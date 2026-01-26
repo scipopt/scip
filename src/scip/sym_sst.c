@@ -61,6 +61,10 @@
 #define DEFAULT_LEADERRULE           0       /**< index of rule for selecting leader variables for SST constraints? */
 #define DEFAULT_LEADERVARTYPE        6       /**< bitset encoding allowed vars types for leaders (1 bin; 2 int; 4 cont);
                                               *   if multiple types are allowed, take the one with most affected vars */
+#define DEFAULT_COMPUTENEWPERMS   TRUE       /**< Shall additional permutations of symmetry component be computed? */
+#define DEFAULT_MAXNNEWPERMS       100       /**< maximum number of additional permutations of symmetry component
+                                              *   that is computed (used to have better approximation of stabilizer);
+                                              *   -1: unbounded */
 #define DEFAULT_ADDCONFLICTCUTS       TRUE   /**< Should SST constraints be added if we use a conflict based rule? */
 #define DEFAULT_MIXEDCOMPONENTS       TRUE   /**< Should SST constraints be added if a symmetry component contains
                                               *   variables of different types? */
@@ -147,6 +151,10 @@ struct SCIP_SymhdlrData
    int                   orbitrule;          /**< rule to select orbit */
    int                   leadervartype;      /**< bitset encoding which variable types can be leaders;
                                               *   if multiple types are allowed, take the one with most affected vars */
+   SCIP_Bool             computenewperms;    /**< Shall additional permutations of symmetry component be computed? */
+   int                   maxnnewperms;       /**< maximum number of additional permutations of symmetry component
+                                              *   that is computed (used to have better approximation of stabilizer);
+                                              *   -1: unbounded */
    SCIP_Bool             addconflictcuts;    /**< Should SST constraints be added if we use a conflict based rule? */
    SCIP_Bool             mixedcomponents;    /**< Should SST constraints be added if a symmetry component contains
                                               *   variables of different types? */
@@ -165,27 +173,35 @@ SCIP_RETCODE createPermsTranspose(
    int**                 perms,              /**< (signed) permutations for which SST constraints shall be added */
    int                   nperms,             /**< number of signed permutations */
    int                   npermvars,          /**< number of variables */
+   int**                 newperms,           /**< additional permutations (or NULL) */
+   int                   nnewperms,          /**< number of additional permutations */
    int***                permstrans          /**< pointer to hold transposed permutation matrix */
    )
 {
    int p;
    int v;
+   int i;
    int len;
+   int ntotalperms;
 
    assert(scip != NULL);
    assert(perms != NULL);
    assert(nperms > 0);
    assert(npermvars > 0);
+   assert(newperms != NULL || nnewperms == 0);
    assert(permstrans != NULL);
 
    len = symtype == SYM_SYMTYPE_PERM ? npermvars : 2 * npermvars;
+   ntotalperms = nperms + nnewperms;
 
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, permstrans, len) );
    for( v = 0; v < len; ++v )
    {
-      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(*permstrans)[v], nperms) );
+      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(*permstrans)[v], ntotalperms) );
       for( p = 0; p < nperms; ++p )
          (*permstrans)[v][p] = perms[p][v];
+      for( i = 0; i < nnewperms; ++i, ++p )
+         (*permstrans)[v][p] = newperms[i][v];
    }
 
    return SCIP_OKAY;
@@ -194,7 +210,7 @@ SCIP_RETCODE createPermsTranspose(
 /** computes number of variables affected by symmetries by type */
 static
 SCIP_RETCODE computeAffectedVartypesCount(
-   int**                 permstrans,         /**< transposed (signed) permutations */
+   int**                 perms,              /**< (signed) permutations */
    int                   nperms,             /**< number of signed permutations */
    SCIP_VAR**            permvars,           /**< variables on which the (signed) permutations act */
    int                   npermvars,          /**< number of variables */
@@ -216,7 +232,7 @@ SCIP_RETCODE computeAffectedVartypesCount(
    {
       for( p = 0; p < nperms; ++p )
       {
-         if( permstrans[v][p] != v )
+         if( perms[p][v] != v )
          {
             switch( SCIPgetSymInferredVarType(permvars[v]) )
             {
@@ -485,16 +501,16 @@ SCIP_RETCODE addSSTConssOrbitAndUpdateSST(
    SYM_SYMTYPE           symtype,            /**< type of symmetries */
    int                   id,                 /**< identifier of symmetry component for that SST conss are added */
    SST_CONFLICTDATA*     varconflicts,       /**< conflict graph or NULL if useconflictgraph == FALSE */
-   int                   nperms,
+   int                   nperms,             /**< number of permutations */
    SCIP_VAR**            permvars,           /**< permvars array */
-   int                   npermvars,
-   SCIP_Real*            permvardomaincenter,
-   int                   leaderrule,
-   int                   orbitrule,
-   SCIP_Bool             addconflictcuts,
-   SCIP_CONS***          sstconss,
-   int*                  nsstconss,
-   int*                  maxnsstconss,
+   int                   npermvars,          /**< number of variables in permvars */
+   SCIP_Real*            permvardomaincenter,/**< domain center of permvars */
+   int                   leaderrule,         /**< rule to select leader of SST conss */
+   int                   orbitrule,          /**< rule to select orbit of SST conss */
+   SCIP_Bool             addconflictcuts,    /**< Shall SST conss be added when a conflict-based rule is used? */
+   SCIP_CONS***          sstconss,           /**< pointer to store SST conss */
+   int*                  nsstconss,          /**< pointer to store number of SST conss */
+   int*                  maxnsstconss,       /**< pointer to store maximum number of conss sstconss can hold */
    int*                  orbits,             /**< symmetry orbits */
    int*                  orbitbegins,        /**< array storing begin position for each orbit */
    int                   orbitidx,           /**< index of orbit for Schreier Sims constraints */
@@ -751,6 +767,248 @@ SCIP_RETCODE freeConflictGraphSST(
       SCIPfreeBlockMemoryArray(scip, &(*varconflicts)[i].cliques, n);
    }
    SCIPfreeBlockMemoryArray(scip, varconflicts, nvars);
+
+   return SCIP_OKAY;
+}
+
+/** returns whether a permutation is already contained in a list of permutations */
+static
+SCIP_Bool isPermKnown(
+   int*                  perm,               /**< permutation to be checked */
+   int                   permlen,            /**< length of permutation */
+   int**                 knownperms,         /**< list of known permutations (possibly longer than nknownperms) */
+   int                   nknownperms         /**< number of known permutations to be checked */
+   )
+{
+   int p;
+   int i;
+
+   assert(perm != NULL);
+   assert(permlen >= 0);
+   assert(knownperms != NULL);
+   assert(nknownperms >= 0);
+
+   for( p = 0; p < nknownperms; ++p )
+   {
+      for( i = 0; i < permlen; ++i )
+      {
+         /* knownperms[p] and perm differ */
+         if( perm[i] != knownperms[p][i] )
+            break;
+      }
+      /* loop did not terminate early, knownperms[p] and perm coincide */
+      if( i == permlen )
+         return TRUE;
+   }
+
+   return FALSE;
+}
+
+
+/** returns whether a permutation is an involution */
+static
+SCIP_Bool isInvolution(
+   int*                  perm,               /**< permutation */
+   int                   lenperm,            /**< length of permutation */
+   SCIP_Bool*            istransposition     /**< pointer to store whether permutation is a transposition */
+   )
+{
+   int lensupport = 0;
+   int i;
+
+   assert(perm != NULL);
+   assert(lenperm > 0);
+   assert(istransposition != NULL);
+   *istransposition = FALSE;
+
+   for( i = 0; i < lenperm; ++i )
+   {
+      if( perm[perm[i]] != i )
+         return FALSE;
+      if( perm[i] != i )
+         ++lensupport;
+   }
+
+   if( lensupport == 2 )
+      *istransposition = TRUE;
+   return TRUE;
+}
+
+/** tries to generate involutions based on permutations in symmetry component
+ *
+ *  An involution is a permutation whose 2-fold application is the identity. Involutions
+ *  are of particular interest, because their support is (in practice) often very small.
+ *  Propagations based on involutions thus can be executed rather quickly. Moreover,
+ *  when computing stabilizer subgroups by a filtering mechanism, it is more likely that
+ *  a (sparse) involution is not filtered in contrast to dense non-involutions.
+ *
+ *  To create new involutions, we are given a list of involutions that have been found
+ *  during symmetry detection. We then iterate through all pairs (p,q) of involutions in
+ *  this list and generate the new involutions p * q (if p and q commute) and p * q * p
+ *  (if p and q do not commute).
+ */
+static
+SCIP_RETCODE tryGenerateInvolutions(
+   SCIP*                 scip,               /**< SCIP instance */
+   SYM_SYMTYPE symtype,
+   int** perms,
+   int nperms,
+   int npermvars,
+   int maxnnewinvolus,
+   int*** newperms,             /* TODOTODO make sure that this is returned */
+   int* nnewperms,
+   int* lennewperms
+   )
+{
+   int* tmpperm;
+   int* perm1;
+   int* perm2;
+   int permlen;
+   int p;
+   int q;
+   int i;
+   SCIP_Bool commute;
+   SCIP_Bool istransposition;
+   SCIP_Bool dynamicmemsize;
+
+   /* check whether we shall run */
+   if( maxnnewinvolus <= 0 )
+      return SCIP_OKAY;
+
+   assert(scip != NULL);
+   assert(perms != NULL);
+   assert(nperms > 0);
+   assert(npermvars > 0);
+   assert(newperms != NULL);
+   assert(nnewperms != NULL);
+   assert(lennewperms != NULL);
+
+   dynamicmemsize = maxnnewinvolus == -1;
+   *lennewperms = dynamicmemsize ? 100 : maxnnewinvolus;
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, newperms, *lennewperms) );
+   *nnewperms = 0;
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &tmpperm, npermvars) );
+
+   permlen = symtype == (int)SYM_SYMTYPE_PERM ? npermvars : 2 * npermvars;
+
+   /* try to generate new involutions by combining two involutions p and q
+    *
+    * If p and q commute, create involution p*q. Otherwise, create involutions p*q*p and q*p*q.
+    */
+   for( p = 0; p < nperms; ++p )
+   {
+      perm1 = perms[p];
+      if( !isInvolution(perm1, npermvars, &istransposition) )
+         continue;
+
+      /* it seems promising to only combine involutions with at least two cycles each */
+      if ( istransposition )
+         continue;
+
+      for( q = p + 1; q < nperms; ++q )
+      {
+         perm2 = perms[q];
+         if( !isInvolution(perm2, npermvars, &istransposition) )
+            continue;
+         if( istransposition )
+            continue;
+
+         /* check whether perm1 and perm2 commute */
+         commute = TRUE;
+         for( i = 0; i < npermvars && commute; ++i )
+         {
+            if( perm1[perm2[i]] != perm2[perm1[i]] )
+               commute = FALSE;
+         }
+         /* only consider involutions that have non-disjoint support */
+         if( commute )
+         {
+            /* permutations commute, store perm1 * perm2 if we do not know it yet */
+            for( i = 0; i < npermvars; ++i )
+               tmpperm[i] = perm1[perm2[i]];
+
+            if( isPermKnown(tmpperm, npermvars, perms, nperms) )
+               continue;
+            if ( isPermKnown(tmpperm, npermvars, *newperms, *nnewperms) )
+               continue;
+            if( dynamicmemsize && *nnewperms == *lennewperms )
+            {
+               SCIP_CALL( SCIPensureBlockMemoryArray(scip, newperms, lennewperms, *lennewperms + 1) );
+            }
+            assert( *nnewperms < *lennewperms );
+
+            /* recompute permutation, because we possibly also need the entries for negated variables */
+            SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(*newperms)[*nnewperms], permlen) );
+            for( i = 0; i < permlen; ++i )
+               (*newperms)[*nnewperms][i] = perm1[perm2[i]];
+            ++(*nnewperms);
+         }
+         else
+         {
+            /* permutations do not commute, compute perm1 * perm2 * perm1 */
+            for( i = 0; i < npermvars; ++i )
+               tmpperm[i] = perm1[perm2[perm1[i]]];
+
+            /* do not store the permutation if it is already known
+             * (also for signed permutations, it is sufficient to iterate over the first npermvars
+             *  entries, because the permutation on the negated variables can be derived from these entries)
+             **/
+            if( isPermKnown(tmpperm, npermvars, perms, nperms) )
+               continue;
+            if( isPermKnown(tmpperm, npermvars, *newperms, *nnewperms) )
+               continue;
+
+            /* we do not know the permutation yet, store it */
+            if( dynamicmemsize && *nnewperms == *lennewperms )
+            {
+               SCIP_CALL( SCIPensureBlockMemoryArray(scip, newperms, lennewperms, *lennewperms + 1) );
+            }
+            assert(*nnewperms < *lennewperms);
+
+            /* recompute permutation, because we possibly also need the entries for negated variables */
+            SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(*newperms)[*nnewperms], permlen) );
+            for( i = 0; i < permlen; ++i )
+               (*newperms)[*nnewperms][i] = perm1[perm2[perm1[i]]];
+            ++(*nnewperms);
+
+            if( !dynamicmemsize && *nnewperms == *lennewperms )
+               break;
+
+            /* compute perm2 * perm1 * perm2 */
+            for( i = 0; i < npermvars; ++i )
+               tmpperm[i] = perm2[perm1[perm2[i]]];
+
+            /* do not store the permutation if it is already known */
+            if( isPermKnown(tmpperm, npermvars, perms, nperms) )
+               continue;
+            if ( isPermKnown(tmpperm, npermvars, *newperms, *nnewperms) )
+               continue;
+
+            /* recompute permutation, because we possibly also need the entries for negated variables */
+            if( dynamicmemsize && *nnewperms == *lennewperms )
+            {
+               SCIP_CALL( SCIPensureBlockMemoryArray(scip, newperms, lennewperms, *lennewperms + 1) );
+            }
+            SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(*newperms)[*nnewperms], permlen) );
+            for( i = 0; i < permlen; ++i )
+               (*newperms)[*nnewperms][i] = perm2[perm1[perm2[i]]];
+            ++(*nnewperms);
+         }
+
+         if( !dynamicmemsize && *nnewperms >= *lennewperms )
+            break;
+      }
+      if( !dynamicmemsize && *nnewperms >= *lennewperms )
+         break;
+   }
+
+   SCIPfreeBufferArray(scip, &tmpperm);
+
+   if( *nnewperms == 0 )
+   {
+      SCIPfreeBlockMemoryArray(scip, newperms, *lennewperms);
+   }
 
    return SCIP_OKAY;
 }
@@ -1015,6 +1273,9 @@ SCIP_RETCODE tryAddSSTConss(
    SST_LEADERRULE        leaderrule,         /**< rule for selecting leaders */
    SST_ORBITRULE         orbitrule,          /**< rule for selecting orbits */
    SST_VARTYPE           leadervartype,      /**< rule for selecting variable type of leaders */
+   SCIP_Bool             computenewperms,    /**< Shall additional permutations of symmetry component be computed? */
+   int                   maxnnewperms,       /**< maximum number of additional permutations of symmetry component
+                                              *   that is computed (used to have better approximation of stabilizer) */
    SCIP_Bool             addconflictcuts,    /**< Shall SST conss be added when a conflict-based rule is used? */
    SCIP_Bool             mixedcomponents,    /**< Shall SST conss be added if symmetry component contains
                                               *   different variable types? */
@@ -1027,6 +1288,7 @@ SCIP_RETCODE tryAddSSTConss(
    int nmovedbinpermvars;
    int nmovedintpermvars;
    int nmovedcontpermvars;
+   int ntotalperms;
 
    int* orbits;
    int* orbitbegins;
@@ -1058,66 +1320,11 @@ SCIP_RETCODE tryAddSSTConss(
 
    *success = FALSE;
 
-   SCIP_CALL( createPermsTranspose(scip, symtype, perms, nperms, npermvars, &permstrans) );
-   assert(permstrans != NULL);
-
-   /* compute variables that are affected by symmetry in component */
-   /* @symtodo Shall we compute this globally? */
-   SCIP_CALL( SCIPallocBufferArray(scip, &isaffected, npermvars) );
-   for( i = 0; i < npermvars; ++i )
-   {
-      isaffected[i] = FALSE;
-      for( p = 0; p < nperms; ++p )
-      {
-         if( permstrans[i][p] != i )
-         {
-            isaffected[i] = TRUE;
-            break;
-         }
-      }
-   }
-
-   /* compute whether permutation is a proper permutation, i.e., not signed */
-   /* @symtodo Shall we compute this globally? */
-   SCIP_CALL( SCIPallocBufferArray(scip, &isproperperm, nperms) );
-   for( p = 0; p < nperms; ++p )
-   {
-      isproperperm[p] = TRUE;
-      if( symtype == SYM_SYMTYPE_PERM )
-         continue;
-
-      for( i = 0; i < npermvars; ++i )
-      {
-         if( perms[p][i] >= npermvars )
-         {
-            isproperperm[p] = FALSE;
-            break;
-         }
-      }
-   }
-
-   /* compute centers of variable domains in case of signed permutations */
-   /* @symtodo Shall we compute this globally? */
-   if( symtype == SYM_SYMTYPE_SIGNPERM )
-   {
-      SCIP_Real lb;
-      SCIP_Real ub;
-
-      SCIP_CALL( SCIPallocBufferArray(scip, &permvardomaincenter, npermvars) );
-      for( i = 0; i < npermvars; ++i )
-      {
-         ub = SCIPvarGetUbGlobal(permvars[i]);
-         lb = SCIPvarGetLbGlobal(permvars[i]);
-
-         permvardomaincenter[i] = 0.5 * (ub + lb);
-      }
-   }
-
    if( nchgbds != NULL )
       *nchgbds = 0;
 
    /* get number of affected vars */
-   SCIP_CALL( computeAffectedVartypesCount(permstrans, nperms, permvars, npermvars,
+   SCIP_CALL( computeAffectedVartypesCount(perms, nperms, permvars, npermvars,
          &nmovedbinpermvars, &nmovedintpermvars, &nmovedcontpermvars) );
    nmovedpermvars = nmovedbinpermvars + nmovedintpermvars + nmovedcontpermvars;
    assert(nmovedpermvars > 0);  /* nperms > 0 implies this */
@@ -1146,6 +1353,119 @@ SCIP_RETCODE tryAddSSTConss(
    if( nvarsselectedtype == 0 )
       goto FREEMEMORY;
 
+   ntotalperms = nperms;
+   if( computenewperms )
+   {
+      int** newperms = NULL;
+      int nnewperms = 0;
+      int lennewperms = 0;
+      int permlen = 0;
+
+      SCIP_CALL( tryGenerateInvolutions(scip, symtype, perms, nperms, npermvars, maxnnewperms,
+            &newperms, &nnewperms, &lennewperms) );
+      ntotalperms += nnewperms;
+      printf("NNEW PERMS %d\n", nnewperms);
+
+      SCIP_CALL( createPermsTranspose(scip, symtype, perms, nperms, npermvars, newperms, nnewperms, &permstrans) );
+
+      /* compute whether permutation is a proper permutation, i.e., not signed */
+      SCIP_CALL( SCIPallocBufferArray(scip, &isproperperm, ntotalperms) );
+      for( p = 0; p < nperms; ++p )
+      {
+         isproperperm[p] = TRUE;
+         if( symtype == SYM_SYMTYPE_PERM )
+            continue;
+
+         for( i = 0; i < npermvars; ++i )
+         {
+            if( perms[p][i] >= npermvars )
+            {
+               isproperperm[p] = FALSE;
+               break;
+            }
+         }
+      }
+      for( p = 0; p < nnewperms; ++p )
+      {
+         isproperperm[nperms + p] = TRUE;
+         if( symtype == SYM_SYMTYPE_PERM )
+            continue;
+
+         for( i = 0; i < npermvars; ++i )
+         {
+            if( newperms[p][i] >= npermvars )
+            {
+               isproperperm[nperms + p] = FALSE;
+               break;
+            }
+         }
+      }
+
+      /* free additional permutations again */
+      permlen = symtype == SYM_SYMTYPE_PERM ? npermvars : 2 * npermvars;
+      for( p = nnewperms - 1; p >= 0; --p )
+      {
+         SCIPfreeBlockMemoryArray(scip, &newperms[p], permlen);
+      }
+      SCIPfreeBlockMemoryArrayNull(scip, &newperms, lennewperms);
+   }
+   else
+   {
+      SCIP_CALL( createPermsTranspose(scip, symtype, perms, nperms, npermvars, NULL, 0, &permstrans) );
+
+      /* compute whether permutation is a proper permutation, i.e., not signed */
+      SCIP_CALL( SCIPallocBufferArray(scip, &isproperperm, nperms) );
+      for( p = 0; p < nperms; ++p )
+      {
+         isproperperm[p] = TRUE;
+         if( symtype == SYM_SYMTYPE_PERM )
+            continue;
+
+         for( i = 0; i < npermvars; ++i )
+         {
+            if( perms[p][i] >= npermvars )
+            {
+               isproperperm[p] = FALSE;
+               break;
+            }
+         }
+      }
+   }
+   assert(permstrans != NULL);
+
+   /* compute variables that are affected by symmetry in component */
+   /* @symtodo Shall we compute this globally? */
+   SCIP_CALL( SCIPallocBufferArray(scip, &isaffected, npermvars) );
+   for( i = 0; i < npermvars; ++i )
+   {
+      isaffected[i] = FALSE;
+      for( p = 0; p < ntotalperms; ++p )
+      {
+         if( permstrans[i][p] != i )
+         {
+            isaffected[i] = TRUE;
+            break;
+         }
+      }
+   }
+
+   /* compute centers of variable domains in case of signed permutations */
+   /* @symtodo Shall we compute this globally? */
+   if( symtype == SYM_SYMTYPE_SIGNPERM )
+   {
+      SCIP_Real lb;
+      SCIP_Real ub;
+
+      SCIP_CALL( SCIPallocBufferArray(scip, &permvardomaincenter, npermvars) );
+      for( i = 0; i < npermvars; ++i )
+      {
+         ub = SCIPvarGetUbGlobal(permvars[i]);
+         lb = SCIPvarGetLbGlobal(permvars[i]);
+
+         permvardomaincenter[i] = 0.5 * (ub + lb);
+      }
+   }
+
    /* @todo only create the conflict graph for the variable in the current component */
    /* possibly create conflict graph; graph is not created if no cliques are present */
    if( selectedtype == SCIP_VARTYPE_BINARY && (leaderrule == SST_LEADERRULE_MAXCONFLICTSINORBIT
@@ -1156,7 +1476,7 @@ SCIP_RETCODE tryAddSSTConss(
    }
 
    /* allocate data structures necessary for orbit computations and conflict graph */
-   SCIP_CALL( SCIPallocBufferArray(scip, &inactiveperms, nperms) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &inactiveperms, ntotalperms) );
    SCIP_CALL( SCIPallocBufferArray(scip, &orbits, npermvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &orbitbegins, npermvars) );
 
@@ -1170,7 +1490,7 @@ SCIP_RETCODE tryAddSSTConss(
 
    /* initialize array indicating whether permutations shall not be considered for orbit permutations */
    ninactiveperms = 0;
-   for( p = 0; p < nperms; ++p )
+   for( p = 0; p < ntotalperms; ++p )
    {
       /* possibly filter signed permutations */
       inactiveperms[p] = !isproperperm[p];
@@ -1180,12 +1500,12 @@ SCIP_RETCODE tryAddSSTConss(
 
    /* as long as the stabilizer is non-trivial, add Schreier Sims constraints */
    norbitleadercomponent = 0;
-   while( ninactiveperms < nperms )
+   while( ninactiveperms < ntotalperms )
    {
       int nchanges = 0;
 
       /* compute orbits w.r.t. active perms */
-      SCIP_CALL( SCIPcomputeOrbitsFilterSymNoComp(scip, npermvars, permstrans, nperms, inactiveperms,
+      SCIP_CALL( SCIPcomputeOrbitsFilterSymNoComp(scip, npermvars, permstrans, ntotalperms, inactiveperms,
             isaffected, orbits, orbitbegins, &norbits, nmovedpermvars) );
 
       /* stop if we require pure components and a component contains variables of different types */
@@ -1213,11 +1533,11 @@ SCIP_RETCODE tryAddSSTConss(
       }
 
       /* possibly adapt the leader and orbit rule */
-      if( leaderrule == SST_LEADERRULE_MAXCONFLICTSINORBIT && ! conflictgraphcreated )
+      if( leaderrule == SST_LEADERRULE_MAXCONFLICTSINORBIT && !conflictgraphcreated )
          leaderrule = SST_LEADERRULE_FIRSTINORBIT;
       if( leaderrule == SST_LEADERRULE_MAXCONFLICTSINORBIT && selectedtype != SCIP_VARTYPE_BINARY )
          leaderrule = SST_LEADERRULE_FIRSTINORBIT;
-      if( orbitrule == SST_ORBITRULE_MAXCONFLICTSINORBIT && ! conflictgraphcreated )
+      if( orbitrule == SST_ORBITRULE_MAXCONFLICTSINORBIT && !conflictgraphcreated )
          orbitrule = SST_ORBITRULE_MAXORBIT;
       if( orbitrule == SST_ORBITRULE_MAXCONFLICTSINORBIT && selectedtype != SCIP_VARTYPE_BINARY )
          orbitrule = SST_ORBITRULE_MAXORBIT;
@@ -1235,7 +1555,7 @@ SCIP_RETCODE tryAddSSTConss(
       SCIPdebugMsg(scip, "%d\t\t%d\t\t%d\n", orbitidx, orbitleaderidx, orbitbegins[orbitidx + 1] - orbitbegins[orbitidx]);
 
       /* add Schreier Sims constraints for the selected orbit and update Schreier Sims table */
-      SCIP_CALL( addSSTConssOrbitAndUpdateSST(scip, symtype, id, varconflicts, nperms, permvars, npermvars,
+      SCIP_CALL( addSSTConssOrbitAndUpdateSST(scip, symtype, id, varconflicts, ntotalperms, permvars, npermvars,
             permvardomaincenter, leaderrule, orbitrule, addconflictcuts, sstconss, nsstconss, maxnsstconss,
             orbits, orbitbegins, orbitidx, orbitleaderidx, orbitvarinconflict, norbitvarinconflict, &nchanges) );
 
@@ -1246,7 +1566,7 @@ SCIP_RETCODE tryAddSSTConss(
 
       /* deactivate permutations that move the orbit leader */
       posleader = orbits[orbitbegins[orbitidx] + orbitleaderidx];
-      for( p = 0; p < nperms; ++p )
+      for( p = 0; p < ntotalperms; ++p )
       {
          if( inactiveperms[p] )
             continue;
@@ -1285,7 +1605,7 @@ SCIP_RETCODE tryAddSSTConss(
    SCIPfreeBufferArray(scip, &isaffected);
    for( i = 0; i < (symtype == SYM_SYMTYPE_PERM ? npermvars : 2 * npermvars); ++i )
    {
-      SCIPfreeBlockMemoryArray(scip, &permstrans[i], nperms);
+      SCIPfreeBlockMemoryArray(scip, &permstrans[i], ntotalperms);
    }
    SCIPfreeBlockMemoryArray(scip, &permstrans, symtype == SYM_SYMTYPE_PERM ? npermvars : 2 * npermvars);
 
@@ -1325,8 +1645,10 @@ SCIP_DECL_SYMHDLRTRYADD(symhdlrTryaddSST)
    /* try to add SST constraints */
    SCIP_CALL( tryAddSSTConss(scip, symtype, perms, nperms, permvars, npermvars, permvarmap, id,
          &sstconss, &nsstconss, &maxnsstconss, &nchgbds, (SST_LEADERRULE)symhdlrdata->leaderrule,
-         (SST_ORBITRULE)symhdlrdata->orbitrule,(SST_VARTYPE)symhdlrdata->leadervartype,
-         symhdlrdata->addconflictcuts, symhdlrdata->mixedcomponents, success) );
+         (SST_ORBITRULE)symhdlrdata->orbitrule, (SST_VARTYPE)symhdlrdata->leadervartype,
+         symhdlrdata->computenewperms, symhdlrdata->maxnnewperms, symhdlrdata->addconflictcuts,
+         symhdlrdata->mixedcomponents, success) );
+   printf("added %d sst conss\n", nsstconss);
 
    /* in case of success, store information in symmetry component's data */
    if( !(*success) )
@@ -1459,6 +1781,15 @@ SCIP_RETCODE SCIPincludeSymhdlrSST(
       SCIP_CALL( SCIPaddIntParam(scip, "symmetries/" SYM_NAME "/leadervartype",
             "bitset encoding allowed variable types for leader  (1: bin, 2: int, 4: cont)",
             &symhdlrdata->leadervartype, TRUE, DEFAULT_LEADERRULE, 0, 7, NULL, NULL) );
+
+      SCIP_CALL( SCIPaddBoolParam(scip, "symmetries/" SYM_NAME "/computenewperms",
+            "Shall additional permutations of symmetry component be computed?",
+            &symhdlrdata->computenewperms, TRUE, DEFAULT_COMPUTENEWPERMS, NULL, NULL) );
+
+      SCIP_CALL( SCIPaddIntParam(scip, "symmetries/" SYM_NAME "/maxnnewperms",
+            "maximum number of additional permutations of symmetry component that is computed "\
+            "(used to have better approximation of stabilizer); -1: unbounded",
+            &symhdlrdata->maxnnewperms, TRUE, DEFAULT_MAXNNEWPERMS, -1, INT_MAX, NULL, NULL) );
 
       SCIP_CALL( SCIPaddBoolParam(scip, "symmetries/" SYM_NAME "/addconflictcuts",
             "Should SST constraints be added is a conflict-based rule is used?",
