@@ -2959,6 +2959,7 @@ SCIP_RETCODE SCIPsolveConcurrent(
    SCIP_RANDNUMGEN* rndgen;
    int minnthreads;
    int maxnthreads;
+   int usesymmetry;
    int i;
 
    SCIP_CALL( SCIPcheckStage(scip, "SCIPsolveConcurrent", FALSE, TRUE, FALSE, TRUE, FALSE, TRUE, FALSE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
@@ -2999,6 +3000,13 @@ SCIP_RETCODE SCIPsolveConcurrent(
       int ncandsolvertypes;
       int nthreads = INT_MAX;
 
+      /* temporarily disable symmetry if symmetrybefore is FALSE */
+      usesymmetry = scip->set->misc_usesymmetry;
+      if( !scip->set->concurrent_symmetrybefore )
+      {
+         scip->set->misc_usesymmetry = 0;
+      }
+
       /* check whether concurrent solve is configured to presolve the problem before setting up the concurrent solvers */
       if( scip->set->concurrent_presolvebefore )
       {
@@ -3010,27 +3018,19 @@ SCIP_RETCODE SCIPsolveConcurrent(
       else
       {
          SCIP_Bool infeas;
-         int usesymmetry;
 
          /* if not, transform the problem and switch stage to presolved */
          SCIP_CALL( SCIPtransformProb(scip) );
 
-         /* temporarily disable symmetry if symmetrybefore is FALSE */
-         usesymmetry = scip->set->misc_usesymmetry;
-         if( !scip->set->concurrent_symmetrybefore )
-         {
-            scip->set->misc_usesymmetry = 0;
-         }
-
          SCIP_CALL( initPresolve(scip) );
          SCIP_CALL( exitPresolve(scip, TRUE, &infeas) );
          assert(!infeas);
+      }
 
-         /* restore symmetry setting so concurrent solvers can use it during their presolving */
-         if( !scip->set->concurrent_symmetrybefore )
-         {
-            scip->set->misc_usesymmetry = usesymmetry;
-         }
+      /* restore symmetry setting so concurrent solvers can use it during their presolving */
+      if( !scip->set->concurrent_symmetrybefore )
+      {
+         scip->set->misc_usesymmetry = usesymmetry;
       }
 
       /* if presolving has run into a limit, we stop here */

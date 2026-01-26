@@ -296,7 +296,7 @@ SCIP_RETCODE initConcsolver(
    assert(valid);
 
    /* include symmetry propagator if symmetry wasn't computed before and user wants symmetry */
-   if( !scip->set->concurrent_symmetrybefore && scip->set->misc_usesymmetry != 0 )
+   if( !scip->set->concurrent_symmetrybefore )
    {
       SCIP_CALL( SCIPincludePropSymmetry(data->solverscip) );
    }

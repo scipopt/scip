@@ -566,6 +566,7 @@ SCIP_RETCODE SCIPprocessShellArguments(
       if( nthreadsread )
       {
          SCIP_CALL( SCIPsetIntParam(scip, "parallel/maxnthreads", nthreads) );
+         SCIP_CALL( SCIPsetIntParam(scip, "parallel/minnthreads", nthreads) );
       }
 
       /**************
