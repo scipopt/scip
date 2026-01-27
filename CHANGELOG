@@ -73,6 +73,7 @@ Fixed bugs
 - fixed that non-efficious cuts were not filtered out before checking dynamic parallelism in dynamic cut selector
 - fixes in nauty.h for 32bit systems
 - fixed SCIPgetDualSolVal() for a linear constraint with a single variable
+- adjust conflictAnalyzeLP() to inability of row aggregation to handle a change in the number of variables
 
 Miscellaneous
 -------------
