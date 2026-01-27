@@ -71,6 +71,19 @@ int SCIPiisfinderGetPriority(
    SCIP_IISFINDER*       iisfinder           /**< IIS finder */
    );
 
+/** returns whether IIS finder is enabled */
+SCIP_EXPORT
+SCIP_Bool SCIPiisfinderGetEnable(
+   SCIP_IISFINDER*       iisfinder           /**< IIS finder */
+   );
+
+/** enables/disables IIS finder */
+SCIP_EXPORT
+void SCIPiisfinderSetEnable(
+   SCIP_IISFINDER*       iisfinder,          /**< IIS finder */
+   SCIP_Bool             enable              /**< whether the IIS finder should be enabled */
+   );
+
 /** sets user data of IIS finder; user has to free old data in advance! */
 SCIP_EXPORT
 void SCIPiisfinderSetData(

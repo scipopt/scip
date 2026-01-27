@@ -37,6 +37,7 @@
 #define IISFINDER_NAME           "xyz"
 #define IISFINDER_DESC           "iis finder template"
 #define IISFINDER_PRIORITY       0
+#define IISFINDER_ENABLE         TRUE
 
 
 /*

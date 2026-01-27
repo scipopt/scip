@@ -34,6 +34,7 @@
 #define IISFINDER_NAME           "greedy"
 #define IISFINDER_DESC           "greedy deletion or addition constraint deletion"
 #define IISFINDER_PRIORITY        8000
+#define IISFINDER_ENABLE          TRUE
 
 #define DEFAULT_TIMELIMPERITER   1e+20 /**< time limit of optimization process for each individual subproblem */
 #define DEFAULT_NODELIMPERITER   -1L   /**< node limit of optimization process for each individual subproblem */
@@ -1038,7 +1039,7 @@ SCIP_RETCODE SCIPincludeIISfinderGreedy(
    BMSclearMemory(iisfinderdata);
 
    SCIP_CALL( SCIPincludeIISfinderBasic(scip, &iisfinder, IISFINDER_NAME, IISFINDER_DESC, IISFINDER_PRIORITY,
-         iisfinderExecGreedy, iisfinderdata) );
+         IISFINDER_ENABLE, iisfinderExecGreedy, iisfinderdata) );
 
    assert(iisfinder != NULL);
 

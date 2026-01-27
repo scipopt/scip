@@ -52,6 +52,7 @@ struct SCIP_IISfinder
    SCIP_CLOCK*           iisfindertime;      /**< IIS finder execution time */
    SCIP_IISFINDERDATA*   iisfinderdata;      /**< IIS finder data */
    int                   priority;           /**< priority of the IIS finder */
+   SCIP_Bool             enable;             /**< whether the IIS finder should be enabled */
 };
 
 /** IIS */

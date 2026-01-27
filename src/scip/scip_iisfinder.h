@@ -61,6 +61,7 @@ SCIP_RETCODE SCIPincludeIISfinder(
    const char*           name,               /**< name of IIS finder */
    const char*           desc,               /**< description of IIS finder */
    int                   priority,           /**< priority of the IIS finder */
+   SCIP_Bool             enable,             /**< whether the IIS finder should be enabled */
    SCIP_DECL_IISFINDERCOPY ((*iisfindercopy)), /**< copy method of IIS finder or NULL if you don't want to copy your plugin into sub-SCIPs */
    SCIP_DECL_IISFINDERFREE ((*iisfinderfree)), /**< destructor of IIS finder */
    SCIP_DECL_IISFINDEREXEC ((*iisfinderexec)), /**< IIS finder execution method */
@@ -81,6 +82,7 @@ SCIP_RETCODE SCIPincludeIISfinderBasic(
    const char*           name,               /**< name of IIS finder */
    const char*           desc,               /**< description of IIS finder */
    int                   priority,           /**< priority of the IIS finder in standard mode */
+   SCIP_Bool             enable,             /**< whether the IIS finder should be enabled */
    SCIP_DECL_IISFINDEREXEC((*iisfinderexec)), /**< IIS finder execution method */
    SCIP_IISFINDERDATA*   iisfinderdata       /**< IIS finder data */
    );
