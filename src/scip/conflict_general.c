@@ -2394,7 +2394,6 @@ SCIP_RETCODE conflictAnalyzeLP(
 
    assert(valid);
 
-   SCIP_CALL( SCIPaggrRowCreate(set->scip, &farkasrow) );
    SCIP_CALL( SCIPsetAllocBufferArray(set, &lbchginfoposs, transprob->nvars) );
    SCIP_CALL( SCIPsetAllocBufferArray(set, &ubchginfoposs, transprob->nvars) );
 
@@ -2451,6 +2450,8 @@ SCIP_RETCODE conflictAnalyzeLP(
    if( !valid )
       goto TERMINATE;
 
+   SCIP_CALL( SCIPaggrRowCreate(set->scip, &farkasrow) );
+
    /* the LP is proven to be infeasible */
    if( SCIPlpiIsPrimalInfeasible(lpi) )
    {
@@ -2466,7 +2467,10 @@ SCIP_RETCODE conflictAnalyzeLP(
    }
 
    if( !valid || validdepth >= SCIPtreeGetCurrentDepth(tree) )
+   {
+      SCIPaggrRowFree(set->scip, &farkasrow);
       goto TERMINATE;
+   }
 
    globalinfeasible = FALSE;
 
@@ -2547,6 +2551,8 @@ SCIP_RETCODE conflictAnalyzeLP(
    }
 
   FLUSHPROOFSETS:
+   SCIPaggrRowFree(set->scip, &farkasrow);
+
    /* flush proof set */
    if( SCIPproofsetGetNVars(conflict->proofset) > 0 || conflict->nproofsets > 0 )
    {
@@ -2559,7 +2565,6 @@ SCIP_RETCODE conflictAnalyzeLP(
    SCIPsetFreeBufferArray(set, &curvarlbs);
    SCIPsetFreeBufferArray(set, &ubchginfoposs);
    SCIPsetFreeBufferArray(set, &lbchginfoposs);
-   SCIPaggrRowFree(set->scip, &farkasrow);
 
    return SCIP_OKAY;
 }
