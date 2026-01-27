@@ -130,14 +130,14 @@ SCIP_RETCODE SCIPincludeIISfinderXyz(
     * new callbacks are added in future SCIP versions
     */
    SCIP_CALL( SCIPincludeIISfinder(scip, IISFINDER_NAME, IISFINDER_DESC, IISFINDER_PRIORITY,
-         iisfinderCopyXyz, iisfinderFreeXyz, iisfinderExecXyz,
+         IISFINDER_ENABLE, iisfinderCopyXyz, iisfinderFreeXyz, iisfinderExecXyz,
          iisdata) );
 #else
    /* use SCIPincludeIISfinderBasic() plus setter functions if you want to set callbacks one-by-one and your code should
     * compile independently of new callbacks being added in future SCIP versions
     */
    SCIP_CALL( SCIPincludeIISfinderBasic(scip, &iisfinder, IISFINDER_NAME, IISFINDER_DESC, IISFINDER_PRIORITY,
-         iisfinderExecXyz, iisfinderdata) );
+         IISFINDER_ENABLE, iisfinderExecXyz, iisfinderdata) );
 
    assert(iisfinder != NULL);
 
