@@ -9,6 +9,8 @@ Features
 Performance improvements
 ------------------------
 
+- Implemented interval function evaluation callback in CONOPT interface.
+
 Fixed bugs
 ----------
 
