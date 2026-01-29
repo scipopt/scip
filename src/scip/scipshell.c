@@ -644,7 +644,7 @@ SCIP_RETCODE SCIPprocessShellArguments(
          "  -b <batchfile>: load and execute dialog command batch file (can be used multiple times)\n"
          "  -r <randseed> : nonnegative integer to be used as random seed. "
          "Has priority over random seed specified through parameter settings (.set) file\n"
-         "  -t <threads>  : maximum number of threads\n"
+         "  -t <threads>  : number of threads (triggers concurrent solving)\n"
          "  -c \"command\"  : execute single line of dialog commands (can be used multiple times)\n",
          argv[0]);
 #ifdef SCIP_WITH_AMPL
