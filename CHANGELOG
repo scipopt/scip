@@ -53,27 +53,28 @@ Miscellaneous
 Fixed bugs
 ----------
 
-- fixed call of SCIPcreateConsBasicSOCNonlinear() with coefs being NULL, and fixed check for offsets being finite
-- avoid crash when initial IIS solve fails while reporting errors explicitly
-- fixed failure in nl writing on big endian machines
-- correct memory reallocation in storeSubproblemMasterVar() of benders.c to avoid freeing errors
-- also set real solution in SCIPsolSetValExact() to maintain approximation
-- handle exact solutions in SCIPsolCheckOrig(), SCIPcheckSolOrig(), and SCIPrecomputeSolObj() to correctly check exact initial solutions in SCIPtransformProb()
-- fixed use of interactive option (-i) of AMPL interface
-- fix calculation of Euclidean norm in calcEfficacyDenseStorage() for use in exact solving
-- fixed bug with changing the type of the slack variable in indicator constraints while copying
-- removed unnecessary explicit linking against gmp for unittests for exact solving mode
 - fixed that parameters passed on as variadic arguments to SCIPsolveNLP() and SCIPsolveNlpi() were ignored when compiling with MS compilers without -Zc:preprocessor
 - make more CONOPT output available when verbosity level is set to 2
 - turn off detection of definitional constraints in CONOPT for now, to work around a related issue in CONOPT 4.39.0
-- signal extreme estimations in timeSeriesEstimate() and skip pruning estimations in eventExecEstim() to avoid unstable restarting
-- fixed that variable removal in IIS cleanup tried to delete variables that were marked as not deleteable
+- fixed call of SCIPcreateConsBasicSOCNonlinear() with coefs being NULL, and fixed check for offsets being finite
+- avoid crash when initial IIS solve fails while reporting errors explicitly
+- fixed that variable removal in IIS cleanup tried to delete variables that were marked as not deletable
 - fixed that some IIS info messages were not using a user's message handler
+- fixed use of interactive option (-i) of AMPL interface
+- fixed failure in nl writing on big endian machines
+- correct memory reallocation in storeSubproblemMasterVar() of benders.c to avoid errors when freeing memory
+- also set real solution in SCIPsolSetValExact() to maintain approximation
+- handle exact solutions in SCIPsolCheckOrig(), SCIPcheckSolOrig(), and SCIPrecomputeSolObj() to correctly check exact initial solutions in SCIPtransformProb()
+- fixed calculation of Euclidean norm in calcEfficacyDenseStorage() for use in exact solving
+- removed unnecessary explicit linking of GMP library for exact solving mode unittests
+- fixed bug with changing the type of the slack variable in indicator constraints while copying
+- signal extreme estimations in timeSeriesEstimate() and skip pruning estimations in eventExecEstim() to avoid unstable restarting
 - fixed parallelism computation of dynamic cut selector to use Euclidean norm instead of unsupported argument
-- fixed that non-efficious cuts were not filtered out before checking dynamic parallelism in dynamic cut selector
+- fixed that non-efficacious cuts were not filtered out before checking dynamic parallelism in dynamic cut selector
 - fixes in nauty.h for 32bit systems
 - fixed SCIPgetDualSolVal() for a linear constraint with a single variable
 - adjust conflictAnalyzeLP() to inability of row aggregation to handle a change in the number of variables
+- propagate child lower bounds back to focus node to ensure consistent lower bound tracking
 
 Miscellaneous
 -------------
