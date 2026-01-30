@@ -27,6 +27,7 @@ Fixed bugs
 - fixes in nauty.h for 32bit systems
 - fixed SCIPgetDualSolVal() for a linear constraint with a single variable
 - adjust conflictAnalyzeLP() to inability of row aggregation to handle a change in the number of variables
+- propagate child lower bounds back to focus node to ensure consistent lower bound tracking
 
 Miscellaneous
 -------------
