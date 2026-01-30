@@ -5266,9 +5266,47 @@ SCIP_RETCODE SCIPnodeFocus(
    else if( tree->nchildren > 0 )
    {
       SCIP_Bool selectedchild;
+      int c;
 
       assert(tree->focusnode != NULL);
       assert(SCIPnodeGetType(tree->focusnode) == SCIP_NODETYPE_FOCUSNODE);
+
+      /* update exact lower bound of focus */
+      if( set->exact_enable )
+      {
+         SCIP_RATIONAL* focuslowerboundexact;
+         SCIP_RATIONAL* childlowerboundexact;
+
+         SCIP_CALL( SCIPrationalCreateBlock(blkmem, &focuslowerboundexact) );
+         SCIPrationalSetInfinity(focuslowerboundexact);
+
+         for( c = 0; c < tree->nchildren; ++c )
+         {
+            childlowerboundexact = SCIPnodeGetLowerboundExact(tree->children[c]);
+            if( SCIPrationalIsGT(focuslowerboundexact, childlowerboundexact) )
+               SCIPrationalSetRational(focuslowerboundexact, childlowerboundexact);
+         }
+
+         SCIP_CALL( SCIPnodeUpdateLowerbound(tree->focusnode, stat, set, eventfilter, tree, transprob, origprob, SCIP_INVALID, focuslowerboundexact) );
+         SCIPrationalFreeBlock(blkmem, &focuslowerboundexact);
+      }
+      /* update real lower bound of focus */
+      else
+      {
+         SCIP_Real focuslowerbound;
+         SCIP_Real childlowerbound;
+
+         focuslowerbound = SCIPsetInfinity(set);
+
+         for( c = 0; c < tree->nchildren; ++c )
+         {
+            childlowerbound = SCIPnodeGetLowerbound(tree->children[c]);
+            if( focuslowerbound > childlowerbound )
+               focuslowerbound = childlowerbound;
+         }
+
+         SCIP_CALL( SCIPnodeUpdateLowerbound(tree->focusnode, stat, set, eventfilter, tree, transprob, origprob, focuslowerbound, NULL) );
+      }
 
       /* check whether the next focus node is a child of the old focus node */
       selectedchild = (*node != NULL && SCIPnodeGetType(*node) == SCIP_NODETYPE_CHILD);
@@ -8293,7 +8331,8 @@ SCIP_RATIONAL* SCIPtreeGetLowerboundExact(
    }
 
    /* compare lower bound with focus node */
-   if( tree->focusnode != NULL && ( lowerbound == NULL || SCIPrationalIsGT(lowerbound, tree->focusnode->lowerboundexact) ) )
+   if( tree->focusnode != NULL
+      && ( lowerbound == NULL || SCIPrationalIsGT(lowerbound, tree->focusnode->lowerboundexact) ) )
    {
       lowerbound = tree->focusnode->lowerboundexact;
    }
