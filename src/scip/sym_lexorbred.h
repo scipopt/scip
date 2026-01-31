@@ -24,14 +24,14 @@
 
 /**@file   sym_sst.h
  * @ingroup OTHER_CFILES
- * @brief  symmetry handler for linear reduction and orbital reduction
+ * @brief  symmetry handler for lexicographic reduction and orbital reduction
  * @author Christopher Hojny
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#ifndef __SCIP_SYM_LINORBRED_H__
-#define __SCIP_SYM_LINORBRED_H__
+#ifndef __SCIP_SYM_LEXORBRED_H__
+#define __SCIP_SYM_LEXORBRED_H__
 
 #include "scip/def.h"
 #include "scip/type_retcode.h"
@@ -45,9 +45,9 @@ extern "C" {
 #endif
 
 
-/** include symmetry handler for linear reduction and orbital reduction */
+/** include symmetry handler for lexicographic reduction and orbital reduction */
 SCIP_EXPORT
-SCIP_RETCODE SCIPincludeSymhdlrLinOrbRed(
+SCIP_RETCODE SCIPincludeSymhdlrLexOrbRed(
    SCIP*                 scip                /**< SCIP data structure */
    );
 

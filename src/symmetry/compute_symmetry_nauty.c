@@ -218,7 +218,7 @@ void nautyterminationhook(
          "symmetry computation terminated early because Nauty level limit %d is exceeded\n",
          data_.maxlevel);
       SCIPverbMessage(data_.scip, SCIP_VERBLEVEL_MINIMAL, NULL,
-         "for running full symmetry detection, increase value of parameter propagating/symmetry/nautymaxlevel\n");
+         "for running full symmetry detection, increase value of parameter symmetries/nautymaxlevel\n");
       nauty_kill_request = 1;
    }
 }
@@ -1378,7 +1378,7 @@ SCIP_RETCODE computeSymmetryGenerators(
    data_.symtype = SCIPgetSymgraphSymtype(symgraph);
    data_.nnodessdg = SCIPgetSymgraphNNodes(symgraph);
    data_.symgrouptype = symgrouptype;
-   SCIP_CALL( SCIPgetIntParam(scip, "propagating/symmetry/nautymaxlevel", &data_.maxlevel) );
+   SCIP_CALL( SCIPgetIntParam(scip, "symmetries/nautymaxlevel", &data_.maxlevel) );
 
    /* call nauty/traces */
 #ifdef NAUTY
@@ -1604,7 +1604,7 @@ SCIP_Bool SYMcheckGraphsAreIdentical(
    data_.symtype = symtype;
    data_.symgrouptype = SYM_GROUPTYPE_SDG;
    data_.nnodessdg = SCIPgetSymgraphNNodes(G1);
-   SCIP_CALL( SCIPgetIntParam(scip, "propagating/symmetry/nautymaxlevel", &data_.maxlevel) ); /*lint !e641*//*lint !e732*/
+   SCIP_CALL( SCIPgetIntParam(scip, "symmetries/nautymaxlevel", &data_.maxlevel) ); /*lint !e641*//*lint !e732*/
 
    /* call nauty/traces */
 #ifdef NAUTY

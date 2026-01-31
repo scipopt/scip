@@ -23,7 +23,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   sym_linorbred.c
- * @brief  symmetry handler for linear reduction and orbital reduction
+ * @brief  symmetry handler for lexicographic reduction and orbital reduction
  * @author Christopher Hojny
  * @author Jasper van Doornmalen
  */
@@ -37,22 +37,25 @@
 #include "scip/pub_sym.h"
 #include "scip/pub_var.h"
 #include "scip/scip_event.h"
+#include "scip/scip_general.h"
 #include "scip/scip_mem.h"
 #include "scip/scip_message.h"
 #include "scip/scip_numerics.h"
 #include "scip/scip_param.h"
 #include "scip/scip_prob.h"
 #include "scip/scip_sym.h"
+#include "scip/scip_tree.h"
 #include "scip/scip_var.h"
-#include "scip/sym_linorbred.h"
+#include "scip/sym_lexorbred.h"
 #include "scip/symmetry.h"
 #include "scip/symmetry_orbital.h"
 #include "scip/symmetry_lexred.h"
 #include "scip/type_implics.h"
+#include "scip/type_set.h"
 
 /* symmetry handler properties */
 #define SYM_NAME            "sym_linorbred"
-#define SYM_DESC            "symmetry handler for linear reduction and orbital reduction"
+#define SYM_DESC            "symmetry handler for lexicographic reduction and orbital reduction"
 #define SYM_PRIORITY            -10000       /**< priority of try-add function*/
 #define SYM_PROPPRIORITY       -100000       /**< priority of propagation method */
 #define SYM_PROPTIMING SCIP_PROPTIMING_BEFORELP /**< timing of propagator method */
@@ -60,7 +63,7 @@
 #define SYM_DELAYPROP            FALSE       /**< Should propagation method be delayed, if other propagators found reductions? */
 
 /* default value of parameters */
-#define DEFAULT_USELINRED         TRUE       /**< Shall linear reduction be used? */
+#define DEFAULT_USELEXRED         TRUE       /**< Shall lexicographic reduction be used? */
 #define DEFAULT_USEORBRED         TRUE       /**< Shall orbital reduction be used? */
 #define DEFAULT_COMPUTENEWPERMS   TRUE       /**< Shall additional permutations of symmetry component be computed? */
 #define DEFAULT_MAXNNEWPERMS       100       /**< maximum number of additional permutations of symmetry component
@@ -74,15 +77,16 @@
 /** symmetry component data */
 struct SCIP_SymCompData
 {
-   SCIP_ORBITALREDDATA*  orbitalreddata;     /**< container for orbital reduction data */
    SCIP_LEXREDDATA*      lexreddata;         /**< container for lexicographic reduction propagation; */
+   SCIP_Bool             active;             /**< whether lexicographic reduction is active on this component */
 };
 
 /** symmetry handler data */
 struct SCIP_SymhdlrData
 {
    SCIP_EVENTHDLR*       shadowtreeeventhdlr; /**< shadow tree event handler */
-   SCIP_Bool             uselinred;          /**< Shall linear reduction be used? */
+   SCIP_ORBITALREDDATA*  orbitalreddata;     /**< container for orbital reduction data */
+   SCIP_Bool             uselexred;          /**< Shall lexicographic reduction be used? */
    SCIP_Bool             useorbred;          /**< Shall orbital reduction be used? */
    SCIP_Bool             computenewperms;    /**< Shall additional permutations of symmetry component be computed? */
    int                   maxnnewperms;       /**< maximum number of additional permutations of symmetry component
@@ -336,15 +340,41 @@ SCIP_RETCODE tryGenerateInvolutions(
    return SCIP_OKAY;
 }
 
+/** returns whether a (signed) permutation is a proper permutation */
+static
+SCIP_Bool isProperPerm(
+   SYM_SYMTYPE           symtype,            /**< symmetry type */
+   int*                  perm,               /**< (signed) permutation */
+   int                   nvars               /**< number of variables the permutation acts on */
+   )
+{
+   int i;
+
+   assert(perm != NULL);
+   assert(nvars > 0);
+
+   if( symtype == SYM_SYMTYPE_PERM )
+      return TRUE;
+
+   for( i = 0; i < nvars; ++i )
+   {
+      if( perm[i] >= nvars )
+         return FALSE;
+   }
+
+   return TRUE;
+}
+
 /*
  * Callback methods of symmetry handler
  */
 
 /** addition method for symmetry method handler plugins (tries to add symmetry handling method for given symmetries) */
 static
-SCIP_DECL_SYMHDLRTRYADD(symhdlrTryaddLinOrbRed)
+SCIP_DECL_SYMHDLRTRYADD(symhdlrTryaddLexOrbRed)
 {  /*lint --e{715}*/
    SCIP_SYMHDLRDATA* symhdlrdata;
+   SCIP_Bool freeproperperms = FALSE;
    int** newperms = NULL;
    int nnewperms = 0;
    int maxnnewperms = 0;
@@ -362,7 +392,7 @@ SCIP_DECL_SYMHDLRTRYADD(symhdlrTryaddLinOrbRed)
    symhdlrdata = SCIPsymhdlrGetData(symhdlr);
    assert(symhdlrdata != NULL);
 
-   if( !symhdlrdata->uselinred && !symhdlrdata->useorbred )
+   if( !symhdlrdata->uselexred && !symhdlrdata->useorbred )
       return SCIP_OKAY;
 
    /* possibly create new permutations */
@@ -373,10 +403,12 @@ SCIP_DECL_SYMHDLRTRYADD(symhdlrTryaddLinOrbRed)
    }
    assert(symhdlrdata->shadowtreeeventhdlr != NULL);
 
-
    SCIP_CALL( SCIPallocBlockMemory(scip, symcompdata) );
+   (*symcompdata)->lexreddata = NULL;
+   (*symcompdata)->active = FALSE;
 
-   if( symhdlrdata->uselinred )
+   /* @symtodo check whether we use orbisack/symresack constraints instead of dynamic methods */
+   if( symhdlrdata->uselexred )
    {
       SCIP_Bool locsuccess;
       SCIP_Real* permvardomaincenter;
@@ -402,10 +434,64 @@ SCIP_DECL_SYMHDLRTRYADD(symhdlrTryaddLinOrbRed)
                permvars, npermvars, newperms[p], (SYM_SYMTYPE) symtype, permvardomaincenter, TRUE, &locsuccess) );
          *success |= locsuccess;
       }
+      (*symcompdata)->active = *success;
 
       SCIPfreeBufferArray(scip, &permvardomaincenter);
    }
+   if( symhdlrdata->useorbred )
+   {
+      int** properperms;
+      int nproperperms;
+      SCIP_Bool locsuccess;
 
+      if( symtype != SYM_SYMTYPE_PERM || nnewperms > 0 )
+      {
+         int i;
+
+         nproperperms = 0;
+         freeproperperms = TRUE;
+
+         SCIP_CALL( SCIPallocBufferArray(scip, &properperms, nperms + nnewperms) );
+         for( p = 0; p < nperms; ++p )
+         {
+            if( isProperPerm(symtype, perms[p], npermvars) )
+            {
+               SCIP_CALL( SCIPallocBufferArray(scip, &properperms[nproperperms], npermvars) );
+               for( i = 0; i < npermvars; ++i )
+                  properperms[nproperperms][i] = perms[p][i];
+               ++nproperperms;
+            }
+         }
+         for( p = 0; p < nnewperms; ++p )
+         {
+            if( isProperPerm(symtype, newperms[p], npermvars) )
+            {
+               SCIP_CALL( SCIPallocBufferArray(scip, &properperms[nproperperms], npermvars) );
+               for( i = 0; i < npermvars; ++i )
+                  properperms[nproperperms][i] = newperms[p][i];
+               ++nproperperms;
+            }
+         }
+      }
+      else
+      {
+         properperms = perms;
+         nproperperms = nperms;
+      }
+
+      SCIP_CALL( SCIPorbitalReductionAddComponent(scip, symhdlrdata->orbitalreddata,
+            permvars, npermvars, properperms, nproperperms, &locsuccess) );
+      *success |= locsuccess;
+
+      if( freeproperperms )
+      {
+         for( p = nproperperms - 1; p >= 0; --p )
+         {
+            SCIPfreeBufferArray(scip, &properperms[p]);
+         }
+         SCIPfreeBufferArray(scip, &properperms);
+      }
+   }
 
    /* free new permutations */
    for( p = nnewperms - 1; p >= 0; --p )
@@ -419,16 +505,27 @@ SCIP_DECL_SYMHDLRTRYADD(symhdlrTryaddLinOrbRed)
 
 /** deinitialization method of symmetry handler (called before transformed problem is freed) */
 static
-SCIP_DECL_SYMHDLREXIT(symhdlrExitLinOrbRed)
+SCIP_DECL_SYMHDLREXIT(symhdlrExitLexOrbRed)
 {  /*lint --e{715}*/
+   SCIP_SYMHDLRDATA* symhdlrdata;
    SCIP_SYMCOMPDATA* symdata;
    int s;
 
+   assert(symcomps != NULL || nsymcomps == 0);
+   assert(symhdlr != NULL);
+
+   symhdlrdata = SCIPsymhdlrGetData(symhdlr);
+   assert(symhdlrdata != NULL);
+
    for( s = 0; s < nsymcomps; ++s )
    {
-      symdata = SCIPsymcompGetData(symcomps[s]);
+      assert(symcomps[s] != NULL);
 
-      if( symdata->lexreddata != NULL )
+      symdata = SCIPsymcompGetData(symcomps[s]);
+      assert(symdata != NULL);
+      assert(symdata->lexreddata != NULL || !symdata->active);
+
+      if( symdata->active )
       {
          SCIP_CALL( SCIPlexicographicReductionReset(scip, symdata->lexreddata) );
          SCIP_CALL( SCIPlexicographicReductionFree(scip, &symdata->lexreddata) );
@@ -436,13 +533,17 @@ SCIP_DECL_SYMHDLREXIT(symhdlrExitLinOrbRed)
 
       SCIPfreeBlockMemory(scip, &symdata);
    }
+   assert(symhdlrdata->orbitalreddata != NULL);
+
+   SCIP_CALL( SCIPorbitalReductionReset(scip, symhdlrdata->orbitalreddata) );
+   SCIP_CALL( SCIPorbitalReductionFree(scip, &symhdlrdata->orbitalreddata) );
 
    return SCIP_OKAY;
 }
 
 /** destructor of symmetry handler to free symmetry handler data (called when SCIP is exiting) */
 static
-SCIP_DECL_SYMHDLRFREE(symhdlrFreeLinOrbRed)
+SCIP_DECL_SYMHDLRFREE(symhdlrFreeLexOrbRed)
 {  /*lint --e{715}*/
    SCIP_SYMHDLRDATA* symhdlrdata;
 
@@ -459,8 +560,9 @@ SCIP_DECL_SYMHDLRFREE(symhdlrFreeLinOrbRed)
 
 /** domain propagation method of symmetry handler */
 static
-SCIP_DECL_SYMHDLRPROP(symhdlrPropLinOrbRed)
+SCIP_DECL_SYMHDLRPROP(symhdlrPropLexOrbRed)
 {  /*lint --e{715}*/
+   SCIP_SYMHDLRDATA* symhdlrdata;
    SCIP_SYMCOMPDATA* symcompdata;
    SCIP_Bool infeasible = FALSE;
    SCIP_Bool didrun = FALSE;
@@ -469,16 +571,34 @@ SCIP_DECL_SYMHDLRPROP(symhdlrPropLinOrbRed)
    int nreds = 0;
    int s;
 
+   assert(symhdlr != NULL);
    assert(symcomps != NULL || nsymcomps == 0);
    assert(result != NULL);
    *result = SCIP_DIDNOTRUN;
 
+   /* do not run if we are in the root or not yet solving */
+   if ( SCIPgetDepth(scip) <= 0 || SCIPgetStage(scip) < SCIP_STAGE_SOLVING )
+      return SCIP_OKAY;
+
+   symhdlrdata = SCIPsymhdlrGetData(symhdlr);
+   assert(symhdlrdata != NULL);
+
+   /* run orbital reduction */
+   SCIP_CALL( SCIPorbitalReductionPropagate(scip, symhdlrdata->orbitalreddata,
+         &infeasible, &nreds, &didrun) );
+   if ( infeasible )
+      return SCIP_OKAY;
+
+   /* run lexicographic reduction */
    for( s = 0; s < nsymcomps; ++s )
    {
       assert(symcomps[s] != NULL);
 
       symcompdata = SCIPsymcompGetData(symcomps[s]);
       assert(symcompdata != NULL);
+
+      if( !symcompdata->active )
+         continue;
 
       SCIP_CALL( SCIPlexicographicReductionPropagate(scip, symcompdata->lexreddata,
             &infeasible, &nredlocal, &didrunlocal) );
@@ -487,8 +607,6 @@ SCIP_DECL_SYMHDLRPROP(symhdlrPropLinOrbRed)
       if ( infeasible )
          return SCIP_OKAY;
    }
-   if( nreds > 0 || infeasible )
-      printf("nreds %d, inf %d\n", nreds, infeasible);
 
    if( infeasible )
       *result = SCIP_CUTOFF;
@@ -500,8 +618,8 @@ SCIP_DECL_SYMHDLRPROP(symhdlrPropLinOrbRed)
    return SCIP_OKAY;
 }
 
-/** include symmetry handler for linear reduction and orbital reduction */
-SCIP_RETCODE SCIPincludeSymhdlrLinOrbRed(
+/** include symmetry handler for lexicographic reduction and orbital reduction */
+SCIP_RETCODE SCIPincludeSymhdlrLexOrbRed(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
@@ -514,8 +632,8 @@ SCIP_RETCODE SCIPincludeSymhdlrLinOrbRed(
 
    SCIP_CALL( SCIPincludeSymhdlrBasic(scip, SYM_NAME, SYM_DESC, SYM_PRIORITY, SYM_PROPPRIORITY, 0, -1,
          SYM_PROPFREQ, -1, SYM_DELAYPROP, FALSE, 1.0, 0, SYM_PROPTIMING, SCIP_PRESOLTIMING_FAST,
-         symhdlrTryaddLinOrbRed, NULL, symhdlrFreeLinOrbRed, NULL, symhdlrExitLinOrbRed,
-         NULL, NULL, NULL, NULL, NULL, NULL, symhdlrPropLinOrbRed,
+         symhdlrTryaddLexOrbRed, NULL, symhdlrFreeLexOrbRed, NULL, symhdlrExitLexOrbRed,
+         NULL, NULL, NULL, NULL, NULL, NULL, symhdlrPropLexOrbRed,
          NULL, NULL, symhdlrdata) );
 
    /* include shadow tree event handler if it is not included yet */
@@ -528,10 +646,15 @@ SCIP_RETCODE SCIPincludeSymhdlrLinOrbRed(
    else
       symhdlrdata->shadowtreeeventhdlr = eventhdlr;
 
+   SCIP_CALL( SCIPincludeOrbitalReduction(scip, &symhdlrdata->orbitalreddata,
+         symhdlrdata->shadowtreeeventhdlr) );
+   assert(symhdlrdata->orbitalreddata != NULL);
+
+
    /* add parameters */
-   SCIP_CALL( SCIPaddBoolParam(scip, "symmetries/" SYM_NAME "/uselinearreduction",
-         "Shall the linear reduction algorithm be used?",
-         &symhdlrdata->uselinred, TRUE, DEFAULT_USELINRED, NULL, NULL) );
+   SCIP_CALL( SCIPaddBoolParam(scip, "symmetries/" SYM_NAME "/uselexicographicreduction",
+         "Shall the lexicographic reduction algorithm be used?",
+         &symhdlrdata->uselexred, TRUE, DEFAULT_USELEXRED, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip, "symmetries/" SYM_NAME "/useorbitalreduction",
          "Shall the orbital reduction algorithm be used?",

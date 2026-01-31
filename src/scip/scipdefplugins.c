@@ -226,7 +226,6 @@ SCIP_RETCODE SCIPincludeDefaultPlugins(
    SCIP_CALL( SCIPincludePropPseudoobj(scip) );
    SCIP_CALL( SCIPincludePropRedcost(scip) );
    SCIP_CALL( SCIPincludePropProbing(scip) );
-   SCIP_CALL( SCIPincludePropSymmetry(scip) );
    SCIP_CALL( SCIPincludePropObbt(scip) );
    SCIP_CALL( SCIPincludePropNlobbt(scip) );
    SCIP_CALL( SCIPincludeSepaClosecuts(scip) );
@@ -250,7 +249,7 @@ SCIP_RETCODE SCIPincludeDefaultPlugins(
    SCIP_CALL( SCIPincludeSepaEccuts(scip) );
    SCIP_CALL( SCIPincludeSepaOddcycle(scip) );
    SCIP_CALL( SCIPincludeSepaRapidlearning(scip) );
-   SCIP_CALL( SCIPincludeSymhdlrLinOrbRed(scip) );
+   SCIP_CALL( SCIPincludeSymhdlrLexOrbRed(scip) );
    SCIP_CALL( SCIPincludeSymhdlrSST(scip) );
    SCIP_CALL( SCIPincludeSymhdlrSymresack(scip) );
    SCIP_CALL( SCIPincludeCutselHybrid(scip) );

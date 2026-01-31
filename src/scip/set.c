@@ -72,6 +72,7 @@
 #include "scip/iisfinder.h"
 #include "scip/pub_nlpi.h"
 #include "scip/struct_scip.h" /* for SCIPsetPrintDebugMessage() */
+#include "symmetry/compute_symmetry.h"
 
 /*
  * Default settings
@@ -567,6 +568,8 @@ static const char SCIP_DEFAULT_CERTIFICATE_FILENAME[2] = {'-', '\0'}; /**< name 
 #define SCIP_DEFAULT_SYM_TRYADDTIMING SYM_TIMING_AFTERPRESOL /**< timing for trying to add symmetry handling methods */ /*@symtodo add explanation of int values */
 #define SCIP_DEFAULT_SYM_MAXNGENERATORS    1500 /**< maximum number of symmetry group generators to be computed (-1: unbounded) */
 #define SCIP_DEFAULT_SYM_SYMTYPE SYM_SYMTYPE_PERM /**< type of symmetries to be considered (0: permutation symmetries, 1: signed permutation symmetries) */
+#define SCIP_DEFAULT_SYM_NAUTYMAXLEVEL    10000 /**< terminate symmetry detection using Nauty when depth level of Nauty's search tree exceeds this number
+                                                 *   (avoids call stack overflows in Nauty for deep graphs) */
 
 /* Writing */
 
@@ -3015,6 +3018,16 @@ SCIP_RETCODE SCIPsetCreate(
          "type of symmetries to be considered (0: permutation symmetries, 1: signed permutation symmetries)",
          &(*set)->sym_symtype, FALSE, SCIP_DEFAULT_SYM_SYMTYPE,
          0, 1, NULL, NULL) );
+
+   /* for symmetry detection tool Nauty, we add further parameters to terminate it early */
+   if ( strncmp(SYMsymmetryGetName(), "Nauty", 5) == 0 )
+   {
+      SCIP_CALL( SCIPaddIntParam(scip,
+            "symmetries/nautymaxlevel",
+            "terminate symmetry detection using Nauty when depth level of Nauty's search tree exceeds this number (-1: unlimited)",
+            NULL, TRUE, SCIP_DEFAULT_SYM_NAUTYMAXLEVEL, -1, INT_MAX, NULL, NULL) );
+   }
+
 
    /* Writing parameters */
    SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
