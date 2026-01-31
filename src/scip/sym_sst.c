@@ -54,7 +54,7 @@
 #define SYM_DESC            "symmetry handler for SST cuts"
 #define SYM_PRIORITY           -100000       /**< priority of try-add function*/
 #define SYM_PRESOLPRIORITY    -1000000       /**< priority of presolving method */
-#define SYM_MAXPRESOLROUND           1       /**< maximum number of presolving rounds */
+#define SYM_MAXPRESOLROUNDS          1       /**< maximum number of presolving rounds */
 
 /* default value of parameters */
 #define DEFAULT_ORBITRULE            1       /**< index of tie break rule for selecting orbit for SST constraints? */
@@ -1765,7 +1765,7 @@ SCIP_RETCODE SCIPincludeSymhdlrSST(
    SCIP_CALL( SCIPallocBlockMemory(scip, &symhdlrdata) );
 
    SCIP_CALL( SCIPincludeSymhdlrBasic(scip, SYM_NAME, SYM_DESC, SYM_PRIORITY, 0, 0, SYM_PRESOLPRIORITY,
-         -1, -1, FALSE, FALSE, 1.0, 1, SCIP_PROPTIMING_BEFORELP, SCIP_PRESOLTIMING_FAST,
+         -1, -1, FALSE, FALSE, 1.0, SYM_MAXPRESOLROUNDS, SCIP_PROPTIMING_BEFORELP, SCIP_PRESOLTIMING_FAST,
          symhdlrTryaddSST, NULL, symhdlrFreeSST, NULL, symhdlrExitSST, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
          NULL, symhdlrPresolSST, symhdlrdata) );
 
