@@ -1038,6 +1038,7 @@ SCIPLIBOBJ	=	scip/boundstore.o \
 			scip/solve.o \
 			scip/stat.o \
 			scip/sym.o \
+			scip/sym_linorbred.o \
 			scip/sym_sst.o \
 			scip/sym_symresack.o \
 			scip/symmetry.o \
