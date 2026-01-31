@@ -850,14 +850,14 @@ SCIP_Bool isInvolution(
 static
 SCIP_RETCODE tryGenerateInvolutions(
    SCIP*                 scip,               /**< SCIP instance */
-   SYM_SYMTYPE symtype,
-   int** perms,
-   int nperms,
-   int npermvars,
-   int maxnnewinvolus,
-   int*** newperms,             /* TODOTODO make sure that this is returned */
-   int* nnewperms,
-   int* lennewperms
+   SYM_SYMTYPE           symtype,            /**< symmetry type */
+   int**                 perms,              /**< (signed) permutations matrix */
+   int                   nperms,             /**< number of permutations */
+   int                   npermvars,          /**< number of variables the permutations act on */
+   int                   maxnnewinvolus,     /**< maximum number of involutions to be computed */
+   int***                newperms,           /**< pointer to store new (signed) permutations */
+   int*                  nnewperms,          /**< pointer to store number of new permutations */
+   int*                  lennewperms         /**< pointer to store length of newperms */
    )
 {
    int* tmpperm;
