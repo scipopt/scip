@@ -45,6 +45,7 @@ OUTFILE="${TMPPATH}/${BASENAME}.out"
 ERRFILE="${TMPPATH}/${BASENAME}.err"
 SOLFILE="${TMPPATH}/${BASENAME}.sol"
 DATFILE="${TMPPATH}/${BASENAME}.dat"
+JSONFILE="${TMPPATH}/${BASENAME}.json"
 TMPFILE="${SOLVERPATH}/${OUTPUTDIR}/${BASENAME}.tmp"
 
 uname -a                            > "${OUTFILE}"
@@ -62,6 +63,11 @@ function cleanup {
     if [ -f "${DATFILE}" ] ;
     then
         mv "${DATFILE}" "${SOLVERPATH}/${OUTPUTDIR}/${BASENAME}.dat"
+    fi
+    # move JSON statistics file
+    if [ -f "${JSONFILE}" ] ;
+    then
+        mv "${JSONFILE}" "${SOLVERPATH}/${OUTPUTDIR}/${BASENAME}.json"
     fi
     rm -f "${TMPFILE}"
     rm -f "${SOLFILE}"
