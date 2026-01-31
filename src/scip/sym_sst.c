@@ -1364,7 +1364,6 @@ SCIP_RETCODE tryAddSSTConss(
       SCIP_CALL( tryGenerateInvolutions(scip, symtype, perms, nperms, npermvars, maxnnewperms,
             &newperms, &nnewperms, &lennewperms) );
       ntotalperms += nnewperms;
-      printf("NNEW PERMS %d\n", nnewperms);
 
       SCIP_CALL( createPermsTranspose(scip, symtype, perms, nperms, npermvars, newperms, nnewperms, &permstrans) );
 
@@ -1648,7 +1647,6 @@ SCIP_DECL_SYMHDLRTRYADD(symhdlrTryaddSST)
          (SST_ORBITRULE)symhdlrdata->orbitrule, (SST_VARTYPE)symhdlrdata->leadervartype,
          symhdlrdata->computenewperms, symhdlrdata->maxnnewperms, symhdlrdata->addconflictcuts,
          symhdlrdata->mixedcomponents, success) );
-   printf("added %d sst conss\n", nsstconss);
 
    /* in case of success, store information in symmetry component's data */
    if( !(*success) )
