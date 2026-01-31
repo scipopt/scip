@@ -260,6 +260,7 @@ SCIP_RETCODE initConcsolver(
    SCIP_VAR** mainvars;
    SCIP_VAR** mainfixedvars;
    SCIP_VAR** mainallvars;
+   SCIP_Bool symmetrybefore;
    SCIP_Bool valid;
    int nmainvars;
    int nmainfixedvars;
@@ -275,10 +276,12 @@ SCIP_RETCODE initConcsolver(
 
    /* we force the copying of symmetry constraints that may have been detected during a central presolving step;
     * otherwise, the copy may become invalid */
-   if( SCIPsetBoolParam(scip, "constraints/orbitope_full/forceconscopy", TRUE) != SCIP_OKAY
+   SCIP_CALL( SCIPgetBoolParam(scip, "concurrent/symmetrybefore", &symmetrybefore) );
+   if( symmetrybefore
+      && ( SCIPsetBoolParam(scip, "constraints/orbitope_full/forceconscopy", TRUE) != SCIP_OKAY
       || SCIPsetBoolParam(scip, "constraints/orbitope_pp/forceconscopy", TRUE) != SCIP_OKAY
       || SCIPsetBoolParam(scip, "constraints/orbisack/forceconscopy", TRUE) != SCIP_OKAY
-      || SCIPsetBoolParam(scip, "constraints/symresack/forceconscopy", TRUE) != SCIP_OKAY )
+      || SCIPsetBoolParam(scip, "constraints/symresack/forceconscopy", TRUE) != SCIP_OKAY ) )
    {
       SCIPdebugMessage("Could not force copying of symmetry constraints\n");
    }
@@ -296,7 +299,7 @@ SCIP_RETCODE initConcsolver(
    assert(valid);
 
    /* include symmetry propagator if symmetry wasn't computed before and user wants symmetry */
-   if( !scip->set->concurrent_symmetrybefore )
+   if( !symmetrybefore )
    {
       SCIP_CALL( SCIPincludePropSymmetry(data->solverscip) );
    }
