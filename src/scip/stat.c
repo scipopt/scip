@@ -366,6 +366,7 @@ void SCIPstatReset(
    stat->firstprimalheur = NULL;
    stat->firstprimaltime = SCIP_DEFAULT_INFINITY;
    stat->firstprimalbound = SCIP_DEFAULT_INFINITY;
+   stat->firstprimaldepth = -1;
    stat->firstsolgap = SCIP_DEFAULT_INFINITY;
    stat->lastsolgap = SCIP_DEFAULT_INFINITY;
    stat->primalzeroittime = 0.0;
