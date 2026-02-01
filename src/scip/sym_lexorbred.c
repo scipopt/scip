@@ -58,7 +58,7 @@
 #include "scip/type_set.h"
 
 /* symmetry handler properties */
-#define SYM_NAME            "sym_linorbred"
+#define SYM_NAME            "sym_lexorbred"
 #define SYM_DESC            "symmetry handler for lexicographic reduction and orbital reduction"
 #define SYM_PRIORITY            -10000       /**< priority of try-add function*/
 #define SYM_PROPPRIORITY       -100000       /**< priority of propagation method */
@@ -889,6 +889,7 @@ SCIP_DECL_SYMHDLRTRYADD(symhdlrTryaddLexOrbRed)
    assert(perms != NULL);
    assert(nperms >= 0);
    assert(permvars != NULL || npermvars == 0);
+   assert(naddedconss != NULL);
 
    *success = FALSE;
 
@@ -948,7 +949,7 @@ SCIP_DECL_SYMHDLRTRYADD(symhdlrTryaddLexOrbRed)
          SCIP_CALL( tryPackingPartitioningOrbisackUpgrade(scip, allperms, nallperms, FALSE,
                permvars, npermvars, permvarmap, &(*symcompdata)->conss, &(*symcompdata)->nconss,
                &(*symcompdata)->maxnconss, success) );
-         printf("nconss: %d\n", (*symcompdata)->nconss);
+         *naddedconss = (*symcompdata)->nconss;
 
          if( nnewperms > 0 )
          {
@@ -1110,6 +1111,44 @@ SCIP_DECL_SYMHDLRPROP(symhdlrPropLexOrbRed)
    return SCIP_OKAY;
 }
 
+/** presolving method of symmetry handler */
+static
+SCIP_DECL_SYMHDLRPRESOL(symhdlrPresolLexOrbRed)
+{  /*lint --e{715}*/
+   SCIP_SYMCOMPDATA* symdata;
+   int s;
+   int c;
+
+   assert(result != NULL);
+   assert(symcomps != NULL || nsymcomps == 0);
+
+   *result = nsymcomps > 0 ? SCIP_DIDNOTFIND : SCIP_DIDNOTRUN;
+
+   for( s = 0; s < nsymcomps; ++s )
+   {
+      symdata = SCIPsymcompGetData(symcomps[s]);
+
+      for( c = 0; c < symdata->nconss; ++c )
+      {
+         SCIP_CALL( SCIPpresolCons(scip, symdata->conss[c], nrounds, presoltiming, nnewfixedvars, nnewaggrvars,
+               nnewchgvartypes, nnewchgbds, nnewholes, nnewdelconss, nnewaddconss, nnewupgdconss, nnewchgcoefs,
+               nnewchgsides, nfixedvars, naggrvars, nchgvartypes, nchgbds, naddholes, ndelconss, naddconss,
+               nupgdconss, nchgcoefs, nchgsides, result) );
+
+         /* exit if cutoff or unboundedness has been detected */
+         if( *result == SCIP_CUTOFF || *result == SCIP_UNBOUNDED )
+         {
+            SCIPdebugMsg(scip, "Presolving constraint <%s> detected cutoff or unboundedness.\n",
+               SCIPconsGetName(symdata->conss[c]));
+            return SCIP_OKAY;
+         }
+      }
+
+   }
+
+   return SCIP_OKAY;
+}
+
 /** include symmetry handler for lexicographic reduction and orbital reduction */
 SCIP_RETCODE SCIPincludeSymhdlrLexOrbRed(
    SCIP*                 scip                /**< SCIP data structure */
@@ -1123,10 +1162,10 @@ SCIP_RETCODE SCIPincludeSymhdlrLexOrbRed(
    SCIP_CALL( SCIPallocBlockMemory(scip, &symhdlrdata) );
 
    SCIP_CALL( SCIPincludeSymhdlrBasic(scip, SYM_NAME, SYM_DESC, SYM_PRIORITY, SYM_PROPPRIORITY, 0, -1,
-         SYM_PROPFREQ, -1, SYM_DELAYPROP, FALSE, 1.0, 0, SYM_PROPTIMING, SCIP_PRESOLTIMING_FAST,
+         SYM_PROPFREQ, -1, SYM_DELAYPROP, FALSE, 1.0, 1, SYM_PROPTIMING, SCIP_PRESOLTIMING_FAST,
          symhdlrTryaddLexOrbRed, NULL, symhdlrFreeLexOrbRed, NULL, symhdlrExitLexOrbRed,
          NULL, NULL, NULL, NULL, NULL, NULL, symhdlrPropLexOrbRed,
-         NULL, NULL, symhdlrdata) );
+         NULL, symhdlrPresolLexOrbRed, symhdlrdata) );
 
    /* include shadow tree event handler if it is not included yet */
    eventhdlr = SCIPfindEventhdlr(scip, "event_shadowtree");
