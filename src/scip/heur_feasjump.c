@@ -92,8 +92,11 @@
 #define DEFAULT_MINPERCENTDECREASE   10  /**< minimum percentage decrease for the number of violated constraints */
 #define DEFAULT_MAXSOLS        1         /**< maximum number of solutions to find */
 #define DEFAULT_BEFORE_PRESOL  FALSE     /**< should the heuristic be called before presolving? */
-
-#define CALLBACK_EFFORT        500000    /**< effort between callbacks */
+#define DEFAULT_SAMPLESIZE     25        /**< number of candidates to sample in tournament selection */
+#define DEFAULT_RANDPROBGOOD   0.001     /**< probability of random selection from good variables */
+#define DEFAULT_RANDPROBVIOL   0.01      /**< probability of random selection from violated constraint */
+#define DEFAULT_CALLBACKEFFORT 500000    /**< effort between callbacks */
+#define DEFAULT_WEIGHTSCALETHRESHOLD 1.0e20 /**< threshold for rescaling weights to avoid overflow */
 
 /* row types */
 enum FJ_Rowtype
@@ -216,6 +219,11 @@ struct FJ_Solver
    int                   nbumps;             /**< number of weight bumps */
    int                   verbosity;          /**< verbosity level */
    int                   checkiterations;    /**< number of iterations to check progress */
+   int                   samplesize;         /**< number of candidates to sample in tournament selection */
+   SCIP_Real             randprobgood;       /**< probability of random selection from good variables */
+   SCIP_Real             randprobviol;       /**< probability of random selection from violated constraint */
+   int                   callbackeffort;     /**< effort between callbacks */
+   SCIP_Real             weightscalethreshold; /**< threshold for rescaling weights to avoid overflow */
 };
 typedef struct FJ_Solver FJ_SOLVER;
 
@@ -234,6 +242,11 @@ struct SCIP_HeurData
    int                   mindecrease;        /**< minimum percentage decrease for the number of violated
                                               *   constraints */
    int                   maxsols;            /**< maximum number of solutions to find */
+   int                   samplesize;         /**< number of candidates to sample in tournament selection */
+   SCIP_Real             randprobgood;       /**< probability of random selection from good variables */
+   SCIP_Real             randprobviol;       /**< probability of random selection from violated constraint */
+   int                   callbackeffort;     /**< effort between callbacks */
+   SCIP_Real             weightscalethreshold; /**< threshold for rescaling weights to avoid overflow */
 };
 
 
@@ -1131,8 +1144,7 @@ SCIP_RETCODE fjSolverResetMoves(
    solver->totaleffort += var->ncoeffs;
    SCIP_CALL( fjSolverUpdateJumpValue(scip, solver, varidx) );
 
-   move->score = 0.0;
-   move->score += solver->objectiveweight * var->objcoeff * (move->value - problem->incumbentassignment[varidx]);
+   move->score = solver->objectiveweight * var->objcoeff * (move->value - problem->incumbentassignment[varidx]);
 
    for( i = 0; i < var->ncoeffs; ++i )
    {
@@ -1176,7 +1188,7 @@ SCIP_RETCODE fjSolverUpdateWeights(
    if( problem->nviolated == 0 )
    {
       solver->objectiveweight += solver->weightupdateincrement;
-      if( solver->objectiveweight > 1.0e20 )
+      if( solver->objectiveweight > solver->weightscalethreshold )
          rescaleallweights = TRUE;
 
       solver->totaleffort += problem->nvars;
@@ -1195,7 +1207,7 @@ SCIP_RETCODE fjSolverUpdateWeights(
          FJ_CONSTRAINT* constraint = &problem->constraints[cstridx];
 
          constraint->weight += solver->weightupdateincrement;
-         if( constraint->weight > 1.0e20 )
+         if( constraint->weight > solver->weightscalethreshold )
             rescaleallweights = TRUE;
 
          solver->totaleffort += constraint->ncoeffs;
@@ -1220,11 +1232,12 @@ SCIP_RETCODE fjSolverUpdateWeights(
 
    if( rescaleallweights )
    {
-      solver->weightupdateincrement *= 1.0e-20;
-      solver->objectiveweight *= 1.0e-20;
+      /* TODO check if rescaling the increment makes sense */ 
+      solver->weightupdateincrement /= solver->weightscalethreshold;
+      solver->objectiveweight /= solver->weightscalethreshold;
 
       for( i = 0; i < problem->nconstraints; ++i )
-         problem->constraints[i].weight *= 1.0e-20;
+         problem->constraints[i].weight /= solver->weightscalethreshold;
 
       solver->totaleffort += problem->nconstraints;
 
@@ -1258,15 +1271,15 @@ SCIP_RETCODE fjSolverSelectVariable(
    {
       SCIP_Real randval = SCIPrandomGetReal(solver->randnumgen, 0.0, 1.0);
 
-      if( randval < 0.001 )
+      if( randval < solver->randprobgood )
       {
          int randomidx = SCIPrandomGetInt(solver->randnumgen, 0, solver->ngoodvars - 1);
          *varidx = solver->goodvarsset[randomidx];
          return SCIP_OKAY;
       }
-
+      else
       {
-         int samplesize = MIN(25, solver->ngoodvars);
+         int samplesize = MIN(solver->samplesize, solver->ngoodvars);
          SCIP_Real bestscore = -INFINITY;
          int bestvar = -1;
 
@@ -1300,13 +1313,13 @@ SCIP_RETCODE fjSolverSelectVariable(
       FJ_CONSTRAINT* constraint = &problem->constraints[cstridx];
       SCIP_Real randval = SCIPrandomGetReal(solver->randnumgen, 0.0, 1.0);
 
-      if( randval < 0.01 )
+      if( randval < solver->randprobviol )
       {
          int randomidx = SCIPrandomGetInt(solver->randnumgen, 0, constraint->ncoeffs - 1);
          *varidx = constraint->coeffs[randomidx].idx;
          return SCIP_OKAY;
       }
-
+      else
       {
          SCIP_Real bestscore = -INFINITY;
          int bestvar = -1;
@@ -1370,7 +1383,12 @@ SCIP_RETCODE fjSolverCreate(
    int                   verbosity,          /**< verbosity level */
    SCIP_Real             weightupdatedecay,  /**< weight update decay */
    SCIP_Real             bestobjective,      /**< best objective value */
-   int                   checkiterations     /**< iterations to check progress */
+   int                   checkiterations,    /**< iterations to check progress */
+   int                   samplesize,         /**< number of candidates to sample in tournament selection */
+   SCIP_Real             randprobgood,       /**< probability of random selection from good variables */
+   SCIP_Real             randprobviol,       /**< probability of random selection from violated constraint */
+   int                   callbackeffort,     /**< effort between callbacks */
+   SCIP_Real             weightscalethreshold /**< threshold for rescaling weights to avoid overflow */
    )
 {
    FJ_SOLVER* solv;
@@ -1386,6 +1404,11 @@ SCIP_RETCODE fjSolverCreate(
    solv->weightupdatedecay = weightupdatedecay;
    solv->bestobjective = bestobjective;
    solv->checkiterations = checkiterations;
+   solv->samplesize = samplesize;
+   solv->randprobgood = randprobgood;
+   solv->randprobviol = randprobviol;
+   solv->callbackeffort = callbackeffort;
+   solv->weightscalethreshold = weightscalethreshold;
 
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &solv->jumpmoves, problem->nvars) );
    for( i = 0; i < problem->nvars; ++i )
@@ -1901,7 +1924,7 @@ SCIP_RETCODE fjCheckTermination(
    *terminate = FALSE;
 
    /* check if callback should be performed */
-   if( solution != NULL || solver->totaleffort - solver->effortatlastcallback > CALLBACK_EFFORT )
+   if( solution != NULL || solver->totaleffort - solver->effortatlastcallback > solver->callbackeffort )
    {
       SCIP_Bool quitnumsol;
       SCIP_Bool quiteffort;
@@ -2020,7 +2043,9 @@ SCIP_RETCODE runFeasjump(
    }
 
    SCIP_CALL( fjSolverCreate(scip, &solver, problem, heurdata->randnumgen, heurdata->verbosity,
-         heurdata->weightupdatedecay, SCIPinfinity(scip), heurdata->iterations) );
+         heurdata->weightupdatedecay, SCIPinfinity(scip), heurdata->iterations, heurdata->samplesize,
+         heurdata->randprobgood, heurdata->randprobviol, heurdata->callbackeffort,
+         heurdata->weightscalethreshold) );
 
    starttime = SCIPgetSolvingTime(scip);
    nsols = 0;
@@ -2273,6 +2298,11 @@ SCIP_RETCODE SCIPincludeHeurFeasjump(
    heurdata->iterations = DEFAULT_ITERATIONS;
    heurdata->mindecrease = DEFAULT_MINPERCENTDECREASE;
    heurdata->maxsols = DEFAULT_MAXSOLS;
+   heurdata->samplesize = DEFAULT_SAMPLESIZE;
+   heurdata->randprobgood = DEFAULT_RANDPROBGOOD;
+   heurdata->randprobviol = DEFAULT_RANDPROBVIOL;
+   heurdata->callbackeffort = DEFAULT_CALLBACKEFFORT;
+   heurdata->weightscalethreshold = DEFAULT_WEIGHTSCALETHRESHOLD;
    heurdata->randnumgen = NULL;
 
    /* include primal heuristic */
@@ -2325,6 +2355,26 @@ SCIP_RETCODE SCIPincludeHeurFeasjump(
          "heuristics/" HEUR_NAME "/maxsols",
          "maximum number of solutions to find",
          &heurdata->maxsols, FALSE, DEFAULT_MAXSOLS, 1, INT_MAX, NULL, NULL) );
+   SCIP_CALL( SCIPaddIntParam(scip,
+         "heuristics/" HEUR_NAME "/samplesize",
+         "number of candidates to sample in tournament selection",
+         &heurdata->samplesize, FALSE, DEFAULT_SAMPLESIZE, 1, INT_MAX, NULL, NULL) );
+   SCIP_CALL( SCIPaddRealParam(scip,
+         "heuristics/" HEUR_NAME "/randprobgood",
+         "probability of random selection from good variables",
+         &heurdata->randprobgood, FALSE, DEFAULT_RANDPROBGOOD, 0.0, 1.0, NULL, NULL) );
+   SCIP_CALL( SCIPaddRealParam(scip,
+         "heuristics/" HEUR_NAME "/randprobviol",
+         "probability of random selection from violated constraint",
+         &heurdata->randprobviol, FALSE, DEFAULT_RANDPROBVIOL, 0.0, 1.0, NULL, NULL) );
+   SCIP_CALL( SCIPaddIntParam(scip,
+         "heuristics/" HEUR_NAME "/callbackeffort",
+         "effort between callbacks",
+         &heurdata->callbackeffort, FALSE, DEFAULT_CALLBACKEFFORT, 1, INT_MAX, NULL, NULL) );
+   SCIP_CALL( SCIPaddRealParam(scip,
+         "heuristics/" HEUR_NAME "/weightscalethreshold",
+         "threshold for rescaling weights to avoid overflow",
+         &heurdata->weightscalethreshold, FALSE, DEFAULT_WEIGHTSCALETHRESHOLD, 1.0, SCIP_REAL_MAX, NULL, NULL) );
 
    return SCIP_OKAY;
 }
