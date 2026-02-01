@@ -30,12 +30,16 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
+#include "scip/cons_setppc.h"
+#include "scip/cons_orbitope.h"
 #include "scip/event_shadowtree.h"
+#include "scip/pub_cons.h"
 #include "scip/pub_implics.h"
 #include "scip/pub_message.h"
 #include "scip/pub_misc.h"
 #include "scip/pub_sym.h"
 #include "scip/pub_var.h"
+#include "scip/scip_cons.h"
 #include "scip/scip_event.h"
 #include "scip/scip_general.h"
 #include "scip/scip_mem.h"
@@ -69,6 +73,7 @@
 #define DEFAULT_MAXNNEWPERMS       100       /**< maximum number of additional permutations of symmetry component
                                               *   that is computed (used to have better approximation of stabilizer);
                                               *   -1: unbounded */
+#define DEFAULT_USEPPPUPGRADE     TRUE       /**< Shall static constraints be used if at least 50% of perms can be handled by pp-orbisacks? */
 
 /*
  * Data structures
@@ -77,6 +82,9 @@
 /** symmetry component data */
 struct SCIP_SymCompData
 {
+   SCIP_CONS**           conss;              /**< static symmetry handling constraints */
+   int                   nconss;             /**< number of static symmetry handling constraints */
+   int                   maxnconss;          /**< maximum number of constraints conss can hold */
    SCIP_LEXREDDATA*      lexreddata;         /**< container for lexicographic reduction propagation; */
    SCIP_Bool             active;             /**< whether lexicographic reduction is active on this component */
 };
@@ -92,11 +100,90 @@ struct SCIP_SymhdlrData
    int                   maxnnewperms;       /**< maximum number of additional permutations of symmetry component
                                               *   that is computed (used to have better approximation of stabilizer);
                                               *   -1: unbounded */
+   SCIP_Bool             useppupgrade;       /**< Shall static constraints be used if at least 50% of perms can be
+                                              *   handled by pp-orbisacks? */
+
 };
+
+/** compare function for sorting an array by the addresses of its members  */
+static
+SCIP_DECL_SORTPTRCOMP(sortByPointerValue)
+{
+   /* @todo move to misc.c? */
+   if ( elem1 < elem2 )
+      return -1;
+   else if ( elem1 > elem2 )
+      return +1;
+   return 0;
+}
 
 /*
  * Local methods
  */
+
+/** checks whether two arrays that are sorted with the same comparator have a common element */
+static
+SCIP_Bool checkSortedArraysHaveOverlappingEntry(
+   void**                arr1,               /**< first array */
+   int                   narr1,              /**< number of elements in first array */
+   void**                arr2,               /**< second array */
+   int                   narr2,              /**< number of elements in second array */
+   SCIP_DECL_SORTPTRCOMP((*compfunc))        /**< comparator function that was used to sort arr1 and arr2; must define a total ordering */
+   )
+{
+   /* @todo move to misc.c? */
+   int it1;
+   int it2;
+   int cmp;
+
+   assert(arr1 != NULL || narr1 == 0);
+   assert(narr1 >= 0);
+   assert(arr2 != NULL || narr2 == 0);
+   assert(narr2 >= 0);
+   assert(compfunc != NULL);
+
+   /* there is no overlap if one of the two arrays is empty */
+   if( narr1 <= 0 )
+      return FALSE;
+   if( narr2 <= 0 )
+      return FALSE;
+
+   it1 = 0;
+   it2 = 0;
+
+   while( TRUE )  /*lint !e716*/
+   {
+      cmp = compfunc(arr1[it1], arr2[it2]);
+      if( cmp < 0 )
+      {
+         /* comparison function determines arr1[it1] < arr2[it2]
+          * increase iterator for arr1
+          */
+         if( ++it1 >= narr1 )
+            break;
+         continue;
+      }
+      else if( cmp > 0 )
+      {
+         /* comparison function determines arr1[it1] > arr2[it2]
+          * increase iterator for arr2
+          */
+         if( ++it2 >= narr2 )
+            break;
+         continue;
+      }
+      else
+      {
+         /* the entries arr1[it1] and arr2[it2] are the same with respect to the comparison function */
+         assert(cmp == 0);
+         return TRUE;
+      }
+   }
+
+   /* no overlap detected */
+   assert(it1 >= narr1 || it2 >= narr2);
+   return FALSE;
+}
 
 /* @symtodo avoid code duplication with sym_sst */
 /** returns whether a permutation is already contained in a list of permutations */
@@ -504,6 +591,283 @@ SCIP_RETCODE addOrbRed(
    return SCIP_OKAY;
 }
 
+/** tries to apply pp-orbitope upgrade if at least 50% of the permutations to pp-orbisacks */
+static
+SCIP_RETCODE tryPackingPartitioningOrbisackUpgrade(
+   SCIP*                 scip,               /**< SCIP data structure */
+   int**                 perms,              /**< permutations */
+   int                   nperms,             /**< number of permutations */
+   SCIP_Bool             hassignedperm,      /**< whether perms contains a signed permutation */
+   SCIP_VAR**            permvars,           /**< variables the permutations act on */
+   int                   npermvars,          /**< number of variables */
+   SCIP_HASHMAP*         permvarmap,         /**< map of variables to indices in permvars array */
+   SCIP_CONS***          addedconss,         /**< pointer to store created constraints */
+   int*                  naddedconss,        /**< pointer to store number of added constraints */
+   int*                  maxnaddedconss,     /**< pointer to store maximum number addedconss can hold */
+   SCIP_Bool*            success             /**< pointer to store if the packing partitioning upgrade succeeded */
+   )
+{
+   int c;
+   int i;
+   int j;
+   int p;
+   int* perm;
+   SCIP_CONSHDLR* setppcconshdlr;
+   SCIP_CONS** setppcconss;
+   SCIP_CONS* cons;
+   SCIP_CONS** setppconsssort;
+   int nsetppconss;
+   int nsetppcvars;
+   SCIP_VAR** setppcvars;
+   int nsetppcconss;
+   int** pporbisackperms;
+   int npporbisackperms;
+   SCIP_VAR* var;
+   int varid;
+   SCIP_CONS*** permvarssetppcconss;
+   int* npermvarssetppcconss;
+   int* maxnpermvarssetppcconss;
+   int maxntwocycles;
+   int ntwocycles;
+
+   assert(scip != NULL);
+   assert(perms != NULL);
+   assert(nperms > 0);
+   assert(success != NULL);
+
+   /* we did not upgrade yet */
+   *success = FALSE;
+   *naddedconss = 0;
+
+   /* currently, we cannot handle signed permutations */
+   if( hassignedperm )
+      return SCIP_OKAY;
+
+   setppcconshdlr = SCIPfindConshdlr(scip, "setppc");
+   if( setppcconshdlr == NULL )
+      return SCIP_OKAY;
+
+   nsetppcconss = SCIPconshdlrGetNConss(setppcconshdlr);
+   if( nsetppcconss == 0 )
+      return SCIP_OKAY;
+
+   setppcconss = SCIPconshdlrGetConss(setppcconshdlr);
+   assert(setppcconss != NULL);
+
+   /* collect non-covering constraints and sort by pointer for easy intersection finding */
+   SCIP_CALL( SCIPallocBufferArray(scip, &setppconsssort, nsetppcconss) );
+   nsetppconss = 0;
+   for( c = 0; c < nsetppcconss; ++c )
+   {
+      cons = setppcconss[c];
+
+      /* only packing or partitioning constraints, no covering types */
+      if( SCIPgetTypeSetppc(scip, cons) == SCIP_SETPPCTYPE_COVERING )
+         continue;
+
+      setppconsssort[nsetppconss++] = cons;
+   }
+   SCIPsortPtr((void**) setppconsssort, sortByPointerValue, nsetppconss);
+
+   /* For each permvar, introduce an array of setppc constraints (initially NULL) for each variable,
+    * and populate it with the setppc constraints that it contains. This array follows the ordering by cons ptr address.
+    */
+   SCIP_CALL( SCIPallocCleanBufferArray(scip, &permvarssetppcconss, npermvars) );
+   SCIP_CALL( SCIPallocCleanBufferArray(scip, &npermvarssetppcconss, npermvars) );
+   SCIP_CALL( SCIPallocCleanBufferArray(scip, &maxnpermvarssetppcconss, npermvars) );
+   for( c = 0; c < nsetppconss; ++c )
+   {
+      cons = setppconsssort[c];
+      assert(cons != NULL);
+
+      setppcvars = SCIPgetVarsSetppc(scip, cons);
+      nsetppcvars = SCIPgetNVarsSetppc(scip, cons);
+
+      for( i = 0; i < nsetppcvars; ++i )
+      {
+         var = setppcvars[i];
+         assert(var != NULL);
+         varid = SCIPhashmapGetImageInt(permvarmap, (void*) var);
+         assert(varid == INT_MAX || varid < npermvars);
+         assert(varid >= 0);
+         if( varid < npermvars )
+         {
+            SCIP_CALL( SCIPensureBlockMemoryArray(scip, &(permvarssetppcconss[varid]),
+                  &maxnpermvarssetppcconss[varid], npermvarssetppcconss[varid] + 1) );
+            assert(npermvarssetppcconss[varid] < maxnpermvarssetppcconss[varid]);
+            permvarssetppcconss[varid][npermvarssetppcconss[varid]++] = cons;
+         }
+      }
+   }
+
+   /* for all permutations, test involutions on binary variables and test if they are captured by setppc conss */
+   SCIP_CALL( SCIPallocBufferArray(scip, &pporbisackperms, nperms) );
+   maxntwocycles = 0;
+   npporbisackperms = 0;
+   for( p = 0; p < nperms; ++p )
+   {
+      perm = perms[p];
+      ntwocycles = 0;
+
+      /* check if the binary orbits are involutions */
+      for( i = 0; i < npermvars; ++i )
+      {
+         j = perm[i];
+
+         /* ignore fixed points in permutation */
+         if( i == j )
+            continue;
+         /* only check for situations where i and j are binary variables */
+         assert(SCIPgetSymInferredVarType(permvars[i]) == SCIPgetSymInferredVarType(permvars[j]));
+         if( SCIPgetSymInferredVarType(permvars[i]) != SCIP_VARTYPE_BINARY )
+            continue;
+         /* the permutation must be an involution on binary variables */
+         if( perm[j] != i )
+            goto NEXTPERMITER;
+         /* i and j are a two-cycle, so we find this once for i and once for j. Only handle this once for i < j. */
+         if( i > j )
+            continue;
+         /* disqualify permutation if i and j are not in a common set packing constraint */
+         if( !checkSortedArraysHaveOverlappingEntry((void**) permvarssetppcconss[i], npermvarssetppcconss[i],
+             (void**) permvarssetppcconss[j], npermvarssetppcconss[j], sortByPointerValue) )
+            goto NEXTPERMITER;
+         ++ntwocycles;
+      }
+
+      /* The permutation qualifies if all binary variables are either a reflection or in a 2-cycle. There must be at
+       * least one binary 2-cycle, because otherwise the permutation is the identity, or it permutes
+       * nonbinary variables.
+       */
+      if( ntwocycles > 0 )
+      {
+         pporbisackperms[npporbisackperms++] = perm;
+         if( ntwocycles > maxntwocycles )
+            maxntwocycles = ntwocycles;
+      }
+
+   NEXTPERMITER:
+      ;
+   }
+
+   /* if at least 50% of such permutations are packing-partitioning type, apply packing upgrade */
+   if( npporbisackperms * 2 >= nperms )
+   {
+      char name[SCIP_MAXSTRLEN];
+      SCIP_VAR** ppvarsblock;
+      SCIP_VAR*** ppvarsmatrix;
+      SCIP_VAR** row;
+      int nrows;
+
+      assert(npporbisackperms > 0);
+      assert(maxntwocycles > 0);
+
+      /* instead of allocating and re-allocating multiple times, recycle the ppvars array */
+      SCIP_CALL( SCIPallocBufferArray(scip, &ppvarsblock, 2 * maxntwocycles) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &ppvarsmatrix, maxntwocycles) );
+      for( i = 0; i < maxntwocycles; ++i )
+         ppvarsmatrix[i] = &(ppvarsblock[2 * i]);
+
+      /* for each of these perms, create the packing orbitope matrix and add constraint*/
+      for( p = 0; p < npporbisackperms; ++p )
+      {
+         perm = pporbisackperms[p];
+
+         /* populate ppvarsmatrix */
+         nrows = 0;
+         for( i = 0; i < npermvars; ++i )
+         {
+            j = perm[i];
+
+            /* ignore fixed points in permutation, and only consider rows with i < j */
+            if( i >= j )
+               continue;
+            /* only check for situations where i and j are binary variables */
+            assert(SCIPgetSymInferredVarType(permvars[i]) == SCIPgetSymInferredVarType(permvars[j]));
+            if( SCIPgetSymInferredVarType(permvars[i]) != SCIP_VARTYPE_BINARY )
+               continue;
+            assert(perm[j] == i);
+            assert(checkSortedArraysHaveOverlappingEntry((void**) permvarssetppcconss[i], npermvarssetppcconss[i],
+               (void**) permvarssetppcconss[j], npermvarssetppcconss[j], sortByPointerValue));
+
+            assert(nrows < maxntwocycles);
+            row = ppvarsmatrix[nrows++];
+            row[0] = permvars[i];
+            row[1] = permvars[j];
+            assert(row[0] != row[1]);
+         }
+         assert(nrows > 0);
+
+         /* create constraint, use same parameterization as in orbitope packing partitioning checker */
+         (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "orbitope_pp_upgrade_lexred%d", p);
+         SCIP_CALL( SCIPcreateConsOrbitope(scip, &cons, name, ppvarsmatrix, SCIP_ORBITOPETYPE_PACKING, nrows, 2,
+               FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+         SCIP_CALL( SCIPensureBlockMemoryArray(scip, addedconss, maxnaddedconss, *naddedconss + 1) );
+         (*addedconss)[(*naddedconss)++] = cons;
+         SCIP_CALL( SCIPaddCons(scip, cons) );
+      }
+
+      SCIPfreeBufferArray(scip, &ppvarsmatrix);
+      SCIPfreeBufferArray(scip, &ppvarsblock);
+
+      *success = TRUE;
+   }
+
+   /* free pp orbisack array */
+   SCIPfreeBufferArray(scip, &pporbisackperms);
+
+   /* clean the non-clean arrays */
+   for( varid = 0; varid < npermvars; ++varid )
+   {
+      assert((permvarssetppcconss[varid] == NULL) == (maxnpermvarssetppcconss[varid] == 0));
+      assert(npermvarssetppcconss[varid] >= 0);
+      assert(maxnpermvarssetppcconss[varid] >= 0);
+      assert(npermvarssetppcconss[varid] <= maxnpermvarssetppcconss[varid]);
+      if( npermvarssetppcconss[varid] == 0 )
+         continue;
+      SCIPfreeBlockMemoryArray(scip, &permvarssetppcconss[varid], maxnpermvarssetppcconss[varid]);
+      permvarssetppcconss[varid] = NULL;
+      npermvarssetppcconss[varid] = 0;
+      maxnpermvarssetppcconss[varid] = 0;
+   }
+   SCIPfreeCleanBufferArray(scip, &maxnpermvarssetppcconss);
+   SCIPfreeCleanBufferArray(scip, &npermvarssetppcconss);
+   SCIPfreeCleanBufferArray(scip, &permvarssetppcconss);
+   SCIPfreeBufferArray(scip, &setppconsssort);
+
+   return SCIP_OKAY;
+}
+
+/** returns whether a list of permutations contains a signed permutation */
+static
+SCIP_Bool hasSignedPerm(
+   SYM_SYMTYPE           symtype,            /**< symmetry type */
+   int**                 perms,              /**< permutations */
+   int                   nperms,             /**< number of permutations */
+   int                   npermvars           /**< number of variables the permutations act on */
+   )
+{
+   int p;
+   int i;
+
+   assert(perms != NULL);
+   assert(nperms > 0);
+   assert(npermvars > 0);
+
+   if( symtype == SYM_SYMTYPE_PERM )
+      return FALSE;
+
+   for( p = 0; p < nperms; ++p )
+   {
+      for( i = 0; i < npermvars; ++i )
+      {
+         if( perms[p][i] >= npermvars )
+            return TRUE;
+      }
+   }
+
+   return FALSE;
+}
 
 /*
  * Callback methods of symmetry handler
@@ -545,8 +909,60 @@ SCIP_DECL_SYMHDLRTRYADD(symhdlrTryaddLexOrbRed)
    SCIP_CALL( SCIPallocBlockMemory(scip, symcompdata) );
    (*symcompdata)->lexreddata = NULL;
    (*symcompdata)->active = FALSE;
+   (*symcompdata)->conss = NULL;
+   (*symcompdata)->nconss = 0;
+   (*symcompdata)->maxnconss = 0;
 
    /* @symtodo check whether we use orbisack/symresack constraints instead of dynamic methods */
+   if( symhdlrdata->useppupgrade )
+   {
+      /* it is sufficient to check for original permutations, because newperms has signed perm iff perms has */
+      if( !hasSignedPerm(symtype, perms, nperms, npermvars) )
+      {
+         int** allperms;
+         int nallperms;
+         int cnt = 0;
+         int i;
+
+         /* store permutations in a single array */
+         nallperms = nperms + nnewperms;
+         if( nnewperms > 0 )
+         {
+            SCIP_CALL( SCIPallocBufferArray(scip, &allperms, nallperms) );
+            for( p = 0; p < nperms; ++p )
+            {
+               SCIP_CALL( SCIPallocBufferArray(scip, &allperms[p], npermvars) );
+               for( i = 0; i < npermvars; ++i )
+                  allperms[p][i] = perms[p][i];
+            }
+            for( p = 0, cnt = nperms; p < nnewperms; ++p, ++cnt )
+            {
+               SCIP_CALL( SCIPallocBufferArray(scip, &allperms[cnt], npermvars) );
+               for( i = 0; i < npermvars; ++i )
+                  allperms[cnt][i] = newperms[p][i];
+            }
+         }
+         else
+            allperms = perms;
+
+         SCIP_CALL( tryPackingPartitioningOrbisackUpgrade(scip, allperms, nallperms, FALSE,
+               permvars, npermvars, permvarmap, &(*symcompdata)->conss, &(*symcompdata)->nconss,
+               &(*symcompdata)->maxnconss, success) );
+         printf("nconss: %d\n", (*symcompdata)->nconss);
+
+         if( nnewperms > 0 )
+         {
+            for( p = nallperms - 1; p >= 0; --p )
+            {
+               SCIPfreeBufferArray(scip, &allperms[p]);
+            }
+            SCIPfreeBufferArray(scip, &allperms);
+         }
+
+         if( *success )
+            goto FREEMEMORY;
+      }
+   }
    if( symhdlrdata->uselexred )
    {
       SCIP_CALL( addLexRed(scip, *symcompdata, symhdlrdata->shadowtreeeventhdlr,
@@ -561,6 +977,7 @@ SCIP_DECL_SYMHDLRTRYADD(symhdlrTryaddLexOrbRed)
       *success |= locsuccess;
    }
 
+ FREEMEMORY:
    /* free new permutations */
    for( p = nnewperms - 1; p >= 0; --p )
    {
@@ -578,6 +995,7 @@ SCIP_DECL_SYMHDLREXIT(symhdlrExitLexOrbRed)
    SCIP_SYMHDLRDATA* symhdlrdata;
    SCIP_SYMCOMPDATA* symdata;
    int s;
+   int c;
 
    assert(symcomps != NULL || nsymcomps == 0);
    assert(symhdlr != NULL);
@@ -598,6 +1016,12 @@ SCIP_DECL_SYMHDLREXIT(symhdlrExitLexOrbRed)
          SCIP_CALL( SCIPlexicographicReductionReset(scip, symdata->lexreddata) );
          SCIP_CALL( SCIPlexicographicReductionFree(scip, &symdata->lexreddata) );
       }
+
+      for( c = 0; c < symdata->nconss; ++c )
+      {
+         SCIP_CALL( SCIPreleaseCons(scip, &symdata->conss[c]) );
+      }
+      SCIPfreeBlockMemoryArrayNull(scip, &symdata->conss, symdata->maxnconss);
 
       SCIPfreeBlockMemory(scip, &symdata);
    }
@@ -718,7 +1142,6 @@ SCIP_RETCODE SCIPincludeSymhdlrLexOrbRed(
          symhdlrdata->shadowtreeeventhdlr) );
    assert(symhdlrdata->orbitalreddata != NULL);
 
-
    /* add parameters */
    SCIP_CALL( SCIPaddBoolParam(scip, "symmetries/" SYM_NAME "/uselexicographicreduction",
          "Shall the lexicographic reduction algorithm be used?",
@@ -736,6 +1159,10 @@ SCIP_RETCODE SCIPincludeSymhdlrLexOrbRed(
          "maximum number of additional permutations of symmetry component that is computed " \
          "(used to have better approximation of stabilizer); -1: unbounded",
          &symhdlrdata->maxnnewperms, TRUE, DEFAULT_MAXNNEWPERMS, -1, INT_MAX, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip, "symmetries/" SYM_NAME "/checkppupgrade",
+         "Shall static constraints be used if at least 50 percent of perms can be handled by pp-orbisacks?",
+         &symhdlrdata->useppupgrade, TRUE, DEFAULT_USEPPPUPGRADE, NULL, NULL) );
 
    return SCIP_OKAY;
 }
