@@ -67,7 +67,9 @@ function cleanup {
     # move JSON statistics file
     if [ -f "${JSONFILE}" ] ;
     then
-        mv "${JSONFILE}" "${SOLVERPATH}/${OUTPUTDIR}/${BASENAME}.json"
+        ( echo -n "\"${FILENAME}\" : " ;
+          cat "${JSONFILE}"
+        ) > "${SOLVERPATH}/${OUTPUTDIR}/${BASENAME}.json"
     fi
     rm -f "${TMPFILE}"
     rm -f "${SOLFILE}"
