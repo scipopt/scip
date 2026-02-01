@@ -365,6 +365,146 @@ SCIP_Bool isProperPerm(
    return TRUE;
 }
 
+/** add lexicographic reduction for given permutations */
+static
+SCIP_RETCODE addLexRed(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SYMCOMPDATA*     symcompdata,        /**< data of symmetry component */
+   SCIP_EVENTHDLR*       shadowtreeeventhdlr,/**< shadow tree event handler */
+   SYM_SYMTYPE           symtype,            /**< symmetry type */
+   int**                 perms,              /**< permutations */
+   int                   nperms,             /**< number of permutations */
+   int**                 moreperms,          /**< additional permutations */
+   int                   nmoreperms,         /**< number of additional permutations */
+   SCIP_VAR**            permvars,           /**< variables permutations act on */
+   int                   npermvars,          /**< numnber of variables */
+   SCIP_Bool*            success             /**< pointer to store whether lexred could be added */
+   )
+{
+   SCIP_Real* permvardomaincenter;
+   SCIP_Bool locsuccess;
+   int p;
+
+   assert(scip != NULL);
+   assert(symcompdata != NULL);
+   assert(shadowtreeeventhdlr != NULL);
+   assert(perms != NULL);
+   assert(nperms > 0);
+   assert(moreperms != NULL || nmoreperms == 0);
+   assert(permvars != NULL);
+   assert(npermvars > 0);
+   assert(success != NULL);
+
+   *success = FALSE;
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &permvardomaincenter, npermvars) );
+   for( p = 0; p < npermvars; ++p )
+      permvardomaincenter[p] = (SCIPvarGetUbLocal(permvars[p]) + SCIPvarGetLbLocal(permvars[p])) / 2;
+
+   SCIP_CALL( SCIPincludeLexicographicReduction(scip, &symcompdata->lexreddata, shadowtreeeventhdlr) );
+   assert(symcompdata->lexreddata != NULL);
+
+   /* add all permutations to lexicograph reduction */
+   for( p = 0; p < nperms; ++p )
+   {
+      SCIP_CALL( SCIPlexicographicReductionAddPermutation(scip, symcompdata->lexreddata,
+            permvars, npermvars, perms[p], (SYM_SYMTYPE) symtype, permvardomaincenter, TRUE, &locsuccess) );
+      *success |= locsuccess;
+   }
+   for( p = 0; p < nmoreperms; ++p )
+   {
+      SCIP_CALL( SCIPlexicographicReductionAddPermutation(scip, symcompdata->lexreddata,
+            permvars, npermvars, moreperms[p], (SYM_SYMTYPE) symtype, permvardomaincenter, TRUE, &locsuccess) );
+      *success |= locsuccess;
+   }
+   symcompdata->active = *success;
+
+   SCIPfreeBufferArray(scip, &permvardomaincenter);
+
+   return SCIP_OKAY;
+}
+
+/** adds orbital reduction for given permutations */
+static
+SCIP_RETCODE addOrbRed(
+   SCIP*                 scip,               /**< SCIP datat structure */
+   SCIP_ORBITALREDDATA*  orbitalreddata,     /**< data for orbital reduction */
+   SYM_SYMTYPE           symtype,            /**< symmetry type */
+   int**                 perms,              /**< permutations */
+   int                   nperms,             /**< number of permutations */
+   int**                 moreperms,          /**< additional permutations */
+   int                   nmoreperms,         /**< number of additional permutations */
+   SCIP_VAR**            permvars,           /**< variables the permutations act on */
+   int                   npermvars,          /**< number of variables */
+   SCIP_Bool*            success             /**< pointer to store whether orbital reduction could be added */
+   )
+{
+   SCIP_Bool freeproperperms = FALSE;
+   int** properperms;
+   int nproperperms;
+   int p;
+
+   assert(scip != NULL);
+   assert(orbitalreddata != NULL);
+   assert(perms != NULL);
+   assert(nperms > 0);
+   assert(moreperms != NULL || nmoreperms == 0);
+   assert(permvars != NULL);
+   assert(npermvars > 0);
+   assert(success != NULL);
+
+   /* store proper permutations in single data structure */
+   if( symtype != SYM_SYMTYPE_PERM || nmoreperms > 0 )
+   {
+      int i;
+
+      nproperperms = 0;
+      freeproperperms = TRUE;
+
+      SCIP_CALL( SCIPallocBufferArray(scip, &properperms, nperms + nmoreperms) );
+      for( p = 0; p < nperms; ++p )
+      {
+         if( isProperPerm(symtype, perms[p], npermvars) )
+         {
+            SCIP_CALL( SCIPallocBufferArray(scip, &properperms[nproperperms], npermvars) );
+            for( i = 0; i < npermvars; ++i )
+               properperms[nproperperms][i] = perms[p][i];
+            ++nproperperms;
+         }
+      }
+      for( p = 0; p < nmoreperms; ++p )
+      {
+         if( isProperPerm(symtype, moreperms[p], npermvars) )
+         {
+            SCIP_CALL( SCIPallocBufferArray(scip, &properperms[nproperperms], npermvars) );
+            for( i = 0; i < npermvars; ++i )
+               properperms[nproperperms][i] = moreperms[p][i];
+            ++nproperperms;
+         }
+      }
+   }
+   else
+   {
+      properperms = perms;
+      nproperperms = nperms;
+   }
+
+   SCIP_CALL( SCIPorbitalReductionAddComponent(scip, orbitalreddata, permvars, npermvars,
+         properperms, nproperperms, success) );
+
+   if( freeproperperms )
+   {
+      for( p = nproperperms - 1; p >= 0; --p )
+      {
+         SCIPfreeBufferArray(scip, &properperms[p]);
+      }
+      SCIPfreeBufferArray(scip, &properperms);
+   }
+
+   return SCIP_OKAY;
+}
+
+
 /*
  * Callback methods of symmetry handler
  */
@@ -374,7 +514,6 @@ static
 SCIP_DECL_SYMHDLRTRYADD(symhdlrTryaddLexOrbRed)
 {  /*lint --e{715}*/
    SCIP_SYMHDLRDATA* symhdlrdata;
-   SCIP_Bool freeproperperms = FALSE;
    int** newperms = NULL;
    int nnewperms = 0;
    int maxnnewperms = 0;
@@ -410,87 +549,16 @@ SCIP_DECL_SYMHDLRTRYADD(symhdlrTryaddLexOrbRed)
    /* @symtodo check whether we use orbisack/symresack constraints instead of dynamic methods */
    if( symhdlrdata->uselexred )
    {
-      SCIP_Bool locsuccess;
-      SCIP_Real* permvardomaincenter;
-
-      SCIP_CALL( SCIPallocBufferArray(scip, &permvardomaincenter, npermvars) );
-      for( p = 0; p < npermvars; ++p )
-         permvardomaincenter[p] = (SCIPvarGetUbLocal(permvars[p]) + SCIPvarGetLbLocal(permvars[p])) / 2;
-
-      SCIP_CALL( SCIPincludeLexicographicReduction(scip, &(*symcompdata)->lexreddata,
-            symhdlrdata->shadowtreeeventhdlr) );
-      assert((*symcompdata)->lexreddata != NULL);
-
-      /* add all permutations to lexicograph reduction */
-      for( p = 0; p < nperms; ++p )
-      {
-         SCIP_CALL( SCIPlexicographicReductionAddPermutation(scip, (*symcompdata)->lexreddata,
-               permvars, npermvars, perms[p], (SYM_SYMTYPE) symtype, permvardomaincenter, TRUE, &locsuccess) );
-         *success |= locsuccess;
-      }
-      for( p = 0; p < nnewperms; ++p )
-      {
-         SCIP_CALL( SCIPlexicographicReductionAddPermutation(scip, (*symcompdata)->lexreddata,
-               permvars, npermvars, newperms[p], (SYM_SYMTYPE) symtype, permvardomaincenter, TRUE, &locsuccess) );
-         *success |= locsuccess;
-      }
-      (*symcompdata)->active = *success;
-
-      SCIPfreeBufferArray(scip, &permvardomaincenter);
+      SCIP_CALL( addLexRed(scip, *symcompdata, symhdlrdata->shadowtreeeventhdlr,
+            symtype, perms, nperms, newperms, nnewperms, permvars, npermvars, success) );
    }
    if( symhdlrdata->useorbred )
    {
-      int** properperms;
-      int nproperperms;
-      SCIP_Bool locsuccess;
+      SCIP_Bool locsuccess = FALSE;
 
-      if( symtype != SYM_SYMTYPE_PERM || nnewperms > 0 )
-      {
-         int i;
-
-         nproperperms = 0;
-         freeproperperms = TRUE;
-
-         SCIP_CALL( SCIPallocBufferArray(scip, &properperms, nperms + nnewperms) );
-         for( p = 0; p < nperms; ++p )
-         {
-            if( isProperPerm(symtype, perms[p], npermvars) )
-            {
-               SCIP_CALL( SCIPallocBufferArray(scip, &properperms[nproperperms], npermvars) );
-               for( i = 0; i < npermvars; ++i )
-                  properperms[nproperperms][i] = perms[p][i];
-               ++nproperperms;
-            }
-         }
-         for( p = 0; p < nnewperms; ++p )
-         {
-            if( isProperPerm(symtype, newperms[p], npermvars) )
-            {
-               SCIP_CALL( SCIPallocBufferArray(scip, &properperms[nproperperms], npermvars) );
-               for( i = 0; i < npermvars; ++i )
-                  properperms[nproperperms][i] = newperms[p][i];
-               ++nproperperms;
-            }
-         }
-      }
-      else
-      {
-         properperms = perms;
-         nproperperms = nperms;
-      }
-
-      SCIP_CALL( SCIPorbitalReductionAddComponent(scip, symhdlrdata->orbitalreddata,
-            permvars, npermvars, properperms, nproperperms, &locsuccess) );
+      SCIP_CALL( addOrbRed(scip, symhdlrdata->orbitalreddata, symtype, perms, nperms, newperms, nnewperms,
+            permvars, npermvars, &locsuccess) );
       *success |= locsuccess;
-
-      if( freeproperperms )
-      {
-         for( p = nproperperms - 1; p >= 0; --p )
-         {
-            SCIPfreeBufferArray(scip, &properperms[p]);
-         }
-         SCIPfreeBufferArray(scip, &properperms);
-      }
    }
 
    /* free new permutations */
