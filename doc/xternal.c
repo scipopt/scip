@@ -4150,12 +4150,12 @@
  * adjusting the corresponding parameter setting. Whenever, even during solving, the priority of an iis finder is
  * changed, then when a call is made to generate an IIS, the iis finders are resorted by the new priorities.
  *
- * \par IISFINDER_ENABLE: whether the iis finder should be enabled.
- * This means that the IIS finder will only be run if this property is set to TRUE, with the one exception:
- * If the parameter iis/irreducible is set to TRUE, the irreducibility-ensuring function `SCIPiisGreedyMakeIrreducible()`
- * (src/scip/iisfinder_greedy.c) will be run after all iis finders whether or not the greedy iis finder is enabled.
+ * \par IISFINDER_ENABLE: whether the IIS finder should be enabled in the main loop.
+ * This means that the IIS finder will only be run if this property is set to TRUE, with the following exception:
+ * If the parameter iis/irreducible is set to TRUE, after calling all enabled IIS finders the irreducibility-ensuring function `SCIPiisGreedyMakeIrreducible()`
+ * will run the greedy IIS finder whether or not it is enabled.
  * \n
- * Note that this property only defines the default setting. The user may change this value arbitrarily by
+ * Note that this property only defines the default enable flag. The user may change this value arbitrarily by
  * adjusting the corresponding parameter setting.
  *
  *
