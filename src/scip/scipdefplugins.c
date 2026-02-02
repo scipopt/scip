@@ -250,6 +250,7 @@ SCIP_RETCODE SCIPincludeDefaultPlugins(
    SCIP_CALL( SCIPincludeSepaOddcycle(scip) );
    SCIP_CALL( SCIPincludeSepaRapidlearning(scip) );
    SCIP_CALL( SCIPincludeSymhdlrLexOrbRed(scip) );
+   SCIP_CALL( SCIPincludeSymhdlrRowCol(scip) );
    SCIP_CALL( SCIPincludeSymhdlrSST(scip) );
    SCIP_CALL( SCIPincludeSymhdlrSymresack(scip) );
    SCIP_CALL( SCIPincludeCutselHybrid(scip) );

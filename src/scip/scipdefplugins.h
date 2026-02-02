@@ -254,6 +254,7 @@
 #include "scip/sepa_zerohalf.h"
 #include "scip/scipshell.h"
 #include "scip/sym_lexorbred.h"
+#include "scip/sym_rowcol.h"
 #include "scip/sym_sst.h"
 #include "scip/sym_symresack.h"
 #include "scip/symmetry.h"
