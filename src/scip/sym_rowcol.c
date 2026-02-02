@@ -1302,7 +1302,7 @@ SCIP_RETCODE tryHandleSingleOrDoubleLexMatrices(
          }
 
          /* if we have not handled the orbitope yet, handle it as unsigned orbitope and the orbitope is large */
-         if( (!success) && percentageunsigned > 0.8 )
+         if( (!locsuccess) && percentageunsigned > 0.8 )
          {
             SCIP_CALL( handleOrbitope(scip, symtype, perms, permvars, npermvars, permvardomaincenter, cidx, lexmatrix,
                   nrows, ncols, partialname, FALSE, FALSE, lexreddata, lexredactive, orbitopalreddata, orbitopeconss,
