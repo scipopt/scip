@@ -1344,6 +1344,9 @@ SCIP_DECL_SYMHDLRTRYADD(symhdlrTryaddRowCol)
 
    if( !(*success) )
    {
+      SCIP_CALL( SCIPlexicographicReductionReset(scip, (*symcompdata)->lexreddata) );
+      SCIP_CALL( SCIPlexicographicReductionFree(scip, &(*symcompdata)->lexreddata) );
+
       SCIPfreeBlockMemory(scip, symcompdata);
       *symcompdata = NULL;
 
