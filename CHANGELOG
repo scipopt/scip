@@ -14,15 +14,24 @@ Interface changes
 ### Deleted and changed API methods
 
 - SCIPcreateSymgraph() receives an additional argument to specify an epsilon value that is used for epsilon-comparisons
+- SCIPincludeIISfinder() receives an additional argument to set whether it should be enabled
+- SCIPincludeIISfinderBasic() receives an additional argument to set whether it should be enabled
 
 ### New API functions
 
 - added SYMcomputeSymmetryGeneratorsNode() to compute generators of the automorphism group of an entire (node set) of a symmetry detection graph
+- added SCIPiisfinderGetEnable() to check whether an iis finder is enabled
+- added SCIPiisfinderSetEnable() to set whether an iis finder is enabled
+
+### New parameters
+
+- `iis/<iisfinder>/enable`: whether to enable the iis finder of name <iisfinder>, e.g., greedy
 
 ### Data structures
 
 - struct SYM_Graph receives an additional field to specify an epsilon value that is used for epsilon-comparisons
 - new enum SYM_GROUPTYPE to encode which symmetry group of a symmetry detection graph is computed
+- struct SCIP_IISFINDER receives the additional field enable to set whether it should be enabled
 
 @page RN10 Release notes for SCIP 10
 

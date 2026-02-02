@@ -142,6 +142,7 @@ SCIP_RETCODE SCIPincludeObjIISfinder(
    /* include iis finder */
    SCIP_CALL( SCIPincludeIISfinder(scip, objiisfinder->scip_name_, objiisfinder->scip_desc_,
          objiisfinder->scip_priority_,
+         objiisfinder->scip_enable_,
          iisfinderCopyObj,
          iisfinderFreeObj,
          iisfinderExecObj,

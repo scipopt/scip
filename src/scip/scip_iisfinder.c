@@ -50,6 +50,7 @@ SCIP_RETCODE SCIPincludeIISfinder(
    const char*           name,               /**< name of IIS finder */
    const char*           desc,               /**< description of IIS finder */
    int                   priority,           /**< priority of the IIS finder */
+   SCIP_Bool             enable,             /**< whether the IIS finder should be enabled */
    SCIP_DECL_IISFINDERCOPY ((*iisfindercopy)), /**< copy method of IIS finder or NULL if you don't want to copy your plugin into sub-SCIPs */
    SCIP_DECL_IISFINDERFREE ((*iisfinderfree)), /**< destructor of IIS finder */
    SCIP_DECL_IISFINDEREXEC ((*iisfinderexec)), /**< IIS finder execution method */
@@ -68,7 +69,7 @@ SCIP_RETCODE SCIPincludeIISfinder(
    }
 
    SCIP_CALL( SCIPiisfinderCreate(&iisfinder, scip->set, scip->messagehdlr, scip->mem->setmem, name, desc, priority,
-         iisfindercopy, iisfinderfree, iisfinderexec, iisfinderdata) );
+         enable, iisfindercopy, iisfinderfree, iisfinderexec, iisfinderdata) );
    SCIP_CALL( SCIPsetIncludeIISfinder(scip->set, iisfinder) );
 
    return SCIP_OKAY;
@@ -87,6 +88,7 @@ SCIP_RETCODE SCIPincludeIISfinderBasic(
    const char*           name,               /**< name of IIS finder */
    const char*           desc,               /**< description of IIS finder */
    int                   priority,           /**< priority of the IIS finder in standard mode */
+   SCIP_Bool             enable,             /**< whether the IIS finder should be enabled */
    SCIP_DECL_IISFINDEREXEC((*iisfinderexec)), /**< IIS finder execution method */
    SCIP_IISFINDERDATA*   iisfinderdata       /**< IIS finder data */
    )
@@ -103,7 +105,7 @@ SCIP_RETCODE SCIPincludeIISfinderBasic(
     }
 
     SCIP_CALL( SCIPiisfinderCreate(&iisfinderptr, scip->set, scip->messagehdlr, scip->mem->setmem, name, desc, priority,
-          NULL, NULL, iisfinderexec, iisfinderdata) );
+          enable, NULL, NULL, iisfinderexec, iisfinderdata) );
     SCIP_CALL( SCIPsetIncludeIISfinder(scip->set, iisfinderptr) );
 
     if( iisfinder != NULL )

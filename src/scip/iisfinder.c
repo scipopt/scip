@@ -246,14 +246,17 @@ SCIP_RETCODE doIISfinderCreate(
    const char*           name,               /**< name of IIS finder */
    const char*           desc,               /**< description of IIS finder */
    int                   priority,           /**< priority of the IIS finder */
+   SCIP_Bool             enable,             /**< whether the IIS finder should be enabled */
    SCIP_DECL_IISFINDERCOPY ((*iisfindercopy)), /**< copy method of IIS finder or NULL if you don't want to copy your plugin into sub-SCIPs */
    SCIP_DECL_IISFINDERFREE ((*iisfinderfree)), /**< destructor of IIS finder */
    SCIP_DECL_IISFINDEREXEC ((*iisfinderexec)), /**< IIS finder execution method */
    SCIP_IISFINDERDATA*   iisfinderdata       /**< IIS finder data */
    )
 {
-   char paramname[SCIP_MAXSTRLEN];
-   char paramdesc[SCIP_MAXSTRLEN];
+   char priorityparamname[SCIP_MAXSTRLEN];
+   char priorityparamdesc[SCIP_MAXSTRLEN];
+   char enableparamname[SCIP_MAXSTRLEN];
+   char enableparamdesc[SCIP_MAXSTRLEN];
 
    assert(iisfinder != NULL);
    assert(name != NULL);
@@ -265,6 +268,7 @@ SCIP_RETCODE doIISfinderCreate(
    SCIP_ALLOC( BMSduplicateBlockMemoryArray(blkmem, &(*iisfinder)->name, name, strlen(name)+1) );
    SCIP_ALLOC( BMSduplicateBlockMemoryArray(blkmem, &(*iisfinder)->desc, desc, strlen(desc)+1) );
    (*iisfinder)->priority = priority;
+   (*iisfinder)->enable = enable;
    (*iisfinder)->iisfindercopy = iisfindercopy;
    (*iisfinder)->iisfinderfree = iisfinderfree;
    (*iisfinder)->iisfinderexec = iisfinderexec;
@@ -274,11 +278,15 @@ SCIP_RETCODE doIISfinderCreate(
    SCIP_CALL( SCIPclockCreate(&(*iisfinder)->iisfindertime, SCIP_CLOCKTYPE_DEFAULT) );
 
    /* add parameters */
-   (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "iis/%s/priority", name);
-   (void) SCIPsnprintf(paramdesc, SCIP_MAXSTRLEN, "priority of iis generation rule <%s>", name);
-   SCIP_CALL( SCIPsetAddIntParam(set, messagehdlr, blkmem, paramname, paramdesc,
+   (void) SCIPsnprintf(priorityparamname, SCIP_MAXSTRLEN, "iis/%s/priority", name);
+   (void) SCIPsnprintf(priorityparamdesc, SCIP_MAXSTRLEN, "priority of iis generation rule <%s>", name);
+   SCIP_CALL( SCIPsetAddIntParam(set, messagehdlr, blkmem, priorityparamname, priorityparamdesc,
          &(*iisfinder)->priority, FALSE, priority, INT_MIN/4, INT_MAX/2,
          paramChgdIISfinderPriority, (SCIP_PARAMDATA*)(*iisfinder)) ); /*lint !e740*/
+   (void) SCIPsnprintf(enableparamname, SCIP_MAXSTRLEN, "iis/%s/enable", name);
+   (void) SCIPsnprintf(enableparamdesc, SCIP_MAXSTRLEN, "whether the iis finder <%s> should be enabled", name);
+   SCIP_CALL( SCIPsetAddBoolParam(set, messagehdlr, blkmem, enableparamname, enableparamdesc,
+         &(*iisfinder)->enable, FALSE, enable, NULL, NULL) );
 
    return SCIP_OKAY;
 }
@@ -293,6 +301,7 @@ SCIP_RETCODE SCIPiisfinderCreate(
    const char*           name,               /**< name of IIS finder */
    const char*           desc,               /**< description of IIS finder */
    int                   priority,           /**< priority of the IIS finder in standard mode */
+   SCIP_Bool             enable,             /**< whether the IIS finder should be enabled */
    SCIP_DECL_IISFINDERCOPY ((*iisfindercopy)), /**< copy method of IIS finder or NULL if you don't want to copy your plugin into sub-SCIPs */
    SCIP_DECL_IISFINDERFREE ((*iisfinderfree)), /**< destructor of IIS finder */
    SCIP_DECL_IISFINDEREXEC ((*iisfinderexec)), /**< IIS finder execution method */
@@ -304,7 +313,7 @@ SCIP_RETCODE SCIPiisfinderCreate(
    assert(desc != NULL);
    assert(iisfinderexec != NULL);
 
-   SCIP_CALL_FINALLY( doIISfinderCreate(iisfinder, set, messagehdlr, blkmem, name, desc, priority,
+   SCIP_CALL_FINALLY( doIISfinderCreate(iisfinder, set, messagehdlr, blkmem, name, desc, priority, enable,
          iisfindercopy, iisfinderfree, iisfinderexec, iisfinderdata), (void) SCIPiisfinderFree(iisfinder, set, blkmem) );
 
    return SCIP_OKAY;
@@ -470,6 +479,10 @@ SCIP_RETCODE SCIPiisGenerate(
          SCIP_IISFINDER* iisfinder;
          iisfinder = set->iisfinders[i];
          assert( iis->infeasible );
+
+         /* skip disabled IIS finders */
+         if( !iisfinder->enable )
+            continue;
 
          /* start timing */
          SCIPclockStart(iisfinder->iisfindertime, set);
@@ -679,6 +692,16 @@ int SCIPiisfinderGetPriority(
    return iisfinder->priority;
 }
 
+/** returns whether IIS finder is enabled */
+SCIP_Bool SCIPiisfinderGetEnable(
+   SCIP_IISFINDER*       iisfinder           /**< IIS finder */
+   )
+{
+   assert(iisfinder != NULL);
+
+   return iisfinder->enable;
+}
+
 /** enables or disables all clocks of @p iisfinder, depending on the value of the flag */
 void SCIPiisfinderEnableOrDisableClocks(
    SCIP_IISFINDER*       iisfinder,          /**< the IIS finder for which all clocks should be enabled or disabled */
@@ -724,6 +747,17 @@ void SCIPiisfinderSetPriority(
 
    iisfinder->priority = priority;
    set->iisfinderssorted = FALSE;
+}
+
+/** enables/disables IIS finder */
+void SCIPiisfinderSetEnable(
+   SCIP_IISFINDER*       iisfinder,          /**< IIS finder */
+   SCIP_Bool             enable              /**< whether the IIS finder should be enabled */
+   )
+{
+   assert(iisfinder != NULL);
+
+   iisfinder->enable = enable;
 }
 
 /** gets time in seconds used in this IIS finder */
