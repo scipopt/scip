@@ -1426,11 +1426,8 @@ SCIP_DECL_SYMHDLREXIT(symhdlrExitRowCol)
       assert(symdata != NULL);
       assert(symdata->lexreddata != NULL || !symdata->lexredactive);
 
-      if( symdata->lexredactive )
-      {
-         SCIP_CALL( SCIPlexicographicReductionReset(scip, symdata->lexreddata) );
-         SCIP_CALL( SCIPlexicographicReductionFree(scip, &symdata->lexreddata) );
-      }
+      SCIP_CALL( SCIPlexicographicReductionReset(scip, symdata->lexreddata) );
+      SCIP_CALL( SCIPlexicographicReductionFree(scip, &symdata->lexreddata) );
 
       for( c = 0; c < symdata->nconss; ++c )
       {
