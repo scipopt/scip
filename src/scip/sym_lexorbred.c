@@ -1029,7 +1029,6 @@ SCIP_DECL_SYMHDLREXIT(symhdlrExitLexOrbRed)
    assert(symhdlrdata->orbitalreddata != NULL);
 
    SCIP_CALL( SCIPorbitalReductionReset(scip, symhdlrdata->orbitalreddata) );
-   SCIP_CALL( SCIPorbitalReductionFree(scip, &symhdlrdata->orbitalreddata) );
 
    return SCIP_OKAY;
 }
@@ -1045,7 +1044,9 @@ SCIP_DECL_SYMHDLRFREE(symhdlrFreeLexOrbRed)
 
    symhdlrdata = SCIPsymhdlrGetData(symhdlr);
    assert(symhdlrdata != NULL);
+   assert(symhdlrdata->orbitalreddata != NULL);
 
+   SCIP_CALL( SCIPorbitalReductionFree(scip, &symhdlrdata->orbitalreddata) );
    SCIPfreeBlockMemory(scip, &symhdlrdata);
 
    return SCIP_OKAY;
