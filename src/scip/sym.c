@@ -180,6 +180,11 @@ SCIP_RETCODE doSymhdlrCreate(
    SCIP_CALL( SCIPsetAddIntParam(set, messagehdlr, blkmem, paramname, "priority of try-add function",
          &(*symhdlr)->tryaddpriority, TRUE, priority, INT_MIN/4, INT_MAX/4, NULL, NULL) );
 
+   (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "symmetries/%s/proppriority", name);
+   (void) SCIPsnprintf(paramdesc, SCIP_MAXSTRLEN, "priority of propagator <%s>", name);
+   SCIP_CALL( SCIPsetAddIntParam(set, messagehdlr, blkmem, paramname, paramdesc,
+         &(*symhdlr)->proppriority, TRUE, proppriority, INT_MIN/4, INT_MAX/4, NULL, NULL) );
+
    (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "symmetries/%s/sepafreq", name);
    SCIP_CALL( SCIPsetAddIntParam(set, messagehdlr, blkmem, paramname,
          "frequency for separating cuts (-1: never, 0: only in root node)",
