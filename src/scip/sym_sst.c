@@ -137,11 +137,6 @@ struct SCIP_SymCompData
    SCIP_CONS**           sstconss;           /**< list of generated SST constraints */
    int                   nsstconss;          /**< number of generated SST constraints */
    int                   maxnsstconss;       /**< maximum number of conss in sstconss */
-
-   /* @symtodo */
-   int*                  leaders;            /**< index of orbit leaders in permvars */
-   int                   nleaders;           /**< number of orbit leaders in leaders array */
-   int                   maxnleaders;        /**< maximum number of leaders in leaders array */
 };
 
 /** symmetry handler data */
