@@ -5271,41 +5271,47 @@ SCIP_RETCODE SCIPnodeFocus(
       assert(tree->focusnode != NULL);
       assert(SCIPnodeGetType(tree->focusnode) == SCIP_NODETYPE_FOCUSNODE);
 
-      /* update exact lower bound of focus */
+      /* update exact lower bounds of focus and children */
       if( set->exact_enable )
       {
          SCIP_RATIONAL* focuslowerboundexact;
-         SCIP_RATIONAL* childlowerboundexact;
+         SCIP_RATIONAL* childrenlowerboundexact;
+         SCIP_RATIONAL* nodelowerboundexact;
 
-         SCIP_CALL( SCIPrationalCreateBlock(blkmem, &focuslowerboundexact) );
-         SCIPrationalSetInfinity(focuslowerboundexact);
+         focuslowerboundexact = SCIPnodeGetLowerboundExact(tree->focusnode);
+         SCIP_CALL( SCIPrationalCreateBlock(blkmem, &childrenlowerboundexact) );
+         SCIPrationalSetInfinity(childrenlowerboundexact);
 
          for( c = 0; c < tree->nchildren; ++c )
          {
-            childlowerboundexact = SCIPnodeGetLowerboundExact(tree->children[c]);
-            if( SCIPrationalIsGT(focuslowerboundexact, childlowerboundexact) )
-               SCIPrationalSetRational(focuslowerboundexact, childlowerboundexact);
+            nodelowerboundexact = SCIPnodeGetLowerboundExact(tree->children[c]);
+            if( SCIPrationalIsGT(childrenlowerboundexact, nodelowerboundexact) )
+               SCIPrationalSetRational(childrenlowerboundexact, nodelowerboundexact);
+            SCIP_CALL( SCIPnodeUpdateLowerbound(tree->children[c], stat, set, eventfilter, tree, transprob, origprob, SCIP_INVALID, focuslowerboundexact) );
          }
 
-         SCIP_CALL( SCIPnodeUpdateLowerbound(tree->focusnode, stat, set, eventfilter, tree, transprob, origprob, SCIP_INVALID, focuslowerboundexact) );
-         SCIPrationalFreeBlock(blkmem, &focuslowerboundexact);
+         SCIP_CALL( SCIPnodeUpdateLowerbound(tree->focusnode, stat, set, eventfilter, tree, transprob, origprob, SCIP_INVALID, childrenlowerboundexact) );
+         SCIPrationalFreeBlock(blkmem, &childrenlowerboundexact);
       }
-      /* update real lower bound of focus */
+      /* update real lower bounds of focus and children */
       else
       {
          SCIP_Real focuslowerbound;
-         SCIP_Real childlowerbound;
+         SCIP_Real childrenlowerbound;
+         SCIP_Real nodelowerbound;
 
-         focuslowerbound = SCIPsetInfinity(set);
+         focuslowerbound = SCIPnodeGetLowerbound(tree->focusnode);
+         childrenlowerbound = SCIPsetInfinity(set);
 
          for( c = 0; c < tree->nchildren; ++c )
          {
-            childlowerbound = SCIPnodeGetLowerbound(tree->children[c]);
-            if( focuslowerbound > childlowerbound )
-               focuslowerbound = childlowerbound;
+            nodelowerbound = SCIPnodeGetLowerbound(tree->children[c]);
+            if( childrenlowerbound > nodelowerbound )
+               childrenlowerbound = nodelowerbound;
+            SCIP_CALL( SCIPnodeUpdateLowerbound(tree->children[c], stat, set, eventfilter, tree, transprob, origprob, focuslowerbound, NULL) );
          }
 
-         SCIP_CALL( SCIPnodeUpdateLowerbound(tree->focusnode, stat, set, eventfilter, tree, transprob, origprob, focuslowerbound, NULL) );
+         SCIP_CALL( SCIPnodeUpdateLowerbound(tree->focusnode, stat, set, eventfilter, tree, transprob, origprob, childrenlowerbound, NULL) );
       }
 
       /* check whether the next focus node is a child of the old focus node */
@@ -8273,13 +8279,6 @@ SCIP_Real SCIPtreeGetLowerbound(
    /* get the lower bound from the queue */
    lowerbound = SCIPnodepqGetLowerbound(tree->leaves, set);
 
-   /* compare lower bound with children */
-   for( i = 0; i < tree->nchildren; ++i )
-   {
-      assert(tree->children[i] != NULL);
-      lowerbound = MIN(lowerbound, tree->children[i]->lowerbound);
-   }
-
    /* compare lower bound with siblings */
    for( i = 0; i < tree->nsiblings; ++i )
    {
@@ -8313,14 +8312,6 @@ SCIP_RATIONAL* SCIPtreeGetLowerboundExact(
 
    /* get the lower bound from the queue */
    lowerbound = SCIPnodepqGetLowerboundExact(tree->leaves, set);
-
-   /* compare lower bound with children */
-   for( i = 0; i < tree->nchildren; ++i )
-   {
-      assert(tree->children[i] != NULL);
-      if( lowerbound == NULL || SCIPrationalIsGT(lowerbound, tree->children[i]->lowerboundexact) )
-         lowerbound = tree->children[i]->lowerboundexact;
-   }
 
    /* compare lower bound with siblings */
    for( i = 0; i < tree->nsiblings; ++i )
