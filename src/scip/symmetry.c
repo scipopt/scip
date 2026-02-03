@@ -3278,7 +3278,7 @@ SCIP_RETCODE SCIPtryAddSymmetryHandlingMethods(
          if( success )
          {
             SCIP_CALL( SCIPcreateSymmetryComponent(scip->mem->probmem,
-                  &(scip->syminfo->symcomps[scip->syminfo->nsymcomps]), symhdlrs[i], symcompdata) );
+                  &(scip->syminfo->symcomps[scip->syminfo->nsymcomps]), symhdlrs[i], symcompdata, c) );
             SCIP_CALL( SCIPaddSymhdlrComponent(scip, symhdlrs[i], scip->syminfo->symcomps[scip->syminfo->nsymcomps]) );
             ++(scip->syminfo->nsymcomps);
          }

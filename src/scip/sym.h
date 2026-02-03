@@ -221,7 +221,8 @@ SCIP_RETCODE SCIPcreateSymmetryComponent(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SYMCOMP**        symcomp,            /**< pointer to symmetry component */
    SCIP_SYMHDLR*         symhdlr,            /**< symmetry handler active on symmetry component */
-   SCIP_SYMCOMPDATA*     symcompdata         /**< symmetry component data */
+   SCIP_SYMCOMPDATA*     symcompdata,        /**< symmetry component data */
+   int                   id                  /**< numerical identifier of symmetry component */
    );
 
 #ifdef __cplusplus

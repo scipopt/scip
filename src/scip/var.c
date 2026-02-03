@@ -60,6 +60,7 @@
 #include "scip/pub_misc.h"
 #include "scip/pub_misc_sort.h"
 #include "scip/pub_prop.h"
+#include "scip/pub_sym.h"
 #include "scip/pub_var.h"
 #include "scip/relax.h"
 #include "scip/scip_certificate.h"
@@ -513,8 +514,9 @@ SCIP_RETCODE varAddLbchginfo(
    SCIPsetDebugMsg(set, "adding lower bound change info to var <%s>[%g,%g]: depth=%d, pos=%d, infer%s=<%s>, inferinfo=%d, %g -> %g\n",
       SCIPvarGetName(var), var->locdom.lb, var->locdom.ub, depth, pos,
       infercons != NULL ? "cons" : (inferprop != NULL ? "prop" : "symcomp"),
-      infercons != NULL ? SCIPconsGetName(infercons) : (inferprop != NULL ? SCIPpropGetName(inferprop) : "-"), inferinfo, /* @symtodo add identifier for symmetry component */
-      oldbound, newbound);
+      infercons != NULL ? SCIPconsGetName(infercons) :
+      (inferprop != NULL ? SCIPpropGetName(inferprop) : SCIPsymcompGetName(infersymcomp)),
+      inferinfo, oldbound, newbound);
 
    SCIP_CALL( varEnsureLbchginfosSize(var, blkmem, set, var->nlbchginfos+1) );
    var->lbchginfos[var->nlbchginfos].oldbound = oldbound;
@@ -594,8 +596,9 @@ SCIP_RETCODE varAddUbchginfo(
    SCIPsetDebugMsg(set, "adding upper bound change info to var <%s>[%g,%g]: depth=%d, pos=%d, infer%s=<%s>, inferinfo=%d, %g -> %g\n",
       SCIPvarGetName(var), var->locdom.lb, var->locdom.ub, depth, pos,
       infercons != NULL ? "cons" : (inferprop != NULL ? "prop" : "symcomp"),
-      infercons != NULL ? SCIPconsGetName(infercons) : (inferprop != NULL ? SCIPpropGetName(inferprop) : "-"), inferinfo, /* @symtodo add identifier for symmetry component */
-      oldbound, newbound);
+      infercons != NULL ? SCIPconsGetName(infercons) :
+      (inferprop != NULL ? SCIPpropGetName(inferprop) : SCIPsymcompGetName(infersymcomp)),
+      inferinfo, oldbound, newbound);
 
    SCIP_CALL( varEnsureUbchginfosSize(var, blkmem, set, var->nubchginfos+1) );
    var->ubchginfos[var->nubchginfos].oldbound = oldbound;
@@ -722,8 +725,10 @@ SCIP_RETCODE boundchgApplyExact(
                break;
 
             case SCIP_BOUNDCHGTYPE_SYMINFER:
-               SCIPsetDebugMsg(set, " -> symmetry component - inference: new lower bound of <%s>[%g,%g]: %g\n", /* @symtodo add identifier for symmetry component */
-                  SCIPvarGetName(var), var->locdom.lb, var->locdom.ub, boundchg->newbound);
+               SCIPsetDebugMsg(set, " -> symmetry component <%s> inference: new lower bound of <%s>[%g,%g]: %g\n",
+                  boundchg->data.inferencedata.reason.symcomp != NULL
+                  ? SCIPsymcompGetName(boundchg->data.inferencedata.reason.symcomp) : "-",
+                     SCIPvarGetName(var), var->locdom.lb, var->locdom.ub, boundchg->newbound);
                SCIP_CALL( varAddLbchginfo(var, blkmem, set, var->locdom.lb, boundchg->newbound, depth, pos,
                      boundchg->data.inferencedata.var, NULL, NULL, boundchg->data.inferencedata.reason.symcomp,
                      boundchg->data.inferencedata.info,
@@ -803,7 +808,9 @@ SCIP_RETCODE boundchgApplyExact(
                break;
 
             case SCIP_BOUNDCHGTYPE_SYMINFER:
-               SCIPsetDebugMsg(set, " -> symmetry component - inference: new upper bound of <%s>[%g,%g]: %g\n", /* @symtodo add identifier symmetry component */
+               SCIPsetDebugMsg(set, " -> symmetry component <%s> inference: new upper bound of <%s>[%g,%g]: %g\n",
+                  boundchg->data.inferencedata.reason.symcomp != NULL
+                  ? SCIPsymcompGetName(boundchg->data.inferencedata.reason.symcomp) : "-",
                   SCIPvarGetName(var), var->locdom.lb, var->locdom.ub, boundchg->newbound);
                SCIP_CALL( varAddUbchginfo(var, blkmem, set, var->locdom.ub, boundchg->newbound, depth, pos,
                      boundchg->data.inferencedata.var, NULL, NULL, boundchg->data.inferencedata.reason.symcomp,
@@ -952,7 +959,9 @@ SCIP_RETCODE SCIPboundchgApply(
                break;
 
             case SCIP_BOUNDCHGTYPE_SYMINFER:
-               SCIPsetDebugMsg(set, " -> symmetry component - inference: new lower bound of <%s>[%g,%g]: %g\n", /* @symtodo add symmetry component identifier */
+               SCIPsetDebugMsg(set, " -> symmetry component <%s> inference: new lower bound of <%s>[%g,%g]: %g\n",
+                  boundchg->data.inferencedata.reason.symcomp != NULL
+                  ? SCIPsymcompGetName(boundchg->data.inferencedata.reason.symcomp) : "-",
                   SCIPvarGetName(var), var->locdom.lb, var->locdom.ub, boundchg->newbound);
                SCIP_CALL( varAddLbchginfo(var, blkmem, set, var->locdom.lb, boundchg->newbound, depth, pos,
                      boundchg->data.inferencedata.var, NULL, NULL, boundchg->data.inferencedata.reason.symcomp,
@@ -1035,7 +1044,9 @@ SCIP_RETCODE SCIPboundchgApply(
                break;
 
             case SCIP_BOUNDCHGTYPE_SYMINFER:
-               SCIPsetDebugMsg(set, " -> symmetry component - inference: new upper bound of <%s>[%g,%g]: %g\n", /* @symtodo add symmetry component identifier */
+               SCIPsetDebugMsg(set, " -> symmetry component <%s> inference: new upper bound of <%s>[%g,%g]: %g\n",
+                  boundchg->data.inferencedata.reason.symcomp != NULL
+                  ? SCIPsymcompGetName(boundchg->data.inferencedata.reason.symcomp) : "-",
                   SCIPvarGetName(var), var->locdom.lb, var->locdom.ub, boundchg->newbound);
                SCIP_CALL( varAddUbchginfo(var, blkmem, set, var->locdom.ub, boundchg->newbound, depth, pos,
                      boundchg->data.inferencedata.var, NULL, NULL, boundchg->data.inferencedata.reason.symcomp,

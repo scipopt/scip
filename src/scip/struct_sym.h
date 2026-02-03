@@ -45,8 +45,9 @@ extern "C" {
 /** symmetry component */
 struct SCIP_SymComp
 {
-   SCIP_SYMHDLR*         symhdlr;            /**< symmetry handler for this symmetry group */
+   SCIP_SYMHDLR*         symhdlr;            /**< symmetry handler for this symmetry component */
    SCIP_SYMCOMPDATA*     symcompdata;        /**< data of symmetry component */
+   const char*           name;               /**< name of symmetry component */
 };
 
 /** symmetry handler */

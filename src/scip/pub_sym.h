@@ -54,6 +54,11 @@ SCIP_SYMHDLR* SCIPsymcompGetHdlr(
    SCIP_SYMCOMP*         symcomp             /**< symmetry component */
    );
 
+/** gets name of symmetry component */
+const char* SCIPsymcompGetName(
+   SCIP_SYMCOMP*         symcomp             /**< symmetry component */
+   );
+
 /** gets name of symmetry handler */
 SCIP_EXPORT
 const char* SCIPsymhdlrGetName(

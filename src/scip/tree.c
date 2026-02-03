@@ -61,6 +61,7 @@
 #include "scip/struct_event.h"
 #include "scip/struct_lpexact.h"
 #include "scip/pub_message.h"
+#include "scip/pub_sym.h"
 #include "lpi/lpi.h"
 
 
@@ -1987,7 +1988,8 @@ SCIP_RETCODE SCIPnodeAddBoundinfer(
       node->number, node->depth, SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var),
       boundtype == SCIP_BOUNDTYPE_LOWER ? "lower" : "upper", newbound,
       infercons != NULL ? "cons" : (inferprop != NULL ? "prop" : "symcomp"),
-      infercons != NULL ? SCIPconsGetName(infercons) : (inferprop != NULL ? SCIPpropGetName(inferprop) : "-"), inferinfo); /* @symtodo add identifier to symmetry component */
+      infercons != NULL ? SCIPconsGetName(infercons) :
+      (inferprop != NULL ? SCIPpropGetName(inferprop) : SCIPsymcompGetName(infersymcomp)), inferinfo);
 
    /* remember variable as inference variable, and get corresponding active variable, bound and bound type */
    infervar = var;

@@ -1056,6 +1056,16 @@ SCIP_SYMHDLR* SCIPsymcompGetHdlr(
    return symcomp->symhdlr;
 }
 
+/** gets name of symmetry component */
+const char* SCIPsymcompGetName(
+   SCIP_SYMCOMP*         symcomp             /**< symmetry component */
+   )
+{
+   assert(symcomp != NULL);
+
+   return symcomp->name;
+}
+
 /** gets name of symmetry handler */
 const char* SCIPsymhdlrGetName(
    SCIP_SYMHDLR*         symhdlr             /**< symmetry handler */
@@ -1155,9 +1165,12 @@ SCIP_RETCODE SCIPcreateSymmetryComponent(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SYMCOMP**        symcomp,            /**< pointer to symmetry component */
    SCIP_SYMHDLR*         symhdlr,            /**< symmetry handler active on symmetry component */
-   SCIP_SYMCOMPDATA*     symcompdata         /**< symmetry component data */
+   SCIP_SYMCOMPDATA*     symcompdata,        /**< symmetry component data */
+   int                   id                  /**< numerical identifier of symmetry component */
    )
 {
+   char name[SCIP_MAXSTRLEN];
+
    assert(blkmem != NULL);
    assert(symcomp != NULL);
    assert(symhdlr != NULL);
@@ -1165,6 +1178,9 @@ SCIP_RETCODE SCIPcreateSymmetryComponent(
    SCIP_ALLOC( BMSallocBlockMemory(blkmem, symcomp) );
    (*symcomp)->symhdlr = symhdlr;
    (*symcomp)->symcompdata = symcompdata;
+
+   (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "symcomp%d", id);
+   (*symcomp)->name = name;
 
    return SCIP_OKAY;
 }
