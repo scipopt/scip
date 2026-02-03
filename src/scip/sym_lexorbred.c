@@ -914,7 +914,7 @@ SCIP_DECL_SYMHDLRTRYADD(symhdlrTryaddLexOrbRed)
    (*symcompdata)->nconss = 0;
    (*symcompdata)->maxnconss = 0;
 
-   /* @symtodo check whether we use orbisack/symresack constraints instead of dynamic methods */
+   /* check whether static constraints shall be used in case there are many set packing/partitioning constraints */
    if( symhdlrdata->useppupgrade )
    {
       /* it is sufficient to check for original permutations, because newperms has signed perm iff perms has */
