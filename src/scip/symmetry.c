@@ -3160,7 +3160,8 @@ SCIP_RETCODE computeComponentsSym(
 /** tries to add symmetry handling methods to CIP */
 SCIP_RETCODE SCIPtryAddSymmetryHandlingMethods(
    SCIP*                 scip,               /**< SCIP data structure */
-   int*                  naddedconss         /**< pointer to store number of constraints added by symmetry handlers */
+   int*                  naddedconss,        /**< pointer to store number of constraints added by symmetry handlers */
+   int*                  nchgbds             /**< pointer to store number of changed variable bounds */
    )
 {
    SCIP_SYMHDLR** symhdlrs;
@@ -3182,8 +3183,10 @@ SCIP_RETCODE SCIPtryAddSymmetryHandlingMethods(
 
    assert(scip != NULL);
    assert(naddedconss != NULL);
+   assert(nchgbds != NULL);
 
    *naddedconss = 0;
+   *nchgbds = 0;
 
    /* only run when symmetry handling is enabled */
    if( !scip->set->sym_enabled )
@@ -3251,6 +3254,7 @@ SCIP_RETCODE SCIPtryAddSymmetryHandlingMethods(
       SCIP_Bool success;
       SCIP_SYMCOMPDATA* symcompdata;
       int ntmpconss;
+      int ntmpchgbds;
 
       success = FALSE;
 
@@ -3267,8 +3271,9 @@ SCIP_RETCODE SCIPtryAddSymmetryHandlingMethods(
       for( i = 0; i < nsymhdlrs && !success; ++i )
       {
          SCIP_CALL( SCIPsymhdlrTryadd(symhdlrs[i], scip->set, syms, nsyms, symtype,
-               symvars, nsymvars, symvarmap, NULL, c, &symcompdata, &ntmpconss, &success) ); /* @symtodo Do we actually want to provide the graph? */
+               symvars, nsymvars, symvarmap, NULL, c, &symcompdata, &ntmpconss, &ntmpchgbds, &success) ); /* @symtodo Do we actually want to provide the graph? */
          *naddedconss += ntmpconss;
+         *nchgbds += ntmpchgbds;
 
          if( success )
          {

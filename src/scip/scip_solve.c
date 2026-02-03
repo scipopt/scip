@@ -1427,10 +1427,12 @@ SCIP_RETCODE presolve(
          if( scip->set->sym_tryaddtiming == SYM_TIMING_AFTERPRESOL && SCIPgetSubscipDepth(scip) == 0 )
          {
             int nnewconss = 0;
+            int nchgbds = 0;
 
-            SCIP_CALL( SCIPtryAddSymmetryHandlingMethods(scip, &nnewconss) );
+            SCIP_CALL( SCIPtryAddSymmetryHandlingMethods(scip, &nnewconss, &nchgbds) );
 
             scip->stat->npresoladdconss += nnewconss;
+            scip->stat->npresolchgbds += nchgbds;
 
             /* call presolving methods of symmetry handlers, use timing SCIP_PRESOLTIMING_MAX to guarantee that they are
              * presolved at least once
@@ -2618,10 +2620,12 @@ SCIP_RETCODE SCIPpresolve(
       if( scip->set->sym_tryaddtiming == SYM_TIMING_BEFOREPRESOL && SCIPgetSubscipDepth(scip) == 0 )
       {
          int nnewconss = 0;
+         int nchgbds = 0;
 
-         SCIP_CALL( SCIPtryAddSymmetryHandlingMethods(scip, &nnewconss) );
+         SCIP_CALL( SCIPtryAddSymmetryHandlingMethods(scip, &nnewconss, &nchgbds) );
 
          scip->stat->npresoladdconss += nnewconss;
+         scip->stat->npresolchgbds += nchgbds;
       }
 
       /* presolve problem */

@@ -1355,7 +1355,6 @@ static
 SCIP_DECL_SYMHDLRTRYADD(symhdlrTryaddRowCol)
 {  /*lint --e{715}*/
    SCIP_SYMHDLRDATA* symhdlrdata;
-   int nchgbds = 0;
 
    assert(success != NULL);
    assert(symhdlr != NULL);
@@ -1364,8 +1363,10 @@ SCIP_DECL_SYMHDLRTRYADD(symhdlrTryaddRowCol)
    assert(nperms >= 0);
    assert(permvars != NULL || npermvars == 0);
    assert(naddedconss != NULL);
+   assert(nchgbds != NULL);
 
    *success = FALSE;
+   *nchgbds = 0;
 
    symhdlrdata = SCIPsymhdlrGetData(symhdlr);
    assert(symhdlrdata != NULL);
@@ -1381,14 +1382,15 @@ SCIP_DECL_SYMHDLRTRYADD(symhdlrTryaddRowCol)
    SCIP_CALL( SCIPincludeLexicographicReduction(scip, &(*symcompdata)->lexreddata, symhdlrdata->shadowtreeeventhdlr) );
    assert((*symcompdata)->lexreddata != NULL);
 
-   /* @symtodo make sure that bound changes are reported */
    SCIP_CALL( tryHandleSingleOrDoubleLexMatrices(scip, symtype, perms, nperms, permvars, npermvars,
          !symhdlrdata->detectdoublelex, symhdlrdata->handlesignedorbitopes, symhdlrdata->usedynamicprop,
-         id, &nchgbds, (*symcompdata)->lexreddata, &(*symcompdata)->lexredactive, symhdlrdata->orbitopalreddata,
+         id, nchgbds, (*symcompdata)->lexreddata, &(*symcompdata)->lexredactive, symhdlrdata->orbitopalreddata,
          &(*symcompdata)->conss, &(*symcompdata)->nconss, &(*symcompdata)->maxnconss, success) );
 
    if( !(*success) )
    {
+      assert(*nchgbds == 0);
+
       SCIP_CALL( SCIPlexicographicReductionReset(scip, (*symcompdata)->lexreddata) );
       SCIP_CALL( SCIPlexicographicReductionFree(scip, &(*symcompdata)->lexreddata) );
 

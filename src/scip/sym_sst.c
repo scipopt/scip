@@ -1623,7 +1623,6 @@ SCIP_DECL_SYMHDLRTRYADD(symhdlrTryaddSST)
    SCIP_CONS** sstconss = NULL;
    int nsstconss = 0;
    int maxnsstconss = 0;
-   int nchgbds = 0;
    int c;
 
    assert(success != NULL);
@@ -1632,18 +1631,17 @@ SCIP_DECL_SYMHDLRTRYADD(symhdlrTryaddSST)
    assert(perms != NULL);
    assert(nperms >= 0);
    assert(permvars != NULL || npermvars == 0);
+   assert(nchgbds != NULL);
 
    *success = FALSE;
+   *nchgbds = 0;
 
    symhdlrdata = SCIPsymhdlrGetData(symhdlr);
    assert(symhdlrdata != NULL);
 
-   /* @symtodo make sure that the TryAdd-method can also return number fixed variables */
-   /* @symtodo create more involutions */
-
    /* try to add SST constraints */
    SCIP_CALL( tryAddSSTConss(scip, symtype, perms, nperms, permvars, npermvars, permvarmap, id,
-         &sstconss, &nsstconss, &maxnsstconss, &nchgbds, (SST_LEADERRULE)symhdlrdata->leaderrule,
+         &sstconss, &nsstconss, &maxnsstconss, nchgbds, (SST_LEADERRULE)symhdlrdata->leaderrule,
          (SST_ORBITRULE)symhdlrdata->orbitrule, (SST_VARTYPE)symhdlrdata->leadervartype,
          symhdlrdata->computenewperms, symhdlrdata->maxnnewperms, symhdlrdata->addconflictcuts,
          symhdlrdata->mixedcomponents, success) );
@@ -1654,6 +1652,7 @@ SCIP_DECL_SYMHDLRTRYADD(symhdlrTryaddSST)
       assert(sstconss == NULL);
       assert(nsstconss == 0);
       assert(maxnsstconss == 0);
+      assert(nchgbds == 0);
 
       return SCIP_OKAY;
    }
