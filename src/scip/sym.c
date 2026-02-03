@@ -176,6 +176,10 @@ SCIP_RETCODE doSymhdlrCreate(
    (*symhdlr)->symcompssize = 0;
 
    /* add parameters */
+   (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "symmetries/%s/tryaddpriority", name);
+   SCIP_CALL( SCIPsetAddIntParam(set, messagehdlr, blkmem, paramname, "priority of try-add function",
+         &(*symhdlr)->tryaddpriority, TRUE, priority, INT_MIN/4, INT_MAX/4, NULL, NULL) );
+
    (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "symmetries/%s/sepafreq", name);
    SCIP_CALL( SCIPsetAddIntParam(set, messagehdlr, blkmem, paramname,
          "frequency for separating cuts (-1: never, 0: only in root node)",
