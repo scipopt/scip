@@ -162,8 +162,9 @@ typedef enum RestartPolicy RESTARTPOLICY;
 #define ESTIMMETHOD_SSG          's'             /**< estimation based on double exponential smoothing for sum of subtree gaps */
 #define ESTIMMETHOD_TPROF        't'             /**< estimation based on tree profile method */
 #define ESTIMMETHOD_TREEWEIGHT   'w'             /**< estimation based on double exponential smoothing for tree weight */
+#define ESTIMMETHOD_CHECKPOINT   'p'             /**< estimation based on checkpoint-based linear extrapolation */
 
-#define ESTIMMETHODS "bceglostw"
+#define ESTIMMETHODS "bceglopstw"
 
 /* constants and default values for treeprofile parameters */
 #define TREEPROFILE_MINSIZE    512                /**< minimum size (depth) that tree profile can hold */
@@ -247,7 +248,7 @@ typedef struct TreeProfile TREEPROFILE;
 #define DEFAULT_COMPLETIONTYPE       COMPLETIONTYPE_AUTO /**< default computation of search tree completion */
 #define DEFAULT_ESTIMMETHOD          ESTIMMETHOD_TREEWEIGHT    /**< default tree size estimation method: (c)ompletion, (e)nsemble, time series forecasts on either
                                                             * (g)ap, (l)eaf frequency, (o)open nodes,
-                                                            * tree (w)eight, (s)sg, or (t)ree profile or w(b)e */
+                                                            * tree (w)eight, (s)sg, check(p)oint, (t)ree profile or w(b)e */
 #define DEFAULT_TREEPROFILE_ENABLED  FALSE   /**< Should the event handler collect data? */
 #define DEFAULT_TREEPROFILE_MINNODESPERDEPTH 20.0 /**< minimum average number of nodes at each depth before producing estimations */
 #define DEFAULT_RESTARTPOLICY        'e'     /**< default restart policy: (a)lways, (c)ompletion, (e)stimation, (n)ever */
@@ -276,6 +277,8 @@ struct SCIP_EventhdlrData
    SCIP_Real             treeprofile_minnodesperdepth;/**< minimum average number of nodes at each depth before producing estimations */
    SCIP_Real             coefmonoweight;     /**< coefficient of tree weight in monotone approximation of search completion */
    SCIP_Real             coefmonossg;        /**< coefficient of 1 - SSG in monotone approximation of search completion */
+   SCIP_Real             prevtreeweight;     /**< previous tree weight for extrapolation */
+   SCIP_Longint          prevnodes;          /**< previous number of nodes for extrapolation */
    SCIP_Longint          minnodes;           /**< minimum number of nodes in a run before restart is triggered */
    int                   restartlimit;       /**< How often should a restart be triggered? (-1 for no limit) */
    int                   nrestartsperformed; /**< number of restarts performed so far */
@@ -2436,6 +2439,38 @@ SCIP_Bool shouldApplyRestartCompletion(
    return FALSE;
 }
 
+/** compute tree size estimation using checkpoint-based linear extrapolation */
+static
+SCIP_Real getCheckpointEstimation(
+   SCIP_EVENTHDLRDATA*   eventhdlrdata       /**< event handler data */
+   )
+{
+   TREEDATA* treedata;
+   SCIP_Real currentweight;
+   SCIP_Real weightdelta;
+   SCIP_Real estimation;
+   SCIP_Longint currentnodes;
+   SCIP_Longint nodedelta;
+
+   treedata = eventhdlrdata->treedata;
+   currentweight = (SCIP_Real)treedata->weight;
+   currentnodes = treedata->nnodes;
+
+   weightdelta = currentweight - eventhdlrdata->prevtreeweight;
+
+   /* need positive progress in tree weight */
+   if( weightdelta <= 1e-9 )
+      return 0.0;
+
+   nodedelta = currentnodes - eventhdlrdata->prevnodes;
+
+   /* linear extrapolation: estimate total nodes when weight reaches 1.0 */
+   estimation = (SCIP_Real)eventhdlrdata->prevnodes +
+                (SCIP_Real)nodedelta * (1.0 - eventhdlrdata->prevtreeweight) / weightdelta;
+
+   return estimation;
+}
+
 /** should a restart be applied based on the value of the selected completion method? */
 static
 SCIP_Bool shouldApplyRestartEstimation(
@@ -2468,6 +2503,13 @@ SCIP_Bool shouldApplyRestartEstimation(
       )
 
       return TRUE;
+   }
+
+   /* update checkpoint if neutral estimation is available */
+   if( eventhdlrdata->estimmethod == ESTIMMETHOD_CHECKPOINT && estimation > 0.0 )
+   {
+      eventhdlrdata->prevtreeweight = (SCIP_Real)eventhdlrdata->treedata->weight;
+      eventhdlrdata->prevnodes = eventhdlrdata->treedata->nnodes;
    }
 
    return FALSE;
@@ -2690,6 +2732,8 @@ SCIP_DECL_EVENTINITSOL(eventInitsolEstim)
    eventhdlrdata = SCIPeventhdlrGetData(eventhdlr);
    assert(eventhdlrdata != NULL);
 
+   eventhdlrdata->prevtreeweight = 0.0;
+   eventhdlrdata->prevnodes = 0;
    eventhdlrdata->restarthitcounter = 0;
    eventhdlrdata->weightlastreport = 0.0;
    eventhdlrdata->nreports = 0;
@@ -2922,7 +2966,7 @@ SCIP_RETCODE SCIPincludeEventHdlrEstim(
    SCIP_CALL( SCIPaddCharParam(scip, "estimation/method",
             "tree size estimation method: (c)ompletion, (e)nsemble, "
             "time series forecasts on either (g)ap, (l)eaf frequency, (o)open nodes, tree (w)eight, (s)sg, "
-            "or (t)ree profile or w(b)e",
+            "check(p)oint, (t)ree profile or w(b)e",
          &eventhdlrdata->estimmethod, FALSE, DEFAULT_ESTIMMETHOD, ESTIMMETHODS, NULL, NULL) );
 
    SCIP_CALL( SCIPaddIntParam(scip, "estimation/restarts/restartlimit", "restart limit",
@@ -3075,6 +3119,10 @@ SCIP_Real SCIPgetTreesizeEstimation(
    /* Weighted backtrack estimation */
    case ESTIMMETHOD_WBE:
       return treeDataGetWbe(eventhdlrdata->treedata);
+
+   /* checkpoint-based linear extrapolation */
+   case ESTIMMETHOD_CHECKPOINT:
+      return getCheckpointEstimation(eventhdlrdata);
 
    default:
       SCIPerrorMessage("Unknown estimation '%c' method specified, should be one of [%s]\n",
