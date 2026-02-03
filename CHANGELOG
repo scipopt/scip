@@ -46,6 +46,13 @@ Testing
 Miscellaneous
 -------------
 
+@section RN1002 SCIP 10.0.2
+***************************
+
+Fixed bugs
+----------
+
+- propagate focus lower bound to child nodes to avoid outdated global lower bound
 
 @section RN1001 SCIP 10.0.1
 ***************************
