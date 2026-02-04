@@ -604,6 +604,7 @@ SCIP_RETCODE tryPackingPartitioningOrbisackUpgrade(
    SCIP_CONS***          addedconss,         /**< pointer to store created constraints */
    int*                  naddedconss,        /**< pointer to store number of added constraints */
    int*                  maxnaddedconss,     /**< pointer to store maximum number addedconss can hold */
+   int                   id,                 /**< identifier of symmetry component */
    SCIP_Bool*            success             /**< pointer to store if the packing partitioning upgrade succeeded */
    )
 {
@@ -798,7 +799,7 @@ SCIP_RETCODE tryPackingPartitioningOrbisackUpgrade(
          assert(nrows > 0);
 
          /* create constraint, use same parameterization as in orbitope packing partitioning checker */
-         (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "orbitope_pp_upgrade_lexred%d", p);
+         (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "orbitope_pp_upgrade_lexred_%d_%d", id, p);
          SCIP_CALL( SCIPcreateConsOrbitope(scip, &cons, name, ppvarsmatrix, SCIP_ORBITOPETYPE_PACKING, nrows, 2,
                FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
@@ -948,7 +949,7 @@ SCIP_DECL_SYMHDLRTRYADD(symhdlrTryaddLexOrbRed)
 
          SCIP_CALL( tryPackingPartitioningOrbisackUpgrade(scip, allperms, nallperms, FALSE,
                permvars, npermvars, permvarmap, &(*symcompdata)->conss, &(*symcompdata)->nconss,
-               &(*symcompdata)->maxnconss, success) );
+               &(*symcompdata)->maxnconss, id, success) );
          *naddedconss = (*symcompdata)->nconss;
 
          if( nnewperms > 0 )
