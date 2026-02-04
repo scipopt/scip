@@ -59,6 +59,7 @@ SCIP_VARTYPE SCIPgetSymInferredVarType(
    SCIP_VAR*             var                 /**< variable whose inferred type has to be returned */
    );
 
+/* @symtodo can most likely be removed */
 /** compute non-trivial orbits of symmetry group
  *
  *  The non-trivial orbits of the group action are stored in the array orbits of length npermvars. This array contains
@@ -80,7 +81,7 @@ SCIP_RETCODE SCIPcomputeOrbitsSym(
    int*                  norbits             /**< pointer to number of orbits currently stored in orbits */
    );
 
-
+/* @symtodo can most likely be removed */
 /** compute non-trivial orbits of symmetry group using filtered generators
  *
  *  The non-trivial orbits of the group action are stored in the array orbits of length npermvars. This array contains
@@ -115,6 +116,7 @@ SCIP_RETCODE SCIPcomputeOrbitsFilterSym(
                                               *   that is handled by orbital fixing */
    );
 
+/* @symtodo only needed by sym_sst.c, but function seems useful also for other applications */
 /** compute non-trivial orbits of symmetry group using filtered generators
  *
  *  The non-trivial orbits of the group action are stored in the array orbits of length npermvars. This array contains
@@ -140,6 +142,7 @@ SCIP_RETCODE SCIPcomputeOrbitsFilterSymNoComp(
    int                   nmovedpermvars      /**< number of variables moved by any permutation in symmetry component */
    );
 
+/* @symtodo is currently used by branch_relpscost.c*/
 /** compute non-trivial orbits of symmetry group
  *
  *  The non-trivial orbits of the group action are stored in the array orbits of length npermvars. This array contains
@@ -167,6 +170,7 @@ SCIP_RETCODE SCIPcomputeOrbitsComponentsSym(
    int*                  varorbitmap         /**< array for storing the orbits for each variable */
    );
 
+/* @symtodo can most likely be removed */
 /** Compute orbit of a given variable and store it in @p orbit. The first entry of the orbit will
  *  be the given variable index and the rest is filled with the remaining variables excluding
  *  the ones specified in @p ignoredvars.
@@ -190,6 +194,7 @@ SCIP_RETCODE SCIPcomputeOrbitVar(
    int*                  orbitsize           /**< buffer to store the size of the orbit */
    );
 
+/* @symtodo can most likely be removed */
 /** Checks whether a permutation is a composition of 2-cycles and in this case determine the number of overall
  *  2-cycles and binary 2-cycles. It is a composition of 2-cycles iff @p ntwocyclesperm > 0 upon termination.
  */
@@ -203,6 +208,7 @@ SCIP_RETCODE SCIPisInvolutionPerm(
    SCIP_Bool             earlytermination    /**< whether we terminate early if not all affected variables are binary */
    );
 
+/* @symtodo can most likely be removed */
 /** determine number of variables affected by symmetry group */
 SCIP_EXPORT
 SCIP_RETCODE SCIPdetermineNVarsAffectedSym(
@@ -214,6 +220,7 @@ SCIP_RETCODE SCIPdetermineNVarsAffectedSym(
    int*                  nvarsaffected       /**< pointer to store number of all affected variables */
    );
 
+/* @symtodo can most likely be removed */
 /** compute components of symmetry group */
 SCIP_EXPORT
 SCIP_RETCODE SCIPcomputeComponentsSym(
@@ -235,6 +242,7 @@ SCIP_RETCODE SCIPcomputeComponentsSym(
    int*                  ncomponents         /**< pointer to store number of components of symmetry group */
    );
 
+/* @symtodo can most likely be removed */
 /** Given a matrix with nrows and \#perms + 1 columns whose first nfilledcols columns contain entries of variables, this routine
  *  checks whether the 2-cycles of perm intersect each row of column coltoextend in exactly one position. In this case,
  *  we add one column to the suborbitope of the first nfilledcols columns.
@@ -257,6 +265,7 @@ SCIP_RETCODE SCIPextendSubOrbitope(
    SCIP_Bool*            infeasible          /**< pointer to store if the number of intersecting cycles is too small */
    );
 
+/* @symtodo can most likely be removed */
 /** generate variable matrix for orbitope constraint handler */
 SCIP_EXPORT
 SCIP_RETCODE SCIPgenerateOrbitopeVarsMatrix(
@@ -291,6 +300,7 @@ SCIP_RETCODE SCIPisPackingPartitioningOrbitope(
    SCIP_ORBITOPETYPE*    type                /**< pointer to store type of orbitope constraint after strengthening */
    );
 
+/* @symtodo move to sym_rowcol? */
 /** detects whether permutations define single or double lex matrices
  *
  *  A single lex matrix is a matrix whose columns can be partitioned into blocks such that the
