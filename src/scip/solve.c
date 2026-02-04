@@ -2190,7 +2190,7 @@ SCIP_RETCODE SCIPtryAddSymmetryHandlingMethods(
    SCIP_HASHMAP* symvarmap;
    SYM_SYMTYPE symtype;
    SCIP_VAR** symvars;
-   SCIP_Real* vardomcenter;
+   SCIP_Real* vardomcenter = NULL;
    int** symmetries;
    int** syms;
    int* componentbegins;
@@ -2263,9 +2263,12 @@ SCIP_RETCODE SCIPtryAddSymmetryHandlingMethods(
 
    /* compute domain center of variables */
    /* @symtodo only compute this for signed permutations */
-   SCIP_CALL( SCIPallocBufferArray(scip, &vardomcenter, nsymvars) );
-   for( i = 0; i < nsymvars; ++i )
-      vardomcenter[i] = 0.5 * (SCIPvarGetLbLocal(symvars[i]) + SCIPvarGetUbLocal(symvars[i]));
+   if( symtype == SYM_SYMTYPE_SIGNPERM )
+   {
+      SCIP_CALL( SCIPallocBufferArray(scip, &vardomcenter, nsymvars) );
+      for( i = 0; i < nsymvars; ++i )
+         vardomcenter[i] = 0.5 * (SCIPvarGetLbLocal(symvars[i]) + SCIPvarGetUbLocal(symvars[i]));
+   }
 
    /* allocate memory for different symmetry components */
    assert(scip->syminfo != NULL);
@@ -2315,7 +2318,7 @@ SCIP_RETCODE SCIPtryAddSymmetryHandlingMethods(
       }
    }
 
-   SCIPfreeBufferArray(scip, &vardomcenter);
+   SCIPfreeBufferArrayNull(scip, &vardomcenter);
    SCIPhashmapFree(&symvarmap);
 
    if( ncomponents > 1 )

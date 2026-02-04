@@ -64,7 +64,7 @@ typedef struct SCIP_SymInfo SCIP_SYMINFO;    /**< data structure for storing sym
  *  - nperms          : number of (signed) permutations in perms array
  *  - permvars        : array of variables on which (signed) permutations operate
  *  - npermvars       : number of variables in permvars array
- *  - permvardomcenter: array containing centers of variable domains
+ *  - permvardomcenter: array containing centers of variable domains (or NULL if symtype != SYM_SYMTYPE_SIGNPERM)
  *  - permvarmap      : map of variables to indices in permvars array
  *  - symgraph        : symmetry detection graph used for detecting symmetries (or NULL)
  *  - id              : numerical identifier of set of permutation symmetries for which symmetry handler is tested

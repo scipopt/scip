@@ -421,7 +421,7 @@ SCIP_RETCODE addLexRed(
    assert(moreperms != NULL || nmoreperms == 0);
    assert(permvars != NULL);
    assert(npermvars > 0);
-   assert(permvardomaincenter != NULL);
+   assert(permvardomaincenter != NULL || symtype != SYM_SYMTYPE_SIGNPERM);
    assert(success != NULL);
 
    *success = FALSE;
@@ -826,7 +826,6 @@ SCIP_DECL_SYMHDLRTRYADD(symhdlrTryaddLexOrbRed)
    assert(perms != NULL);
    assert(nperms >= 0);
    assert(permvars != NULL || npermvars == 0);
-   assert(permvardomcenter != NULL);
    assert(naddedconss != NULL);
 
    *success = FALSE;

@@ -135,7 +135,7 @@ SCIP_RETCODE addOrbitopesDynamic(
    assert(perms != NULL);
    assert(permvars != NULL);
    assert(npermvars > 0);
-   assert(permvardomaincenter != NULL);
+   assert(permvardomaincenter != NULL || symtype != SYM_SYMTYPE_SIGNPERM);
    assert(varidxmatrix != NULL);
    assert(nrows > 0);
    assert(ncols > 0);
@@ -301,10 +301,13 @@ SCIP_Bool isEquallyCenteredOrbitope(
    int j;
 
    assert(scip != NULL);
-   assert(vardomaincenter != NULL);
    assert(varidxmatrix != NULL);
    assert(0 <= startrow && startrow < endrow);
    assert(0 <= startcol && startcol < endcol);
+
+   /* if we are dealing with unsigned permutations, then all rows have the same center */
+   if( vardomaincenter == NULL )
+      return TRUE;
 
    if( equalrowcenters )
    {
@@ -429,7 +432,7 @@ SCIP_RETCODE handleOrbitope(
    assert(perms != NULL);
    assert(permvars != NULL);
    assert(npermvars > 0);
-   assert(permvardomaincenter != NULL);
+   assert(permvardomaincenter != NULL || symtype != SYM_SYMTYPE_SIGNPERM);
    assert(varidxmatrix != NULL);
    assert(nrows > 0);
    assert(ncols > 0);
@@ -495,6 +498,8 @@ SCIP_RETCODE handleOrbitope(
       {
          SCIP_VAR* var;
          SCIP_Real bound;
+
+         assert(permvardomaincenter != NULL);
 
          /* the first row is contained in the upper half of the variable domain */
          for( j = 0; j < ncols; ++j )
@@ -610,7 +615,7 @@ SCIP_RETCODE handleDoubleLexOrbitope(
 
    assert(scip != NULL);
    assert(permvars != NULL);
-   assert(permvardomaincenter != NULL);
+   assert(permvardomaincenter != NULL || nsignedconss == 0);
    assert(varidxmatrix != NULL);
    assert(nrows > 0);
    assert(ncols > 0);
@@ -844,7 +849,7 @@ SCIP_RETCODE handleDoublelLexMatrix(
    assert(scip != NULL);
    assert(perms != NULL);
    assert(permvars != NULL);
-   assert(permvardomaincenter != NULL);
+   assert(permvardomaincenter != NULL || symtype != SYM_SYMTYPE_SIGNPERM);
    assert(varidxmatrix != NULL);
    assert(nrows > 0);
    assert(ncols > 0);
