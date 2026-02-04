@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2026 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -64,7 +64,7 @@ typedef int SCIP_HYPERGRAPH_EDGE;
 typedef int SCIP_HYPERGRAPH_OVERLAP;
 
 
-/** Called by \ref SCIPhypergraphOverlapFind, \ref SCIPhypergraphOverlapIntersectEdges and \ref SCIPhypergraphComputeOverlaps
+/** Called by \ref SCIPhypergraphOverlapFind, \ref SCIPhypergraphIntersectEdges and \ref SCIPhypergraphComputeOverlaps
  * whenever a new overlap set is created or an existing overlap is found.
  */
 #define SCIP_DECL_HYPERGRAPH_OVERLAP(x) SCIP_RETCODE x (SCIP_HYPERGRAPH* hypergraph, SCIP_HYPERGRAPH_OVERLAP overlap, \

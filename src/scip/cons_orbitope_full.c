@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2026 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -619,9 +619,9 @@ SCIP_RETCODE resolvePropagationFullOrbitope(
    {
       for (j = 0; j < ncols; ++j)
       {
-         if ( SCIPvarGetLbAtIndex(vars[i][j], bdchgidx, FALSE) > 0.5 )
+         if ( SCIPgetVarLbAtIndex(scip, vars[i][j], bdchgidx, FALSE) > 0.5 )
             lexminfixes[i][j] = 1;
-         else if ( SCIPvarGetUbAtIndex(vars[i][j], bdchgidx, FALSE) < 0.5 || j == ncols - 1 )
+         else if ( SCIPgetVarUbAtIndex(scip, vars[i][j], bdchgidx, FALSE) < 0.5 || j == ncols - 1 )
             lexminfixes[i][j] = 0;
          else
             lexminfixes[i][j] = 2;
@@ -651,9 +651,9 @@ SCIP_RETCODE resolvePropagationFullOrbitope(
    {
       for (j = 0; j < ncols; ++j)
       {
-         if ( SCIPvarGetUbAtIndex(vars[i][j], bdchgidx, FALSE) < 0.5 )
+         if ( SCIPgetVarUbAtIndex(scip, vars[i][j], bdchgidx, FALSE) < 0.5 )
             lexmaxfixes[i][j] = 0;
-         else if ( SCIPvarGetLbAtIndex(vars[i][j], bdchgidx, FALSE) > 0.5 || j == 0 )
+         else if ( SCIPgetVarLbAtIndex(scip, vars[i][j], bdchgidx, FALSE) > 0.5 || j == 0 )
             lexmaxfixes[i][j] = 1;
          else
             lexmaxfixes[i][j] = 2;
@@ -675,8 +675,8 @@ SCIP_RETCODE resolvePropagationFullOrbitope(
 
       for (i = 0; i <= ub; ++i)
       {
-         if ( SCIPvarGetLbAtIndex(vars[i][j], bdchgidx, FALSE) > 0.5 ||
-            SCIPvarGetUbAtIndex(vars[i][j], bdchgidx, FALSE) < 0.5 )
+         if ( SCIPgetVarLbAtIndex(scip, vars[i][j], bdchgidx, FALSE) > 0.5 ||
+            SCIPgetVarUbAtIndex(scip, vars[i][j], bdchgidx, FALSE) < 0.5 )
          {
             SCIP_CALL( SCIPaddConflictBinvar(scip, vars[i][j]) );
             *result = SCIP_SUCCESS;
@@ -997,6 +997,59 @@ SCIP_RETCODE checkRedundantCons(
       }
    }
    *redundant = TRUE;
+
+   return SCIP_OKAY;
+}
+
+
+/** replace aggregated variables by active variables */
+static
+SCIP_RETCODE replaceAggregatedVarsOrbitopeFull(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons                /**< constraint to be processed */
+   )
+{
+   SCIP_CONSDATA* consdata;
+   SCIP_VAR*** vars;
+   int i;
+   int j;
+   int nrows;
+   int ncols;
+
+   assert( scip != NULL );
+   assert( cons != NULL );
+
+   consdata = SCIPconsGetData(cons);
+   assert( consdata != NULL );
+   assert( consdata->vars != NULL );
+   assert( consdata->nrows > 0 );
+   assert( consdata->ncols > 0 );
+
+   vars = consdata->vars;
+   nrows = consdata->nrows;
+   ncols = consdata->ncols;
+
+   /* check whether there exists an aggregated variable in the orbitope */
+   for (i = 0; i < nrows; ++i)
+   {
+      for (j = 0; j < ncols; ++j)
+      {
+         SCIP_VAR* var;
+         SCIP_Bool negated;
+
+         assert( SCIPvarGetStatus(vars[i][j]) != SCIP_VARSTATUS_MULTAGGR ); /* variables are marked as not to be multi-aggregated */
+
+         SCIP_CALL( SCIPgetBinvarRepresentative(scip, vars[i][j], &var, &negated) );
+         SCIP_UNUSED( negated );
+         assert( SCIPvarIsActive(var) || SCIPvarGetStatus(var) == SCIP_VARSTATUS_NEGATED || SCIPvarGetStatus(var) == SCIP_VARSTATUS_FIXED );
+         if ( var != vars[i][j] )
+         {
+            SCIP_CALL( SCIPreleaseVar(scip, &vars[i][j]) );
+            vars[i][j] = var;
+            SCIP_CALL( SCIPcaptureVar(scip, var) );
+         }
+      }
+   }
 
    return SCIP_OKAY;
 }
@@ -1378,6 +1431,25 @@ SCIP_DECL_CONSRESPROP(consRespropOrbitopeFull)
 
    SCIP_CALL( resolvePropagationFullOrbitope(scip, conshdlr, cons, inferinfo, bdchgidx, result) );
 
+   return SCIP_OKAY;
+}
+
+
+/** presolving deinitialization method of constraint handler (called after presolving has been finished) */
+static
+SCIP_DECL_CONSEXITPRE(consExitpreOrbitopeFull)
+{
+   int c;
+
+   assert( scip != NULL );
+   assert( conshdlr != NULL );
+   assert( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0 );
+
+   for (c = 0; c < nconss; ++c)
+   {
+      /* replace aggregated variables by active variables */
+      SCIP_CALL( replaceAggregatedVarsOrbitopeFull(scip, conss[c]) );
+   }
    return SCIP_OKAY;
 }
 
@@ -1767,6 +1839,7 @@ SCIP_RETCODE SCIPincludeConshdlrOrbitopeFull(
    SCIP_CALL( SCIPsetConshdlrProp(scip, conshdlr, consPropOrbitopeFull, CONSHDLR_PROPFREQ, CONSHDLR_DELAYPROP,
          CONSHDLR_PROP_TIMING) );
    SCIP_CALL( SCIPsetConshdlrResprop(scip, conshdlr, consRespropOrbitopeFull) );
+   SCIP_CALL( SCIPsetConshdlrExitpre(scip, conshdlr, consExitpreOrbitopeFull) );
    SCIP_CALL( SCIPsetConshdlrSepa(scip, conshdlr, consSepalpOrbitopeFull, consSepasolOrbitopeFull, CONSHDLR_SEPAFREQ,
          CONSHDLR_SEPAPRIORITY, CONSHDLR_DELAYSEPA) );
    SCIP_CALL( SCIPsetConshdlrTrans(scip, conshdlr, consTransOrbitopeFull) );
@@ -1789,8 +1862,8 @@ SCIP_RETCODE SCIPcreateConsOrbitopeFull(
    SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
    const char*           name,               /**< name of constraint */
    SCIP_VAR***           vars,               /**< matrix of variables on which the symmetry acts */
-   int                   nrows,            /**< number of set partitioning/packing constraints  <=> p */
-   int                   ncols,            /**< number of symmetric variable blocks             <=> q */
+   int                   nrows,              /**< number of set partitioning/packing constraints  <=> p */
+   int                   ncols,              /**< number of symmetric variable blocks             <=> q */
    SCIP_Bool             resolveprop,        /**< should propagation be resolved? */
    SCIP_Bool             ismodelcons,        /**< whether the orbitope is a model constraint */
    SCIP_Bool             initial,            /**< should the LP relaxation of constraint be in the initial LP?

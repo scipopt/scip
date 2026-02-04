@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2026 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -66,7 +66,7 @@ SCIP_RETCODE SCIPstatFree(
    BMS_BLKMEM*           blkmem              /**< block memory */
    );
 
-/** diables the collection of any statistic for a variable */
+/** disables the collection of any statistic for a variable */
 void SCIPstatDisableVarHistory(
    SCIP_STAT*            stat                /**< problem statistics data */
    );
@@ -118,8 +118,8 @@ void SCIPstatUpdatePrimalDualIntegrals(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_PROB*            transprob,          /**< transformed problem */
    SCIP_PROB*            origprob,           /**< original problem */
-   SCIP_Real             primalbound,        /**< current primal bound in transformed problem, or infinity */
-   SCIP_Real             dualbound           /**< current lower bound in transformed space, or -infinity */
+   SCIP_Real             upperbound,         /**< current upper bound in transformed problem, or infinity */
+   SCIP_Real             lowerbound          /**< current lower bound in transformed space, or -infinity */
    );
 
 /** optionally update and return the reference-dual integral statistic */

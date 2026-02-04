@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2026 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -37,6 +37,7 @@
 #include "scip/def.h"
 #include "scip/type_event.h"
 #include "scip/type_lp.h"
+#include "scip/type_rational.h"
 #include "scip/type_sol.h"
 #include "scip/type_tree.h"
 #include "scip/type_var.h"
@@ -115,7 +116,7 @@ SCIP_EVENTTYPE SCIPeventGetType(
    SCIP_EVENT*           event               /**< event */
    );
 
-/** gets variable for a variable event (var added, var deleted, var fixed, 
+/** gets variable for a variable event (var added, var deleted, var fixed,
  *  objective value or domain change, domain hole added or removed) */
 SCIP_EXPORT
 SCIP_VAR* SCIPeventGetVar(
@@ -137,6 +138,12 @@ SCIP_Real SCIPeventGetNewobj(
 /** gets old bound for a bound change event */
 SCIP_EXPORT
 SCIP_Real SCIPeventGetOldbound(
+   SCIP_EVENT*           event               /**< event */
+   );
+
+/** gets exact old bound for a bound change event */
+SCIP_EXPORT
+SCIP_RATIONAL* SCIPeventGetOldboundExact(
    SCIP_EVENT*           event               /**< event */
    );
 

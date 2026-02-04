@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2026 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -88,7 +88,7 @@
 #include "scip/pub_message.h"
 
 /* do defines for windows directly her to make the lpi more independent*/
-#if defined(_WIN32) || defined(_WIN64)
+#ifdef _WIN32
 #define snprintf _snprintf
 #endif
 
@@ -840,11 +840,17 @@ SCIP_RETCODE SCIPlpiDelCols(
    int                   lastcol             /**< last column to be deleted */
    )
 {
-   SCIPdebugMessage("calling SCIPlpiDelCols()\n");
-
    assert(lpi != NULL);
    assert(lpi->clp != NULL);
-   assert(0 <= firstcol && firstcol <= lastcol && lastcol < lpi->clp->numberColumns());
+   assert(firstcol >= 0);
+   assert(lastcol < lpi->clp->numberColumns());
+   assert(firstcol <= lastcol + 1);
+
+   SCIPdebugMessage("calling SCIPlpiDelCols()\n");
+
+   // handle empty range
+   if( firstcol > lastcol )
+      return SCIP_OKAY;
 
    invalidateSolution(lpi);
 
@@ -989,11 +995,17 @@ SCIP_RETCODE SCIPlpiDelRows(
    int                   lastrow             /**< last row to be deleted */
    )
 {
-   SCIPdebugMessage("calling SCIPlpiDelRows() (number: %d)\n", lastrow-firstrow+1);
-
    assert(lpi != NULL);
    assert(lpi->clp != NULL);
-   assert(0 <= firstrow && firstrow <= lastrow && lastrow < lpi->clp->numberRows());
+   assert(firstrow >= 0);
+   assert(lastrow < lpi->clp->numberRows());
+   assert(firstrow <= lastrow + 1);
+
+   SCIPdebugMessage("calling SCIPlpiDelRows() (number: %d)\n", lastrow-firstrow+1);
+
+   // handle empty range
+   if( firstrow > lastrow )
+      return SCIP_OKAY;
 
    invalidateSolution(lpi);
 
@@ -1325,8 +1337,8 @@ SCIP_RETCODE SCIPlpiScaleRow(
    {
       for (CoinBigIndex k = beg[j]; k < beg[j] + length[j]; ++k)
       {
-	 if (ind[k] == row)
-	    val[k] *= scaleval;
+         if (ind[k] == row)
+            val[k] *= scaleval;
       }
    }
 
@@ -1483,13 +1495,15 @@ SCIP_RETCODE SCIPlpiGetCols(
    SCIP_Real*            val                 /**< buffer to store values of constraint matrix entries, or NULL */
    )
 {
-   SCIPdebugMessage("calling SCIPlpiGetCols()\n");
-
    assert(lpi != NULL);
    assert(lpi->clp != NULL);
-   assert(0 <= firstcol && firstcol <= lastcol && lastcol < lpi->clp->numberColumns());
    assert((lb != NULL && ub != NULL) || (lb == NULL && ub == NULL));
    assert((nnonz != NULL && beg != NULL && ind != NULL && val != NULL) || (nnonz == NULL && beg == NULL && ind == NULL && val == NULL));
+   assert(firstcol >= 0);
+   assert(lastcol < lpi->clp->numberColumns());
+   assert(firstcol <= lastcol + 1);
+
+   SCIPdebugMessage("calling SCIPlpiGetCols()\n");
 
    ClpSimplex* clp = lpi->clp;
 
@@ -1547,13 +1561,15 @@ SCIP_RETCODE SCIPlpiGetRows(
    SCIP_Real*            val                 /**< buffer to store values of constraint matrix entries, or NULL */
    )
 {
-   SCIPdebugMessage("calling SCIPlpiGetRows()\n");
-
    assert(lpi != NULL);
    assert(lpi->clp != NULL);
-   assert(0 <= firstrow && firstrow <= lastrow && lastrow < lpi->clp->numberRows());
    assert((lhs != NULL && rhs != NULL) || (lhs == NULL && rhs == NULL));
    assert((nnonz != NULL && beg != NULL && ind != NULL && val != NULL) || (nnonz == NULL && beg == NULL && ind == NULL && val == NULL));
+   assert(firstrow >= 0);
+   assert(lastrow < lpi->clp->numberRows());
+   assert(firstrow <= lastrow + 1);
+
+   SCIPdebugMessage("calling SCIPlpiGetRows()\n");
 
    ClpSimplex* clp = lpi->clp;
    if ( lhs != NULL )
@@ -1569,7 +1585,7 @@ SCIP_RETCODE SCIPlpiGetRows(
    {
       ClpMatrixBase* M = clp->rowCopy();   // get row view on matrix
       if ( M == NULL ) // can happen e.g. if no LP was solved yet ...
-	 M = clp->clpMatrix()->reverseOrderedCopy();
+         M = clp->clpMatrix()->reverseOrderedCopy();
       assert( M != NULL );
       assert( M->getNumRows() == clp->numberRows() );
 
@@ -1612,6 +1628,9 @@ SCIP_RETCODE SCIPlpiGetColNames(
    assert(namestorage != NULL || namestoragesize == 0);
    assert(namestoragesize >= 0);
    assert(storageleft != NULL);
+   assert(firstcol >= 0);
+   assert(lastcol < lpi->clp->numberColumns());
+   assert(firstcol <= lastcol + 1);
 
    SCIPerrorMessage("SCIPlpiGetColNames() has not been implemented yet.\n");
 
@@ -1636,6 +1655,9 @@ SCIP_RETCODE SCIPlpiGetRowNames(
    assert(namestorage != NULL || namestoragesize == 0);
    assert(namestoragesize >= 0);
    assert(storageleft != NULL);
+   assert(firstrow >= 0);
+   assert(lastrow < lpi->clp->numberRows());
+   assert(firstrow <= lastrow + 1);
 
    SCIPerrorMessage("SCIPlpiGetRowNames() has not been implemented yet.\n");
 
@@ -1690,12 +1712,14 @@ SCIP_RETCODE SCIPlpiGetObj(
    SCIP_Real*            vals                /**< array to store objective coefficients */
    )
 {
-   SCIPdebugMessage("calling SCIPlpiGetObj()\n");
-
    assert(lpi != NULL);
    assert(lpi->clp != NULL);
-   assert(0 <= firstcol && firstcol <= lastcol && lastcol < lpi->clp->numberColumns());
    assert(vals != NULL);
+   assert(firstcol >= 0);
+   assert(lastcol < lpi->clp->numberColumns());
+   assert(firstcol <= lastcol + 1);
+
+   SCIPdebugMessage("calling SCIPlpiGetObj()\n");
 
    const double* obj = lpi->clp->getObjCoefficients();    // Here we can use the const versions (see SCIPchgObj)
 
@@ -1714,11 +1738,13 @@ SCIP_RETCODE SCIPlpiGetBounds(
    SCIP_Real*            ubs                 /**< array to store upper bound values, or NULL */
    )
 {
-   SCIPdebugMessage("calling SCIPlpiGetBounds()\n");
-
    assert(lpi != NULL);
    assert(lpi->clp != NULL);
-   assert(0 <= firstcol && firstcol <= lastcol && lastcol < lpi->clp->numberColumns());
+   assert(firstcol >= 0);
+   assert(lastcol < lpi->clp->numberColumns());
+   assert(firstcol <= lastcol + 1);
+
+   SCIPdebugMessage("calling SCIPlpiGetBounds()\n");
 
    if ( lbs != 0 )
    {
@@ -1745,11 +1771,13 @@ SCIP_RETCODE SCIPlpiGetSides(
    SCIP_Real*            rhss                /**< array to store right hand side values, or NULL */
    )
 {
-   SCIPdebugMessage("calling SCIPlpiGetSides()\n");
-
    assert(lpi != NULL);
    assert(lpi->clp != NULL);
-   assert(0 <= firstrow && firstrow <= lastrow && lastrow < lpi->clp->numberRows());
+   assert(firstrow >= 0);
+   assert(lastrow < lpi->clp->numberRows());
+   assert(firstrow <= lastrow + 1);
+
+   SCIPdebugMessage("calling SCIPlpiGetSides()\n");
 
    if ( lhss != 0 )
    {
@@ -2700,9 +2728,9 @@ SCIP_Bool SCIPlpiIsObjlimExc(
    if ( lpi->clp->status() == 1 )
    {
       if ( lpi->clp->secondaryStatus() == 1 )
-	 return TRUE;
+         return TRUE;
       else
-	 return FALSE;
+         return FALSE;
    }
 
    return ( lpi->clp->isObjectiveLimitTestValid() && lpi->clp->isDualObjectiveLimitReached() );
@@ -2981,34 +3009,34 @@ SCIP_RETCODE SCIPlpiGetBase(
    {
       for( int i = 0; i < clp->numberRows(); ++i )
       {
-	 switch ( clp->getRowStatus(i) )
-	 {
-	 case ClpSimplex::isFree:
-            rstat[i] = SCIP_BASESTAT_ZERO;
-            break;
-	 case ClpSimplex::basic:
-            rstat[i] = SCIP_BASESTAT_BASIC;
-            break;
-	 case ClpSimplex::atUpperBound:
-            rstat[i] = SCIP_BASESTAT_UPPER;
-            break;
-	 case ClpSimplex::atLowerBound:
-            rstat[i] = SCIP_BASESTAT_LOWER;
-            break;
-	 case ClpSimplex::superBasic:
-            rstat[i] = SCIP_BASESTAT_ZERO;
-            break;
-	 case ClpSimplex::isFixed:
-	    if (clp->getRowPrice()[i] > 0.0)
-	       rstat[i] = SCIP_BASESTAT_LOWER;
-	    else
-	       rstat[i] = SCIP_BASESTAT_UPPER;
-	    break;
-	 default:
-            SCIPerrorMessage("invalid basis status\n");
-            SCIPABORT();
-            return SCIP_INVALIDDATA; /*lint !e527*/
-	 }
+         switch ( clp->getRowStatus(i) )
+         {
+            case ClpSimplex::isFree:
+               rstat[i] = SCIP_BASESTAT_ZERO;
+               break;
+            case ClpSimplex::basic:
+               rstat[i] = SCIP_BASESTAT_BASIC;
+               break;
+            case ClpSimplex::atUpperBound:
+               rstat[i] = SCIP_BASESTAT_UPPER;
+               break;
+            case ClpSimplex::atLowerBound:
+               rstat[i] = SCIP_BASESTAT_LOWER;
+               break;
+            case ClpSimplex::superBasic:
+               rstat[i] = SCIP_BASESTAT_ZERO;
+               break;
+            case ClpSimplex::isFixed:
+               if (clp->getRowPrice()[i] > 0.0)
+                  rstat[i] = SCIP_BASESTAT_LOWER;
+               else
+                  rstat[i] = SCIP_BASESTAT_UPPER;
+               break;
+            default:
+               SCIPerrorMessage("invalid basis status\n");
+               SCIPABORT();
+               return SCIP_INVALIDDATA; /*lint !e527*/
+         }
       }
    }
 
@@ -3021,41 +3049,41 @@ SCIP_RETCODE SCIPlpiGetBase(
 
       for( int j = 0; j < clp->numberColumns(); ++j )
       {
-	 switch ( clp->getColumnStatus(j) )
-	 {
-	 case ClpSimplex::isFree:
-            cstat[j] = SCIP_BASESTAT_ZERO;
-            break;
-	 case ClpSimplex::basic:
-            cstat[j] = SCIP_BASESTAT_BASIC;
-            break;
-	 case ClpSimplex::atUpperBound:
-            cstat[j] = SCIP_BASESTAT_UPPER;
-            assert( ub[j] < COIN_DBL_MAX );
-            break;
-	 case ClpSimplex::atLowerBound:
-            cstat[j] = SCIP_BASESTAT_LOWER;
-            assert( lb[j] > -COIN_DBL_MAX );
-            break;
-	 case ClpSimplex::superBasic:
-            cstat[j] = SCIP_BASESTAT_ZERO;
-            break;
-	 case ClpSimplex::isFixed:
-	    if (clp->getReducedCost()[j] > 0.0)
-            {
-	       cstat[j] = SCIP_BASESTAT_LOWER;
-               assert( lb[j] > -COIN_DBL_MAX );
-            }
-	    else
-            {
-	       cstat[j] = SCIP_BASESTAT_UPPER;
+         switch ( clp->getColumnStatus(j) )
+         {
+            case ClpSimplex::isFree:
+               cstat[j] = SCIP_BASESTAT_ZERO;
+               break;
+            case ClpSimplex::basic:
+               cstat[j] = SCIP_BASESTAT_BASIC;
+               break;
+            case ClpSimplex::atUpperBound:
+               cstat[j] = SCIP_BASESTAT_UPPER;
                assert( ub[j] < COIN_DBL_MAX );
-            }
-	    break;
-	 default: SCIPerrorMessage("invalid basis status\n");
+               break;
+            case ClpSimplex::atLowerBound:
+               cstat[j] = SCIP_BASESTAT_LOWER;
+               assert( lb[j] > -COIN_DBL_MAX );
+               break;
+            case ClpSimplex::superBasic:
+               cstat[j] = SCIP_BASESTAT_ZERO;
+               break;
+            case ClpSimplex::isFixed:
+               if (clp->getReducedCost()[j] > 0.0)
+               {
+                  cstat[j] = SCIP_BASESTAT_LOWER;
+                  assert( lb[j] > -COIN_DBL_MAX );
+               }
+               else
+               {
+                  cstat[j] = SCIP_BASESTAT_UPPER;
+                  assert( ub[j] < COIN_DBL_MAX );
+               }
+               break;
+            default: SCIPerrorMessage("invalid basis status\n");
             SCIPABORT();
             return SCIP_INVALIDDATA; /*lint !e527*/
-	 }
+         }
       }
    }
 
@@ -3103,28 +3131,28 @@ SCIP_RETCODE SCIPlpiSetBase(
 
       switch ( status )
       {
-      case SCIP_BASESTAT_ZERO:
-	 if ( lhs[i] <= -COIN_DBL_MAX && rhs[i] >= COIN_DBL_MAX )
-	    clp->setRowStatus(i, ClpSimplex::isFree);
-	 else
-	    clp->setRowStatus(i, ClpSimplex::superBasic);
-	 break;
-      case SCIP_BASESTAT_BASIC:
-         clp->setRowStatus(i, ClpSimplex::basic);
-         break;
-      case SCIP_BASESTAT_UPPER:
-         clp->setRowStatus(i, ClpSimplex::atUpperBound);
-         break;
-      case SCIP_BASESTAT_LOWER:
-	 if ( EPSEQ(rhs[i], lhs[i], 1e-6) )   // if bounds are equal
-	    clp->setRowStatus(i, ClpSimplex::isFixed);
-	 else
-	    clp->setRowStatus(i, ClpSimplex::atLowerBound);
-	 break;
-      default:
-         SCIPerrorMessage("invalid basis status\n");
-         SCIPABORT();
-         return SCIP_INVALIDDATA; /*lint !e527*/
+         case SCIP_BASESTAT_ZERO:
+            if ( lhs[i] <= -COIN_DBL_MAX && rhs[i] >= COIN_DBL_MAX )
+               clp->setRowStatus(i, ClpSimplex::isFree);
+            else
+               clp->setRowStatus(i, ClpSimplex::superBasic);
+            break;
+         case SCIP_BASESTAT_BASIC:
+            clp->setRowStatus(i, ClpSimplex::basic);
+            break;
+         case SCIP_BASESTAT_UPPER:
+            clp->setRowStatus(i, ClpSimplex::atUpperBound);
+            break;
+         case SCIP_BASESTAT_LOWER:
+            if ( EPSEQ(rhs[i], lhs[i], 1e-6) )   // if bounds are equal
+               clp->setRowStatus(i, ClpSimplex::isFixed);
+            else
+               clp->setRowStatus(i, ClpSimplex::atLowerBound);
+            break;
+         default:
+            SCIPerrorMessage("invalid basis status\n");
+            SCIPABORT();
+            return SCIP_INVALIDDATA; /*lint !e527*/
       }
    }
 
@@ -3140,28 +3168,28 @@ SCIP_RETCODE SCIPlpiSetBase(
 
       switch ( status )
       {
-      case SCIP_BASESTAT_ZERO:
-	 if ( lb[j] <= -COIN_DBL_MAX && ub[j] >= COIN_DBL_MAX )
-	    clp->setColumnStatus(j, ClpSimplex::isFree);
-	 else
-	    clp->setColumnStatus(j, ClpSimplex::superBasic);
-	 break;
-      case SCIP_BASESTAT_BASIC:
-         clp->setColumnStatus(j, ClpSimplex::basic);
-         break;
-      case SCIP_BASESTAT_UPPER:
-         clp->setColumnStatus(j, ClpSimplex::atUpperBound);
-         break;
-      case SCIP_BASESTAT_LOWER:
-	 if ( EPSEQ(ub[j], lb[j], 1e-6) )
-	    clp->setColumnStatus(j, ClpSimplex::isFixed);
-	 else
-	    clp->setColumnStatus(j, ClpSimplex::atLowerBound);
-	 break;
-      default:
-         SCIPerrorMessage("invalid basis status\n");
-         SCIPABORT();
-         return SCIP_INVALIDDATA; /*lint !e527*/
+         case SCIP_BASESTAT_ZERO:
+            if ( lb[j] <= -COIN_DBL_MAX && ub[j] >= COIN_DBL_MAX )
+               clp->setColumnStatus(j, ClpSimplex::isFree);
+            else
+               clp->setColumnStatus(j, ClpSimplex::superBasic);
+            break;
+         case SCIP_BASESTAT_BASIC:
+            clp->setColumnStatus(j, ClpSimplex::basic);
+            break;
+         case SCIP_BASESTAT_UPPER:
+            clp->setColumnStatus(j, ClpSimplex::atUpperBound);
+            break;
+         case SCIP_BASESTAT_LOWER:
+            if ( EPSEQ(ub[j], lb[j], 1e-6) )
+               clp->setColumnStatus(j, ClpSimplex::isFixed);
+            else
+               clp->setColumnStatus(j, ClpSimplex::atLowerBound);
+            break;
+         default:
+            SCIPerrorMessage("invalid basis status\n");
+            SCIPABORT();
+            return SCIP_INVALIDDATA; /*lint !e527*/
       }
    }
 
@@ -3176,8 +3204,8 @@ SCIP_RETCODE SCIPlpiSetBase(
     *    64 - column objective not changed
     *   128 - column lbs not changed
     *   256 - column ubs not changed
-    *	512 - basis not changed (up to user to set this to 0)
-    *	      top bits may be used internally
+    *   512 - basis not changed (up to user to set this to 0)
+    *   top bits may be used internally
     */
    clp->setWhatsChanged(clp->whatsChanged() & (~512));
 
@@ -3211,7 +3239,7 @@ SCIP_RETCODE SCIPlpiGetBasisInd(
    {
       assert( clp->getNumElements() == 0 );
       for (int i = 0; i < nrows; ++i)
-	 idx[i] = ncols + i;
+         idx[i] = ncols + i;
    }
    else
       clp->getBasics(idx);
@@ -3518,7 +3546,7 @@ SCIP_RETCODE SCIPlpiFreeState(
    return SCIP_OKAY;
 }
 
-/** checks, whether the given LP state contains simplex basis information */
+/** checks whether the given LP state contains simplex basis information */
 SCIP_Bool SCIPlpiHasStateBasis(
    SCIP_LPI*             lpi,                /**< LP interface structure */
    SCIP_LPISTATE*        lpistate            /**< LP state information (like basis information), or NULL*/
@@ -3768,7 +3796,7 @@ SCIP_RETCODE SCIPlpiSetIntpar(
        *  above that 8,16,32 etc just for selective SCIPdebug
        */
       if ( ival )
-	 lpi->clp->setLogLevel(2);      // lpi->clp->setLogLevel(63);
+         lpi->clp->setLogLevel(2);      // lpi->clp->setLogLevel(63);
       else
          lpi->clp->setLogLevel(0);
       break;
@@ -3951,7 +3979,7 @@ SCIP_Bool SCIPlpiIsInfinity(
 /**@name File Interface Methods */
 /**@{ */
 
-/** returns, whether the given file exists */
+/** returns whether the given file exists */
 static
 SCIP_Bool fileExists(
    const char*           filename            /**< file name */

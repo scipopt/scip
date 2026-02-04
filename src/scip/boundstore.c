@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2026 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -24,7 +24,7 @@
 
 /**@file   boundstore.c
  * @ingroup PARALLEL
- * @brief  the implementation of the bound store datastructure
+ * @brief  the implementation of the bound store data structure
  * @author Leona Gottwald
  */
 
@@ -37,8 +37,8 @@
 
 /** create bound store data structure */
 SCIP_RETCODE SCIPboundstoreCreate(
-   SCIP*                 scip,               /**< scip main datastructure */
-   SCIP_BOUNDSTORE**     boundstore,         /**< pointer to store the bound store datastructure */
+   SCIP*                 scip,               /**< scip main data structure */
+   SCIP_BOUNDSTORE**     boundstore,         /**< pointer to store the bound store data structure */
    int                   nvars               /**< number of variables for which bounds may be stored */
    )
 {
@@ -58,8 +58,8 @@ SCIP_RETCODE SCIPboundstoreCreate(
 
 /** free bound store data structure */
 void SCIPboundstoreFree(
-   SCIP*                 scip,               /**< scip main datastructure */
-   SCIP_BOUNDSTORE**     boundstore          /**< pointer to the bound store datastructure */
+   SCIP*                 scip,               /**< scip main data structure */
+   SCIP_BOUNDSTORE**     boundstore          /**< pointer to the bound store data structure */
    )
 {
    assert(scip != NULL);
@@ -73,8 +73,8 @@ void SCIPboundstoreFree(
 
 /** add bound change to bound store data structure */
 SCIP_RETCODE SCIPboundstoreAdd(
-   SCIP*                 scip,               /**< scip main datastructure */
-   SCIP_BOUNDSTORE*      boundstore,         /**< the bound store datastructure */
+   SCIP*                 scip,               /**< scip main data structure */
+   SCIP_BOUNDSTORE*      boundstore,         /**< the bound store data structure */
    int                   varidx,             /**< variable index of bound change, must be smaller than the
                                               *   number of variables given during creation of bound store */
    SCIP_Real             newbound,           /**< bound value of variable */
@@ -87,7 +87,12 @@ SCIP_RETCODE SCIPboundstoreAdd(
    assert(scip != NULL);
    assert(boundstore != NULL);
 
+   /* ignore indices larger than nvars (may happen for (multi-)aggregated/fixed variables) */
+   if( varidx >= boundstore->nvars )
+      return SCIP_OKAY;
+
    pos = boundstore->bndpos[varidx].pos[boundtype];
+   assert(pos >= 0);
 
    if( pos == 0 )
    {
@@ -122,9 +127,9 @@ SCIP_RETCODE SCIPboundstoreAdd(
 
 /** add all bound changes of source to target */
 SCIP_RETCODE SCIPboundstoreMerge(
-   SCIP*                 scip,               /**< scip main datastructure for target boundstore */
-   SCIP_BOUNDSTORE*      target,             /**< the bound store datastructure where the bounds get merged in */
-   SCIP_BOUNDSTORE*      source              /**< the bound store datastructure from which the bounds get merged in */
+   SCIP*                 scip,               /**< scip main data structure for target boundstore */
+   SCIP_BOUNDSTORE*      target,             /**< the bound store data structure where the bounds get merged in */
+   SCIP_BOUNDSTORE*      source              /**< the bound store data structure from which the bounds get merged in */
    )
 {
    int i;
@@ -136,6 +141,7 @@ SCIP_RETCODE SCIPboundstoreMerge(
    /* just iterate over the boundchanges in the source and add them to the target */
    for( i = 0; i < source->nbndchg; ++i )
    {
+      assert(source->bndchg[i].varidx < source->nvars);
       SCIP_CALL( SCIPboundstoreAdd(scip, target, source->bndchg[i].varidx, source->bndchg[i].newbound, source->bndchg[i].boundtype) );
    }
 
@@ -144,7 +150,7 @@ SCIP_RETCODE SCIPboundstoreMerge(
 
 /** remove all boundchanges from bound store */
 void SCIPboundstoreClear(
-   SCIP_BOUNDSTORE*      boundstore          /**< the bound store datastructure */
+   SCIP_BOUNDSTORE*      boundstore          /**< the bound store data structure */
    )
 {
    assert(boundstore != NULL);
@@ -159,7 +165,7 @@ void SCIPboundstoreClear(
 
 /** gets variable index of the i'th stored boundchange */
 int SCIPboundstoreGetChgVaridx(
-   SCIP_BOUNDSTORE*      boundstore,         /**< the bound store datastructure */
+   SCIP_BOUNDSTORE*      boundstore,         /**< the bound store data structure */
    int                   i                   /**< the index of the bound change */
    )
 {
@@ -171,7 +177,7 @@ int SCIPboundstoreGetChgVaridx(
 
 /** gets the type of the i'th stored boundchange */
 SCIP_BOUNDTYPE SCIPboundstoreGetChgType(
-   SCIP_BOUNDSTORE*      boundstore,         /**< the bound store datastructure */
+   SCIP_BOUNDSTORE*      boundstore,         /**< the bound store data structure */
    int                   i                   /**< the index of the bound change */
    )
 {
@@ -183,7 +189,7 @@ SCIP_BOUNDTYPE SCIPboundstoreGetChgType(
 
 /** gets the bound value of the i'th stored boundchange */
 SCIP_Real SCIPboundstoreGetChgVal(
-   SCIP_BOUNDSTORE*      boundstore,         /**< the bound store datastructure */
+   SCIP_BOUNDSTORE*      boundstore,         /**< the bound store data structure */
    int                   i                   /**< the index of the bound change */
    )
 {
@@ -195,7 +201,7 @@ SCIP_Real SCIPboundstoreGetChgVal(
 
 /** gets the number of stored bound changes */
 int SCIPboundstoreGetNChgs(
-   SCIP_BOUNDSTORE*      boundstore          /**< the bound store datastructure */
+   SCIP_BOUNDSTORE*      boundstore          /**< the bound store data structure */
    )
 {
    assert(boundstore != NULL);

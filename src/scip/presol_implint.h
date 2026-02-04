@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2026 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -37,7 +37,6 @@
  * \begin{array}{llll}
  * A x & + B y &       & \leq c\\
  * D x &       & + E z & \leq f\\
- *
  * & &               x & \in Z^{p_1} \\
  * & &               y & \in Z^{p_2} \times R^{n_2-p_2}\\
  * & &               z & \in Z^{p_3} \times R^{n_3-p_3}

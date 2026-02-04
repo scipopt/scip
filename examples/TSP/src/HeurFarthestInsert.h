@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2026 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -38,7 +38,7 @@ namespace tsp
 {
 
 /** C++ farthest insert heuristic for TSP */
-class HeurFarthestInsert : public scip::ObjHeur
+class HeurFarthestInsert : public scip::ObjHeur /*lint --e{3713}*/
 {
    GRAPH*                graph_;             /**< the underlying graph of the TSP */
 

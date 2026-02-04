@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2026 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -67,19 +67,16 @@ SCIP_RETCODE SCIPcreateConsSamediff(
 
 /** returns item id one */
 int SCIPgetItemid1Samediff(
-   SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< samediff constraint */
    );
 
 /** returns item id two */
 int SCIPgetItemid2Samediff(
-   SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< samediff constraint */
    );
 
 /** return constraint type SAME or DIFFER */
 CONSTYPE SCIPgetTypeSamediff(
-   SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< samediff constraint */
    );
 

@@ -1,10 +1,15 @@
 cmake_minimum_required(VERSION 3.11)
 
+# INTERPROCEDURAL_OPTIMIZATION is enforced when enabled.
+if(POLICY CMP0069)
+   cmake_policy(SET CMP0069 NEW)
+endif()
+
 project(Eventhdlr)
 
 if(TARGET SCIP::SCIP)
   # find package by SCIP PATH
-  find_package(SCIP CONFIG PATHS ${SCIP_BINARY_DIR} REQUIRED)
+  find_package(SCIP CONFIG NO_DEFAULT_PATH PATHS ${SCIP_BINARY_DIR} REQUIRED)
 else()
   find_package(SCIP REQUIRED)
 endif()
@@ -18,6 +23,7 @@ add_executable(eventhdlr
 
 target_link_libraries(eventhdlr ${SCIP_LIBRARIES})
 target_compile_options(eventhdlr PRIVATE ${SCIP_COMPILE_FLAGS})
+set_property(TARGET eventhdlr PROPERTY INTERPROCEDURAL_OPTIMIZATION ${LTO_AVAILABLE})
 
 if( TARGET examples )
     add_dependencies( examples eventhdlr )
@@ -78,6 +84,7 @@ foreach(instance ${instances})
     set_tests_properties(examples-eventhdlr-${basename}
                         PROPERTIES
                             PASS_REGULAR_EXPRESSION "Validation         : Success"
+                            FAIL_REGULAR_EXPRESSION "ERROR"
                             DEPENDS examples-eventhdlr-build
                             )
     if(WIN32)

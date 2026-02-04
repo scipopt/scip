@@ -20,13 +20,13 @@ namespace dejavu {
     
     class preprocessor;
 
-    /** 
-     * Used to make preprocessor object available from nauty/saucy/Traces hook. 
+    /**
+     * Used to make preprocessor object available from nauty/saucy/Traces hook.
      */
     inline preprocessor*& save_preprocessor() {
-        static preprocessor* p = nullptr;
+        static thread_local preprocessor* p = nullptr;
         return p;
-    } 
+    }
 
     /**
      * \brief preprocessor for symmetry detection

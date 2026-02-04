@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2026 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -335,8 +335,8 @@ struct SCIP_ConsData
    SCIP_VAR**            varswithevents;     /**< linear constraint variables with bound change events */
    SCIP_EVENTTYPE*       eventtypes;         /**< eventtypes of linear constraint variables with bound change events */
    int                   nevents;            /**< number of bound change events of linear constraint variables */
-   SCIP_Bool             activeone;          /**< whether the constraint is active on 1 or 0 */
-   SCIP_Bool             lessthanineq;       /**< whether the original linear constraint is less-than-rhs or greater-than-rhs */
+   SCIP_Bool             activeone;          /**< whether the constraint is active on 1 or 0 (only used at creation time) */
+   SCIP_Bool             lessthanineq;       /**< whether the original linear constraint is less-than-rhs or greater-than-rhs (only used at creation time) */
    int                   nfixednonzero;      /**< number of variables among binvar and slackvar fixed to be nonzero */
    int                   colindex;           /**< column index in alternative LP */
    unsigned int          linconsactive:1;    /**< whether linear constraint and slack variable are active */
@@ -476,13 +476,9 @@ SCIP_RETCODE addSymmetryInformation(
    SCIP_CONS* lincons;
    SCIP_VAR** vars;
    SCIP_Real* vals;
-   SCIP_VAR** linvars;
-   SCIP_Real* linvals;
    SCIP_Real constant;
-   SCIP_Real actweight;
    SCIP_Real lhs;
    SCIP_Real rhs;
-   SCIP_Bool suc;
    int slacknodeidx;
    int consnodeidx;
    int eqnodeidx;
@@ -490,8 +486,6 @@ SCIP_RETCODE addSymmetryInformation(
    int nodeidx;
    int nvarslincons;
    int nlocvars;
-   int nvars;
-   int i;
 
    assert(scip != NULL);
    assert(cons != NULL);
@@ -504,28 +498,19 @@ SCIP_RETCODE addSymmetryInformation(
    lincons = consdata->lincons;
    assert(lincons != NULL);
 
-   SCIP_CALL( SCIPgetConsNVars(scip, lincons, &nvarslincons, &suc) );
-   assert(suc);
-
+   /* get information about linear constraint */
    lhs = SCIPgetLhsLinear(scip, lincons);
    rhs = SCIPgetRhsLinear(scip, lincons);
+   nvarslincons = SCIPgetNVarsLinear(scip, lincons);
 
-   /* get information about linear constraint */
-   nvars = SCIPgetNVars(scip);
-
-   SCIP_CALL( SCIPallocBufferArray(scip, &vars, nvars) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &vals, nvars) );
-
-   linvars = SCIPgetVarsLinear(scip, lincons);
-   linvals = SCIPgetValsLinear(scip, lincons);
-   for( i = 0; i < nvarslincons; ++i )
-   {
-      vars[i] = linvars[i];
-      vals[i] = linvals[i];
-   }
-   nlocvars = nvarslincons;
+   nlocvars = MAX3(1, nvarslincons, SCIPgetNVars(scip));  /*lint !e666*/
+   SCIP_CALL( SCIPallocBufferArray(scip, &vars, nlocvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &vals, nlocvars) );
+   BMScopyMemoryArray(vars, SCIPgetVarsLinear(scip, lincons), nvarslincons);
+   BMScopyMemoryArray(vals, SCIPgetValsLinear(scip, lincons), nvarslincons);
 
    constant = 0.0;
+   nlocvars = nvarslincons;
    SCIP_CALL( SCIPgetSymActiveVariables(scip, symtype, &vars, &vals, &nlocvars, &constant, SCIPisTransformed(scip)) );
 
    /* update lhs/rhs due to possible variable aggregation */
@@ -552,14 +537,11 @@ SCIP_RETCODE addSymmetryInformation(
 
    SCIP_CALL( SCIPgetSymActiveVariables(scip, symtype, &vars, &vals, &nlocvars, &constant, SCIPisTransformed(scip)) );
 
-   /* activation of a constraint is modeled as weight of the edge to the activation variable */
-   actweight = consdata->activeone ? 1.0 : -1.0;
-
    if( nlocvars > 1 || !SCIPisEQ(scip, vals[0], 1.0) || !SCIPisZero(scip, constant) )
    {
       /* encode aggregation by a sum-expression and connect it to indicator node */
       SCIP_CALL( SCIPaddSymgraphOpnode(scip, graph, (int) SYM_CONSOPTYPE_SUM, &opnodeidx) ); /*lint !e641*/
-      SCIP_CALL( SCIPaddSymgraphEdge(scip, graph, eqnodeidx, opnodeidx, TRUE, actweight) );
+      SCIP_CALL( SCIPaddSymgraphEdge(scip, graph, eqnodeidx, opnodeidx, TRUE, 1.0) );
 
       /* add nodes and edges for variables in aggregation */
       SCIP_CALL( SCIPaddSymgraphVarAggregation(scip, graph, opnodeidx, vars, vals, nlocvars, constant) );
@@ -569,15 +551,15 @@ SCIP_RETCODE addSymmetryInformation(
       if( symtype == SYM_SYMTYPE_SIGNPERM )
       {
          nodeidx = SCIPgetSymgraphVarnodeidx(scip, graph, vars[0]);
-         SCIP_CALL( SCIPaddSymgraphEdge(scip, graph, eqnodeidx, nodeidx, TRUE, actweight) );
+         SCIP_CALL( SCIPaddSymgraphEdge(scip, graph, eqnodeidx, nodeidx, TRUE, 1.0) );
 
          nodeidx = SCIPgetSymgraphNegatedVarnodeidx(scip, graph, vars[0]);
-         SCIP_CALL( SCIPaddSymgraphEdge(scip, graph, eqnodeidx, nodeidx, TRUE, -actweight) );
+         SCIP_CALL( SCIPaddSymgraphEdge(scip, graph, eqnodeidx, nodeidx, TRUE, -1.0) );
       }
       else
       {
          nodeidx = SCIPgetSymgraphVarnodeidx(scip, graph, vars[0]);
-         SCIP_CALL( SCIPaddSymgraphEdge(scip, graph, eqnodeidx, nodeidx, TRUE, actweight) );
+         SCIP_CALL( SCIPaddSymgraphEdge(scip, graph, eqnodeidx, nodeidx, TRUE, 1.0) );
       }
    }
 
@@ -780,8 +762,8 @@ SCIP_DECL_EVENTEXEC(eventExecIndicatorRestart)
       SCIP_Real oldbound;
       SCIP_Real newbound;
 
-      assert( SCIPvarGetType(SCIPeventGetVar(event)) == SCIP_VARTYPE_BINARY &&
-            !SCIPvarIsImpliedIntegral(SCIPeventGetVar(event)) );
+      assert( SCIPvarIsBinary(SCIPeventGetVar(event)) );
+      assert( !SCIPvarIsImpliedIntegral(SCIPeventGetVar(event)) );
       oldbound = SCIPeventGetOldbound(event);
       newbound = SCIPeventGetNewbound(event);
       assert( SCIPisIntegral(scip, oldbound) );
@@ -1031,7 +1013,7 @@ SCIP_DECL_CONFLICTEXEC(conflictExecIndicator)
 #endif
 
          /* add constraint to SCIP */
-         SCIP_CALL( SCIPaddConflict(scip, node, cons, validnode, conftype, cutoffinvolved) );
+         SCIP_CALL( SCIPaddConflict(scip, node, &cons, validnode, conftype, cutoffinvolved) );
 
          *result = SCIP_CONSADDED;
       }
@@ -3376,13 +3358,12 @@ SCIP_RETCODE consdataCreate(
    assert( slackvar != NULL );
    assert( eventhdlrrestart != NULL );
 
-   /* if active on 0, a provided binary variable is reversed */
+   /* if active on 0, a provided binary variable is negated */
    if ( activeone || binvar == NULL )
-   {
       binvarinternal = binvar;
-   }
    else
    {
+      assert( SCIPvarIsBinary(binvar) );
       SCIP_CALL( SCIPgetNegatedVar(scip, binvar, &binvarinternal) );
    }
 
@@ -3415,7 +3396,7 @@ SCIP_RETCODE consdataCreate(
          (*consdata)->binvar = var;
 
          /* check type */
-         if ( SCIPvarGetType(var) != SCIP_VARTYPE_BINARY || SCIPvarIsImpliedIntegral(var) )
+         if ( !SCIPvarIsBinary(var) || SCIPvarIsImpliedIntegral(var) )
          {
             SCIPerrorMessage("Indicator variable <%s> is not binary %d.\n", SCIPvarGetName(var), SCIPvarGetType(var));
             return SCIP_ERROR;
@@ -4139,45 +4120,42 @@ SCIP_RETCODE propIndicator(
     *
     * It is especially worth to tighten the upper bound if it is greater than maxcouplingvalue or sepacouplingvalue.
     * But do not tighten it if slackvar is locked down by other constraints,
-    * or if it has a nonzero coefficient in the objective function (not implemented).
+    * or if it has a nonzero coefficient in the objective function.
     *
-    * ax - s <= rhs  ->  s <= maxActivity(ax) - rhs
+    * ax - c * s <= rhs  ->  s <= (maxActivity(ax) - rhs) / c;
     */
    if ( (SCIPvarGetUbLocal(consdata->slackvar) > conshdlrdata->maxcouplingvalue
          || SCIPvarGetUbLocal(consdata->slackvar) > conshdlrdata->sepacouplingvalue)
-         && SCIPvarGetNLocksDownType(consdata->slackvar, SCIP_LOCKTYPE_MODEL) <= 1
-         && SCIPvarGetObj(consdata->slackvar) == 0.0 )
+      && SCIPvarGetNLocksDownType(consdata->slackvar, SCIP_LOCKTYPE_MODEL) <= 1
+      && SCIPvarGetObj(consdata->slackvar) == 0.0 && SCIPconsIsActive(consdata->lincons) )
    {
-      SCIP_VAR** consvars;
-      SCIP_Real* consvals;
-      SCIP_Real maxactivity;
+      SCIP_VAR** linconsvars;
+      SCIP_Real* linconsvals;
+      SCIP_Real maxactivity = 0.0;
+      SCIP_Real coeffslack = SCIP_INVALID;   /* -c */
       SCIP_Real newub;
       SCIP_Real rhs;
-      SCIP_Real coeffslack;
       int nlinconsvars;
       int j;
 
-      maxactivity = 0.0;
-      coeffslack = -1.0;
-
       nlinconsvars = SCIPgetNVarsLinear(scip, consdata->lincons);
-      consvars = SCIPgetVarsLinear(scip, consdata->lincons);
-      consvals = SCIPgetValsLinear(scip, consdata->lincons);
+      linconsvars = SCIPgetVarsLinear(scip, consdata->lincons);
+      linconsvals = SCIPgetValsLinear(scip, consdata->lincons);
 
       /* calculate maximal activity of linear constraint without slackvar */
       for (j = 0; j < nlinconsvars; ++j)
       {
          SCIP_VAR* var;
          SCIP_Real val;
-         SCIP_Real ub;
+         SCIP_Real bound;
 
-         val = consvals[j];
+         val = linconsvals[j];
          assert( ! SCIPisZero(scip, val) );
 
-         var = consvars[j];
+         var = linconsvars[j];
          assert( var != NULL );
 
-         /* skip slackvar */
+         /* store slackvar coefficient */
          if ( var == consdata->slackvar )
          {
             coeffslack = val;
@@ -4185,44 +4163,40 @@ SCIP_RETCODE propIndicator(
          }
 
          if ( val > 0.0 )
-            ub = SCIPvarGetUbLocal(var);
+            bound = SCIPvarGetUbLocal(var);
          else
-            ub = SCIPvarGetLbLocal(var);
+            bound = SCIPvarGetLbLocal(var);
 
-         if ( SCIPisInfinity(scip, ub) )
+         if ( SCIPisInfinity(scip, REALABS(bound)) )
          {
             maxactivity = SCIPinfinity(scip);
             break;
          }
          else
-            maxactivity += val * ub;
+            maxactivity += val * bound;
       }
 
       /* continue only if maxactivity is not infinity */
-      if ( !SCIPisInfinity(scip, maxactivity) )
+      if ( !SCIPisInfinity(scip, maxactivity) && coeffslack != SCIP_INVALID && coeffslack < 0.0 )  /*lint !e777*/
       {
-         /* substract rhs */
          rhs = SCIPgetRhsLinear(scip, consdata->lincons);
 
          /* continue if rhs is not finite; happens, e.g., if variables are multiaggregated; we would need the minimal activity in this case */
          if ( !SCIPisInfinity(scip, rhs) )
          {
-            newub = maxactivity - rhs;
+            /* divide by coeff of slackvar */
+            newub = (maxactivity - rhs) / (-1.0 * coeffslack);
             assert( !SCIPisInfinity(scip, newub) );
 
-            /* divide by coeff of slackvar */
-            newub = newub / (-1.0 * coeffslack);
-
-            /* round if slackvar is integral */
-            if ( SCIPvarIsIntegral(consdata->slackvar) )
-            {
-               if ( !SCIPisIntegral(scip, newub) )
-                  newub = SCIPceil(scip, newub);
-            }
+            /* adjust bound if slackvar is (implicit) integer */
+            newub = SCIPadjustedVarUb(scip, consdata->slackvar, newub);
 
             if ( SCIPisFeasLT(scip, newub, SCIPvarGetUbLocal(consdata->slackvar))
-                  && newub > SCIPvarGetLbLocal(consdata->slackvar) )
+               && newub > SCIPvarGetLbLocal(consdata->slackvar) )
             {
+               SCIPdebugMsg(scip, "Adjusting upper bound of slack variable <%s> to %g for indicator constraint <%s>.\n",
+                  SCIPvarGetName(consdata->slackvar), newub, SCIPconsGetName(cons));
+
                /* propagate bound */
                SCIP_CALL( SCIPinferVarUbCons(scip, consdata->slackvar, newub, cons, 3, FALSE, &infeasible, &tightened) );
                assert( !infeasible );
@@ -4650,11 +4624,8 @@ SCIP_RETCODE separateIISRounding(
 
          /* check whether complementary (negated) variable is present as well */
          binvarneg = SCIPvarGetNegatedVar(consdata->binvar);
-         assert( binvarneg != NULL );
-
-         /* negated variable is present as well */
          assert( conshdlrdata->binvarhash != NULL );
-         if ( SCIPhashmapExists(conshdlrdata->binvarhash, (void*) binvarneg) )
+         if ( binvarneg != NULL && SCIPhashmapExists(conshdlrdata->binvarhash, (void*) binvarneg) )
          {
             SCIP_Real binvarnegval = SCIPgetVarSol(scip, binvarneg);
 
@@ -6969,8 +6940,8 @@ SCIP_DECL_CONSRESPROP(consRespropIndicator)
    {
       /* if the slack variable fixed to a positive value was the reason */
       assert( infervar != consdata->slackvar );
-      /* Use a weaker comparison to SCIPvarGetLbAtIndex here (i.e., SCIPisPositive instead of SCIPisFeasPositive),
-       * because SCIPvarGetLbAtIndex might differ from the local bound at time bdchgidx by epsilon. */
+      /* Use a weaker comparison to SCIPgetVarLbAtIndex here (i.e., SCIPisPositive instead of SCIPisFeasPositive),
+       * because SCIPgetVarLbAtIndex might differ from the local bound at time bdchgidx by epsilon. */
       assert( SCIPisPositive(scip, SCIPgetVarLbAtIndex(scip, consdata->slackvar, bdchgidx, FALSE)) );
       SCIP_CALL( SCIPaddConflictLb(scip, consdata->slackvar, bdchgidx) );
    }
@@ -6982,8 +6953,31 @@ SCIP_DECL_CONSRESPROP(consRespropIndicator)
    }
    else
    {
+      SCIP_VAR** linconsvars;
+      SCIP_Real* linconsvals;
+      int nlinconsvars;
+      int j;
+
       assert( inferinfo == 3 );
-      SCIP_CALL( SCIPaddConflictUb(scip, consdata->slackvar, bdchgidx) );
+
+      /* mark variables in linear constraint */
+      nlinconsvars = SCIPgetNVarsLinear(scip, consdata->lincons);
+      linconsvars = SCIPgetVarsLinear(scip, consdata->lincons);
+      linconsvals = SCIPgetValsLinear(scip, consdata->lincons);
+
+      for (j = 0; j < nlinconsvars; ++j)
+      {
+         if ( linconsvals[j] > 0.0 )
+         {
+            assert( ! SCIPisInfinity(scip, SCIPgetVarUbAtIndex(scip, linconsvars[j], bdchgidx, FALSE)) );
+            SCIP_CALL( SCIPaddConflictUb(scip, linconsvars[j], bdchgidx) );
+         }
+         else
+         {
+            assert( ! SCIPisInfinity(scip, -SCIPgetVarLbAtIndex(scip, linconsvars[j], bdchgidx, FALSE)) );
+            SCIP_CALL( SCIPaddConflictLb(scip, linconsvars[j], bdchgidx) );
+         }
+      }
    }
 
    *result = SCIP_SUCCESS;
@@ -8049,11 +8043,12 @@ SCIP_RETCODE SCIPcreateConsIndicatorGeneric(
       }
    }
 
-   /* if active on 0, a provided binary variable is reversed */
+   /* if active on 0, a provided binary variable is negated */
    if ( activeone || binvar == NULL )
       binvarinternal = binvar;
    else
    {
+      assert( SCIPvarIsBinary(binvar) );
       SCIP_CALL( SCIPgetNegatedVar(scip, binvar, &binvarinternal) );
    }
 
@@ -8239,7 +8234,7 @@ SCIP_RETCODE SCIPcreateConsBasicIndicator(
 }
 
 /** creates and captures an indicator constraint with given linear constraint and slack variable
- *  in a generic version, i. e., with a flag activeone indicating whether the constraint is active on
+ *  in a generic version, i.e., with a flag activeone indicating whether the constraint is active on
  *  value 1 or 0 of the binary variable.
 
  *  @note @a binvar is checked to be binary only later. This enables a change of the type in
@@ -8285,10 +8280,8 @@ SCIP_RETCODE SCIPcreateConsIndicatorGenericLinCons(
    SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONSDATA* consdata = NULL;
    SCIP_VAR** vars;
-   SCIP_Real* vals;
    SCIP_Bool modifiable = FALSE;
    SCIP_Bool linconsactive;
-   SCIP_Bool integral = TRUE;
    int nvars;
    int v;
 
@@ -8322,45 +8315,21 @@ SCIP_RETCODE SCIPcreateConsIndicatorGenericLinCons(
       return SCIP_INVALIDDATA;
    }
 
-   /* determine integrality of slack variable and whether problem is decomposed if no variables are integral */
+   /* determine whether the linear constraint needs to be active */
    nvars = SCIPgetNVarsLinear(scip, lincons);
    vars = SCIPgetVarsLinear(scip, lincons);
-   vals = SCIPgetValsLinear(scip, lincons);
-   linconsactive = !conshdlrdata->nolinconscont;
-   for ( v = 0; v < nvars; ++v )
+   linconsactive = ! conshdlrdata->nolinconscont;
+   for ( v = 0; v < nvars && ! linconsactive; ++v )
    {
       if ( vars[v] == slackvar )
          continue;
 
       if ( SCIPvarIsIntegral(vars[v]) )
-      {
          linconsactive = TRUE;
-         if ( !integral )
-            break;
-         if ( !SCIPisIntegral(scip, vals[v]) )
-         {
-            integral = FALSE;
-            break;
-         }
-      }
-      else
-      {
-         integral = FALSE;
-         if ( linconsactive )
-            break;
-      }
    }
 
-   /* make sure that the type of the slack is as general as necessary */
-   if ( !integral && SCIPvarIsIntegral(slackvar) )
-   {
-      SCIP_Bool infeasible;
-
-      SCIP_CALL( SCIPchgVarType(scip, slackvar, SCIP_VARTYPE_CONTINUOUS, &infeasible) );
-      assert( !infeasible );
-      SCIP_CALL( SCIPchgVarImplType(scip, slackvar, SCIP_IMPLINTTYPE_NONE, &infeasible) );
-      assert( !infeasible );
-   }
+   /* Note that we do not change the type of the slackvariable here, because it might appear in other constraints and
+    * the locks are note yet set up if we are copying. */
 
    /* mark slack variable not to be multi-aggregated */
    SCIP_CALL( SCIPmarkDoNotMultaggrVar(scip, slackvar) );
@@ -8376,15 +8345,14 @@ SCIP_RETCODE SCIPcreateConsIndicatorGenericLinCons(
 
       SCIP_Real val = 1.0;
 
-      /* if active on 0, the binary variable is reversed */
+      /* if active on 0, the binary variable is negated */
       SCIP_VAR* binvarinternal;
       if ( activeone )
-      {
          binvarinternal = binvar;
-      }
       else
       {
-         SCIP_CALL ( SCIPgetNegatedVar(scip, binvar, &binvarinternal) );
+         assert( SCIPvarIsBinary(binvar) );
+         SCIP_CALL( SCIPgetNegatedVar(scip, binvar, &binvarinternal) );
       }
 
       /* create a quadratic constraint with a single bilinear term - note that cons is used */
@@ -8618,11 +8586,12 @@ SCIP_RETCODE SCIPcreateConsIndicatorGenericLinConsPure(
       }
    }
 
-   /* if active on 0, the binary variable is reversed */
+   /* if active on 0, the binary variable is negated */
    if ( activeone )
       binvarinternal = binvar;
    else
    {
+      assert( SCIPvarIsBinary(binvar) );
       SCIP_CALL( SCIPgetNegatedVar(scip, binvar, &binvarinternal) );
    }
 
@@ -8944,7 +8913,7 @@ SCIP_RETCODE SCIPsetBinaryVarIndicator(
    assert( consdata != NULL );
 
    /* check type */
-   if ( SCIPvarGetType(binvar) != SCIP_VARTYPE_BINARY || SCIPvarIsImpliedIntegral(binvar) )
+   if ( !SCIPvarIsBinary(binvar) || SCIPvarIsImpliedIntegral(binvar) )
    {
       SCIPerrorMessage("Indicator variable <%s> is not binary %d.\n", SCIPvarGetName(binvar), SCIPvarGetType(binvar));
       return SCIP_ERROR;

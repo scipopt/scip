@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2026 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -164,6 +164,7 @@ SCIP_RETCODE doSepaCreate(
    (*sepa)->ncutsfoundatnode = 0;
    (*sepa)->lpwasdelayed = FALSE;
    (*sepa)->solwasdelayed = FALSE;
+   (*sepa)->exact = FALSE;
    (*sepa)->initialized = FALSE;
    (*sepa)->isparentsepa = FALSE;
    (*sepa)->parentsepa = NULL;
@@ -426,7 +427,8 @@ SCIP_RETCODE SCIPsepaExecLP(
        ( (depth == 0 && sepa->freq != -1) ||
          (sepa->freq > 0 && depth % sepa->freq == 0 &&
             (sepa->expbackoff == 1 || SCIPsetIsIntegral(set, LOG2(depth * (1.0 / sepa->freq)) / LOG2((SCIP_Real)sepa->expbackoff)))) ||
-         sepa->lpwasdelayed )
+         sepa->lpwasdelayed) &&
+         (!set->exact_enable || sepa->exact)
      )
    {
       if( (!sepa->delay && !sepa->lpwasdelayed) || execdelayed )
@@ -480,7 +482,7 @@ SCIP_RETCODE SCIPsepaExecLP(
          ncutsfound = SCIPsepastoreGetNCuts(sepastore) + SCIPcutpoolGetNCuts(cutpool) + SCIPcutpoolGetNCuts(delayedcutpool) - oldncutsfound;
          sepa->ncutsfound += ncutsfound;
          sepa->ncutsfoundatnode += ncutsfound;
-         sepa->nconssfound += MAX(stat->nactiveconss - oldnactiveconss, 0); /*lint !e776*/
+         sepa->nconssfound += MAX(stat->nactiveconss - oldnactiveconss, 0); /*lint !e776*/  /* cppcheck-suppress duplicateValueTernary */
 
          /* update domain reductions; therefore remove the domain
           * reduction counts which were generated in probing mode */
@@ -542,7 +544,8 @@ SCIP_RETCODE SCIPsepaExecSol(
        ( (depth == 0 && sepa->freq != -1) ||
          (sepa->freq > 0 && depth % sepa->freq == 0 &&
             (sepa->expbackoff == 1 || SCIPsetIsIntegral(set, LOG2(depth * (1.0 / sepa->freq) / LOG2((SCIP_Real)sepa->expbackoff))))) ||
-         sepa->solwasdelayed )
+         sepa->solwasdelayed ) &&
+         (!set->exact_enable || sepa->exact)
      )
    {
       if( (!sepa->delay && !sepa->solwasdelayed) || execdelayed )
@@ -592,7 +595,7 @@ SCIP_RETCODE SCIPsepaExecSol(
 
          sepa->ncutsfound += ncutsfound;
          sepa->ncutsfoundatnode += ncutsfound;
-         sepa->nconssfound += MAX(stat->nactiveconss - oldnactiveconss, 0); /*lint !e776*/
+         sepa->nconssfound += MAX(stat->nactiveconss - oldnactiveconss, 0); /*lint !e776*/  /* cppcheck-suppress duplicateValueTernary */
 
          /* update domain reductions; therefore remove the domain
           * reduction counts which were generated in probing mode */
@@ -802,6 +805,16 @@ void SCIPsepaSetFreq(
    assert(sepa != NULL);
 
    sepa->freq = freq;
+}
+
+/** marks the separator as safe to use in exact solving mode */
+void SCIPsepaMarkExact(
+   SCIP_SEPA*            sepa                /**< separator */
+   )
+{
+   assert(sepa != NULL);
+
+   sepa->exact = TRUE;
 }
 
 /** get maximal bound distance at which the separator is called */

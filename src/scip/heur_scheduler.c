@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2026 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -1711,11 +1711,11 @@ SCIP_RETCODE LNSFixMoreVariables(
    varprio.redcostscores = redcostscores;
    varprio.pscostscores = pscostscores;
 
-   nvarstoadd = MIN(nunfixedvars, nvarstoadd);
-
    /* select the first nvarstoadd many variables according to the score */
    if( nvarstoadd < nunfixedvars )
       SCIPselectInd(perm, sortIndCompScheduler, &varprio, nvarstoadd, nunfixedvars);
+   else
+      nvarstoadd = nunfixedvars;
 
    /* loop over the first elements of the selection defined in permutation. They represent the best variables */
    for( b = 0; b < nvarstoadd; ++b )
@@ -4211,8 +4211,17 @@ SCIP_DECL_HEURINIT(heurInitScheduler)
    /* note: diving heuristics data will be initialized when executing scheduler */
    if( heurdata->divingheurs != NULL )
    {
+      int j;
+
+      for( j = 0; j < heurdata->ndiving; ++j )
+      {
+         SCIP_CALL( schedulerFreeDivingHeur(scip, &(heurdata->divingheurs[j])) );
+      }
+
       SCIPfreeBlockMemoryArray(scip, &heurdata->divingheurs, heurdata->divingheurssize);
-      assert(heurdata->divingheurs == NULL);
+
+      if( heurdata->defaultroot )
+         SCIPfreeBlockMemoryArray(scip, &heurdata->sortedindices, heurdata->ndiving + heurdata->nneighborhoods);
    }
 
    /* create working solution */
@@ -4293,7 +4302,7 @@ SCIP_DECL_HEURINITSOL(heurInitsolScheduler)
          SCIP_Real* initpriorities;
          int nheurs;
 
-	 nheurs = heurdata->nactiveneighborhoods + heurdata->ndiving;
+         nheurs = heurdata->nactiveneighborhoods + heurdata->ndiving;
          SCIP_CALL( SCIPallocBufferArray(scip, &initpriorities, nheurs) );
          heurdata->counter = 0;
 
@@ -4498,6 +4507,9 @@ SCIP_RETCODE SCIPincludeHeurScheduler(
          HEUR_MAXDEPTH, HEUR_TIMING, HEUR_USESSUBSCIP, heurExecScheduler, heurdata) );
 
    assert(heur != NULL);
+
+   /* primal heuristic is safe to use in exact solving mode */
+   SCIPheurMarkExact(heur);
 
    /* include all neighborhoods */
    /* note: diving heuristics will be included when executing the scheduler heuristic for

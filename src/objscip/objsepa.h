@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2026 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -43,7 +43,7 @@ namespace scip
 
 /** @brief C++ wrapper for cut separators
  *
- *  This class defines the interface for cut separators implemented in C++. 
+ *  This class defines the interface for cut separators implemented in C++.
  *
  *  - \ref SEPA "Instructions for implementing a cut separator"
  *  - \ref SEPARATORS "List of available cut separators"
@@ -143,7 +143,7 @@ public:
    /** assignment of polymorphic classes causes slicing and is therefore disabled. */
    ObjSepa& operator=(ObjSepa&& o) = delete;
 
-   /** destructor of cut separator to free user data (called when SCIP is exiting) 
+   /** destructor of cut separator to free user data (called when SCIP is exiting)
     *
     *  @see SCIP_DECL_SEPAFREE(x) in @ref type_sepa.h
     */
@@ -152,7 +152,7 @@ public:
       return SCIP_OKAY;
    }
 
-   /** initialization method of cut separator (called after problem was transformed) 
+   /** initialization method of cut separator (called after problem was transformed)
     *
     *  @see SCIP_DECL_SEPAINIT(x) in @ref type_sepa.h
     */

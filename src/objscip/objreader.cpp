@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2026 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -137,8 +137,8 @@ SCIP_DECL_READERWRITE(readerWriteObj)
    assert(readerdata->objreader != NULL);
 
    /* call virtual method of reader object */
-   SCIP_CALL( readerdata->objreader->scip_write(scip, reader, file, name, probdata, transformed, 
-         objsense, objscale, objoffset, 
+   SCIP_CALL( readerdata->objreader->scip_write(scip, reader, file, filename, name, probdata, transformed,
+         objsense, objoffset, objscale, objoffsetexact, objscaleexact,
          vars, nvars, nbinvars, nintvars, nimplvars, ncontvars, fixedvars, nfixedvars, startnvars,
          conss, nconss, maxnconss, startnconss, genericnames, result) );
    

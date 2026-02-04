@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2026 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -130,7 +130,7 @@ struct SCIP_PresolData
    SCIP_Bool             updatequadbounded;  /**< if TRUE then only apply the update to QPs with bounded variables; if
                                               *   the variables are not bounded then a finite optimal solution might not
                                               *   exist and the KKT conditions would then be invalid */
-   SCIP_Bool             updatequadindef;    /**< if TRUE then apply quadratic constraint update even if the quadratic 
+   SCIP_Bool             updatequadindef;    /**< if TRUE then apply quadratic constraint update even if the quadratic
                                               *   constraint matrix is known to be indefinite */
 };
 
@@ -1675,7 +1675,7 @@ SCIP_RETCODE checkConsQuadraticProblem(
 
    if( maydecrease == NULL && mayincrease == NULL )
       return SCIP_OKAY;
-   else if( maydecrease != NULL )
+   if( maydecrease != NULL )
    {
       *objvar = maydecrease;
       coef = maydecreasecoef;
@@ -1692,6 +1692,7 @@ SCIP_RETCODE checkConsQuadraticProblem(
       *objvar = mayincrease;
       coef = mayincreasecoef;
    }
+   assert(*objvar != NULL);
    obj = SCIPvarGetObj(*objvar);
 
    /* check sign of coefficient */
@@ -1715,7 +1716,7 @@ SCIP_RETCODE checkConsQuadraticProblem(
    }
    else
       return SCIP_OKAY;
-   assert( *objvar != NULL && ! SCIPisFeasZero(scip, SCIPvarGetObj(*objvar)) );
+   assert( ! SCIPisFeasZero(scip, SCIPvarGetObj(*objvar)) );
    assert( ! SCIPisFeasZero(scip, *scale) );
 
    /* scale the right hand side of the objective constraint */
@@ -1748,13 +1749,13 @@ SCIP_RETCODE checkConsQuadraticProblem(
 
    if( SCIPisFeasPositive(scip, origObjScalar) )
    {
-	   origObjUb = SCIPvarGetUbOriginal(origObjVar);
-	   origObjLb = SCIPvarGetLbOriginal(origObjVar);
+      origObjUb = SCIPvarGetUbOriginal(origObjVar);
+      origObjLb = SCIPvarGetLbOriginal(origObjVar);
    }
    else
    {
-	   origObjUb = -SCIPvarGetLbOriginal(origObjVar);
-	   origObjLb = -SCIPvarGetUbOriginal(origObjVar);
+      origObjUb = -SCIPvarGetLbOriginal(origObjVar);
+      origObjLb = -SCIPvarGetUbOriginal(origObjVar);
       origObjScalar *= -1;
       origObjConstant *= -1;
    }
@@ -1762,11 +1763,11 @@ SCIP_RETCODE checkConsQuadraticProblem(
    /* not every optimal solution of the problem is a KKT point if the objective variable is bounded */
    if( SCIPisFeasPositive(scip, obj))
    {
-	  if ( !SCIPisInfinity(scip, -origObjLb))
-	     return SCIP_OKAY;
-	  if ( !SCIPisInfinity(scip, origObjUb)
-		  && !SCIPisFeasLE(scip, rhs/coef, (origObjUb-origObjConstant)/origObjScalar) )
-	     return SCIP_OKAY;
+      if ( !SCIPisInfinity(scip, -origObjLb))
+         return SCIP_OKAY;
+      if ( !SCIPisInfinity(scip, origObjUb)
+         && !SCIPisFeasLE(scip, rhs/coef, (origObjUb-origObjConstant)/origObjScalar) )
+         return SCIP_OKAY;
    }
    else
    {

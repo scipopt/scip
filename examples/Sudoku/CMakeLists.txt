@@ -1,10 +1,15 @@
 cmake_minimum_required(VERSION 3.11)
 
+# INTERPROCEDURAL_OPTIMIZATION is enforced when enabled.
+if(POLICY CMP0069)
+   cmake_policy(SET CMP0069 NEW)
+endif()
+
 project(Sudoku)
 
 if(TARGET SCIP::SCIP)
   # find package by SCIP PATH
-  find_package(SCIP CONFIG PATHS ${SCIP_BINARY_DIR} REQUIRED)
+  find_package(SCIP CONFIG NO_DEFAULT_PATH PATHS ${SCIP_BINARY_DIR} REQUIRED)
 else()
   find_package(SCIP REQUIRED)
 endif()
@@ -14,6 +19,7 @@ include_directories(BEFORE PUBLIC ${SCIP_INCLUDE_DIRS})
 add_executable(sudoku
    src/sudoku_main.cpp
    src/sudoku_utils.h)
+set_property(TARGET sudoku PROPERTY INTERPROCEDURAL_OPTIMIZATION ${LTO_AVAILABLE})
 
 target_link_libraries(sudoku ${SCIP_LIBRARIES})
 target_compile_options(sudoku PRIVATE ${SCIP_COMPILE_FLAGS})

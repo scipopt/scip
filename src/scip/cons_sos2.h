@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2026 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -109,7 +109,7 @@ SCIP_RETCODE SCIPcreateConsSOS2(
 /** creates and captures a SOS2 constraint with all constraint flags set to their default values.
  *
  *  @warning Do NOT set the constraint to be modifiable manually, because this might lead
- *  to wrong results as the variable array will not be resorted
+ *  to wrong results as the variable array will not be re-sorted
  *
  *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
  */

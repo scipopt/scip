@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2026 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -2235,6 +2235,7 @@ SCIP_RETCODE doConshdlrCreate(
    (*conshdlr)->propwasdelayed = FALSE;
    (*conshdlr)->duringsepa = FALSE;
    (*conshdlr)->duringprop = FALSE;
+   (*conshdlr)->exact = FALSE;
    (*conshdlr)->initialized = FALSE;
 
    /* add parameters */
@@ -2418,6 +2419,11 @@ SCIP_RETCODE SCIPconshdlrInit(
    assert(conshdlr != NULL);
    assert(set != NULL);
 
+   /* skip non-exact constraint handlers during exact solving mode */
+   assert(!set->exact_enable || conshdlr->exact || !conshdlr->needscons || conshdlr->nconss == 0);
+   if( set->exact_enable && !conshdlr->exact )
+      return SCIP_OKAY;
+
    if( conshdlr->initialized )
    {
       SCIPerrorMessage("constraint handler <%s> already initialized\n", conshdlr->name);
@@ -2531,6 +2537,11 @@ SCIP_RETCODE SCIPconshdlrExit(
    assert(conshdlr != NULL);
    assert(set != NULL);
 
+   /* skip non-exact constraint handlers during exact solving mode */
+   assert(!set->exact_enable || conshdlr->exact || !conshdlr->needscons || conshdlr->nconss == 0);
+   if( set->exact_enable && !conshdlr->exact )
+      return SCIP_OKAY;
+
    if( !conshdlr->initialized )
    {
       SCIPerrorMessage("constraint handler <%s> not initialized\n", conshdlr->name);
@@ -2573,6 +2584,11 @@ SCIP_RETCODE SCIPconshdlrInitpre(
 {
    assert(conshdlr != NULL);
    assert(set != NULL);
+
+   /* skip non-exact constraint handlers during exact solving mode */
+   assert(!set->exact_enable || conshdlr->exact || !conshdlr->needscons || conshdlr->nconss == 0);
+   if( set->exact_enable && !conshdlr->exact )
+      return SCIP_OKAY;
 
    /* reset conshdlr last presolved data in case of a restart */
    conshdlr->lastpropdomchgcount = -1;
@@ -2660,6 +2676,11 @@ SCIP_RETCODE SCIPconshdlrExitpre(
    assert(conshdlr != NULL);
    assert(set != NULL);
 
+   /* skip non-exact constraint handlers during exact solving mode */
+   assert(!set->exact_enable || conshdlr->exact || !conshdlr->needscons || conshdlr->nconss == 0);
+   if( set->exact_enable && !conshdlr->exact )
+      return SCIP_OKAY;
+
    /* call presolving deinitialization method of constraint handler */
    if( conshdlr->consexitpre != NULL )
    {
@@ -2701,6 +2722,11 @@ SCIP_RETCODE SCIPconshdlrInitsol(
    assert(set != NULL);
    assert(stat != NULL);
 
+   /* skip non-exact constraint handlers during exact solving mode */
+   assert(!set->exact_enable || conshdlr->exact || !conshdlr->needscons || conshdlr->nconss == 0);
+   if( set->exact_enable && !conshdlr->exact )
+      return SCIP_OKAY;
+
    conshdlr->sepalpwasdelayed = FALSE;
    conshdlr->sepasolwasdelayed = FALSE;
 
@@ -2740,6 +2766,11 @@ SCIP_RETCODE SCIPconshdlrExitsol(
 {
    assert(conshdlr != NULL);
    assert(set != NULL);
+
+   /* skip non-exact constraint handlers during exact solving mode */
+   assert(!set->exact_enable || conshdlr->exact || !conshdlr->needscons || conshdlr->nconss == 0);
+   if( set->exact_enable && !conshdlr->exact )
+      return SCIP_OKAY;
 
    /* call solving process deinitialization method of constraint handler */
    if( conshdlr->consexitsol != NULL )
@@ -2786,6 +2817,11 @@ SCIP_RETCODE SCIPconshdlrInitLP(
 #endif
 
    *cutoff = FALSE;
+
+   /* skip non-exact constraint handlers during exact solving mode */
+   assert(!set->exact_enable || conshdlr->exact || !conshdlr->needscons || conshdlr->nconss == 0);
+   if( set->exact_enable && !conshdlr->exact )
+      return SCIP_OKAY;
 
    if( conshdlr->consinitlp != NULL )
    {
@@ -2897,6 +2933,11 @@ SCIP_RETCODE SCIPconshdlrSeparateLP(
    assert(result != NULL);
 
    *result = SCIP_DIDNOTRUN;
+
+   /* skip non-exact constraint handlers during exact solving mode */
+   assert(!set->exact_enable || conshdlr->exact || !conshdlr->needscons || conshdlr->nconss == 0);
+   if( set->exact_enable && !conshdlr->exact )
+      return SCIP_OKAY;
 
    if( conshdlr->conssepalp != NULL
       && ((depth == 0 && conshdlr->sepafreq == 0)
@@ -3054,6 +3095,11 @@ SCIP_RETCODE SCIPconshdlrSeparateSol(
 
    *result = SCIP_DIDNOTRUN;
 
+   /* skip non-exact constraint handlers during exact solving mode */
+   assert(!set->exact_enable || conshdlr->exact || !conshdlr->needscons || conshdlr->nconss == 0);
+   if( set->exact_enable && !conshdlr->exact )
+      return SCIP_OKAY;
+
    if( conshdlr->conssepasol != NULL
       && ((depth == 0 && conshdlr->sepafreq == 0)
          || (conshdlr->sepafreq > 0 && depth % conshdlr->sepafreq == 0)
@@ -3195,6 +3241,11 @@ SCIP_RETCODE SCIPconshdlrEnforceRelaxSol(
 
    *result = SCIP_FEASIBLE;
 
+   /* skip non-exact constraint handlers during exact solving mode */
+   assert(!set->exact_enable || conshdlr->exact || !conshdlr->needscons || conshdlr->nconss == 0);
+   if( set->exact_enable && !conshdlr->exact )
+      return SCIP_OKAY;
+
    /* check, if this relaxation solution was already enforced at this node
     * the integrality constraint handler always needs to be enforced for all constraints since external branching
     * candidates are cleared before each resolve
@@ -3248,7 +3299,7 @@ SCIP_RETCODE SCIPconshdlrEnforceRelaxSol(
    /* constraint handlers without constraints should only be called once */
    if( nconss > 0 || (!conshdlr->needscons && relaxchanged) )
    {
-      SCIP_CONS** conss;
+      SCIP_CONS** conss = NULL;
       SCIP_Longint oldndomchgs;
       SCIP_Longint oldnprobdomchgs;
       int oldncuts;
@@ -3266,7 +3317,11 @@ SCIP_RETCODE SCIPconshdlrEnforceRelaxSol(
       conshdlr->lastnusefulenfoconss = conshdlr->nusefulenfoconss;
 
       /* get the array of the constraints to be processed */
-      conss = &(conshdlr->enfoconss[firstcons]);
+      if( conshdlr->needscons )
+      {
+         assert(conshdlr->enfoconss != NULL);
+         conss = conshdlr->enfoconss + firstcons;
+      }
 
       oldncuts = SCIPsepastoreGetNCuts(sepastore);
       oldnactiveconss = stat->nactiveconss;
@@ -3375,6 +3430,11 @@ SCIP_RETCODE SCIPconshdlrEnforceLPSol(
    assert(result != NULL);
 
    *result = SCIP_FEASIBLE;
+
+   /* skip non-exact constraint handlers during exact solving mode */
+   assert(!set->exact_enable || conshdlr->exact || !conshdlr->needscons || conshdlr->nconss == 0);
+   if( set->exact_enable && !conshdlr->exact )
+      return SCIP_OKAY;
 
    if( conshdlr->consenfolp != NULL )
    {
@@ -3542,6 +3602,14 @@ SCIP_RETCODE SCIPconshdlrGetDiveBoundChanges(
    assert(success != NULL);
    assert(infeasible != NULL);
 
+   *success = FALSE;
+   *infeasible = FALSE;
+
+   /* skip non-exact constraint handlers during exact solving mode */
+   assert(!set->exact_enable || conshdlr->exact || !conshdlr->needscons || conshdlr->nconss == 0);
+   if( set->exact_enable && !conshdlr->exact )
+      return SCIP_OKAY;
+
    if( conshdlr->consgetdivebdchgs != NULL )
    {
       SCIP_CALL( conshdlr->consgetdivebdchgs(set->scip, conshdlr, diveset, sol, success, infeasible) );
@@ -3588,6 +3656,12 @@ SCIP_RETCODE SCIPconshdlrEnforcePseudoSol(
    }
 
    *result = SCIP_FEASIBLE;
+
+   /* skip non-exact constraint handlers during exact solving mode */
+   assert(!set->exact_enable || conshdlr->exact || !conshdlr->needscons || conshdlr->nconss == 0);
+   if( set->exact_enable && !conshdlr->exact )
+      return SCIP_OKAY;
+
    if( conshdlr->consenfops != NULL )
    {
       int nconss;
@@ -3644,7 +3718,7 @@ SCIP_RETCODE SCIPconshdlrEnforcePseudoSol(
       /* constraint handlers without constraints should only be called once */
       if( nconss > 0 || (!conshdlr->needscons && pschanged) )
       {
-         SCIP_CONS** conss;
+         SCIP_CONS** conss = NULL;
          SCIP_Longint oldndomchgs;
          SCIP_Longint oldnprobdomchgs;
 
@@ -3657,7 +3731,11 @@ SCIP_RETCODE SCIPconshdlrEnforcePseudoSol(
          conshdlr->lastnusefulenfoconss = conshdlr->nusefulenfoconss;
 
          /* get the array of the constraints to be processed */
-         conss = &(conshdlr->enfoconss[firstcons]);
+         if( conshdlr->needscons )
+         {
+            assert(conshdlr->enfoconss != NULL);
+            conss = conshdlr->enfoconss + firstcons;
+         }
 
          oldndomchgs = stat->nboundchgs + stat->nholechgs;
          oldnprobdomchgs = stat->nprobboundchgs + stat->nprobholechgs;
@@ -3780,6 +3858,11 @@ SCIP_RETCODE SCIPconshdlrCheck(
 
    *result = SCIP_FEASIBLE;
 
+   /* skip non-exact constraint handlers during exact solving mode */
+   assert(!set->exact_enable || conshdlr->exact || !conshdlr->needscons || conshdlr->nconss == 0);
+   if( set->exact_enable && !conshdlr->exact )
+      return SCIP_OKAY;
+
    if( conshdlr->conscheck != NULL && (!conshdlr->needscons || conshdlr->ncheckconss > 0) )
    {
       SCIPsetDebugMsg(set, "checking %d constraints of handler <%s>\n", conshdlr->ncheckconss, conshdlr->name);
@@ -3845,6 +3928,11 @@ SCIP_RETCODE SCIPconshdlrPropagate(
    assert(result != NULL);
 
    *result = SCIP_DIDNOTRUN;
+
+   /* skip non-exact constraint handlers during exact solving mode */
+   assert(!set->exact_enable || conshdlr->exact || !conshdlr->needscons || conshdlr->nconss == 0);
+   if( set->exact_enable && !conshdlr->exact )
+      return SCIP_OKAY;
 
    if( conshdlr->consprop != NULL
       && (!conshdlr->needscons || conshdlr->npropconss > 0)
@@ -4030,6 +4118,11 @@ SCIP_RETCODE SCIPconshdlrPresolve(
 
    *result = SCIP_DIDNOTRUN;
 
+   /* skip non-exact constraint handlers during exact solving mode */
+   assert(!set->exact_enable || conshdlr->exact || !conshdlr->needscons || conshdlr->nconss == 0);
+   if( set->exact_enable && !conshdlr->exact )
+      return SCIP_OKAY;
+
    if( conshdlr->conspresol != NULL
       && (!conshdlr->needscons || conshdlr->nactiveconss > 0)
       && (conshdlr->maxprerounds == -1 || conshdlr->npresolcalls < conshdlr->maxprerounds ) )
@@ -4097,6 +4190,17 @@ SCIP_RETCODE SCIPconshdlrPresolve(
          SCIP_CALL( conshdlrForceUpdates(conshdlr, blkmem, set, stat) );
 
          /* count the new changes */
+         assert( *nfixedvars - conshdlr->lastnfixedvars >= 0 );
+         assert( *naggrvars - conshdlr->lastnaggrvars >= 0 );
+         assert( *nchgvartypes - conshdlr->lastnchgvartypes >= 0 );
+         assert( *nchgbds - conshdlr->lastnchgbds >= 0 );
+         assert( *naddholes - conshdlr->lastnaddholes >= 0 );
+         assert( *ndelconss - conshdlr->lastndelconss >= 0 );
+         assert( *naddconss - conshdlr->lastnaddconss >= 0 );
+         assert( *nupgdconss - conshdlr->lastnupgdconss >= 0 );
+         assert( *nchgcoefs - conshdlr->lastnchgcoefs >= 0 );
+         assert( *nchgsides - conshdlr->lastnchgsides >= 0 );
+
          conshdlr->nfixedvars += *nfixedvars - conshdlr->lastnfixedvars;
          conshdlr->naggrvars += *naggrvars - conshdlr->lastnaggrvars;
          conshdlr->nchgvartypes += *nchgvartypes - conshdlr->lastnchgvartypes;
@@ -4143,6 +4247,11 @@ SCIP_RETCODE SCIPconshdlrDelVars(
    assert(conshdlr != NULL);
    assert(set != NULL);
 
+   /* skip non-exact constraint handlers during exact solving mode */
+   assert(!set->exact_enable || conshdlr->exact || !conshdlr->needscons || conshdlr->nconss == 0);
+   if( set->exact_enable && !conshdlr->exact )
+      return SCIP_OKAY;
+
    if( conshdlr->consdelvars != NULL )
    {
       SCIPsetDebugMsg(set, "deleting variables in constraints of handler <%s>\n", conshdlr->name);
@@ -4173,6 +4282,11 @@ SCIP_RETCODE SCIPconshdlrLockVars(
    assert(conshdlr->conslock != NULL);
    assert(!conshdlr->needscons);
 
+   /* skip non-exact constraint handlers during exact solving mode */
+   assert(!set->exact_enable || conshdlr->exact || !conshdlr->needscons || conshdlr->nconss == 0);
+   if( set->exact_enable && !conshdlr->exact )
+      return SCIP_OKAY;
+
    SCIP_CALL( conshdlr->conslock(set->scip, conshdlr, NULL, SCIP_LOCKTYPE_MODEL, +1, 0) );
 
    return SCIP_OKAY;
@@ -4187,6 +4301,11 @@ SCIP_RETCODE SCIPconshdlrUnlockVars(
    assert(conshdlr != NULL);
    assert(conshdlr->conslock != NULL);
    assert(!conshdlr->needscons);
+
+   /* skip non-exact constraint handlers during exact solving mode */
+   assert(!set->exact_enable || conshdlr->exact || !conshdlr->needscons || conshdlr->nconss == 0);
+   if( set->exact_enable && !conshdlr->exact )
+      return SCIP_OKAY;
 
    SCIP_CALL( conshdlr->conslock(set->scip, conshdlr, NULL, SCIP_LOCKTYPE_MODEL, -1, 0) );
 
@@ -4232,6 +4351,29 @@ void SCIPconshdlrSetData(
    assert(conshdlr != NULL);
 
    conshdlr->conshdlrdata = conshdlrdata;
+}
+
+/** is constraint handler safe to use in exact solving mode? */
+SCIP_Bool SCIPconshdlrIsExact(
+   SCIP_CONSHDLR*        conshdlr            /**< constraint handler */
+   )
+{
+   assert(conshdlr != NULL);
+
+   return conshdlr->exact;
+}
+
+/** marks the constraint handler as safe to use in exact solving mode
+ *
+ *  @note Constraint handlers that are not marked as exact are skipped during exact solving mode.
+ */
+void SCIPconshdlrMarkExact(
+   SCIP_CONSHDLR*        conshdlr            /**< constraint handler */
+   )
+{
+   assert(conshdlr != NULL);
+
+   conshdlr->exact = TRUE;
 }
 
 /** sets all separation related callbacks of the constraint handler */
@@ -5166,6 +5308,17 @@ SCIP_Bool SCIPconshdlrNeedsCons(
    return conshdlr->needscons;
 }
 
+/** sets the needscons flag of constraint handler, for example to disable without constraints */
+void SCIPconshdlrSetNeedsCons(
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   SCIP_Bool             needscons           /**< should be skipped, if no constraints are available? */
+   )
+{
+   assert(conshdlr != NULL);
+
+   conshdlr->needscons = needscons;
+}
+
 /** does the constraint handler perform presolving? */
 SCIP_Bool SCIPconshdlrDoesPresolve(
    SCIP_CONSHDLR*        conshdlr            /**< constraint handler */
@@ -5933,6 +6086,7 @@ SCIP_RETCODE SCIPconsCreate(
    (*cons)->enfoconsspos = -1;
    (*cons)->checkconsspos = -1;
    (*cons)->propconsspos = -1;
+   (*cons)->confconsspos = -1;
    (*cons)->activedepth = -2;
    (*cons)->validdepth = (local ? -1 : 0);
    (*cons)->age = 0.0;
@@ -6115,17 +6269,35 @@ SCIP_RETCODE SCIPconsParse(
    /* scan constraint handler name */
    assert(str != NULL);
    SCIPstrCopySection(str, '[', ']', conshdlrname, SCIP_MAXSTRLEN, &endptr);
-   if ( endptr == NULL || endptr == str )
+   if( endptr == NULL || endptr == str )
    {
       SCIPmessagePrintWarning(messagehdlr, "Syntax error: Could not find constraint handler name.\n");
       return SCIP_OKAY;
    }
    assert(endptr != NULL);
+
+   /* allow parsing linear constraints exactly in exact solving mode */
+   if( set->exact_enable )
+   {
+      /* linear to exactlinear */
+      if( strcmp(conshdlrname, "linear") == 0 )
+         strcpy(conshdlrname, "exactlinear");
+   }
+#ifdef SCIP_DISABLED_CODE
+   /**@todo allow parsing exactlinear constraints approximately in real solving mode, but issue a warning message */
+   else
+   {
+      /* exactlinear to linear */
+      if( strcmp(conshdlrname, "exactlinear") == 0 )
+         strcpy(conshdlrname, "linear");
+   }
+#endif
+
    SCIPsetDebugMsg(set, "constraint handler name <%s>\n", conshdlrname);
 
    /* scan constraint name */
    SCIPstrCopySection(endptr, '<', '>', consname, SCIP_MAXSTRLEN, &endptr);
-   if ( endptr == NULL || endptr == str )
+   if( endptr == NULL || endptr == str )
    {
       SCIPmessagePrintWarning(messagehdlr, "Syntax error: Could not find constraint name.\n");
       return SCIP_OKAY;
@@ -6242,6 +6414,7 @@ SCIP_RETCODE SCIPconsFree(
       checkConssArrays((*cons)->conshdlr);
    }
    assert((*cons)->consspos == -1);
+   assert((*cons)->confconsspos == -1);
 
    /* free constraint */
    BMSfreeBlockMemoryArray(blkmem, &(*cons)->name, strlen((*cons)->name)+1);
@@ -7117,13 +7290,15 @@ SCIP_RETCODE SCIPconsDisablePropagation(
 }
 
 /** marks the constraint to be a conflict */
-void SCIPconsMarkConflict(
+SCIP_RETCODE SCIPconsMarkConflict(
    SCIP_CONS*            cons                /**< constraint */
    )
 {
    assert(cons != NULL);
 
    cons->conflict = TRUE;
+
+   return SCIP_OKAY;
 }
 
 /** marks the constraint to be propagated (update might be delayed) */
@@ -8657,8 +8832,9 @@ void SCIPconsAddUpgradeLocks(
 {
    assert(cons != NULL);
 
-   assert(cons->nupgradelocks < (1 << 28) - nlocks); /*lint !e574*/
-   cons->nupgradelocks += (unsigned int) nlocks;
+   assert(cons->nupgradelocks >= -nlocks);
+   cons->nupgradelocks += nlocks;
+   assert(cons->nupgradelocks >= nlocks);
 }
 
 /** gets number of locks against upgrading the constraint, 0 means this constraint can be upgraded */

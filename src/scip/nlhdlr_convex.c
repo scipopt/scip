@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2026 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -300,7 +300,7 @@ SCIP_RETCODE exprstackPush(
       SCIP_CALL( SCIPreallocBufferArray(scip, &exprstack->stack, exprstack->stacksize) );
    }
 
-   memcpy(exprstack->stack + (exprstack->stackpos+1), exprs, nexprs * sizeof(SCIP_EXPR*));  /*lint !e679*/ /*lint !e737*/
+   memcpy(exprstack->stack + (exprstack->stackpos+1), exprs, nexprs * sizeof(SCIP_EXPR*));  /*lint !e679*/ /*lint !e737*/ /*lint !e420*/
    exprstack->stackpos += nexprs;
 
    return SCIP_OKAY;
@@ -849,6 +849,8 @@ DECL_CURVCHECK(curvCheckExprhdlr)
       return SCIP_OKAY;
    }
 
+   *success = FALSE;
+
    /* ignore sums if > 1 children
     * NOTE: this means that for something like 1+f(x), even if f is a trivial convex expression, we would handle 1+f(x)
     * with this nlhdlr, instead of formulating this as 1+z and handling z=f(x) with the default nlhdlr, i.e., the exprhdlr
@@ -1015,7 +1017,7 @@ SCIP_RETCODE constructExpr(
       else if( SCIPexprGetCurvature(nlexpr) != SCIP_EXPRCURV_UNKNOWN && !assumecurvature )
       {
          /* if we are here, either convexity or concavity is required; try to check for this curvature */
-         SCIP_Bool success;
+         SCIP_Bool success = FALSE;
          int method;
 
          /* try through curvature check methods until one succeeds */

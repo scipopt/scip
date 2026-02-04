@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2026 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -98,7 +98,7 @@ SCIP_Real SCIPgetShadowTreeEventHandlerExecutionTime(
 SCIP_EXPORT
 SCIP_SHADOWNODE* SCIPshadowTreeGetShadowNodeFromNodeNumber(
    SCIP_SHADOWTREE*      shadowtree,         /**< pointer to the shadow tree */
-   SCIP_Longint          nodeno              /**< index of the node, equivalent to the standard branch-and-bound tree */
+   SCIP_Longint          nodeid              /**< index of the node, equivalent to the standard branch-and-bound tree */
 );
 
 /** given a node, returns the node in the shadowtree, or NULL if it doesn't exist */

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2026 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -670,7 +670,7 @@ SCIP_Bool isZero(
 
    assert(scip != NULL);
    assert(raydirection != NULL);
-   iszero = TRUE; 
+   iszero = TRUE;
    for( v = nsubspacevars - 1; v >= 0; --v )
    {
       assert(!SCIPisInfinity(scip, raydirection[v]));
@@ -1213,6 +1213,9 @@ SCIP_RETCODE SCIPincludeHeurOctane(
          HEUR_MAXDEPTH, HEUR_TIMING, HEUR_USESSUBSCIP, heurExecOctane, heurdata) );
 
    assert(heur != NULL);
+
+   /* primal heuristic is safe to use in exact solving mode */
+   SCIPheurMarkExact(heur);
 
    /* set non-NULL pointers to callback methods */
    SCIP_CALL( SCIPsetHeurCopy(scip, heur, heurCopyOctane) );

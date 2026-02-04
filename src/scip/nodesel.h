@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2026 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -45,6 +45,7 @@
 #include "scip/type_reopt.h"
 #include "scip/type_message.h"
 #include "scip/pub_nodesel.h"
+#include "scip/type_rational.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -141,6 +142,12 @@ int SCIPnodepqLen(
 
 /** gets the minimal lower bound of all nodes in the queue */
 SCIP_Real SCIPnodepqGetLowerbound(
+   SCIP_NODEPQ*          nodepq,             /**< node priority queue */
+   SCIP_SET*             set                 /**< global SCIP settings */
+   );
+
+/** gets the minimal exact lower bound of all nodes in the queue or NULL if empty */
+SCIP_RATIONAL* SCIPnodepqGetLowerboundExact(
    SCIP_NODEPQ*          nodepq,             /**< node priority queue */
    SCIP_SET*             set                 /**< global SCIP settings */
    );

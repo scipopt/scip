@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2026 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -24,7 +24,7 @@
 
 /**@file   struct_concsolver.h
  * @ingroup INTERNALAPI
- * @brief  datastructures for concurrent solvers
+ * @brief  data structures for concurrent solvers
  * @author Leona Gottwald
  */
 
@@ -64,7 +64,7 @@ struct SCIP_ConcSolverType
 struct SCIP_ConcSolver
 {
    SCIP_CONCSOLVERTYPE*                type;                      /**< type of this concurrent solver */
-   int                                 idx;                       /**< index of initialized exernal solver */
+   int                                 idx;                       /**< index of initialized external solver */
    char*                               name;                      /**< name of concurrent solver */
    SCIP_CONCSOLVERDATA*                data;                      /**< user data of concurrent solver */
    SCIP_SYNCDATA*                      syncdata;                  /**< most recent synchronization data that has been read */

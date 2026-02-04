@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2026 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -588,7 +588,8 @@ SCIP_RETCODE aggregation(
    }
 #endif
 
-   assert( !SCIPisZero(scip, weight1) );
+   assert( !SCIPisSumZero(scip, weight1) );
+   assert( !SCIPisSumZero(scip, 1.0 / weight1) );
 
    presoldata->naggregated += 1;
    aggregatedvar = vars[colidx2];
@@ -853,20 +854,23 @@ SCIP_RETCODE cancelCol(
             hashingcolinds = SCIPmatrixGetColIdxPtr(matrix, hashingcolconspair->colindex);
             hashingcolvar = vars[hashingcolconspair->colindex];
             hashingcolisbin = SCIPvarIsBinary(hashingcolvar);
-            scale = -colconspair.conscoef1 / hashingcolconspair->conscoef1;
 
-            if( SCIPisZero(scip, scale) )
-               continue;
-
-            if( REALABS(scale) > MAXSCALE )
-               continue;
-
-            /* @todo do more reduction if knspsack constraint handler supports downgrading constraint,
+            /* @todo do more reduction if knapsack constraint handler supports downgrading constraint,
              * i.e., converting into a linear constraint
              */
             if( hashingcolisbin )
                continue;
-            else if( SCIPvarIsIntegral(hashingcolvar) )
+
+            scale = -colconspair.conscoef1 / hashingcolconspair->conscoef1;
+            assert(scale != 0.0); /*lint !e777*/
+
+            if( REALABS(scale) > MAXSCALE )
+               continue;
+
+            if( !SCIPisVarAggrCoefAcceptable(scip, hashingcolvar, scale) )
+               continue;
+
+            if( SCIPvarIsIntegral(hashingcolvar) )
             {
                if( SCIPvarIsIntegral(cancelvar) )
                {
@@ -1306,7 +1310,7 @@ SCIP_DECL_PRESOLEXEC(presolExecDualsparsify)
          SCIPmatrixFree(scip, &matrix);
 
       if( infeasible )
-	     *result = SCIP_CUTOFF;
+         *result = SCIP_CUTOFF;
 
       return SCIP_OKAY;
    }
@@ -1522,7 +1526,7 @@ SCIP_DECL_PRESOLEXEC(presolExecDualsparsify)
    if( numcancel > 0 )
    {
       SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL,
-		      "   (%.1fs) dualsparsify: %d nonzeros canceled\n", SCIPgetSolvingTime(scip), numcancel);
+         "   (%.1fs) dualsparsify: %d nonzeros canceled\n", SCIPgetSolvingTime(scip), numcancel);
       *result = SCIP_SUCCESS;
    }
    else /* do reductions on variables that contain larger nonzero entries */
@@ -1703,8 +1707,8 @@ SCIP_DECL_PRESOLEXEC(presolExecDualsparsify)
 
       if( numcancel > 0 )
       {
-	 SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL,
-			 "   (%.1fs) dualsparsify: %d nonzeros canceled\n", SCIPgetSolvingTime(scip), numcancel);
+         SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL,
+            "   (%.1fs) dualsparsify: %d nonzeros canceled\n", SCIPgetSolvingTime(scip), numcancel);
          *result = SCIP_SUCCESS;
       }
    }

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2026 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -229,7 +229,8 @@
 #define MAKECONTINTEGRAL                             FALSE /**< convert continuous variable to integral variables in SCIPmakeRowIntegral()? */
 #define POSTPROCESS                                   TRUE /**< apply postprocessing after MIR calculation? - see SCIPcalcMIR() */
 #define BOUNDSWITCH                                 0.9999 /**< threshold for bound switching - see SCIPcalcMIR() */
-#define USEVBDS                                       TRUE /**< use variable bounds? - see SCIPcalcMIR() */
+#define VARTYPEUSEVBDS                                   2 /**< We allow variable bound substitution for variables with continuous vartype only.
+                                                            *   See SCIPcalcMIR() for more information. */
 #define FIXINTEGRALRHS                               FALSE /**< try to generate an integral rhs? - see SCIPcalcMIR() */
 #define MAXAGGRLEN(ncols)               (0.1*(ncols)+1000) /**< maximal length of base inequality */
 
@@ -2154,7 +2155,7 @@ SCIP_RETCODE generateGMICuts(
        */
 
       /* try to create GMI cut out of the aggregation row */
-      SCIP_CALL( SCIPcalcMIR(scip, sol, POSTPROCESS, BOUNDSWITCH, USEVBDS, allowlocal, FIXINTEGRALRHS, NULL,
+      SCIP_CALL( SCIPcalcMIR(scip, sol, POSTPROCESS, BOUNDSWITCH, VARTYPEUSEVBDS, allowlocal, FIXINTEGRALRHS, NULL,
             NULL, minfrac, maxfrac, 1.0, aggrrow, cutcoefs, &cutrhs, cutinds, &cutnnz, &cutefficacy, &cutrank,
             &cutislocal, &success) );
 
@@ -2349,7 +2350,6 @@ SCIP_RETCODE solveLagrangianDual(
    SCIP_Bool solvelp;
    int ncurrroundlpiterslast;
    int nlpiters;
-   int ngeneratednewcuts;
    int nnewaddedsoftcuts;
    int nsoftcutviols;
    int nnzsubgradientdualprod;
@@ -2369,13 +2369,10 @@ SCIP_RETCODE solveLagrangianDual(
    nviolscore = 0.0;
    scoreweight = 1.0;
    ballradius = sepadata->radiusinit;
-   ngeneratednewcuts = 0;
    nsoftcutviols = 0;
    nnzsubgradientdualprod = 0;
    terminate = FALSE;
-   subgradientzero = FALSE;
    objvecsdiffer = FALSE;
-   dualvecsdiffer = FALSE;
    solvelp = TRUE;
 
    /* update objective vector based on input Lagrangian multipliers */
@@ -2413,7 +2410,7 @@ SCIP_RETCODE solveLagrangianDual(
          /* generate GMI cuts if a new basis solution is found */
          if( (nlpiters >= 1) && (i % sepadata->cutgenfreq == 0) )
          {
-            ngeneratednewcuts = 0;
+            int ngeneratednewcuts = 0;
             SCIP_CALL( generateGMICuts(scip, sepa, sepadata, mainiternum, i, sol, solvals,
                   nmaxgeneratedperroundcuts, allowlocal, generatedcurrroundcuts, generatedcutefficacies,
                   *ngeneratedcurrroundcuts, &ngeneratednewcuts, depth, cutoff));
@@ -2762,7 +2759,6 @@ SCIP_RETCODE separateCuts(
    solfound = FALSE;
    cutoff = FALSE;
    cutoff2 = FALSE;
-   dualvecsdiffer = FALSE;
    terminate = FALSE;
 
    SCIPdebugMsg(scip, "Separating cuts...\n");
@@ -2847,7 +2843,7 @@ SCIP_RETCODE separateCuts(
 
          /* if dual feasible, then fetch dual solution and reset Lagrangian multipliers based on it. otherwise, retain the
           * Lagrangian multipliers and simply initialize the new multipliers to zeroes. */
-         if( SCIPlpiIsDualFeasible(sepadata->lpiwithhardcuts) )
+         if( SCIPlpiWasSolved(sepadata->lpiwithhardcuts) && SCIPlpiIsDualFeasible(sepadata->lpiwithhardcuts) )
          {
             SCIP_CALL( SCIPlpiGetSol(sepadata->lpiwithhardcuts, NULL, NULL, dualsol, NULL, NULL) );
             SCIP_CALL( updateDualVector(scip, sepadata, dualvector, &(dualsol[nrows]),

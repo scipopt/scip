@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2026 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -197,7 +197,7 @@ SCIP_RETCODE scoring(
       if( pscosts[i] > maxpscost )
          maxpscost = pscosts[i];
    }
-   
+
    /* account for the case where maxlocks or maxpscost is 0 */
    maxpscost = MAX(maxpscost, SCIPepsilon(scip)); /*lint !e666*/
    maxlocks = MAX(maxlocks, 1);
@@ -532,13 +532,13 @@ SCIP_DECL_CUTSELSELECT(cutselSelectEnsemble)
 
    cutseldata = SCIPcutselGetData(cutsel);
    assert(cutseldata != NULL);
-   
+
    if( ncuts > cutseldata->maxcuts || SCIPgetNVars(scip) > cutseldata->maxnumvars )
    {
       *result = SCIP_DIDNOTFIND;
       return SCIP_OKAY;
    }
-   
+
    *result = SCIP_SUCCESS;
 
    SCIP_CALL( SCIPselectCutsEnsemble(scip, cuts, forcedcuts, cutseldata, root, ncuts, nforcedcuts,

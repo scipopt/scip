@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2026 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -53,8 +53,7 @@
 #include "scip/sepa_clique.h"
 #include "tclique/tclique.h"
 #include <string.h>
-#if defined(_WIN32) || defined(_WIN64)
-#else
+#ifndef _WIN32
 #include <strings.h> /*lint --e{766}*/
 #endif
 
@@ -616,7 +615,7 @@ SCIP_Bool nodesHaveCommonClique(
    }
 }
 
-/** returns, whether the edge (node1, node2) is in the graph */
+/** returns whether the edge (node1, node2) is in the graph */
 static
 TCLIQUE_ISEDGE(tcliqueIsedgeClique)
 {
@@ -897,7 +896,7 @@ SCIP_RETCODE separateCuts(
           * implication graph or in the clique table -> nothing has to be done
           */
          else
-	 {
+         {
             SCIPdebugMsg(scip, "no 3-cliques found in implication graph\n");
          }
 

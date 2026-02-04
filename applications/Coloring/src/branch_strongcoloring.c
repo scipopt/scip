@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2026 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -525,9 +525,9 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpStrongcoloring)
       node = SCIPgetCurrentNode(scip);
 #endif
       currentcons = COLORconsGetActiveStoreGraphCons(scip);
-       
+
       start = TRUE;
-      for ( i = SCIPgetDepth(scip)%nnodes; (start || (i != SCIPgetDepth(scip)%nnodes)); i=((i+1)%nnodes) )
+      for ( i = SCIPgetDepth(scip)%nnodes; (start || (i != SCIPgetDepth(scip)%nnodes)); i=((i+1)%nnodes) ) /*lint !e2840*/
       {
          start = FALSE;
          node1 = COLORconsGetRepresentative(scip, i);

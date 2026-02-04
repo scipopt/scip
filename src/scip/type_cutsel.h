@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2026 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -110,7 +110,7 @@ typedef struct SCIP_CutselData SCIP_CUTSELDATA; /**< cut selector specific data 
 /** cut selection method of cut selector
  *
  *  This method is called to select the cuts to be added to the LP.
- *  Forcedcuts must not be changed, and cuts should only be resorted, with the first nselectedcuts of cuts being chosen.
+ *  Forcedcuts must not be changed, and cuts should only be re-sorted, with the first nselectedcuts of cuts being chosen.
  *  These nselectededcuts are used in addition to the forcedcuts (do not delete nor modify elements, simply resort).
  *
  *  input:

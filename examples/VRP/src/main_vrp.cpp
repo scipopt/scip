@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2026 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -82,19 +82,22 @@ int read_problem(
    vector<vector<int> >& dist                /**< distances between nodes */
    )
 {
-   static const string DIMENSION           = "DIMENSION";
-   static const string DEMAND_SECTION      = "DEMAND_SECTION";
-   static const string DEPOT_SECTION       = "DEPOT_SECTION";
-   static const string EDGE_WEIGHT_TYPE    = "EDGE_WEIGHT_TYPE";
-   static const string EUC_2D              = "EUC_2D";
-   static const string EXPLICIT            = "EXPLICIT";
-   static const string LOWER_DIAG_ROW      = "LOWER_DIAG_ROW";
-   static const string EDGE_WEIGHT_FORMAT  = "EDGE_WEIGHT_FORMAT";
-   static const string EDGE_WEIGHT_SECTION = "EDGE_WEIGHT_SECTION";
-   static const string NODE_COORD_SECTION  = "NODE_COORD_SECTION";
-   static const string CAPACITY            = "CAPACITY";
+   const string DIMENSION           = "DIMENSION";
+   const string DEMAND_SECTION      = "DEMAND_SECTION";
+   const string DEPOT_SECTION       = "DEPOT_SECTION";
+   const string EDGE_WEIGHT_TYPE    = "EDGE_WEIGHT_TYPE";
+   const string EUC_2D              = "EUC_2D";
+   const string EXPLICIT            = "EXPLICIT";
+   const string LOWER_DIAG_ROW      = "LOWER_DIAG_ROW";
+   const string EDGE_WEIGHT_FORMAT  = "EDGE_WEIGHT_FORMAT";
+   const string EDGE_WEIGHT_SECTION = "EDGE_WEIGHT_SECTION";
+   const string NODE_COORD_SECTION  = "NODE_COORD_SECTION";
+   const string CAPACITY            = "CAPACITY";
 
    ifstream file(filename);
+
+   num_nodes = -1;
+   capacity = -1;
 
    if ( ! file )
    {
@@ -121,6 +124,7 @@ int read_problem(
          file >> dummy;
          file >> num_nodes;
 
+         assert( num_nodes >= 0 );
          demand.resize(num_nodes, 0); /*lint !e732 !e747*/
          dist.resize(num_nodes); /*lint !e732 !e747*/
          for (int i = 0; i < num_nodes; ++i)
@@ -143,6 +147,7 @@ int read_problem(
          }
          if ( edge_weight_type == EUC_2D )
          {
+            assert( num_nodes >= 0 );
             x.resize(num_nodes, 0); /*lint !e732 !e747*/
             y.resize(num_nodes, 0); /*lint !e732 !e747*/
          }
@@ -163,6 +168,7 @@ int read_problem(
             cerr << "Error. Unsupported edge length type." << endl;
             return 1;
          }
+         assert( num_nodes >= 0 );
          for (int i = 0; i < num_nodes; ++i)
          {
             for (int j = 0; j < i; ++j)
@@ -180,6 +186,7 @@ int read_problem(
             cerr << "Error. Data file contains " << EDGE_WEIGHT_TYPE << " " << edge_weight_type << " and " << NODE_COORD_SECTION << endl;
             return 1;
          }
+         assert( num_nodes >= 0 );
          for (int i = 0; i < num_nodes; ++i)
          {
             int j, xi, yi;
@@ -206,6 +213,7 @@ int read_problem(
       }
       else if ( key == DEMAND_SECTION )
       {
+         assert( num_nodes >= 0 );
          for (int i = 0; i < num_nodes; ++i)
          {
             int j, d;
@@ -263,7 +271,7 @@ SCIP_RETCODE execmain(int argc, char** argv)
     * Setup problem data *
     **********************/
 
-   static const char* VRP_PRICER_NAME = "VRP_Pricer";
+   const char* VRP_PRICER_NAME = "VRP_Pricer";
 
    vector<vector<int> > dist;
    vector<int> demand;
@@ -275,6 +283,8 @@ SCIP_RETCODE execmain(int argc, char** argv)
       cerr << "Error reading data file " << argv[argc-1] << endl;
       return SCIP_READERROR;
    }
+   assert( num_nodes >= 0 );
+   assert( capacity >= 0 );
 
    cout << "Number of nodes: " << num_nodes << endl;
 
@@ -331,10 +341,10 @@ SCIP_RETCODE execmain(int argc, char** argv)
    /* add arc-routing variables */
    char var_name[255];
    vector< vector<SCIP_VAR*> > arc_var( num_nodes ); /*lint !e732 !e747*/
-   for (int i = 0; i < num_nodes; ++i)
+   for (size_t i = 0; i < (size_t)num_nodes; ++i)
    {
       arc_var[i].resize(i, (SCIP_VAR*) NULL); /*lint !e732 !e747*/
-      for (int j = 0; j < i; ++j)
+      for (size_t j = 0; j < i; ++j)
       {
          SCIP_VAR* var;
          (void) SCIPsnprintf(var_name, 255, "E%d_%d", i, j );
@@ -346,8 +356,8 @@ SCIP_RETCODE execmain(int argc, char** argv)
                      2.0,                    // upper bound
                      dist[i][j],             // objective
                      SCIP_VARTYPE_INTEGER,   // variable type
-                     true,                   // initial
-                     false,                  // forget the rest ...
+                     TRUE,                   // initial
+                     FALSE,                  // forget the rest ...
                      NULL, NULL, NULL, NULL, NULL) );  /*lint !e732 !e747*/
          SCIP_CALL( SCIPaddVar(scip, var) );
          arc_var[i][j] = var; /*lint !e732 !e747*/
@@ -357,10 +367,10 @@ SCIP_RETCODE execmain(int argc, char** argv)
    /* add arc-routing - tour constraints */
    char con_name[255];
    vector< vector<SCIP_CONS*> > arc_con( num_nodes );  /*lint !e732 !e747*/
-   for (int i = 0; i < num_nodes; ++i)
+   for (size_t i = 0; i < (size_t)num_nodes; ++i)
    {
       arc_con[i].resize(i, (SCIP_CONS*)NULL); /*lint !e732 !e747*/
-      for (int j = 0; j < i; ++j)
+      for (size_t j = 0; j < i; ++j)
       {
          SCIP_CONS* con;
          (void) SCIPsnprintf(con_name, 255, "A%d_%d", i, j);
@@ -369,41 +379,41 @@ SCIP_RETCODE execmain(int argc, char** argv)
          SCIP_CALL( SCIPcreateConsLinear(scip, &con, con_name, 1, &idx, &coeff,
                      -SCIPinfinity(scip),    /* lhs */
                      0.0,                    /* rhs */
-                     true,                   /* initial */
-                     false,                  /* separate */
-                     true,                   /* enforce */
-                     true,                   /* check */
-                     true,                   /* propagate */
-                     false,                  /* local */
-                     true,                   /* modifiable */
-                     false,                  /* dynamic */
-                     false,                  /* removable */
-                     false) );               /* stickingatnode */
+                     TRUE,                   /* initial */
+                     FALSE,                  /* separate */
+                     TRUE,                   /* enforce */
+                     TRUE,                   /* check */
+                     TRUE,                   /* propagate */
+                     FALSE,                  /* local */
+                     TRUE,                   /* modifiable */
+                     FALSE,                  /* dynamic */
+                     FALSE,                  /* removable */
+                     FALSE) );               /* stickingatnode */
          SCIP_CALL( SCIPaddCons(scip, con) );
          arc_con[i][j] = con;  /*lint !e732 !e747*/
       }
    }
 
    /* add arc-routing - degree constraints */
-   for (int i = 1; i < num_nodes; ++i)
+   for (size_t i = 1; i < (size_t)num_nodes; ++i)
    {
       SCIP_CONS* con;
       (void) SCIPsnprintf(con_name, 255, "D%d", i);
       SCIP_CALL( SCIPcreateConsLinear(scip, &con, con_name, 0, 0, 0,
                   2.0,                    /* lhs */
                   2.0,                    /* rhs */
-                  true,                   /* initial */
-                  false,                  /* separate */
-                  true,                   /* enforce */
-                  true,                   /* check */
-                  true,                   /* propagate */
-                  false,                  /* local */
-                  false,                  /* modifiable */
-                  false,                  /* dynamic */
-                  false,                  /* removable */
-                  false) );               /* stickingatnode */
+                  TRUE,                   /* initial */
+                  FALSE,                  /* separate */
+                  TRUE,                   /* enforce */
+                  TRUE,                   /* check */
+                  TRUE,                   /* propagate */
+                  FALSE,                  /* local */
+                  FALSE,                  /* modifiable */
+                  FALSE,                  /* dynamic */
+                  FALSE,                  /* removable */
+                  FALSE) );               /* stickingatnode */
       SCIP_CALL( SCIPaddCons(scip, con) );
-      for (int j = 0; j < num_nodes; ++j)
+      for (size_t j = 0; j < (size_t)num_nodes; ++j)
       {
          if ( j != i )
          {
@@ -415,23 +425,23 @@ SCIP_RETCODE execmain(int argc, char** argv)
 
    /* add set packing constraints (Node 0 is the depot) */
    vector<SCIP_CONS*> part_con(num_nodes, (SCIP_CONS*)NULL);  /*lint !e732 !e747*/
-   for (int i = 1; i < num_nodes; ++i)
+   for (size_t i = 1; i < (size_t)num_nodes; ++i)
    {
       SCIP_CONS* con = NULL;
       (void) SCIPsnprintf(con_name, 255, "C%d", i);
       SCIP_CALL( SCIPcreateConsLinear( scip, &con, con_name, 0, NULL, NULL,
                                        1.0,                /* lhs */
                                        SCIPinfinity(scip), /* rhs */
-                                       true,  /* initial */
-                                       false, /* separate */
-                                       true,  /* enforce */
-                                       true,  /* check */
-                                       true,  /* propagate */
-                                       false, /* local */
-                                       true,  /* modifiable */
-                                       false, /* dynamic */
-                                       false, /* removable */
-                                       false  /* stickingatnode */ ) );
+                                       TRUE,  /* initial */
+                                       FALSE, /* separate */
+                                       TRUE,  /* enforce */
+                                       TRUE,  /* check */
+                                       TRUE,  /* propagate */
+                                       FALSE, /* local */
+                                       TRUE,  /* modifiable */
+                                       FALSE, /* dynamic */
+                                       FALSE, /* removable */
+                                       FALSE  /* stickingatnode */ ) );
       SCIP_CALL( SCIPaddCons(scip, con) );
       part_con[i] = con;  /*lint !e732 !e747*/
    }
@@ -440,7 +450,7 @@ SCIP_RETCODE execmain(int argc, char** argv)
    ObjPricerVRP* vrp_pricer_ptr = new ObjPricerVRP(scip, VRP_PRICER_NAME, num_nodes, capacity, demand, dist,
       arc_var, arc_con, part_con);
 
-   SCIP_CALL( SCIPincludeObjPricer(scip, vrp_pricer_ptr, true) );
+   SCIP_CALL( SCIPincludeObjPricer(scip, vrp_pricer_ptr, TRUE) );
 
    /* activate pricer */
    SCIP_CALL( SCIPactivatePricer(scip, SCIPfindPricer(scip, VRP_PRICER_NAME)) );
@@ -469,13 +479,13 @@ SCIP_RETCODE execmain(int argc, char** argv)
     ********************/
 
    /* release variables */
-   for (int i = 0; i < num_nodes; ++i)
+   for (size_t i = 0; i < (size_t)num_nodes; ++i)
    {
       if ( i > 0 )
       {
          SCIP_CALL( SCIPreleaseCons(scip, &part_con[i]) );
       }
-      for (int j = 0; j < i; ++j)
+      for (size_t j = 0; j < i; ++j)
       {
          SCIP_CALL( SCIPreleaseVar(scip, &arc_var[i][j]) );
          SCIP_CALL( SCIPreleaseCons(scip, &arc_con[i][j]) );

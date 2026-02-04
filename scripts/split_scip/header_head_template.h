@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2026 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -76,7 +76,7 @@
 #include "scip/type_sepa.h"
 #include "scip/type_table.h"
 #include "scip/type_prop.h"
-#include "nlpi/type_nlpi.h"
+#include "scip/type_nlpi.h"
 #include "scip/type_concsolver.h"
 #include "scip/type_syncstore.h"
 #include "scip/type_benders.h"

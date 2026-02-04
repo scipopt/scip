@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2026 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -285,8 +285,8 @@ void SCIPencodeDualBit(
       *out++ =
          mask[0][inp[0]] | mask[1][inp[1]] | mask[2][inp[2]] | mask[3][inp[3]]
          | mask[4][inp[4]] | mask[5][inp[5]] | mask[6][inp[6]]
-         | mask[7][inp[7]] | mask[8][inp[8]] | mask[9][inp[9]] 
-         | mask[10][inp[10]] | mask[11][inp[11]] | mask[12][inp[12]] 
+         | mask[7][inp[7]] | mask[8][inp[8]] | mask[9][inp[9]]
+         | mask[10][inp[10]] | mask[11][inp[11]] | mask[12][inp[12]]
          | mask[13][inp[13]] | mask[14][inp[14]] | mask[15][inp[15]];
    }
 

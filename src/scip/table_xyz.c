@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2026 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -47,7 +47,9 @@
  * Data structures
  */
 
-/* TODO: fill in the necessary statistics table data */
+/* TODO: fill in the necessary statistics table data
+ * when this plugin is written in C++, rename SCIP_TableData to something unique (C++ One-Definition-Rule)
+ */
 
 /** statistics table data */
 struct SCIP_TableData
@@ -180,7 +182,7 @@ SCIP_DECL_TABLEOUTPUT(tableOutputXyz)
 
 /** data collection method of table */
 #if 0
-static 
+static
 SCIP_DECL_TABLECOLLECT(tableCollectXyz)
 { /*lint --e{715}*/
    SCIPerrorMessage("method of xyz statistics table not implemented yet\n");

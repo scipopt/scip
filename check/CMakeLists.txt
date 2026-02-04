@@ -4,7 +4,7 @@ include(CTest)
 # add a custom SCIP check target 'scip_check'
 #
 add_custom_target(scip_check
-                COMMAND ${CMAKE_CTEST_COMMAND} -R "-default" -E "applications" --output-on-failure
+                COMMAND ${CMAKE_CTEST_COMMAND} -R "default" -E "applications" --output-on-failure
                 DEPENDS scip
                 )
 
@@ -43,6 +43,17 @@ set(settings_default
     "default"
 )
 
+set(instances_linking
+    "instances/CP/linking.cip\;2"
+    "instances/CP/linking2.cip\;2"
+    "instances/CP/sched_10_2_1.cip\;11"
+    "instances/CP/sched_10_3_3.cip\;17"
+)
+
+set(settings_linking
+   "linking"
+)
+
 #
 # settings to run a whole test. In order to run a sub-suite, use -R
 #
@@ -71,6 +82,7 @@ set(settings_MIP
     #separation and branching
     "oddcyclelift_randomhybrid"
     "oddcycle_distribution"
+    "cutsel_dynamic"
     "treemodel_ratio"
     "treemodel_sampling"
     "treemodel_svts_filter"
@@ -123,7 +135,11 @@ set(settings_fastMIP
     "enable_treeprofile_regression_forest"
     "../../../scripts/trainEstimation/periodic_report"
   )
-
+set(settings_MIPEX
+    "exact-default"
+    "exact-exactlp"
+    "exact-projshift"
+    )
 set(settings_MINLP
     "default"
     "undercover1"
@@ -182,6 +198,10 @@ set(settings_BendersLB
 set(settings_BendersQP
     "benders-qp"
    )
+
+set(settings_BendersDec
+    "usebenders-dec"
+)
 
 set(settings_Decomp
    "decompheurs"
@@ -306,12 +326,42 @@ set(instances_fastMIP
 #
 # add additional ZIMPL instances if the configuration uses ZIMPL
 #
-if(ZIMPL AND ZIMPL_FOUND)
-list(APPEND
-    instances_Indicator
-    "instances/Indicator/indicatortest.zpl\;-2"
-    "instances/Indicator/mcf64-4-1.zpl\;10"
+if(SCIP_WITH_ZIMPL)
+    list(APPEND
+        instances_Indicator
+        "instances/Indicator/indicatortest.zpl\;-2"
+        "instances/Indicator/mcf64-4-1.zpl\;10"
     )
+#
+# this instance was part of the original coverage tests. However, it causes
+# a significant overhead without providing relevant benefit.
+#
+#list(APPEND
+#    instances_MIP
+#    "instances/MIP/rocII_2_11.zpl\;+4.61527698552400e+00"
+#    )
+endif()
+
+# exact ip instances
+if(SCIP_WITH_EXACTSOLVE)
+    set(instances_MIPEX
+        "instances/MIPEX/egout.cip\;5681007/10000"
+        "instances/MIP/enigma.mps\;0"
+        "instances/MIPEX/flugpl_rational.mps\;1201500"
+        "instances/MIP/Side.lp\;2"
+        "instances/MIPEX/Side-coef.cip\;2"
+        "instances/MIPEX/Side-coeftest.lp\;2"
+        "instances/MIP/stein27_inf.lp\;+infinity"
+        "instances/PseudoBoolean/normalized-t2001.13queen13.1111218308.opb\;+infinity"
+    )
+    if(SCIP_WITH_ZIMPL)
+        list(APPEND
+            instances_MIPEX
+            # instance misc03p1 appended later
+            "instances/MIPEX/rgn.zpl\;2054999981/25000000"
+            "instances/MIPEX/stein27.zpl\;18"
+        )
+    endif()
 endif()
 
 #
@@ -343,7 +393,7 @@ set(instances_Bilinrelax
 # PB instances
 #
 set(instances_PB
-    "instances/PseudoBoolean/factor-mod-size=9-P0=67-P1=349-P2=67-P3=499-P4=79-P5=347-P6=307-B.opb\;3"
+    "instances/PseudoBoolean/factor-mod-size=9-P0=263-P1=409-P2=29-P3=379-B.opb\;3"
     "instances/PseudoBoolean/normalized-bsg_10_4_5.opb\;-4"
     "instances/PseudoBoolean/normalized-mds_10_4_3.opb\;2"
     "instances/PseudoBoolean/normalized-mds_50_25_5.opb\;3"
@@ -450,9 +500,16 @@ set(instances_BendersLB
    )
 
 set(instances_BendersQP
-    "instances/Benders/classical_20_0.mps\;instances/Benders/classical_20.dec\;-8.22960761981176e-02"
-    "instances/Benders/classical_30_0.mps\;instances/Benders/classical_30.dec\;-7.98150796362468e-02"
-    "instances/Benders/classical_30_15.mps\;instances/Benders/classical_30.dec\;-7.34740783553289e-02"
+    "instances/Benders/classical_20_0.mps\;instances/Benders/classical_20.dec\;-8.22958452550615e-02"
+    "instances/Benders/classical_30_0.mps\;instances/Benders/classical_30.dec\;-7.98149452840201e-02"
+    "instances/Benders/classical_30_15.mps\;instances/Benders/classical_30.dec\;-7.34739274330805e-02"
+   )
+
+set(instances_BendersDec
+   "instances/Benders/cap41.lp\;instances/Benders/cap41.dec\;+1.24518068000000e+06"
+   "instances/Benders/cap42.lp\;instances/Benders/cap42.dec\;+1.31282733250000e+06"
+   "instances/Benders/cap43.lp\;instances/Benders/cap43.dec\;+1.37782733250000e+06"
+   "instances/Benders/cap44.lp\;instances/Benders/cap44.dec\;+1.47532733250000e+06"
    )
 
 set(instances_Decomp
@@ -473,6 +530,8 @@ set(instances_Objlim
 # Pairs of instances and settings
 #
 set(pairs_Issue
+    "instances/Issue/591_1.cip\;0\;reduced_constraints"
+    "instances/Issue/591_2.cip\;0\;reduced_and"
     "instances/Issue/3047.lp\;20000\;dualinfer"
     "instances/Issue/3132.lp\;0\;default"
     "instances/Issue/3499.lp\;11460\;closeobj"
@@ -491,6 +550,7 @@ set(pairs_Issue
     "instances/Issue/3662_2.cip\;0\;default"
     "instances/Issue/3675_1.cip\;0\;default"
     "instances/Issue/3675_2.cip\;0\;presolving_heuristics_off"
+    "instances/Issue/3675_3.cip\;21589416.4938212\;default"
     "instances/Issue/3681.cip\;0\;default"
     "instances/Issue/3688.cip\;131882\;reduced_presolving"
     "instances/Issue/3691.cip\;1.862908\;presolvingnolinear"
@@ -502,24 +562,46 @@ set(pairs_Issue
     "instances/Issue/3727.cip\;1922\;vanillafullstrong_reduced_presolving_separating_heuristics"
     "instances/Issue/3728.cip\;0\;reduced_presolving_heuristics"
     "instances/Issue/3746.cip\;0\;seed_1"
-    "instances/Issue/3752.cip\;28066\;default"
+    "instances/Issue/3752_1.cip\;28066\;default"
+    "instances/Issue/3752_2.cip\;0\;default"
     "instances/Issue/3787.lp\;1\;default"
     "instances/Issue/3832.cip\;0\;default"
     # Test currently not working since problems with the relative check for presolved problems appear: https://git.zib.de/integer/scip/-/issues/3819
     # "instances/Issue/3842.cip\;-16812.7692740365\;default"
+    "instances/Issue/3870.cip\;5133546551065818\;default"
+    "instances/Issue/3908.cip\;-20317.1313131313\;subrestart"
+    "instances/Issue/3911.cip\;-30386.2338470598\;lexdual"
+    "instances/Issue/3917.cip\;+infinity\;default"
+    "instances/Issue/3920.cip\;0\;presolving_milp_off"
+    "instances/Issue/3932.cip\;+infinity\;reduced_tolerance"
+    "instances/Issue/3934.cip\;-5007\;conflict_off_reduced_presolving_subrestart"
+    "instances/Issue/3935.cip\;-24793.9840277416\;default"
+    "instances/Issue/3939.cip\;-24000\;lexdual"
+    "instances/Issue/3940.cip\;-2549.22\;unscaled_tolerance"
+    "instances/Issue/3942.cip\;0\;default"
+    "instances/Issue/3949.cip\;+infinity\;presolving_milp_off"
 )
 
 #
 # available reader file extensions for MIP problems
 #
 set(reader_extensions_MIP
+  "cip"
   "mps"
   "lp"
   "opb"
   "pip"
   "fzn"
-  "cip"
   "rlp"
+  "nl"
+  )
+
+#
+# available reader file extensions for MINLP problems
+#
+set(reader_extensions_MINLP
+  "cip"
+  "nl"
   )
 
 #
@@ -527,6 +609,14 @@ set(reader_extensions_MIP
 #
 set(reader_extensions_PB
   "cip"
+  )
+
+#
+# available reader file extensions for MIPEX problems
+#
+set(reader_extensions_MIPEX
+  "cip"
+  "lp"
   )
 
 #
@@ -595,6 +685,9 @@ macro(add_instancetests instances settings prefix)
             #
             if(NOT ((${setting} STREQUAL "tolerance") AND (${basename} STREQUAL "blend2.mps") AND (${LPS} STREQUAL "xprs")))
             if(NOT ((${setting} STREQUAL "default") AND (${basename} STREQUAL "pltexpA4_6.smps") AND (${LPS} STREQUAL "xprs")))
+            if(NOT ((${setting} STREQUAL "lns_epsgreedy_vanilla") AND (${basename} STREQUAL "enigma.mps") AND (${LPS} STREQUAL "xprs")))
+            if(NOT ((${setting} STREQUAL "lns_epsgreedy_vanilla") AND (${basename} STREQUAL "blend2.mps") AND (${LPS} STREQUAL "grb")))
+            if(NOT ((${setting} STREQUAL "cgmipdirect") AND (${basename} STREQUAL "bell5.mps")))
             add_test(NAME ${prefix}-${setting}-${basename}
                     COMMAND $<TARGET_FILE:scip> -f ${PROJECT_SOURCE_DIR}/check/${path} -s ${PROJECT_SOURCE_DIR}/check/coverage/settings/${setting}.set -o ${optval} ${optval}
                     )
@@ -604,6 +697,9 @@ macro(add_instancetests instances settings prefix)
                                     FAIL_REGULAR_EXPRESSION "ERROR|user parameter file <${PROJECT_SOURCE_DIR}/check/coverage/settings/${setting}.set> not found"
                                     DEPENDS scip-build
                                 )
+            endif()  # solution not feasible in original problem due to cons_linear presolve, #3819 (https://git.zib.de/integer/scip/-/merge_requests/3881#note_295336)
+            endif()  # Gurobi gets stuck in LP solve, #2833
+            endif()  # Xpress returns 11 while solving a strong branching LP, #3724
             endif()  # LP Error: Xpress returned 120, #3724 (LPS=xprs, Stochastic-default-pltexpA4_6.smps)
             endif()  # Xpress does not keep feasibility tolerance setting, #3640
         endforeach(setting)
@@ -629,7 +725,7 @@ if((${TEST_BENDERSQP} AND (NOT ${LPS} STREQUAL "msk" )) OR (NOT ${prefix} STREQU
             #
             # treat the instance as a tuple (list) of two values
             #
-            if(NOT ((${basename} STREQUAL "classical_30_0.mps") AND (${LPS} STREQUAL "grb")))
+            if(NOT ((${basename} STREQUAL "classical_30_0.mps") AND ((${LPS} STREQUAL "grb") OR (${LPS} STREQUAL "cpx"))))
             add_test(NAME ${prefix}-${setting}-${basename}
                COMMAND $<TARGET_FILE:scip> -c "set load ${PROJECT_SOURCE_DIR}/check/coverage/settings/${setting}.set read ${PROJECT_SOURCE_DIR}/check/${instpath} read ${PROJECT_SOURCE_DIR}/check/${decpath} opt validatesol ${optval} ${optval} q"
                     )
@@ -639,7 +735,7 @@ if((${TEST_BENDERSQP} AND (NOT ${LPS} STREQUAL "msk" )) OR (NOT ${prefix} STREQU
                                     FAIL_REGULAR_EXPRESSION "ERROR|user parameter file <${PROJECT_SOURCE_DIR}/check/coverage/settings/${setting}.set> not found"
                                     DEPENDS scip-build
                                 )
-            endif()  # separation does not converge, #3724 (LPS=grb, BendersQP-benders-qp-classical_30_0.mps)
+            endif()  # separation does not converge, #3724 (LPS=grb or LPS=cpx, BendersQP-benders-qp-classical_30_0.mps)
         endforeach(setting)
     endforeach(instance)
 endif()
@@ -652,6 +748,7 @@ macro(add_pairtests pairs prefix)
     foreach(pair ${${pairs}})
         split_pair(pair)
         if(NOT ((${basename} STREQUAL "3727.cip") AND (${LPS} STREQUAL "xprs")))
+        if(NOT ((${basename} STREQUAL "3935.cip") AND (${LPS} STREQUAL "msk")))
         #
         # add the test
         #
@@ -664,11 +761,13 @@ macro(add_pairtests pairs prefix)
                                 FAIL_REGULAR_EXPRESSION "ERROR|user parameter file <${PROJECT_SOURCE_DIR}/check/coverage/settings/${setting}.set> not found"
                                 DEPENDS scip-build
                             )
+        endif() # left hand side of _C16 violated by 0.01411 with Mosek 10.2.2
         endif() # LP error 11 from Xpress (but SCIP recovers), #3724
     endforeach(pair)
 endmacro(add_pairtests)
 
 add_instancetests(instances_CP settings_default "CP")
+add_instancetests(instances_linking settings_linking "linking")
 add_instancetests(instances_Indicator settings_Indicator "Indicator")
 add_instancetests(instances_MIP settings_MIP "MIP")
 add_instancetests(instances_compHandlerTest settings_compHandlerTest "compHandlerTest")
@@ -691,6 +790,7 @@ add_instancetests(instances_Benders settings_Benders "Benders")
 add_instancetests(instances_Or settings_Or "Or")
 add_instancetests(instances_BendersLB settings_BendersLB "BendersLB")
 add_decompinstancetests(instances_BendersQP settings_BendersQP "BendersQP")
+add_decompinstancetests(instances_BendersDec settings_BendersDec "BendersDec")
 add_decompinstancetests(instances_Decomp settings_Decomp "Decomp")
 add_pairtests(pairs_Issue "Issue")
 
@@ -760,16 +860,17 @@ endforeach(instance)
 set(basenames_opb_wrongformat
     bell5.mps
     blend2.mps
+    dcmulti.mps
+    egout.cip
     egout.mps
     flugpl.mps
+    flugpl_rational.mps
     gt2.mps
-    MANN_a9.clq.lp
+    lseu_dcmulti.cip
     misc03.mps
     rgn.mps
+    rgn.zpl
     vpm2.fzn
-    lseu_dcmulti.cip
-    lseu_dcmulti_sHB.cip
-    dcmulti.mps
     )
 set(message_format_opb "WARNING: only binary problems can be written in OPB format.")
 
@@ -777,7 +878,12 @@ set(message_format_opb "WARNING: only binary problems can be written in OPB form
 # the following instances use variable or equations names that are not supported in pip format
 #
 set(basenames_pip_wrongformat
+    dcmulti.mps
+    egout.cip
+    egout.mps
+    lseu_dcmulti.cip
     rgn.mps
+    rgn.zpl
     )
 set(message_format_pip "PIP might be corrupted")
 
@@ -785,9 +891,22 @@ set(message_format_pip "PIP might be corrupted")
 # the following instances use variable or equations names that are not supported in lp format
 #
 set(basenames_lp_wrongformat
+    dcmulti.mps
+    egout.cip
+    egout.mps
+    lseu_dcmulti.cip
     rgn.mps
+    rgn.zpl
     )
 set(message_format_lp "WARNING: violation of LP format - a constraint name starts with a digit; it is not possible to read the generated LP file with SCIP; use write/genproblem or write/gentransproblem for generic variable names")
+
+#
+# the following instances have constraints that cannot or cannot yet be written out in nl format
+#
+set(basenames_nl_wrongformat
+    bip_cross_min.10.10.10.1.pip
+    )
+set(message_format_nl "WARNING: constraint .* of type <.*> cannot be printed in requested format")
 
 #
 # test writing and reading from and to different file extensions for MIP
@@ -834,6 +953,39 @@ foreach(instance ${instances_MIP})
                 COMMAND $<TARGET_FILE:scip> -b ${PROJECT_BINARY_DIR}/check/interactiveshell/readertest-${extension}-${basename}.bat
                 )
         set_tests_properties(MIP-readertest-${extension}-${basename}
+                            PROPERTIES
+                                PASS_REGULAR_EXPRESSION ${regex}
+                                FAIL_REGULAR_EXPRESSION "ERROR"
+                                DEPENDS scip-build
+                            )
+    endforeach(extension)
+endforeach(instance)
+
+#
+# test writing and reading from and to different file extensions for MINLP (only without original objective offset)
+#
+foreach(instance ${instances_MINLP})
+    split_instance(instance)
+    foreach(extension ${reader_extensions_MINLP})
+        #
+        # configure the batch file for this test by substituting placeholders in the in.file
+        #
+        # does this instance match the requirements of this format?
+        list(FIND basenames_${extension}_wrongformat ${basename} wrongformat)
+        #
+        # use different template batch files depending on the format requirements
+        #
+        if( wrongformat EQUAL -1 )
+            configure_file(interactiveshell/readertest.bat.in interactiveshell/readertest-${extension}-${basename}.bat)
+            set(regex "Validation         : Success.*Validation         : Success")
+        else()
+            configure_file(interactiveshell/readertest-wrongformat.bat.in interactiveshell/readertest-${extension}-${basename}.bat)
+            set(regex "${message_format_${extension}}")
+        endif()
+        add_test(NAME MINLP-readertest-${extension}-${basename}
+                COMMAND $<TARGET_FILE:scip> -b ${PROJECT_BINARY_DIR}/check/interactiveshell/readertest-${extension}-${basename}.bat
+                )
+        set_tests_properties(MINLP-readertest-${extension}-${basename}
                             PROPERTIES
                                 PASS_REGULAR_EXPRESSION ${regex}
                                 FAIL_REGULAR_EXPRESSION "ERROR"
@@ -985,9 +1137,8 @@ set(linclass_bell5
   "total             :         91"
   "singleton         :          2"
   "precedence        :         17"
-  "varbound          :         18"
-  "mixedbinary       :         26"
-  "general           :         28"
+  "mixedbinary       :         30"
+  "general           :         42"
   )
 
 set(linclass_blend2
@@ -1029,9 +1180,8 @@ set(linclass_flugpl
     "empty             :          0"
     "free              :          0"
     "singleton         :          1"
-    "varbound          :          6"
-    "mixedbinary       :          0"
-    "general           :         11"
+    "mixedbinary       :          1"
+    "general           :         16"
     )
 
 set(linclass_gt2
@@ -1174,4 +1324,140 @@ if (UNIX)
 endif (UNIX)
 endif()
 
+if(SCIP_WITH_EXACTSOLVE)
+    #
+    # first test writing and reading from and to different file extensions for default MIPEX (only without original objective offset)
+    #
+    foreach(instance ${instances_MIPEX})
+        split_instance(instance)
+        foreach(extension ${reader_extensions_MIPEX})
+            #
+            # configure the batch file for this test by substituting placeholders in the in.file
+            #
+            # does this instance match the requirements of this format?
+            list(FIND basenames_${extension}_wrongformat ${basename} wrongformat)
+            #
+            # use different template batch files depending on the format requirements
+            #
+            if( wrongformat EQUAL -1 )
+                configure_file(interactiveshell/readertest.bat.in interactiveshell/readertest-${extension}-${basename}.bat)
+                set(regex "Validation         : Success.*Validation         : Success")
+            else()
+                configure_file(interactiveshell/readertest-wrongformat.bat.in interactiveshell/readertest-${extension}-${basename}.bat)
+                set(regex "${message_format_${extension}}")
+            endif()
+            if(NOT ((${extension} STREQUAL "cip") AND (${basename} STREQUAL "rgn.zpl") AND (${LPS} STREQUAL "xprs")))
+            if(NOT ((${basename} STREQUAL "stein27.zpl") AND (${LPS} STREQUAL "xprs")))
+            add_test(NAME MIPEX-readertest-${extension}-${basename}
+                    COMMAND $<TARGET_FILE:scip>
+                    -c "set load ${PROJECT_SOURCE_DIR}/check/coverage/settings/exact-default.set"
+                    -b "${PROJECT_BINARY_DIR}/check/interactiveshell/readertest-${extension}-${basename}.bat"
+                    )
+            set_tests_properties(MIPEX-readertest-${extension}-${basename}
+                                PROPERTIES
+                                    PASS_REGULAR_EXPRESSION ${regex}
+                                    FAIL_REGULAR_EXPRESSION "ERROR"
+                                    DEPENDS scip-build
+                                )
+            endif()  # LP Error: Xpress returned 11, #3724
+            endif()  # LP Error: Xpress returned 11, #3724
+        endforeach(extension)
+    endforeach(instance)
+    #
+    # append ZIMPL instances with objective constant (not compatible with the readertest)
+    #
+    if(SCIP_WITH_ZIMPL)
+        list(APPEND
+            instances_MIPEX
+            "instances/MIPEX/misc03p1.zpl\;3360.1"
+        )
+    endif()
+    #
+    # second test without certification
+    #
+    foreach(instance ${instances_MIPEX})
+        split_instance(instance)
+        #
+        # loop over all settings
+        #
+        foreach(setting ${settings_MIPEX})
+          if(NOT ((${basename} STREQUAL "enigma.mps") AND (${setting} STREQUAL "exact-exactlp") AND (${LPS} STREQUAL "msk")))  # certificate.cpp:3194 assert failing, #4261
+            #
+            # treat the instance as a tuple (list) of two values
+            #
+            add_test(NAME MIPEX-${setting}-${basename}
+                    COMMAND $<TARGET_FILE:scip> -c "set load ${PROJECT_SOURCE_DIR}/check/coverage/settings/${setting}.set
+                        read ${PROJECT_SOURCE_DIR}/check/${path}
+                        o validatesolve ${optval} ${optval} q"
+                    )
+            set_tests_properties(MIPEX-${setting}-${basename}
+                                PROPERTIES
+                                    PASS_REGULAR_EXPRESSION "Validation         : Success"
+                                    FAIL_REGULAR_EXPRESSION "WARNING: unknown parameter"
+                                    FAIL_REGULAR_EXPRESSION "user parameter file <${PROJECT_SOURCE_DIR}/check/coverage/settings/${setting}.set> not found"
+                                    DEPENDS scip-build
+                                )
+          endif()
+        endforeach(setting)
+    endforeach(instance ${instances_MIPEX})
+    #
+    # third test with certification, even if VIPR is not available, because it leads to SCIP running differently
+    #
+    foreach(instance ${instances_MIPEX})
+        split_instance(instance)
+        #
+        # loop over all settings
+        #
+        foreach(setting ${settings_MIPEX})
+          if(NOT ((${basename} STREQUAL "enigma.mps") AND ((${setting} STREQUAL "exact-exactlp") OR (${setting} STREQUAL "exact-projshift")) AND (${LPS} STREQUAL "grb")))  # certificate.cpp:3194 assert failing, #4261
+            #
+            # treat the instance as a tuple (list) of two values
+            #
+            add_test(NAME MIPEX-${setting}-${basename}-certified
+                    COMMAND $<TARGET_FILE:scip> -c "set certificate filename ${basename}.${setting}.vipr
+                        set load ${PROJECT_SOURCE_DIR}/check/coverage/settings/${setting}.set
+                        read ${PROJECT_SOURCE_DIR}/check/${path}
+                        o validatesolve ${optval} ${optval} q"
+                    )
+            set_tests_properties(MIPEX-${setting}-${basename}-certified
+                                PROPERTIES
+                                    PASS_REGULAR_EXPRESSION "Validation         : Success"
+                                    FAIL_REGULAR_EXPRESSION "WARNING: unknown parameter"
+                                    FAIL_REGULAR_EXPRESSION "user parameter file <${PROJECT_SOURCE_DIR}/check/coverage/settings/${setting}.set> not found"
+                                    DEPENDS scip-build
+                                )
+
+            if(VIPRCOMP AND VIPRCHK)
+               add_test(NAME MIPEX-${setting}-${basename}-viprcomp
+                     COMMAND ${VIPRCOMP} ${basename}.${setting}.vipr)
+               set_tests_properties(MIPEX-${setting}-${basename}-viprcomp
+                                 PROPERTIES
+                                 DEPENDS MIPEX-${setting}-${basename}-certified
+                                 PASS_REGULAR_EXPRESSION "Completion of File successful!"
+                                 FAIL_REGULAR_EXPRESSION "Error"
+                                 FAIL_REGULAR_EXPRESSION "Failed")
+
+               add_test(NAME MIPEX-${setting}-${basename}-vipr
+                     COMMAND ${VIPRCHK} ${basename}.${setting}_complete.vipr)
+               set_tests_properties(MIPEX-${setting}-${basename}-vipr
+                                 PROPERTIES
+                                 DEPENDS MIPEX-${setting}-${basename}-viprcomp
+                                 PASS_REGULAR_EXPRESSION "Successfully verified;Infeasibility verified"
+                                 FAIL_REGULAR_EXPRESSION "Error"
+                                 FAIL_REGULAR_EXPRESSION "Failed")
+
+               add_test(NAME MIPEX-${setting}-${basename}-vipr_ori
+                     COMMAND ${VIPRCHK} ${basename}.${setting}.vipr_ori)
+               set_tests_properties(MIPEX-${setting}-${basename}-vipr_ori
+                                 PROPERTIES
+                                 DEPENDS MIPEX-${setting}-${basename}-certified
+                                 PASS_REGULAR_EXPRESSION "Successfully verified"
+                                 FAIL_REGULAR_EXPRESSION "Error"
+                                 FAIL_REGULAR_EXPRESSION "Failed")
+            endif()
+
+          endif()
+        endforeach(setting)
+    endforeach(instance ${instances_MIPEX})
+endif()
 set_tests_properties(FastMIP-presolving_off-bell5.mps PROPERTIES TIMEOUT 3000)

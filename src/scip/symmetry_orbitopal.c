@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2026 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -163,25 +163,25 @@ struct SCIP_OrbitopalReductionData
 /** gets whether a variable type is a branchrow-type */
 static
 SCIP_Bool vartypeIsBranchRowType(
-   SCIP*                 scip,               /**< SCIP data structure */
    SCIP_ORBITOPALREDDATA* orbireddata,       /**< pointer to the dynamic orbitopal reduction data */
-   SCIP_VARTYPE          vartype,            /**< var type */
-   SCIP_IMPLINTTYPE      impltype            /**< is the variable implied integral? */
+   SCIP_VAR*              var                /**< variable whose type is checked */
 )
 {
-   assert( scip != NULL );
    assert( orbireddata != NULL );
    assert( orbireddata->conshdlr_nonlinear_checked );
 
-   if( impltype != SCIP_IMPLINTTYPE_NONE || vartype == SCIP_VARTYPE_CONTINUOUS )
+   /* if nonlinear constraints are present, also continuous variables can be branching variables */
+   if ( orbireddata->conshdlr_nonlinear != NULL && SCIPconshdlrGetNActiveConss(orbireddata->conshdlr_nonlinear) > 0 )
+      return TRUE;
+
+   /* otherwise, only integral variables are used for branching */
+   if ( SCIPvarIsIntegral(var) )
    {
-      /* potential branching variables if nonlinear constraints exist */
-      assert( orbireddata->conshdlr_nonlinear_checked );
-      return orbireddata->conshdlr_nonlinear == NULL ? FALSE :
-             SCIPconshdlrGetNActiveConss(orbireddata->conshdlr_nonlinear) > 0;
+      assert( SCIPgetSymInferredVarType(var) == SCIP_VARTYPE_BINARY
+         || SCIPgetSymInferredVarType(var) == SCIP_VARTYPE_INTEGER );
+      return TRUE;
    }
-   assert(vartype == SCIP_VARTYPE_BINARY || vartype == SCIP_VARTYPE_INTEGER);
-   return TRUE;
+   return FALSE;
 }
 
 
@@ -986,10 +986,10 @@ SCIP_Bool rowIsBranchRow(
    int                   rowid               /**< row id for which to check */
    )
 {
-   SCIP_VAR* var;
 #ifndef NDEBUG
    int c;
 #endif
+   SCIP_VAR* var;
 
    assert( scip != NULL );
    assert( orbireddata != NULL );
@@ -999,25 +999,22 @@ SCIP_Bool rowIsBranchRow(
    assert( rowid >= 0 );
    assert( rowid < orbidata->nrows );
    assert( orbidata->vars != NULL );
-   assert( orbidata->vars[rowid * orbidata->ncols] );  /* variable in first column must be set */
 
    /* get the first variable from the row */
    var = orbidata->vars[rowid * orbidata->ncols];
+   assert( var != NULL );
 
    /* debugging: the variable types in a row should all be the same */
 #ifndef NDEBUG
    for (c = 1; c < orbidata->ncols; ++c)
    {
-      /* the actual vartypes can be different,
-       * for example when an INTEGER vartype turns into BINARY due to bound changes
-       */
-      assert( vartypeIsBranchRowType(scip, orbireddata, SCIPvarGetType(var), SCIPvarGetImplType(var)) ==
-         vartypeIsBranchRowType(scip, orbireddata, SCIPvarGetType(orbidata->vars[rowid * orbidata->ncols + c]),
-                                SCIPvarGetImplType(orbidata->vars[rowid * orbidata->ncols + c])) );
+      assert( SCIPgetSymInferredVarType(var)
+         == SCIPgetSymInferredVarType(orbidata->vars[rowid * orbidata->ncols + c]) );
    }
 #endif
 
-   return vartypeIsBranchRowType(scip, orbireddata, SCIPvarGetType(var), SCIPvarGetImplType(var));
+   /* check whether the row contains a potential branching variable (all variables within a row are symmetric) */
+   return vartypeIsBranchRowType(orbireddata, var);
 }
 
 
@@ -1647,7 +1644,7 @@ SCIP_RETCODE propagateStaticOrbitope(
                   }
                   /* now row "lastunfixed" is greater. Restart from here. */
                   iseq = FALSE;
-                  rowid = lastunfixed; /* the next iteration considers "lastunfixed + 1" */
+                  rowid = lastunfixed; /*lint !e850*/ /* the next iteration considers "lastunfixed + 1" */
                   i = rowid * ncols + colid;
                   continue;
                }
@@ -1806,7 +1803,7 @@ SCIP_RETCODE propagateStaticOrbitope(
                   }
                   /* now row "lastunfixed" is greater. Restart from here. */
                   iseq = FALSE;
-                  rowid = lastunfixed; /* the next iteration considers "lastunfixed + 1" */
+                  rowid = lastunfixed; /*lint !e850*/ /* the next iteration considers "lastunfixed + 1" */
                   i = rowid * ncols + colid;
                   continue;
                }
@@ -2154,16 +2151,24 @@ SCIP_RETCODE SCIPorbitopalReductionPropagate(
 
    assert( scip != NULL );
    assert( orbireddata != NULL );
-   assert( (orbireddata->norbitopes == 0) == (orbireddata->orbitopes == NULL) );
+   assert( (orbireddata->orbitopes == NULL) == (orbireddata->norbitopes == 0) );
+   assert( orbireddata->norbitopes >= 0 );
+   assert( orbireddata->norbitopes <= orbireddata->maxnorbitopes );
    assert( infeasible != NULL );
    assert( nred != NULL );
+   assert( didrun != NULL );
 
    *infeasible = FALSE;
    *nred = 0;
+   *didrun = FALSE;
+
+   /* early termination */
+   if ( orbireddata->norbitopes == 0 )
+      return SCIP_OKAY;
 
    /* @todo Can the following be removed? */
    /* @todo shouldn't this be SCIPallowWeakDualReds, since we do not regard the objective */
-   if ( ! SCIPallowStrongDualReds(scip) )
+   if ( !SCIPallowStrongDualReds(scip) )
       return SCIP_OKAY;
 
    /* cannot do anything during probing

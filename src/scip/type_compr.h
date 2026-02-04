@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2026 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -28,7 +28,11 @@
  * @author Jakob Witzig
  *
  *  This file defines the interface for tree compression implemented in C.
- *
+ */
+
+/** @defgroup DEFPLUGINS_COMPRESSION Default tree compressions
+ *  @ingroup DEFPLUGINS
+ *  @brief implementation files (.c files) of the default tree compressions of SCIP
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/

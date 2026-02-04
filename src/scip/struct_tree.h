@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2026 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -142,6 +142,7 @@ struct SCIP_Node
 {
    SCIP_Longint          number;             /**< successively assigned number of the node */
    SCIP_Real             lowerbound;         /**< lower (dual) bound of subtree */
+   SCIP_RATIONAL*        lowerboundexact;    /**< lower (dual) rational bound of subtree */
    SCIP_Real             estimate;           /**< estimated value of feasible solution in subtree */
    union
    {
@@ -173,6 +174,7 @@ struct SCIP_PendingBdchg
    SCIP_NODE*            node;               /**< node to add bound change to */
    SCIP_VAR*             var;                /**< variable to change the bounds for */
    SCIP_Real             newbound;           /**< new value for bound */
+   SCIP_RATIONAL*        newboundexact;      /**< new value for exact bound, or NULL if not needed */
    SCIP_BOUNDTYPE        boundtype;          /**< type of bound: lower or upper bound */
    SCIP_CONS*            infercons;          /**< constraint that deduced the bound change, or NULL */
    SCIP_PROP*            inferprop;          /**< propagator that deduced the bound change, or NULL */
@@ -212,6 +214,7 @@ struct SCIP_Tree
    SCIP_LPINORMS*        probinglpinorms;    /**< LP pricing norms information before probing started */
    SCIP_PENDINGBDCHG*    pendingbdchgs;      /**< array of pending bound changes, or NULL */
    SCIP_Real*            probdiverelaxsol;   /**< array with stored original relaxation solution during diving or probing */
+   SCIP_Real             probinglpobjval;    /**< lp objective value before probing started */
    int                   nprobdiverelaxsol;  /**< size of probdiverelaxsol */
    SCIP_Longint          focuslpstateforklpcount; /**< LP number of last solved LP in current LP state fork, or -1 if unknown */
    SCIP_Longint          lastbranchparentid; /**< last node id/number of branching parent */
@@ -225,8 +228,8 @@ struct SCIP_Tree
    int                   nsiblings;          /**< number of siblings of focus node (number of used slots in siblings vector) */
    int                   pathlen;            /**< length of the current path */
    int                   pathsize;           /**< number of available slots in path arrays */
-   int                   effectiverootdepth; /**< first depth with node with at least two children */
-   int                   appliedeffectiverootdepth; /**< the effective root depth which was already enforced (that is constraint and bound changes were made global) */
+   int                   effectiverootdepth; /**< the effective root depth which was already enforced */
+   int                   updatedeffectiverootdepth; /**< first depth of node with at least two children or focus node */
    int                   correctlpdepth;     /**< depth to which current LP data corresponds to LP data of active path */
    int                   cutoffdepth;        /**< depth of first node in active path that is marked being cutoff */
    int                   repropdepth;        /**< depth of first node in active path that has to be propagated again */
@@ -248,6 +251,7 @@ struct SCIP_Tree
    SCIP_Bool             probinglpwasprimchecked;/**< primal feasibility has been checked when probing started */
    SCIP_Bool             probinglpwasdualfeas;/**< dual feasibility when probing started */
    SCIP_Bool             probinglpwasdualchecked;/**< dual feasibility has been check when probing started */
+   SCIP_Bool             probinglphadsafebound;/**< lp had a proven dual bound when probing started? */
    SCIP_Bool             probdiverelaxstored; /**< was a relax solution stored before diving or probing ? */
    SCIP_Bool             probdiverelaxincludeslp; /**< did the stored relaxation solution include all lp cuts ? */
 };

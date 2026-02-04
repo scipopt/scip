@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2026 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -68,6 +68,12 @@ SCIP_EXPORT
 void SCIPrelaxSetData(
    SCIP_RELAX*           relax,              /**< relaxation handler */
    SCIP_RELAXDATA*       relaxdata           /**< new relaxation handler user data */
+   );
+
+/** marks the relaxator as safe to use in exact solving mode */
+SCIP_EXPORT
+void SCIPrelaxMarkExact(
+   SCIP_RELAX*           relax               /**< relaxation handler  */
    );
 
 /** gets name of relaxation handler */

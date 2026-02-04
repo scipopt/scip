@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2026 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -167,6 +167,13 @@ SCIP_Real SCIPgetDualfarkasLogicor(
  */
 SCIP_EXPORT
 SCIP_ROW* SCIPgetRowLogicor(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons                /**< constraint data */
+   );
+
+/** creates and returns the row of the given logicor constraint */
+SCIP_EXPORT
+SCIP_RETCODE SCIPcreateRowLogicor(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint data */
    );

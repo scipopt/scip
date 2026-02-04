@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2026 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -349,7 +349,7 @@ SCIP_RETCODE SCIPparamsetSetToDefault(
    const char*           paramname           /**< name of the parameter */
    );
 
-/** sets parameters to 
+/** sets parameters to
  *
  *  - \ref SCIP_PARAMEMPHASIS_DEFAULT to use default values (see also SCIPparamsetSetToDefault())
  *  - \ref SCIP_PARAMEMPHASIS_COUNTER to get feasible and "fast" counting process
@@ -381,8 +381,8 @@ SCIP_RETCODE SCIPparamsetSetToSubscipsOff(
    SCIP_Bool             quiet               /**< should the parameters be set quietly (no output)? */
    );
 
-/** sets heuristic parameters values to 
- *  - SCIP_PARAMSETTING_DEFAULT which are the default values of all heuristic parameters 
+/** sets heuristic parameters values to
+ *  - SCIP_PARAMSETTING_DEFAULT which are the default values of all heuristic parameters
  *  - SCIP_PARAMSETTING_FAST such that the time spend for heuristic is decreased
  *  - SCIP_PARAMSETTING_AGGRESSIVE such that the heuristic are called more aggregative
  *  - SCIP_PARAMSETTING_OFF which turn off all heuristics
@@ -395,8 +395,8 @@ SCIP_RETCODE SCIPparamsetSetHeuristics(
    SCIP_Bool             quiet               /**< should the parameters be set quietly (no output)? */
    );
 
-/** sets presolving parameters to 
- *  - SCIP_PARAMSETTING_DEFAULT which are the default values of all presolving parameters 
+/** sets presolving parameters to
+ *  - SCIP_PARAMSETTING_DEFAULT which are the default values of all presolving parameters
  *  - SCIP_PARAMSETTING_FAST such that the time spend for presolving is decreased
  *  - SCIP_PARAMSETTING_AGGRESSIVE such that the presolving is more aggregative
  *  - SCIP_PARAMSETTING_OFF which turn off all presolving
@@ -409,8 +409,8 @@ SCIP_RETCODE SCIPparamsetSetPresolving(
    SCIP_Bool             quiet               /**< should the parameters be set quietly (no output)? */
    );
 
-/** sets separating parameters to 
- *  - SCIP_PARAMSETTING_DEFAULT which are the default values of all separating parameters 
+/** sets separating parameters to
+ *  - SCIP_PARAMSETTING_DEFAULT which are the default values of all separating parameters
  *  - SCIP_PARAMSETTING_FAST such that the time spend for separating is decreased
  *  - SCIP_PARAMSETTING_AGGRESSIVE such that the separating is done more aggregative
  *  - SCIP_PARAMSETTING_OFF which turn off all separating
@@ -439,6 +439,16 @@ SCIP_RETCODE SCIPparamsetCopyParams(
    SCIP_PARAMSET*        targetparamset,     /**< target parameter set */
    SCIP_SET*             set,                /**< global SCIP settings of target SCIP */
    SCIP_MESSAGEHDLR*     messagehdlr         /**< message handler of target SCIP */
+   );
+
+/** checks whether the value pointers attached to each parameter are unique
+ *
+ *  When creating a parameter a value pointer can be attached. This function checks whether these pointers are
+ *  unique. Duplicate pointers indicate an error.
+ */
+SCIP_RETCODE SCIPparamsetCheckValuePtrUnique(
+   SCIP_PARAMSET*        paramset,           /**< parameter set */
+   SCIP_SET*             set                 /**< global SCIP settings */
    );
 
 /** checks whether value of SCIP_Bool parameter is valid */

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2026 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -132,7 +132,7 @@ extern "C" {
 #define SCIP_EVENTTYPE_VARCHANGED            (SCIP_EVENTTYPE_VARFIXED | SCIP_EVENTTYPE_VARUNLOCKED | SCIP_EVENTTYPE_OBJCHANGED \
                                               | SCIP_EVENTTYPE_GBDCHANGED | SCIP_EVENTTYPE_DOMCHANGED | SCIP_EVENTTYPE_IMPLADDED \
                                               | SCIP_EVENTTYPE_VARDELETED | SCIP_EVENTTYPE_TYPECHANGED | SCIP_EVENTTYPE_IMPLTYPECHANGED)
-#define SCIP_EVENTTYPE_VAREVENT              (SCIP_EVENTTYPE_VARADDED | SCIP_EVENTTYPE_VARCHANGED | SCIP_EVENTTYPE_TYPECHANGED | SCIP_EVENTTYPE_IMPLTYPECHANGED)
+#define SCIP_EVENTTYPE_VAREVENT              (SCIP_EVENTTYPE_VARADDED | SCIP_EVENTTYPE_VARCHANGED)
 
 /* event masks for node events */
 #define SCIP_EVENTTYPE_NODESOLVED            (SCIP_EVENTTYPE_NODEFEASIBLE | SCIP_EVENTTYPE_NODEINFEASIBLE \

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2026 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -135,7 +135,7 @@ SCIP_RETCODE SCIPpricerRedcost(
    SCIP_PROB*            prob,               /**< transformed problem */
    SCIP_Real*            lowerbound,         /**< local lower bound computed by the pricer */
    SCIP_Bool*            stopearly,          /**< should pricing be stopped, although new variables were added? */
-   SCIP_RESULT*          result              /**< result of the pricing process */    
+   SCIP_RESULT*          result              /**< result of the pricing process */
    );
 
 /** calls Farkas pricing method of variable pricer */

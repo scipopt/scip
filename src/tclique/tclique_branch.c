@@ -3,7 +3,7 @@
 /*                  This file is part of the program                         */
 /*              TCLIQUE --- Algorithm for Maximum Cliques                    */
 /*                                                                           */
-/*  Copyright (c) 1996-2025 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 1996-2026 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -117,7 +117,7 @@ void freeClique(
    BMSfreeMemory(clique);
 }
 
-/** checks, whether clique1 is a subset of clique2 and returns the following value:
+/** checks whether clique1 is a subset of clique2 and returns the following value:
  *   == 0 if clique1 == clique2, or clique1 is contained in clique2,
  *    < 0 if clique1 < clique2, and clique1 is not contained in clique2,
  *    > 0 if clique1 > clique2, and clique1 is not contained in clique2

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2026 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -532,9 +532,11 @@ SCIP_DECL_HEUREXEC(heurExecZirounding)
 
    heurdata->lastlp = nlps;
 
+   /* @todo: check whether rounding continuous implied integral variables is necessary */
    /* get fractional variables */
    SCIP_CALL( SCIPgetLPBranchCands(scip, &lpcands, &lpcandssol, NULL, &nlpcands, NULL, &nimplfracs) );
    nlpcands = nlpcands + nimplfracs;
+
    /* make sure that there is at least one fractional variable that should be integral */
    if( nlpcands == 0 )
       return SCIP_OKAY;
@@ -780,7 +782,7 @@ SCIP_DECL_HEUREXEC(heurExecZirounding)
          up   = oldsolval + upperbound;
          down = oldsolval - lowerbound;
 
-         /* if the variable is integer or implicit binary, do not shift further than the nearest integer */
+         /* if the variable is integer or implied integral, do not shift further than the nearest integer */
          if( SCIPvarGetType(var) != SCIP_VARTYPE_BINARY || SCIPvarIsImpliedIntegral(var) )
          {
             SCIP_Real ceilx;
@@ -904,6 +906,9 @@ SCIP_RETCODE SCIPincludeHeurZirounding(
          HEUR_MAXDEPTH, HEUR_TIMING, HEUR_USESSUBSCIP, heurExecZirounding, heurdata) );
 
    assert(heur != NULL);
+
+   /* primal heuristic is safe to use in exact solving mode */
+   SCIPheurMarkExact(heur);
 
    /* set non-NULL pointers to callback methods */
    SCIP_CALL( SCIPsetHeurCopy(scip, heur, heurCopyZirounding) );

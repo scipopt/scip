@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2026 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -71,7 +71,7 @@
 #include <string.h>
 
 #ifdef ALLDIFFERENT
-#include "scip/cons_alldifferent.h"
+#include "scip/cons_alldifferent.h"   /* cppcheck-suppress missingInclude */
 #endif
 
 #define READER_NAME             "fznreader"
@@ -4784,6 +4784,12 @@ SCIP_DECL_READERREAD(readerReadFzn)
 {  /*lint --e{715}*/
    FZNINPUT fzninput;
    int i;
+
+   assert(reader != NULL);
+   assert(strcmp(SCIPreaderGetName(reader), READER_NAME) == 0);
+   assert(result != NULL);
+
+   *result = SCIP_DIDNOTRUN;
 
    /* initialize FZN input data */
    fzninput.file = NULL;

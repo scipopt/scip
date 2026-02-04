@@ -40,6 +40,7 @@ foreach(instance ${instances})
     set_tests_properties("applications-coloring-${basename}"
                         PROPERTIES
                             PASS_REGULAR_EXPRESSION "Validation         : Success"
+                            FAIL_REGULAR_EXPRESSION "ERROR"
                             DEPENDS applications-coloring-build
                             RESOURCE_LOCK libscip
                         )

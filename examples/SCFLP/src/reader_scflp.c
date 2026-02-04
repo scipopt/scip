@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2026 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -257,7 +257,7 @@ SCIP_DECL_READERREAD(readerReadScflp)
    readerdata = SCIPreaderGetData(reader);
 
    /* creating the random number generator */
-   SCIP_CALL( SCIPcreateRandom(scip, &randomgen, readerdata->randomseed, FALSE) );
+   SCIP_CALL( SCIPcreateRandom(scip, &randomgen, (unsigned int) readerdata->randomseed, FALSE) );
 
    nscenarios = readerdata->nscenarios;
 
@@ -273,7 +273,7 @@ SCIP_DECL_READERREAD(readerReadScflp)
    }
 
    lineno = 0;
-   sprintf(name, "SCFLP");
+   (void)sprintf(name, "SCFLP");
 
    nfacilities = 0;
    ncustomers = 0;
@@ -296,7 +296,7 @@ SCIP_DECL_READERREAD(readerReadScflp)
    }
 
    /* computing the number of customer cost lines */
-   ncostlines = SCIPceil(scip, (SCIP_Real)nfacilities/MAXNCOSTS);
+   ncostlines = (int) SCIPceil(scip, (SCIP_Real)nfacilities/MAXNCOSTS);
 
    /* allocate buffer memory for storing the demand and the transport cost temporarily */
    SCIP_CALL( SCIPallocBufferArray(scip, &capacity, nfacilities) );
@@ -395,7 +395,7 @@ SCIP_DECL_READERREAD(readerReadScflp)
          for( i = 0; i < nread; i++ )
          {
             SCIPdebugMsg(scip, "(%d, %d) found cost <%e>\n", customer, facility, tmpcosts[i]);
-            costs[customer][facility] = tmpcosts[i]/demand;
+            costs[customer][facility] = tmpcosts[i] / demand; /*lint !e530*/
             facility++;
          }
       }

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2026 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -40,6 +40,7 @@
 #include "scip/type_set.h"
 #include "scip/type_event.h"
 #include "scip/type_lp.h"
+#include "scip/type_lpexact.h"
 #include "scip/type_var.h"
 #include "scip/type_prob.h"
 #include "scip/type_sol.h"
@@ -134,11 +135,33 @@ SCIP_RETCODE SCIPprimalUpdateObjoffset(
    SCIP_LP*              lp                  /**< current LP data */
    );
 
+/** recalculates upper bound and cutoff bound in primal data after a change of the problem's objective offset */
+SCIP_RETCODE SCIPprimalUpdateObjoffsetExact(
+   SCIP_PRIMAL*          primal,             /**< primal data */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics data */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_EVENTFILTER*     eventfilter,        /**< global event filter */
+   SCIP_PROB*            transprob,          /**< tranformed problem data */
+   SCIP_PROB*            origprob,           /**< original problem data */
+   SCIP_TREE*            tree,               /**< branch and bound tree */
+   SCIP_REOPT*           reopt,              /**< reoptimization data structure */
+   SCIP_LP*              lp                  /**< current LP data */
+   );
+
 /** adds additional objective offset in origanal space to all existing solution (in original space) */
 void SCIPprimalAddOrigObjoffset(
    SCIP_PRIMAL*          primal,             /**< primal data */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_Real             addval              /**< additional objective offset in original space */
+   );
+
+/** adds additional objective offset in original space to all existing solution (in original space) */
+void SCIPprimalAddOrigObjoffsetExact(
+   SCIP_PRIMAL*          primal,             /**< primal data */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_RATIONAL*        addval              /**< additional objective offset in original space */
    );
 
 /** returns whether the current primal bound is justified with a feasible primal solution; if not, the primal bound
@@ -384,6 +407,47 @@ SCIP_Bool SCIPprimalUpdateViolations(
 void SCIPprimalSetUpdateViolations(
    SCIP_PRIMAL*          primal,             /**< problem data */
    SCIP_Bool             updateviolations    /**< TRUE to enable violation updates, FALSE otherwise */
+   );
+
+/** adds exact primal solution to solution storage, frees the solution afterwards */
+SCIP_RETCODE SCIPprimalTrySolFreeExact(
+   SCIP_PRIMAL*          primal,             /**< primal data */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
+   SCIP_STAT*            stat,               /**< problem statistics data */
+   SCIP_PROB*            origprob,           /**< original problem */
+   SCIP_PROB*            transprob,          /**< transformed problem after presolve */
+   SCIP_TREE*            tree,               /**< branch and bound tree */
+   SCIP_REOPT*           reopt,              /**< reoptimization data structure */
+   SCIP_LPEXACT*         lpexact,            /**< current LP data */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
+   SCIP_SOL**            sol,                /**< pointer to primal CIP solution; is cleared in function call */
+   SCIP_Bool             printreason,        /**< Should all the reasons of violations be printed? */
+   SCIP_Bool             completely,         /**< Should all violations be checked? */
+   SCIP_Bool             checkbounds,        /**< Should the bounds of the variables be checked? */
+   SCIP_Bool             checkintegrality,   /**< Has integrality to be checked? */
+   SCIP_Bool             checklprows,        /**< Do constraints represented by rows in the current LP have to be checked? */
+   SCIP_Bool*            stored              /**< stores whether given solution was good enough to keep */
+   );
+
+/** adds exact primal solution to solution storage by copying it and frees the solution afterwards */
+SCIP_RETCODE SCIPprimalAddSolFreeExact(
+   SCIP_PRIMAL*          primal,             /**< primal data */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
+   SCIP_STAT*            stat,               /**< problem statistics data */
+   SCIP_PROB*            origprob,           /**< original problem */
+   SCIP_PROB*            transprob,          /**< transformed problem after presolve */
+   SCIP_TREE*            tree,               /**< branch and bound tree */
+   SCIP_REOPT*           reopt,              /**< reoptimization data structure */
+   SCIP_LPEXACT*         lpexact,            /**< current exact LP data */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
+   SCIP_SOL**            sol,                /**< primal CIP solution */
+   SCIP_Bool*            stored              /**< stores whether given solution was good enough to keep */
    );
 
 #ifdef __cplusplus

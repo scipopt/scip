@@ -35,6 +35,15 @@ namespace mp {
     assert((condition) && message)
 #endif
 
+/// Assert with throw, only for Debug
+#ifdef NDEBUG
+  #define MP_ASSERT__RAISE(condition, message) \
+    do { } while(0)
+#else
+  #define MP_ASSERT__RAISE(condition, message) \
+    do { if (!(condition)) MP_RAISE(message); } while(0)
+#endif
+
 /// Assert even for Release
 #define MP_ASSERT_ALWAYS(condition, message) \
   do { if (!(condition)) MP_RAISE(message); } while(0)

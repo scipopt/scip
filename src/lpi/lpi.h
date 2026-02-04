@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2026 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -50,9 +50,11 @@ extern "C" {
  * This file specifies a generic LP solver interface used by SCIP to create, modify, and solve linear programs of the
  * form
  *
+ * ```
  *   min/max   obj * x
  *      lhs <=   A * x  <= rhs
  *      lb  <=       x  <= ub
+ * ```
  *
  * and query information about the solution. Although it includes a few SCIP header files, e.g., because it uses SCIP's
  * return codes, it can be used independently of any SCIP instance.
@@ -946,7 +948,7 @@ SCIP_RETCODE SCIPlpiFreeState(
    SCIP_LPISTATE**       lpistate            /**< pointer to LPi state information (like basis information) */
    );
 
-/** checks, whether the given LPi state contains simplex basis information */
+/** checks whether the given LPi state contains simplex basis information */
 SCIP_EXPORT
 SCIP_Bool SCIPlpiHasStateBasis(
    SCIP_LPI*             lpi,                /**< LP interface structure */

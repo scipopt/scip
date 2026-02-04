@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2026 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -157,11 +157,16 @@ typedef struct SCIP_Hole SCIP_HOLE;               /**< hole in a domain of an in
 typedef struct SCIP_Holelist SCIP_HOLELIST;       /**< list of holes in a domain of an integer variable */
 typedef struct SCIP_Dom SCIP_DOM;                 /**< datastructures for storing domains of variables */
 typedef struct SCIP_Original SCIP_ORIGINAL;       /**< original variable information */
+typedef struct SCIP_Loose SCIP_LOOSE;             /**< loose variable information */
 typedef struct SCIP_Aggregate SCIP_AGGREGATE;     /**< aggregation information */
+typedef struct SCIP_AggregateExact SCIP_AGGREGATEEXACT; /**< exact aggregation information */
 typedef struct SCIP_Multaggr SCIP_MULTAGGR;       /**< multiple aggregation information */
+typedef struct SCIP_MultaggrExact SCIP_MULTAGGREXACT; /**< exact multiple aggregation information */
 typedef struct SCIP_Negate SCIP_NEGATE;           /**< negation information */
 typedef struct SCIP_Var SCIP_VAR;                 /**< variable of the problem */
 typedef struct SCIP_VarData SCIP_VARDATA;         /**< user variable data */
+typedef struct SCIP_VarDataExact SCIP_VARDATAEXACT;/**< exact data (obj, bounds, ...) */
+typedef struct SCIP_DomExact SCIP_DOMEXACT;       /**< exact domain (using rationals) */
 
 /** frees user data of original variable (called when the original variable is freed)
  *
@@ -232,7 +237,7 @@ typedef struct SCIP_VarData SCIP_VARDATA;         /**< user variable data */
  *  - result          : pointer to store the result of the call
  *
  *  possible return values for *result:
- *  - SCIP_DIDNOTRUN  : the copying process was not performed 
+ *  - SCIP_DIDNOTRUN  : the copying process was not performed
  *  - SCIP_SUCCESS    : the copying process was successfully performed
  */
 #define SCIP_DECL_VARCOPY(x) SCIP_RETCODE x (SCIP* scip, SCIP* sourcescip, SCIP_VAR* sourcevar, SCIP_VARDATA* sourcedata, \

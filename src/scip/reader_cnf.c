@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2026 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -134,7 +134,7 @@ SCIP_RETCODE readCnfLine(
 }
 
 /* Read SAT formula in "CNF File Format".
- * 
+ *
  *  The specification is taken from the
  *
  *  Satisfiability Suggested Format
@@ -142,10 +142,10 @@ SCIP_RETCODE readCnfLine(
  *  Online available at http://www.intellektik.informatik.tu-darmstadt.de/SATLIB/Benchmarks/SAT/satformat.ps
  *
  *  The method reads all files of CNF format. Other formats (SAT, SATX, SATE) are not supported.
- */  
+ */
 static
 SCIP_RETCODE readCnf(
-   SCIP*                 scip,               /**< SCIP data structure */   
+   SCIP*                 scip,               /**< SCIP data structure */
    SCIP_FILE*            file                /**< input file */
    )
 {
@@ -402,6 +402,8 @@ SCIP_DECL_READERREAD(readerReadCnf)
    assert(strcmp(SCIPreaderGetName(reader), READER_NAME) == 0);
    assert(filename != NULL);
    assert(result != NULL);
+
+   *result = SCIP_DIDNOTRUN;
 
    /* open file */
    f = SCIPfopen(filename, "r");

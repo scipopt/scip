@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2026 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -81,6 +81,7 @@ struct SCIP_Presol
    int                   nchgsides;          /**< total number of changed left or right hand sides by this presolver */
    int                   ncalls;             /**< number of times the presolver was called and tried to find reductions */
    SCIP_Bool             initialized;        /**< is presolver initialized? */
+   SCIP_Bool             exact;              /**< is the presolver safe to be used in exact solving mode? */
    SCIP_PRESOLTIMING     timing;             /**< timing of the presolver */
 };
 

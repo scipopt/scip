@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2026 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -45,6 +45,7 @@
 #include "scip/debug.h"
 #include "scip/pub_message.h"
 #include "scip/scip_debug.h"
+#include "scip/scip_prop.h"
 
 /** enable debug solution mechanism
  *
@@ -59,6 +60,9 @@ void SCIPenableDebugSol(
    )
 {
    SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPenableDebugSol", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE) );
+
+   if( SCIPfindProp(scip, "debug") == NULL )
+      (void)SCIPdebugIncludeProp(scip);
 
    SCIPdebugSolEnable(scip);
 }

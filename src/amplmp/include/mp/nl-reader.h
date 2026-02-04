@@ -499,6 +499,9 @@ class NLHandler {
     \rst
     Receives notification of a `common expression <mp::expr::COMMON_EXPR>`
     (defined variable) reference.
+    It's up to the Handler to check
+    that the CommonExpr has been provided
+    (according to the NL spec, actually before first use.)
     \endrst
    */
   Reference OnCommonExprRef(int expr_index) {
@@ -2117,6 +2120,7 @@ class NLProblemBuilder {
     AddVariables(h);
     if (int n = h.num_common_exprs())
       builder_.AddCommonExprs(n);
+    builder_.NotifyObjChoice(h.num_objs, multiobj(), objno());
     int n_objs = resulting_nobj( h.num_objs );
     if (n_objs != 0)
       builder_.AddObjs( n_objs );
@@ -2131,7 +2135,8 @@ class NLProblemBuilder {
   /// Add variables
   void AddVariables(const NLHeader& h) {
     // Distinguish NL variable order
-    // See D.M.Gay, Hooking Your Solver to AMPL; and Writing .NL Files,
+    // See D.M.Gay, Hooking Your Solver to AMPL;
+    //     D.M.Gay, Writing .NL Files;
     // and, e.g.,
     // github.com/jump-dev/MathOptInterface.jl/blob/master/src/FileFormats/NL/README.md
     int k=0;                             // current block position
@@ -2293,6 +2298,9 @@ class NLProblemBuilder {
     return builder_.MakeVariable(var_index);
   }
 
+  /// It's up to the Handler to check
+  /// that the CommonExpr has been provided
+  /// (according to the NL spec, actually before first use.)
   Reference OnCommonExprRef(int expr_index) {
     return builder_.MakeCommonExpr(expr_index);
   }
@@ -2526,17 +2534,23 @@ public:
   /// Returns the name of the item at specified index.
   /// @param i2: if >=0,
   ///   from this index, generic name 2 is used
-  fmt::StringRef name(std::size_t index, std::size_t i2=-1);
+	/// @param any_empty: if non-0, set true if the read
+	///   name was empty (it is replaced by a standard name then).
+	fmt::StringRef name(
+			std::size_t index, std::size_t i2=-1, bool* was_empty=0);
 
   /// Return vector of names, length n.
   /// If number_read() < n, generic names are filled.
   /// @param i2: if >=0,
   ///   from this index, generic name 2 is used
-  std::vector<std::string> get_names(size_t n, size_t i2=-1);
+	/// @param any_empty: if non-0, true iff had any empty names
+	///   in the input (they were replaced by standard names then).
+	std::vector<std::string> get_names(
+			size_t n, size_t i2=-1, bool* p_any_empty=0);
 
 private:
   std::vector<const char *> names_;
-  std::string gen_name_, gen_name_2_;
+  std::string gen_name_ {"_std_"}, gen_name_2_ {"_extra_"};
   internal::NameReader reader_;
   fmt::MemoryWriter writer_;
 };

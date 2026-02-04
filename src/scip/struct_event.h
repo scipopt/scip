@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2026 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -74,6 +74,8 @@ struct SCIP_EventObjChg
 {
    SCIP_Real             oldobj;             /**< old objective value before value changed */
    SCIP_Real             newobj;             /**< new objective value after value changed */
+   SCIP_RATIONAL*        oldobjexact;        /**< exact old obj (NULL if not an exact change) */
+   SCIP_RATIONAL*        newobjexact;        /**< exact new obj (NULL if not an exact change) */
    SCIP_VAR*             var;                /**< variable whose objective value changed */
 };
 
@@ -82,6 +84,8 @@ struct SCIP_EventBdChg
 {
    SCIP_Real             oldbound;           /**< old bound before bound changed */
    SCIP_Real             newbound;           /**< new bound after bound changed */
+   SCIP_RATIONAL*        oldboundexact;      /**< exact old variable bound (NULL if not an exact change) */
+   SCIP_RATIONAL*        newboundexact;      /**< exact new variable bound (NULL if not an exact change) */
    SCIP_VAR*             var;                /**< variable whose bound changed */
 };
 

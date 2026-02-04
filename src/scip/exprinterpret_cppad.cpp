@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2026 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -240,9 +240,9 @@ public:
  */
 static
 bool univariate_for_sparse_jac(
-   size_t                     q,             /**< number of columns in R */
+   size_t                q,                  /**< number of columns in R */
    const CppAD::vector<bool>& r,             /**< sparsity of R, columnwise */
-   CppAD::vector<bool>&       s              /**< vector to store sparsity of S, columnwise */
+   CppAD::vector<bool>&  s                   /**< vector to store sparsity of S, columnwise */
    )
 {
    assert(r.size() == q);
@@ -260,9 +260,9 @@ bool univariate_for_sparse_jac(
  */
 static
 bool univariate_rev_sparse_jac(
-   size_t                     q,             /**< number of rows in R */
+   size_t                q,                  /**< number of rows in R */
    const CppAD::vector<bool>& r,             /**< sparsity of R, rowwise */
-   CppAD::vector<bool>&       s              /**< vector to store sparsity of S, rowwise */
+   CppAD::vector<bool>&  s                   /**< vector to store sparsity of S, rowwise */
    )
 {
    assert(r.size() == q);
@@ -810,7 +810,6 @@ private:
    {
       return univariate_rev_sparse_hes(vx, s, t, q, r, u, v);
    }
-
 };
 
 /** template for evaluation for signpower operator */
@@ -1103,7 +1102,7 @@ private:
       size_t             p,                  /**< highest order Taylor coefficient that we are evaluating */
       const CppAD::vector<SCIP_Real>& tx,    /**< values for taylor coefficients of x */
       const CppAD::vector<SCIP_Real>& ty,    /**< values for taylor coefficients of y */
-      CppAD::vector<SCIP_Real>& px,          /**< vector to store partial derivatives of h(x) = g(y(x)) w.r.t. x */
+      CppAD::vector<SCIP_Real>& px,          /**< vector to store partial derivatives of h(x) = g(y(x)) w.r.t. x */  /* cppcheck-suppress constParameterReference */
       const CppAD::vector<SCIP_Real>& py     /**< values for partial derivatives of g(x) w.r.t. y */
       )
    {
@@ -1502,7 +1501,7 @@ SCIP_RETCODE SCIPexprintCreate(
 {
    assert(exprint != NULL);
 
-   *exprint = (SCIP_EXPRINT*)1u;  /* some code checks that a non-NULL pointer is returned here, even though it may not point anywhere */
+   *exprint = (SCIP_EXPRINT*)(size_t)1u;  /* some code checks that a non-NULL pointer is returned here, even though it may not point anywhere */
 
    return SCIP_OKAY;
 }
@@ -1530,14 +1529,14 @@ SCIP_RETCODE SCIPexprintFree(
 SCIP_RETCODE SCIPexprintCompile(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_EXPRINT*         exprint,            /**< interpreter data structure */
-   SCIP_EXPR*            rootexpr,           /**< expression */
+   SCIP_EXPR*            expr,               /**< expression */
    SCIP_EXPRINTDATA**    exprintdata         /**< buffer to store pointer to compiled data */
    )
 {
    SCIP_EXPRITER* it;
-   SCIP_EXPR* expr;
+   SCIP_EXPR* expr2;
 
-   assert(rootexpr != NULL);
+   assert(expr != NULL);
    assert(exprintdata != NULL);
 
    if( *exprintdata == NULL )
@@ -1553,34 +1552,34 @@ SCIP_RETCODE SCIPexprintCompile(
    }
 
    SCIP_CALL( SCIPcreateExpriter(scip, &it) );
-   SCIP_CALL( SCIPexpriterInit(it, rootexpr, SCIP_EXPRITER_DFS, FALSE) );
+   SCIP_CALL( SCIPexpriterInit(it, expr, SCIP_EXPRITER_DFS, FALSE) );
 
    std::set<int> varidxs;
-   for( expr = SCIPexpriterGetCurrent(it); !SCIPexpriterIsEnd(it); expr = SCIPexpriterGetNext(it) )
+   for( expr2 = SCIPexpriterGetCurrent(it); !SCIPexpriterIsEnd(it); expr2 = SCIPexpriterGetNext(it) )
    {
       /* cannot handle var-expressions in exprint so far, should be varidx expressions */
-      assert(!SCIPisExprVar(scip, expr));
+      assert(!SCIPisExprVar(scip, expr2));
 
-      if( SCIPisExprVaridx(scip, expr) )
+      if( SCIPisExprVaridx(scip, expr2) )
       {
-         varidxs.insert(SCIPgetIndexExprVaridx(expr));
+         varidxs.insert(SCIPgetIndexExprVaridx(expr2));
          continue;
       }
 
-      /* check whether expr is of a type we don't recognize */
+      /* check whether expr2 is of a type we don't recognize */
 #ifndef EVAL_USE_EXPRHDLR_ALWAYS
-      if( !SCIPisExprSum(scip, expr) &&
-          !SCIPisExprProduct(scip, expr) &&
-          !SCIPisExprPower(scip, expr) &&
-          !SCIPisExprSignpower(scip, expr) &&
-          !SCIPisExprExp(scip, expr) &&
-          !SCIPisExprLog(scip, expr) &&
-          strcmp(SCIPexprhdlrGetName(SCIPexprGetHdlr(expr)), "abs") != 0 &&
-          strcmp(SCIPexprhdlrGetName(SCIPexprGetHdlr(expr)), "sin") != 0 &&
-          strcmp(SCIPexprhdlrGetName(SCIPexprGetHdlr(expr)), "cos") != 0 &&
-          strcmp(SCIPexprhdlrGetName(SCIPexprGetHdlr(expr)), "entropy") != 0 &&
-          strcmp(SCIPexprhdlrGetName(SCIPexprGetHdlr(expr)), "erf") != 0 &&
-          !SCIPisExprValue(scip, expr) )
+      if( !SCIPisExprSum(scip, expr2) &&
+          !SCIPisExprProduct(scip, expr2) &&
+          !SCIPisExprPower(scip, expr2) &&
+          !SCIPisExprSignpower(scip, expr2) &&
+          !SCIPisExprExp(scip, expr2) &&
+          !SCIPisExprLog(scip, expr2) &&
+          strcmp(SCIPexprhdlrGetName(SCIPexprGetHdlr(expr2)), "abs") != 0 &&
+          strcmp(SCIPexprhdlrGetName(SCIPexprGetHdlr(expr2)), "sin") != 0 &&
+          strcmp(SCIPexprhdlrGetName(SCIPexprGetHdlr(expr2)), "cos") != 0 &&
+          strcmp(SCIPexprhdlrGetName(SCIPexprGetHdlr(expr2)), "entropy") != 0 &&
+          strcmp(SCIPexprhdlrGetName(SCIPexprGetHdlr(expr2)), "erf") != 0 &&
+          !SCIPisExprValue(scip, expr2) )
 #endif
       {
          /* an expression for which we have no taping implemented in eval()
@@ -1588,13 +1587,13 @@ SCIP_RETCODE SCIPexprintCompile(
           * however, only atomic_userexpr:forward() is implemented for p=0,1 at the moment, so we cannot do Hessians
           * also the exprhdlr needs to implement the fwdiff callback for derivatives
           */
-         if( SCIPexprhdlrHasFwdiff(SCIPexprGetHdlr(expr)) )
+         if( SCIPexprhdlrHasFwdiff(SCIPexprGetHdlr(expr2)) )
             (*exprintdata)->userevalcapability &= SCIP_EXPRINTCAPABILITY_FUNCVALUE | SCIP_EXPRINTCAPABILITY_GRADIENT;
          else
             (*exprintdata)->userevalcapability &= SCIP_EXPRINTCAPABILITY_FUNCVALUE;
       }
 
-      //if( strcmp(SCIPexprhdlrGetName(SCIPexprGetHdlr(expr)), "xyz") == 0 )
+      //if( strcmp(SCIPexprhdlrGetName(SCIPexprGetHdlr(expr2)), "xyz") == 0 )
       //   (*exprintdata)->need_retape_always = true;
    }
 
@@ -1611,13 +1610,13 @@ SCIP_RETCODE SCIPexprintCompile(
    // check whether we are quadratic (or linear), so we can save on Hessian time (so
    // assumes simplified and skips over x^2 and x*y cases
    // not using SCIPcheckExprQuadratic(), because we don't need the quadratic form
-   if( SCIPisExprSum(scip, rootexpr) )
+   if( SCIPisExprSum(scip, expr) )
    {
       (*exprintdata)->hesconstant = true;
-      for( int i = 0; i < SCIPexprGetNChildren(rootexpr); ++i )
+      for( int i = 0; i < SCIPexprGetNChildren(expr); ++i )
       {
          SCIP_EXPR* child;
-         child = SCIPexprGetChildren(rootexpr)[i];
+         child = SCIPexprGetChildren(expr)[i];
          /* linear term is ok */
          if( SCIPisExprVaridx(scip, child) )
             continue;
@@ -1650,6 +1649,10 @@ SCIP_RETCODE SCIPexprintFreeData(
 
    SCIPfreeBlockMemoryArrayNull(scip, &(*exprintdata)->hesrowidxs, (*exprintdata)->hesnnz);
    SCIPfreeBlockMemoryArrayNull(scip, &(*exprintdata)->hescolidxs, (*exprintdata)->hesnnz);
+
+   for( vector<atomic_userexpr*>::iterator it((*exprintdata)->userexprs.begin()); it != (*exprintdata)->userexprs.end(); ++it )
+      delete *it;
+   (*exprintdata)->userexprs.clear();
 
    delete *exprintdata;
    *exprintdata = NULL;

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2026 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -149,8 +149,11 @@ void debugCheckColrang(
 {
    int ncols;
 
+   assert(lpi != NULL);
+   assert(firstcol >= 0);
+   assert(firstcol <= lastcol + 1);
    (void)XPRSgetintattrib(lpi->xprslp, XPRS_COLS, &ncols);
-   assert(0 <= firstcol && firstcol <= lastcol && lastcol < ncols);
+   assert(lastcol < ncols);
 }
 
 /** check that the row range fits */
@@ -163,8 +166,11 @@ void debugCheckRowrang(
 {
    int nrows;
 
+   assert(lpi != NULL);
+   assert(firstrow >= 0);
+   assert(firstrow <= lastrow + 1);
    (void)XPRSgetintattrib(lpi->xprslp, XPRS_ROWS, &nrows);
-   assert(0 <= firstrow && firstrow <= lastrow && lastrow < nrows);
+   assert(lastrow < nrows);
 }
 
 #else
@@ -1002,12 +1008,13 @@ SCIP_RETCODE SCIPlpiDelCols(
 {
    int c;
 
-   assert(lpi != NULL);
-   assert(lpi->xprslp != NULL);
-
    debugCheckColrang(lpi, firstcol, lastcol);
 
    SCIPdebugMessage("deleting %d columns from Xpress\n", lastcol - firstcol + 1);
+
+   /* handle empty range */
+   if( firstcol > lastcol )
+      return SCIP_OKAY;
 
    invalidateSolution(lpi);
 
@@ -1147,12 +1154,13 @@ SCIP_RETCODE SCIPlpiDelRows(
 {
    int r;
 
-   assert(lpi != NULL);
-   assert(lpi->xprslp != NULL);
-
    debugCheckRowrang(lpi, firstrow, lastrow);
 
    SCIPdebugMessage("deleting %d rows from Xpress\n", lastrow - firstrow + 1);
+
+   /* handle empty range */
+   if( firstrow > lastrow )
+      return SCIP_OKAY;
 
    invalidateSolution(lpi);
 
@@ -1336,17 +1344,17 @@ SCIP_RETCODE SCIPlpiChgCoef(
 /** changes the objective sense */
 SCIP_RETCODE SCIPlpiChgObjsen(
    SCIP_LPI*             lpi,                /**< LP interface structure */
-   SCIP_OBJSEN           objsense            /**< new objective sense */
+   SCIP_OBJSEN           objsen              /**< new objective sense */
    )
 {
    assert(lpi != NULL);
    assert(lpi->xprslp != NULL);
 
-   SCIPdebugMessage("changing objective sense in Xpress to %d\n", objsense);
+   SCIPdebugMessage("changing objective sense in Xpress to %d\n", objsen);
 
    invalidateSolution(lpi);
 
-   CHECK_ZERO( lpi->messagehdlr, XPRSchgobjsense(lpi->xprslp, xprsObjsen(objsense)) );
+   CHECK_ZERO( lpi->messagehdlr, XPRSchgobjsense(lpi->xprslp, xprsObjsen(objsen)) );
 
    return SCIP_OKAY;
 }
@@ -1573,8 +1581,6 @@ SCIP_RETCODE SCIPlpiGetCols(
    SCIP_Real*            val                 /**< buffer to store values of constraint matrix entries, or NULL */
    )
 {
-   assert(lpi != NULL);
-   assert(lpi->xprslp != NULL);
    assert((lb != NULL && ub != NULL) || (lb == NULL && ub == NULL));
    assert((nnonz != NULL && beg != NULL && ind != NULL && val != NULL) || (nnonz == NULL && beg == NULL && ind == NULL && val == NULL));
 
@@ -1623,27 +1629,25 @@ SCIP_RETCODE SCIPlpiGetRows(
    SCIP_LPI*             lpi,                /**< LP interface structure */
    int                   firstrow,           /**< first row to get from LP */
    int                   lastrow,            /**< last row to get from LP */
-   SCIP_Real*            lhss,               /**< buffer to store left hand side vector, or NULL */
-   SCIP_Real*            rhss,               /**< buffer to store right hand side vector, or NULL */
+   SCIP_Real*            lhs,                /**< buffer to store left hand side vector, or NULL */
+   SCIP_Real*            rhs,                /**< buffer to store right hand side vector, or NULL */
    int*                  nnonz,              /**< pointer to store the number of nonzero elements returned, or NULL */
    int*                  beg,                /**< buffer to store start index of each row in ind- and val-array, or NULL */
    int*                  ind,                /**< buffer to store column indices of constraint matrix entries, or NULL */
    SCIP_Real*            val                 /**< buffer to store values of constraint matrix entries, or NULL */
    )
 {
-   assert(lpi != NULL);
-   assert(lpi->xprslp != NULL);
-   assert((lhss != NULL && rhss != NULL) || (lhss == NULL && rhss == NULL));
+   assert((lhs != NULL && rhs != NULL) || (lhs == NULL && rhs == NULL));
    assert((nnonz != NULL && beg != NULL && ind != NULL && val != NULL) || (nnonz == NULL && beg == NULL && ind == NULL && val == NULL));
 
    debugCheckRowrang(lpi, firstrow, lastrow);
 
    SCIPdebugMessage("getting rows %d to %d\n", firstrow, lastrow);
 
-   if( lhss != NULL )
+   if( lhs != NULL )
    {
       /* get left and right sides */
-      SCIP_CALL( SCIPlpiGetSides(lpi, firstrow, lastrow, lhss, rhss) );
+      SCIP_CALL( SCIPlpiGetSides(lpi, firstrow, lastrow, lhs, rhs) );
    }
 
    if( nnonz != NULL )
@@ -1684,15 +1688,15 @@ SCIP_RETCODE SCIPlpiGetColNames(
    int*                  storageleft         /**< amount of storage left (if < 0 the namestorage was not big enough) or NULL if namestoragesize is zero */
    )
 { /*lint --e{715}*/
-   assert(lpi != NULL);
-   assert(lpi->xprslp != NULL);
    assert(colnames != NULL || namestoragesize == 0);
    assert(namestorage != NULL || namestoragesize == 0);
    assert(namestoragesize >= 0);
    assert(storageleft != NULL);
-   assert(0 <= firstcol && firstcol <= lastcol);
+
+   debugCheckColrang(lpi, firstcol, lastcol);
 
    SCIPerrorMessage("SCIPlpiGetColNames() has not been implemented yet.\n");
+
    return SCIP_LPERROR;
 }
 
@@ -1707,15 +1711,15 @@ SCIP_RETCODE SCIPlpiGetRowNames(
    int*                  storageleft         /**< amount of storage left (if < 0 the namestorage was not big enough) or NULL if namestoragesize is zero */
    )
 { /*lint --e{715}*/
-   assert(lpi != NULL);
-   assert(lpi->xprslp != NULL);
    assert(rownames != NULL || namestoragesize == 0);
    assert(namestorage != NULL || namestoragesize == 0);
    assert(namestoragesize >= 0);
    assert(storageleft != NULL);
-   assert(0 <= firstrow && firstrow <= lastrow);
+
+   debugCheckRowrang(lpi, firstrow, lastrow);
 
    SCIPerrorMessage("SCIPlpiGetRowNames() has not been implemented yet.\n");
+
    return SCIP_LPERROR;
 }
 
@@ -1750,10 +1754,9 @@ SCIP_RETCODE SCIPlpiGetObj(
    SCIP_Real*            vals                /**< array to store objective coefficients */
    )
 {
-   assert(lpi != NULL);
-   assert(lpi->xprslp != NULL);
-   assert(firstcol <= lastcol);
    assert(vals != NULL);
+
+   debugCheckColrang(lpi, firstcol, lastcol);
 
    SCIPdebugMessage("getting objective values %d to %d\n", firstcol, lastcol);
 
@@ -1771,9 +1774,7 @@ SCIP_RETCODE SCIPlpiGetBounds(
    SCIP_Real*            ubs                 /**< array to store upper bound values, or NULL */
    )
 {
-   assert(lpi != NULL);
-   assert(lpi->xprslp != NULL);
-   assert(firstcol <= lastcol);
+   debugCheckColrang(lpi, firstcol, lastcol);
 
    SCIPdebugMessage("getting bounds %d to %d\n", firstcol, lastcol);
 
@@ -1799,9 +1800,7 @@ SCIP_RETCODE SCIPlpiGetSides(
    SCIP_Real*            rhss                /**< array to store right hand side values, or NULL */
    )
 {
-   assert(lpi != NULL);
-   assert(lpi->xprslp != NULL);
-   assert(firstrow <= lastrow);
+   debugCheckRowrang(lpi, firstrow, lastrow);
 
    SCIPdebugMessage("getting row sides %d to %d\n", firstrow, lastrow);
 
@@ -3002,7 +3001,7 @@ SCIP_RETCODE SCIPlpiGetBasisInd(
  */
 SCIP_RETCODE SCIPlpiGetBInvRow(
    SCIP_LPI*             lpi,                /**< LP interface structure */
-   int                   row,                /**< row number */
+   int                   r,                  /**< row number */
    SCIP_Real*            coef,               /**< pointer to store the coefficients of the row */
    int*                  inds,               /**< array to store the non-zero indices, or NULL */
    int*                  ninds               /**< pointer to store the number of non-zero indices, or NULL
@@ -3016,7 +3015,7 @@ SCIP_RETCODE SCIPlpiGetBInvRow(
    assert(coef != NULL);
    SCIP_UNUSED(inds);
 
-   SCIPdebugMessage("getting binv-row %d\n", row);
+   SCIPdebugMessage("getting binv-row %d\n", r);
 
    /* can only return dense result */
    if ( ninds != NULL )
@@ -3024,7 +3023,7 @@ SCIP_RETCODE SCIPlpiGetBInvRow(
 
    CHECK_ZERO( lpi->messagehdlr, XPRSgetintattrib(lpi->xprslp, XPRS_ROWS, &nrows) );
    BMSclearMemoryArray(coef, nrows);
-   coef[row] = 1.0;
+   coef[r] = 1.0;
    CHECK_ZERO( lpi->messagehdlr, XPRSbtran(lpi->xprslp, coef) );
 
    return SCIP_OKAY;
@@ -3370,7 +3369,7 @@ SCIP_RETCODE SCIPlpiFreeState(
    return SCIP_OKAY;
 }
 
-/** checks, whether the given LP state contains simplex basis information */
+/** checks whether the given LP state contains simplex basis information */
 SCIP_Bool SCIPlpiHasStateBasis(
    SCIP_LPI*             lpi,                /**< LP interface structure */
    SCIP_LPISTATE*        lpistate            /**< LP state information (like basis information), or NULL */

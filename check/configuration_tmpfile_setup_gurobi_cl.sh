@@ -4,7 +4,7 @@
 #*                  This file is part of the program and library             *
 #*         SCIP --- Solving Constraint Integer Programs                      *
 #*                                                                           *
-#*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      *
+#*  Copyright (c) 2002-2026 Zuse Institute Berlin (ZIB)                      *
 #*                                                                           *
 #*  Licensed under the Apache License, Version 2.0 (the "License");          *
 #*  you may not use this file except in compliance with the License.         *
@@ -49,6 +49,7 @@ VISUALIZE="${18}"      # - true, if the branch-and-bound search should be visual
 SOLUFILE="${19}"       # - solu file, only necessary if ${SETCUTOFF} is 1
 EMPHBENCHMARK="${20}"  # - use set emphasis benchmark
 CLOCKTYPE="${21}"      # - clocktype (1 = CPU, 2 = wallclock) - currently ignored by Gurobi
+WITHCERTIFICATE="${22}" # - true, if a certificate file should be created - currently ignored by Gurobi
 
 # new environment variables after running this script
 # -None

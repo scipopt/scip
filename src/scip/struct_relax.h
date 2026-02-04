@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2026 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -67,6 +67,7 @@ struct SCIP_Relax
    SCIP_Real             imprtime;           /**< time spent for executing relaxator when improving bound (or cutoff) */
    int                   priority;           /**< priority of the relaxator */
    int                   freq;               /**< frequency for calling relaxator */
+   SCIP_Bool             exact;              /**< is relaxator safe to be used in exact solving mode? */
    SCIP_Bool             initialized;        /**< is relaxator initialized? */
 };
 

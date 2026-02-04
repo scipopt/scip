@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2026 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -135,6 +135,18 @@ SCIP_RETCODE SCIPconflictstoreAddConflict(
    SCIP_CONFTYPE         conftype,           /**< type of the conflict */
    SCIP_Bool             cutoffinvolved,     /**< is a cutoff bound involved in this conflict */
    SCIP_Real             primalbound         /**< primal bound the conflict depend on (or -SCIPinfinity) */
+   );
+
+/** upgrades an unchecked conflict in the conflict store
+ *
+ *  @note this method releases oldcons and captures newcons
+ */
+SCIP_RETCODE SCIPconflictstoreUpgradeConflict(
+   SCIP_CONFLICTSTORE*   conflictstore,      /**< conflict store */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_CONS*            oldcons,            /**< underlying constraint to upgrade */
+   SCIP_CONS*            newcons             /**< upgraded constraint to add */
    );
 
 /** deletes all conflicts depending on a cutoff bound larger than the given bound */

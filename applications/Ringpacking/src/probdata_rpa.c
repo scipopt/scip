@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2026 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -1024,7 +1024,7 @@ void updateBestCandidate(
    isoverthreshold = (ncalls % 2) == 1 && SCIPisGT(scip, *bestx, threshold) && SCIPisGT(scip, x, threshold);
 
    /* check whether the candidate is better than the best known candidate */
-   if( *bestx == SCIP_INVALID || *besty == SCIP_INVALID
+   if( *bestx == SCIP_INVALID || *besty == SCIP_INVALID /*lint !e777*/
       || ((!isoverthreshold || SCIPisEQ(scip, y, *besty)) && SCIPisLT(scip, x, *bestx)) /*lint !e777*/
       || ((isoverthreshold || SCIPisEQ(scip, x, *bestx)) && SCIPisLT(scip, y, *besty)) ) /*lint !e777*/
    {

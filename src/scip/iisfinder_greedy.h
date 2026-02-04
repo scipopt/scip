@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2026 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -27,6 +27,7 @@
  * @brief  greedy deletion and addition filter heuristic to compute IISs
  * @author Marc Pfetsch
  * @author Mark Turner
+ * @author Paul Meinhold
  *
  * An irreducible infeasible subsystem (IIS) is a subset of the constraints and bounds from a problem
  * that is infeasible.
@@ -41,9 +42,9 @@
  * O. Guieu and J. Chinneck, Analyzing infeasible mixed-integer and integer linear programs,@p
  * INFORMS J. Comput. 11, no. 1 (1999), pp. 63–77.
  *
- * If the appropriate parameters are set then we can guarantee that the result is minimal, i.e.,
+ * If the appropriate parameters are set then we can guarantee that the result is irreducible, i.e.,
  * an irreducible infeasible subsystem (IIS). Otherwise we may only obtain an infeasible subsystem (IS).
- * For no settings can we guarantee the smallest possible infeasible subsystem.
+ * This algorithm cannot guarantee to find the smallest possible IIS.
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -71,32 +72,10 @@ SCIP_RETCODE SCIPincludeIISfinderGreedy(
  * @{
  */
 
-/** perform a greedy addition or deletion algorithm to obtain an infeasible subsystem (IS).
- *
- *  This is the generation method for the greedy IIS finder rule.
- *  Depending on the parameter choices, constraints are either greedily added from an empty problem,
- *  or deleted from a valid problem state. In the case of constraints being added, this is done until the problem
- *  becomes infeasible, after which one can then begin deleting constraints. In the case of deleting constraints,
- *  this is done until no more constraints (or batches of constraints) can be deleted without making
- *  the problem feasible.
- *  The algorithm also extends to variable bounds.
- */
+/** perform the greedy deletion algorithm with singleton batches to obtain an irreducible infeasible subsystem (IIS) */
 SCIP_EXPORT
-SCIP_RETCODE SCIPexecIISfinderGreedy(
-   SCIP_IIS*             iis,                /**< IIS data structure */
-   SCIP_Real             timelim,            /**< The global time limit on the IIS call */
-   SCIP_Longint          nodelim,            /**< The global node limit on the IIS call */
-   SCIP_Bool             removebounds,       /**< Whether the algorithm should remove bounds as well as constraints */
-   SCIP_Bool             silent,             /**< should the run be performed silently without printing progress information */
-   SCIP_Real             timelimperiter,     /**< time limit per individual solve call */
-   SCIP_Bool             additive,           /**< whether an additive approach instead of deletion based approach should be used */
-   SCIP_Bool             conservative,       /**< should a hit limit (e.g. node / time) solve be counted as feasible when deleting constraints */
-   SCIP_Bool             dynamicreordering,  /**< should satisfied constraints outside the batch of an intermediate solve be added during the additive method */
-   SCIP_Bool             delafteradd,        /**< should the deletion routine be performed after the addition routine (in the case of additive) */
-   SCIP_Longint          maxnnodesperiter,   /**< maximum number of nodes per individual solve call */
-   int                   maxbatchsize,       /**< the maximum number of constraints to delete or add per iteration */
-   SCIP_Real             maxrelbatchsize,    /**< the maximum number of constraints relative to the original problem to delete or add per iteration */
-   SCIP_RESULT*          result              /**< pointer to store the result of the IIS run */
+SCIP_RETCODE SCIPiisGreedyMakeIrreducible(
+   SCIP_IIS*             iis                 /**< IIS data structure */
    );
 
 /** @} */

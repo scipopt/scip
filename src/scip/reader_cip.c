@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2026 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -34,13 +34,16 @@
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 #include "blockmemshell/memory.h"
+#include "scip/rational.h"
 #include "scip/cons_linear.h"
+#include "scip/cons_exactlinear.h"
 #include "scip/pub_fileio.h"
 #include "scip/pub_message.h"
 #include "scip/pub_misc.h"
 #include "scip/pub_reader.h"
 #include "scip/pub_var.h"
 #include "scip/reader_cip.h"
+#include "scip/scip_exact.h"
 #include "scip/scip_cons.h"
 #include "scip/scip_mem.h"
 #include "scip/scip_message.h"
@@ -66,7 +69,7 @@ struct SCIP_ReaderData
 
 
 /** Section of the in CIP files */
-enum CipSection 
+enum CipSection
 {
    CIP_START,            /**< start tag */
    CIP_STATISTIC,        /**< statistics section */
@@ -94,6 +97,10 @@ struct CipInput
    CIPSECTION            section;            /**< current section */
    SCIP_Bool             haserror;           /**< some error occurred */
    SCIP_Bool             endfile;            /**< we have reached the end of the file */
+   SCIP_Real             objoffset;          /**< real objective offset */
+   SCIP_Real             objscale;           /**< real objective scale */
+   SCIP_RATIONAL*        objoffsetexact;     /**< exact objective offset */
+   SCIP_RATIONAL*        objscaleexact;      /**< exact objective scale */
 };
 typedef struct CipInput CIPINPUT;            /**< CIP reading data */
 
@@ -155,8 +162,8 @@ SCIP_RETCODE getInputString(
 
       if( cipinput->endfile )
       {
-	 /* clear the line for safety reason */
-	 BMSclearMemoryArray(cipinput->strbuf, cipinput->len);
+         /* clear the line for safety reason */
+         BMSclearMemoryArray(cipinput->strbuf, cipinput->len);
          return SCIP_OKAY;
       }
 
@@ -270,16 +277,12 @@ SCIP_RETCODE getStatistics(
 static
 SCIP_RETCODE getObjective(
    SCIP*                 scip,               /**< SCIP data structure */
-   CIPINPUT*             cipinput,           /**< CIP parsing data */
-   SCIP_Real*            objscale,           /**< buffer where to multiply with objective scale */
-   SCIP_Real*            objoffset           /**< buffer where to add with objective offset */
+   CIPINPUT*             cipinput            /**< CIP parsing data */
    )
 {
+   SCIP_Bool success;
    char* buf;
    char* name;
-
-   assert(objscale != NULL);
-   assert(objoffset != NULL);
 
    buf = cipinput->strbuf;
 
@@ -334,7 +337,6 @@ SCIP_RETCODE getObjective(
    }
    else if( SCIPstrncasecmp(buf, "Offset", 6) == 0 )
    {
-      SCIP_Real off = 0;
       char* endptr;
 
       name = strchr(buf, ':');
@@ -348,15 +350,28 @@ SCIP_RETCODE getObjective(
       /* skip ':' */
       ++name;
 
-      /* remove white space in front of the name */
-      SCIP_CALL( SCIPskipSpace(&name) );
-
-      if ( SCIPstrToRealValue(name, &off, &endptr) )
+      /* read exact offset */
+      if( cipinput->objoffsetexact != NULL )
       {
-         *objoffset += off;
-         SCIPdebugMsg(scip, "offset <%g> (total: %g)\n", off, *objoffset);
+         success = SCIPparseRational(scip, name, cipinput->objoffsetexact, &endptr);
+
+         if( success )
+            SCIPrationalDebugMessage("read exact objoffset %q\n", cipinput->objoffsetexact);
+         else
+            SCIPrationalSetReal(cipinput->objoffsetexact, 0.0);
       }
+      /* read real offset */
       else
+      {
+         success = SCIPparseReal(scip, name, &cipinput->objoffset, &endptr);
+
+         if( success )
+            SCIPdebugMsg(scip, "read real objoffset %g\n", cipinput->objoffset);
+         else
+            cipinput->objoffset = 0.0;
+      }
+
+      if( !success )
       {
          SCIPwarningMessage(scip, "could not parse offset (line: %d)\n%s\n", cipinput->linenumber, cipinput->strbuf);
          return SCIP_OKAY;
@@ -364,7 +379,6 @@ SCIP_RETCODE getObjective(
    }
    else if( SCIPstrncasecmp(buf, "Scale", 5) == 0 )
    {
-      SCIP_Real scale = 1.0;
       char* endptr;
 
       name = strchr(buf, ':');
@@ -378,15 +392,28 @@ SCIP_RETCODE getObjective(
       /* skip ':' */
       ++name;
 
-      /* remove white space in front of the name */
-      SCIP_CALL( SCIPskipSpace(&name) );
-
-      if ( SCIPstrToRealValue(name, &scale, &endptr) )
+      /* read exact scale */
+      if( cipinput->objscaleexact != NULL )
       {
-         *objscale *= scale;
-         SCIPdebugMsg(scip, "objscale <%g> (total: %g)\n", scale, *objscale);
+         success = SCIPparseRational(scip, name, cipinput->objscaleexact, &endptr);
+
+         if( success )
+            SCIPrationalDebugMessage("read exact objscale %q\n", cipinput->objscaleexact);
+         else
+            SCIPrationalSetReal(cipinput->objscaleexact, 1.0);
       }
+      /* read real scale */
       else
+      {
+         success = SCIPparseReal(scip, name, &cipinput->objscale, &endptr);
+
+         if( success )
+            SCIPdebugMsg(scip, "read real objscale %g\n", cipinput->objscale);
+         else
+            cipinput->objscale = 1.0;
+      }
+
+      if( !success )
       {
          SCIPwarningMessage(scip, "could not parse objective scale (line: %d)\n%s\n", cipinput->linenumber, cipinput->strbuf);
          return SCIP_OKAY;
@@ -402,8 +429,7 @@ SCIP_RETCODE getVariable(
    SCIP*                 scip,               /**< SCIP data structure */
    CIPINPUT*             cipinput,           /**< CIP parsing data */
    SCIP_Bool             initial,            /**< should var's column be present in the initial root LP? */
-   SCIP_Bool             removable,          /**< is var's column removable from the LP (due to aging or cleanup)? */
-   SCIP_Real             objscale            /**< objective scale */
+   SCIP_Bool             removable           /**< is var's column removable from the LP (due to aging or cleanup)? */
    )
 {
    SCIP_Bool success;
@@ -435,9 +461,28 @@ SCIP_RETCODE getVariable(
       return SCIP_OKAY;
    }
 
-   if( objscale != 1.0 )
+   /* scale exact objective */
+   if( cipinput->objscaleexact != NULL )
    {
-      SCIP_CALL( SCIPchgVarObj(scip, var, SCIPvarGetObj(var) * objscale) );
+      if( !SCIPrationalIsEQReal(cipinput->objscaleexact, 1.0) )
+      {
+         SCIP_RATIONAL* newobjval;
+
+         SCIP_CALL( SCIPrationalCreateBuffer(SCIPbuffer(scip), &newobjval) );
+
+         SCIPrationalMult(newobjval, SCIPvarGetObjExact(var), cipinput->objscaleexact);
+         SCIP_CALL( SCIPchgVarObjExact(scip, var, newobjval) );
+
+         SCIPrationalFreeBuffer(SCIPbuffer(scip), &newobjval);
+      }
+   }
+   /* scale real objective */
+   else
+   {
+      if( cipinput->objscale != 1.0 ) /*lint !e777*/
+      {
+         SCIP_CALL( SCIPchgVarObj(scip, var, SCIPvarGetObj(var) * cipinput->objscale) );
+      }
    }
 
    SCIP_CALL( SCIPaddVar(scip, var) );
@@ -487,20 +532,19 @@ SCIP_RETCODE getFixedVariable(
    /* skip intermediate stuff */
    buf = endptr;
 
-   while ( *buf != '\0' && (*buf == ' ' || *buf == ',') )
+   while( *buf != '\0' && (*buf == ' ' || *buf == ',') )
       ++buf;
 
    /* check whether variable is fixed */
-   if ( strncmp(buf, "fixed:", 6) == 0 )
+   if( strncmp(buf, "fixed:", 6) == 0 )
    {
       SCIP_CALL( SCIPaddVar(scip, var) );
       SCIPdebug( SCIP_CALL( SCIPprintVar(scip, var, NULL) ) );
    }
-   else if ( strncmp(buf, "negated:", 8) == 0 )
+   else if( strncmp(buf, "negated:", 8) == 0 )
    {
-      SCIP_CONS* lincons;
+      SCIP_CONS* lincons = NULL;
       SCIP_VAR* negvar;
-      SCIP_Real vals[2];
       SCIP_VAR* vars[2];
 
       buf += 8;
@@ -508,7 +552,7 @@ SCIP_RETCODE getFixedVariable(
       /* we can just parse the next variable (ignoring all other information in between) */
       SCIP_CALL( SCIPparseVarName(scip, buf, &negvar, &endptr) );
 
-      if ( negvar == NULL )
+      if( negvar == NULL )
       {
          SCIPerrorMessage("could not parse negated variable (line: %d):\n%s\n", cipinput->linenumber, cipinput->strbuf);
          cipinput->haserror = TRUE;
@@ -523,25 +567,43 @@ SCIP_RETCODE getFixedVariable(
       SCIPdebugMsg(scip, "creating negated variable <%s> (of <%s>) ...\n", SCIPvarGetName(var), SCIPvarGetName(negvar) );
       SCIPdebug( SCIP_CALL( SCIPprintVar(scip, var, NULL) ) );
 
-      /* add linear constraint for negation */
       (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "neg_%s", SCIPvarGetName(var) );
       vars[0] = var;
       vars[1] = negvar;
-      vals[0] = 1.0;
-      vals[1] = 1.0;
+
+      /* add exact linear constraint for negation */
+      if( SCIPisExact(scip) )
+      {
+         SCIP_RATIONAL** vals;
+
+         SCIP_CALL( SCIPrationalCreateBufferArray(SCIPbuffer(scip), &vals, 2) );
+
+         SCIPrationalSetReal(vals[0], 1.0);
+         SCIPrationalSetReal(vals[1], 1.0);
+         SCIP_CALL( SCIPcreateConsExactLinear(scip, &lincons, name, 2, vars, vals, vals[0], vals[0], TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, TRUE, FALSE) );
+
+         SCIPrationalFreeBufferArray(SCIPbuffer(scip), &vals, 2);
+      }
+      /* add real linear constraint for negation */
+      else
+      {
+         SCIP_Real vals[2];
+
+         vals[0] = 1.0;
+         vals[1] = 1.0;
+         SCIP_CALL( SCIPcreateConsLinear(scip, &lincons, name, 2, vars, vals, 1.0, 1.0, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, TRUE, FALSE) );
+      }
+
       SCIPdebugMsg(scip, "coupling constraint:\n");
-      SCIP_CALL( SCIPcreateConsLinear(scip, &lincons, name, 2, vars, vals, 1.0, 1.0, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, TRUE, FALSE) );
       SCIPdebugPrintCons(scip, lincons, NULL);
       SCIP_CALL( SCIPaddCons(scip, lincons) );
       SCIP_CALL( SCIPreleaseCons(scip, &lincons) );
    }
-   else if ( strncmp(buf, "aggregated:", 11) == 0 )
+   else if( strncmp(buf, "aggregated:", 11) == 0 )
    {
       /* handle (multi-)aggregated variables */
-      SCIP_CONS* lincons;
-      SCIP_Real* vals;
+      SCIP_CONS* lincons = NULL;
       SCIP_VAR** vars;
-      SCIP_Real rhs = 0.0;
       const char* str;
       int nvarssize = 20;
       int requsize;
@@ -549,75 +611,149 @@ SCIP_RETCODE getFixedVariable(
 
       buf += 11;
 
-      SCIPdebugMsg(scip, "parsing aggregated variable <%s> ...\n", SCIPvarGetName(var));
-
-      /* first parse constant */
-      if ( ! SCIPstrToRealValue(buf, &rhs, &endptr) )
+      /* special handling of variables that seem to be slack variables of indicator constraints */
+      str = SCIPvarGetName(var);
+      if( strncmp(str, "indslack", 8) == 0 )
       {
-         SCIPerrorMessage("expected constant when aggregated variable information (line: %d):\n%s\n", cipinput->linenumber, buf);
-         cipinput->haserror = TRUE;
-         return SCIP_OKAY;
+         (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, "indlin");
+         (void)strncat(name, str+8, SCIP_MAXSTRLEN-7);
       }
-
-      /* check whether constant is 0.0 */
-      str = endptr;
-      SCIP_CALL( SCIPskipSpace((char**)&str) );
-      /* if next char is '<' we found a variable -> constant is 0 */
-      if ( *str != '<' )
+      else if( strncmp(str, "t_indslack", 10) == 0 )
       {
-         SCIPdebugMsg(scip, "constant: %f\n", rhs);
-         buf = endptr;
+         (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, "indlin");
+         (void)strncat(name, str+10, SCIP_MAXSTRLEN-7);
       }
       else
+         (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s", SCIPvarGetName(var) );
+
+      SCIPdebugMsg(scip, "parsing aggregated variable <%s> ...\n", SCIPvarGetName(var));
+
+      /* add exact linear constraint for (multi-)aggregation */
+      if( SCIPisExact(scip) )
       {
+         SCIP_RATIONAL** vals;
+         SCIP_RATIONAL* rhs;
+
+         SCIP_CALL( SCIPrationalCreateBuffer(SCIPbuffer(scip), &rhs) );
+
+         /* parse exact constant */
+         if( !SCIPparseRational(scip, buf, rhs, &endptr) )
+         {
+            SCIPerrorMessage("expected constant when aggregated variable information (line: %d):\n%s\n", cipinput->linenumber, buf);
+            cipinput->haserror = TRUE;
+            SCIPrationalFreeBuffer(SCIPbuffer(scip), &rhs);
+            return SCIP_OKAY;
+         }
+
+         SCIP_CALL( SCIPallocBufferArray(scip, &vars, nvarssize) );
+         SCIP_CALL( SCIPrationalCreateBufferArray(SCIPbuffer(scip), &vals, nvarssize) );
+
+         /* check whether constant is 0.0 */
+         str = endptr;
+         SCIP_CALL( SCIPskipSpace((char**)&str) );
+
+         /* if next char is '<' we found a variable -> constant is 0 */
+         if( *str != '<' )
+         {
+            buf = endptr;
+
+            SCIPrationalDebugMessage("constant: %q\n", rhs);
+
+            SCIPrationalMultReal(rhs, rhs, -1.0);
+         }
          /* otherwise keep buf */
-         rhs = 0.0;
+         else
+            SCIPrationalSetReal(rhs, 0.0);
+
+         vars[0] = var;
+         SCIPrationalSetReal(vals[0], -1.0);
+         --nvarssize;
+
+         /* parse exact linear sum to get variables and coefficients */
+         SCIP_CALL( SCIPparseVarsLinearsumExact(scip, buf, vars + 1, vals + 1, &nvars, nvarssize, &requsize, &endptr, &success) );
+         if( success && requsize > nvarssize )
+         {
+            SCIP_CALL( SCIPreallocBufferArray(scip, &vars, requsize + 1) );
+            SCIP_CALL( SCIPrationalReallocBufferArray(SCIPbuffer(scip), &vals, nvarssize + 1, requsize + 1) );
+            nvarssize = requsize;
+            SCIP_CALL( SCIPparseVarsLinearsumExact(scip, buf, vars + 1, vals + 1, &nvars, nvarssize, &requsize, &endptr, &success) );
+            assert(!success || requsize <= nvarssize);
+         }
+
+         if( success )
+         {
+            /* add aggregation constraint */
+            SCIP_CALL( SCIPaddVar(scip, var) );
+            SCIP_CALL( SCIPcreateConsExactLinear(scip, &lincons, name, nvars + 1, vars, vals, rhs, rhs, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, TRUE, FALSE) );
+         }
+
+         SCIPrationalFreeBufferArray(SCIPbuffer(scip), &vals, nvarssize + 1);
+         SCIPfreeBufferArray(scip, &vars);
+         SCIPrationalFreeBuffer(SCIPbuffer(scip), &rhs);
       }
-
-      /* initialize buffers for storing the variables and values */
-      SCIP_CALL( SCIPallocBufferArray(scip, &vars, nvarssize) );
-      SCIP_CALL( SCIPallocBufferArray(scip, &vals, nvarssize) );
-
-      vars[0] = var;
-      vals[0] = -1.0;
-      --nvarssize;
-
-      /* parse linear sum to get variables and coefficients */
-      SCIP_CALL( SCIPparseVarsLinearsum(scip, buf, &(vars[1]), &(vals[1]), &nvars, nvarssize, &requsize, &endptr, &success) );
-      if ( success && requsize > nvarssize )
+      /* add real linear constraint for (multi-)aggregation */
+      else
       {
-         /* realloc buffers and try again */
-         nvarssize = requsize;
-         SCIP_CALL( SCIPreallocBufferArray(scip, &vars, nvarssize + 1) );
-         SCIP_CALL( SCIPreallocBufferArray(scip, &vals, nvarssize + 1) );
+         SCIP_Real* vals;
+         SCIP_Real rhs;
 
-         SCIP_CALL( SCIPparseVarsLinearsum(scip, buf, &(vars[1]), &(vals[1]), &nvars, nvarssize, &requsize, &endptr, &success) );
-         assert( ! success || requsize <= nvarssize); /* if successful, then should have had enough space now */
+         /* parse real constant */
+         if( !SCIPparseReal(scip, buf, &rhs, &endptr) )
+         {
+            SCIPerrorMessage("expected constant when aggregated variable information (line: %d):\n%s\n", cipinput->linenumber, buf);
+            cipinput->haserror = TRUE;
+            return SCIP_OKAY;
+         }
+
+         SCIP_CALL( SCIPallocBufferArray(scip, &vars, nvarssize) );
+         SCIP_CALL( SCIPallocBufferArray(scip, &vals, nvarssize) );
+
+         /* check whether constant is 0.0 */
+         str = endptr;
+         SCIP_CALL( SCIPskipSpace((char**)&str) );
+
+         /* if next char is '<' we found a variable -> constant is 0 */
+         if( *str != '<' )
+         {
+            buf = endptr;
+
+            SCIPdebugMsg(scip, "constant: %f\n", rhs);
+
+            rhs *= -1.0;
+         }
+         /* otherwise keep buf */
+         else
+            rhs = 0.0;
+
+         vars[0] = var;
+         vals[0] = -1.0;
+         --nvarssize;
+
+         /* parse linear sum to get variables and coefficients */
+         SCIP_CALL( SCIPparseVarsLinearsum(scip, buf, vars + 1, vals + 1, &nvars, nvarssize, &requsize, &endptr, &success) );
+         if( success && requsize > nvarssize )
+         {
+            SCIP_CALL( SCIPreallocBufferArray(scip, &vars, requsize + 1) );
+            SCIP_CALL( SCIPreallocBufferArray(scip, &vals, requsize + 1) );
+            nvarssize = requsize;
+            SCIP_CALL( SCIPparseVarsLinearsum(scip, buf, vars + 1, vals + 1, &nvars, nvarssize, &requsize, &endptr, &success) );
+            assert(!success || requsize <= nvarssize);
+         }
+
+         if( success )
+         {
+            /* add aggregation constraint */
+            SCIP_CALL( SCIPaddVar(scip, var) );
+            SCIP_CALL( SCIPcreateConsLinear(scip, &lincons, name, nvars + 1, vars, vals, rhs, rhs, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, TRUE, FALSE) );
+         }
+
+         SCIPfreeBufferArray(scip, &vals);
+         SCIPfreeBufferArray(scip, &vars);
       }
 
       if( success )
       {
-         /* add aggregated variable */
-         SCIP_CALL( SCIPaddVar(scip, var) );
-
-         /* special handling of variables that seem to be slack variables of indicator constraints */
-         str = SCIPvarGetName(var);
-         if ( strncmp(str, "indslack", 8) == 0 )
-         {
-            (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "indlin");
-            (void) strncat(name, str+8, SCIP_MAXSTRLEN-7);
-         }
-         else if ( strncmp(str, "t_indslack", 10) == 0 )
-         {
-            (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "indlin");
-            (void) strncat(name, str+10, SCIP_MAXSTRLEN-7);
-         }
-         else
-            (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s", SCIPvarGetName(var) );
-
-         /* add linear constraint for (multi-)aggregation */
          SCIPdebugMsg(scip, "coupling constraint:\n");
-         SCIP_CALL( SCIPcreateConsLinear(scip, &lincons, name, nvars + 1, vars, vals, -rhs, -rhs, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, TRUE, FALSE) );
          SCIPdebugPrintCons(scip, lincons, NULL);
          SCIP_CALL( SCIPaddCons(scip, lincons) );
          SCIP_CALL( SCIPreleaseCons(scip, &lincons) );
@@ -627,9 +763,6 @@ SCIP_RETCODE getFixedVariable(
          SCIPwarningMessage(scip, "Could not read (multi-)aggregated variable <%s>: dependent variables unkown - consider changing the order (line: %d):\n%s\n",
             SCIPvarGetName(var), cipinput->linenumber, buf);
       }
-
-      SCIPfreeBufferArray(scip, &vals);
-      SCIPfreeBufferArray(scip, &vars);
    }
    else
    {
@@ -766,15 +899,13 @@ static
 SCIP_DECL_READERREAD(readerReadCip)
 {  /*lint --e{715}*/
    CIPINPUT cipinput;
-   SCIP_Real objscale;
-   SCIP_Real objoffset;
    SCIP_Bool initialconss;
    SCIP_Bool dynamicconss;
    SCIP_Bool dynamiccols;
    SCIP_Bool dynamicrows;
    SCIP_Bool initialvar;
    SCIP_Bool removablevar;
-   SCIP_RETCODE retcode;
+   SCIP_RETCODE retcode = SCIP_OKAY;
 
    if( NULL == (cipinput.file = SCIPfopen(filename, "r")) )
    {
@@ -791,24 +922,36 @@ SCIP_DECL_READERREAD(readerReadCip)
    cipinput.haserror = FALSE;
    cipinput.endfile = FALSE;
    cipinput.readingsize = 65535;
+   cipinput.objoffset = 0.0;
+   cipinput.objscale = 1.0;
+   if( SCIPisExact(scip) )
+   {
+      SCIP_CALL( SCIPrationalCreateBuffer(SCIPbuffer(scip), &cipinput.objoffsetexact) );
+      SCIP_CALL( SCIPrationalCreateBuffer(SCIPbuffer(scip), &cipinput.objscaleexact) );
 
-   SCIP_CALL( SCIPcreateProb(scip, filename, NULL, NULL, NULL, NULL, NULL, NULL, NULL) );
+      SCIPrationalSetReal(cipinput.objoffsetexact, 0.0);
+      SCIPrationalSetReal(cipinput.objscaleexact, 1.0);
+   }
+   else
+   {
+      cipinput.objoffsetexact = NULL;
+      cipinput.objscaleexact = NULL;
+   }
 
-   SCIP_CALL( SCIPgetBoolParam(scip, "reading/initialconss", &initialconss) );
-   SCIP_CALL( SCIPgetBoolParam(scip, "reading/dynamiccols", &dynamiccols) );
-   SCIP_CALL( SCIPgetBoolParam(scip, "reading/dynamicconss", &dynamicconss) );
-   SCIP_CALL( SCIPgetBoolParam(scip, "reading/dynamicrows", &dynamicrows) );
+   SCIP_CALL_TERMINATE( retcode, SCIPcreateProb(scip, filename, NULL, NULL, NULL, NULL, NULL, NULL, NULL), TERMINATE );
+
+   SCIP_CALL_TERMINATE( retcode, SCIPgetBoolParam(scip, "reading/initialconss", &initialconss), TERMINATE );
+   SCIP_CALL_TERMINATE( retcode, SCIPgetBoolParam(scip, "reading/dynamiccols", &dynamiccols), TERMINATE );
+   SCIP_CALL_TERMINATE( retcode, SCIPgetBoolParam(scip, "reading/dynamicconss", &dynamicconss), TERMINATE );
+   SCIP_CALL_TERMINATE( retcode, SCIPgetBoolParam(scip, "reading/dynamicrows", &dynamicrows), TERMINATE );
 
    initialvar = !dynamiccols;
    removablevar = dynamiccols;
 
-   objscale = 1.0;
-   objoffset = 0.0;
-
    while( cipinput.section != CIP_END && !cipinput.haserror )
    {
       /* get next input string */
-      SCIP_CALL( getInputString(scip, &cipinput) );
+      SCIP_CALL_TERMINATE( retcode, getInputString(scip, &cipinput), TERMINATE );
 
       if( cipinput.endfile )
          break;
@@ -819,73 +962,74 @@ SCIP_DECL_READERREAD(readerReadCip)
          getStart(scip, &cipinput);
          break;
       case CIP_STATISTIC:
-         SCIP_CALL( getStatistics(scip, &cipinput) );
+         SCIP_CALL_TERMINATE( retcode, getStatistics(scip, &cipinput), TERMINATE );
          break;
       case CIP_OBJECTIVE:
-         SCIP_CALL( getObjective(scip, &cipinput, &objscale, &objoffset) );
+         SCIP_CALL_TERMINATE( retcode, getObjective(scip, &cipinput), TERMINATE );
          break;
       case CIP_VARS:
-         retcode = getVariable(scip, &cipinput, initialvar, removablevar, objscale);
-
-         if( retcode == SCIP_READERROR )
-         {
-            cipinput.haserror = TRUE;
-            goto TERMINATE;
-         }
-         SCIP_CALL( retcode );
-
+         SCIP_CALL_TERMINATE( retcode, getVariable(scip, &cipinput, initialvar, removablevar), TERMINATE );
          break;
       case CIP_FIXEDVARS:
-         retcode = getFixedVariable(scip, &cipinput);
-
-         if( retcode == SCIP_READERROR )
-         {
-            cipinput.haserror = TRUE;
-            goto TERMINATE;
-         }
-         SCIP_CALL( retcode );
-
+         SCIP_CALL_TERMINATE( retcode, getFixedVariable(scip, &cipinput), TERMINATE );
          break;
       case CIP_CONSTRAINTS:
-         retcode = getConstraint(scip, &cipinput, initialconss, dynamicconss, dynamicrows);
-
-         if( retcode == SCIP_READERROR )
-         {
-            cipinput.haserror = TRUE;
-            goto TERMINATE;
-         }
-         SCIP_CALL( retcode );
-
+         SCIP_CALL_TERMINATE( retcode, getConstraint(scip, &cipinput, initialconss, dynamicconss, dynamicrows), TERMINATE );
          break;
       default:
          SCIPerrorMessage("invalid CIP state\n");
          SCIPABORT();
-         return SCIP_INVALIDDATA;  /*lint !e527*/
-      } /*lint !e788*/ 
+         retcode = SCIP_INVALIDDATA;  /*lint !e527*/
+         goto TERMINATE;
+      } /*lint !e788*/
    }
 
-   if( !SCIPisZero(scip, objoffset) && !cipinput.haserror )
+   if( cipinput.haserror )
+      goto TERMINATE;
+
+   /* offset exact objective */
+   if( cipinput.objoffsetexact != NULL )
    {
-      SCIP_CALL( SCIPaddOrigObjoffset(scip, objscale * objoffset) );
+      if( !SCIPrationalIsZero(cipinput.objoffsetexact) )
+      {
+         SCIPrationalMult(cipinput.objoffsetexact, cipinput.objoffsetexact, cipinput.objscaleexact);
+         SCIP_CALL_TERMINATE( retcode, SCIPaddOrigObjoffsetExact(scip, cipinput.objoffsetexact), TERMINATE );
+      }
+   }
+   /* offset real objective */
+   else
+   {
+      if( cipinput.objoffset != 0.0 ) /*lint !e777*/
+      {
+         cipinput.objoffset *= cipinput.objscale;
+         SCIP_CALL_TERMINATE( retcode, SCIPaddOrigObjoffset(scip, cipinput.objoffset), TERMINATE );
+      }
    }
 
-   if( cipinput.section != CIP_END && !cipinput.haserror )
+   if( cipinput.section != CIP_END )
    {
       SCIPerrorMessage("unexpected EOF\n");
+      cipinput.haserror = TRUE;
    }
 
  TERMINATE:
    /* close file stream */
    SCIPfclose(cipinput.file);
 
+   if( cipinput.objscaleexact != NULL )
+      SCIPrationalFreeBuffer(SCIPbuffer(scip), &cipinput.objscaleexact);
+   if( cipinput.objoffsetexact != NULL )
+      SCIPrationalFreeBuffer(SCIPbuffer(scip), &cipinput.objoffsetexact);
    SCIPfreeBufferArray(scip, &cipinput.strbuf);
 
-   if( cipinput.haserror )
+   if( cipinput.haserror || retcode == SCIP_INVALIDDATA )
       return SCIP_READERROR;
 
    /* successfully parsed cip format */
-   *result = SCIP_SUCCESS;
-   return SCIP_OKAY;
+   if( retcode == SCIP_OKAY )
+      *result = SCIP_SUCCESS;
+
+   return retcode;
 }
 
 /** hash key retrieval function for variables */
@@ -931,10 +1075,42 @@ SCIP_DECL_READERWRITE(readerWriteCip)
 
    SCIPinfoMessage(scip, file, "OBJECTIVE\n");
    SCIPinfoMessage(scip, file, "  Sense            : %s\n", objsense == SCIP_OBJSENSE_MINIMIZE ? "minimize" : "maximize");
-   if( !SCIPisZero(scip, objoffset) )
-      SCIPinfoMessage(scip, file, "  Offset           : %+.15g\n", objoffset);
-   if( !SCIPisEQ(scip, objscale, 1.0) )
-      SCIPinfoMessage(scip, file, "  Scale            : %.15g\n", objscale);
+   /* write exact offset */
+   if( objoffsetexact != NULL )
+   {
+      assert(SCIPisExact(scip));
+
+      if( !SCIPrationalIsZero(objoffsetexact) )
+      {
+         SCIPinfoMessage(scip, file, "  Offset           : ");
+         SCIPrationalMessage(SCIPgetMessagehdlr(scip), file, objoffsetexact);
+         SCIPinfoMessage(scip, file, "\n");
+      }
+   }
+   /* write real offset */
+   else
+   {
+      if( objoffset != 0.0 ) /*lint !e777*/
+         SCIPinfoMessage(scip, file, "  Offset           : %+.15g\n", objoffset);
+   }
+   /* write exact scale */
+   if( objscaleexact != NULL )
+   {
+      assert(SCIPisExact(scip));
+
+      if( !SCIPrationalIsEQReal(objscaleexact, 1.0) )
+      {
+         SCIPinfoMessage(scip, file, "  Scale            : ");
+         SCIPrationalMessage(SCIPgetMessagehdlr(scip), file, objscaleexact);
+         SCIPinfoMessage(scip, file, "\n");
+      }
+   }
+   /* write real scale */
+   else
+   {
+      if( objscale != 1.0 ) /*lint !e777*/
+         SCIPinfoMessage(scip, file, "  Scale            : %.15g\n", objscale);
+   }
 
    if ( nfixedvars > 0 )
    {
@@ -1117,6 +1293,9 @@ SCIP_RETCODE SCIPincludeReaderCip(
 
    /* include reader */
    SCIP_CALL( SCIPincludeReaderBasic(scip, &reader, READER_NAME, READER_DESC, READER_EXTENSION, readerdata) );
+
+   /* reader is safe to use in exact solving mode */
+   SCIPreaderMarkExact(reader);
 
    /* set non fundamental callbacks via setter functions */
    SCIP_CALL( SCIPsetReaderCopy(scip, reader, readerCopyCip) );

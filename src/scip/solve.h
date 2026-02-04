@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2026 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -193,7 +193,7 @@ SCIP_RETCODE SCIPpriceLoop(
    int*                  npricedcolvars,     /**< pointer to store number of column variables after problem vars were priced */
    SCIP_Bool*            mustsepa,           /**< pointer to store TRUE if a separation round should follow */
    SCIP_Bool*            lperror,            /**< pointer to store whether an unresolved error in LP solving occured */
-   SCIP_Bool*            aborted             /**< pointer to store whether the pricing was aborted and the lower bound must 
+   SCIP_Bool*            aborted             /**< pointer to store whether the pricing was aborted and the lower bound must
                                               *   not be used */
    );
 

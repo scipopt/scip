@@ -1,10 +1,15 @@
 cmake_minimum_required(VERSION 3.11)
 
+# INTERPROCEDURAL_OPTIMIZATION is enforced when enabled.
+if(POLICY CMP0069)
+   cmake_policy(SET CMP0069 NEW)
+endif()
+
 project(Coloring)
 
 if(TARGET SCIP::SCIP)
   # find package by SCIP PATH
-  find_package(SCIP CONFIG PATHS ${SCIP_BINARY_DIR} REQUIRED)
+  find_package(SCIP CONFIG NO_DEFAULT_PATH PATHS ${SCIP_BINARY_DIR} REQUIRED)
 else()
   find_package(SCIP REQUIRED)
 endif()
@@ -23,6 +28,7 @@ add_executable(coloring
     src/reader_col.c
     src/reader_csol.c
 )
+set_property(TARGET coloring PROPERTY INTERPROCEDURAL_OPTIMIZATION ${LTO_AVAILABLE})
 
 # link to math library if it is available
 find_library(LIBM m)

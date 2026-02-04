@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2026 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -39,6 +39,7 @@
 #include "scip/pub_misc.h"
 #include "scip/pub_var.h"
 #include "scip/scip_branch.h"
+#include "scip/scip_exact.h"
 #include "scip/scip_general.h"
 #include "scip/scip_heur.h"
 #include "scip/scip_lp.h"
@@ -228,7 +229,7 @@ SCIP_RETCODE updateActivities(
    assert(maxactivities != NULL);
    assert(nviolrows != NULL);
    assert(0 <= *nviolrows && *nviolrows <= nlprows);
-   assert(SCIPvarIsNonimpliedIntegral(var));
+   assert(SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS);
 
    delta = newsolval - oldsolval;
    col = SCIPvarGetCol(var);
@@ -355,7 +356,7 @@ SCIP_RETCODE selectShifting(
       solval = SCIPgetSolVal(scip, sol, var);
 
       /* only accept integer variables */
-      if( !SCIPvarIsNonimpliedIntegral(var) )
+      if( SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS )
          continue;
 
       isfrac = !SCIPisFeasIntegral(scip, solval);
@@ -473,7 +474,7 @@ SCIP_RETCODE selectEssentialRounding(
    for( v = 0; v < nlpcands; ++v )
    {
       var = lpcands[v];
-      assert(SCIPvarIsNonimpliedIntegral(var));
+      assert(SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS);
 
       solval = SCIPgetSolVal(scip, sol, var);
       if( !SCIPisFeasIntegral(scip, solval) )
@@ -705,10 +706,10 @@ SCIP_DECL_HEUREXEC(heurExecIntshifting) /*lint --e{715}*/
    SCIP_Real obj;
    SCIP_Real bestshiftval;
    SCIP_Real minobj;
-   int nlpcands;
-   int nlprows;
    int nvars;
    int nfrac;
+   int nlpcands;
+   int nlprows;
    int nviolrows;
    int nviolfracrows;
    int nprevviolrows;
@@ -764,12 +765,10 @@ SCIP_DECL_HEUREXEC(heurExecIntshifting) /*lint --e{715}*/
       return SCIP_OKAY;
 
    /* get fractional variables, that should be integral */
-   /* todo check if heuristic should include implicit integer variables for its calculations */
    SCIP_CALL( SCIPgetLPBranchCands(scip, &lpcands, &lpcandssol, NULL, &nlpcands, NULL, NULL) );
-   nfrac = nlpcands;
 
    /* only call heuristic, if LP solution is fractional */
-   if( nfrac == 0 )
+   if( nlpcands == 0 )
       return SCIP_OKAY;
 
    *result = SCIP_DIDNOTFIND;
@@ -777,10 +776,11 @@ SCIP_DECL_HEUREXEC(heurExecIntshifting) /*lint --e{715}*/
    /* get LP rows */
    SCIP_CALL( SCIPgetLPRowsData(scip, &lprows, &nlprows) );
 
-   SCIPdebugMsg(scip, "executing intshifting heuristic: %d LP rows, %d fractionals\n", nlprows, nfrac);
+   SCIPdebugMsg(scip, "executing intshifting heuristic: %d LP rows, %d LP candidates\n", nlprows, nlpcands);
 
    /* get memory for activities, violated rows, and row violation positions */
    nvars = SCIPgetNVars(scip);
+   nfrac = nlpcands;
    SCIP_CALL( SCIPallocBufferArray(scip, &minactivities, nlprows) );
    SCIP_CALL( SCIPallocBufferArray(scip, &maxactivities, nlprows) );
    SCIP_CALL( SCIPallocBufferArray(scip, &violrows, nlprows) );
@@ -824,7 +824,7 @@ SCIP_DECL_HEUREXEC(heurExecIntshifting) /*lint --e{715}*/
             SCIP_VAR* var;
 
             var = SCIPcolGetVar(cols[c]);
-            if( SCIPvarIsNonimpliedIntegral(var) )
+            if( SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS )
             {
                SCIP_Real act;
 
@@ -983,7 +983,7 @@ SCIP_DECL_HEUREXEC(heurExecIntshifting) /*lint --e{715}*/
          break;
       }
 
-      assert(SCIPvarIsNonimpliedIntegral(shiftvar));
+      assert(SCIPvarGetType(shiftvar) != SCIP_VARTYPE_CONTINUOUS);
 
       SCIPdebugMsg(scip, "intshifting heuristic:  -> shift var <%s>[%g,%g], type=%d, oldval=%g, newval=%g, obj=%g\n",
          SCIPvarGetName(shiftvar), SCIPvarGetLbGlobal(shiftvar), SCIPvarGetUbGlobal(shiftvar), SCIPvarGetType(shiftvar),
@@ -1072,9 +1072,10 @@ SCIP_DECL_HEUREXEC(heurExecIntshifting) /*lint --e{715}*/
       /* start diving to calculate the LP relaxation */
       SCIP_CALL( SCIPstartDive(scip) );
 
-      /* set the bounds of the variables: fixed for integers, global bounds for continuous */
+      /* set the bounds of the variables: fixed for binaries and integers, global bounds for continuous */
       vars = SCIPgetVars(scip);
-      nintvars = SCIPgetNBinVars(scip) + SCIPgetNIntVars(scip);
+      nintvars = SCIPgetNVars(scip) - SCIPgetNContVars(scip) - SCIPgetNContImplVars(scip);
+      assert(nintvars >= 0);
       for( v = 0; v < nvars; ++v )
       {
          if( SCIPvarGetStatus(vars[v]) == SCIP_VARSTATUS_COLUMN )
@@ -1121,6 +1122,13 @@ SCIP_DECL_HEUREXEC(heurExecIntshifting) /*lint --e{715}*/
          /* copy the current LP solution to the working solution */
          SCIP_CALL( SCIPlinkLPSol(scip, sol) );
 
+         /* in exact mode we have to end diving prior to trying the solution */
+         if( SCIPisExact(scip) )
+         {
+            SCIP_CALL( SCIPunlinkSol(scip, heurdata->sol) );
+            SCIP_CALL( SCIPendDive(scip) );
+         }
+
          /* check solution for feasibility, and add it to solution store if possible
           * neither integrality nor feasibility of LP rows has to be checked, because this is already
           * done in the intshifting heuristic itself and due to the LP resolve
@@ -1136,7 +1144,10 @@ SCIP_DECL_HEUREXEC(heurExecIntshifting) /*lint --e{715}*/
       }
 
       /* terminate the diving */
-      SCIP_CALL( SCIPendDive(scip) );
+      if( SCIPinDive(scip) )
+      {
+         SCIP_CALL( SCIPendDive(scip) );
+      }
    }
 
    /* free memory buffers */
@@ -1169,6 +1180,9 @@ SCIP_RETCODE SCIPincludeHeurIntshifting(
          HEUR_MAXDEPTH, HEUR_TIMING, HEUR_USESSUBSCIP, heurExecIntshifting, NULL) );
 
    assert(heur != NULL);
+
+   /* primal heuristic is safe to use in exact solving mode */
+   SCIPheurMarkExact(heur);
 
    /* set non-NULL pointers to callback methods */
    SCIP_CALL( SCIPsetHeurCopy(scip, heur, heurCopyIntshifting) );

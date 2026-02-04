@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2026 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -66,6 +66,7 @@
 #include "scip/type_stat.h"
 #include "scip/type_tree.h"
 #include "scip/type_var.h"
+#include "scip/type_cons.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -74,6 +75,13 @@ extern "C" {
 /*
  * Conflict Analysis
  */
+
+/** return TRUE if conflict analysis is applicable; In case the function return FALSE there is no need to initialize the
+ *  conflict analysis since it will not be applied
+ */
+SCIP_Bool SCIPconflictApplicable(
+   SCIP_SET*             set                 /**< global SCIP settings */
+   );
 
 /** creates conflict analysis data for propagation conflicts */
 SCIP_RETCODE SCIPconflictCreate(
@@ -88,6 +96,11 @@ SCIP_RETCODE SCIPconflictFree(
    BMS_BLKMEM*           blkmem              /**< block memory of transformed problem */
    );
 
+/** clears conflict analysis  bound changes queues for propagation conflicts */
+SCIP_RETCODE SCIPconflictClearQueues(
+   SCIP_CONFLICT*        conflict            /**< pointer to conflict analysis data */
+   );
+
 /** analyzes conflicting bound changes that were added with calls to SCIPconflictAddBound() and
  *  SCIPconflictAddRelaxedBound(), and on success, calls the conflict handlers to create a conflict constraint out of
  *  the resulting conflict set; updates statistics for propagation conflict analysis
@@ -99,6 +112,28 @@ SCIP_RETCODE SCIPconflictAnalyze(
    SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_PROB*            prob,               /**< problem data */
    SCIP_TREE*            tree,               /**< branch and bound tree */
+   int                   validdepth,         /**< minimal depth level at which the initial conflict set is valid */
+   SCIP_Bool*            success             /**< pointer to store whether a conflict constraint was created, or NULL */
+   );
+
+/** analyzes conflicting bound changes that were added with calls to SCIPconflictAddBound(), and on success,
+ * creates a linear constraint that explains the infeasibility
+ */
+SCIP_RETCODE SCIPconflictAnalyzeResolution(
+   SCIP_CONFLICT*        conflict,           /**< conflict analysis data */
+   BMS_BLKMEM*           blkmem,             /**< block memory of transformed problem */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics */
+   SCIP_PROB*            transprob,          /**< transformed problem */
+   SCIP_PROB*            origprob,           /**< original problem */
+   SCIP_TREE*            tree,               /**< branch and bound tree */
+   SCIP_REOPT*           reopt,              /**< reoptimization data structure */
+   SCIP_LP*              lp,                 /**< LP data */
+   SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_EVENTFILTER*     eventfilter,        /**< global event filter */
+   SCIP_CLIQUETABLE*     cliquetable,        /**< clique table data structure */
+   SCIP_ROW*             initialconflictrow, /**< row of constraint that detected the conflict */
    int                   validdepth,         /**< minimal depth level at which the initial conflict set is valid */
    SCIP_Bool*            success             /**< pointer to store whether a conflict constraint was created, or NULL */
    );
@@ -130,6 +165,11 @@ int SCIPconflictGetNConflicts(
 
 /** returns the total number of conflict constraints that were added to the problem */
 SCIP_Longint SCIPconflictGetNAppliedConss(
+   SCIP_CONFLICT*        conflict            /**< conflict analysis data */
+   );
+
+/** returns the total number of resolution conflict constraints that were added to the problem */
+SCIP_Longint SCIPconflictGetNAppliedResConss(
    SCIP_CONFLICT*        conflict            /**< conflict analysis data */
    );
 
@@ -178,6 +218,11 @@ SCIP_Real SCIPconflictGetPropTime(
    SCIP_CONFLICT*        conflict            /**< conflict analysis data */
    );
 
+/** gets time in seconds used for analyzing propagation conflicts with generalized resolution*/
+SCIP_Real SCIPconflictGetResTime(
+   SCIP_CONFLICT*        conflict            /**< conflict analysis data */
+   );
+
 /** gets number of calls to propagation conflict analysis */
 SCIP_Longint SCIPconflictGetNPropCalls(
    SCIP_CONFLICT*        conflict            /**< conflict analysis data */
@@ -195,6 +240,11 @@ SCIP_Longint SCIPconflictGetNPropConflictConss(
 
 /** gets total number of literals in conflict constraints created in propagation conflict analysis */
 SCIP_Longint SCIPconflictGetNPropConflictLiterals(
+   SCIP_CONFLICT*        conflict            /**< conflict analysis data */
+   );
+
+/** gets total number of variables in resolution conflict constraints created in propagation conflict analysis */
+SCIP_Longint SCIPconflictGetNResConflictVars(
    SCIP_CONFLICT*        conflict            /**< conflict analysis data */
    );
 
@@ -517,6 +567,34 @@ SCIP_RETCODE conflictAnalyze(
    int*                  nreconvliterals     /**< pointer to store the number of literals generated reconvergence constraints */
    );
 
+/** Analyzes conflicting bound changes added via SCIPconflictAddBound().
+ * This function performs generalized resolution conflict analysis by iteratively aggregating the
+ * infeasible conflict row (conflictrow) with the reason row (reasonrow) that propagated the bound change.
+ * In each iteration, the coefficient of the resolving variable is cancelled. If the aggregation does not
+ * yield an infeasible row, MIR reduction is applied to the reason row and the aggregation is retried,
+ * continuing until a first unique implication point (FUIP) is reached. On success, a linear conflict
+ * constraint that explains the infeasibility is added to the problem.
+ */
+SCIP_RETCODE conflictAnalyzeResolution(
+   SCIP_CONFLICT*        conflict,           /**< conflict analysis data */
+   BMS_BLKMEM*           blkmem,             /**< block memory of transformed problem */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics */
+   SCIP_PROB*            transprob,          /**< transformed problem */
+   SCIP_PROB*            origprob,           /**< original problem */
+   SCIP_TREE*            tree,               /**< branch and bound tree */
+   SCIP_REOPT*           reopt,              /**< reoptimization data structure */
+   SCIP_LP*              lp,                 /**< LP data */
+   SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_EVENTFILTER*     eventfilter,        /**< global event filter */
+   SCIP_CLIQUETABLE*     cliquetable,        /**< clique table data structure */
+   SCIP_ROW*             initialconflictrow, /**< row of constraint that detected the conflict */
+   int                   validdepth,         /**< minimal depth level at which the initial conflict set is valid */
+   int*                  nconss,             /**< pointer to store the number of generated conflict constraints */
+   int*                  nconfvars           /**< pointer to store the number of variables in generated conflict constraints */
+   );
+
 /** calculates a Farkas proof from the current dual LP solution */
 SCIP_RETCODE SCIPgetFarkasProof(
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -547,7 +625,10 @@ SCIP_RETCODE SCIPgetDualProof(
    SCIP_Bool*            valid               /**< pointer store whether the proof constraint is valid */
    );
 
-/** calculates the minimal activity of a given aggregation row */
+/** calculates the minimal activity of a given aggregation row
+ *
+ *  @note in exact solving mode, this returns a safe underestimation of the minimal activity
+ */
 SCIP_Real SCIPaggrRowGetMinActivity(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_PROB*            transprob,          /**< transformed problem data */

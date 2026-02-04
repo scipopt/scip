@@ -1,10 +1,15 @@
 cmake_minimum_required(VERSION 3.11)
 
+# INTERPROCEDURAL_OPTIMIZATION is enforced when enabled.
+if(POLICY CMP0069)
+   cmake_policy(SET CMP0069 NEW)
+endif()
+
 project(Rinpacking)
 
 if(TARGET SCIP::SCIP)
   # find package by SCIP PATH
-  find_package(SCIP CONFIG PATHS ${SCIP_BINARY_DIR} REQUIRED)
+  find_package(SCIP CONFIG NO_DEFAULT_PATH PATHS ${SCIP_BINARY_DIR} REQUIRED)
 else()
   find_package(SCIP REQUIRED)
 endif()
@@ -18,6 +23,7 @@ add_executable(ringpacking
    src/pricer_rpa.c
    src/cons_rpa.c
    src/pattern.c)
+set_property(TARGET ringpacking PROPERTY INTERPROCEDURAL_OPTIMIZATION ${LTO_AVAILABLE})
 
 # link to math library if it is available
 find_library(LIBM m)

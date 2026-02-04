@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2026 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -82,6 +82,7 @@ struct SCIP_HeurData
    SCIP_CONSHDLR*        indicatorconshdlr;  /**< indicator constraint handler */
    SCIP_SOL*             lastsol;            /**< last solution considered for improvement */
    SCIP_Bool             improvesols;        /**< Try to improve other solutions by one-opt? */
+   SCIP_HEURTIMING       inittiming;         /**< initial heuristic timing */
 };
 
 /*
@@ -381,27 +382,47 @@ SCIP_DECL_HEURCOPY(heurCopyIndicator)
    return SCIP_OKAY;
 }
 
-/** initialization method of primal heuristic (called after problem was transformed) */
+/** solving process initialization method of primal heuristic (called when branch and bound process is about to begin) */
 static
-SCIP_DECL_HEURINIT(heurInitIndicator)
+SCIP_DECL_HEURINITSOL(heurInitsolIndicator)
 {  /*lint --e{715}*/
    SCIP_HEURDATA* heurdata;
 
-   assert( heur != NULL );
    assert( scip != NULL );
+   assert( strcmp(SCIPheurGetName(heur), HEUR_NAME) == 0 );
 
    /* get heuristic data */
    heurdata = SCIPheurGetData(heur);
    assert( heurdata != NULL );
 
-   if ( heurdata->indicatorconshdlr == NULL )
-   {
-      heurdata->indicatorconshdlr = SCIPfindConshdlr(scip, "indicator");
-      if ( heurdata->indicatorconshdlr == NULL )
-      {
-         SCIPwarningMessage(scip, "Could not find indicator constraint handler.\n");
-      }
-   }
+   /* find indicator handler */
+   heurdata->indicatorconshdlr = SCIPfindConshdlr(scip, "indicator");
+
+   /* store indicator timing */
+   heurdata->inittiming = SCIPheurGetTimingmask(heur);
+
+   /* disable indicator heuristic, enabled when indicators are passed */
+   if ( heurdata->indicatorconshdlr == NULL || SCIPconshdlrGetNConss(heurdata->indicatorconshdlr) == 0 || SCIPgetSubscipDepth(scip) > 0 )
+      SCIPheurSetTimingmask(heur, SCIP_HEURTIMING_NONE);
+
+   return SCIP_OKAY;
+}
+
+/** solving process deinitialization method of primal heuristic (called before branch and bound process data is freed) */
+static
+SCIP_DECL_HEUREXITSOL(heurExitsolIndicator)
+{  /*lint --e{715}*/
+   SCIP_HEURDATA* heurdata;
+
+   assert( scip != NULL );
+   assert( strcmp(SCIPheurGetName(heur), HEUR_NAME) == 0 );
+
+   /* get heuristic data */
+   heurdata = SCIPheurGetData(heur);
+   assert( heurdata != NULL );
+
+   /* reset indicator timing */
+   SCIPheurSetTimingmask(heur, heurdata->inittiming);
 
    return SCIP_OKAY;
 }
@@ -435,33 +456,34 @@ static
 SCIP_DECL_HEUREXEC(heurExecIndicator)
 {  /*lint --e{715}*/
    SCIP_HEURDATA* heurdata;
-   int nfoundsols = 0;
+   int nindconss;
+   int nfoundsols;
 
-   assert( heur != NULL );
    assert( scip != NULL );
+   assert( heur != NULL );
    assert( result != NULL );
 
    *result = SCIP_DIDNOTRUN;
 
-   if ( SCIPgetSubscipDepth(scip) > 0 )
-      return SCIP_OKAY;
-
    /* get heuristic's data */
    heurdata = SCIPheurGetData(heur);
    assert( heurdata != NULL );
+   assert( heurdata->indicatorconshdlr != NULL );
+   nindconss = heurdata->solcand == NULL ? SCIPconshdlrGetNConss(heurdata->indicatorconshdlr) : heurdata->nindconss;
 
-   /* call heuristic, if solution candidate is available */
+   /* the heuristic will only be successful if there are indicator constraints, no binary variables except for the
+    * indicator variables, and no integral variables */
+   if ( nindconss == 0
+      || SCIPgetNBinVars(scip) + SCIPgetNBinImplVars(scip) > nindconss
+      || SCIPgetNIntVars(scip) + SCIPgetNIntImplVars(scip) >= 1 )
+      return SCIP_OKAY;
+
+   /* call heuristic if solution candidate is available */
    if ( heurdata->solcand != NULL )
    {
-      assert( heurdata->nindconss > 0 );
       assert( heurdata->indconss != NULL );
 
-      /* The heuristic will only be successful if there are no integral variables and no binary variables except the
-       * indicator variables. */
-      if ( SCIPgetNIntVars(scip) > 0 || heurdata->nindconss < SCIPgetNBinVars(scip) )
-         return SCIP_OKAY;
-
-      SCIP_CALL( trySolCandidate(scip, heur, heurdata, heurdata->nindconss, heurdata->indconss, heurdata->solcand, &nfoundsols) );
+      SCIP_CALL( trySolCandidate(scip, heur, heurdata, nindconss, heurdata->indconss, heurdata->solcand, &nfoundsols) );
 
       if ( nfoundsols > 0 )
          *result = SCIP_FOUNDSOL;
@@ -469,8 +491,8 @@ SCIP_DECL_HEUREXEC(heurExecIndicator)
          *result = SCIP_DIDNOTFIND;
 
       /* free memory */
-      SCIPfreeBlockMemoryArray(scip, &(heurdata->solcand), heurdata->nindconss);
-      SCIPfreeBlockMemoryArray(scip, &(heurdata->indconss), heurdata->nindconss);
+      SCIPfreeBlockMemoryArray(scip, &(heurdata->solcand), nindconss);
+      SCIPfreeBlockMemoryArray(scip, &(heurdata->indconss), nindconss);
    }
 
    /* try to improve solutions generated by other heuristics */
@@ -479,11 +501,7 @@ SCIP_DECL_HEUREXEC(heurExecIndicator)
       SCIP_CONS** indconss;
       SCIP_Bool* solcand;
       SCIP_SOL* bestsol;
-      int nindconss;
       int i;
-
-      if ( heurdata->indicatorconshdlr == NULL )
-         return SCIP_OKAY;
 
       /* check whether a new best solution has been found */
       bestsol = SCIPgetBestSol(scip);
@@ -493,15 +511,6 @@ SCIP_DECL_HEUREXEC(heurExecIndicator)
 
       /* avoid solutions produced by this heuristic */
       if ( SCIPsolGetHeur(bestsol) == heur )
-         return SCIP_OKAY;
-
-      /* The heuristic will only be successful if there are no integral variables and no binary variables except the
-       * indicator variables. */
-      nindconss = SCIPconshdlrGetNConss(heurdata->indicatorconshdlr);
-      if ( SCIPgetNIntVars(scip) > 0 || nindconss < SCIPgetNBinVars(scip) )
-         return SCIP_OKAY;
-
-      if ( nindconss == 0 )
          return SCIP_OKAY;
 
       indconss = SCIPconshdlrGetConss(heurdata->indicatorconshdlr);
@@ -564,6 +573,7 @@ SCIP_RETCODE SCIPincludeHeurIndicator(
    heurdata->lastsol = NULL;
    heurdata->indicatorconshdlr = NULL;
    heurdata->obj = SCIPinfinity(scip);
+   heurdata->inittiming = HEUR_TIMING;
 
    /* include primal heuristic */
    SCIP_CALL( SCIPincludeHeurBasic(scip, &heur,
@@ -572,9 +582,13 @@ SCIP_RETCODE SCIPincludeHeurIndicator(
 
    assert( heur != NULL );
 
+   /* primal heuristic is safe to use in exact solving mode */
+   SCIPheurMarkExact(heur);
+
    /* set non-NULL pointers to callback methods */
    SCIP_CALL( SCIPsetHeurCopy(scip, heur, heurCopyIndicator) );
-   SCIP_CALL( SCIPsetHeurInit(scip, heur, heurInitIndicator) );
+   SCIP_CALL( SCIPsetHeurInitsol(scip, heur, heurInitsolIndicator) );
+   SCIP_CALL( SCIPsetHeurExitsol(scip, heur, heurExitsolIndicator) );
    SCIP_CALL( SCIPsetHeurFree(scip, heur, heurFreeIndicator) );
 
    /* add parameters */
@@ -631,6 +645,9 @@ SCIP_RETCODE SCIPheurPassIndicator(
    else
       SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &(heurdata->solcand), solcand, nindconss) );
    heurdata->obj = obj;
+
+   /* enable indicator heuristic */
+   SCIPheurSetTimingmask(heur, heurdata->inittiming);
 
    return SCIP_OKAY;
 }

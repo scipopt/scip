@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2026 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -57,7 +57,8 @@ struct SCIP_BranchCand
    int                   nlpcands;           /**< number of candidates for branching on LP solution */
    int                   npriolpcands;       /**< number of LP candidates with largest branch priority value */
    int                   npriolpbins;        /**< number of binary LP candidates with largest branch priority value */
-   int                   nimpllpfracs;       /**< number of implicit variables with fractional LP solution value */
+   int                   nimpllpfracs;       /**< number of implied integral variables with fractional LP solution value */
+   int                   nenfoimpllpfracs;   /**< number of enforced implied integral variables with fractional LP solution value */
    int                   lpmaxpriority;      /**< maximal branch priority of all LP candidates */
    int                   externcandssize;    /**< number of available slots in externcands array */
    int                   nexterncands;       /**< number of external candidates for branching */
@@ -107,6 +108,7 @@ struct SCIP_Branchrule
    int                   maxdepth;           /**< maximal depth level, up to which this branching rule should be used (or -1) */
    SCIP_Bool             initialized;        /**< is branching rule initialized? */
    SCIP_Bool             isobjbranchrule;    /**< is branching rule an obj branching rule? */
+   SCIP_Bool             exact;              /**< is branching rule safe to use in exact solving mode? */
 };
 
 #ifdef __cplusplus

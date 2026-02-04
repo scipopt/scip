@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2026 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -507,7 +507,7 @@ SCIP_RETCODE SCIPinsertBilinearTermImplicitNonlinear(
  * -# If the bounds are not finite, there is no underestimator. Also, \f$ T^{-1}(x^*) \f$ must be in the domain,
  * otherwise the dual is infeasible.
  * -# After a facet is computed, we check whether it is a valid facet (i.e. we check \f$ \alpha^T v + \beta \le f(v) \f$
- *  for every vertex \f$ v \f$). If we find a violation of at most ADJUSTFACETFACTOR * SCIPlpfeastol(), then we weaken \f$
+ *  for every vertex \f$ v \f$). If we find a violation of at most ADJUSTFACETFACTOR * SCIPgetLPFeastol(), then we weaken \f$
  *  \beta \f$ by this amount, otherwise, we discard the cut.
  * -# If a variable is fixed within tolerances, we replace it with its value and compute the facet of the remaining
  * expression. Note that since we are checking the cut for validity, this will never produce wrong result.

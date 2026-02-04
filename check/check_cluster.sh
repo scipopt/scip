@@ -4,7 +4,7 @@
 #*                  This file is part of the program and library             *
 #*         SCIP --- Solving Constraint Integer Programs                      *
 #*                                                                           *
-#*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      *
+#*  Copyright (c) 2002-2026 Zuse Institute Berlin (ZIB)                      *
 #*                                                                           *
 #*  Licensed under the Apache License, Version 2.0 (the "License");          *
 #*  you may not use this file except in compliance with the License.         *
@@ -79,9 +79,10 @@ SLURMACCOUNT="${31}"
 PYTHON="${32}"
 EMPHBENCHMARK="${33}"
 CLOCKTYPE="${34}"
+WITHCERTIFICATE="${35}"
 
 # check if all variables defined (by checking the last one)
-if test -z "${CLOCKTYPE}"
+if test -z "${WITHCERTIFICATE}"
 then
     echo Skipping test since not all variables are defined
     echo "TSTNAME       = ${TSTNAME}"
@@ -118,6 +119,7 @@ then
     echo "PYTHON        = ${PYTHON}"
     echo "EMPHBENCHMARK = ${EMPHBENCHMARK}"
     echo "CLOCKTYPE     = ${CLOCKTYPE}"
+    echo "WITHCERTIFICATE = ${WITHCERTIFICATE}"
     exit 1;
 fi
 
@@ -216,13 +218,19 @@ do
                 # find out the solver that should be used
                 SOLVER=$(stripversion "${BINNAME}")
 
+                # xpress executable is called optimizer
+                if test "${SOLVER}" = "optimizer"
+                then
+                    SOLVER="xpress"
+                fi
+
                 CONFFILE="configuration_tmpfile_setup_${SOLVER}.sh"
 
                 # call tmp file configuration for the solver
                 # this may modify the EXECNAME environment variable
                 . ./"${CONFFILE}" "${INSTANCE}" "${SCIPPATH}" "${TMPFILE}" "${SETNAME}" "${SETFILE}" "${THREADS}" "${SETCUTOFF}" \
                             "${FEASTOL}" "${TIMELIMIT}" "${MEMLIMIT}" "${NODELIMIT}" "${LPS}" "${DISPFREQ}" "${REOPT}" "${OPTCOMMAND}" \
-                            "${CLIENTTMPDIR}" "${FILENAME}" "${VISUALIZE}" "${SOLUFILE}" "${EMPHBENCHMARK}" "${CLOCKTYPE}"
+                            "${CLIENTTMPDIR}" "${FILENAME}" "${VISUALIZE}" "${SOLUFILE}" "${EMPHBENCHMARK}" "${CLOCKTYPE}" "${WITHCERTIFICATE}"
 
                 JOBNAME="$(capitalize ${SOLVER})${SHORTPROBNAME}"
                 # additional environment variables needed by run.sh
@@ -238,6 +246,9 @@ do
                 export SETFILE
                 export TIMELIMIT
                 export EXECNAME
+                export VIPRCHECKNAME=viprchk
+                export VIPRCOMPNAME=viprcomp
+                export VIPRCOMPRESSNAME=viprttn
 
                 if test "${SLURMACCOUNT}" == "default"
                 then
@@ -260,7 +271,7 @@ do
                     if test "${CLUSTERQUEUE}" != "moskito" && test "${CLUSTERQUEUE}" != "prio"
                     then
                         # the space at the end is necessary
-                        export SRUN="srun --cpu_bind=cores ${SRUN_FLAGS} "
+                        export SRUN="srun --propagate=STACK --cpu_bind=cores ${SRUN_FLAGS} "
                     fi
 
                     if test "${WRITESETTINGS}" = "true"

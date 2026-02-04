@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2026 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -468,7 +468,7 @@ SCIP_RETCODE selectBranchVar(
    SCIP_VAR**            brvar,              /**< pointer to store the selected branching candidate or NULL if none */
    SCIP_Real*            brpoint             /**< pointer to store branching point of selected branching variable */
    )
-{ /*lint --e{850}*/ 
+{ /*lint --e{850}*/
    SCIP_BRANCHRULEDATA* branchruledata;
 
    SCIP_VAR* cand;

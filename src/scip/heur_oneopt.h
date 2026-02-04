@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2026 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -31,7 +31,7 @@
  * an integer variable x<sub>j</sub> can be decreased for c<sub>j</sub> > 0 or increased for c<sub>j</sub> < 0
  * if the resulting solution is still feasible.  If more than one variable can be shifted, they are sorted by
  * non-decreasing impact on the objective and sequentially shifted until no more improvements can be
- * obtained. 
+ * obtained.
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/

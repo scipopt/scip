@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2026 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -27,6 +27,7 @@
  * @brief  internal methods for dual proof conflict analysis
  * @author Timo Berthold
  * @author Jakob Witzig
+ * @author Sander Borst
  *
  * In dual proof analysis, an infeasible LP relaxation is analysed.
  * Using the dual solution, a valid constraint is derived that is violated

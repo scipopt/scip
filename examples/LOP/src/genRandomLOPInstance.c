@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2026 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -32,7 +32,11 @@
 #include <assert.h>
 
 
-/* the following is copied from <scip/misc.c> */
+/* the following is copied from an old version of scip/misc.c */
+
+#ifdef _WIN32
+#define NO_RAND_R
+#endif
 
 /* define own random numbers or take library version depending on the following define */
 #ifdef NO_RAND_R

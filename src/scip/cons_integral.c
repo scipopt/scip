@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2026 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -34,14 +34,19 @@
 #include "scip/pub_cons.h"
 #include "scip/pub_message.h"
 #include "scip/pub_var.h"
+#include "scip/pub_sol.h"
 #include "scip/scip_branch.h"
 #include "scip/scip_cons.h"
+#include "scip/scip_exact.h"
 #include "scip/scip_lp.h"
+#include "scip/scip_lpexact.h"
 #include "scip/scip_message.h"
 #include "scip/scip_numerics.h"
 #include "scip/scip_prob.h"
 #include "scip/scip_probing.h"
 #include "scip/scip_sol.h"
+#include "scip/scip_mem.h"
+#include "scip/rational.h"
 #include <string.h>
 
 
@@ -52,6 +57,68 @@
 #define CONSHDLR_EAGERFREQ           -1 /**< frequency for using all instead of only the useful constraints in separation,
                                               *   propagation and enforcement, -1 for no eager evaluations, 0 for first only */
 #define CONSHDLR_NEEDSCONS        FALSE /**< should the constraint handler be skipped, if no constraints are available? */
+
+
+/** checks whether primal solution satisfies all integrality restrictions without tolerances */
+static
+SCIP_RETCODE checkIntegralityExact(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SOL*             sol,                /**< solution to be checked */
+   SCIP_Bool             printreason,        /**< should infeasisibility reason be printed? */
+   SCIP_RESULT*          result              /**< pointer to store the result of the lp enforcement call */
+   )
+{
+   SCIP_RATIONAL* solval;
+   SCIP_Bool integral;
+   SCIP_VAR** vars;
+   int nintegers;
+   int ncontimplvars;
+   int ncontvars;
+   int v;
+
+   assert(result != NULL);
+
+   SCIPdebugMessage("checking exact integrality of primal solution:\n");
+
+   integral = TRUE;
+
+   SCIP_CALL( SCIPrationalCreateBuffer(SCIPbuffer(scip), &solval) );
+
+   /* get all problem variables and integer region in vars array */
+   SCIP_CALL( SCIPgetSolVarsData(scip, sol, &vars, &nintegers, NULL, NULL, NULL, NULL, &ncontimplvars, &ncontvars) );
+   nintegers -= ncontimplvars + ncontvars;
+   assert(nintegers >= 0);
+
+   /* check whether primal solution satisfies all integrality restrictions */
+   for( v = 0; v < nintegers && integral; ++v )
+   {
+      /* if the solution is exact we check the exact data, otherwise we check the fp data */
+      if( SCIPsolIsExact(sol) )
+         SCIPgetSolValExact(scip, sol, vars[v], solval);
+      else
+         SCIPrationalSetReal(solval, SCIPgetSolVal(scip, sol, vars[v]));
+
+      assert(SCIPvarGetProbindex(vars[v]) == v);
+      assert(SCIPvarGetType(vars[v]) == SCIP_VARTYPE_BINARY || SCIPvarGetType(vars[v]) == SCIP_VARTYPE_INTEGER );
+
+      if( !SCIPrationalIsIntegral(solval) )
+      {
+         *result = SCIP_INFEASIBLE;
+         if( printreason )
+         {
+            SCIPinfoMessage(scip, NULL, "violation: integrality condition of variable <%s> =",
+               SCIPvarGetName(vars[v]));
+            SCIPrationalMessage(SCIPgetMessagehdlr(scip), NULL, solval);
+            SCIPinfoMessage(scip, NULL, "\n");
+         }
+         integral = FALSE;
+      }
+   }
+
+   SCIPrationalFreeBuffer(SCIPbuffer(scip), &solval);
+
+   return SCIP_OKAY;
+}
 
 /*
  * Callback methods
@@ -90,6 +157,8 @@ SCIP_DECL_CONSENFOLP(consEnfolpIntegral)
 
    SCIPdebugMsg(scip, "Enfolp method of integrality constraint: %d fractional variables\n", SCIPgetNLPBranchCands(scip));
 
+    *result = SCIP_DIDNOTRUN;
+
    /* if the root LP is unbounded, we want to terminate with UNBOUNDED or INFORUNBOUNDED,
     * depending on whether we are able to construct an integral solution; in any case we do not want to branch
     */
@@ -104,6 +173,11 @@ SCIP_DECL_CONSENFOLP(consEnfolpIntegral)
 
    /* call branching methods */
    SCIP_CALL( SCIPbranchLP(scip, result) );
+
+   if( SCIPisExact(scip) && *result == SCIP_DIDNOTRUN )
+   {
+      SCIP_CALL( SCIPbranchLPExact(scip, result) );
+   }
 
    /* if no branching was done, the LP solution was not fractional */
    if( *result == SCIP_DIDNOTRUN )
@@ -202,25 +276,33 @@ SCIP_DECL_CONSCHECK(consCheckIntegral)
    nintegers -= ncontimplvars + ncontvars;
    assert(nintegers >= 0);
 
-   for( v = 0; v < nintegers; ++v )
+   if( !SCIPisExact(scip) )
    {
-      solval = SCIPgetSolVal(scip, sol, vars[v]);
-
-      if( sol != NULL )
-         SCIPupdateSolIntegralityViolation(scip, sol, EPSFRAC(solval, SCIPfeastol(scip)));
-
-      if( !SCIPisFeasIntegral(scip, solval) )
+      for( v = 0; v < nintegers; ++v )
       {
-         *result = SCIP_INFEASIBLE;
+         solval = SCIPgetSolVal(scip, sol, vars[v]);
 
-         if( printreason )
+         if( sol != NULL )
+            SCIPupdateSolIntegralityViolation(scip, sol, EPSFRAC(solval, SCIPfeastol(scip)));
+
+         if( !SCIPisFeasIntegral(scip, solval) )
          {
-            SCIPinfoMessage(scip, NULL, "violation: integrality condition of variable <%s> = %.15g\n",
-               SCIPvarGetName(vars[v]), solval);
+            *result = SCIP_INFEASIBLE;
+
+            if( printreason )
+            {
+               SCIPinfoMessage(scip, NULL, "violation: integrality condition of variable <%s> = %.15g\n",
+                  SCIPvarGetName(vars[v]), solval);
+            }
+            if( !completely )
+               break;
          }
-         if( !completely )
-            break;
       }
+   }
+   /* in exact solving mode, we have to check integrality without tolerances */
+   else
+   {
+      SCIP_CALL( checkIntegralityExact(scip, sol, printreason, result) );
    }
 
    return SCIP_OKAY;
@@ -244,6 +326,9 @@ SCIP_DECL_CONSGETDIVEBDCHGS(consGetDiveBdChgsIntegral)
    SCIP_Bool bestroundup;
    int nintegers;
    int ncontvars;
+   int nbinimplvars;
+   int nintimplvars;
+   int ncontimplvars;
    int bestcandidx;
    int v;
 
@@ -254,8 +339,9 @@ SCIP_DECL_CONSGETDIVEBDCHGS(consGetDiveBdChgsIntegral)
 
    SCIPdebugMsg(scip, "integral constraint handler: determine diving bound changes\n");
 
-   SCIP_CALL( SCIPgetSolVarsData(scip, sol, &vars, &nintegers, NULL, NULL, NULL, NULL, NULL, &ncontvars) );
-   nintegers -= ncontvars;
+   SCIP_CALL( SCIPgetSolVarsData(scip, sol, &vars, &nintegers, NULL, NULL,
+         &nbinimplvars, &nintimplvars, &ncontimplvars, &ncontvars) );
+   nintegers = nintegers - nbinimplvars - nintimplvars - ncontimplvars - ncontvars;
    assert(nintegers >= 0);
 
    bestscore = SCIP_REAL_MIN;
@@ -320,6 +406,9 @@ SCIP_RETCODE SCIPincludeConshdlrIntegral(
          consEnfolpIntegral, consEnfopsIntegral, consCheckIntegral, consLockIntegral, NULL) );
 
    assert(conshdlr != NULL);
+
+   /* mark constraint handler as exact */
+   SCIPconshdlrMarkExact(conshdlr);
 
    /* set non-fundamental callbacks via specific setter functions */
    SCIP_CALL( SCIPsetConshdlrCopy(scip, conshdlr, conshdlrCopyIntegral, consCopyIntegral) );

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2026 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -40,14 +40,17 @@ const char* SCIPgetBuildFlags(
  OSTYPE=@CMAKE_SYSTEM@\n\
  COMP=@CMAKE_C_COMPILER_ID@ @CMAKE_C_COMPILER_VERSION@\n\
  BUILD=@CMAKE_BUILD_TYPE@\n\
+ CHECKSTAGE=@CHECKSTAGE@\n\
  DEBUGSOL=@DEBUGSOL@\n\
  EXPRINT=@EXPRINT@\n\
  SYM=@SYM@\n\
  GMP=@GMP@\n\
+ CONOPT=@CONOPT@\n\
  IPOPT=@IPOPT@\n\
  WORHP=@WORHP@\n\
  LPS=@LPS@\n\
  LPSCHECK=@LPSCHECK@\n\
+ LTO=@LTO@\n\
  NOBLKBUFMEM=@NOBLKBUFMEM@\n\
  NOBLKMEM=@NOBLKMEM@\n\
  NOBUFMEM=@NOBUFMEM@\n\

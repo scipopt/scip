@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2026 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -443,13 +443,13 @@ SCIP_RETCODE SCIPwriteCcg(
       assert( transformed == SCIPconsIsTransformed(cons) );
 
       if( strcmp(conshdlrname, "linear") == 0 )
-      {  
+      {
          consvars = SCIPgetVarsLinear(scip, cons);
          nconsvars = SCIPgetNVarsLinear(scip, cons);
          assert( consvars != NULL || nconsvars == 0 );
 
-         if( nconsvars > 0 ) 
-         { 
+         if( nconsvars > 0 )
+         {
             SCIP_CALL( handleLinearCons(scip, SCIPgetVarsLinear(scip, cons), SCIPgetValsLinear(scip, cons),
                   SCIPgetNVarsLinear(scip, cons), transformed, &G) );
          }
@@ -460,19 +460,19 @@ SCIP_RETCODE SCIPwriteCcg(
          nconsvars = SCIPgetNVarsSetppc(scip, cons);
          assert( consvars != NULL || nconsvars == 0 );
 
-         if( nconsvars > 0 ) 
+         if( nconsvars > 0 )
          {
             SCIP_CALL( handleLinearCons(scip, consvars, NULL, nconsvars, transformed, &G) );
          }
       }
       else if( strcmp(conshdlrname, "logicor") == 0 )
-      {  
+      {
          consvars = SCIPgetVarsLogicor(scip, cons);
          nconsvars = SCIPgetNVarsLogicor(scip, cons);
          assert( consvars != NULL || nconsvars == 0 );
 
-         if( nconsvars > 0 ) 
-         { 
+         if( nconsvars > 0 )
+         {
             SCIP_CALL( handleLinearCons(scip, SCIPgetVarsLogicor(scip, cons), NULL, SCIPgetNVarsLogicor(scip, cons), transformed, &G) );
          }
       }
@@ -490,8 +490,8 @@ SCIP_RETCODE SCIPwriteCcg(
          for( v = 0; v < nconsvars; ++v )
             consvals[v] = (SCIP_Real)w[v];
 
-         if( nconsvars > 0 ) 
-         { 
+         if( nconsvars > 0 )
+         {
             SCIP_CALL( handleLinearCons(scip, consvars, consvals, nconsvars, transformed, &G) );
          }
          SCIPfreeBufferArray(scip, &consvals);

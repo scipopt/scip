@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2026 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -97,7 +97,7 @@ SCIP_RETCODE SCIPincludeCutselHybrid(
  *
  *  This is the selection method of the hybrid cut selector which uses a weighted sum of the
  *  efficacy, parallelism, directed cutoff distance, and the integral support.
- *  The input cuts array gets resorted s.t the selected cuts come first and the remaining
+ *  The input cuts array gets re-sorted s.t the selected cuts come first and the remaining
  *  ones are the end.
  */
 SCIP_EXPORT

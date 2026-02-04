@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2026 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -936,7 +936,6 @@ SCIP_RETCODE SCIPsetConshdlrGetSignedPermsymGraph(
    return SCIP_OKAY;
 }
 
-/** returns the constraint handler of the given name, or NULL if not existing */
 /** returns the constraint handler of the given name, or NULL if not existing */
 SCIP_CONSHDLR* SCIPfindConshdlr(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -2659,7 +2658,7 @@ SCIP_RETCODE SCIPgetConsPermsymGraph(
    SCIP_Bool*            success             /**< pointer to store whether the constraint successfully returned the graph */
    )
 {
-   SCIP_CALL( SCIPcheckStage(scip, "SCIPgetConsGetPermsymGraph", FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+   SCIP_CALL( SCIPcheckStage(scip, "SCIPgetConsPermsymGraph", FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
    assert(scip != NULL);
    assert(cons != NULL);
@@ -2692,7 +2691,7 @@ SCIP_RETCODE SCIPgetConsSignedPermsymGraph(
    SCIP_Bool*            success             /**< pointer to store whether the constraint successfully returned the graph */
    )
 {
-   SCIP_CALL( SCIPcheckStage(scip, "SCIPgetConsGetSignedPermsymGraph", FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+   SCIP_CALL( SCIPcheckStage(scip, "SCIPgetConsSignedPermsymGraph", FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
    assert(scip != NULL);
    assert(cons != NULL);

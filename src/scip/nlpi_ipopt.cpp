@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2026 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -199,6 +199,12 @@ public:
    int                         lastniter;    /**< number of iterations in last run */
    SCIP_Real                   lasttime;     /**< time spend in last run */
 
+   int                         ncalls;       /**< overall number of solver calls */
+   int                         nsuccess;     /**< number of successes (optimal or feasible solution found or proven unbounded) */
+   int                         nlocinfeas;   /**< number of calls resulting in local infeasibility */
+   int                         nother;       /**< number of other calls */
+   int                         nlimit;       /**< number of calls where the solver terminated due to a time or iteration limit */
+
    /** constructor */
    SCIP_NlpiProblem()
       : oracle(NULL), randnumgen(NULL),
@@ -207,7 +213,7 @@ public:
         solprimalvalid(false), solprimalgiven(false), soldualvalid(false), soldualgiven(false),
         solprimals(NULL), soldualcons(NULL), soldualvarlb(NULL), soldualvarub(NULL),
         solobjval(SCIP_INVALID), solconsviol(SCIP_INVALID), solboundviol(SCIP_INVALID),
-        lastniter(-1), lasttime(-1.0)
+        lastniter(-1), lasttime(-1.0), ncalls(0), nsuccess(0), nlocinfeas(0), nother(0), nlimit(0)
    { }
 };
 
@@ -582,7 +588,7 @@ SCIP_RETCODE handleNlpParam(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NLPIDATA*        nlpidata,           /**< NLPI data */
    SCIP_NLPIPROBLEM*     nlpiproblem,        /**< NLP */
-   const SCIP_NLPPARAM   param               /**< solve parameters */
+   SCIP_NLPPARAM         param               /**< solve parameters */
    )
 {
    assert(scip != NULL);
@@ -674,7 +680,8 @@ SCIP_RETCODE handleNlpParam(
          }
 
          const int* offset;
-         SCIP_CALL( SCIPnlpiOracleGetJacobianSparsity(scip, nlpiproblem->oracle, &offset, NULL) );
+         int nnlnz;
+         SCIP_CALL( SCIPnlpiOracleGetJacobianRowSparsity(scip, nlpiproblem->oracle, &offset, NULL, NULL, &nnlnz) );
          jacnnz = offset[m];
 
          /* fitting data from NLP runs gave the following coefficients (see also !2634):
@@ -843,10 +850,11 @@ void collectStatistic(
 
    const int* offset;
    const int* col;
-   SCIP_CALL_ABORT( SCIPnlpiOracleGetJacobianSparsity(scip, problem->oracle, &offset, NULL) );
+   int nnlnz;
+   SCIP_CALL_ABORT( SCIPnlpiOracleGetJacobianRowSparsity(scip, problem->oracle, &offset, NULL, NULL, &nnlnz) );
    jacnnz = offset[m];
 
-   SCIP_CALL_ABORT( SCIPnlpiOracleGetHessianLagSparsity(scip, problem->oracle, &offset, &col) );
+   SCIP_CALL_ABORT( SCIPnlpiOracleGetHessianLagSparsity(scip, problem->oracle, &offset, &col, FALSE) );
    hesnnz = offset[n];
 
    // number of nonzeros of matrix in linear system of barrier problem ((11) in Ipopt paper):
@@ -1057,6 +1065,11 @@ SCIP_DECL_NLPIFREEPROBLEM(nlpiFreeProblemIpopt)
    {
       SCIPfreeRandom(scip, &(*problem)->randnumgen);
    }
+
+#ifdef PRINT_NLPSTATS
+   SCIPinfoMessage(scip, NULL, "\nNLP solver IPOPT stats: ncalls = %d, nsuccess = %d, nlimit = %d, nlocinfeas = %d, nother = %d\n",
+         (*problem)->ncalls, (*problem)->nsuccess, (*problem)->nlimit, (*problem)->nlocinfeas, (*problem)->nother);
+#endif
 
    delete *problem;
    *problem = NULL;
@@ -1869,15 +1882,16 @@ void* SCIPgetNlpiOracleIpopt(
 
 /** Method to return some info about the nlp */
 bool ScipNLP::get_nlp_info(
-   Index&             n,                  /**< place to store number of variables */
-   Index&             m,                  /**< place to store number of constraints */
-   Index&             nnz_jac_g,          /**< place to store number of nonzeros in jacobian */
-   Index&             nnz_h_lag,          /**< place to store number of nonzeros in hessian */
-   IndexStyleEnum&    index_style         /**< place to store used index style (0-based or 1-based) */
+   Index&                n,                  /**< place to store number of variables */
+   Index&                m,                  /**< place to store number of constraints */
+   Index&                nnz_jac_g,          /**< place to store number of nonzeros in jacobian */
+   Index&                nnz_h_lag,          /**< place to store number of nonzeros in hessian */
+   IndexStyleEnum&       index_style         /**< place to store used index style (0-based or 1-based) */
    )
 {
    const int* offset;
    SCIP_RETCODE retcode;
+   int nnlnz;
 
    assert(nlpiproblem != NULL);
    assert(nlpiproblem->oracle != NULL);
@@ -1885,15 +1899,15 @@ bool ScipNLP::get_nlp_info(
    n = SCIPnlpiOracleGetNVars(nlpiproblem->oracle);
    m = SCIPnlpiOracleGetNConstraints(nlpiproblem->oracle);
 
-   retcode = SCIPnlpiOracleGetJacobianSparsity(scip, nlpiproblem->oracle, &offset, NULL);
+   retcode = SCIPnlpiOracleGetJacobianRowSparsity(scip, nlpiproblem->oracle, &offset, NULL, NULL, &nnlnz);
    if( retcode != SCIP_OKAY )
       return false;
-   assert(offset != NULL);
-   nnz_jac_g = offset[m];
+
+   nnz_jac_g = offset == NULL ? 0 : offset[m];
 
    if( !approxhessian )
    {
-      retcode = SCIPnlpiOracleGetHessianLagSparsity(scip, nlpiproblem->oracle, &offset, NULL);
+      retcode = SCIPnlpiOracleGetHessianLagSparsity(scip, nlpiproblem->oracle, &offset, NULL, FALSE);
       if( retcode != SCIP_OKAY )
          return false;
       assert(offset != NULL);
@@ -1911,12 +1925,12 @@ bool ScipNLP::get_nlp_info(
 
 /** Method to return the bounds for my problem */
 bool ScipNLP::get_bounds_info(
-   Index              n,                  /**< number of variables */
-   Number*            x_l,                /**< buffer to store lower bounds on variables */
-   Number*            x_u,                /**< buffer to store upper bounds on variables */
-   Index              m,                  /**< number of constraints */
-   Number*            g_l,                /**< buffer to store lower bounds on constraints */
-   Number*            g_u                 /**< buffer to store lower bounds on constraints */
+   Index                 n,                  /**< number of variables */
+   Number*               x_l,                /**< buffer to store lower bounds on variables */
+   Number*               x_u,                /**< buffer to store upper bounds on variables */
+   Index                 m,                  /**< number of constraints */
+   Number*               g_l,                /**< buffer to store lower bounds on constraints */
+   Number*               g_u                 /**< buffer to store lower bounds on constraints */
    )
 {
    const int* varlincounts;
@@ -1966,15 +1980,15 @@ bool ScipNLP::get_bounds_info(
 
 /** Method to return the starting point for the algorithm */  /*lint -e{715}*/
 bool ScipNLP::get_starting_point(
-   Index              n,                  /**< number of variables */
-   bool               init_x,             /**< whether initial values for primal values are requested */
-   Number*            x,                  /**< buffer to store initial primal values */
-   bool               init_z,             /**< whether initial values for dual values of variable bounds are requested */
-   Number*            z_L,                /**< buffer to store dual values for variable lower bounds */
-   Number*            z_U,                /**< buffer to store dual values for variable upper bounds */
-   Index              m,                  /**< number of constraints */
-   bool               init_lambda,        /**< whether initial values for dual values of constraints are required */
-   Number*            lambda              /**< buffer to store dual values of constraints */
+   Index                 n,                  /**< number of variables */
+   bool                  init_x,             /**< whether initial values for primal values are requested */
+   Number*               x,                  /**< buffer to store initial primal values */
+   bool                  init_z,             /**< whether initial values for dual values of variable bounds are requested */
+   Number*               z_L,                /**< buffer to store dual values for variable lower bounds */
+   Number*               z_U,                /**< buffer to store dual values for variable upper bounds */
+   Index                 m,                  /**< number of constraints */
+   bool                  init_lambda,        /**< whether initial values for dual values of constraints are required */
+   Number*               lambda              /**< buffer to store dual values of constraints */
    )
 {  /*lint --e{715} */
    assert(nlpiproblem != NULL);
@@ -2030,8 +2044,8 @@ Index ScipNLP::get_number_of_nonlinear_variables()
 
 /** Method to return the indices of the nonlinear variables */
 bool ScipNLP::get_list_of_nonlinear_variables(
-   Index              num_nonlin_vars,    /**< number of nonlinear variables */
-   Index*             pos_nonlin_vars     /**< array to fill with indices of nonlinear variables */
+   Index                 num_nonlin_vars,    /**< number of nonlinear variables */
+   Index*                pos_nonlin_vars     /**< array to fill with indices of nonlinear variables */
    )
 {
    int count;
@@ -2059,14 +2073,14 @@ bool ScipNLP::get_list_of_nonlinear_variables(
 
 /** Method to return metadata about variables and constraints */  /*lint -e{715}*/
 bool ScipNLP::get_var_con_metadata(
-   Index              n,                  /**< number of variables */
-   StringMetaDataMapType& var_string_md,  /**< variable meta data of string type */
-   IntegerMetaDataMapType& var_integer_md,/**< variable meta data of integer type */
-   NumericMetaDataMapType& var_numeric_md,/**< variable meta data of numeric type */
-   Index              m,                  /**< number of constraints */
-   StringMetaDataMapType& con_string_md,  /**< constraint meta data of string type */
-   IntegerMetaDataMapType& con_integer_md,/**< constraint meta data of integer type */
-   NumericMetaDataMapType& con_numeric_md /**< constraint meta data of numeric type */
+   Index                 n,                  /**< number of variables */
+   StringMetaDataMapType& var_string_md,     /**< variable meta data of string type */
+   IntegerMetaDataMapType& var_integer_md,   /**< variable meta data of integer type */
+   NumericMetaDataMapType& var_numeric_md,   /**< variable meta data of numeric type */
+   Index                 m,                  /**< number of constraints */
+   StringMetaDataMapType& con_string_md,     /**< constraint meta data of string type */
+   IntegerMetaDataMapType& con_integer_md,   /**< constraint meta data of integer type */
+   NumericMetaDataMapType& con_numeric_md    /**< constraint meta data of numeric type */
    )
 { /*lint --e{715}*/
    assert(nlpiproblem != NULL);
@@ -2115,10 +2129,10 @@ bool ScipNLP::get_var_con_metadata(
 
 /** Method to return the objective value */  /*lint -e{715}*/
 bool ScipNLP::eval_f(
-   Index              n,                  /**< number of variables */
-   const Number*      x,                  /**< point to evaluate */
-   bool               new_x,              /**< whether some function evaluation method has been called for this point before */
-   Number&            obj_value           /**< place to store objective function value */
+   Index                 n,                  /**< number of variables */
+   const Number*         x,                  /**< point to evaluate */
+   bool                  new_x,              /**< whether some function evaluation method has been called for this point before */
+   Number&               obj_value           /**< place to store objective function value */
    )
 { /*lint --e{715}*/
    assert(nlpiproblem != NULL);
@@ -2135,10 +2149,10 @@ bool ScipNLP::eval_f(
 
 /** Method to return the gradient of the objective */  /*lint -e{715}*/
 bool ScipNLP::eval_grad_f(
-   Index              n,                  /**< number of variables */
-   const Number*      x,                  /**< point to evaluate */
-   bool               new_x,              /**< whether some function evaluation method has been called for this point before */
-   Number*            grad_f              /**< buffer to store objective gradient */
+   Index                 n,                  /**< number of variables */
+   const Number*         x,                  /**< point to evaluate */
+   bool                  new_x,              /**< whether some function evaluation method has been called for this point before */
+   Number*               grad_f              /**< buffer to store objective gradient */
    )
 { /*lint --e{715}*/
    SCIP_Real dummy;
@@ -2164,11 +2178,11 @@ bool ScipNLP::eval_grad_f(
 
 /** Method to return the constraint residuals */  /*lint -e{715}*/
 bool ScipNLP::eval_g(
-   Index              n,                  /**< number of variables */
-   const Number*      x,                  /**< point to evaluate */
-   bool               new_x,              /**< whether some function evaluation method has been called for this point before */
-   Index              m,                  /**< number of constraints */
-   Number*            g                   /**< buffer to store constraint function values */
+   Index                 n,                  /**< number of variables */
+   const Number*         x,                  /**< point to evaluate */
+   bool                  new_x,              /**< whether some function evaluation method has been called for this point before */
+   Index                 m,                  /**< number of constraints */
+   Number*               g                   /**< buffer to store constraint function values */
    )
 { /*lint --e{715}*/
    assert(nlpiproblem != NULL);
@@ -2188,14 +2202,14 @@ bool ScipNLP::eval_g(
  *   2) The values of the jacobian (if "values" is not NULL)
  */  /*lint -e{715}*/
 bool ScipNLP::eval_jac_g(
-   Index              n,                  /**< number of variables */
-   const Number*      x,                  /**< point to evaluate */
-   bool               new_x,              /**< whether some function evaluation method has been called for this point before */
-   Index              m,                  /**< number of constraints */
-   Index              nele_jac,           /**< number of nonzero entries in jacobian */
-   Index*             iRow,               /**< buffer to store row indices of nonzero jacobian entries, or NULL if values are requested */
-   Index*             jCol,               /**< buffer to store column indices of nonzero jacobian entries, or NULL if values are requested */
-   Number*            values              /**< buffer to store values of nonzero jacobian entries, or NULL if structure is requested */
+   Index                 n,                  /**< number of variables */
+   const Number*         x,                  /**< point to evaluate */
+   bool                  new_x,              /**< whether some function evaluation method has been called for this point before */
+   Index                 m,                  /**< number of constraints */
+   Index                 nele_jac,           /**< number of nonzero entries in jacobian */
+   Index*                iRow,               /**< buffer to store row indices of nonzero jacobian entries, or NULL if values are requested */
+   Index*                jCol,               /**< buffer to store column indices of nonzero jacobian entries, or NULL if values are requested */
+   Number*               values              /**< buffer to store values of nonzero jacobian entries, or NULL if structure is requested */
    )
 { /*lint --e{715}*/
    assert(nlpiproblem != NULL);
@@ -2210,21 +2224,25 @@ bool ScipNLP::eval_jac_g(
       const int* jaccol;
       int j;
       int i;
+      int nnlnz;
 
       assert(iRow != NULL);
       assert(jCol != NULL);
 
-      if( SCIPnlpiOracleGetJacobianSparsity(scip, nlpiproblem->oracle, &jacoffset, &jaccol) != SCIP_OKAY )
+      if( SCIPnlpiOracleGetJacobianRowSparsity(scip, nlpiproblem->oracle, &jacoffset, &jaccol, NULL, &nnlnz) != SCIP_OKAY )
          return false;
 
-      assert(jacoffset[0] == 0);
-      assert(jacoffset[m] == nele_jac);
-      j = jacoffset[0];
-      for( i = 0; i < m; ++i )
-         for( ; j < jacoffset[i+1]; ++j )
-            iRow[j] = i;
+      if( jacoffset != NULL )
+      {
+         assert(jacoffset[0] == 0);
+         assert(jacoffset[m] == nele_jac);
+         j = jacoffset[0];
+         for( i = 0; i < m; ++i )
+            for( ; j < jacoffset[i+1]; ++j )
+               iRow[j] = i;
 
-      BMScopyMemoryArray(jCol, jaccol, nele_jac);
+         BMScopyMemoryArray(jCol, jaccol, nele_jac);
+      }
    }
    else
    {
@@ -2251,17 +2269,17 @@ bool ScipNLP::eval_jac_g(
  *   2) The values of the hessian of the lagrangian (if "values" is not NULL)
  */   /*lint -e{715}*/
 bool ScipNLP::eval_h(
-   Index              n,                  /**< number of variables */
-   const Number*      x,                  /**< point to evaluate */
-   bool               new_x,              /**< whether some function evaluation method has been called for this point before */
-   Number             obj_factor,         /**< weight for objective function */
-   Index              m,                  /**< number of constraints */
-   const Number*      lambda,             /**< weights for constraint functions */
-   bool               new_lambda,         /**< whether the hessian has been evaluated for these values of lambda before */
-   Index              nele_hess,          /**< number of nonzero entries in hessian */
-   Index*             iRow,               /**< buffer to store row indices of nonzero hessian entries, or NULL if values are requested */
-   Index*             jCol,               /**< buffer to store column indices of nonzero hessian entries, or NULL if values are requested */
-   Number*            values              /**< buffer to store values of nonzero hessian entries, or NULL if structure is requested */
+   Index                 n,                  /**< number of variables */
+   const Number*         x,                  /**< point to evaluate */
+   bool                  new_x,              /**< whether some function evaluation method has been called for this point before */
+   Number                obj_factor,         /**< weight for objective function */
+   Index                 m,                  /**< number of constraints */
+   const Number*         lambda,             /**< weights for constraint functions */
+   bool                  new_lambda,         /**< whether the hessian has been evaluated for these values of lambda before */
+   Index                 nele_hess,          /**< number of nonzero entries in hessian */
+   Index*                iRow,               /**< buffer to store row indices of nonzero hessian entries, or NULL if values are requested */
+   Index*                jCol,               /**< buffer to store column indices of nonzero hessian entries, or NULL if values are requested */
+   Number*               values              /**< buffer to store values of nonzero hessian entries, or NULL if structure is requested */
    )
 {  /*lint --e{715}*/
    assert(nlpiproblem != NULL);
@@ -2280,7 +2298,7 @@ bool ScipNLP::eval_h(
       assert(iRow != NULL);
       assert(jCol != NULL);
 
-      if( SCIPnlpiOracleGetHessianLagSparsity(scip, nlpiproblem->oracle, &heslagoffset, &heslagcol) != SCIP_OKAY )
+      if( SCIPnlpiOracleGetHessianLagSparsity(scip, nlpiproblem->oracle, &heslagoffset, &heslagcol, FALSE) != SCIP_OKAY )
          return false;
 
       assert(heslagoffset[0] == 0);
@@ -2309,7 +2327,8 @@ bool ScipNLP::eval_h(
       last_f_eval_x = current_x;
       last_g_eval_x = current_x;
 
-      if( SCIPnlpiOracleEvalHessianLag(scip, nlpiproblem->oracle, x, new_x_obj, new_x_cons, obj_factor, lambda, values) != SCIP_OKAY )
+      if( SCIPnlpiOracleEvalHessianLag(scip, nlpiproblem->oracle, x, new_x_obj, new_x_cons, obj_factor, lambda, values,
+            FALSE) != SCIP_OKAY )
          return false;
    }
 
@@ -2322,19 +2341,19 @@ bool ScipNLP::eval_h(
  * Sets solution and termination status accordingly.
  */   /*lint -e{715}*/
 bool ScipNLP::intermediate_callback(
-   AlgorithmMode      mode,               /**< current mode of algorithm */
-   Index              iter,               /**< current iteration number */
-   Number             obj_value,          /**< current objective value */
-   Number             inf_pr,             /**< current primal infeasibility */
-   Number             inf_du,             /**< current dual infeasibility */
-   Number             mu,                 /**< current barrier parameter */
-   Number             d_norm,             /**< current gradient norm */
-   Number             regularization_size,/**< current size of regularization */
-   Number             alpha_du,           /**< current dual alpha */
-   Number             alpha_pr,           /**< current primal alpha */
-   Index              ls_trials,          /**< current number of linesearch trials */
-   const IpoptData*   ip_data,            /**< pointer to Ipopt Data */
-   IpoptCalculatedQuantities* ip_cq       /**< pointer to current calculated quantities */
+   AlgorithmMode         mode,               /**< current mode of algorithm */
+   Index                 iter,               /**< current iteration number */
+   Number                obj_value,          /**< current objective value */
+   Number                inf_pr,             /**< current primal infeasibility */
+   Number                inf_du,             /**< current dual infeasibility */
+   Number                mu,                 /**< current barrier parameter */
+   Number                d_norm,             /**< current gradient norm */
+   Number                regularization_size,/**< current size of regularization */
+   Number                alpha_du,           /**< current dual alpha */
+   Number                alpha_pr,           /**< current primal alpha */
+   Index                 ls_trials,          /**< current number of linesearch trials */
+   const IpoptData*      ip_data,            /**< pointer to Ipopt Data */
+   IpoptCalculatedQuantities* ip_cq          /**< pointer to current calculated quantities */
    )
 {  /*lint --e{715}*/
    if( SCIPisSolveInterrupted(scip) )
@@ -2433,17 +2452,17 @@ bool ScipNLP::intermediate_callback(
 
 /** This method is called when the algorithm is complete so the TNLP can store/write the solution. */  /*lint -e{715}*/
 void ScipNLP::finalize_solution(
-   SolverReturn       status,             /**< solve and solution status */
-   Index              n,                  /**< number of variables */
-   const Number*      x,                  /**< primal solution values */
-   const Number*      z_L,                /**< dual values of variable lower bounds */
-   const Number*      z_U,                /**< dual values of variable upper bounds */
-   Index              m,                  /**< number of constraints */
-   const Number*      g,                  /**< values of constraints */
-   const Number*      lambda,             /**< dual values of constraints */
-   Number             obj_value,          /**< objective function value */
-   const IpoptData*   data,               /**< pointer to Ipopt Data */
-   IpoptCalculatedQuantities* cq          /**< pointer to calculated quantities */
+   SolverReturn          status,             /**< solve and solution status */
+   Index                 n,                  /**< number of variables */
+   const Number*         x,                  /**< primal solution values */
+   const Number*         z_L,                /**< dual values of variable lower bounds */
+   const Number*         z_U,                /**< dual values of variable upper bounds */
+   Index                 m,                  /**< number of constraints */
+   const Number*         g,                  /**< values of constraints */
+   const Number*         lambda,             /**< dual values of constraints */
+   Number                obj_value,          /**< objective function value */
+   const IpoptData*      data,               /**< pointer to Ipopt Data */
+   IpoptCalculatedQuantities* cq             /**< pointer to calculated quantities */
    )
 { /*lint --e{715}*/
    assert(nlpiproblem         != NULL);
@@ -2453,11 +2472,13 @@ void ScipNLP::finalize_solution(
    assert(m == SCIPnlpiOracleGetNConstraints(nlpiproblem->oracle));
 
    bool check_feasibility = false; // whether we should check x for feasibility, if not NULL
+   ++(nlpiproblem->ncalls);
    switch( status )
    {
    case SUCCESS:
       nlpiproblem->solstat  = SCIP_NLPSOLSTAT_LOCOPT;
       nlpiproblem->termstat = SCIP_NLPTERMSTAT_OKAY;
+      ++(nlpiproblem->nsuccess);
       assert(x != NULL);
       break;
 
@@ -2466,6 +2487,7 @@ void ScipNLP::finalize_solution(
    case FEASIBLE_POINT_FOUND:
       nlpiproblem->solstat  = SCIP_NLPSOLSTAT_FEASIBLE;
       nlpiproblem->termstat = SCIP_NLPTERMSTAT_OKAY;
+      ++(nlpiproblem->nsuccess);
       assert(x != NULL);
       break;
 
@@ -2473,6 +2495,7 @@ void ScipNLP::finalize_solution(
       check_feasibility = true;
       nlpiproblem->solstat  = SCIP_NLPSOLSTAT_UNKNOWN;
       nlpiproblem->termstat = SCIP_NLPTERMSTAT_ITERLIMIT;
+      ++(nlpiproblem->nlimit);
       break;
 
    case CPUTIME_EXCEEDED:
@@ -2482,6 +2505,7 @@ void ScipNLP::finalize_solution(
       check_feasibility = true;
       nlpiproblem->solstat  = SCIP_NLPSOLSTAT_UNKNOWN;
       nlpiproblem->termstat = SCIP_NLPTERMSTAT_TIMELIMIT;
+      ++(nlpiproblem->nlimit);
       break;
 
    case STOP_AT_TINY_STEP:
@@ -2490,11 +2514,13 @@ void ScipNLP::finalize_solution(
       check_feasibility = true;
       nlpiproblem->solstat  = SCIP_NLPSOLSTAT_UNKNOWN;
       nlpiproblem->termstat = SCIP_NLPTERMSTAT_NUMERICERROR;
+      ++(nlpiproblem->nother);
       break;
 
    case LOCAL_INFEASIBILITY:
       nlpiproblem->solstat  = SCIP_NLPSOLSTAT_LOCINFEASIBLE;
       nlpiproblem->termstat = SCIP_NLPTERMSTAT_OKAY;
+      ++(nlpiproblem->nlocinfeas);
       break;
 
    case USER_REQUESTED_STOP:
@@ -2504,6 +2530,7 @@ void ScipNLP::finalize_solution(
    case DIVERGING_ITERATES:
       nlpiproblem->solstat  = SCIP_NLPSOLSTAT_UNBOUNDED;
       nlpiproblem->termstat = SCIP_NLPTERMSTAT_OKAY;
+      ++(nlpiproblem->nsuccess);
       break;
 
    // for the following status codes, if we get called here at all,
@@ -2517,6 +2544,7 @@ void ScipNLP::finalize_solution(
       check_feasibility = true;
       nlpiproblem->solstat  = SCIP_NLPSOLSTAT_UNKNOWN;
       nlpiproblem->termstat = SCIP_NLPTERMSTAT_EVALERROR;
+      ++(nlpiproblem->nother);
       break;
 
    case TOO_FEW_DEGREES_OF_FREEDOM:
@@ -2524,17 +2552,20 @@ void ScipNLP::finalize_solution(
    case INVALID_OPTION:
       nlpiproblem->solstat  = SCIP_NLPSOLSTAT_UNKNOWN;
       nlpiproblem->termstat = SCIP_NLPTERMSTAT_OTHER;
+      ++(nlpiproblem->nother);
       break;
 
    case OUT_OF_MEMORY:
       nlpiproblem->solstat  = SCIP_NLPSOLSTAT_UNKNOWN;
       nlpiproblem->termstat = SCIP_NLPTERMSTAT_OUTOFMEMORY;
+      ++(nlpiproblem->nother);
       break;
 
    default:
       SCIPerrorMessage("Ipopt returned with unknown solution status %d\n", status);
       nlpiproblem->solstat  = SCIP_NLPSOLSTAT_UNKNOWN;
       nlpiproblem->termstat = SCIP_NLPTERMSTAT_OTHER;
+      ++(nlpiproblem->nother);
       break;
    }
 
@@ -2610,8 +2641,9 @@ void ScipNLP::finalize_solution(
    }
    catch(...)
    {
-      /* with clang++, an IpoptNLP::Eval_Error wasn't catched by the catch-block above
-       * I don't know why, but this should work around it
+      /* with clang++, an IpoptNLP::Eval_Error wasn't catched by the catch-block above for Ipopt < 3.14.20
+       * if visibility attributes of the Ipopt exception classes in the Ipopt and SCIP libs differed,
+       * we we also catch any exception here
        */
       SCIPdebugMsg(scip, "Unknown exception when checking constraint viol\n");
       assert(status == INVALID_NUMBER_DETECTED);

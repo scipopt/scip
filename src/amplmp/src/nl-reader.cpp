@@ -354,17 +354,25 @@ void mp::NameProvider::ReadNames(
 }
 
 fmt::StringRef mp::NameProvider::name(
-    std::size_t index, std::size_t i2) {
+		std::size_t index, std::size_t i2, bool* was_empty) {
   if (index + 1 < names_.size()) {
     const char *name = names_[index];
     const auto* pos1past = names_[index + 1] - 1;
     assert( ('\n' == *pos1past) || ('\r' == *pos1past));
-    if ('\r' == *(pos1past-1))            // Windows
+    if (pos1past>name && '\r' == *(pos1past-1))            // Windows
       --pos1past;
-    return fmt::StringRef(name, pos1past - name);
+		while (isspace(*name) && name < pos1past)              // trim left
+			++name;
+		while (name < pos1past && isspace(*(pos1past-1)))      // trim right
+			--pos1past;
+		if (name < pos1past)
+			return fmt::StringRef(name, pos1past - name);
+		else
+			if (was_empty)
+				*was_empty = true;
   }
   writer_.clear();
-  if (/*SV always true: i2>=0 &&*/ index>=i2)
+  if (index>=i2)
     writer_ << gen_name_2_ << '[' << (index - i2 + 1) << ']';
   else
     writer_ << gen_name_ << '[' << (index + 1) << ']';
@@ -376,11 +384,11 @@ size_t mp::NameProvider::number_read() const {
 }
 
 std::vector<std::string> mp::NameProvider::get_names(
-    size_t n, size_t i2) {
+		size_t n, size_t i2, bool* any_empty) {
   std::vector<std::string> result;
   result.reserve(n);
   for (size_t i=0; i<n; ++i)
-    result.push_back(name(i, i2));
+		result.push_back(name(i, i2, any_empty));
   return result;
 }
 

@@ -4,7 +4,7 @@
 #*                  This file is part of the program and library             *
 #*         SCIP --- Solving Constraint Integer Programs                      *
 #*                                                                           *
-#*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      *
+#*  Copyright (c) 2002-2026 Zuse Institute Berlin (ZIB)                      *
 #*                                                                           *
 #*  Licensed under the Apache License, Version 2.0 (the "License");          *
 #*  you may not use this file except in compliance with the License.         *
@@ -240,32 +240,31 @@ fi
 CLUSTERQUEUE="${QUEUE}"
 
 NICE=""
-ACCOUNT="mip"
+ACCOUNT="optimi_integer"
 
-if test "${CLUSTERQUEUE}" = "dbg"
+CONSTRAINT=""
+if test "${CLUSTERQUEUE}" = "Gold6338"
 then
-    CLUSTERQUEUE="mip-dbg,telecom-dbg"
-    ACCOUNT="mip-dbg"
-elif test "${CLUSTERQUEUE}" = "telecom-dbg"
+    CONSTRAINT="Gold6338"
+    CLUSTERQUEUE="big"
+elif test "${CLUSTERQUEUE}" = "Gold6342"
 then
-    ACCOUNT="mip-dbg"
-elif test "${CLUSTERQUEUE}" = "mip-dbg"
+    CONSTRAINT="Gold6342"
+    CLUSTERQUEUE="big"
+elif test "${CLUSTERQUEUE}" = "M640v2"
 then
-    ACCOUNT="mip-dbg"
-elif test "${CLUSTERQUEUE}" = "opt-low"
+    CONSTRAINT="Gold5222"
+    CLUSTERQUEUE="opt_int"
+elif test "${CLUSTERQUEUE}" = "M640"
 then
-    CLUSTERQUEUE="opt"
-    NICE="--nice=10000"
+    CONSTRAINT="Gold5122"
+    CLUSTERQUEUE="opt_int"
 fi
 
 # check if the slurm blades should be used exclusively
 if test "${EXCLUSIVE}" = "true"
 then
     EXCLUSIVE=" --exclusive"
-    if test "${CLUSTERQUEUE}" = "opt"
-    then
-        CLUSTERQUEUE="M640"
-    fi
 else
     EXCLUSIVE=""
 fi
@@ -399,8 +398,7 @@ do
             # we add 10% to the hard memory limit and additional 100MB to the memory limit
             HARDMEMLIMIT=$(((MEMLIMIT + 100) + (MEMLIMIT / 10)))
 
-        # hard timelimit could be set via --time=0:${HARDTIMELIMIT}
-        sbatchret=$(sbatch --job-name="${SHORTFILENAME}" --mem="${HARDMEMLIMIT}" -p "${CLUSTERQUEUE}" -A "${ACCOUNT}" ${EXCLUSIVE} ${NICE} --output=/dev/null rungamscluster.sh)
+        sbatchret=$(sbatch --job-name="${SHORTFILENAME}" --mem="${HARDMEMLIMIT}" --time="0:${HARDTIMELIMIT}" -p "${CLUSTERQUEUE}" --constraint="${CONSTRAINT}" -A "${ACCOUNT}" ${EXCLUSIVE} ${NICE} --output=/dev/null rungamscluster.sh)
         echo "${sbatchret}"
         FINISHDEPEND="${FINISHDEPEND}":$(echo "${sbatchret}" | cut -d " " -f 4)
         ;;

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2026 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -62,12 +62,6 @@ SCIP_RETCODE SCIPincludeNlhdlrBilinear(
 /** returns an array of expressions that have been detected by the bilinear nonlinear handler */
 SCIP_EXPORT
 SCIP_EXPR** SCIPgetExprsBilinear(
-   SCIP_NLHDLR*          nlhdlr              /**< nonlinear handler */
-   );
-
-/** returns an array of nonlinear handler expressions data of expressions that have been detected by the bilinear nonlinear handler */
-SCIP_EXPORT
-SCIP_NLHDLREXPRDATA** SCIPgetExprsdataBilinear(
    SCIP_NLHDLR*          nlhdlr              /**< nonlinear handler */
    );
 
@@ -163,12 +157,12 @@ void SCIPcomputeBilinEnvelope2(
    SCIP_Real             uby,                /**< upper bound on second variable */
    SCIP_Real             refpointy,          /**< reference point for second variable */
    SCIP_Bool             overestimate,       /**< whether to compute an overestimator instead of an underestimator */
-   SCIP_Real             alpha1,             /**< x coefficient of linear inequality; must be in {-1,0,1} */
-   SCIP_Real             beta1,              /**< y coefficient of linear inequality */
-   SCIP_Real             gamma1,             /**< constant of linear inequality */
-   SCIP_Real             alpha2,             /**< x coefficient of linear inequality; must be in {-1,0,1} */
-   SCIP_Real             beta2,              /**< y coefficient of linear inequality */
-   SCIP_Real             gamma2,             /**< constant of linear inequality */
+   SCIP_Real             xcoef1,             /**< x coefficient of linear inequality; must be in {-1,0,1} */
+   SCIP_Real             ycoef1,             /**< y coefficient of linear inequality */
+   SCIP_Real             constant1,          /**< constant of linear inequality */
+   SCIP_Real             xcoef2,             /**< x coefficient of linear inequality; must be in {-1,0,1} */
+   SCIP_Real             ycoef2,             /**< y coefficient of linear inequality */
+   SCIP_Real             constant2,          /**< constant of linear inequality */
    SCIP_Real* RESTRICT   lincoefx,           /**< buffer to store coefficient of first  variable in linearization */
    SCIP_Real* RESTRICT   lincoefy,           /**< buffer to store coefficient of second variable in linearization */
    SCIP_Real* RESTRICT   linconstant,        /**< buffer to store constant of linearization */

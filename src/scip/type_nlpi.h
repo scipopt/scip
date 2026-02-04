@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2026 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -180,16 +180,6 @@ enum SCIP_NlpTermStat
    SCIP_NLPTERMSTAT_OUTOFMEMORY   = 7,    /**< memory exceeded */
    SCIP_NLPTERMSTAT_LICENSEERROR  = 8,    /**< problems with license of NLP solver */
    SCIP_NLPTERMSTAT_OTHER         = 9     /**< other error (= this should never happen) */
-#if defined(GCC_VERSION) && GCC_VERSION >= 600 && !defined(__INTEL_COMPILER) /* _attribute__ ((deprecated)) within enums not allowed for older GCCs; ICC ignores attributes */
-   ,/* for some backward compatibility */
-   SCIP_NLPTERMSTAT_TILIM   SCIP_DEPRECATED = SCIP_NLPTERMSTAT_TIMELIMIT,
-   SCIP_NLPTERMSTAT_ITLIM   SCIP_DEPRECATED = SCIP_NLPTERMSTAT_ITERLIMIT,
-   SCIP_NLPTERMSTAT_LOBJLIM SCIP_DEPRECATED = SCIP_NLPTERMSTAT_LOBJLIMIT,
-   SCIP_NLPTERMSTAT_NUMERR  SCIP_DEPRECATED = SCIP_NLPTERMSTAT_NUMERICERROR,
-   SCIP_NLPTERMSTAT_EVALERR SCIP_DEPRECATED = SCIP_NLPTERMSTAT_EVALERROR,
-   SCIP_NLPTERMSTAT_MEMERR  SCIP_DEPRECATED = SCIP_NLPTERMSTAT_OUTOFMEMORY,
-   SCIP_NLPTERMSTAT_LICERR  SCIP_DEPRECATED = SCIP_NLPTERMSTAT_LICENSEERROR
-#endif
 };
 typedef enum SCIP_NlpTermStat SCIP_NLPTERMSTAT;  /**< NLP solver termination status */
 
@@ -377,8 +367,8 @@ typedef struct SCIP_NlpStatistics SCIP_NLPSTATISTICS; /**< NLP solve statistics 
  * \param[in] problem datastructure for problem instance
  * \param[in] nconss  number of constraints to change sides
  * \param[in] indices indices of constraints to change sides
- * \param[in] lhss    new left hand sides
- * \param[in] rhss    new right hand sides
+ * \param[in] lhss    new left hand sides (NULL means minus infinity)
+ * \param[in] rhss    new right hand sides (NULL means infinity)
  */
 #define SCIP_DECL_NLPICHGCONSSIDES(x) SCIP_RETCODE x (\
    SCIP*             scip,    \

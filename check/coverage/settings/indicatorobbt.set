@@ -3,4 +3,3 @@
 # apply obbt on variables of indicator constraints? (independent of convexity)
 # [type: bool, advanced: TRUE, range: {TRUE,FALSE}, default: FALSE]
 propagating/obbt/indicators = TRUE
-

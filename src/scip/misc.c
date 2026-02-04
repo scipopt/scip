@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2026 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -54,6 +54,7 @@
 #include "scip/misc.h"
 #include "scip/intervalarith.h"
 #include "scip/pub_misc.h"
+#include "scip/rational.h"
 
 #ifndef NDEBUG
 #include "scip/struct_misc.h"
@@ -160,7 +161,7 @@ SCIP_Real SCIPerf(
    SCIP_Real             x                   /**< value to evaluate */
    )
 {
-#if defined(_WIN32) || defined(_WIN64)
+#ifdef _WIN32
    SCIP_Real a1, a2, a3, a4, a5, p, t, y;
    int sign;
 
@@ -766,18 +767,16 @@ void SCIPdotWriteClosing(
 SCIP_RETCODE SCIPsparseSolCreate(
    SCIP_SPARSESOL**      sparsesol,          /**< pointer to store the created sparse solution */
    SCIP_VAR**            vars,               /**< variables in the sparse solution, must not contain continuous
-					      *   variables
-					      */
+                                              *   variables
+                                              */
    int                   nvars,              /**< number of variables to store, size of the lower and upper bound
-					      *   arrays
-					      */
-   SCIP_Bool             cleared             /**< should the lower and upper bound arrays be cleared (entries set to
-					      *	  0)
-					      */
+                                              *   arrays
+                                              */
+   SCIP_Bool             cleared             /**< should the lower and upper bound arrays be cleared (entries set to 0) */
    )
 {
    assert(sparsesol != NULL);
-   assert(vars != NULL);
+   assert(nvars == 0 || vars != NULL);
    assert(nvars >= 0);
 
    SCIP_ALLOC( BMSallocMemory(sparsesol) );
@@ -788,8 +787,8 @@ SCIP_RETCODE SCIPsparseSolCreate(
 
       for( v = nvars - 1; v >= 0; --v )
       {
-	 assert(vars[v] != NULL);
-	 /* assert(SCIPvarGetType(vars[v]) != SCIP_VARTYPE_CONTINUOUS); */
+         assert(vars[v] != NULL);
+         /* assert(SCIPvarGetType(vars[v]) != SCIP_VARTYPE_CONTINUOUS); */
       }
    }
 #endif
@@ -2391,20 +2390,6 @@ void SCIPhashtableFree(
    BMSfreeBlockMemory((*hashtable)->blkmem, hashtable);
 }
 
-/** removes all elements of the hash table
- *
- *  @note From a performance point of view you should not fill and clear a hash table too often since the clearing can
- *        be expensive. Clearing is done by looping over all buckets and removing the hash table lists one-by-one.
- *
- *  @deprecated Please use SCIPhashtableRemoveAll()
- */
-void SCIPhashtableClear(
-   SCIP_HASHTABLE*       hashtable           /**< hash table */
-   )
-{
-   SCIPhashtableRemoveAll(hashtable);
-}
-
 /* computes the distance from it's desired position for the element stored at pos */
 #define ELEM_DISTANCE(pos) (((pos) + hashtable->mask + 1 - (hashtable->hashes[(pos)]>>(hashtable->shift))) & hashtable->mask)
 
@@ -2939,7 +2924,6 @@ SCIP_RETCODE hashmapInsert(
       {
          if( override )
          {
-            hashmap->slots[pos].origin = origin;
             hashmap->slots[pos].image = image;
             hashmap->hashes[pos] = hashval;
             return SCIP_OKAY;
@@ -3228,6 +3212,42 @@ SCIP_RETCODE SCIPhashmapInsertInt(
  *
  *  @note multiple insertion of same element is checked and results in an error
  */
+SCIP_RETCODE SCIPhashmapInsertLong(
+   SCIP_HASHMAP*         hashmap,            /**< hash map */
+   void*                 origin,             /**< origin to set image for */
+   SCIP_Longint          image               /**< new image for origin */
+   )
+{
+   uint32_t hashval;
+   SCIP_HASHMAPIMAGE img;
+
+   assert(hashmap != NULL);
+   assert(hashmap->slots != NULL);
+   assert(hashmap->hashes != NULL);
+   assert(hashmap->mask > 0);
+   assert(hashmap->hashmaptype == SCIP_HASHMAPTYPE_UNKNOWN || hashmap->hashmaptype == SCIP_HASHMAPTYPE_LONG);
+
+#ifndef NDEBUG
+   if( hashmap->hashmaptype == SCIP_HASHMAPTYPE_UNKNOWN )
+      hashmap->hashmaptype = SCIP_HASHMAPTYPE_LONG;
+#endif
+
+   SCIP_CALL( hashmapCheckLoad(hashmap) );
+
+   /* get the hash value */
+   hashval = hashvalue((size_t)origin);
+
+   /* append origin->image pair to hash map */
+   img.longint = image;
+   SCIP_CALL( hashmapInsert(hashmap, origin, img, hashval, FALSE) );
+
+   return SCIP_OKAY;
+}
+
+/** inserts new origin->image pair in hash map
+ *
+ *  @note multiple insertion of same element is checked and results in an error
+ */
 SCIP_RETCODE SCIPhashmapInsertReal(
    SCIP_HASHMAP*         hashmap,            /**< hash map */
    void*                 origin,             /**< origin to set image for */
@@ -3298,6 +3318,26 @@ int SCIPhashmapGetImageInt(
       return hashmap->slots[pos].image.integer;
 
    return INT_MAX;
+}
+
+/** retrieves image of given origin from the hash map, or SCIP_LONGINT_MAX if no image exists */
+SCIP_Longint SCIPhashmapGetImageLong(
+   SCIP_HASHMAP*         hashmap,            /**< hash map */
+   void*                 origin              /**< origin to retrieve image for */
+   )
+{
+   uint32_t pos;
+
+   assert(hashmap != NULL);
+   assert(hashmap->slots != NULL);
+   assert(hashmap->hashes != NULL);
+   assert(hashmap->mask > 0);
+   assert(hashmap->hashmaptype == SCIP_HASHMAPTYPE_UNKNOWN || hashmap->hashmaptype == SCIP_HASHMAPTYPE_LONG);
+
+   if( hashmapLookup(hashmap, origin, &pos) )
+      return hashmap->slots[pos].image.longint;
+
+   return SCIP_LONGINT_MAX;
 }
 
 /** retrieves image of given origin from the hash map, or SCIP_INVALID if no image exists */
@@ -4799,8 +4839,8 @@ SCIP_RETCODE SCIPboolarrayCopy(
    SCIP_CALL( SCIPboolarrayCreate(boolarray, blkmem) );
    if( sourceboolarray->valssize > 0 )
    {
-      SCIP_ALLOC( BMSduplicateBlockMemoryArray(blkmem, &(*boolarray)->vals, sourceboolarray->vals, \
-                     sourceboolarray->valssize) );
+      SCIP_ALLOC( BMSduplicateBlockMemoryArray(blkmem, &(*boolarray)->vals, sourceboolarray->vals,
+            sourceboolarray->valssize) );
    }
    (*boolarray)->valssize = sourceboolarray->valssize;
    (*boolarray)->firstidx = sourceboolarray->firstidx;
@@ -4962,9 +5002,9 @@ SCIP_RETCODE SCIPboolarrayExtend(
          shift = newfirstidx - boolarray->firstidx;
          assert(shift > 0);
 
-	 assert(0 <= boolarray->minusedidx - boolarray->firstidx - shift);
+         assert(0 <= boolarray->minusedidx - boolarray->firstidx - shift);
          assert(boolarray->maxusedidx - boolarray->firstidx - shift < boolarray->valssize);
-	 BMSmoveMemoryArray(&(boolarray->vals[boolarray->minusedidx - boolarray->firstidx - shift]),
+         BMSmoveMemoryArray(&(boolarray->vals[boolarray->minusedidx - boolarray->firstidx - shift]),
             &(boolarray->vals[boolarray->minusedidx - boolarray->firstidx]),
             boolarray->maxusedidx - boolarray->minusedidx + 1); /*lint !e866*/
 
@@ -5789,6 +5829,14 @@ void SCIPsort(
 #include "scip/sorttpl.c" /*lint !e451*/
 
 
+/* SCIPsortRealPtrPtr(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
+#define SORTTPL_NAMEEXT     RealPtrPtr
+#define SORTTPL_KEYTYPE     SCIP_Real
+#define SORTTPL_FIELD1TYPE  void*
+#define SORTTPL_FIELD2TYPE  void*
+#include "scip/sorttpl.c" /*lint !e451*/
+
+
 /* SCIPsortRealRealPtr(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
 #define SORTTPL_NAMEEXT     RealRealPtr
 #define SORTTPL_KEYTYPE     SCIP_Real
@@ -5970,6 +6018,22 @@ void SCIPsort(
 #define SORTTPL_FIELD3TYPE  SCIP_Real
 #include "scip/sorttpl.c" /*lint !e451*/
 
+/* SCIPsortIntIntPtrPtr(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
+#define SORTTPL_NAMEEXT     IntIntPtrPtr
+#define SORTTPL_KEYTYPE     int
+#define SORTTPL_FIELD1TYPE  int
+#define SORTTPL_FIELD2TYPE  void*
+#define SORTTPL_FIELD3TYPE  void*
+#include "scip/sorttpl.c" /*lint !e451*/
+
+/* SCIPsortIntIntPtrPtrInterval(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
+#define SORTTPL_NAMEEXT     IntIntPtrPtrInterval
+#define SORTTPL_KEYTYPE     int
+#define SORTTPL_FIELD1TYPE  int
+#define SORTTPL_FIELD2TYPE  void*
+#define SORTTPL_FIELD3TYPE  void*
+#define SORTTPL_FIELD4TYPE  SCIP_INTERVAL
+#include "scip/sorttpl.c" /*lint !e451*/
 
 /* SCIPsortLong(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
 #define SORTTPL_NAMEEXT     Long
@@ -6510,6 +6574,16 @@ void SCIPsortDown(
 #define SORTTPL_FIELD1TYPE  int
 #define SORTTPL_FIELD2TYPE  int
 #define SORTTPL_FIELD3TYPE  void*
+#define SORTTPL_BACKWARDS
+#include "scip/sorttpl.c" /*lint !e451*/
+
+
+/* SCIPsortDownIntIntIntReal(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
+#define SORTTPL_NAMEEXT     DownIntIntIntReal
+#define SORTTPL_KEYTYPE     int
+#define SORTTPL_FIELD1TYPE  int
+#define SORTTPL_FIELD2TYPE  int
+#define SORTTPL_FIELD3TYPE  SCIP_Real
 #define SORTTPL_BACKWARDS
 #include "scip/sorttpl.c" /*lint !e451*/
 
@@ -8073,7 +8147,6 @@ SCIP_RETCODE SCIPdigraphGetArticulationPoints(
    /* the articulation points are now up-to-date */
    digraph->articulationscheck = TRUE;
 
-/* cppcheck-suppress unusedLabel */
 TERMINATE:
    BMSfreeMemoryArrayNull(&articulationflag);
    BMSfreeMemoryArrayNull(&parent);
@@ -9399,7 +9472,7 @@ SCIP_Bool SCIPrealToRational(
    SCIP_Real             mindelta,           /**< minimal allowed difference r - q of real r and rational q = n/d */
    SCIP_Real             maxdelta,           /**< maximal allowed difference r - q of real r and rational q = n/d */
    SCIP_Longint          maxdnom,            /**< maximal denominator allowed */
-   SCIP_Longint*         nominator,          /**< pointer to store the nominator n of the rational number */
+   SCIP_Longint*         numerator,          /**< pointer to store the numerator n of the rational number */
    SCIP_Longint*         denominator         /**< pointer to store the denominator d of the rational number */
    )
 {
@@ -9416,9 +9489,9 @@ SCIP_Bool SCIPrealToRational(
    SCIP_Real epsilon;
    int i;
 
-   assert(mindelta < 0.0);
-   assert(maxdelta > 0.0);
-   assert(nominator != NULL);
+   assert(mindelta <= 0.0);
+   assert(maxdelta >= 0.0);
+   assert(numerator != NULL);
    assert(denominator != NULL);
 
    if( REALABS(val) >= ((SCIP_Real)SCIP_LONGINT_MAX) / maxdnom )
@@ -9445,13 +9518,13 @@ SCIP_Bool SCIPrealToRational(
          {
             if( val - ratval0 <= maxdelta )
             {
-               *nominator = (SCIP_Longint)nom;
+               *numerator = (SCIP_Longint)nom;
                *denominator = (SCIP_Longint)dnom;
                return TRUE;
             }
             if( mindelta <= val - ratval1 )
             {
-               *nominator = (SCIP_Longint)(nom+1.0);
+               *numerator = (SCIP_Longint)(nom+1.0);
                *denominator = (SCIP_Longint)dnom;
                return TRUE;
             }
@@ -9506,25 +9579,33 @@ SCIP_Bool SCIPrealToRational(
    if( delta0 < mindelta )
    {
       assert(mindelta <= delta1 && delta1 <= maxdelta);
-      *nominator = (SCIP_Longint)(g0 - 1.0);
+      *numerator = (SCIP_Longint)(g0 - 1.0);
       *denominator = (SCIP_Longint)h0;
    }
    else if( delta0 > maxdelta )
    {
       assert(mindelta <= delta1 && delta1 <= maxdelta);
-      *nominator = (SCIP_Longint)(g0 + 1.0);
+      *numerator = (SCIP_Longint)(g0 + 1.0);
       *denominator = (SCIP_Longint)h0;
    }
    else
    {
-      *nominator = (SCIP_Longint)g0;
+      *numerator = (SCIP_Longint)g0;
       *denominator = (SCIP_Longint)h0;
    }
    assert(*denominator >= 1);
-   assert(val - (SCIP_Real)(*nominator)/(SCIP_Real)(*denominator) >= mindelta);
-   assert(val - (SCIP_Real)(*nominator)/(SCIP_Real)(*denominator) <= maxdelta);
+   assert(val - (SCIP_Real)(*numerator)/(SCIP_Real)(*denominator) >= mindelta);
+   assert(val - (SCIP_Real)(*numerator)/(SCIP_Real)(*denominator) <= maxdelta);
 
    return TRUE;
+}
+
+/** checks, if value is integral without any tolerances */
+SCIP_Bool SCIPrealIsExactlyIntegral(
+   SCIP_Real             val                 /**< value to process */
+   )
+{
+   return floor(val) == val; /*lint !e777*/
 }
 
 /** checks, whether the given scalar scales the given value to an integral number with error in the given bounds */
@@ -9571,7 +9652,7 @@ SCIP_RETCODE SCIPcalcIntegralScalar(
    SCIP_Real bestscalar;
    SCIP_Longint gcd;
    SCIP_Longint scm;
-   SCIP_Longint nominator;
+   SCIP_Longint numerator;
    SCIP_Longint denominator;
    SCIP_Real val;
    SCIP_Real minval;
@@ -9628,61 +9709,61 @@ SCIP_RETCODE SCIPcalcIntegralScalar(
 
       /* try, if values can be made integral multiplying them with the reciprocal of the smallest value and a power of 2 */
       if( i == 0 )
-	 scaleval = 1.0/minval;
+         scaleval = 1.0/minval;
       /* try, if values can be made integral by multiplying them by a power of 2 */
       else
-	 scaleval = 1.0;
+         scaleval = 1.0;
 
       for( c = 0; c < nvals && scalable; ++c )
       {
-	 /* check, if the value can be scaled with a simple scalar */
-	 val = vals[c];
-	 if( val == 0.0 ) /* zeros are allowed in the vals array */
-	    continue;
+         /* check, if the value can be scaled with a simple scalar */
+         val = vals[c];
+         if( val == 0.0 ) /* zeros are allowed in the vals array */
+            continue;
 
-	 absval = REALABS(val);
-	 while( scaleval <= maxscale
-	    && (absval * scaleval < 0.5 || !isIntegralScalar(val, scaleval, mindelta, maxdelta)) )
-	 {
-	    for( s = 0; s < nscalars; ++s )
-	    {
-	       if( isIntegralScalar(val, scaleval * scalars[s], mindelta, maxdelta) )
-	       {
-		  scaleval *= scalars[s];
-		  break;
-	       }
-	    }
-	    if( s >= nscalars )
-	       scaleval *= 2.0;
-	 }
-	 scalable = (scaleval <= maxscale);
-	 SCIPdebugMessage(" -> val=%g, scaleval=%g, val*scaleval=%g, scalable=%u\n",
-	    val, scaleval, val*scaleval, scalable);
+         absval = REALABS(val);
+         while( scaleval <= maxscale
+            && (absval * scaleval < 0.5 || !isIntegralScalar(val, scaleval, mindelta, maxdelta)) )
+         {
+            for( s = 0; s < nscalars; ++s )
+            {
+               if( isIntegralScalar(val, scaleval * scalars[s], mindelta, maxdelta) )
+               {
+                  scaleval *= scalars[s];
+                  break;
+               }
+            }
+            if( s >= nscalars )
+               scaleval *= 2.0;
+         }
+         scalable = (scaleval <= maxscale);
+         SCIPdebugMessage(" -> val=%g, scaleval=%g, val*scaleval=%g, scalable=%u\n",
+            val, scaleval, val*scaleval, scalable);
       }
       if( scalable )
       {
-	 /* make values integral by dividing them by the smallest value (and multiplying them with a power of 2) */
-	 assert(scaleval <= maxscale);
+         /* make values integral by dividing them by the smallest value (and multiplying them with a power of 2) */
+         assert(scaleval <= maxscale);
 
-	 /* check if we found a better scaling value */
-	 if( scaleval < bestscalar )
-	    bestscalar = scaleval;
+         /* check if we found a better scaling value */
+         if( scaleval < bestscalar )
+            bestscalar = scaleval;
 
-	 SCIPdebugMessage(" -> integrality could be achieved by scaling with %g\n", scaleval);
+         SCIPdebugMessage(" -> integrality could be achieved by scaling with %g\n", scaleval);
 
-	 /* if the scalar is still the reciprocal of the minimal value, all coeffcients are the same and we do not get a better scalar */
-	 if( i == 0 && EPSEQ(scaleval, 1.0/minval, SCIP_DEFAULT_EPSILON) )
-	 {
-	    if( intscalar != NULL )
-	       *intscalar = bestscalar;
-	    *success = TRUE;
+         /* if the scalar is still the reciprocal of the minimal value, all coeffcients are the same and we do not get a better scalar */
+         if( i == 0 && EPSEQ(scaleval, 1.0/minval, SCIP_DEFAULT_EPSILON) )
+         {
+            if( intscalar != NULL )
+               *intscalar = bestscalar;
+            *success = TRUE;
 
-	    return SCIP_OKAY;
-	 }
+            return SCIP_OKAY;
+         }
       }
    }
 
-   /* convert each value into a rational number, calculate the greatest common divisor of the nominators
+   /* convert each value into a rational number, calculate the greatest common divisor of the numerators
     * and the smallest common multiple of the denominators
     */
    gcd = 1;
@@ -9696,15 +9777,15 @@ SCIP_RETCODE SCIPcalcIntegralScalar(
       if( val == 0.0 ) /* zeros are allowed in the vals array */
          continue;
 
-      rational = SCIPrealToRational(val, mindelta, maxdelta, maxdnom, &nominator, &denominator);
-      if( rational && nominator != 0 )
+      rational = SCIPrealToRational(val, mindelta, maxdelta, maxdnom, &numerator, &denominator);
+      if( rational && numerator != 0 )
       {
          assert(denominator > 0);
-         gcd = ABS(nominator);
+         gcd = ABS(numerator);
          scm = denominator;
          rational = ((SCIP_Real)scm/(SCIP_Real)gcd <= maxscale);
          SCIPdebugMessage(" -> c=%d first rational: val: %g == %" SCIP_LONGINT_FORMAT "/%" SCIP_LONGINT_FORMAT ", gcd=%" SCIP_LONGINT_FORMAT ", scm=%" SCIP_LONGINT_FORMAT ", rational=%u\n",
-            c, val, nominator, denominator, gcd, scm, rational);
+            c, val, numerator, denominator, gcd, scm, rational);
          break;
       }
    }
@@ -9716,15 +9797,15 @@ SCIP_RETCODE SCIPcalcIntegralScalar(
       if( val == 0.0 ) /* zeros are allowed in the vals array */
          continue;
 
-      rational = SCIPrealToRational(val, mindelta, maxdelta, maxdnom, &nominator, &denominator);
-      if( rational && nominator != 0 )
+      rational = SCIPrealToRational(val, mindelta, maxdelta, maxdnom, &numerator, &denominator);
+      if( rational && numerator != 0 )
       {
          assert(denominator > 0);
-         gcd = SCIPcalcGreComDiv(gcd, ABS(nominator));
+         gcd = SCIPcalcGreComDiv(gcd, ABS(numerator));
          scm *= denominator / SCIPcalcGreComDiv(scm, denominator);
          rational = ((SCIP_Real)scm/(SCIP_Real)gcd <= maxscale);
          SCIPdebugMessage(" -> c=%d next rational : val: %g == %" SCIP_LONGINT_FORMAT "/%" SCIP_LONGINT_FORMAT ", gcd=%" SCIP_LONGINT_FORMAT ", scm=%" SCIP_LONGINT_FORMAT ", rational=%u\n",
-            c, val, nominator, denominator, gcd, scm, rational);
+            c, val, numerator, denominator, gcd, scm, rational);
       }
       else
       {
@@ -9739,7 +9820,7 @@ SCIP_RETCODE SCIPcalcIntegralScalar(
 
       /* check if we found a better scaling value */
       if( (SCIP_Real)scm/(SCIP_Real)gcd < bestscalar )
-	 bestscalar = (SCIP_Real)scm/(SCIP_Real)gcd;
+         bestscalar = (SCIP_Real)scm/(SCIP_Real)gcd;
 
       SCIPdebugMessage(" -> integrality could be achieved by scaling with %g (rational:%" SCIP_LONGINT_FORMAT "/%" SCIP_LONGINT_FORMAT ")\n",
          (SCIP_Real)scm/(SCIP_Real)gcd, scm, gcd);
@@ -9753,6 +9834,139 @@ SCIP_RETCODE SCIPcalcIntegralScalar(
 
       SCIPdebugMessage(" -> smallest value to achieve integrality is %g \n", bestscalar);
    }
+
+   return SCIP_OKAY;
+}
+
+/** tries to find a value, such that all given values, if scaled with this value become integral */
+SCIP_RETCODE SCIPcalcIntegralScalarExact(
+   BMS_BUFMEM*           buffer,
+   SCIP_RATIONAL**       vals,               /**< values to scale */
+   int                   nvals,              /**< number of values to scale */
+   SCIP_Real             maxscale,           /**< maximal allowed scalar */
+   SCIP_RATIONAL*        intscalar,          /**< pointer to store scalar that would make the coefficients integral */
+   SCIP_Bool*            success             /**< stores whether returned value is valid */
+   )
+{
+   SCIP_Longint gcd;
+   SCIP_Longint scm;
+   SCIP_Longint numerator;
+   SCIP_Longint denominator;
+   SCIP_Longint updatemultiplier;
+   SCIP_RATIONAL* ratupdate;
+   SCIP_RATIONAL* ratscm;
+   SCIP_Bool scalable;
+   int c;
+
+   assert(vals != NULL);
+   assert(nvals >= 0);
+   assert(success != NULL);
+
+   SCIPdebugMessage("trying to find rational representation for given rational values\n");
+
+   *success = FALSE;
+
+   /** @todo test whether it is faster to compute scm and gcd via mpz_scm() and mpz_gcd() in
+    *        SCIPcalcIntegralScalarExact(); even if we stay with the SCIP_Longint conversion, we could use the other way
+    *        to check the correctness of our result
+    */
+   /* calculate the greatest common divisor of the numerators and the smallest common multiple of the denominators */
+   gcd = 1;
+   scm = 1;
+   scalable = TRUE;
+
+   SCIP_CALL( SCIPrationalCreateBuffer(buffer, &ratupdate) );
+   SCIP_CALL( SCIPrationalCreateBuffer(buffer, &ratscm) );
+
+   /* first value (to initialize gcd) */
+   for( c = 0; c < nvals && scalable; ++c )
+   {
+      if( SCIPrationalIsZero(vals[c]) ) /* zeros are allowed in the vals array */
+         continue;
+
+      /* get numerator and check whether it fits into SCIP_Longint */
+      numerator = SCIPrationalNumerator(vals[c]);
+      if( numerator == SCIP_LONGINT_MAX )
+      {
+         scalable = FALSE;
+         break;
+      }
+
+      /* get numerator and check whether it fits into SCIP_Longint */
+      denominator = SCIPrationalDenominator(vals[c]);
+      if( denominator == SCIP_LONGINT_MAX )
+      {
+         scalable = FALSE;
+         break;
+      }
+
+      assert(denominator > 0);
+      gcd = ABS(numerator);
+      scm = denominator;
+
+      scalable = ((SCIP_Real)scm/(SCIP_Real)gcd <= maxscale); /*lint !e838*/
+
+      break;
+   }
+
+   /* remaining values */
+   for( ++c; c < nvals && scalable; ++c )
+   {
+      if( SCIPrationalIsZero(vals[c]) ) /* zeros are allowed in the vals array */
+         continue;
+
+      /* get numerator and check whether it fits into SCIP_Longint */
+      numerator = SCIPrationalNumerator(vals[c]);
+      if( numerator == SCIP_LONGINT_MAX )
+      {
+         scalable = FALSE;
+         break;
+      }
+
+      /* get denom and check whether it fits into SCIP_Longint */
+      denominator = SCIPrationalDenominator(vals[c]);
+      if( denominator == SCIP_LONGINT_MAX )
+      {
+         scalable = FALSE;
+         break;
+      }
+
+      assert(denominator > 0);
+
+      gcd = SCIPcalcGreComDiv(gcd, ABS(numerator));
+
+      /* update scm via newscm = scm * denominator / gcd(scm, denominator) and check whether it fits into SCIP_Longint */
+      updatemultiplier = denominator / SCIPcalcGreComDiv(scm, denominator);
+      SCIPrationalSetFraction(ratupdate, updatemultiplier, 1LL);
+      SCIPrationalSetFraction(ratscm, scm, 1LL);
+      SCIPrationalMult(ratscm, ratscm, ratupdate);
+      SCIPrationalCanonicalize(ratscm);
+
+      scm = SCIPrationalNumerator(ratscm);
+
+      if( scm == SCIP_LONGINT_MAX )
+      {
+         scalable = FALSE;
+         break;
+      }
+
+      scalable = ((SCIP_Real)scm/(SCIP_Real)gcd <= maxscale); /*lint !e838*/
+   }
+
+   if( scalable )
+   {
+      /* make values integral by multiplying them with the smallest common multiple of the denominators */
+      assert((SCIP_Real)scm/(SCIP_Real)gcd <= maxscale);
+
+      SCIPrationalSetFraction(intscalar, scm, gcd);
+      SCIPrationalCanonicalize(intscalar);
+
+      *success = TRUE;
+
+   }
+
+   SCIPrationalFreeBuffer(buffer, &ratscm);
+   SCIPrationalFreeBuffer(buffer, &ratupdate);
 
    return SCIP_OKAY;
 }
@@ -9781,7 +9995,7 @@ SCIP_Bool SCIPfindSimpleRational(
    SCIP_Real             lb,                 /**< lower bound of the interval */
    SCIP_Real             ub,                 /**< upper bound of the interval */
    SCIP_Longint          maxdnom,            /**< maximal denominator allowed for resulting rational number */
-   SCIP_Longint*         nominator,          /**< pointer to store the nominator n of the rational number */
+   SCIP_Longint*         numerator,          /**< pointer to store the numerator n of the rational number */
    SCIP_Longint*         denominator         /**< pointer to store the denominator d of the rational number */
    )
 {
@@ -9811,7 +10025,7 @@ SCIP_Bool SCIPfindSimpleRational(
       delta = 0.5*(ub-lb);
    }
 
-   return SCIPrealToRational(center, -delta, +delta, maxdnom, nominator, denominator);
+   return SCIPrealToRational(center, -delta, +delta, maxdnom, numerator, denominator);
 }
 
 #if defined(__INTEL_COMPILER) || defined(_MSC_VER)
@@ -9835,17 +10049,17 @@ SCIP_Real SCIPselectSimpleValue(
    val = 0.5*(lb+ub);
    if( lb < ub )
    {
-      SCIP_Longint nominator;
+      SCIP_Longint numerator;
       SCIP_Longint denominator;
       SCIP_Bool success;
 
       /* try to find a "simple" rational number inside the interval */
       SCIPdebugMessage("simple rational in [%.9f,%.9f]:", lb, ub);
-      success = SCIPfindSimpleRational(lb, ub, maxdnom, &nominator, &denominator);
+      success = SCIPfindSimpleRational(lb, ub, maxdnom, &numerator, &denominator);
       if( success )
       {
-         val = (SCIP_Real)nominator/(SCIP_Real)denominator;
-         SCIPdebugPrintf(" %" SCIP_LONGINT_FORMAT "/%" SCIP_LONGINT_FORMAT " == %.9f\n", nominator, denominator, val);
+         val = (SCIP_Real)numerator/(SCIP_Real)denominator;
+         SCIPdebugPrintf(" %" SCIP_LONGINT_FORMAT "/%" SCIP_LONGINT_FORMAT " == %.9f\n", numerator, denominator, val);
 
          if( val - lb < 0.0 || val - ub > 0.0 )
          {
@@ -9912,106 +10126,6 @@ SCIP_Real SCIPcalcRootNewton(
 /*
  * Random Numbers
  */
-
-#if defined(NO_RAND_R) || defined(_WIN32) || defined(_WIN64)
-
-#define SCIP_RAND_MAX 32767
-/** returns a random number between 0 and SCIP_RAND_MAX */
-static
-int getRand(
-   unsigned int*         seedp               /**< pointer to seed value */
-   )
-{
-   SCIP_Longint nextseed;
-
-   assert(seedp != NULL);
-
-   nextseed = (*seedp) * (SCIP_Longint)1103515245 + 12345;
-   *seedp = (unsigned int)nextseed;
-
-   return (int)((unsigned int)(nextseed/(2*(SCIP_RAND_MAX+1))) % (SCIP_RAND_MAX+1));
-}
-
-#else
-
-#define SCIP_RAND_MAX RAND_MAX
-
-/** returns a random number between 0 and SCIP_RAND_MAX */
-static
-int getRand(
-   unsigned int*         seedp               /**< pointer to seed value */
-   )
-{
-   return rand_r(seedp);
-}
-
-#endif
-
-/** returns a random integer between minrandval and maxrandval */
-static
-int getRandomInt(
-   int                   minrandval,         /**< minimal value to return */
-   int                   maxrandval,         /**< maximal value to return */
-   unsigned int*         seedp               /**< pointer to seed value */
-   )
-{
-   SCIP_Real randnumber;
-
-   randnumber = (SCIP_Real)getRand(seedp)/(SCIP_RAND_MAX+1.0);
-   assert(randnumber >= 0.0);
-   assert(randnumber < 1.0);
-
-   /* we multiply minrandval and maxrandval separately by randnumber in order to avoid overflow if they are more than INT_MAX
-    * apart
-    */
-   return (int) (minrandval*(1.0 - randnumber) + maxrandval*randnumber + randnumber);
-}
-
-/** returns a random real between minrandval and maxrandval */
-static
-SCIP_Real getRandomReal(
-   SCIP_Real             minrandval,         /**< minimal value to return */
-   SCIP_Real             maxrandval,         /**< maximal value to return */
-   unsigned int*         seedp               /**< pointer to seed value */
-   )
-{
-   SCIP_Real randnumber;
-
-   randnumber = (SCIP_Real)getRand(seedp)/(SCIP_Real)SCIP_RAND_MAX;
-   assert(randnumber >= 0.0);
-   assert(randnumber <= 1.0);
-
-   /* we multiply minrandval and maxrandval separately by randnumber in order to avoid overflow if they are more than
-    * SCIP_REAL_MAX apart
-    */
-   return minrandval*(1.0 - randnumber) + maxrandval*randnumber;
-}
-
-/** returns a random integer between minrandval and maxrandval
- *
- *  @deprecated Please use SCIPrandomGetInt() to request a random integer.
- */
-int SCIPgetRandomInt(
-   int                   minrandval,         /**< minimal value to return */
-   int                   maxrandval,         /**< maximal value to return */
-   unsigned int*         seedp               /**< pointer to seed value */
-   )
-{
-   return getRandomInt(minrandval, maxrandval, seedp);
-}
-
-/** returns a random real between minrandval and maxrandval
- *
- *  @deprecated Please use SCIPrandomGetReal() to request a random real.
- */
-SCIP_Real SCIPgetRandomReal(
-   SCIP_Real             minrandval,         /**< minimal value to return */
-   SCIP_Real             maxrandval,         /**< maximal value to return */
-   unsigned int*         seedp               /**< pointer to seed value */
-   )
-{
-   return getRandomReal(minrandval, maxrandval, seedp);
-}
 
 
 /* initial seeds for KISS random number generator */
@@ -10406,155 +10520,11 @@ void SCIPswapPointers(
    *pointer2 = tmp;
 }
 
-/** randomly shuffles parts of an integer array using the Fisher-Yates algorithm
- *
- *  @deprecated Please use SCIPrandomPermuteIntArray()
- */
-void SCIPpermuteIntArray(
-   int*                  array,              /**< array to be shuffled */
-   int                   begin,              /**< first included index that should be subject to shuffling
-                                              *   (0 for first array entry)
-                                              */
-   int                   end,                /**< first excluded index that should not be subject to shuffling
-                                              *   (array size for last array entry)
-                                              */
-   unsigned int*         randseed            /**< seed value for the random generator */
-   )
-{
-   int tmp;
-   int i;
-
-   /* loop backwards through all elements and always swap the current last element to a random position */
-   while( end > begin+1 )
-   {
-      --end;
-
-      /* get a random position into which the last entry should be shuffled */
-      i = getRandomInt(begin, end, randseed);
-
-      /* swap the last element and the random element */
-      tmp = array[i];
-      array[i] = array[end];
-      array[end] = tmp;
-   }
-}
-
-
-/** randomly shuffles parts of an array using the Fisher-Yates algorithm
- *
- *  @deprecated Please use SCIPrandomPermuteArray()
- */
-void SCIPpermuteArray(
-   void**                array,              /**< array to be shuffled */
-   int                   begin,              /**< first included index that should be subject to shuffling
-                                              *   (0 for first array entry)
-                                              */
-   int                   end,                /**< first excluded index that should not be subject to shuffling
-                                              *   (array size for last array entry)
-                                              */
-   unsigned int*         randseed            /**< seed value for the random generator */
-   )
-{
-   void* tmp;
-   int i;
-
-   /* loop backwards through all elements and always swap the current last element to a random position */
-   while( end > begin+1 )
-   {
-      end--;
-
-      /* get a random position into which the last entry should be shuffled */
-      i = getRandomInt(begin, end, randseed);
-
-      /* swap the last element and the random element */
-      tmp = array[i];
-      array[i] = array[end];
-      array[end] = tmp;
-   }
-}
-
-/** draws a random subset of disjoint elements from a given set of disjoint elements;
- *  this implementation is suited for the case that nsubelems is considerably smaller then nelems
- *
- *  @deprecated Please use SCIPrandomGetSubset()
- */
-SCIP_RETCODE SCIPgetRandomSubset(
-   void**                set,                /**< original set, from which elements should be drawn */
-   int                   nelems,             /**< number of elements in original set */
-   void**                subset,             /**< subset in which drawn elements should be stored */
-   int                   nsubelems,          /**< number of elements that should be drawn and stored */
-   unsigned int          randseed            /**< seed value for random generator */
-   )
-{
-   int i;
-   int j;
-
-   /* if both sets are of equal size, we just copy the array */
-   if( nelems == nsubelems)
-   {
-      BMScopyMemoryArray(subset,set,nelems);
-      return SCIP_OKAY;
-   }
-
-   /* abort, if size of subset is too big */
-   if( nsubelems > nelems )
-   {
-      SCIPerrorMessage("Cannot create %d-elementary subset of %d-elementary set.\n", nsubelems, nelems);
-      return SCIP_INVALIDDATA;
-   }
-#ifndef NDEBUG
-   for( i = 0; i < nsubelems; i++ )
-      for( j = 0; j < i; j++ )
-         assert(set[i] != set[j]);
-#endif
-
-   /* draw each element individually */
-   i = 0;
-   while( i < nsubelems )
-   {
-      int r;
-
-      r = getRandomInt(0, nelems-1, &randseed);
-      subset[i] = set[r];
-
-      /* if we get an element that we already had, we will draw again */
-      for( j = 0; j < i; j++ )
-      {
-         if( subset[i] == subset[j] )
-         {
-            --i;
-            break;
-         }
-      }
-      ++i;
-   }
-   return SCIP_OKAY;
-}
-
 
 /*
  * Arrays
  */
 
-/** computes set intersection (duplicates removed) of two integer arrays that are ordered ascendingly
- *
- * @deprecated Switch to SCIPcomputeArraysIntersectionInt().
- */
-SCIP_RETCODE SCIPcomputeArraysIntersection(
-   int*                  array1,             /**< first array (in ascending order) */
-   int                   narray1,            /**< number of entries of first array */
-   int*                  array2,             /**< second array (in ascending order) */
-   int                   narray2,            /**< number of entries of second array */
-   int*                  intersectarray,     /**< intersection of array1 and array2
-                                              *   (note: it is possible to use array1 for this input argument) */
-   int*                  nintersectarray     /**< pointer to store number of entries of intersection array
-                                              *   (note: it is possible to use narray1 for this input argument) */
-   )
-{
-   SCIPcomputeArraysIntersectionInt(array1, narray1, array2, narray2, intersectarray, nintersectarray);
-
-   return SCIP_OKAY;
-}
 
 /** computes set intersection (duplicates removed) of two integer arrays that are ordered ascendingly */
 void SCIPcomputeArraysIntersectionInt(
@@ -10665,27 +10635,6 @@ void SCIPcomputeArraysIntersectionPtr(
    *nintersectarray = cnt;
 }
 
-
-/** computes set difference (duplicates removed) of two integer arrays that are ordered ascendingly
- *
- * @deprecated Switch to SCIPcomputeArraysSetminusInt().
- */
-SCIP_RETCODE SCIPcomputeArraysSetminus(
-   int*                  array1,             /**< first array (in ascending order) */
-   int                   narray1,            /**< number of entries of first array */
-   int*                  array2,             /**< second array (in ascending order) */
-   int                   narray2,            /**< number of entries of second array */
-   int*                  setminusarray,      /**< array to store entries of array1 that are not an entry of array2
-                                              *   (note: it is possible to use array1 for this input argument) */
-   int*                  nsetminusarray      /**< pointer to store number of entries of setminus array
-                                              *   (note: it is possible to use narray1 for this input argument) */
-   )
-{
-   SCIPcomputeArraysSetminusInt(array1, narray1, array2, narray2, setminusarray, nsetminusarray);
-
-   return SCIP_OKAY;
-}
-
 /** computes set difference (duplicates removed) of two integer arrays that are ordered ascendingly */
 void SCIPcomputeArraysSetminusInt(
    int*                  array1,             /**< first array (in ascending order) */
@@ -10776,7 +10725,7 @@ void SCIPprintSysError(
 #else
    char buf[SCIP_MAXSTRLEN];
 
-#if defined(_WIN32) || defined(_WIN64)
+#ifdef _WIN32
    /* strerror_s returns 0 on success; the string is \0 terminated. */
    if ( strerror_s(buf, SCIP_MAXSTRLEN, errno) != 0 )
       SCIPmessagePrintError("Unknown error number %d or error message too long.\n", errno);
@@ -10849,13 +10798,13 @@ void SCIPescapeString(
       if( s[i] == '\\' )
       {
          t[p] = s[i];
-         ++p;
-         ++i;
+         ++p; /*lint !e850*/
+         ++i; /*lint !e850*/
       }
       else if( s[i] == ' ' || s[i] == '\"' || s[i] == '\'' )
       {
          t[p] = '\\';
-         ++p;
+         ++p;  /*lint !e850*/
       }
       if( i <= len && p < bufsize )
          t[p] = s[i];
@@ -10868,7 +10817,7 @@ SCIP_RETCODE SCIPskipSpace(
    char**                s                   /**< pointer to string pointer */
    )
 {
-   while( isspace(**s) || ( **s == '\\' && *(*s+1) != '\0' && strchr(SCIP_SPACECONTROL, *(*s+1)) ) )
+   while( isspace((unsigned char)**s) || ( **s == '\\' && *(*s+1) != '\0' && strchr(SCIP_SPACECONTROL, *(*s+1)) ) )
       *s += **s == '\\' ? 2 : 1;
 
    return SCIP_OKAY;
@@ -11104,7 +11053,7 @@ void SCIPstrCopySection(
  * File methods
  */
 
-/** returns, whether the given file exists */
+/** returns whether the given file exists */
 SCIP_Bool SCIPfileExists(
    const char*           filename            /**< file name */
    )

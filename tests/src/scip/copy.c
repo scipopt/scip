@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2026 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -43,7 +43,8 @@ const char* const missing[] =
    "table",
    "compression",
    "solvingphases",
-   "propagating/symmetry"
+   "propagating/symmetry",
+   "relaxing/benders"
 };
 const int nmissing = sizeof(missing) / sizeof(missing[0]);
 

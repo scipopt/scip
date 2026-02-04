@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2026 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -116,7 +116,7 @@ typedef struct SCIP_SepaData SCIP_SEPADATA;       /**< locally defined separator
  *  - sepa            : the separator itself
  *  - result          : pointer to store the result of the separation call
  *  - allowlocal      : should the separator allow local cuts?
- *  - depth           : preteneded depth of current node
+ *  - depth           : pretended depth of current node
  *
  *  @note The depth argument shouldn't be use to determine whether the cut is globally valid or not.  The value of depth
  *  could be 0 even though we are not in the root node! The purpose of depth is to control the behavior of the
@@ -146,7 +146,7 @@ typedef struct SCIP_SepaData SCIP_SEPADATA;       /**< locally defined separator
  *  - sol             : primal solution that should be separated
  *  - result          : pointer to store the result of the separation call
  *  - allowlocal      : should the separator allow local cuts?
- *  - depth           : preteneded depth of current node
+ *  - depth           : pretended depth of current node
  *
  *  @note The depth argument shouldn't be use to determine whether the cut is globally valid or not.  The value of depth
  *  could be 0 even though we are not in the root node! The purpose of depth is to control the behavior of the

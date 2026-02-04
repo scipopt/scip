@@ -4,7 +4,7 @@
 #*                  This file is part of the program and library             *
 #*         SCIP --- Solving Constraint Integer Programs                      *
 #*                                                                           *
-#*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      *
+#*  Copyright (c) 2002-2026 Zuse Institute Berlin (ZIB)                      *
 #*                                                                           *
 #*  Licensed under the Apache License, Version 2.0 (the "License");          *
 #*  you may not use this file except in compliance with the License.         *
@@ -88,12 +88,16 @@ then
     else
         GAMSOPTS="${GAMSOPTS} optdir=${OPTDIR} optfile=1"
     fi
-    echo "scaled yes"           >> "${OPTDIR}/examiner2.opt"
+    echo "scaled no"            >> "${OPTDIR}/examiner2.opt"
     echo "unscaled yes"         >> "${OPTDIR}/examiner2.opt"
     echo "examinesolupoint yes" >> "${OPTDIR}/examiner2.opt"
-    echo "examinesolvpoint yes" >> "${OPTDIR}/examiner2.opt"
+    echo "examinesolvpoint no"  >> "${OPTDIR}/examiner2.opt"
     echo "examinegamspoint no"  >> "${OPTDIR}/examiner2.opt"
     echo "examineinitpoint no"  >> "${OPTDIR}/examiner2.opt"
+    echo "fcheckdcon off"       >> "${OPTDIR}/examiner2.opt"
+    echo "fcheckdcmp off"       >> "${OPTDIR}/examiner2.opt"
+    echo "fcheckdvar off"       >> "${OPTDIR}/examiner2.opt"
+    echo "fcheckpcmp off"       >> "${OPTDIR}/examiner2.opt"
     echo "trace ${EXMFILE}"     >> "${OPTDIR}/examiner2.opt"
     echo "tracestyle 1"         >> "${OPTDIR}/examiner2.opt"
 

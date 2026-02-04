@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2026 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -81,7 +81,7 @@ SCIP_RETCODE SCIPdialoghdlrGetLine(
    SCIP_Bool*            endoffile           /**< pointer to store whether the end of the input file was reached */
    );
 
-/** returns the next word in the handler's command buffer; if the buffer is empty, displays the given prompt or the 
+/** returns the next word in the handler's command buffer; if the buffer is empty, displays the given prompt or the
  *  current dialog's path and asks the user for further input; the user must not free or modify the returned string
  */
 SCIP_EXPORT
@@ -144,21 +144,21 @@ int SCIPdialogFindEntry(
 SCIP_EXPORT
 SCIP_RETCODE SCIPdialogDisplayMenu(
    SCIP_DIALOG*          dialog,             /**< dialog */
-   SCIP*                 scip                /**< SCIP data structure */   
+   SCIP*                 scip                /**< SCIP data structure */
    );
 
 /** displays the entry for the dialog in it's parent's menu */
 SCIP_EXPORT
 SCIP_RETCODE SCIPdialogDisplayMenuEntry(
    SCIP_DIALOG*          dialog,             /**< dialog */
-   SCIP*                 scip                /**< SCIP data structure */   
+   SCIP*                 scip                /**< SCIP data structure */
    );
 
 /** displays all dialog entries with names starting with the given "entryname" */
 SCIP_EXPORT
 SCIP_RETCODE SCIPdialogDisplayCompletions(
    SCIP_DIALOG*          dialog,             /**< dialog */
-   SCIP*                 scip,               /**< SCIP data structure */   
+   SCIP*                 scip,               /**< SCIP data structure */
    const char*           entryname           /**< name of the dialog entry to find */
    );
 

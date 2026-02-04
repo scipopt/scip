@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2026 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -56,8 +56,7 @@
 
 #define PROP_PRESOL_PRIORITY          (INT_MAX/4) /**< priority of the presolving method (>= 0: before, < 0: after constraint handlers); combined with presolvers */
 #define PROP_PRESOLTIMING       SCIP_PRESOLTIMING_ALWAYS /* timing of the presolving method (fast, medium, or exhaustive) */
-#define PROP_PRESOL_MAXROUNDS        -1 /**< maximal number of presolving rounds the presolver participates in (-1: no
-                                         *   limit) */
+#define PROP_PRESOL_MAXROUNDS        -1 /**< maximal number of presolving rounds the presolver participates in (-1: no limit) */
 
 /*
  * Data structures
@@ -66,13 +65,13 @@
 /** propagator data */
 struct SCIP_PropData
 {
-   SCIP_VAR**       bndvar;        /**< array of variables with a bound change */
-   SCIP_Real*       bndval;        /**< array of new bound values */
-   SCIP_BOUNDTYPE*  bndtype;       /**< array of bound types */
-   int              nbnds;         /**< number of boundchanges */
-   int              bndsize;       /**< current size of bound change array */
-   SCIP_Longint     ntightened;    /**< number of tightened bounds */
-   SCIP_Longint     ntightenedint; /**< number of tightened bounds of integer variables */
+   SCIP_VAR**            bndvar;        /**< array of variables with a bound change */
+   SCIP_Real*            bndval;        /**< array of new bound values */
+   SCIP_BOUNDTYPE*       bndtype;       /**< array of bound types */
+   int                   nbnds;         /**< number of boundchanges */
+   int                   bndsize;       /**< current size of bound change array */
+   SCIP_Longint          ntightened;    /**< number of tightened bounds */
+   SCIP_Longint          ntightenedint; /**< number of tightened bounds of integer variables */
 };
 
 
@@ -80,20 +79,21 @@ struct SCIP_PropData
  * Local methods
  */
 
-/* put your local methods here, and declare them static */
 
+/** apply the stored bound changes */
 static
 SCIP_RETCODE applyBoundChanges(
-   SCIP*                 scip,
-   SCIP_PROPDATA*        data,
-   SCIP_RESULT*          result,
-   int*                  ntightened,
-   int*                  ntightenedint
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_PROPDATA*        data,               /**< propagator data */
+   SCIP_RESULT*          result,             /**< result of propagations */
+   int*                  ntightened,         /**< pointer to store the number of tightened bounds */
+   int*                  ntightenedint       /**< pointer to store the number of tightened integer bounds */
    )
 {
-   int             i;
+   int i;
 
    assert(data != NULL);
+   assert(result != NULL);
    assert(ntightened != NULL);
    assert(ntightenedint  != NULL);
 
@@ -105,7 +105,9 @@ SCIP_RETCODE applyBoundChanges(
 
    for( i = 0; i < data->nbnds; ++i )
    {
-      SCIP_Bool infeas, tightened;
+      SCIP_Bool infeas;
+      SCIP_Bool tightened;
+
       SCIP_CALL( SCIPvarGetProbvarBound(&data->bndvar[i], &data->bndval[i], &data->bndtype[i]) );
 
       /* cannot change bounds of multi-aggregated variables so skip this bound-change */
@@ -121,16 +123,18 @@ SCIP_RETCODE applyBoundChanges(
          assert(data->bndtype[i] == SCIP_BOUNDTYPE_UPPER);
          SCIP_CALL( SCIPtightenVarUbGlobal(scip, data->bndvar[i], data->bndval[i], FALSE, &infeas, &tightened) );
       }
+
       if( tightened )
       {
          ++(*ntightened);
          if( SCIPvarIsNonimpliedIntegral(data->bndvar[i]) )
             ++(*ntightenedint);
       }
+
       if( infeas )
       {
 #ifndef NDEBUG
-         SCIPverbMessage(scip, SCIP_VERBLEVEL_FULL, NULL, "sync propagator found cutoff in thread %i\n", SCIPtpiGetThreadNum());
+         SCIPverbMessage(scip, SCIP_VERBLEVEL_FULL, NULL, "sync propagator found cutoff in thread %i.\n", SCIPtpiGetThreadNum());
 #endif
          *result = SCIP_CUTOFF;
          break;
@@ -161,7 +165,7 @@ SCIP_DECL_PROPFREE(propFreeSync)
    propdata = SCIPpropGetData(prop);
    assert(propdata != NULL);
 
-   SCIPfreeMemory(scip, &propdata);
+   SCIPfreeBlockMemory(scip, &propdata);
    SCIPpropSetData(prop, NULL);
 
    return SCIP_OKAY;
@@ -209,14 +213,16 @@ SCIP_DECL_PROPEXIT(propExitSync)
    return SCIP_OKAY;
 }
 
+/** presolving method of propagator */
 static
 SCIP_DECL_PROPPRESOL(propPresolSync)
 {  /*lint --e{715}*/
    SCIP_PROPDATA*  data;
-   int             ntightened;
-   int             ntightenedint;
+   int ntightened;
+   int ntightenedint;
 
    assert(prop != NULL);
+   assert(result != NULL);
    assert(strcmp(SCIPpropGetName(prop), PROP_NAME) == 0);
 
    data = SCIPpropGetData(prop);
@@ -228,7 +234,6 @@ SCIP_DECL_PROPPRESOL(propPresolSync)
       return SCIP_OKAY;
 
    /* remember number of tightened bounds before applying new bound tightenings */
-
    SCIP_CALL( applyBoundChanges(scip, data, result, &ntightened, &ntightenedint) );
 
    /* add number of tightened bounds to the total number of presolving boundchanges */
@@ -251,8 +256,8 @@ static
 SCIP_DECL_PROPEXEC(propExecSync)
 {  /*lint --e{715}*/
    SCIP_PROPDATA*  data;
-   int             ntightened;
-   int             ntightenedint;
+   int ntightened;
+   int ntightenedint;
 
    assert(prop != NULL);
    assert(strcmp(SCIPpropGetName(prop), PROP_NAME) == 0);
@@ -289,24 +294,14 @@ SCIP_RETCODE SCIPincludePropSync(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
-   SCIP_PROPDATA* propdata;
-   SCIP_PROP* prop;
+   SCIP_PROPDATA* propdata = NULL;
+   SCIP_PROP* prop = NULL;
 
-   /* create xyz propagator data */
-   propdata = NULL;
-   /* create propagator specific data */
-   SCIP_CALL( SCIPallocMemory(scip, &propdata) );
-
-   prop = NULL;
+   SCIP_CALL( SCIPallocBlockMemory(scip, &propdata) );
 
    /* include propagator */
-
-   /* use SCIPincludePropBasic() plus setter functions if you want to set callbacks one-by-one and your code should
-    * compile independent of new callbacks being added in future SCIP versions
-    */
    SCIP_CALL( SCIPincludePropBasic(scip, &prop, PROP_NAME, PROP_DESC, PROP_PRIORITY, PROP_FREQ, PROP_DELAY, PROP_TIMING,
          propExecSync, propdata) );
-
    assert(prop != NULL);
 
    /* set optional callbacks via setter functions */
@@ -359,7 +354,7 @@ SCIP_RETCODE SCIPpropSyncAddBndchg(
    return SCIP_OKAY;
 }
 
-/** gives the total number of tightened bounds found by the sync propagator */
+/** returns the total number of tightened bounds found by the sync propagator */
 SCIP_Longint SCIPpropSyncGetNTightenedBnds(
    SCIP_PROP*            prop                /**< sync propagator */
    )
@@ -374,7 +369,7 @@ SCIP_Longint SCIPpropSyncGetNTightenedBnds(
    return data->ntightened;
 }
 
-/** gives the total number of tightened bounds for integer variables found by the sync propagator */
+/** returns the total number of tightened bounds for integer variables found by the sync propagator */
 SCIP_Longint SCIPpropSyncGetNTightenedIntBnds(
    SCIP_PROP*            prop                /**< sync propagator */
    )

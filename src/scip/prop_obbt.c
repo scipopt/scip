@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2026 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -1629,11 +1629,10 @@ SCIP_DECL_SORTPTRCOMP(compBoundsBoundtype)
       return diff;
 
    diff = (bound1->boundtype == SCIP_BOUNDTYPE_LOWER ? 1 : 0) - (bound2->boundtype == SCIP_BOUNDTYPE_LOWER ? 1 : 0);
-
-   if( diff == 0 )
-      return (bound1->score == bound2->score) ? 0 : (bound1->score > bound2->score ? 1 : -1);
-   else
+   if( diff != 0 )  /* cppcheck-suppress knownConditionTrueFalse */
       return diff;
+
+   return (bound1->score == bound2->score) ? 0 : (bound1->score > bound2->score ? 1 : -1);
 }
 
 /** sort the propdata->bounds array with their distance or their boundtype key */

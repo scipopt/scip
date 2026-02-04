@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2026 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -306,7 +306,7 @@ SCIP_RETCODE createOriginalproblem(
                if( quadcosts )
                {
                   (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "customersqr(%d,%d,%d)", i, j, k);
-                  SCIP_CALL( SCIPcreateVarBasic(scip, &sqrvar, name, 0.0, SCIPinfinity(scip), coeff, SCIP_VARTYPE_CONTINUOUS) );
+                  SCIP_CALL( SCIPcreateVarBasic(scip, &sqrvar, name, 0.0, SCIPinfinity(scip), coeff, SCIP_VARTYPE_CONTINUOUS) ); /*lint !e644*/
 
                   SCIP_CALL( SCIPaddVar(scip, sqrvar) );
 

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2026 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -63,7 +63,7 @@
 
 #define DEFAULT_MINRELDEPTH         0.0 /**< minimal relative depth to start diving */
 #define DEFAULT_MAXRELDEPTH         1.0 /**< maximal relative depth to start diving */
-#define DEFAULT_MAXLPITERQUOT      0.15 /**< maximal fraction of diving LP iterations compared to node LP iterations */
+#define DEFAULT_MAXLPITERQUOT      0.05 /**< maximal fraction of diving LP iterations compared to node LP iterations */
 #define DEFAULT_MAXLPITEROFS       1000 /**< additional number of allowed LP iterations */
 #define DEFAULT_MAXDIVEUBQUOT       0.8 /**< maximal quotient (curlowerbound - lowerbound)/(cutoffbound - lowerbound)
                                          *   where diving is performed (0.0: no limit) */
@@ -507,6 +507,9 @@ SCIP_RETCODE SCIPincludeHeurConflictdiving(
          HEUR_FREQOFS, HEUR_MAXDEPTH, HEUR_TIMING, HEUR_USESSUBSCIP, heurExecConflictdiving, heurdata) );
 
    assert(heur != NULL);
+
+   /* primal heuristic is safe to use in exact solving mode */
+   SCIPheurMarkExact(heur);
 
    /* set non-NULL pointers to callback methods */
    SCIP_CALL( SCIPsetHeurCopy(scip, heur, heurCopyConflictdiving) );

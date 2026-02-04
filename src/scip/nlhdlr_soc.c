@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2026 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -1331,6 +1331,10 @@ SCIP_RETCODE detectSocNorm(
    if( SCIPgetExprNLocksPosNonlinear(expr) == 0 )
       return SCIP_OKAY;
 
+   /* expression is a leaf (variable or constant) */
+   if( SCIPexprGetNChildren(expr) == 0 )
+      return SCIP_OKAY;
+
    assert(SCIPexprGetNChildren(expr) > 0);
 
    child = SCIPexprGetChildren(expr)[0];
@@ -2148,7 +2152,7 @@ SCIP_RETCODE detectSocQuadraticComplex(
    }
 
    /* check that nvars*nvars doesn't get too large, see also SCIPcomputeExprQuadraticCurvature() */
-   if( nvars > 7000 )
+   if( nvars > 23000 )
    {
       SCIPverbMessage(scip, SCIP_VERBLEVEL_FULL, NULL, "nlhdlr_soc - number of quadratic variables is too large (%d) to check the curvature\n", nvars);
       SCIPfreeBufferArray(scip, &occurringexprs);

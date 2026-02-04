@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2026 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -217,7 +217,7 @@ SCIP_Bool SCIPbendersSubproblemIsSetup(
 /** returns the master auxiliary variable that represents an underestimation of the subproblem objective value. */
 SCIP_EXPORT
 SCIP_VAR* SCIPbenderGetMasterAuxiliaryVar(
-   SCIP_BENDERS*         benders            /**< Benders' decomposition */
+   SCIP_BENDERS*         benders             /**< Benders' decomposition */
    );
 
 /** returns the auxiliary variable for the given subproblem */
@@ -236,26 +236,26 @@ SCIP_VAR** SCIPbendersGetAuxiliaryVars(
 /** returns the subproblem master variables for the given subproblem */
 SCIP_EXPORT
 SCIP_VAR** SCIPbendersGetSubproblemMasterVars(
-   SCIP_BENDERS*         benders,             /**< Benders' decomposition */
+   SCIP_BENDERS*         benders,            /**< Benders' decomposition */
    int                   probnumber          /**< the subproblem number */
    );
 
 /** returns the number of subproblem master variables for the given subproblem */
 SCIP_EXPORT
 int SCIPbendersGetNSubproblemMasterVars(
-   SCIP_BENDERS*         benders,             /**< Benders' decomposition */
+   SCIP_BENDERS*         benders,            /**< Benders' decomposition */
    int                   probnumber          /**< the subproblem number */
    );
 
 /** returns the subproblem master variable data for the given subproblem */
 SCIP_EXPORT
 void SCIPbendersGetSubproblemMasterVarsData(
-   SCIP_BENDERS*         benders,             /**< Benders' decomposition */
-   int                   probnumber,          /**< the subproblem number */
-   SCIP_VAR***           vars,                /**< pointer to store the master variables, or NULL */
-   int*                  nvars,               /**< the number of master problem variables, or NULL */
-   int*                  nbinvars,            /**< the number of binary master problem variables, or NULL */
-   int*                  nintvars             /**< the number of integer master problem variables, or NULL */
+   SCIP_BENDERS*         benders,            /**< Benders' decomposition */
+   int                   probnumber,         /**< the subproblem number */
+   SCIP_VAR***           vars,               /**< pointer to store the master variables, or NULL */
+   int*                  nvars,              /**< the number of master problem variables, or NULL */
+   int*                  nbinvars,           /**< the number of binary master problem variables, or NULL */
+   int*                  nintvars            /**< the number of integer master problem variables, or NULL */
    );
 
 /** stores the objective function value of the subproblem for use in cut generation */

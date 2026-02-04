@@ -4,7 +4,7 @@
 #*                  This file is part of the program and library             *
 #*         SCIP --- Solving Constraint Integer Programs                      *
 #*                                                                           *
-#*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      *
+#*  Copyright (c) 2002-2026 Zuse Institute Berlin (ZIB)                      *
 #*                                                                           *
 #*  Licensed under the Apache License, Version 2.0 (the "License");          *
 #*  you may not use this file except in compliance with the License.         *
@@ -159,7 +159,7 @@ fi
 # check if the test run should be processed in a debug tool environment
 if test "${DEBUGTOOL}" = "valgrind"
 then
-    DEBUGTOOLCMD="valgrind --log-fd=1 --leak-check=full --suppressions=${SCIPPATH}/../suppressions.valgrind "
+    DEBUGTOOLCMD="valgrind --log-fd=1 --leak-check=full --num-callers=20 --suppressions=${SCIPPATH}/../suppressions.valgrind "
 elif test "${DEBUGTOOL}" = "rr"
 then
     DEBUGTOOLCMD="rr record --chaos -o RRTRACEFOLDER_PLACEHOLDER.rr "
@@ -204,9 +204,50 @@ then
     exit 1
 fi
 
-#write instance names to an array
+# function to sort a list of instances by expected solution time
+function sortinstances () {
+    # look for an all.time, if none exists only echo all instances in the same oder as they arrived
+    ALLTIME=testset/all.time
+    [ -f "$ALLTIME" ] || ALLTIME=instancedata/testsets/all.time
+    [ -f "$ALLTIME" ] || { echo $@ ; return 0; }
+
+    # read time for each instance from all.time
+    declare -A INSTANCETIME
+    while read line
+    do
+        INSTANCETIME[${line/ */}]=${line/* /}
+    done < $ALLTIME
+
+    # print for each instance the time and the instance, then sort by time in descending order, and then drop time again
+    UNAVAILTIME=31536000
+    for INSTANCE in $@
+    do
+        # if the key word DONE appears in the test file, skip the remaining test file
+        [ "${INSTANCE}" = "DONE" ] && break
+
+        # strip path and filetype extension
+        INSTANCEBASE=`basename ${INSTANCE} .gz`
+        INSTANCEBASE=${INSTANCEBASE%.*}
+
+        # print estimate on time and instances
+        # if not available, then use up to a year; decrement to ensure that relative position is kept
+        if [ -z "${INSTANCETIME[$INSTANCEBASE]}" ]
+        then
+            #echo "no time available for $INSTANCE in $ALLTIME" 1>&2
+            echo $UNAVAILTIME $INSTANCE
+            UNAVAILTIME=$(( UNAVAILTIME - 1 ))
+        else
+            echo ${INSTANCETIME[$INSTANCEBASE]} $INSTANCE
+        fi
+    done | sort -n -r | awk '{print $2}'
+}
+
+INSTANCES=$(cat "${FULLTSTNAME}" | awk '{print $1}')
+INSTANCES=$(sortinstances ${INSTANCES})
+
+# write instance names to an array
 COUNT=0
-for INSTANCE in $(cat "${FULLTSTNAME}" | awk '{print $1}')
+for INSTANCE in $INSTANCES
 do
     # if the key word DONE appears in the test file, skip the remaining test file
     if test "${INSTANCE}" = "DONE"

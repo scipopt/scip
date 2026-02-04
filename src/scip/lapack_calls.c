@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2026 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -153,7 +153,7 @@ int convertToInt(
    work.big = num;
 
    /* if we have a little-endian machine (e.g, x86), the sought value is in the bottom part */
-   if ( *(int8_t*)&checkval != 0 ) /*lint !e774*/
+   if ( *(int8_t*)&checkval != 0 ) /*lint !e774*/  /* cppcheck-suppress knownConditionTrueFalse */
    {
       /* if the top part is nonzero, we assume that the number is negative */
       if ( work.small[1] != 0 ) /*lint !e2662*/

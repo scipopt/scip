@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2026 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -63,6 +63,23 @@
 /* in optimized mode some of the function are handled via defines, for that the structs are needed */
 #ifdef NDEBUG
 #include "scip/struct_misc.h"
+#endif
+
+/* The C99 standard defines the function (or macro) isfinite.
+ * On MacOS X, isfinite is also available.
+ * From the BSD world, there comes a function finite.
+ * On SunOS, finite is also available.
+ * In the MS compiler world, there is a function _finite.
+ * As last resort, we check whether x == x does not hold, but this works only for NaN's, not for infinities!
+ */
+#if _XOPEN_SOURCE >= 600 || defined(_ISOC99_SOURCE) || _POSIX_C_SOURCE >= 200112L || defined(__APPLE__)
+#define SCIPisFinite isfinite
+#elif defined(_BSD_SOURCE) || defined(__sun)
+#define SCIPisFinite finite
+#elif defined(_MSC_VER)
+#define SCIPisFinite _finite
+#else
+#define SCIPisFinite(x) ((x) == (x))
 #endif
 
 #ifdef __cplusplus
@@ -575,8 +592,34 @@ int SCIPpqueueFind(
 INLINE static
 uint32_t SCIPrealHashCode(double x)
 {
+   uint16_t mantissa;
+   int thenum;
    int theexp;
-   return (((uint32_t)(uint16_t)(int16_t)ldexp(frexp(x, &theexp), 15))<<16) | (uint32_t)(uint16_t)theexp;
+
+   /* hashing infinite or nan values is not supported */
+   assert(SCIPisFinite(x));
+
+   /* get 16 digits of absolute mantissa */
+   mantissa = (uint16_t)ldexp(frexp(ABS(x), &theexp), 16) + 1;
+
+   /* pave sign bit with overflow */
+   if( mantissa == 0 )  /* cppcheck-suppress knownConditionTrueFalse */
+   {
+      /* divide overflow 2^16 by four */
+      mantissa = 1 << 14;
+
+      /* increment the exponent */
+      ++theexp;
+   }
+   /* pave sign bit without overflow */
+   else
+      /* divide mantissa by two */
+      mantissa >>= 1;
+
+   /* determine mantissa hash */
+   thenum = x < 0.0 ? -(int)mantissa : (int)mantissa;
+
+   return (((uint32_t)(uint16_t)theexp) << 16) | ((uint32_t)(uint16_t)thenum);
 }
 
 /** creates a hash table */
@@ -595,19 +638,6 @@ SCIP_RETCODE SCIPhashtableCreate(
 SCIP_EXPORT
 void SCIPhashtableFree(
    SCIP_HASHTABLE**      hashtable           /**< pointer to the hash table */
-   );
-
-/** removes all elements of the hash table
- *
- *  @note From a performance point of view you should not fill and clear a hash table too often since the clearing can
- *        be expensive. Clearing is done by looping over all buckets and removing the hash table lists one-by-one.
- *
- *  @deprecated Please use SCIPhashtableRemoveAll()
- */
-SCIP_EXPORT
-SCIP_DEPRECATED
-void SCIPhashtableClear(
-   SCIP_HASHTABLE*       hashtable           /**< hash table */
    );
 
 /** inserts element in hash table (multiple inserts of same element override the previous entry) */
@@ -864,6 +894,14 @@ SCIP_RETCODE SCIPhashmapInsert(
 
 /** inserts new origin->image pair in hash map (must not be called for already existing origins!) */
 SCIP_EXPORT
+SCIP_RETCODE SCIPhashmapInsertLong(
+   SCIP_HASHMAP*         hashmap,            /**< hash map */
+   void*                 origin,             /**< origin to set image for */
+   SCIP_Longint          image               /**< new image for origin */
+   );
+
+/** inserts new origin->image pair in hash map (must not be called for already existing origins!) */
+SCIP_EXPORT
 SCIP_RETCODE SCIPhashmapInsertInt(
    SCIP_HASHMAP*         hashmap,            /**< hash map */
    void*                 origin,             /**< origin to set image for */
@@ -888,6 +926,13 @@ void* SCIPhashmapGetImage(
 /** retrieves image of given origin from the hash map, or INT_MAX if no image exists */
 SCIP_EXPORT
 int SCIPhashmapGetImageInt(
+   SCIP_HASHMAP*         hashmap,            /**< hash map */
+   void*                 origin              /**< origin to retrieve image for */
+   );
+
+/** retrieves image of given origin from the hash map, or SCIP_LONGINT_MAX if no image exists */
+SCIP_EXPORT
+SCIP_Longint SCIPhashmapGetImageLong(
    SCIP_HASHMAP*         hashmap,            /**< hash map */
    void*                 origin              /**< origin to retrieve image for */
    );
@@ -1283,7 +1328,7 @@ SCIP_RETCODE SCIPprofileInsertCore(
    SCIP_PROFILE*         profile,            /**< resource profile to use */
    int                   left,               /**< left side of the core  */
    int                   right,              /**< right side of the core */
-   int                   height,             /**< height of the core */
+   int                   demand,             /**< demand of the core */
    int*                  pos,                /**< pointer to store the first position were it gets infeasible */
    SCIP_Bool*            infeasible          /**< pointer to store if the core does not fit due to capacity */
    );
@@ -1294,7 +1339,7 @@ SCIP_RETCODE SCIPprofileDeleteCore(
    SCIP_PROFILE*         profile,            /**< resource profile to use */
    int                   left,               /**< left side of the core  */
    int                   right,              /**< right side of the core */
-   int                   height              /**< height of the core */
+   int                   demand              /**< demand of the core */
    );
 
 /** return the earliest possible starting point within the time interval [lb,ub] for a given core (given by its height
@@ -1306,7 +1351,7 @@ int SCIPprofileGetEarliestFeasibleStart(
    int                   est,                /**< earliest starting time of the given core */
    int                   lst,                /**< latest starting time of the given core */
    int                   duration,           /**< duration of the core */
-   int                   height,             /**< height of the core */
+   int                   demand,             /**< demand of the core */
    SCIP_Bool*            infeasible          /**< pointer store if the corer cannot be inserted */
    );
 
@@ -1316,10 +1361,10 @@ int SCIPprofileGetEarliestFeasibleStart(
 SCIP_EXPORT
 int SCIPprofileGetLatestFeasibleStart(
    SCIP_PROFILE*         profile,            /**< resource profile to use */
-   int                   lb,                 /**< earliest possible start point */
-   int                   ub,                 /**< latest possible start point */
+   int                   est,                /**< earliest possible start point */
+   int                   lst,                /**< latest possible start point */
    int                   duration,           /**< duration of the core */
-   int                   height,             /**< height of the core */
+   int                   demand,             /**< demand of the core */
    SCIP_Bool*            infeasible          /**< pointer store if the core cannot be inserted */
    );
 
@@ -1860,8 +1905,14 @@ SCIP_Bool SCIPrealToRational(
    SCIP_Real             mindelta,           /**< minimal allowed difference r - q of real r and rational q = n/d */
    SCIP_Real             maxdelta,           /**< maximal allowed difference r - q of real r and rational q = n/d */
    SCIP_Longint          maxdnom,            /**< maximal denominator allowed */
-   SCIP_Longint*         nominator,          /**< pointer to store the nominator n of the rational number */
+   SCIP_Longint*         numerator,          /**< pointer to store the numerator n of the rational number */
    SCIP_Longint*         denominator         /**< pointer to store the denominator d of the rational number */
+   );
+
+/** checks, if value is integral without any tolerances */
+SCIP_EXPORT
+SCIP_Bool SCIPrealIsExactlyIntegral(
+   SCIP_Real             val                 /**< value to process */
    );
 
 /** tries to find a value, such that all given values, if scaled with this value become integral in relative allowed
@@ -1879,6 +1930,17 @@ SCIP_RETCODE SCIPcalcIntegralScalar(
    SCIP_Bool*            success             /**< stores whether returned value is valid */
    );
 
+/** tries to find a value, such that all given values, if scaled with this value become integral */
+SCIP_EXPORT
+SCIP_RETCODE SCIPcalcIntegralScalarExact(
+   BMS_BUFMEM*           buffer,             /**< buffer memory */
+   SCIP_RATIONAL**       vals,               /**< values to scale */
+   int                   nvals,              /**< number of values to scale */
+   SCIP_Real             maxscale,           /**< maximal allowed scalar */
+   SCIP_RATIONAL*        intscalar,          /**< pointer to store scalar that would make the coefficients integral */
+   SCIP_Bool*            success             /**< stores whether returned value is valid */
+   );
+
 /** given a (usually very small) interval, tries to find a rational number with simple denominator (i.e. a small
  *  number, probably multiplied with powers of 10) out of this interval; returns TRUE iff a valid rational
  *  number inside the interval was found
@@ -1888,7 +1950,7 @@ SCIP_Bool SCIPfindSimpleRational(
    SCIP_Real             lb,                 /**< lower bound of the interval */
    SCIP_Real             ub,                 /**< upper bound of the interval */
    SCIP_Longint          maxdnom,            /**< maximal denominator allowed for resulting rational number */
-   SCIP_Longint*         nominator,          /**< pointer to store the nominator n of the rational number */
+   SCIP_Longint*         numerator,          /**< pointer to store the numerator n of the rational number */
    SCIP_Longint*         denominator         /**< pointer to store the denominator d of the rational number */
    );
 
@@ -1916,23 +1978,6 @@ SCIP_Real SCIPcalcRootNewton(
    SCIP_Real             eps,                /**< tolerance */
    int                   k                   /**< iteration limit */
    );
-
-/* The C99 standard defines the function (or macro) isfinite.
- * On MacOS X, isfinite is also available.
- * From the BSD world, there comes a function finite.
- * On SunOS, finite is also available.
- * In the MS compiler world, there is a function _finite.
- * As last resort, we check whether x == x does not hold, but this works only for NaN's, not for infinities!
- */
-#if _XOPEN_SOURCE >= 600 || defined(_ISOC99_SOURCE) || _POSIX_C_SOURCE >= 200112L || defined(__APPLE__)
-#define SCIPisFinite isfinite
-#elif defined(_BSD_SOURCE) || defined(__sun)
-#define SCIPisFinite finite
-#elif defined(_MSC_VER)
-#define SCIPisFinite _finite
-#else
-#define SCIPisFinite(x) ((x) == (x))
-#endif
 
 /* In debug mode, the following methods are implemented as function calls to ensure
  * type validity.
@@ -1978,22 +2023,10 @@ SCIP_Real SCIPcomputeGap(
  *@{
  */
 
-/** returns a random integer between minrandval and maxrandval
- *
- *  @deprecated Please use SCIPrandomGetInt() to request a random integer.
- */
-SCIP_EXPORT
-SCIP_DEPRECATED
-int SCIPgetRandomInt(
-   int                   minrandval,         /**< minimal value to return */
-   int                   maxrandval,         /**< maximal value to return */
-   unsigned int*         seedp               /**< pointer to seed value */
-   );
-
 /** returns a random integer between minrandval and maxrandval */
 SCIP_EXPORT
 int SCIPrandomGetInt(
-   SCIP_RANDNUMGEN*      randgen,            /**< random number generator data */
+   SCIP_RANDNUMGEN*      randnumgen,         /**< random number generator data */
    int                   minrandval,         /**< minimal value to return */
    int                   maxrandval          /**< maximal value to return */
    );
@@ -2003,7 +2036,7 @@ int SCIPrandomGetInt(
  */
 SCIP_EXPORT
 SCIP_RETCODE SCIPrandomGetSubset(
-   SCIP_RANDNUMGEN*      randgen,            /**< random number generator */
+   SCIP_RANDNUMGEN*      randnumgen,         /**< random number generator */
    void**                set,                /**< original set, from which elements should be drawn */
    int                   nelems,             /**< number of elements in original set */
    void**                subset,             /**< subset in which drawn elements should be stored */
@@ -2013,36 +2046,9 @@ SCIP_RETCODE SCIPrandomGetSubset(
 /** returns a random real between minrandval and maxrandval */
 SCIP_EXPORT
 SCIP_Real SCIPrandomGetReal(
-   SCIP_RANDNUMGEN*      randgen,            /**< random number generator data */
+   SCIP_RANDNUMGEN*      randnumgen,         /**< random number generator data */
    SCIP_Real             minrandval,         /**< minimal value to return */
    SCIP_Real             maxrandval          /**< maximal value to return */
-   );
-
-/** returns a random real between minrandval and maxrandval
- *
- *  @deprecated Please use SCIPrandomGetReal() to request a random real.
- */
-SCIP_EXPORT
-SCIP_DEPRECATED
-SCIP_Real SCIPgetRandomReal(
-   SCIP_Real             minrandval,         /**< minimal value to return */
-   SCIP_Real             maxrandval,         /**< maximal value to return */
-   unsigned int*         seedp               /**< pointer to seed value */
-   );
-
-/** draws a random subset of disjoint elements from a given set of disjoint elements;
- *  this implementation is suited for the case that nsubelems is considerably smaller then nelems
- *
- *  @deprecated Please use SCIPrandomGetSubset()
- */
-SCIP_EXPORT
-SCIP_DEPRECATED
-SCIP_RETCODE SCIPgetRandomSubset(
-   void**                set,                /**< original set, from which elements should be drawn */
-   int                   nelems,             /**< number of elements in original set */
-   void**                subset,             /**< subset in which drawn elements should be stored */
-   int                   nsubelems,          /**< number of elements that should be drawn and stored */
-   unsigned int          randseed            /**< seed value for random generator */
    );
 
 /**@} */
@@ -2079,27 +2085,10 @@ void SCIPswapPointers(
    void**                pointer2            /**< second pointer */
    );
 
-/** randomly shuffles parts of an integer array using the Fisher-Yates algorithm
- *
- *  @deprecated Please use SCIPrandomPermuteIntArray()
- */
-SCIP_EXPORT
-SCIP_DEPRECATED
-void SCIPpermuteIntArray(
-   int*                  array,              /**< array to be shuffled */
-   int                   begin,              /**< first included index that should be subject to shuffling
-                                              *   (0 for first array entry)
-                                              */
-   int                   end,                /**< first excluded index that should not be subject to shuffling
-                                              *   (array size for last array entry)
-                                              */
-   unsigned int*         randseed            /**< seed value for the random generator */
-   );
-
 /** randomly shuffles parts of an integer array using the Fisher-Yates algorithm */
 SCIP_EXPORT
 void SCIPrandomPermuteIntArray(
-   SCIP_RANDNUMGEN*      randgen,            /**< random number generator */
+   SCIP_RANDNUMGEN*      randnumgen,         /**< random number generator */
    int*                  array,              /**< array to be shuffled */
    int                   begin,              /**< first included index that should be subject to shuffling
                                               *   (0 for first array entry)
@@ -2112,7 +2101,7 @@ void SCIPrandomPermuteIntArray(
 /** randomly shuffles parts of an array using the Fisher-Yates algorithm */
 SCIP_EXPORT
 void SCIPrandomPermuteArray(
-   SCIP_RANDNUMGEN*      randgen,            /**< random number generator */
+   SCIP_RANDNUMGEN*      randnumgen,         /**< random number generator */
    void**                array,              /**< array to be shuffled */
    int                   begin,              /**< first included index that should be subject to shuffling
                                               *   (0 for first array entry)
@@ -2120,23 +2109,6 @@ void SCIPrandomPermuteArray(
    int                   end                 /**< first excluded index that should not be subject to shuffling
                                               *   (array size for last array entry)
                                               */
-   );
-
-/** randomly shuffles parts of an array using the Fisher-Yates algorithm
- *
- *  @deprecated Please use SCIPrandomPermuteArray()
- */
-SCIP_EXPORT
-SCIP_DEPRECATED
-void SCIPpermuteArray(
-   void**                array,              /**< array to be shuffled */
-   int                   begin,              /**< first included index that should be subject to shuffling
-                                              *   (0 for first array entry)
-                                              */
-   int                   end,                /**< first excluded index that should not be subject to shuffling
-                                              *   (array size for last array entry)
-                                              */
-   unsigned int*         randseed            /**< pointer to seed value for the random generator */
    );
 
 /**@} */
@@ -2152,24 +2124,6 @@ void SCIPpermuteArray(
  *
  * @{
  */
-
-
-/** computes set intersection (duplicates removed) of two integer arrays that are ordered ascendingly
- *
- * @deprecated Switch to SCIPcomputeArraysIntersectionInt().
- */
-SCIP_DEPRECATED
-SCIP_EXPORT
-SCIP_RETCODE SCIPcomputeArraysIntersection(
-   int*                  array1,             /**< first array (in ascending order) */
-   int                   narray1,            /**< number of entries of first array */
-   int*                  array2,             /**< second array (in ascending order) */
-   int                   narray2,            /**< number of entries of second array */
-   int*                  intersectarray,     /**< intersection of array1 and array2
-                                              *   (note: it is possible to use array1 for this input argument) */
-   int*                  nintersectarray     /**< pointer to store number of entries of intersection array
-                                              *   (note: it is possible to use narray1 for this input argument) */
-   );
 
 /** computes set intersection (duplicates removed) of two integer arrays that are ordered ascendingly */
 SCIP_EXPORT
@@ -2197,23 +2151,6 @@ void SCIPcomputeArraysIntersectionPtr(
    int*                  nintersectarray     /**< pointer to store number of entries of intersection array
                                               *   (note: it is possible to use narray1 for this input argument) */
 );
-
-/** computes set difference (duplicates removed) of two integer arrays that are ordered ascendingly
- *
- * @deprecated Switch to SCIPcomputeArraysSetminusInt().
- */
-SCIP_DEPRECATED
-SCIP_EXPORT
-SCIP_RETCODE SCIPcomputeArraysSetminus(
-   int*                  array1,             /**< first array (in ascending order) */
-   int                   narray1,            /**< number of entries of first array */
-   int*                  array2,             /**< second array (in ascending order) */
-   int                   narray2,            /**< number of entries of second array */
-   int*                  setminusarray,      /**< array to store entries of array1 that are not an entry of array2
-                                              *   (note: it is possible to use array1 for this input argument) */
-   int*                  nsetminusarray      /**< pointer to store number of entries of setminus array
-                                              *   (note: it is possible to use narray1 for this input argument) */
-   );
 
 /** computes set difference (duplicates removed) of two integer arrays that are ordered ascendingly */
 SCIP_EXPORT
@@ -2381,7 +2318,7 @@ SCIP_Bool SCIPstrAtStart(
  * @{
  */
 
-/** returns, whether the given file exists */
+/** returns whether the given file exists */
 SCIP_EXPORT
 SCIP_Bool SCIPfileExists(
    const char*           filename            /**< file name */

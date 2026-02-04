@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2026 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -36,8 +36,7 @@
 
 #include <assert.h>
 #include <string.h>
-#if defined(_WIN32) || defined(_WIN64)
-#else
+#ifndef _WIN32
 #include <strings.h> /*lint --e{766}*/
 #endif
 
@@ -1741,7 +1740,7 @@ SCIP_RETCODE SCIPparamsetGetBool(
    }
    if( param->paramtype != SCIP_PARAMTYPE_BOOL )
    {
-      SCIPerrorMessage("wrong parameter type - parameter <%s> has type <%s> instead of <%s>\n", 
+      SCIPerrorMessage("wrong parameter type - parameter <%s> has type <%s> instead of <%s>\n",
          name, paramtypeGetName(param->paramtype), paramtypeGetName(SCIP_PARAMTYPE_BOOL));
       return SCIP_PARAMETERWRONGTYPE;
    }
@@ -1773,7 +1772,7 @@ SCIP_RETCODE SCIPparamsetGetInt(
    }
    if( param->paramtype != SCIP_PARAMTYPE_INT )
    {
-      SCIPerrorMessage("wrong parameter type - parameter <%s> has type <%s> instead of <%s>\n", 
+      SCIPerrorMessage("wrong parameter type - parameter <%s> has type <%s> instead of <%s>\n",
          name, paramtypeGetName(param->paramtype), paramtypeGetName(SCIP_PARAMTYPE_INT));
       return SCIP_PARAMETERWRONGTYPE;
    }
@@ -1805,7 +1804,7 @@ SCIP_RETCODE SCIPparamsetGetLongint(
    }
    if( param->paramtype != SCIP_PARAMTYPE_LONGINT )
    {
-      SCIPerrorMessage("wrong parameter type - parameter <%s> has type <%s> instead of <%s>\n", 
+      SCIPerrorMessage("wrong parameter type - parameter <%s> has type <%s> instead of <%s>\n",
          name, paramtypeGetName(param->paramtype), paramtypeGetName(SCIP_PARAMTYPE_LONGINT));
       return SCIP_PARAMETERWRONGTYPE;
    }
@@ -1837,7 +1836,7 @@ SCIP_RETCODE SCIPparamsetGetReal(
    }
    if( param->paramtype != SCIP_PARAMTYPE_REAL )
    {
-      SCIPerrorMessage("wrong parameter type - parameter <%s> has type <%s> instead of <%s>\n", 
+      SCIPerrorMessage("wrong parameter type - parameter <%s> has type <%s> instead of <%s>\n",
          name, paramtypeGetName(param->paramtype), paramtypeGetName(SCIP_PARAMTYPE_REAL));
       return SCIP_PARAMETERWRONGTYPE;
    }
@@ -1869,7 +1868,7 @@ SCIP_RETCODE SCIPparamsetGetChar(
    }
    if( param->paramtype != SCIP_PARAMTYPE_CHAR )
    {
-      SCIPerrorMessage("wrong parameter type - parameter <%s> has type <%s> instead of <%s>\n", 
+      SCIPerrorMessage("wrong parameter type - parameter <%s> has type <%s> instead of <%s>\n",
          name, paramtypeGetName(param->paramtype), paramtypeGetName(SCIP_PARAMTYPE_CHAR));
       return SCIP_PARAMETERWRONGTYPE;
    }
@@ -1901,7 +1900,7 @@ SCIP_RETCODE SCIPparamsetGetString(
    }
    if( param->paramtype != SCIP_PARAMTYPE_STRING )
    {
-      SCIPerrorMessage("wrong parameter type - parameter <%s> has type <%s> instead of <%s>\n", 
+      SCIPerrorMessage("wrong parameter type - parameter <%s> has type <%s> instead of <%s>\n",
          name, paramtypeGetName(param->paramtype), paramtypeGetName(SCIP_PARAMTYPE_STRING));
       return SCIP_PARAMETERWRONGTYPE;
    }
@@ -3579,7 +3578,7 @@ SCIP_RETCODE paramsetSetSeparatingAggressive(
          assert(SCIPparamGetType(param) == SCIP_PARAMTYPE_INT);
          deffreq = SCIPparamGetIntDefault(param);
 
-         /* for enabled separators, change frequency to at least every 20th depths and 
+         /* for enabled separators, change frequency to at least every 20th depths and
           * enable disabled separators
           */
          if( deffreq == -1 )
@@ -3644,8 +3643,8 @@ SCIP_RETCODE paramsetSetSeparatingAggressive(
          assert(SCIPparamGetType(param) == SCIP_PARAMTYPE_INT);
          deffreq = SCIPparamGetIntDefault(param);
 
-         /* for constraint handlers with enabled separation, change frequency to at least every 10th depths and 
-          * enable disabled separation routines 
+         /* for constraint handlers with enabled separation, change frequency to at least every 10th depths and
+          * enable disabled separation routines
           */
          if( deffreq == -1 )
             newfreq = 0;
@@ -3847,7 +3846,7 @@ SCIP_RETCODE SCIPparamsetSetEmphasis(
 
    case SCIP_PARAMEMPHASIS_COUNTER:
       /* TODO: should constraints/linear/detectlowerbound and detectcutoffbound be set to FALSE? */
-      /* avoid logicor upgrade since the logicor constraint handler does not perform full propagation */ 
+      /* avoid logicor upgrade since the logicor constraint handler does not perform full propagation */
       SCIP_CALL( paramSetBool(paramset, set, messagehdlr, "constraints/linear/upgrade/logicor", FALSE, quiet) );
 
       /* set priority for inference branching to highest possible value */
@@ -3879,7 +3878,7 @@ SCIP_RETCODE SCIPparamsetSetEmphasis(
       /* prefer binary variables for branching */
       SCIP_CALL( paramSetBool(paramset, set, messagehdlr, "branching/preferbinary", TRUE, quiet) );
 
-      /* turn on aggressive constraint aging */ 
+      /* turn on aggressive constraint aging */
       SCIP_CALL( paramSetInt(paramset, set, messagehdlr, "constraints/agelimit", 1, quiet) );
 
       /* turn off symmetry handling */
@@ -4200,8 +4199,8 @@ SCIP_RETCODE SCIPparamsetSetToSubscipsOff(
    return SCIP_OKAY;
 }
 
-/** sets heuristic parameters values to 
- *  - SCIP_PARAMSETTING_DEFAULT which are the default values of all heuristic parameters 
+/** sets heuristic parameters values to
+ *  - SCIP_PARAMSETTING_DEFAULT which are the default values of all heuristic parameters
  *  - SCIP_PARAMSETTING_FAST such that the time spent on heuristics is decreased
  *  - SCIP_PARAMSETTING_AGGRESSIVE such that the heuristics are called more aggressively
  *  - SCIP_PARAMSETTING_OFF which turn off all heuristics
@@ -4236,8 +4235,8 @@ SCIP_RETCODE SCIPparamsetSetHeuristics(
    return SCIP_OKAY;
 }
 
-/** sets presolving parameters to 
- *  - SCIP_PARAMSETTING_DEFAULT which are the default values of all presolving parameters 
+/** sets presolving parameters to
+ *  - SCIP_PARAMSETTING_DEFAULT which are the default values of all presolving parameters
  *  - SCIP_PARAMSETTING_FAST such that the time spent on presolving is decreased
  *  - SCIP_PARAMSETTING_AGGRESSIVE such that the presolving is more aggressive
  *  - SCIP_PARAMSETTING_OFF which turn off all presolving
@@ -4272,8 +4271,8 @@ SCIP_RETCODE SCIPparamsetSetPresolving(
    return SCIP_OKAY;
 }
 
-/** sets separating parameters to 
- *  - SCIP_PARAMSETTING_DEFAULT which are the default values of all separating parameters 
+/** sets separating parameters to
+ *  - SCIP_PARAMSETTING_DEFAULT which are the default values of all separating parameters
  *  - SCIP_PARAMSETTING_FAST such that the time spent on separating is decreased
  *  - SCIP_PARAMSETTING_AGGRESSIVE such that separating is more aggressive
  *  - SCIP_PARAMSETTING_OFF which turn off all separating
@@ -4393,11 +4392,11 @@ SCIP_RETCODE SCIPparamsetCopyParams(
          break;
 
       case SCIP_PARAMTYPE_STRING:
-         /* the visualization parameters are explicitly not copied to avoid that the visualization file of the original SCIP is overwritten;
-          * to avoid a hard coded comparison, each parameter could get a Bool flag which tells if the value
-          * of that parameter can be copied
+         /* the visualization and certificate parameters are explicitly not copied to avoid that these files of the
+          * original SCIP are overwritten; to avoid a hard coded comparison, each parameter could get a Bool flag which
+          * tells if the value of that parameter can be copied
           */
-         if( strncmp(sourceparam->name, "visual/", 7) != 0 )
+         if( strncmp(sourceparam->name, "visual/", 7) != 0 && strncmp(sourceparam->name, "certificate/", 12) != 0 )
          {
             SCIP_CALL( paramCopyString(sourceparam, targetparam, set, messagehdlr) );
          }
@@ -4422,6 +4421,99 @@ SCIP_RETCODE SCIPparamsetCopyParams(
       SCIP_CALL( SCIPparamsetSetBool(targetparamset, set, messagehdlr, "reoptimization/enable", FALSE) );
       SCIP_CALL( SCIPsetSetReoptimizationParams(set, messagehdlr) );
    }
+
+   return SCIP_OKAY;
+}
+
+/** default comparer for integers */
+static
+SCIP_DECL_SORTPTRCOMP(SCIPsortCompPtr)
+{
+   if( elem1 < elem2 )
+      return -1;
+
+   if( elem2 < elem1 )
+      return 1;
+
+   return 0;
+}
+
+/** checks whether the value pointers attached to each parameter are unique
+ *
+ *  When creating a parameter a value pointer can be attached. This function checks whether these pointers are
+ *  unique. Duplicate pointers indicate an error.
+ */
+SCIP_RETCODE SCIPparamsetCheckValuePtrUnique(
+   SCIP_PARAMSET*        paramset,           /**< parameter set */
+   SCIP_SET*             set                 /**< global SCIP settings */
+   )
+{
+   void** valueptr;
+   int* paramidx;
+   int nparam = 0;
+   int i;
+
+   SCIP_CALL( SCIPsetAllocBufferArray(set, &valueptr, paramset->nparams) );
+   SCIP_CALL( SCIPsetAllocBufferArray(set, &paramidx, paramset->nparams) );
+
+   for( i = 0; i < paramset->nparams; ++i)
+   {
+      SCIP_PARAM* param;
+
+      paramidx[nparam] = i;
+      param = paramset->params[i];
+      switch( param->paramtype )
+      {
+      case SCIP_PARAMTYPE_BOOL:
+         if( param->data.boolparam.valueptr != NULL )
+            valueptr[nparam++] = (void*) param->data.boolparam.valueptr;
+         break;
+      case SCIP_PARAMTYPE_INT:
+         if( param->data.intparam.valueptr != NULL )
+            valueptr[nparam++] = (void*) param->data.intparam.valueptr;
+         break;
+      case SCIP_PARAMTYPE_LONGINT:
+         if( param->data.longintparam.valueptr != NULL )
+            valueptr[nparam++] = (void*) param->data.longintparam.valueptr;
+         break;
+      case SCIP_PARAMTYPE_REAL:
+         if( param->data.realparam.valueptr != NULL )
+            valueptr[nparam++] = (void*) param->data.realparam.valueptr;
+         break;
+      case SCIP_PARAMTYPE_CHAR:
+         if( param->data.charparam.valueptr != NULL )
+            valueptr[nparam++] = (void*) param->data.charparam.valueptr;
+         break;
+      case SCIP_PARAMTYPE_STRING:
+         if( param->data.stringparam.valueptr != NULL )
+            valueptr[nparam++] = (void*) param->data.stringparam.valueptr;
+         break;
+      default:
+         SCIPerrorMessage("Wrong parameter type %d\n", param->paramtype);
+         SCIPABORT();
+      }
+   }
+   SCIPsortPtrInt(valueptr, paramidx, SCIPsortCompPtr, nparam);
+
+   /* check whether some consecutive pointers are the same */
+   for( i = 0; i < nparam - 1; ++i)
+   {
+      SCIP_PARAM* param1;
+      SCIP_PARAM* param2;
+
+      assert( 0 <= paramidx[i] && paramidx[i] < paramset->nparams );
+      assert( 0 <= paramidx[i+1] && paramidx[i+1] < paramset->nparams );
+      param1 = paramset->params[paramidx[i]];
+      param2 = paramset->params[paramidx[i+1]];
+      if( valueptr[i] == valueptr[i+1] )
+      {
+         SCIPerrorMessage("Value pointer for parameter <%s> is the same as for parameter <%s>.\n", param1->name, param2->name);
+         SCIPABORT();
+      }
+   }
+
+   SCIPsetFreeBufferArray(set, &paramidx);
+   SCIPsetFreeBufferArray(set, &valueptr);
 
    return SCIP_OKAY;
 }

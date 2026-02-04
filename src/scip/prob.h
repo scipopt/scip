@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2026 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -46,6 +46,7 @@
 #include "scip/type_prob.h"
 #include "scip/type_primal.h"
 #include "scip/type_tree.h"
+#include "scip/type_rational.h"
 #include "scip/type_reopt.h"
 #include "scip/type_branch.h"
 #include "scip/type_cons.h"
@@ -66,7 +67,7 @@ extern "C" {
  * problem creation
  */
 
-/** creates problem data structure by copying the source problem; 
+/** creates problem data structure by copying the source problem;
  *  If the problem type requires the use of variable pricers, these pricers should be activated with calls
  *  to SCIPactivatePricer(). These pricers are automatically deactivated, when the problem is freed.
  */
@@ -338,6 +339,12 @@ void SCIPprobAddObjoffset(
    SCIP_Real             addval              /**< value to add to objective offset */
    );
 
+/** adds value to objective offset */
+void SCIPprobAddObjoffsetExact(
+   SCIP_PROB*            prob,               /**< problem data */
+   SCIP_RATIONAL*        addval              /**< value to add to objective offset */
+   );
+
 /** sets the dual bound on objective function */
 void SCIPprobSetDualbound(
    SCIP_PROB*            prob,               /**< problem data */
@@ -355,7 +362,7 @@ void SCIPprobSetObjIntegral(
    SCIP_PROB*            prob                /**< problem data */
    );
 
-/** sets integral objective value flag, if all variables with non-zero objective values are integral and have 
+/** sets integral objective value flag, if all variables with non-zero objective values are integral and have
  *  integral objective value and also updates the cutoff bound if primal solution is already known
  */
 SCIP_RETCODE SCIPprobCheckObjIntegral(
@@ -494,12 +501,30 @@ SCIP_Real SCIPprobExternObjval(
    SCIP_Real             objval              /**< internal objective value */
    );
 
+/** computes the exact external value of the given internal objective value */
+void SCIPprobExternObjvalExact(
+   SCIP_PROB*            transprob,          /**< tranformed problem data */
+   SCIP_PROB*            origprob,           /**< original problem data */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_RATIONAL*        objval,             /**< internal objective value */
+   SCIP_RATIONAL*        objvalext           /**< store external objective value */
+   );
+
 /** returns the internal value of the given external objective value */
 SCIP_Real SCIPprobInternObjval(
    SCIP_PROB*            transprob,          /**< tranformed problem data */
    SCIP_PROB*            origprob,           /**< original problem data */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_Real             objval              /**< external objective value */
+   );
+
+/** returns the internal value of the given external objective value */
+void SCIPprobInternObjvalExact(
+   SCIP_PROB*            transprob,          /**< tranformed problem data */
+   SCIP_PROB*            origprob,           /**< original problem data */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_RATIONAL*        objval,             /**< internal objective value */
+   SCIP_RATIONAL*        objvalint           /**< store internal objective value */
    );
 
 /** returns variable of the problem with given name */
@@ -669,6 +694,16 @@ SCIP_Real SCIPprobGetObjscale(
    SCIP_PROB*            prob                /**< problem data */
    );
 
+/** gets the exact objective offset */
+SCIP_RATIONAL* SCIPprobGetObjoffsetExact(
+   SCIP_PROB*            prob                /**< problem data */
+   );
+
+/** gets the exact objective scalar */
+SCIP_RATIONAL* SCIPprobGetObjscaleExact(
+   SCIP_PROB*            prob                /**< problem data */
+   );
+
 /** is constraint compression enabled for this problem? */
 SCIP_Bool SCIPprobIsConsCompressionEnabled(
    SCIP_PROB*            prob                /**< problem data */
@@ -711,10 +746,11 @@ void SCIPprobEnableConsCompression(
 #define SCIPprobGetObjsense(prob)       ((prob)->objsense)
 #define SCIPprobGetObjoffset(prob)      ((prob)->objoffset)
 #define SCIPprobGetObjscale(prob)       ((prob)->objscale)
+#define SCIPprobGetObjoffsetExact(prob) ((prob)->objoffsetexact)
+#define SCIPprobGetObjscaleExact(prob)  ((prob)->objscaleexact)
 #define SCIPprobIsConsCompressionEnabled(prob)  ((prob)->conscompression)
 #define SCIPprobEnableConsCompression(prob)  ((prob)->conscompression = TRUE)
 #endif
-
 
 #ifdef __cplusplus
 }

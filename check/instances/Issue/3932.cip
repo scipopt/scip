@@ -1,0 +1,15 @@
+STATISTICS
+  Problem name     : t_t_seed
+  Variables        : 3 (0 binary, 1 integer, 0 implicit integer, 2 continuous)
+  Constraints      : 0 initial, 3 maximal
+OBJECTIVE
+  Sense            : minimize
+VARIABLES
+  [integer] <t_t_x0>: obj=0, original bounds=[29,200]
+  [continuous] <t_t_x4>: obj=0, original bounds=[-200,-88]
+  [continuous] <t_t_x2>: obj=0, original bounds=[-200,-51]
+CONSTRAINTS
+  [linear] <_C1>:  +14.66<t_t_x0>[I] +83.96<t_t_x4>[C] -99.73<t_t_x2>[C] <= 4758.33;
+  [linear] <_C3>:  +36.95<t_t_x0>[I] -77.02<t_t_x4>[C] +27.3<t_t_x2>[C] <= 15108.87;
+  [linear] <dualproof_bnd_1>:  +35.3812724355761<t_t_x0>[I] -106.595454727765<t_t_x4>[C] >= 26150.7507972695;
+END

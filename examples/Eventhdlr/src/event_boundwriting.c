@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2026 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -23,7 +23,6 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   examples/Eventhdlr/src/event_boundwriting.c
- * @ingroup EVENTHDLR
  * @brief  event handler for writing primal and dual bound for all open nodes
  * @author Michael Winkler
  *
@@ -283,7 +282,7 @@ SCIP_RETCODE writeBounds(
    SCIP_Bool             writesubmipdualbound/**< write dualbounds of submip roots for all open nodes */
    )
 {
-   SCIP_NODE** opennodes;
+   SCIP_NODE** opennodes = NULL;
    int nopennodes;
    int n;
    int v;
@@ -318,7 +317,7 @@ SCIP_RETCODE writeBounds(
          SCIP_CALL( SCIPgetLeaves(scip, &opennodes, &nopennodes) );
          break;
       default:
-	 assert(0);
+	 SCIPABORT();
 	 break;
       }
       assert(nopennodes >= 0);
@@ -326,6 +325,7 @@ SCIP_RETCODE writeBounds(
       /* print all node information */
       for( n = nopennodes - 1; n >= 0 && !SCIPisStopped(scip); --n )
       {
+         assert( opennodes != NULL );
          node = opennodes[n];
 
          if( writesubmipdualbound )
@@ -583,18 +583,17 @@ SCIP_DECL_EVENTEXEC(eventExecBoundwriting)
          (void)SCIPstrncpy(eventhdlrdata->oldfilename, eventhdlrdata->filename, SCIP_MAXSTRLEN);
 
       /* find last '.' to append filenumber */
-      pch=strrchr(eventhdlrdata->filename,'.');
+      pch = strrchr(eventhdlrdata->filename,'.');
 
       assert(eventhdlrdata->filenumber > 0);
-      n=sprintf(number, "%"SCIP_LONGINT_FORMAT"", eventhdlrdata->filenumber * eventhdlrdata->freq);
+      n = sprintf(number, "%"SCIP_LONGINT_FORMAT"", eventhdlrdata->filenumber * eventhdlrdata->freq);
       assert(n > 0);
       assert(n < SCIP_MAXSTRLEN);
 
       /* if no point is found, extend directly */
       if( pch == NULL )
       {
-         (void)SCIPstrncpy(name, eventhdlrdata->filename, SCIP_MAXSTRLEN - n);
-         strncat(name, number, (unsigned int)n);
+         (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s%s", eventhdlrdata->filename, number);
       }
       else
       {
@@ -606,9 +605,10 @@ SCIP_DECL_EVENTEXEC(eventExecBoundwriting)
             len = (int) (pch-(eventhdlrdata->filename));
 
          (void)SCIPstrncpy(name, eventhdlrdata->filename, len);
-         strncat(name, number, (unsigned int)n);
+         (void)strncat(name, number, (size_t)n);
+         assert(len+n >= 0);
          assert(len+n < SCIP_MAXSTRLEN);
-         name[len+n] = '\0';
+         name[len+n] = '\0'; /*lint !e676*//*lint !e661*/
 
          if( len + n + strlen(&(eventhdlrdata->filename[len])) < SCIP_MAXSTRLEN ) /*lint !e776*/
             strcat(name, &(eventhdlrdata->filename[len]));

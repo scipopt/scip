@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2026 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -1019,6 +1019,70 @@ SCIP_RETCODE separateInequalities(
 }
 
 
+/** replace aggregated variables by active variables */
+static
+SCIP_RETCODE replaceAggregatedVarsOrbisack(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons                /**< constraint to be processed */
+   )
+{
+   SCIP_CONSDATA* consdata;
+   SCIP_VAR** vars1;
+   SCIP_VAR** vars2;
+   int i;
+   int nrows;
+
+   assert( scip != NULL );
+   assert( cons != NULL );
+
+   /* get data of constraint */
+   consdata = SCIPconsGetData(cons);
+   assert( consdata != NULL );
+   assert( consdata->vars1 != NULL );
+   assert( consdata->vars2 != NULL );
+   assert( consdata->nrows > 0 );
+
+   nrows = consdata->nrows;
+   vars1 = consdata->vars1;
+   vars2 = consdata->vars2;
+
+   /* loop through all variables */
+   for (i = 0; i < nrows; ++i)
+   {
+      SCIP_VAR* var;
+      SCIP_Bool negated;
+
+      /* treat first column */
+      assert( SCIPvarGetStatus(vars1[i]) != SCIP_VARSTATUS_MULTAGGR ); /* variables are marked as not to be multi-aggregated */
+
+      SCIP_CALL( SCIPgetBinvarRepresentative(scip, vars1[i], &var, &negated) );
+      SCIP_UNUSED( negated );
+      assert( SCIPvarIsActive(var) || SCIPvarGetStatus(var) == SCIP_VARSTATUS_NEGATED || SCIPvarGetStatus(var) == SCIP_VARSTATUS_FIXED );
+      if ( var != vars1[i] )
+      {
+         SCIP_CALL( SCIPreleaseVar(scip, &vars1[i]) );
+         vars1[i] = var;
+         SCIP_CALL( SCIPcaptureVar(scip, var) );
+      }
+
+      /* treat second column */
+      assert( SCIPvarGetStatus(vars2[i]) != SCIP_VARSTATUS_MULTAGGR ); /* variables are marked as not to be multi-aggregated */
+
+      SCIP_CALL( SCIPgetBinvarRepresentative(scip, vars2[i], &var, &negated) );
+      SCIP_UNUSED( negated );
+      assert( SCIPvarIsActive(var) || SCIPvarGetStatus(var) == SCIP_VARSTATUS_NEGATED || SCIPvarGetStatus(var) == SCIP_VARSTATUS_FIXED );
+      if ( var != vars2[i] )
+      {
+         SCIP_CALL( SCIPreleaseVar(scip, &vars2[i]) );
+         vars2[i] = var;
+         SCIP_CALL( SCIPcaptureVar(scip, var) );
+      }
+   }
+
+   return SCIP_OKAY;
+}
+
+
 /*--------------------------------------------------------------------------------------------
  *--------------------------------- SCIP functions -------------------------------------------
  *--------------------------------------------------------------------------------------------*/
@@ -1709,10 +1773,10 @@ SCIP_DECL_CONSRESPROP(consRespropOrbisack)
       }
 
       /* And infrow itself is (0, 1). */
-      assert( SCIPvarGetUbAtIndex(vars1[infrow], bdchgidx, TRUE) < 0.5 );
-      assert( SCIPvarGetUbAtIndex(vars1[infrow], bdchgidx, FALSE) < 0.5 );
-      assert( SCIPvarGetLbAtIndex(vars2[infrow], bdchgidx, TRUE) > 0.5 );
-      assert( SCIPvarGetLbAtIndex(vars2[infrow], bdchgidx, FALSE) > 0.5 );
+      assert( SCIPgetVarUbAtIndex(scip, vars1[infrow], bdchgidx, TRUE) < 0.5 );
+      assert( SCIPgetVarUbAtIndex(scip, vars1[infrow], bdchgidx, FALSE) < 0.5 );
+      assert( SCIPgetVarLbAtIndex(scip, vars2[infrow], bdchgidx, TRUE) > 0.5 );
+      assert( SCIPgetVarLbAtIndex(scip, vars2[infrow], bdchgidx, FALSE) > 0.5 );
 
       SCIP_CALL( SCIPaddConflictUb(scip, vars1[infrow], bdchgidx) );
       SCIP_CALL( SCIPaddConflictLb(scip, vars2[infrow], bdchgidx) );
@@ -1726,10 +1790,10 @@ SCIP_DECL_CONSRESPROP(consRespropOrbisack)
       {
          /* We changed the lower bound of infervar to 1. This means that this fixing is due to (_, 1) */
          assert( infervar == vars1[varrow] );
-         assert( SCIPvarGetLbAtIndex(vars1[varrow], bdchgidx, FALSE) < 0.5 );
-         assert( SCIPvarGetLbAtIndex(vars1[varrow], bdchgidx, TRUE) > 0.5 );
-         assert( SCIPvarGetLbAtIndex(vars2[varrow], bdchgidx, FALSE ) > 0.5);
-         assert( SCIPvarGetUbAtIndex(vars2[varrow], bdchgidx, FALSE ) > 0.5);
+         assert( SCIPgetVarLbAtIndex(scip, vars1[varrow], bdchgidx, FALSE) < 0.5 );
+         assert( SCIPgetVarLbAtIndex(scip, vars1[varrow], bdchgidx, TRUE) > 0.5 );
+         assert( SCIPgetVarLbAtIndex(scip, vars2[varrow], bdchgidx, FALSE) > 0.5);
+         assert( SCIPgetVarUbAtIndex(scip, vars2[varrow], bdchgidx, FALSE) > 0.5);
 
          SCIP_CALL( SCIPaddConflictUb(scip, vars2[varrow], bdchgidx) );
          SCIP_CALL( SCIPaddConflictLb(scip, vars2[varrow], bdchgidx) );
@@ -1738,10 +1802,10 @@ SCIP_DECL_CONSRESPROP(consRespropOrbisack)
       {
          /* We changed the upper bound to 0. This means that this fixing is due to (0, _) */
          assert( infervar == vars2[varrow] );
-         assert( SCIPvarGetLbAtIndex(vars1[varrow], bdchgidx, FALSE ) < 0.5);
-         assert( SCIPvarGetUbAtIndex(vars1[varrow], bdchgidx, FALSE ) < 0.5);
-         assert( SCIPvarGetUbAtIndex(vars2[varrow], bdchgidx, FALSE) > 0.5 );
-         assert( SCIPvarGetUbAtIndex(vars2[varrow], bdchgidx, TRUE) < 0.5 );
+         assert( SCIPgetVarLbAtIndex(scip, vars1[varrow], bdchgidx, FALSE) < 0.5);
+         assert( SCIPgetVarUbAtIndex(scip, vars1[varrow], bdchgidx, FALSE) < 0.5);
+         assert( SCIPgetVarUbAtIndex(scip, vars2[varrow], bdchgidx, FALSE) > 0.5 );
+         assert( SCIPgetVarUbAtIndex(scip, vars2[varrow], bdchgidx, TRUE) < 0.5 );
 
          SCIP_CALL( SCIPaddConflictUb(scip, vars1[varrow], bdchgidx) );
          SCIP_CALL( SCIPaddConflictLb(scip, vars1[varrow], bdchgidx) );
@@ -1749,6 +1813,25 @@ SCIP_DECL_CONSRESPROP(consRespropOrbisack)
    }
 
    *result = SCIP_SUCCESS;
+   return SCIP_OKAY;
+}
+
+
+/** presolving deinitialization method of constraint handler (called after presolving has been finished) */
+static
+SCIP_DECL_CONSEXITPRE(consExitpreOrbisack)
+{
+   int c;
+
+   assert( scip != NULL );
+   assert( conshdlr != NULL );
+   assert( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0 );
+
+   for (c = 0; c < nconss; ++c)
+   {
+      /* replace aggregated variables by active variables */
+      SCIP_CALL( replaceAggregatedVarsOrbisack(scip, conss[c]) );
+   }
    return SCIP_OKAY;
 }
 
@@ -2182,6 +2265,7 @@ SCIP_RETCODE SCIPincludeConshdlrOrbisack(
    SCIP_CALL( SCIPsetConshdlrPrint(scip, conshdlr, consPrintOrbisack) );
    SCIP_CALL( SCIPsetConshdlrProp(scip, conshdlr, consPropOrbisack, CONSHDLR_PROPFREQ, CONSHDLR_DELAYPROP, CONSHDLR_PROP_TIMING) );
    SCIP_CALL( SCIPsetConshdlrResprop(scip, conshdlr, consRespropOrbisack) );
+   SCIP_CALL( SCIPsetConshdlrExitpre(scip, conshdlr, consExitpreOrbisack) );
    SCIP_CALL( SCIPsetConshdlrSepa(scip, conshdlr, consSepalpOrbisack, consSepasolOrbisack, CONSHDLR_SEPAFREQ, CONSHDLR_SEPAPRIORITY, CONSHDLR_DELAYSEPA) );
    SCIP_CALL( SCIPsetConshdlrTrans(scip, conshdlr, consTransOrbisack) );
    SCIP_CALL( SCIPsetConshdlrInitlp(scip, conshdlr, consInitlpOrbisack) );

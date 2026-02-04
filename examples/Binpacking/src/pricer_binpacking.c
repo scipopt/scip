@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2026 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -157,9 +157,9 @@ SCIP_RETCODE addBranchingDecisionConss(
          continue;
 
       /* collect the two item ids and the branching type (SAME or DIFFER) on which the constraint branched */
-      id1 = SCIPgetItemid1Samediff(scip, cons);
-      id2 = SCIPgetItemid2Samediff(scip, cons);
-      type = SCIPgetTypeSamediff(scip, cons);
+      id1 = SCIPgetItemid1Samediff(cons);
+      id2 = SCIPgetItemid2Samediff(cons);
+      type = SCIPgetTypeSamediff(cons);
 
       SCIPdebugMsg(scip, "create varbound for %s(%d,%d)\n", type == SAME ? "same" : "diff",
          SCIPprobdataGetIds(SCIPgetProbData(scip))[id1], SCIPprobdataGetIds(SCIPgetProbData(scip))[id2]);

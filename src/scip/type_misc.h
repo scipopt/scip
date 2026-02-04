@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2026 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -58,7 +58,8 @@ enum SCIP_Hashmaptype
    SCIP_HASHMAPTYPE_UNKNOWN = 0,    /**< the hashmap did not store a single element yet, type unknown */
    SCIP_HASHMAPTYPE_POINTER = 1,    /**< the hashmap stores pointers % */
    SCIP_HASHMAPTYPE_REAL    = 2,    /**< the hashmap stores reals */
-   SCIP_HASHMAPTYPE_INT     = 3     /**< the hashmap stores ints */
+   SCIP_HASHMAPTYPE_INT     = 3,    /**< the hashmap stores ints */
+   SCIP_HASHMAPTYPE_LONG    = 4     /**< the hashmap stores long ints */
 };
 typedef enum SCIP_Hashmaptype SCIP_HASHMAPTYPE;
 
@@ -106,7 +107,7 @@ typedef struct SCIP_HashMap SCIP_HASHMAP;
 
 /** Hash set data structure
  *
- *  - \ref HashMap "List of all available methods"
+ *  - \ref HashSet "List of all available methods"
  */
 typedef struct SCIP_HashSet SCIP_HASHSET;
 

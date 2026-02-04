@@ -3,7 +3,7 @@
 /*                  This file is part of the program                         */
 /*              TCLIQUE --- Algorithm for Maximum Cliques                    */
 /*                                                                           */
-/*  Copyright (c) 1996-2025 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 1996-2026 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -88,7 +88,7 @@ TCLIQUE_GETWEIGHTS(tcliqueGetWeights)
    return tcliquegraph->weights;
 }
 
-/** returns, whether the edge (node1, node2) is in the graph */
+/** returns whether the edge (node1, node2) is in the graph */
 TCLIQUE_ISEDGE(tcliqueIsEdge)
 {
    int* currentadjedge;
@@ -218,16 +218,16 @@ void tcliqueFree(
    {
       if ( (*tcliquegraph)->adjedges != NULL )
       {
-	 BMSfreeMemoryArray(&(*tcliquegraph)->adjedges);
-	 BMSfreeMemoryArray(&(*tcliquegraph)->adjnodes);
-	 BMSfreeMemoryArray(&(*tcliquegraph)->degrees);
-	 BMSfreeMemoryArray(&(*tcliquegraph)->weights);
+         BMSfreeMemoryArray(&(*tcliquegraph)->adjedges);
+         BMSfreeMemoryArray(&(*tcliquegraph)->adjnodes);
+         BMSfreeMemoryArray(&(*tcliquegraph)->degrees);
+         BMSfreeMemoryArray(&(*tcliquegraph)->weights);
       }
       if ( (*tcliquegraph)->cacheddegrees )
       {
-	 BMSfreeMemoryArrayNull(&(*tcliquegraph)->cacheddegrees);
-	 BMSfreeMemoryArrayNull(&(*tcliquegraph)->cachedorigs);
-	 BMSfreeMemoryArrayNull(&(*tcliquegraph)->cacheddests);
+         BMSfreeMemoryArrayNull(&(*tcliquegraph)->cacheddegrees);
+         BMSfreeMemoryArrayNull(&(*tcliquegraph)->cachedorigs);
+         BMSfreeMemoryArrayNull(&(*tcliquegraph)->cacheddests);
       }
       BMSfreeMemory(tcliquegraph);
    }
@@ -644,7 +644,7 @@ TCLIQUE_Bool tcliqueLoadFile(
    }
 
    /* coverity[tainted_data] */
-   if( BMSallocMemoryArray(&(*tcliquegraph)->degrees, (*tcliquegraph)->nnodes) == NULL )   
+   if( BMSallocMemoryArray(&(*tcliquegraph)->degrees, (*tcliquegraph)->nnodes) == NULL )
    {
       infoMessage("Run out of memory while reading file %s.\n", filename);
       (void) fclose(file);
@@ -886,7 +886,7 @@ void tcliquePrintGraph(
 
       for( ; currentadjedge <= lastadjedge; currentadjedge++ )
       {
-	 infoMessage("%d, ", *currentadjedge);
+         infoMessage("%d, ", *currentadjedge);
       }
       infoMessage("]\n");
    }

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2026 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -73,6 +73,33 @@ SCIP_RETCODE SCIPvalidateSolve(
    SCIP_Real             primalreference,    /**< external primal reference value for the problem, or SCIP_UNKNOWN */
    SCIP_Real             dualreference,      /**< external dual reference value for the problem, or SCIP_UNKNOWN */
    SCIP_Real             reftol,             /**< relative tolerance for acceptable violation of reference values */
+   SCIP_Bool             quiet,              /**< TRUE if no status line should be printed */
+   SCIP_Bool*            feasible,           /**< pointer to store if the best solution is feasible in the original problem,
+                                               *  or NULL */
+   SCIP_Bool*            primalboundcheck,   /**< pointer to store if the primal bound respects the given dual reference
+                                               *  value, or NULL */
+   SCIP_Bool*            dualboundcheck      /**< pointer to store if the dual bound respects the given primal reference
+                                               *  value, or NULL */
+   );
+
+/** validate the result of an exact solve
+ *
+ *  the validation includes
+ *
+ *  - checking the feasibility of the incumbent solution in the original problem (using SCIPcheckSolOrig())
+ *
+ *  - checking if the objective bounds computed by SCIP agree with external primal and dual reference bounds.
+ *
+ *  All external reference bounds the original problem space and the original objective sense.
+ *
+ *  For infeasible problems, +/-inf should be passed as reference bounds depending on the objective sense
+ *  of the original problem.
+ */
+SCIP_EXPORT
+SCIP_RETCODE SCIPvalidateSolveExact(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_RATIONAL*        primalreference,    /**< external primal reference value for the problem, or SCIP_UNKNOWN */
+   SCIP_RATIONAL*        dualreference,      /**< external dual reference value for the problem, or SCIP_UNKNOWN */
    SCIP_Bool             quiet,              /**< TRUE if no status line should be printed */
    SCIP_Bool*            feasible,           /**< pointer to store if the best solution is feasible in the original problem,
                                                *  or NULL */

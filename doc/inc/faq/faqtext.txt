@@ -66,26 +66,18 @@ SECTION: General Questions about SCIP
     <p>Unless you want to use SCIP as a pure CP-Solver (see <a href="#scipascpsolver">here</a>),
       you need an underlying LP-Solver installed and linked to the libraries
       (see the <code><a href="PATHTODOC/INSTALL.LINKEXT">INSTALL</a></code> file in the SCIP root directory).
-      LP-solvers currently supported by SCIP are:
+      See <a href="PATHTODOC/LPI.LINKEXT">here</a> for LP-solvers currently supported by SCIP.
+      When solving MIPs exactly, an <a href="PATHTODOC/LPIEXACT.LINKEXT">exact LP solver supported by SCIP</a> is required.
     </p>
-    <ul>
-      <li><a href="https://soplex.zib.de/">SoPlex</a></li>
-      <li><a href="http://www-01.ibm.com/software/integration/optimization/cplex-optimizer/">IBM ILOG CPLEX</a></li>
-      <li><a href="http://www.fico.com/en/Products/DMTools/Pages/FICO-Xpress-Optimization-Suite.aspx">FICO XPress</a></li>
-      <li><a href="http://www.gurobi.com/">Gurobi</a> (version at least 7.0.2 required)</li>
-      <li><a href="https://projects.coin-or.org/Clp/">CLP</a> (interface currently sometimes produces wrong results)</li>
-      <li><a href="https://github.com/google/or-tools">Glop, Google OR tools</a> (experimental, LPI contained in OR tools)</li>
-      <li><a href="http://www.mosek.com/">Mosek</a></li>
-      <li><a href="http://www2.isye.gatech.edu/~wcook/qsopt/">QSopt</a> (experimental)</li>
-    </ul>
     <p>
-      If you want to use SCIP for mixed integer nonlinear programming, you might want to use an underlying NLP solver (e.g.,
-      <a href="https://projects.coin-or.org/Ipopt">Ipopt</a>). SCIP already comes with the CppAD expression interpreter (e.g., <a href="http://www.coin-or.org/CppAD/">CppAD</a>) as part of the source code.
+      If you want to use SCIP for mixed integer nonlinear programming, linking an <a href="PATHTODOC/NLPISOLVERS.LINKEXT">NLP solver supported by SCIP</a> is strongly advised.
+      The automatic differentiation library <a href="https://github.com/coin-or/CppAD">CppAD</a> is redistributed as part of the SCIP source code.
     </p>
     <p>
       Besides that, you might need a modeling language like <a href="https://zimpl.zib.de/">ZIMPL</a> to generate *.mps
       or *.lp files. ZIMPL files (.zpl extension) can also be read directly into SCIP.
-      Downloading the SCIP Optimization Suite includes SCIP, SoPlex and ZIMPL, as well as GCG and UG. Find installers for different platforms
+      Further, linking <a href="https://github.com/scipopt/papilo">PaPILO</a> can provide a stronger presolve when solving MIP.
+      Downloading the SCIP Optimization Suite includes SCIP, SoPlex and ZIMPL, as well as GCG, PaPILO, and UG. Find installers for different platforms
       and the source code bundle of all versions <a href="https://scipopt.org/#download">here</a>.
     </p>
 
@@ -421,29 +413,52 @@ SECTION: General Questions about SCIP
     ANSWER:
     <p>
        There are two main ways to analyse infeasible instances using SCIP:
-    <\p>
+    </p>
     <p>
        Firstly, there is IIS (irreducible infeasible subsystem) functionality in SCIP.
-       This can be called from the command line using `iis` or from the C API using `SCIPgenerateIIS(scip)`.
-       SCIP will then call its `iisfinders` and find a minimal subset of constraints (variable bounds too,
+       This can be called from the command line using <code>iis</code> or from the C API using <code>SCIPgenerateIIS()</code>.
+       SCIP will then call its <code>iisfinders</code> and find a minimal subset of constraints (variable bounds too,
        depending on the settings) that still results in an infeasible instance. There is no guarantee that
        the returned reduced instance is the smallest possible infeasible subsystem for the whole instance,
        but there is a guarantee that it contains no smaller infeasible subsystem, i.e., is irreducible.
        This functionality helps with identifying a small portion of constraints / variable bounds
        that together result in an infeasible problem.
-       After computing the IIS, it can be printed via the command line using `display/iis` or `write/iis`.
-    <\p>
+       After computing the IIS, it can be printed via the command line using <code>display/iis</code> or <code>write/iis</code>.
+    </p>
     <p>
        Secondly, there is MinUC (minimize number of unsatisfied constraints) functionality in SCIP.
-       This can be called from the command line using `change/minuc`.
+       This can be called from the command line using <code>change/minuc</code>.
        SCIP will then alter the current problem into a new problem.
-       One can then simply call `optimize` and solve the altered problem, which now minimizes the number
+       One can then simply call <code>optimize</code> and solve the altered problem, which now minimizes the number
        of unsatisfied constraints.
        In other words, SCIP will find a solution that marks a minimum number of constraints,
        such that if those constraints were relaxed, the original problem would be feasible.
-       One can view this by printing the solution, where `originalconsname_master` has value 1
+       One can view this by printing the solution, where <code>originalconsname_master</code> has value 1
        if the constraint is part of the MinUC.
-    <\p>
+    </p>
+
+    QUESTION: How do I use SCIP in order to solve MIPs numerically exactly and certify the result?
+    LABEL:exactsolving
+    ANSWER:
+    <p>
+       In the interactive shell the exact solving mode must be enabled by typing <code>set exact enable TRUE</code> before reading
+       the problem instance.  Optionally, a certificate file can be printed by specifying its filename via
+       <code>set certificate filename [yourfilename.vipr]</code>.
+       The resulting certificate can be checked with the proof checker <a href="https://github.com/scipopt/vipr">VIPR</a>
+       or a formally verified version in <a href="https://cakeml.org/checkers.html">CakeML</a>.
+    </p>
+    <p>
+       In SCIP 10, this certificate only certifies the correctness of the branch-and-bound process after presolving, so
+       you may want to disable presolving by typing <code>set presolving emphasis off</code> in order to obtain a certificate for
+       the original problem instance.  (Note that this may or may not slow down the solving process.)
+       Note that, in any case, certificate files are incomplete if cutting plane separation is enabled (as by default).
+       In this case, the certificate needs to be completed using the <code>viprcomp</code> script prior to verification.
+    </p>
+    <p>
+      If you access SCIP via the API, the exact solving mode is enabled by setting the parameter <code>exact/enable = TRUE</code>
+      or calling the API function <code>SCIPenableExactSolving()</code>, again <b>before</b> reading a problem instance.
+      For further details please see the dedicated section of the release report of SCIP 10.
+    </p>
 
 
 SECTION: Using SCIP as a standalone solver
@@ -856,7 +871,7 @@ SECTION: Using SCIP included in another source code
         In cases where this overrides the signal handling of a surrounding application,
         this may be undesirable.
         As a remedy, the parameter misc/catchctrlc can be set to FALSE or the SCIP library can be
-        compiled with the special C compiler flag "-DNO_SIGACTION", both disabling SCIP's internal
+        compiled with the special C compiler flag "-DSCIP_NO_SIGACTION", both disabling SCIP's internal
         signal handling.
     </p>
 

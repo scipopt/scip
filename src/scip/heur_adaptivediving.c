@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2026 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -60,7 +60,7 @@
 #define DEFAULT_USEADAPTIVECONTEXT FALSE
 #define DEFAULT_SELCONFIDENCECOEFF 10.0      /**< coefficient c to decrease initial confidence (calls + 1.0) / (calls + c) in scores */
 #define DEFAULT_EPSILON             1.0      /**< parameter that increases probability of exploration among divesets (only active if seltype is 'e') */
-#define DEFAULT_MAXLPITERQUOT       0.1      /**< maximal fraction of diving LP iterations compared to node LP iterations */
+#define DEFAULT_MAXLPITERQUOT      0.15      /**< maximal fraction of diving LP iterations compared to node LP iterations */
 #define DEFAULT_MAXLPITEROFS      1500L      /**< additional number of allowed LP iterations */
 #define DEFAULT_BESTSOLWEIGHT      10.0      /**< weight of incumbent solutions compared to other solutions in computation of LP iteration limit */
 
@@ -327,21 +327,16 @@ SCIP_Longint getLPIterlimit(
 #ifdef SCIP_DEBUG
 /** print array for debug purpose */
 static
-char* printRealArray(
+void printRealArray(
    char*                 strbuf,             /**< string buffer array */
    SCIP_Real*            elems,              /**< array elements */
    int                   nelems              /**< number of elements */
    )
 {
    int c;
-   char* pos = strbuf;
 
    for( c = 0; c < nelems; ++c )
-   {
-      pos += sprintf(pos, "%.4f ", elems[c]);
-   }
-
-   return strbuf;
+      strbuf += sprintf(strbuf, "%.4f ", elems[c]);
 }
 #endif
 
@@ -359,7 +354,8 @@ int sampleWeighted(
    int w;
 #ifdef SCIP_DEBUG
    char strbuf[SCIP_MAXSTRLEN];
-   SCIPdebugMsg(scip, "Weights: %s\n", printRealArray(strbuf, weights, nweights));
+   printRealArray(strbuf, weights, nweights);
+   SCIPdebugMsg(scip, "Weights: %s\n", strbuf);
 #endif
 
    weightsum = 0.0;
@@ -614,6 +610,9 @@ SCIP_RETCODE SCIPincludeHeurAdaptivediving(
 
    assert(heur != NULL);
 
+   /* primal heuristic is safe to use in exact solving mode */
+   SCIPheurMarkExact(heur);
+
    /* set non-NULL pointers to callback methods */
    SCIP_CALL( SCIPsetHeurCopy(scip, heur, heurCopyAdaptivediving) );
    SCIP_CALL( SCIPsetHeurFree(scip, heur, heurFreeAdaptivediving) );
@@ -654,7 +653,6 @@ SCIP_RETCODE SCIPincludeHeurAdaptivediving(
          "weight of incumbent solutions compared to other solutions in computation of LP iteration limit",
          &heurdata->bestsolweight, FALSE, DEFAULT_BESTSOLWEIGHT, 0.0, SCIP_REAL_MAX, NULL, NULL) );
 
-/* cppcheck-suppress unusedLabel */
 TERMINATE:
    if( retcode != SCIP_OKAY )
    {

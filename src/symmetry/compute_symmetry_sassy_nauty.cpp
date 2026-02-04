@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2026 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -76,7 +76,7 @@
 #include "scip/cons_linear.h"
 #include "scip/scip_mem.h"
 #include "scip/symmetry_graph.h"
-
+#include "tinycthread/tinycthread.h"
 
 /** struct for symmetry callback */
 struct SYMMETRY_Data
@@ -96,13 +96,16 @@ struct SYMMETRY_Data
 struct NAUTY_Data
 {
    SCIP*                 scip;               /**< SCIP pointer */
-   int                   ntreenodes;         /**< number of nodes visitied in nauty's search tree */
-   int                   maxncells;          /**< maximum number of cells in nauty's search tree */
-   int                   maxnnodes;          /**< maximum number of nodes in nauty's search tree */
+   int                   maxlevel;           /**< maximum depth level of nauty's search tree (-1: unlimited) */
 };
 
 /** static data for nauty callback */
+#if defined(_Thread_local)
+static _Thread_local struct NAUTY_Data nautydata_;
+#else
 static struct NAUTY_Data nautydata_;
+#endif
+
 #endif
 
 /* ------------------- hook functions ------------------- */
@@ -207,35 +210,15 @@ void nautyterminationhook(
    int                   n                   /**< number of nodes in the graph */
    )
 {  /* lint --e{715} */
-   SCIP_Bool terminate = FALSE;
-   nautydata_.ntreenodes++;
-
-   /* add some iteration limit to avoid spending too much time in nauty  */
-   if ( numcells >= nautydata_.maxncells )
+   /* add level limit to work around call stack overflow in nauty */
+   if ( level > nautydata_.maxlevel && nautydata_.maxlevel >= 0 )
    {
-      terminate = TRUE;
       SCIPverbMessage(nautydata_.scip, SCIP_VERBLEVEL_MINIMAL, NULL,
-         "symmetry computation terminated early, because number of cells %d in Nauty exceeds limit of %d\n",
-         numcells, nautydata_.maxncells);
+         "symmetry computation terminated early because Nauty level limit %d is exceeded\n",
+         nautydata_.maxlevel);
       SCIPverbMessage(nautydata_.scip, SCIP_VERBLEVEL_MINIMAL, NULL,
-         "for running full symmetry detection, increase value of parameter propagating/symmetry/nautymaxncells\n");
-   }
-   else if ( nautydata_.ntreenodes >= nautydata_.maxnnodes )
-   {
-      terminate = TRUE;
-      SCIPverbMessage(nautydata_.scip, SCIP_VERBLEVEL_MINIMAL, NULL,
-         "symmetry computation terminated early, because number of"
-         " nodes %d in Nauty's search tree exceeds limit of %d\n", nautydata_.ntreenodes, nautydata_.maxnnodes);
-      SCIPverbMessage(nautydata_.scip, SCIP_VERBLEVEL_MINIMAL, NULL,
-         "for running full symmetry detection, increase value of"
-         " parameter propagating/symmetry/nautymaxnnodes\n");
-   }
-
-   if ( terminate )
-   {
-      /* request a kill from nauty */
+         "for running full symmetry detection, increase value of parameter propagating/symmetry/nautymaxlevel\n");
       nauty_kill_request = 1;
-      return;
    }
 }
 
@@ -247,18 +230,16 @@ SCIP_Bool SYMcanComputeSymmetry(void)
    return TRUE;
 }
 
-/** static variable for holding the name of nauty */
-static TLS_ATTR char nautyname[20];
+/** nauty/traces version string */
+#ifdef NAUTY
+static const char nautyname[] = {'N', 'a', 'u', 't', 'y', ' ', NAUTYVERSIONID/10000 + '0', '.', (NAUTYVERSIONID%10000)/1000 + '0', '.', (NAUTYVERSIONID%1000)/10 + '0', '\0'};
+#else
+static const char nautyname[] = {'T', 'r', 'a', 'c', 'e', 's', ' ', NAUTYVERSIONID/10000 + '0', '.', (NAUTYVERSIONID%10000)/1000 + '0', '.', (NAUTYVERSIONID%1000)/10 + '0', '\0'};
+#endif
 
 /** return name of external program used to compute generators */
 const char* SYMsymmetryGetName(void)
 {
-   /* 28080+HAVE_TLS -> 2.8.(0)8 */
-#ifdef NAUTY
-   (void) SCIPsnprintf(nautyname, (int)sizeof(nautyname), "Nauty %d.%d.%d", NAUTYVERSIONID/10000, (NAUTYVERSIONID%10000)/1000, (NAUTYVERSIONID%1000)/10);
-#else
-   (void) SCIPsnprintf(nautyname, (int)sizeof(nautyname), "Traces %d.%d.%d", NAUTYVERSIONID/10000, (NAUTYVERSIONID%10000)/1000, (NAUTYVERSIONID%1000)/10);
-#endif
    return nautyname;
 }
 
@@ -321,7 +302,7 @@ SCIP_RETCODE computeAutomorphisms(
    *nperms = 0;
    *nmaxperms = 0;
    *perms = NULL;
-   *log10groupsize = 0;
+   *log10groupsize = 0.0;
    *symcodetime = 0.0;
 
    /* init data */
@@ -337,9 +318,7 @@ SCIP_RETCODE computeAutomorphisms(
 
 #ifdef NAUTY
    nautydata_.scip = scip;
-   nautydata_.ntreenodes = 0;
-   SCIP_CALL( SCIPgetIntParam(scip, "propagating/symmetry/nautymaxncells", &nautydata_.maxncells) );
-   SCIP_CALL( SCIPgetIntParam(scip, "propagating/symmetry/nautymaxnnodes", &nautydata_.maxnnodes) );
+   SCIP_CALL( SCIPgetIntParam(scip, "propagating/symmetry/nautymaxlevel", &nautydata_.maxlevel) );
 #endif
 
    oldtime = SCIPgetSolvingTime(scip);
@@ -355,47 +334,55 @@ SCIP_RETCODE computeAutomorphisms(
    /* call sassy to reduce graph */
    sassy.reduce(G, &sassyglue);
 
-   /* first, convert the graph */
-   sparsegraph sg;
-   DYNALLSTAT(int, lab, lab_sz);
-   DYNALLSTAT(int, ptn, ptn_sz);
+   if( G->get_sgraph()->v_size == 0 )
+   {
+      dejavu::big_number grp_sz = sassy.grp_sz;
+      *log10groupsize = (SCIP_Real) log10l(grp_sz.mantissa * powl(10.0, (SCIP_Real) grp_sz.exponent));
+   }
+   else
+   {
+      /* first, convert the graph */
+      sparsegraph sg;
+      DYNALLSTAT(int, lab, lab_sz);
+      DYNALLSTAT(int, ptn, ptn_sz);
 
 #ifdef NAUTY
-   convert_dejavu_to_nauty(G, &sg, &lab, &lab_sz, &ptn, &ptn_sz);
-   statsblk stats;
-   DYNALLSTAT(int, orbits, orbits_sz);
-   DYNALLOC1(int, orbits, orbits_sz, sg.nv, "malloc");
-   DEFAULTOPTIONS_SPARSEGRAPH(options);
-   /* init callback functions for nauty (accumulate the group generators found by nauty) */
-   options.writeautoms = FALSE;
-   options.userautomproc = dejavu::preprocessor::nauty_hook;
-   options.defaultptn = FALSE; /* use color classes */
-   if ( canterminateearly )
-      options.usernodeproc = nautyterminationhook;
-   *log10groupsize = 0.0;
-   if(sg.nv > 0) {
+      convert_dejavu_to_nauty(G, &sg, &lab, &lab_sz, &ptn, &ptn_sz);
+      assert( sg.nv > 0 );
+
+      statsblk stats;
+      DYNALLSTAT(int, orbits, orbits_sz);
+      DYNALLOC1(int, orbits, orbits_sz, sg.nv, "malloc");
+      DEFAULTOPTIONS_SPARSEGRAPH(options);
+      /* init callback functions for nauty (accumulate the group generators found by nauty) */
+      options.writeautoms = FALSE;
+      options.userautomproc = dejavu::preprocessor::nauty_hook;
+      options.defaultptn = FALSE; /* use color classes */
+      if ( canterminateearly )
+         options.usernodeproc = nautyterminationhook;
       sparsenauty(&sg, lab, ptn, orbits, &options, &stats, NULL);
-      *log10groupsize = (SCIP_Real) stats.grpsize2;
-   }
+      dejavu::big_number grp_sz = sassy.grp_sz;
+      *log10groupsize = log10(stats.grpsize1 * grp_sz.mantissa * pow(10.0, (SCIP_Real) (stats.grpsize2 + grp_sz.exponent)));
 #else
-   convert_dejavu_to_traces(&sassygraph, &sg, &lab, &lab_sz, &ptn, &ptn_sz);
-   TracesStats stats;
-   DYNALLSTAT(int, orbits, orbits_sz);
-   DYNALLOC1(int, orbits, orbits_sz, sg.nv, "malloc");
-   DEFAULTOPTIONS_TRACES(options);
-   /* init callback functions for traces (accumulate the group generators found by traces) */
-   options.writeautoms = FALSE;
-   options.userautomproc = dejavu::preprocessor::traces_hook;
-   options.defaultptn = FALSE; /* use color classes */
-   if(sg.nv > 0) {
+      convert_dejavu_to_traces(&sassygraph, &sg, &lab, &lab_sz, &ptn, &ptn_sz);
+      TracesStats stats;
+      DYNALLSTAT(int, orbits, orbits_sz);
+      DYNALLOC1(int, orbits, orbits_sz, sg.nv, "malloc");
+      DEFAULTOPTIONS_TRACES(options);
+      /* init callback functions for traces (accumulate the group generators found by traces) */
+      options.writeautoms = FALSE;
+      options.userautomproc = dejavu::preprocessor::traces_hook;
+      options.defaultptn = FALSE; /* use color classes */
       Traces(&sg, lab, ptn, orbits, &options, &stats, NULL);
-   }
+      dejavu::big_number grp_sz = sassy.grp_sz;
+      *log10groupsize = log10(stats.grpsize1 * grp_sz.mantissa * pow(10.0, (SCIP_Real) (stats.grpsize2 + grp_sz.exponent)));
 #endif
 
-   /* clean up */
-   DYNFREE(lab, lab_sz);
-   DYNFREE(ptn, ptn_sz);
-   SG_FREE(sg);
+      /* clean up */
+      DYNFREE(lab, lab_sz);
+      DYNFREE(ptn, ptn_sz);
+      SG_FREE(sg);
+   }
 
    *symcodetime = SCIPgetSolvingTime(scip) - oldtime;
 
@@ -423,7 +410,7 @@ SCIP_RETCODE computeAutomorphisms(
 SCIP_RETCODE SYMcomputeSymmetryGenerators(
    SCIP*                 scip,               /**< SCIP pointer */
    int                   maxgenerators,      /**< maximal number of generators constructed (= 0 if unlimited) */
-   SYM_GRAPH*            symgraph,           /**< symmetry detection graph */
+   SYM_GRAPH*            symgraph,           /**< symmetry detection graph */ /* cppcheck-suppress funcArgNamesDifferent */
    int*                  nperms,             /**< pointer to store number of permutations */
    int*                  nmaxperms,          /**< pointer to store maximal number of permutations (needed for freeing storage) */
    int***                perms,              /**< pointer to store permutation generators as (nperms x npermvars) matrix */

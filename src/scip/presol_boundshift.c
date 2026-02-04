@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2026 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -105,7 +105,7 @@ SCIP_DECL_PRESOLCOPY(presolCopyBoundshift)
 /**! [SnippetPresolFreeBoundshift] */
 static
 SCIP_DECL_PRESOLFREE(presolFreeBoundshift)
-{  /*lint --e{715}*/   
+{  /*lint --e{715}*/
    SCIP_PRESOLDATA* presoldata;
 
    /* free presolver data */
@@ -193,7 +193,7 @@ SCIP_DECL_PRESOLEXEC(presolExecBoundshift)
       assert( SCIPisLE(scip, lb, ub) );
       if( SCIPisEQ(scip, lb, ub) )
          continue;
-      if( presoldata->integer && !SCIPisIntegral(scip, ub - lb) ) 
+      if( presoldata->integer && !SCIPisIntegral(scip, ub - lb) )
          continue;
 
       /* check if bounds are shiftable */

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2026 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -35,13 +35,13 @@
 #include "scip/disp_xyz.h"
 
 
-#define DISP_NAME               "xyz"                
+#define DISP_NAME               "xyz"
 #define DISP_DESC               "xyz display column"
-#define DISP_HEADER             "xyz" 
+#define DISP_HEADER             "xyz"
 #define DISP_WIDTH              14      /**< the width of the display column */
 #define DISP_PRIORITY           110000  /**< the priority of the display column */
 #define DISP_POSITION           30100   /**< the relative position of the display column */
-#define DISP_STRIPLINE          TRUE    /**< the default for whether the display column should be separated 
+#define DISP_STRIPLINE          TRUE    /**< the default for whether the display column should be separated
                                          *   with a line from its right neighbor */
 
 
@@ -51,7 +51,9 @@
  * Data structures
  */
 
-/* TODO: fill in the necessary display column data */
+/* TODO: fill in the necessary display column data
+ * when this plugin is written in C++, rename SCIP_DispData to something unique (C++ One-Definition-Rule)
+ */
 
 /** display column data */
 struct SCIP_DispData
@@ -197,10 +199,10 @@ SCIP_RETCODE SCIPincludeDispXyz(
    /* TODO: (optional) create display column specific data here */
 
    /* include display column */
-   SCIP_CALL( SCIPincludeDisp(scip, DISP_NAME, DISP_DESC, DISP_HEADER, SCIP_DISPSTATUS_AUTO, 
+   SCIP_CALL( SCIPincludeDisp(scip, DISP_NAME, DISP_DESC, DISP_HEADER, SCIP_DISPSTATUS_AUTO,
          dispCopyXyz,
-         dispFreeXyz, dispInitXyz, dispExitXyz, 
-         dispInitsolXyz, dispExitsolXyz, dispOutputXyz, 
+         dispFreeXyz, dispInitXyz, dispExitXyz,
+         dispInitsolXyz, dispExitsolXyz, dispOutputXyz,
          dispdata, DISP_WIDTH, DISP_PRIORITY, DISP_POSITION, DISP_STRIPLINE) );
 
    /* add xyz display column parameters */

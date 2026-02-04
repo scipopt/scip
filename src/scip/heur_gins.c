@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2026 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -82,7 +82,7 @@
 #define HEUR_DESC             "gins works on k-neighborhood in a variable-constraint graph"
 #define HEUR_DISPCHAR         SCIP_HEURDISPCHAR_LNS
 #define HEUR_PRIORITY         -1103000
-#define HEUR_FREQ             20
+#define HEUR_FREQ             10
 #define HEUR_FREQOFS          8
 #define HEUR_MAXDEPTH         -1
 #define HEUR_TIMING           SCIP_HEURTIMING_AFTERNODE
@@ -1610,7 +1610,7 @@ SCIP_RETCODE selectInitialVariableRandomly(
          break;
       }
 
-      assert(SCIPvarIsIntegral(choosevar));
+      assert(SCIPvarGetType(choosevar) == SCIP_VARTYPE_BINARY || SCIPvarGetType(choosevar) == SCIP_VARTYPE_INTEGER);
 
       /* get neighborhood storage */
       SCIP_CALL( SCIPallocBufferArray(scip, &neighborhood, nvars) );
@@ -1643,7 +1643,7 @@ SCIP_RETCODE selectInitialVariableRandomly(
             neighborhood[neighborhoodsize++] = currvar;
 
             /* increase discrete variables counter */
-            if( SCIPvarIsIntegral(currvar) )
+            if( SCIPvarGetType(currvar) <= SCIP_VARTYPE_INTEGER )
                ++ndiscvarsneighborhood;
          }
       }
@@ -2413,45 +2413,48 @@ SCIP_DECL_HEUREXEC(heurExecGins)
    DECOMPHORIZON* decomphorizon;             /* data structure for processing multiple blocks of a decomposition */
    SCIP_DECOMP* decomp;
    SCIP_HASHMAP* varmapfw;                   /* mapping of SCIP variables to sub-SCIP variables */
-
-   int nvars;                                /* number of original problem's variables */
-   int i;
-   int nfixedvars;
+   SCIP_SOL* oldincumbent;
+   SCIP_SOL* newincumbent;
    SOLVELIMITS solvelimits;
    SCIP_Bool runagain;
-
    SCIP_Bool success;
+   int nvars;                                /* number of original problem's variables */
+   int nfixedvars;
+   int i;
 
-   assert(heur != NULL);
    assert(scip != NULL);
+   assert(heur != NULL);
    assert(result != NULL);
+
+   *result = SCIP_DELAYED;
+
+   /* only call heuristic if feasible solution is available */
+   if( SCIPgetNSols(scip) == 0 )
+      return SCIP_OKAY;
 
    /* get heuristic's data */
    heurdata = SCIPheurGetData(heur);
    assert(heurdata != NULL);
 
-   *result = SCIP_DELAYED;
-
-   /* only call heuristic, if feasible solution is available */
-   if( SCIPgetNSols(scip) <= 0 )
-      return SCIP_OKAY;
-
    /* in case of many unsuccessful calls, the nextnodenumber is increased to prevent us from running too often  */
    if( SCIPgetNNodes(scip) < heurdata->nextnodenumber )
       return SCIP_OKAY;
 
-   /* only call heuristic, if the best solution comes from transformed problem */
-   assert(SCIPgetBestSol(scip) != NULL);
-   if( SCIPsolIsOriginal(SCIPgetBestSol(scip)) )
+   /* get best solution */
+   newincumbent = SCIPgetBestSol(scip);
+   assert(newincumbent != NULL);
+
+   /* only call heuristic if enough nodes were processed since last incumbent */
+   if( SCIPgetNNodes(scip) - SCIPgetSolNodenum(scip, newincumbent) < heurdata->nwaitingnodes )
       return SCIP_OKAY;
 
-   /* only call heuristic, if enough nodes were processed since last incumbent */
-   if( SCIPgetNNodes(scip) - SCIPgetSolNodenum(scip,SCIPgetBestSol(scip)) < heurdata->nwaitingnodes )
+   /* only call heuristic if the best solution comes from transformed problem */
+   if( SCIPsolIsOriginal(newincumbent) )
       return SCIP_OKAY;
 
    *result = SCIP_DIDNOTRUN;
 
-   /* only call heuristic, if discrete variables are present */
+   /* only call heuristic if discrete variables are present */
    if( SCIPgetNBinVars(scip) == 0 && SCIPgetNIntVars(scip) == 0 )
       return SCIP_OKAY;
 
@@ -2463,7 +2466,7 @@ SCIP_DECL_HEUREXEC(heurExecGins)
    /* determine solving limits for the sub-SCIP for the first time */
    SCIP_CALL( determineLimits(scip, heur, &solvelimits, &runagain) );
 
-   if( ! runagain )
+   if( !runagain )
       return SCIP_OKAY;
 
    *result = SCIP_DIDNOTFIND;
@@ -2487,9 +2490,6 @@ SCIP_DECL_HEUREXEC(heurExecGins)
 
    do
    {
-      SCIP_SOL* oldincumbent;
-      SCIP_SOL* newincumbent;
-
       /* create a new problem, by fixing all variables except for a small neighborhood */
       SCIP_CALL( determineVariableFixings(scip, fixedvars, fixedvals, &nfixedvars, heurdata, rollinghorizon, decomphorizon, &success) );
 
@@ -2555,15 +2555,15 @@ SCIP_DECL_HEUREXEC(heurExecGins)
       heurdata->usednodes += SCIPgetNNodes(subscip);
 
       success = FALSE;
+
       /* check, whether a solution was found;
        * due to numerics, it might happen that not all solutions are feasible -> try all solutions until one was accepted
        */
-      oldincumbent = SCIPgetBestSol(scip);
-
       SCIP_CALL( SCIPtranslateSubSols(scip, subscip, heur, subvars, &success, NULL) );
       if( success )
          *result = SCIP_FOUNDSOL;
 
+      oldincumbent = newincumbent;
       newincumbent = SCIPgetBestSol(scip);
 
       /* free subproblem */
@@ -2626,6 +2626,9 @@ SCIP_RETCODE SCIPincludeHeurGins(
          HEUR_MAXDEPTH, HEUR_TIMING, HEUR_USESSUBSCIP, heurExecGins, heurdata) );
 
    assert(heur != NULL);
+
+   /* primal heuristic is safe to use in exact solving mode */
+   SCIPheurMarkExact(heur);
 
    /* set non-NULL pointers to callback methods */
    SCIP_CALL( SCIPsetHeurCopy(scip, heur, heurCopyGins) );

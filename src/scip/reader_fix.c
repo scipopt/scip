@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2026 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -69,7 +69,7 @@
 /** reads the given solution file */
 static
 SCIP_RETCODE readSol(
-   SCIP*                 scip,               /**< SCIP data structure */   
+   SCIP*                 scip,               /**< SCIP data structure */
    const char*           filename            /**< name of the input file */
    )
 {
@@ -90,7 +90,7 @@ SCIP_RETCODE readSol(
       SCIPerrorMessage("cannot open file <%s> for reading\n", filename);
       SCIPprintSysError(filename);
       return SCIP_NOFILE;
-   }   
+   }
 
    /* read the file */
    error = FALSE;

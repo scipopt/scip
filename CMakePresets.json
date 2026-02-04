@@ -15,7 +15,8 @@
         "AUTOBUILD": "Off",
         "IPOPT": "Off",
         "PAPILO": "On",
-        "SYM": "snauty"
+        "SYM": "snauty",
+        "LTO": "On"
       }
     },
     {
@@ -29,7 +30,19 @@
         "READLINE": "Off",
         "ZLIB": "Off",
         "GMP": "Off",
-        "LPS": "none"
+        "MPFR": "Off",
+        "EXACTSOLVE": "Off",
+        "LPS": "none",
+        "LPSEXACT": "none"
+      }
+    },
+    {
+      "name": "interface",
+      "description": "User interface configuration",
+      "cacheVariables": {
+        "AUTOBUILD": "Off",
+        "CHECKSTAGE": "On",
+        "LTO": "On"
       }
     }
   ]

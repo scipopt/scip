@@ -3,7 +3,7 @@
 /*                  This file is part of the library                         */
 /*          BMS --- Block Memory Shell                                       */
 /*                                                                           */
-/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2026 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -352,7 +352,7 @@ SCIP_EXPORT
 BMS_CHKMEM* BMScreateChunkMemory_call(
    size_t                size,               /**< element size of the chunk block */
    int                   initchunksize,      /**< number of elements in the first chunk of the chunk block */
-   int                   garbagefactor,      /**< garbage collector is called, if at least garbagefactor * avg. chunksize 
+   int                   garbagefactor,      /**< garbage collector is called, if at least garbagefactor * avg. chunksize
                                               *   elements are free (-1: disable garbage collection) */
    const char*           filename,           /**< source file of the function call */
    int                   line                /**< line number in source file of the function call */
@@ -522,7 +522,7 @@ typedef struct BMS_BlkMem BMS_BLKMEM;           /**< block memory: collection of
 SCIP_EXPORT
 BMS_BLKMEM* BMScreateBlockMemory_call(
    int                   initchunksize,      /**< number of elements in the first chunk of each chunk block */
-   int                   garbagefactor,      /**< garbage collector is called, if at least garbagefactor * avg. chunksize 
+   int                   garbagefactor,      /**< garbage collector is called, if at least garbagefactor * avg. chunksize
                                               *   elements are free (-1: disable garbage collection) */
    const char*           filename,           /**< source file of the function call */
    int                   line                /**< line number in source file of the function call */
@@ -878,7 +878,7 @@ size_t BMSgetNUsedBufferMemory(
 /** returns the number of allocated bytes in the buffer memory */
 SCIP_EXPORT
 long long BMSgetBufferMemoryUsed(
-   const BMS_BUFMEM*     bufmem              /**< buffer memory */
+   const BMS_BUFMEM*     buffer              /**< buffer memory */
    );
 
 /** outputs statistics about currently allocated buffers to the screen */

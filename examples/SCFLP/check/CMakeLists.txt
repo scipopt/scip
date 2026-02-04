@@ -43,6 +43,7 @@ foreach(instance ${instances})
     set_tests_properties("examples-scflp-${basename}"
                         PROPERTIES
                             PASS_REGULAR_EXPRESSION "Validation         : Success"
+                            FAIL_REGULAR_EXPRESSION "ERROR"
                             DEPENDS examples-scflp-build
                             RESOURCE_LOCK libscip
                         )
@@ -65,6 +66,7 @@ foreach(instance ${instances})
                         PROPERTIES
                             PASS_REGULAR_EXPRESSION "Validation         : Success"
                             DEPENDS examples-scflp-build
+                            RESOURCE_LOCK libscip
                         )
     if(WIN32)
         # on windows we need to execute the application and examples executables from the directory containing the libscip.dll,
@@ -95,6 +97,7 @@ if( DEFINED IPOPT_FOUND AND DEFINED LPS )
                               PROPERTIES
                                   PASS_REGULAR_EXPRESSION "Validation         : Success"
                                   DEPENDS examples-scflp-build
+                                  RESOURCE_LOCK libscip
                               )
           if(WIN32)
               # on windows we need to execute the application and examples executables from the directory containing the libscip.dll,
@@ -116,6 +119,7 @@ if( DEFINED IPOPT_FOUND AND DEFINED LPS )
                               PROPERTIES
                                   PASS_REGULAR_EXPRESSION "Validation         : Success"
                                   DEPENDS examples-scflp-build
+                                  RESOURCE_LOCK libscip
                               )
           if(WIN32)
               # on windows we need to execute the application and examples executables from the directory containing the libscip.dll,

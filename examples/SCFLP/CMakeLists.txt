@@ -1,10 +1,15 @@
 cmake_minimum_required(VERSION 3.11)
 
+# INTERPROCEDURAL_OPTIMIZATION is enforced when enabled.
+if(POLICY CMP0069)
+   cmake_policy(SET CMP0069 NEW)
+endif()
+
 project(SCFLP)
 
 if(TARGET SCIP::SCIP)
   # find package by SCIP PATH
-  find_package(SCIP CONFIG PATHS ${SCIP_BINARY_DIR} REQUIRED)
+  find_package(SCIP CONFIG NO_DEFAULT_PATH PATHS ${SCIP_BINARY_DIR} REQUIRED)
 else()
   find_package(SCIP REQUIRED)
 endif()
@@ -15,6 +20,7 @@ add_executable(scflp
    src/cmain.c
    src/probdata_scflp.c
    src/reader_scflp.c )
+set_property(TARGET scflp PROPERTY INTERPROCEDURAL_OPTIMIZATION ${LTO_AVAILABLE})
 
 # link to math library if it is available
 find_library(LIBM m)

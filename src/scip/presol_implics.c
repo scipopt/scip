@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2026 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -306,7 +306,7 @@ SCIP_DECL_PRESOLEXEC(presolExecImplics)
    }
 
    /* perform the aggregations
-    * 
+    *
     * Note, that we cannot assume y to be active (see var.c: varRemoveImplicsVbs()), but it should not cause any
     * troubles as this case seems to be handled correctly in SCIPaggregateVars(), unless the variable is
     * multiaggregated, but this has been excluded above.

@@ -1,11 +1,16 @@
 cmake_minimum_required(VERSION 3.11)
 
+# INTERPROCEDURAL_OPTIMIZATION is enforced when enabled.
+if(POLICY CMP0069)
+   cmake_policy(SET CMP0069 NEW)
+endif()
+
 project(CallableLibrary)
 include(CTest)
 
 if(TARGET SCIP::SCIP)
   # find package by SCIP PATH
-  find_package(SCIP CONFIG PATHS ${SCIP_BINARY_DIR} REQUIRED)
+  find_package(SCIP CONFIG NO_DEFAULT_PATH PATHS ${SCIP_BINARY_DIR} REQUIRED)
 else()
   find_package(SCIP REQUIRED)
 endif()
@@ -32,12 +37,16 @@ endif()
 
 target_link_libraries(gastrans ${SCIP_LIBRARIES} ${LIBM})
 target_compile_options(gastrans PRIVATE ${SCIP_COMPILE_FLAGS})
+set_property(TARGET gastrans PROPERTY INTERPROCEDURAL_OPTIMIZATION ${LTO_AVAILABLE})
 target_link_libraries(spring ${SCIP_LIBRARIES})
 target_compile_options(spring PRIVATE ${SCIP_COMPILE_FLAGS})
+set_property(TARGET spring PROPERTY INTERPROCEDURAL_OPTIMIZATION ${LTO_AVAILABLE})
 target_link_libraries(brachistochrone ${SCIP_LIBRARIES} ${LIBM})
 target_compile_options(brachistochrone PRIVATE ${SCIP_COMPILE_FLAGS})
+set_property(TARGET brachistochrone PROPERTY INTERPROCEDURAL_OPTIMIZATION ${LTO_AVAILABLE})
 target_link_libraries(circlepacking ${SCIP_LIBRARIES} ${LIBM})
 target_compile_options(circlepacking PRIVATE ${SCIP_COMPILE_FLAGS})
+set_property(TARGET circlepacking PROPERTY INTERPROCEDURAL_OPTIMIZATION ${LTO_AVAILABLE})
 
 if( TARGET examples )
     add_dependencies( examples gastrans spring brachistochrone circlepacking )
@@ -64,6 +73,7 @@ macro(addbuildandtest target)
             )
     set_tests_properties(examples-callablelibrary_${target}
                         PROPERTIES
+			    FAIL_REGULAR_EXPRESSION "ERROR"
                             DEPENDS examples-callablelibrary_${target}-build
                         )
     if(WIN32)

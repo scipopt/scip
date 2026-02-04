@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2026 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -1129,7 +1129,7 @@ SCIP_RETCODE catchVarEvent(
    if( ownerdata->nconss <= 1 )
       ownerdata->consssorted = TRUE;
    else if( ownerdata->consssorted )
-      ownerdata->consssorted = compIndexConsNonlinear(ownerdata->conss[ownerdata->nconss-2], ownerdata->conss[ownerdata->nconss-1]) > 0;
+      ownerdata->consssorted = compIndexConsNonlinear(ownerdata->conss[ownerdata->nconss-2], ownerdata->conss[ownerdata->nconss-1]) < 0;
 
    /* catch variable events, if not done so yet (first constraint) */
    if( ownerdata->filterpos < 0 )
@@ -1362,7 +1362,7 @@ SCIP_RETCODE createCons(
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
 
-   if( local && SCIPgetDepth(scip) != 0 )
+   if( local && SCIPgetStage(scip) == SCIP_STAGE_SOLVING && SCIPgetDepth(scip) != 0 )
    {
       SCIPerrorMessage("Locally valid nonlinear constraints are not supported, yet.\n");
       return SCIP_INVALIDCALL;
@@ -1373,6 +1373,13 @@ SCIP_RETCODE createCons(
    {
       SCIPerrorMessage("Non-initial nonlinear constraints are not supported, yet.\n");
       return SCIP_INVALIDCALL;
+   }
+
+   if( isnan(lhs) || isnan(rhs) )
+   {
+      SCIPerrorMessage("%s hand side of nonlinear constraint <%s> is nan\n",
+            isnan(lhs) ? "left" : "right", name);
+      return SCIP_INVALIDDATA;
    }
 
    /* create constraint data */
@@ -3529,6 +3536,24 @@ SCIP_RETCODE detectNlhdlrs(
          FALSE, FALSE) );
       conshdlrdata->indetect = FALSE;
 
+      /* presolveSingleLockedVars() may need the activity of product expressions in a sum expr that is in the root expr of a nonlinear constraint with only one finite side
+       * if this presolver may be run in the current presolve round (presoltiming=exhaustive could be added as additional criterion),
+       * then we ensure that a routine will be present to compute this activity (SCIPregisterExprUsageNonlinear actually updates activity already)
+       */
+      if( SCIPgetStage(scip) == SCIP_STAGE_PRESOLVING && !conshdlrdata->checkedvarlocks && conshdlrdata->checkvarlocks != 'd'
+         && (SCIPisInfinity(scip, -consdata->lhs) || SCIPisInfinity(scip, consdata->rhs)) && SCIPisExprSum(scip, consdata->expr) )
+      {
+         int c;
+         for( c = 0; c < SCIPexprGetNChildren(consdata->expr); ++c )
+         {
+            expr = SCIPexprGetChildren(consdata->expr)[c];
+            if( SCIPisExprProduct(scip, expr) )
+            {
+               SCIP_CALL( SCIPregisterExprUsageNonlinear(scip, expr, FALSE, TRUE, FALSE, FALSE) );
+            }
+         }
+      }
+
       /* compute integrality information for all subexpressions */
       SCIP_CALL( SCIPcomputeExprIntegrality(scip, consdata->expr) );
 
@@ -3808,9 +3833,10 @@ SCIP_Bool isBinaryProduct(
 
       var = SCIPgetVarExprVar(child);
 
-      /* check whether variable is binary, in any feasible solution */
-      /* TODO allow for weak implicit binary vars, but then auxiliary variables created in
-       * reformulateFactorizedBinaryQuadratic() and getBinaryProductExprDo() need to be weakly implied integral
+      /* check whether variable is binary, in any feasible solution
+       * we need to forbid weakly implied binary variables because cons_and wouldn't ensure that the
+       * product condition holds in any feasible solution (i.e., when vars may not be at bounds) in this case,
+       * which would lead to accepting solutions that are not feasible in the original (non-reformulated) cons
        */
       if( !SCIPvarIsBinary(var) || SCIPvarGetImplType(var) == SCIP_IMPLINTTYPE_WEAK )
          return FALSE;
@@ -3903,13 +3929,10 @@ SCIP_RETCODE reformulateFactorizedBinaryQuadratic(
       minact += MIN(coefs[i], 0.0);
       maxact += MAX(coefs[i], 0.0);
       assert(SCIPvarIsIntegral(vars[i]));
-      if( impltype != SCIP_IMPLINTTYPE_NONE )
-      {
-         if( !SCIPisIntegral(scip, coefs[i]) )
-            impltype = SCIP_IMPLINTTYPE_NONE;
-         else if( SCIPvarGetImplType(vars[i]) == SCIP_IMPLINTTYPE_WEAK )
-            impltype = SCIP_IMPLINTTYPE_WEAK;
-      }
+      assert(SCIPvarGetImplType(vars[i]) != SCIP_IMPLINTTYPE_WEAK || SCIPvarGetType(vars[i]) != SCIP_VARTYPE_CONTINUOUS);
+
+      if( impltype != SCIP_IMPLINTTYPE_NONE && !SCIPisIntegral(scip, coefs[i]) )
+         impltype = SCIP_IMPLINTTYPE_NONE;
    }
    assert(minact <= maxact);
 
@@ -4240,6 +4263,8 @@ SCIP_RETCODE getBinaryProductExprDo(
       assert(vars[i] != NULL);
       (void) strcat(name, "_");
       (void) strcat(name, SCIPvarGetName(vars[i]));
+
+      assert(SCIPvarIsBinary(vars[i]) && SCIPvarGetImplType(vars[i]) != SCIP_IMPLINTTYPE_WEAK);
    }
 
    /* create and add variable */
@@ -4601,7 +4626,7 @@ SCIP_RETCODE presolveBinaryProducts(
    assert(conshdlr != NULL);
 
    /* no nonlinear constraints or binary variables -> skip */
-   if( nconss == 0 || SCIPgetNBinVars(scip) == 0 )
+   if( nconss == 0 || SCIPgetNBinVars(scip) + SCIPgetNImplVars(scip) == 0 )
       return SCIP_OKAY;
    assert(conss != NULL);
 
@@ -4913,9 +4938,9 @@ SCIP_RETCODE canonicalizeConstraints(
 
       /* update counters */
       if( naddconss != NULL )
-         *naddconss = tmpnaddconss;
+         *naddconss += tmpnaddconss;
       if( nchgcoefs != NULL )
-         *nchgcoefs = tmpnchgcoefs;
+         *nchgcoefs += tmpnchgcoefs;
 
       /* check whether at least one expression has changed */
       if( tmpnaddconss + tmpnchgcoefs > 0 )
@@ -5579,10 +5604,7 @@ SCIP_RETCODE removeSingleLockedVars(
  *  If a continuous variable has bounds [0,1], then the variable type is changed to be binary.
  *  Otherwise, a bound disjunction constraint is added.
  *
- *  @todo the same reduction can be applied if g(x) is not concave, but monotone in \f$x_i\f$ for g(x) &le; rhs
- *  @todo extend this to cases where a variable can appear in a monomial with an exponent, essentially relax
- *    g(x) to \f$\sum_i [a_i,b_i] x^{p_i}\f$ for a single variable \f$x\f$ and try to conclude montonicity or convexity/concavity
- *    on this (probably have one or two flags per variable and update this whenever another \f$x^{p_i}\f$ is found)
+ *  @todo the same reduction can be applied if g(x) is not concave, but monotone in \f$x_i\f$ for g(x) &le; rhs (done in prop_dualfix?)
  */
 static
 SCIP_RETCODE presolveSingleLockedVars(
@@ -5675,16 +5697,39 @@ SCIP_RETCODE presolveSingleLockedVars(
          if( SCIPisExprVar(scip, child) )
             continue;
 
-         /* consider products prod_j f_j(x); ignore f_j(x) if it is a single variable, otherwise iterate through the
-          * expression that represents f_j and remove each variable expression from exprcands
+         /* consider products coef * prod_j f_j(x)
+          * - if f_j(x) is a single variable, ignore it
+          * - if f_j(x) = x^(2k), then keep it if product is concave when fixing all other factor;
+          *   since x^(2k) >= 0, it suffices to check that the activity of the whole product is non-negative if haslhs or non-positive if hasrhs
+          * - remove all other variable expressions from exprcand
           */
-         else if( SCIPisExprProduct(scip, child) )
+         if( SCIPisExprProduct(scip, child) )
          {
             int j;
+            SCIP_INTERVAL productactivity;
+            SCIP_Bool keepevenpower;
+
+            /* activity has been ensured to be uptodate (or at least still valid) by
+             * call to SCIPregisterExprUsageNonlinear() in detectNlhdlrs() in canonicalize
+             */
+            productactivity = SCIPexprGetActivity(child);
+
+            /* check whether variables in even-powered factor terms can be restricted to bounds (as in SCIPisExprPower() below) */
+            keepevenpower = (haslhs && productactivity.inf >= 0.0) || (hasrhs && productactivity.sup <= 0.0);
 
             for( j = 0; j < SCIPexprGetNChildren(child); ++j )
             {
                SCIP_EXPR* grandchild = SCIPexprGetChildren(child)[j];
+               assert(grandchild != NULL);
+
+               /* if grandchild is x^(2k), then do not remove x from exprcands */
+               if( keepevenpower && SCIPisExprPower(scip, grandchild) && SCIPisExprVar(scip, SCIPexprGetChildren(grandchild)[0]) )
+               {
+                  SCIP_Real exponent = SCIPgetExponentExprPow(grandchild);
+
+                  if( exponent > 1.0 && fmod(exponent, 2.0) == 0.0 )
+                     continue;
+               }
 
                if( !SCIPisExprVar(scip, grandchild) )
                {
@@ -6322,7 +6367,7 @@ void addExprsViolScore(
    int i;
 
    assert(exprs != NULL);
-   assert(nexprs > 0);
+   assert(nexprs >= 0);
    assert(success != NULL);
 
    if( nexprs == 1 )
@@ -6331,6 +6376,12 @@ void addExprsViolScore(
       SCIPdebugMsg(scip, "add score %g to <%s>[%g,%g]\n", violscore,
          SCIPvarGetName(SCIPgetExprAuxVarNonlinear(exprs[0])), SCIPvarGetLbLocal(SCIPgetExprAuxVarNonlinear(exprs[0])), SCIPvarGetUbLocal(SCIPgetExprAuxVarNonlinear(exprs[0])));
       *success = TRUE;
+      return;
+   }
+
+   if( nexprs == 0 )
+   {
+      *success = FALSE;
       return;
    }
 
@@ -6442,12 +6493,7 @@ SCIP_RETCODE addExprViolScoresAuxVars(
 
    SCIPfreeExpriter(&it);
 
-   if( nexprs > 0 )
-   {
-      SCIP_CALL( SCIPaddExprsViolScoreNonlinear(scip, exprs, nexprs, violscore, sol, success) );
-   }
-   else
-      *success = FALSE;
+   SCIP_CALL( SCIPaddExprsViolScoreNonlinear(scip, exprs, nexprs, violscore, sol, success) );
 
    SCIPfreeBufferArray(scip, &exprs);
 
@@ -7153,27 +7199,25 @@ void scoreBranchingCandidates(
 
       if( conshdlrdata->branchvartypeweight > 0.0 )
       {
-         if( SCIPvarIsImpliedIntegral(cands[c].var) )
-            cands[c].vartype = 0.01;
-         else
+         switch( SCIPvarGetType(cands[c].var) )
          {
-            switch( SCIPvarGetType(cands[c].var) )
-            {
-               case SCIP_VARTYPE_BINARY:
-                  cands[c].vartype = 1.0;
-                  break;
-               case SCIP_VARTYPE_INTEGER:
-                  cands[c].vartype = 0.1;
-                  break;
-               case SCIP_VARTYPE_CONTINUOUS:
+            case SCIP_VARTYPE_BINARY:
+               cands[c].vartype = 1.0;
+               break;
+            case SCIP_VARTYPE_INTEGER:
+               cands[c].vartype = 0.1;
+               break;
+            case SCIP_VARTYPE_CONTINUOUS:
+               if( SCIPvarIsImpliedIntegral(cands[c].var) )
+                  cands[c].vartype = 0.01;
+               else
                   cands[c].vartype = 0.0;
-                  break;
-               default:
-                  SCIPerrorMessage("invalid variable type\n");
-                  SCIPABORT();
-                  return; /*lint !e527*/
-            } /*lint !e788*/
-         }
+               break;
+            default:
+               SCIPerrorMessage("invalid variable type\n");
+               SCIPABORT();
+               return; /*lint !e527*/
+         } /*lint !e788*/
 
          maxscore.vartype = MAX(cands[c].vartype, maxscore.vartype);
       }
@@ -7859,7 +7903,7 @@ SCIP_RETCODE enforceConstraint(
 
       /* if not enforced, then we must not have found a cutoff, cut, domain reduction, or branchscore */
       assert((ownerdata->lastenforced == conshdlrdata->enforound) == (resultexpr != SCIP_DIDNOTFIND));
-      if( ownerdata->lastenforced == conshdlrdata->enforound )
+      if( ownerdata->lastenforced == conshdlrdata->enforound )  /* cppcheck-suppress knownConditionTrueFalse */
          *success = TRUE;
 
       if( resultexpr == SCIP_CUTOFF )
@@ -8101,8 +8145,8 @@ SCIP_RETCODE branchingIntegralOrNonlinear(
 
    for( c = 0; c < nlpcands; ++c )
    {
+      assert(SCIPvarGetType(lpcands[c]) != SCIP_VARTYPE_CONTINUOUS);
       assert(ncands < SCIPgetNVars(scip) + SCIPgetNLPBranchCands(scip));
-      assert(SCIPvarIsNonimpliedIntegral(lpcands[c]));
       cands[ncands].expr = NULL;
       cands[ncands].var = lpcands[c];
       cands[ncands].auxviol = 0.0;
@@ -12633,8 +12677,8 @@ SCIP_RETCODE SCIPincludeConshdlrNonlinear(
          &conshdlrdata->linearizeheursol, FALSE, 'o', "oie", NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip, "constraints/" CONSHDLR_NAME "/assumeconvex",
-         "whether to assume that any constraint is convex",
-         &conshdlrdata->assumeconvex, FALSE, FALSE, NULL, NULL) );
+         "whether to assume that any constraint in the presolved problem is convex",
+         &conshdlrdata->assumeconvex, TRUE, FALSE, NULL, NULL) );
 
    /* include handler for bound change events */
    SCIP_CALL( SCIPincludeEventhdlrBasic(scip, &conshdlrdata->eventhdlr, CONSHDLR_NAME "_boundchange",
@@ -12856,9 +12900,29 @@ SCIP_RETCODE SCIPcreateConsQuadraticNonlinear(
 {
    SCIP_CONSHDLR* conshdlr;
    SCIP_EXPR* expr;
+   int i;
 
    assert(nlinvars == 0 || (linvars != NULL && lincoefs != NULL));
    assert(nquadterms == 0 || (quadvars1 != NULL && quadvars2 != NULL && quadcoefs != NULL));
+
+   /* check data for infinity or nan values */
+   for( i = 0; i < nlinvars; ++i )
+   {
+      if( !SCIPisFinite(lincoefs[i]) || SCIPisInfinity(scip, lincoefs[i]) )
+      {
+         SCIPerrorMessage("Infinite or nan coefficient of variable %s in quadratic constraint %s\n", SCIPvarGetName(linvars[i]), name);
+         return SCIP_INVALIDDATA;
+      }
+   }
+   for( i = 0; i < nquadterms; ++i )
+   {
+      if( !SCIPisFinite(quadcoefs[i]) || SCIPisInfinity(scip, quadcoefs[i]) )
+      {
+         SCIPerrorMessage("Infinite or nan coefficient of term %s*%s in quadratic constraint %s\n", SCIPvarGetName(quadvars1[i]), SCIPvarGetName(quadvars2[i]), name);
+         return SCIP_INVALIDDATA;
+      }
+   }
+   /* lhs and rhs will be checked in createCons */
 
    /* get nonlinear constraint handler */
    conshdlr = SCIPfindConshdlr(scip, CONSHDLR_NAME);
@@ -12939,6 +13003,37 @@ SCIP_RETCODE SCIPcreateConsBasicSOCNonlinear(
 
    assert(vars != NULL || nvars == 0);
 
+   /* check values for infinity or nan */
+   for( i = 0; i < nvars; ++i )
+   {
+      if( coefs != NULL && ( !SCIPisFinite(coefs[i]) || SCIPisInfinity(scip, coefs[i]) ) )
+      {
+         SCIPerrorMessage("Second-order cone term with infinite or nan coefficient of variable %s in nonlinear constraint %s\n", SCIPvarGetName(vars[i]), name);
+         return SCIP_INVALIDDATA;
+      }
+      if( offsets != NULL && (!SCIPisFinite(offsets[i]) || SCIPisInfinity(scip, offsets[i])) )
+      {
+         SCIPerrorMessage("Second-order cone term with infinite or nan offset for variable %s in nonlinear constraint %s\n", SCIPvarGetName(vars[i]), name);
+         return SCIP_INVALIDDATA;
+      }
+   }
+   if( !SCIPisFinite(constant) || SCIPisInfinity(scip, constant) )
+   {
+         SCIPerrorMessage("Second-order cone constant with infinite or nan value in nonlinear constraint %s\n", name);
+         return SCIP_INVALIDDATA;
+   }
+   if( !SCIPisFinite(rhscoeff) || SCIPisInfinity(scip, rhscoeff) )
+   {
+         SCIPerrorMessage("Infinite or nan coefficient of right hand side variable in second-order cone constraint %s\n", name);
+         return SCIP_INVALIDDATA;
+   }
+   if( !SCIPisFinite(rhsoffset) || SCIPisInfinity(scip, rhsoffset) )
+   {
+         SCIPerrorMessage("Infinite or nan right hand side offset in second-order cone constraint %s\n", name);
+         return SCIP_INVALIDDATA;
+   }
+   /* lhs and rhs will be checked in createCons */
+
    SCIP_CALL( SCIPcreateExprSum(scip, &lhssum, 0, NULL, NULL, constant, NULL, NULL) );  /* gamma */
    for( i = 0; i < nvars; ++i )
    {
@@ -13008,6 +13103,24 @@ SCIP_RETCODE SCIPcreateConsBasicSignpowerNonlinear(
 
    assert(x != NULL);
    assert(z != NULL);
+
+   if( !SCIPisFinite(exponent) )
+   {
+      SCIPerrorMessage("exponent in nonlinear signpower constraint <%s> is infinite or nan\n", name);
+      return SCIP_INVALIDDATA;
+   }
+
+   if( !SCIPisFinite(xoffset) )
+   {
+      SCIPerrorMessage("argument offset in nonlinear signpower constraint <%s> is infinite or nan\n", name);
+      return SCIP_INVALIDDATA;
+   }
+
+   if( !SCIPisFinite(zcoef) )
+   {
+      SCIPerrorMessage("coefficient of linear variable in nonlinear signpower constraint <%s> is infinite or nan\n", name);
+      return SCIP_INVALIDDATA;
+   }
 
    SCIP_CALL( SCIPcreateExprVar(scip, &xexpr, x, NULL, NULL) );
    if( xoffset != 0.0 )

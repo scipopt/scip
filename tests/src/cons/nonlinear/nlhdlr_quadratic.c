@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2026 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -381,7 +381,7 @@ Test(nlhdlrquadratic, detectandfree3, .init = setup, .fini = teardown)
    cr_assert_str_eq(SCIPexprhdlrGetName(SCIPexprGetHdlr(expr)), "sum", "expecting sum got %s\n",
          SCIPexprhdlrGetName(SCIPexprGetHdlr(expr)));
 
-#if 0
+#ifdef SCIP_DISABLED_CODE
    /* it should be identified that child should not have aux vars because of locks */
    for( int i = 0; i < SCIPexprGetNChildren(expr); ++i )
    {

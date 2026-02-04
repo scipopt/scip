@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2026 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -37,11 +37,13 @@
 #include "blockmemshell/memory.h"
 #include "scip/def.h"
 #include "scip/type_branch.h"
+#include "scip/type_certificate.h"
 #include "scip/type_cons.h"
 #include "scip/type_event.h"
 #include "scip/type_history.h"
 #include "scip/type_implics.h"
 #include "scip/type_lp.h"
+#include "scip/type_lpexact.h"
 #include "scip/type_message.h"
 #include "scip/type_misc.h"
 #include "scip/type_primal.h"
@@ -57,6 +59,7 @@
 #include "scip/type_stat.h"
 #include "scip/type_tree.h"
 #include "scip/type_var.h"
+#include "scip/intervalarith.h"
 
 #ifndef NDEBUG
 #include "scip/struct_var.h"
@@ -153,6 +156,12 @@ SCIP_RETCODE SCIPdomchgUndo(
    SCIP_EVENTQUEUE*      eventqueue          /**< event queue */
    );
 
+/** adds certificate line number to domain changes */
+void SCIPdomchgAddCurrentCertificateIndex(
+   SCIP_DOMCHG*          domchg,             /**< pointer to domain change data structure */
+   SCIP_CERTIFICATE*     certificate         /**< certificate information */
+   );
+
 /** adds bound change to domain changes */
 SCIP_RETCODE SCIPdomchgAddBoundchg(
    SCIP_DOMCHG**         domchg,             /**< pointer to domain change data structure */
@@ -160,6 +169,7 @@ SCIP_RETCODE SCIPdomchgAddBoundchg(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_VAR*             var,                /**< variable to change the bounds for */
    SCIP_Real             newbound,           /**< new value for bound */
+   SCIP_RATIONAL*        newboundexact,      /**< new value for exact bound, or NULL if not needed */
    SCIP_BOUNDTYPE        boundtype,          /**< type of bound for var: lower or upper bound */
    SCIP_BOUNDCHGTYPE     boundchgtype,       /**< type of bound change: branching decision or inference */
    SCIP_Real             lpsolval,           /**< solval of variable in last LP on path to node, or SCIP_INVALID if unknown */
@@ -202,7 +212,7 @@ SCIP_Real SCIPbdchginfoGetRelaxedBound(
    );
 
 /*
- * methods for variables 
+ * methods for variables
  */
 
 /** creates and captures an original problem variable; an integer variable with bounds
@@ -249,6 +259,31 @@ SCIP_RETCODE SCIPvarCreateTransformed(
    SCIP_DECL_VARDELTRANS ((*vardeltrans)),   /**< frees user data of transformed variable, or NULL */
    SCIP_DECL_VARCOPY     ((*varcopy)),       /**< copies variable data if wanted to subscip, or NULL */
    SCIP_VARDATA*         vardata             /**< user data for this specific variable */
+   );
+
+/** creates and sets the exact variable bounds and objective value (using floating-point data if value pointer is NULL)
+ *
+ *  @note an inactive integer variable with bounds zero and one is automatically converted into a binary variable
+ *
+ *  @note if exact data is provided, the corresponding floating-point data is overwritten
+ */
+SCIP_RETCODE SCIPvarAddExactData(
+   SCIP_VAR*             var,                /**< pointer to variable data */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_RATIONAL*        lb,                 /**< lower bound of variable */
+   SCIP_RATIONAL*        ub,                 /**< upper bound of variable */
+   SCIP_RATIONAL*        obj                 /**< objective function value */
+   );
+
+/** copies exact variable data from one variable to another
+ *
+ *  @note This method cannot be integrated into SCIPvarCopy() because it is needed, e.g., when transforming vars.
+ */
+SCIP_RETCODE SCIPvarCopyExactData(
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_VAR*             targetvar,          /**< variable that gets the exact data */
+   SCIP_VAR*             sourcevar,          /**< variable the data gets copied from */
+   SCIP_Bool             negateobj           /**< should the objective be negated */
    );
 
 /** copies and captures a variable from source to target SCIP; an integer variable with bounds zero and one is
@@ -372,6 +407,15 @@ SCIP_RETCODE SCIPvarColumn(
    SCIP_LP*              lp                  /**< current LP data */
    );
 
+/** converts transformed variable into column variable and creates LP column */
+SCIP_RETCODE SCIPvarColumnExact(
+   SCIP_VAR*             var,                /**< problem variable */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics */
+   SCIP_LPEXACT*         lp                  /**< current LP data */
+   );
+
 /** converts column transformed variable back into loose variable, frees LP column */
 SCIP_RETCODE SCIPvarLoose(
    SCIP_VAR*             var,                /**< problem variable */
@@ -403,6 +447,27 @@ SCIP_RETCODE SCIPvarFix(
    SCIP_Bool*            fixed               /**< pointer to store whether the fixing was performed (variable was unfixed) */
    );
 
+/** converts variable into fixed variable */
+SCIP_RETCODE SCIPvarFixExact(
+   SCIP_VAR*             var,                /**< problem variable */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics */
+   SCIP_PROB*            transprob,          /**< tranformed problem data */
+   SCIP_PROB*            origprob,           /**< original problem data */
+   SCIP_PRIMAL*          primal,             /**< primal data */
+   SCIP_TREE*            tree,               /**< branch and bound tree */
+   SCIP_REOPT*           reopt,              /**< reoptimization data structure */
+   SCIP_LP*              lp,                 /**< current LP data */
+   SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_EVENTFILTER*     eventfilter,        /**< global event filter */
+   SCIP_CLIQUETABLE*     cliquetable,        /**< clique table data structure */
+   SCIP_RATIONAL*        fixedval,           /**< value to fix variable at */
+   SCIP_Bool*            infeasible,         /**< pointer to store whether the fixing is infeasible */
+   SCIP_Bool*            fixed               /**< pointer to store whether the fixing was performed (variable was unfixed) */
+   );
+
 /** transforms given variables, scalars and constant to the corresponding active variables, scalars and constant
  *
  * If the number of needed active variables is greater than the available slots in the variable array, nothing happens
@@ -423,6 +488,26 @@ SCIP_RETCODE SCIPvarGetActiveRepresentatives(
    int*                  requiredsize        /**< pointer to store an uppper bound on the required size for the active variables */
    );
 
+/** transforms given variables, scalars and constant to the corresponding active variables, scalars and constant
+ *
+ * If the number of needed active variables is greater than the available slots in the variable array, nothing happens except
+ * that the required size is stored in the corresponding variable; hence, if afterwards the required size is greater than the
+ * available slots (varssize), nothing happens; otherwise, the active variable representation is stored in the arrays.
+ *
+ * The reason for this approach is that we cannot reallocate memory, since we do not know how the
+ * memory has been allocated (e.g., by a C++ 'new' or SCIP functions).
+ */
+SCIP_RETCODE SCIPvarGetActiveRepresentativesExact(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_VAR**            vars,               /**< variable array to get active variables */
+   SCIP_RATIONAL**       scalars,            /**< scalars a_1, ..., a_n in linear sum a_1*x_1 + ... + a_n*x_n + c */
+   int*                  nvars,              /**< pointer to number of variables and values in vars and vals array */
+   int                   varssize,           /**< available slots in vars and scalars array */
+   SCIP_RATIONAL*        constant,           /**< pointer to constant c in linear sum a_1*x_1 + ... + a_n*x_n + c  */
+   int*                  requiredsize,       /**< pointer to store the required array size for the active variables */
+   SCIP_Bool             mergemultiples      /**< should multiple occurrences of a var be replaced by a single coeff? */
+   );
+
 /** transforms given variable, scalar and constant to the corresponding active, fixed, or
  *  multi-aggregated variable, scalar and constant; if the variable resolves to a fixed variable,
  *  "scalar" will be 0.0 and the value of the sum will be stored in "constant"; a multi-aggregation
@@ -436,6 +521,17 @@ SCIP_RETCODE SCIPvarGetProbvarSum(
    SCIP_Real*            constant            /**< pointer to constant c in sum a*x + c */
    );
 
+/** transforms given variable, scalar and constant to the corresponding active, fixed, or
+ *  multi-aggregated variable, scalar and constant; if the variable resolves to a fixed variable,
+ *  "scalar" will be 0.0 and the value of the sum will be stored in "constant"; a multi-aggregation
+ *  with only one active variable (this can happen due to fixings after the multi-aggregation),
+ *  is treated like an aggregation; if the multi-aggregation constant is infinite, "scalar" will be 0.0
+ */
+SCIP_RETCODE SCIPvarGetProbvarSumExact(
+   SCIP_VAR**            var,                /**< pointer to problem variable x in sum a*x + c */
+   SCIP_RATIONAL*        scalar,             /**< pointer to scalar a in sum a*x + c */
+   SCIP_RATIONAL*        constant            /**< pointer to constant c in sum a*x + c */
+   );
 
 /** flattens aggregation graph of multi-aggregated variable in order to avoid exponential recursion later-on */
 SCIP_RETCODE SCIPvarFlattenAggregationGraph(
@@ -489,6 +585,42 @@ SCIP_RETCODE SCIPvarTryAggregateVars(
    SCIP_Bool*            aggregated          /**< pointer to store whether the aggregation was successful */
    );
 
+/** performs second step of SCIPaggregateVarsExact():
+ *  the variable to be aggregated is chosen among active problem variables x' and y', preferring a less strict variable
+ *  type as aggregation variable (i.e. continuous variables are preferred over implicit integers, implicit integers
+ *  or integers over binaries). If none of the variables is continuous, it is tried to find an integer
+ *  aggregation (i.e. integral coefficients a'' and b'', such that a''*x' + b''*y' == c''). This can lead to
+ *  the detection of infeasibility (e.g. if c'' is fractional), or to a rejection of the aggregation (denoted by
+ *  aggregated == FALSE), if the resulting integer coefficients are too large and thus numerically instable.
+ *
+ *  @todo check for fixings, infeasibility, bound changes, or domain holes:
+ *     a) if there is no easy aggregation and we have one binary variable and another integer/implicit/binary variable
+ *     b) for implicit integer variables with fractional aggregation scalar (we cannot (for technical reasons) and do
+ *        not want to aggregate implicit integer variables, since we loose the corresponding divisibility property)
+ */
+SCIP_RETCODE SCIPvarTryAggregateVarsExact(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_STAT*            stat,               /**< problem statistics */
+   SCIP_PROB*            transprob,          /**< tranformed problem data */
+   SCIP_PROB*            origprob,           /**< original problem data */
+   SCIP_PRIMAL*          primal,             /**< primal data */
+   SCIP_TREE*            tree,               /**< branch and bound tree */
+   SCIP_REOPT*           reopt,              /**< reoptimization data structure */
+   SCIP_LP*              lp,                 /**< current LP data */
+   SCIP_CLIQUETABLE*     cliquetable,        /**< clique table data structure */
+   SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_EVENTFILTER*     eventfilter,        /**< global event filter */
+   SCIP_VAR*             varx,               /**< variable x in equality a*x + b*y == c */
+   SCIP_VAR*             vary,               /**< variable y in equality a*x + b*y == c */
+   SCIP_RATIONAL*        scalarx,            /**< multiplier a in equality a*x + b*y == c */
+   SCIP_RATIONAL*        scalary,            /**< multiplier b in equality a*x + b*y == c */
+   SCIP_RATIONAL*        rhs,                /**< right hand side c in equality a*x + b*y == c */
+   SCIP_Bool*            infeasible,         /**< pointer to store whether the aggregation is infeasible */
+   SCIP_Bool*            aggregated          /**< pointer to store whether the aggregation was successful */
+   );
+
 /** converts loose variable into aggregated variable */
 SCIP_RETCODE SCIPvarAggregate(
    SCIP_VAR*             var,                /**< loose problem variable */
@@ -508,6 +640,29 @@ SCIP_RETCODE SCIPvarAggregate(
    SCIP_VAR*             aggvar,             /**< loose variable y in aggregation x = a*y + c */
    SCIP_Real             scalar,             /**< multiplier a in aggregation x = a*y + c */
    SCIP_Real             constant,           /**< constant shift c in aggregation x = a*y + c */
+   SCIP_Bool*            infeasible,         /**< pointer to store whether the aggregation is infeasible */
+   SCIP_Bool*            aggregated          /**< pointer to store whether the aggregation was successful */
+   );
+
+/** converts loose variable into aggregated variable */
+SCIP_RETCODE SCIPvarAggregateExact(
+   SCIP_VAR*             var,                /**< loose problem variable */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics */
+   SCIP_PROB*            transprob,          /**< tranformed problem data */
+   SCIP_PROB*            origprob,           /**< original problem data */
+   SCIP_PRIMAL*          primal,             /**< primal data */
+   SCIP_TREE*            tree,               /**< branch and bound tree */
+   SCIP_REOPT*           reopt,              /**< reoptimization data structure */
+   SCIP_LP*              lp,                 /**< current LP data */
+   SCIP_CLIQUETABLE*     cliquetable,        /**< clique table data structure */
+   SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_EVENTFILTER*     eventfilter,        /**< global event filter */
+   SCIP_VAR*             aggvar,             /**< loose variable y in aggregation x = a*y + c */
+   SCIP_RATIONAL*        scalar,             /**< multiplier a in aggregation x = a*y + c */
+   SCIP_RATIONAL*        constant,           /**< constant shift c in aggregation x = a*y + c */
    SCIP_Bool*            infeasible,         /**< pointer to store whether the aggregation is infeasible */
    SCIP_Bool*            aggregated          /**< pointer to store whether the aggregation was successful */
    );
@@ -536,6 +691,30 @@ SCIP_RETCODE SCIPvarMultiaggregate(
    SCIP_Bool*            aggregated          /**< pointer to store whether the aggregation was successful */
    );
 
+/** converts variable into multi-aggregated variable */
+SCIP_RETCODE SCIPvarMultiaggregateExact(
+   SCIP_VAR*             var,                /**< problem variable */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics */
+   SCIP_PROB*            transprob,          /**< tranformed problem data */
+   SCIP_PROB*            origprob,           /**< original problem data */
+   SCIP_PRIMAL*          primal,             /**< primal data */
+   SCIP_TREE*            tree,               /**< branch and bound tree */
+   SCIP_REOPT*           reopt,              /**< reoptimization data structure */
+   SCIP_LPEXACT*         lpexact,            /**< current LP data */
+   SCIP_CLIQUETABLE*     cliquetable,        /**< clique table data structure */
+   SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_EVENTFILTER*     eventfilter,        /**< global event filter */
+   int                   naggvars,           /**< number n of variables in aggregation x = a_1*y_1 + ... + a_n*y_n + c */
+   SCIP_VAR**            aggvars,            /**< variables y_i in aggregation x = a_1*y_1 + ... + a_n*y_n + c */
+   SCIP_RATIONAL**       scalars,            /**< multipliers a_i in aggregation x = a_1*y_1 + ... + a_n*y_n + c */
+   SCIP_RATIONAL*        constant,           /**< constant shift c in aggregation x = a_1*y_1 + ... + a_n*y_n + c */
+   SCIP_Bool*            infeasible,         /**< pointer to store whether the aggregation is infeasible */
+   SCIP_Bool*            aggregated          /**< pointer to store whether the aggregation was successful */
+   );
+
 /** returns whether variable is not allowed to be aggregated */
 SCIP_Bool SCIPvarDoNotAggr(
    SCIP_VAR*             var                 /**< problem variable */
@@ -544,6 +723,13 @@ SCIP_Bool SCIPvarDoNotAggr(
 /** returns whether variable is not allowed to be multi-aggregated */
 SCIP_Bool SCIPvarDoNotMultaggr(
    SCIP_VAR*             var                 /**< problem variable */
+   );
+
+/** checks whether a loose variable can be used in a new aggregation with given coefficient */
+SCIP_Bool SCIPvarIsAggrCoefAcceptable(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_VAR*             var,                /**< problem variable */
+   SCIP_Real             scalar              /**< aggregation scalar */
    );
 
 /** returns whether the variable was flagged for deletion from global structures (cliques etc.) */
@@ -584,13 +770,16 @@ void SCIPvarSetNamePointer(
  *  variable bounds and implication data structures of the variable are freed. Since in the final removal
  *  of all variables from the transformed problem, this deletes the implication graph completely and is faster
  *  than removing the variables one by one, each time updating all lists of the other variables.
+ *  If 'keepimplics' is TRUE, the implications, variable bounds and cliques are kept. This should be used when the
+ *  variable type is upgraded, i.e. when it gains (implied) integrality, so that existing implications are not lost.
  */
 SCIP_RETCODE SCIPvarRemove(
    SCIP_VAR*             var,                /**< problem variable */
    BMS_BLKMEM*           blkmem,             /**< block memory buffer */
    SCIP_CLIQUETABLE*     cliquetable,        /**< clique table data structure */
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_Bool             final               /**< is this the final removal of all problem variables? */
+   SCIP_Bool             final,              /**< is this the final removal of all problem variables? */
+   SCIP_Bool             keepimplics         /**< should the implications be kept? */
    );
 
 /** marks the variable to be deleted from the problem */
@@ -653,6 +842,44 @@ SCIP_RETCODE SCIPvarChgObj(
    SCIP_Real             newobj              /**< new objective value for variable */
    );
 
+/** changes objective value of variable */
+SCIP_RETCODE SCIPvarChgObjExact(
+   SCIP_VAR*             var,                /**< variable to change */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_PROB*            prob,               /**< problem data */
+   SCIP_PRIMAL*          primal,             /**< primal data */
+   SCIP_LPEXACT*         lp,                 /**< current LP data */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_RATIONAL*        newobj              /**< new objective value for variable */
+   );
+
+/** changes rational objective value of variable */
+SCIP_RETCODE SCIPvarChgUbGlobalExact(
+   SCIP_VAR*             var,                /**< variable to change */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics */
+   SCIP_LPEXACT*         lpexact,            /**< current LP data */
+   SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage, may be NULL for original variables */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue, may be NULL for original variables */
+   SCIP_CLIQUETABLE*     cliquetable,        /**< clique table data structure */
+   SCIP_RATIONAL*        newbound            /**< new upper bound value for variable */
+   );
+
+/** changes rational objective value of variable */
+SCIP_RETCODE SCIPvarChgLbGlobalExact(
+   SCIP_VAR*             var,                /**< variable to change */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics */
+   SCIP_LPEXACT*         lpexact,            /**< current LP data */
+   SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage, may be NULL for original variables */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue, may be NULL for original variables */
+   SCIP_CLIQUETABLE*     cliquetable,        /**< clique table data structure */
+   SCIP_RATIONAL*        newbound            /**< new upper bound value for variable */
+   );
+
 /** adds value to objective value of variable */
 SCIP_RETCODE SCIPvarAddObj(
    SCIP_VAR*             var,                /**< variable to change */
@@ -670,6 +897,23 @@ SCIP_RETCODE SCIPvarAddObj(
    SCIP_Real             addobj              /**< additional objective value for variable */
    );
 
+/** adds exact value to objective value of variable */
+SCIP_RETCODE SCIPvarAddObjExact(
+   SCIP_VAR*             var,                /**< variable to change */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics */
+   SCIP_PROB*            transprob,          /**< transformed problem data */
+   SCIP_PROB*            origprob,           /**< original problem data */
+   SCIP_PRIMAL*          primal,             /**< primal data */
+   SCIP_TREE*            tree,               /**< branch and bound tree */
+   SCIP_REOPT*           reopt,              /**< reoptimization data structure */
+   SCIP_LP*              lp,                 /**< current LP data */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_EVENTFILTER*     eventfilter,        /**< global event filter */
+   SCIP_RATIONAL*        addobj              /**< additional objective value for variable */
+   );
+
 /** changes objective value of variable in current dive */
 SCIP_RETCODE SCIPvarChgObjDive(
    SCIP_VAR*             var,                /**< problem variable to change */
@@ -685,8 +929,36 @@ void SCIPvarAdjustLb(
    SCIP_Real*            lb                  /**< pointer to lower bound to adjust */
    );
 
+/** adjust lower bound to integral value, if variable is integral */
+void SCIPvarAdjustLbExact(
+   SCIP_VAR*             var,                /**< problem variable */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_RATIONAL*        lb                  /**< pointer to lower bound to adjust */
+   );
+
+/** adjust lower bound to integral value, if variable is integral */
+void SCIPvarAdjustLbExactFloat(
+   SCIP_VAR*             var,                /**< problem variable */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Real*            lb                  /**< pointer to lower bound to adjust */
+   );
+
 /** adjust upper bound to integral value, if variable is integral */
 void SCIPvarAdjustUb(
+   SCIP_VAR*             var,                /**< problem variable */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Real*            ub                  /**< pointer to upper bound to adjust */
+   );
+
+/** adjust lower bound to integral value, if variable is integral */
+void SCIPvarAdjustUbExact(
+   SCIP_VAR*             var,                /**< problem variable */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_RATIONAL*        ub                  /**< pointer to lower bound to adjust */
+   );
+
+/** adjust lower bound to integral value, if variable is integral */
+void SCIPvarAdjustUbExactFloat(
    SCIP_VAR*             var,                /**< problem variable */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_Real*            ub                  /**< pointer to upper bound to adjust */
@@ -707,11 +979,25 @@ SCIP_RETCODE SCIPvarChgLbOriginal(
    SCIP_Real             newbound            /**< new bound for variable */
    );
 
+/** changes exact lower bound of original variable in original problem */
+SCIP_RETCODE SCIPvarChgLbOriginalExact(
+   SCIP_VAR*             var,                /**< problem variable to change */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_RATIONAL*        newbound            /**< new bound for variable */
+   );
+
 /** changes upper bound of original variable in original problem */
 SCIP_RETCODE SCIPvarChgUbOriginal(
    SCIP_VAR*             var,                /**< problem variable to change */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_Real             newbound            /**< new bound for variable */
+   );
+
+/** changes exact upper bound of original variable in original problem */
+SCIP_RETCODE SCIPvarChgUbOriginalExact(
+   SCIP_VAR*             var,                /**< problem variable to change */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_RATIONAL*        newbound            /**< new bound for variable */
    );
 
 /** changes global lower bound of variable; if possible, adjusts bound to integral value;
@@ -760,6 +1046,22 @@ SCIP_RETCODE SCIPvarChgBdGlobal(
    SCIP_BOUNDTYPE        boundtype           /**< type of bound: lower or upper bound */
    );
 
+/** changes exact global bound of variable; if possible, adjusts bound to integral value;
+ *  updates local bound if the global bound is tighter
+ */
+SCIP_RETCODE SCIPvarChgBdGlobalExact(
+   SCIP_VAR*             var,                /**< problem variable to change */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics */
+   SCIP_LPEXACT*         lpexact,            /**< current LP data, may be NULL for original variables */
+   SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage, may be NULL for original variables */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue, may be NULL for original variables */
+   SCIP_CLIQUETABLE*     cliquetable,        /**< clique table data structure */
+   SCIP_RATIONAL*        newbound,           /**< new bound for variable */
+   SCIP_BOUNDTYPE        boundtype           /**< type of bound: lower or upper bound */
+   );
+
 /** changes current local lower bound of variable; if possible, adjusts bound to integral value; stores inference
  *  information in variable
  */
@@ -774,6 +1076,20 @@ SCIP_RETCODE SCIPvarChgLbLocal(
    SCIP_Real             newbound            /**< new bound for variable */
    );
 
+/** changes current exact local lower bound of variable; if possible, adjusts bound to integral value; stores inference
+ *  information in variable
+ */
+SCIP_RETCODE SCIPvarChgLbLocalExact(
+   SCIP_VAR*             var,                /**< problem variable to change */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics */
+   SCIP_LPEXACT*         lpexact,            /**< current exact LP data, may be NULL for original variables */
+   SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage, may be NULL for original variables */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue, may be NULL for original variables */
+   SCIP_RATIONAL*        newbound            /**< new bound for variable */
+   );
+
 /** changes current local upper bound of variable; if possible, adjusts bound to integral value; stores inference
  *  information in variable
  */
@@ -786,6 +1102,20 @@ SCIP_RETCODE SCIPvarChgUbLocal(
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage, may be NULL for original variables */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue, may be NULL for original variables */
    SCIP_Real             newbound            /**< new bound for variable */
+   );
+
+/** changes current exact upper lower bound of variable; if possible, adjusts bound to integral value; stores inference
+ *  information in variable
+ */
+SCIP_RETCODE SCIPvarChgUbLocalExact(
+   SCIP_VAR*             var,                /**< problem variable to change */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics */
+   SCIP_LPEXACT*         lpexact,            /**< current exact LP data, may be NULL for original variables */
+   SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage, may be NULL for original variables */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue, may be NULL for original variables */
+   SCIP_RATIONAL*        newbound            /**< new bound for variable */
    );
 
 /** changes current local bound of variable; if possible, adjusts bound to integral value; stores inference
@@ -814,7 +1144,7 @@ SCIP_RETCODE SCIPvarChgLbLazy(
 SCIP_RETCODE SCIPvarChgUbLazy(
    SCIP_VAR*             var,                /**< problem variable */
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_Real             lazylb              /**< the lazy lower bound to be set */
+   SCIP_Real             lazyub              /**< the lazy upper bound to be set */
    );
 
 /** changes lower bound of variable in current dive; if possible, adjusts bound to integral value */
@@ -825,12 +1155,28 @@ SCIP_RETCODE SCIPvarChgLbDive(
    SCIP_Real             newbound            /**< new bound for variable */
    );
 
+/** changes lower bound of variable in current exact dive */
+SCIP_RETCODE SCIPvarChgLbExactDive(
+   SCIP_VAR*             var,                /**< problem variable to change */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_LPEXACT*         lpexact,            /**< current exact LP data */
+   SCIP_RATIONAL*        newbound            /**< new bound for variable */
+   );
+
 /** changes upper bound of variable in current dive; if possible, adjusts bound to integral value */
 SCIP_RETCODE SCIPvarChgUbDive(
    SCIP_VAR*             var,                /**< problem variable to change */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_Real             newbound            /**< new bound for variable */
+   );
+
+/** changes upper bound of variable in current exact dive */
+SCIP_RETCODE SCIPvarChgUbExactDive(
+   SCIP_VAR*             var,                /**< problem variable to change */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_LPEXACT*         lpexact,            /**< current exact LP data */
+   SCIP_RATIONAL*        newbound            /**< new bound for variable */
    );
 
 /** for a multi-aggregated variable, gives the local lower bound computed by adding the local bounds from all aggregation variables
@@ -842,6 +1188,16 @@ SCIP_Real SCIPvarGetMultaggrLbLocal(
    SCIP_SET*             set                 /**< global SCIP settings */
    );
 
+/** for a multi-aggregated variable, gives the exact local lower bound computed by adding the local bounds from all aggregation variables
+ * this lower bound may be tighter than the one given by SCIPvarGetLbLocal, since the latter is not updated if bounds of aggregation variables are changing
+ * calling this function for a non-multi-aggregated variable is not allowed
+ */
+SCIP_RETCODE SCIPvarGetMultaggrLbLocalExact(
+   SCIP_VAR*             var,                /**< problem variable */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_RATIONAL*        result              /**< the resulting bound */
+   );
+
 /** for a multi-aggregated variable, gives the local upper bound computed by adding the local bounds from all aggregation variables
  * this upper bound may be tighter than the one given by SCIPvarGetUbLocal, since the latter is not updated if bounds of aggregation variables are changing
  * calling this function for a non-multi-aggregated variable is not allowed
@@ -849,6 +1205,16 @@ SCIP_Real SCIPvarGetMultaggrLbLocal(
 SCIP_Real SCIPvarGetMultaggrUbLocal(
    SCIP_VAR*             var,                /**< problem variable */
    SCIP_SET*             set                 /**< global SCIP settings */
+   );
+
+/** for a multi-aggregated variable, gives the exact local upper bound computed by adding the local bounds from all aggregation variables
+ * this lower bound may be tighter than the one given by SCIPvarGetUbLocal, since the latter is not updated if bounds of aggregation variables are changing
+ * calling this function for a non-multi-aggregated variable is not allowed
+ */
+SCIP_RETCODE SCIPvarGetMultaggrUbLocalExact(
+   SCIP_VAR*             var,                /**< problem variable */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_RATIONAL*        result              /**< the resulting bound */
    );
 
 /** for a multi-aggregated variable, gives the global lower bound computed by adding the global bounds from all aggregation variables
@@ -1226,6 +1592,18 @@ SCIP_RETCODE SCIPvarAddToRow(
    SCIP_Real             val                 /**< value of coefficient */
    );
 
+/** resolves variable to columns and adds them with the coefficient to the */
+SCIP_RETCODE SCIPvarAddToRowExact(
+   SCIP_VAR*             var,                /**< problem variable */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_PROB*            prob,               /**< problem data */
+   SCIP_LPEXACT*         lpexact,            /**< current LP data */
+   SCIP_ROWEXACT*        rowexact,           /**< LP row */
+   SCIP_RATIONAL*        val                 /**< value of coefficient */
+   );
 
 /** merge two variable histories together; a typical use case is that \p othervar is an image of the target variable
  *  in a SCIP copy. Method should be applied with care, especially because no internal checks are performed whether
@@ -1618,6 +1996,11 @@ int SCIPbdchgidxGetPos(
    SCIP_BDCHGIDX*        bdchgidx            /**< bound change index */
    );
 
+/** returns the depth of the bound change index */
+int SCIPbdchgidxGetDepth(
+   SCIP_BDCHGIDX*        bdchgidx            /**< bound change index */
+   );
+
 /** removes (redundant) cliques, implications and variable bounds of variable from all other variables' implications and variable
  *  bounds arrays, and optionally removes them also from the variable itself
  */
@@ -1629,6 +2012,29 @@ SCIP_RETCODE SCIPvarRemoveCliquesImplicsVbs(
    SCIP_Bool             irrelevantvar,      /**< has the variable become irrelevant? */
    SCIP_Bool             onlyredundant,      /**< should only the redundant implications and variable bounds be removed? */
    SCIP_Bool             removefromvar       /**< should the implications and variable bounds be removed from the var itself? */
+   );
+
+/** Get the tightest local lower bound (from the exact and the real bound) */
+void SCIPvarGetLbLocalExactMaximal(
+   SCIP_VAR*             var,                /**< problem variable */
+   SCIP_RATIONAL*        output              /**< output rational */
+   );
+/** Get the tightest local uppper bound (from the exact and the real bound) */
+void SCIPvarGetUbLocalExactMinimal(
+   SCIP_VAR*             var,                /**< problem variable */
+   SCIP_RATIONAL*        output              /**< output rational */
+   );
+
+/** sets index of variable in certificate */
+void SCIPvarSetUbCertificateIndexLocal(
+   SCIP_VAR*             var,                /**< variable to set index for */
+   SCIP_Longint          certidx             /**< the index */
+   );
+
+/** sets index of variable in certificate */
+void SCIPvarSetLbCertificateIndexLocal(
+   SCIP_VAR*             var,                /**< variable to set index for */
+   SCIP_Longint          certidx             /**< the index */
    );
 
 #ifdef NDEBUG
@@ -1644,7 +2050,7 @@ SCIP_RETCODE SCIPvarRemoveCliquesImplicsVbs(
 #define SCIPvarGetVSIDS(var, stat, dir)    ((var)->varstatus == SCIP_VARSTATUS_LOOSE || (var)->varstatus == SCIP_VARSTATUS_COLUMN ? \
       SCIPhistoryGetVSIDS(var->history, dir)/stat->vsidsweight : SCIPvarGetVSIDS_rec(var, stat, dir))
 #define SCIPbdchgidxGetPos(bdchgidx) ((bdchgidx)->pos)
-
+#define SCIPbdchgidxGetDepth(bdchgidx) ((bdchgidx)->depth)
 #endif
 
 /*

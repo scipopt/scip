@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2026 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -596,6 +596,9 @@ SCIP_RETCODE SCIPsetSubscipsOff(
  *  - SCIP_PARAMSETTING_AGGRESSIVE such that the heuristic are called more aggregative
  *  - SCIP_PARAMSETTING_OFF which turn off all heuristics
  *
+ *  @note: Using SCIP_PARAMSETTING_AGGRESSIVE enables heuristics regardless of the USESSUBSCIP flag,
+ *         which could lead to unintended recursion when applied to a subscip.
+ *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
  */
@@ -629,6 +632,9 @@ SCIP_RETCODE SCIPsetPresolving(
  *  - SCIP_PARAMSETTING_FAST such that the time spend for separating is decreased
  *  - SCIP_PARAMSETTING_AGGRESSIVE such that the separating is done more aggregative
  *  - SCIP_PARAMSETTING_OFF which turn off all separating
+ *
+ *  @note: Using SCIP_PARAMSETTING_AGGRESSIVE enables separators regardless of the USESSUBSCIP flag,
+ *         which could lead to unintended recursion when applied to a subscip.
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.

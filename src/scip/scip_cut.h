@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2026 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -104,7 +104,7 @@ SCIP_Bool SCIPisCutEfficacious(
    SCIP_ROW*             cut                 /**< separated cut */
    );
 
-/** checks, if the given cut's efficacy is larger than the minimal cut efficacy
+/** checks if the given cut's efficacy is larger than the minimal cut efficacy
  *
  *  @return TRUE if the given cut's efficacy is larger than the minimal cut efficacy, otherwise FALSE
  */
@@ -141,26 +141,6 @@ SCIP_EXPORT
 SCIP_Bool SCIPisCutApplicable(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_ROW*             cut                 /**< separated cut */
-   );
-
-/** adds cut to separation storage
- *
- *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
- *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
- *
- *  @pre This method can be called if @p scip is in one of the following stages:
- *       - \ref SCIP_STAGE_SOLVING
- *
- *  @deprecated Please use SCIPaddRow() instead, or, if the row is a global cut and it might be useful to keep it for future use,
- *  consider adding it to the global cutpool with SCIPaddPoolCut().
- */
-SCIP_DEPRECATED SCIP_EXPORT
-SCIP_RETCODE SCIPaddCut(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_SOL*             sol,                /**< primal solution that was separated, or NULL for LP solution */
-   SCIP_ROW*             cut,                /**< separated cut */
-   SCIP_Bool             forcecut,           /**< should the cut be forced to enter the LP? */
-   SCIP_Bool*            infeasible          /**< pointer to store whether cut has been detected to be infeasible for local bounds */
    );
 
 /** adds row to separation storage

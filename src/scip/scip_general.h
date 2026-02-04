@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2026 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -263,17 +263,6 @@ SCIP_Bool SCIPisTransformed(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/** returns whether the solution process is arithmetically exact, i.e., not subject to roundoff errors
- *
- *  @note This feature is not supported yet!
- *
- *  @return Returns TRUE if \SCIP is exact solving mode, otherwise FALSE
- */
-SCIP_EXPORT
-SCIP_Bool SCIPisExactSolve(
-   SCIP*                 scip                /**< SCIP data structure */
-   );
-
 /** returns whether the presolving process would be finished given no more presolving reductions are found in this
  *  presolving round
  *
@@ -373,7 +362,8 @@ void SCIPprintExternalCodes(
  */
 #ifdef NDEBUG
 
-#define SCIPgetStage(scip)                        (((scip)->set)->stage)
+#define SCIPgetStage(scip)                        ((scip)->set->stage)
+#define SCIPgetStatus(scip)                       ((scip)->stat->status)
 #define SCIPhasPerformedPresolve(scip)            ((scip)->stat->performpresol)
 #define SCIPisStopped(scip)                       SCIPsolveIsStopped((scip)->set, (scip)->stat, 0)
 

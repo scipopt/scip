@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2026 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -43,6 +43,7 @@
 #include "scip/tree.h"
 #include "scip/reopt.h"
 #include "scip/lp.h"
+#include "scip/primal.h"
 #include "scip/scip.h"
 #include "scip/nodesel.h"
 #include "scip/pub_message.h"
@@ -289,7 +290,6 @@ SCIP_RETCODE SCIPnodepqInsert(
    SCIP_NODE** slots;
    int* bfsposs;
    int* bfsqueue;
-   SCIP_Real lowerbound;
    int pos;
    int bfspos;
 
@@ -321,18 +321,33 @@ SCIP_RETCODE SCIPnodepqInsert(
    slots[pos] = node;
 
    /* insert the final position into the bfs index queue */
-   lowerbound = SCIPnodeGetLowerbound(node);
    bfspos = nodepq->len-1;
-   while( bfspos > 0 && lowerbound < SCIPnodeGetLowerbound(slots[bfsqueue[PQ_PARENT(bfspos)]]) )
+   if( set->exact_enable )
    {
-      bfsqueue[bfspos] = bfsqueue[PQ_PARENT(bfspos)];
-      bfsposs[bfsqueue[bfspos]] = bfspos;
-      bfspos = PQ_PARENT(bfspos);
+      SCIP_RATIONAL* lowerbound = SCIPnodeGetLowerboundExact(node);
+      while( bfspos > 0 && SCIPrationalIsLT(lowerbound, SCIPnodeGetLowerboundExact(slots[bfsqueue[PQ_PARENT(bfspos)]])) )
+      {
+         bfsqueue[bfspos] = bfsqueue[PQ_PARENT(bfspos)];
+         bfsposs[bfsqueue[bfspos]] = bfspos;
+         bfspos = PQ_PARENT(bfspos);
+      }
+
+      SCIPrationalDebugMessage("inserted node %p[%q] at pos %d and bfspos %d of node queue\n", (void*)node, lowerbound, pos, bfspos);
+   }
+   else
+   {
+      SCIP_Real lowerbound = SCIPnodeGetLowerbound(node);
+      while( bfspos > 0 && lowerbound < SCIPnodeGetLowerbound(slots[bfsqueue[PQ_PARENT(bfspos)]]) )
+      {
+         bfsqueue[bfspos] = bfsqueue[PQ_PARENT(bfspos)];
+         bfsposs[bfsqueue[bfspos]] = bfspos;
+         bfspos = PQ_PARENT(bfspos);
+      }
+
+      SCIPsetDebugMsg(set, "inserted node %p[%g] at pos %d and bfspos %d of node queue\n", (void*)node, lowerbound, pos, bfspos);
    }
    bfsqueue[bfspos] = pos;
    bfsposs[pos] = bfspos;
-
-   SCIPsetDebugMsg(set, "inserted node %p[%g] at pos %d and bfspos %d of node queue\n", (void*)node, lowerbound, pos, bfspos);
 
    return SCIP_OKAY;
 }
@@ -448,44 +463,84 @@ SCIP_Bool nodepqDelPos(
    bfsparentfelldown = FALSE;
    if( freebfspos < nodepq->len )
    {
-      SCIP_Real lastlowerbound;
       int parentpos;
 
       /* try to move parents downwards to insert last queue index */
-      lastlowerbound = SCIPnodeGetLowerbound(slots[lastbfsqueueidx]);
       parentpos = PQ_PARENT(freebfspos);
-      while( freebfspos > 0 && lastlowerbound < SCIPnodeGetLowerbound(slots[bfsqueue[parentpos]]) )
+      if( set->exact_enable )
       {
-         bfsqueue[freebfspos] = bfsqueue[parentpos];
-         bfsposs[bfsqueue[freebfspos]] = freebfspos;
-         freebfspos = parentpos;
-         parentpos = PQ_PARENT(freebfspos);
-         bfsparentfelldown = TRUE;
-      }
-      if( !bfsparentfelldown )
-      {
-         /* downward moving of parents was not successful -> move children upwards */
-         while( freebfspos <= PQ_PARENT(nodepq->len-1) ) /* as long as free slot has children... */
+         SCIP_RATIONAL* lastlowerbound = SCIPnodeGetLowerboundExact(slots[lastbfsqueueidx]);
+         while( freebfspos > 0 && SCIPrationalIsLT(lastlowerbound, SCIPnodeGetLowerboundExact(slots[bfsqueue[parentpos]])) )
          {
-            int childpos;
-            int brotherpos;
-
-            /* select the better child of free slot */
-            childpos = PQ_LEFTCHILD(freebfspos);
-            assert(childpos < nodepq->len);
-            brotherpos = PQ_RIGHTCHILD(freebfspos);
-            if( brotherpos < nodepq->len
-               && SCIPnodeGetLowerbound(slots[bfsqueue[brotherpos]]) < SCIPnodeGetLowerbound(slots[bfsqueue[childpos]]) )
-               childpos = brotherpos;
-
-            /* exit search loop if better child is not better than last node */
-            if( lastlowerbound <= SCIPnodeGetLowerbound(slots[bfsqueue[childpos]]) )
-               break;
-
-            /* move better child upwards, free slot is now the better child's slot */
-            bfsqueue[freebfspos] = bfsqueue[childpos];
+            bfsqueue[freebfspos] = bfsqueue[parentpos];
             bfsposs[bfsqueue[freebfspos]] = freebfspos;
-            freebfspos = childpos;
+            freebfspos = parentpos;
+            parentpos = PQ_PARENT(freebfspos);
+            bfsparentfelldown = TRUE;
+         }
+         if( !bfsparentfelldown )
+         {
+            /* downward moving of parents was not successful -> move children upwards */
+            while( freebfspos <= PQ_PARENT(nodepq->len-1) ) /* as long as free slot has children... */
+            {
+               int childpos;
+               int brotherpos;
+
+               /* select the better child of free slot */
+               childpos = PQ_LEFTCHILD(freebfspos);
+               assert(childpos < nodepq->len);
+               brotherpos = PQ_RIGHTCHILD(freebfspos);
+               if( brotherpos < nodepq->len
+                  && SCIPrationalIsLT(SCIPnodeGetLowerboundExact(slots[bfsqueue[brotherpos]]), SCIPnodeGetLowerboundExact(slots[bfsqueue[childpos]])) )
+                  childpos = brotherpos;
+
+               /* exit search loop if better child is not better than last node */
+               if( SCIPrationalIsLE(lastlowerbound, SCIPnodeGetLowerboundExact(slots[bfsqueue[childpos]])) )
+                  break;
+
+               /* move better child upwards, free slot is now the better child's slot */
+               bfsqueue[freebfspos] = bfsqueue[childpos];
+               bfsposs[bfsqueue[freebfspos]] = freebfspos;
+               freebfspos = childpos;
+            }
+         }
+      }
+      else
+      {
+         SCIP_Real lastlowerbound = SCIPnodeGetLowerbound(slots[lastbfsqueueidx]);
+         while( freebfspos > 0 && lastlowerbound < SCIPnodeGetLowerbound(slots[bfsqueue[parentpos]]) )
+         {
+            bfsqueue[freebfspos] = bfsqueue[parentpos];
+            bfsposs[bfsqueue[freebfspos]] = freebfspos;
+            freebfspos = parentpos;
+            parentpos = PQ_PARENT(freebfspos);
+            bfsparentfelldown = TRUE;
+         }
+         if( !bfsparentfelldown )
+         {
+            /* downward moving of parents was not successful -> move children upwards */
+            while( freebfspos <= PQ_PARENT(nodepq->len-1) ) /* as long as free slot has children... */
+            {
+               int childpos;
+               int brotherpos;
+
+               /* select the better child of free slot */
+               childpos = PQ_LEFTCHILD(freebfspos);
+               assert(childpos < nodepq->len);
+               brotherpos = PQ_RIGHTCHILD(freebfspos);
+               if( brotherpos < nodepq->len
+                  && SCIPnodeGetLowerbound(slots[bfsqueue[brotherpos]]) < SCIPnodeGetLowerbound(slots[bfsqueue[childpos]]) )
+                  childpos = brotherpos;
+
+               /* exit search loop if better child is not better than last node */
+               if( lastlowerbound <= SCIPnodeGetLowerbound(slots[bfsqueue[childpos]]) )
+                  break;
+
+               /* move better child upwards, free slot is now the better child's slot */
+               bfsqueue[freebfspos] = bfsqueue[childpos];
+               bfsposs[bfsqueue[freebfspos]] = freebfspos;
+               freebfspos = childpos;
+            }
          }
       }
       assert(0 <= freebfspos && freebfspos < nodepq->len);
@@ -603,6 +658,29 @@ SCIP_Real SCIPnodepqGetLowerbound(
       return SCIPsetInfinity(set);
 }
 
+/** gets the minimal exact lower bound of all nodes in the queue or NULL if empty */
+SCIP_RATIONAL* SCIPnodepqGetLowerboundExact(
+   SCIP_NODEPQ*          nodepq,             /**< node priority queue */
+   SCIP_SET*             set                 /**< global SCIP settings */
+   )
+{
+   assert(nodepq != NULL);
+   assert(nodepq->nodesel != NULL);
+   assert(set != NULL);
+
+   if( nodepq->len > 0 )
+   {
+      int bfspos;
+
+      bfspos = nodepq->bfsqueue[0];
+      assert(0 <= bfspos && bfspos < nodepq->len);
+      assert(nodepq->slots[bfspos] != NULL);
+      return SCIPnodeGetLowerboundExact(nodepq->slots[bfspos]);
+   }
+   else
+      return NULL;
+}
+
 /** gets the node with minimal lower bound of all nodes in the queue */
 SCIP_NODE* SCIPnodepqGetLowerboundNode(
    SCIP_NODEPQ*          nodepq,             /**< node priority queue */
@@ -651,11 +729,11 @@ SCIP_RETCODE SCIPnodepqBound(
    SCIP_Real             cutoffbound         /**< cutoff bound: all nodes with lowerbound >= cutoffbound are cut off */
    )
 {
-   SCIP_EVENT event;
    SCIP_NODE* node;
    int pos;
 
    assert(nodepq != NULL);
+   assert(set != NULL);
 
    SCIPsetDebugMsg(set, "bounding node queue of length %d with cutoffbound=%g\n", nodepq->len, cutoffbound);
 
@@ -669,7 +747,8 @@ SCIP_RETCODE SCIPnodepqBound(
       assert(SCIPnodeGetType(node) == SCIP_NODETYPE_LEAF);
 
       /* cut off node */
-      if( SCIPsetIsInfinity(set, SCIPnodeGetLowerbound(node)) || SCIPsetIsGE(set, SCIPnodeGetLowerbound(node), cutoffbound) )
+      if( set->exact_enable ? SCIPrationalIsGEReal(SCIPnodeGetLowerboundExact(node), cutoffbound)
+                             : SCIPsetIsGE(set, SCIPnodeGetLowerbound(node), cutoffbound) )
       {
          /* because we loop from back to front, the existing children of the node must have a smaller lower bound
           * than the cut off value
@@ -677,9 +756,11 @@ SCIP_RETCODE SCIPnodepqBound(
          assert(!node->active);
          assert(node->depth != 0 || tree->focusnode == NULL);
          assert(PQ_LEFTCHILD(pos) >= nodepq->len
-            || SCIPsetIsLT(set, SCIPnodeGetLowerbound(nodepq->slots[PQ_LEFTCHILD(pos)]), cutoffbound));
+            || SCIPsetIsLT(set, SCIPnodeGetLowerbound(nodepq->slots[PQ_LEFTCHILD(pos)]), cutoffbound)
+            || (set->exact_enable && SCIPnodeGetLowerbound(nodepq->slots[PQ_LEFTCHILD(pos)]) < cutoffbound));
          assert(PQ_RIGHTCHILD(pos) >= nodepq->len
-            || SCIPsetIsLT(set, SCIPnodeGetLowerbound(nodepq->slots[PQ_RIGHTCHILD(pos)]), cutoffbound));
+            || SCIPsetIsLT(set, SCIPnodeGetLowerbound(nodepq->slots[PQ_RIGHTCHILD(pos)]), cutoffbound)
+            || (set->exact_enable && SCIPnodeGetLowerbound(nodepq->slots[PQ_RIGHTCHILD(pos)]) < cutoffbound));
 
          SCIPsetDebugMsg(set, "cutting off leaf node in slot %d (queuelen=%d) at depth %d with lowerbound=%g\n",
             pos, SCIPnodepqLen(nodepq), SCIPnodeGetDepth(node), SCIPnodeGetLowerbound(node));
@@ -701,25 +782,61 @@ SCIP_RETCODE SCIPnodepqBound(
             --pos;
 
          node->cutoff = TRUE;
+         if( set->exact_enable )
+            SCIPrationalSetInfinity(node->lowerboundexact);
          node->lowerbound = SCIPsetInfinity(set);
          node->estimate = SCIPsetInfinity(set);
 
          if( node->depth == 0 )
             stat->rootlowerbound = SCIPsetInfinity(set);
 
+         if( set->exact_enable )
+         {
+            SCIP_RATIONAL* lowerboundexact = SCIPtreeGetLowerboundExact(tree, set);
+
+            assert(SCIPrationalIsGEReal(lowerboundexact, SCIPtreeGetLowerbound(tree, set)));
+
+            /* exact lower bound improved */
+            if( SCIPrationalIsLT(stat->lastlowerboundexact, lowerboundexact) )
+            {
+               /* throw improvement event if upper bound not already exceeded */
+               if( SCIPrationalIsLT(stat->lastlowerboundexact, set->scip->primal->upperboundexact) )
+               {
+                  SCIP_EVENT event;
+
+                  SCIP_CALL( SCIPeventChgType(&event, SCIP_EVENTTYPE_DUALBOUNDIMPROVED) );
+                  SCIP_CALL( SCIPeventProcess(&event, set, NULL, NULL, NULL, eventfilter) );
+               }
+
+               /* update exact last lower bound */
+               SCIPrationalSetRational(stat->lastlowerboundexact, lowerboundexact);
+            }
+         }
+
          SCIP_Real lowerbound = SCIPtreeGetLowerbound(tree, set);
+
          assert(lowerbound <= SCIPsetInfinity(set));
 
-         if( lowerbound > stat->lastlowerbound )
+         /* lower bound improved */
+         if( stat->lastlowerbound < lowerbound )
          {
+            /* throw improvement event if not already done exactly */
+            if( !set->exact_enable && stat->lastlowerbound < set->scip->primal->upperbound )
+            {
+               SCIP_EVENT event;
+
+               SCIP_CALL( SCIPeventChgType(&event, SCIP_EVENTTYPE_DUALBOUNDIMPROVED) );
+               SCIP_CALL( SCIPeventProcess(&event, set, NULL, NULL, NULL, eventfilter) );
+            }
+
             /* update primal-dual integrals */
             if( set->misc_calcintegral )
+            {
                SCIPstatUpdatePrimalDualIntegrals(stat, set, set->scip->transprob, set->scip->origprob, SCIPsetInfinity(set), lowerbound);
-
-            /* throw improvement event */
-            SCIP_CALL( SCIPeventChgType(&event, SCIP_EVENTTYPE_DUALBOUNDIMPROVED) );
-            SCIP_CALL( SCIPeventProcess(&event, set, NULL, NULL, NULL, eventfilter) );
-            stat->lastlowerbound = lowerbound;
+               assert(stat->lastlowerbound == lowerbound); /*lint !e777*/
+            }
+            else
+               stat->lastlowerbound = lowerbound;
          }
 
          SCIPvisualCutoffNode(stat->visual, set, stat, node, TRUE);

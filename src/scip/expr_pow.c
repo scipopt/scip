@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2026 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -2719,7 +2719,7 @@ SCIP_DECL_EXPRPARSE(parseSignpower)
       return SCIP_READERROR;
    }
 
-   if( exponent <= 1.0 || SCIPisInfinity(scip, exponent) )
+   if( exponent <= 1.0 || !SCIPisFinite(exponent) || SCIPisInfinity(scip, exponent) )
    {
       SCIPerrorMessage("Expected finite exponent >= 1.0 for signpower().\n");
       return SCIP_READERROR;

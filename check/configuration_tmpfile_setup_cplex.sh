@@ -4,7 +4,7 @@
 #*                  This file is part of the program and library             *
 #*         SCIP --- Solving Constraint Integer Programs                      *
 #*                                                                           *
-#*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      *
+#*  Copyright (c) 2002-2026 Zuse Institute Berlin (ZIB)                      *
 #*                                                                           *
 #*  Licensed under the Apache License, Version 2.0 (the "License");          *
 #*  you may not use this file except in compliance with the License.         *
@@ -49,7 +49,7 @@ VISUALIZE=${18}    # - true, if the branch-and-bound search should be visualized
 SOLUFILE=${19}     # - solu file, only necessary if ${SETCUTOFF} is 1
 EMPHBENCHMARK="${20}"  # - use set emphasis benchmark
 CLOCKTYPE="${21}"      # - clocktype (1 = CPU, 2 = wallclock)
-
+WITHCERTIFICATE="${22}" # - true, if a certificate file should be created - currently ignored by CPLEX
 
 #args=("$@")
 #for ((i=0; i < $#; i++)) {
@@ -84,21 +84,21 @@ fi
 # if permutation counter is positive add permutation seed (0 = default)
 if test ${p} -gt 0
 then
-    echo "Warning: CPlex configuration currently cannot handle instance permutation"
+    echo "Error: CPlex configuration currently cannot handle instance permutation"
     exit 1
 fi
 
 if test "${REOPT}" = true
 then
     # exit because reoptimization feature is not supported here
-    echo "Warning: CPlex configuration currently cannot handle reoptimization"
+    echo "Error: CPlex configuration currently cannot handle reoptimization"
     exit 1
 fi
 
 if test "${VISUALIZE}" = true
 then
     # exit because visualization feature is not supported here
-    echo "Warning: CPlex configuration currently cannot handle visualization"
+    echo "Error: CPlex configuration currently cannot handle visualization"
     exit 1
 fi
 
@@ -106,7 +106,7 @@ fi
 if test "${SETCUTOFF}" = 1 || test "${SETCUTOFF}" = true
 then
     # TODO setting cutoff requires knowledge about whether the objective sense is minimization or maximization
-    echo "Warning: Setting a cutoff is currently not supported for Cplex configuration"
+    echo "Error: Setting a cutoff is currently not supported for Cplex configuration"
     exit 1
 fi
 
@@ -120,7 +120,7 @@ echo "set mip limits treememory ${MEMLIMIT}" >> "${TMPFILE}"
 echo "set threads ${THREADS}"                >> "${TMPFILE}"
 echo "set parallel 1"                        >> "${TMPFILE}"
 echo "set lpmethod 4"                        >> "${TMPFILE}"
-echo "set barrier crossover -1"              >> "${TMPFILE}"
+echo "set solutiontype 2"                    >> "${TMPFILE}"
 echo "read ${INSTANCE}"                      >> "${TMPFILE}"
 echo "display problem stats"                 >> "${TMPFILE}"
 echo "${OPTCOMMAND}"                         >> "${TMPFILE}"

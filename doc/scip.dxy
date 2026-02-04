@@ -907,6 +907,7 @@ INPUT                  = . \
                          ../src \
                          ../src/scip \
                          ../src/lpi \
+                         ../src/lpiexact \
                          ../src/objscip \
                          ../src/tclique \
                          ../src/dijkstra \
@@ -921,6 +922,8 @@ INPUT                  = . \
                          ../applications/CycleClustering/doc/xternal_cycleclustering.c \
                          ../applications/MinIISC/src \
                          ../applications/MinIISC/doc/xternal_miniisc.c \
+                         ../applications/PBSolver/src/ \
+                         ../applications/PBSolver/doc/xternal_pbsolver.c \
                          ../applications/Ringpacking/src/ \
                          ../applications/Ringpacking/doc/xternal_ringpacking.c \
                          ../applications/Scheduler/src \

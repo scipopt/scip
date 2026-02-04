@@ -83,9 +83,13 @@ it is necessary to check they are correct.
 #define FLEX_ARRAY_OK 0
  /* whether the compiler supports flexible array members in structures */
 
+#ifndef _FILE_OFFSET_BITS
 #define _FILE_OFFSET_BITS 0
+#endif
 #if _FILE_OFFSET_BITS == 64
+#ifndef _LARGEFILE_SOURCE
 #define _LARGEFILE_SOURCE
+#endif
 #else
 #undef _FILE_OFFSET_BITS
 #endif
@@ -466,6 +470,7 @@ it is necessary to check they are correct.
 #else
 #define SIZEOF_LONG 8
 #endif
+#else
 #ifndef _WIN32
 #define SIZEOF_LONG 8
 #else
@@ -473,15 +478,7 @@ it is necessary to check they are correct.
 #endif
 #endif
 
-#if defined(LLONG_MAX) 
 #define SIZEOF_LONG_LONG 8
-#else
-#ifndef _WIN32
-#define SIZEOF_LONG 8   /* 0 if nonexistent */
-#else
-#define SIZEOF_LONG 4   /* 0 if nonexistent */
-#endif
-#endif
 
 #if defined(_MSC_VER)
 #define SIZEOF_UNINT128 0
@@ -1043,17 +1040,17 @@ static int msc_bsr_16(setword x) \
 #include <x86intrin.h>
 #endif
 #if WORDSIZE==128
-#pragma instrinsic(_mm_popcnt_u64)
+#pragma intrinsic(_mm_popcnt_u64)
 #define POPCOUNT(x) ((int)_mm_popcnt_u64((unsigned long long)((x)>>64)) \
                    + (int)_mm_popcnt_u64((unsigned long long)((x)&MASK128R)))
 #elif WORDSIZE==64
-#pragma instrinsic(_mm_popcnt_u64)
+#pragma intrinsic(_mm_popcnt_u64)
 #define POPCOUNT(x) ((int)_mm_popcnt_u64(x))
 #elif WORDSIZE==32 
-#pragma instrinsic(_mm_popcnt_u32)
+#pragma intrinsic(_mm_popcnt_u32)
 #define POPCOUNT(x) _mm_popcnt_u32(x)
 #elif WORDSIZE==16
-#pragma instrinsic(_mm_popcnt_u32)
+#pragma intrinsic(_mm_popcnt_u32)
 #define POPCOUNT(x) _mm_popcnt_u32((unsigned int)(x))
 #endif
 

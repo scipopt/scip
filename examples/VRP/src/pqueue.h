@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2026 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -41,14 +41,14 @@ namespace std
             typename Data,
             typename Compare = less<Key> >
 
-   class pqueue
+   class pqueue /*lint --e{3713}*/
    {
       private:
 
       //--------------------
       // item node class
       //--------------------
-      class node
+      class node /*lint --e{3713}*/
       {
          friend class pqueue;
 
@@ -68,7 +68,11 @@ namespace std
 
          //
          ~node()
-         {}
+         {
+            left = nullptr;
+            right = nullptr;
+            father = nullptr;
+         }
 
       private:
          //
@@ -163,7 +167,7 @@ namespace std
       /** Returns queue item at top (with lowers key). */
       pqueue_item top()
       {
-         return root;
+         return root; /*lint !e1535*//*lint !e1806*/
       }
 
       /** Inserts a new entry into the queue, returns new item */
@@ -235,7 +239,7 @@ namespace std
             return;
          }
          // at leave: remove and update all sizes
-         for (node* n = item, *f = n->father; f != NULL; n = f, f = n->father)
+         for (node* n = item, *f = n->father; f != NULL; n = f, f = n->father) /*lint !e440*/ /*lint !e2840*/
          {
             if ( f->left == n )
             {

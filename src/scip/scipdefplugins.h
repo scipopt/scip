@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2026 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -69,6 +69,8 @@
 #include "scip/cons_integral.h"
 #include "scip/cons_knapsack.h"
 #include "scip/cons_linear.h"
+#include "scip/cons_exactlinear.h"
+#include "scip/cons_exactsol.h"
 #include "scip/cons_linking.h"
 #include "scip/cons_logicor.h"
 #include "scip/cons_nonlinear.h"
@@ -109,6 +111,7 @@
 #include "scip/heur_crossover.h"
 #include "scip/heur_dins.h"
 #include "scip/heur_distributiondiving.h"
+#include "scip/heur_dks.h"
 #include "scip/heur_dps.h"
 #include "scip/heur_dualval.h"
 #include "scip/heur_farkasdiving.h"
@@ -236,6 +239,7 @@
 #include "scip/sepa_aggregation.h"
 #include "scip/sepa_convexproj.h"
 #include "scip/sepa_disjunctive.h"
+#include "scip/sepa_flower.h"
 #include "scip/sepa_gauge.h"
 #include "scip/sepa_gomory.h"
 #include "scip/sepa_impliedbounds.h"
@@ -245,7 +249,6 @@
 #include "scip/sepa_mcf.h"
 #include "scip/sepa_minor.h"
 #include "scip/sepa_mixing.h"
-#include "scip/sepa_multilinear.h"
 #include "scip/sepa_oddcycle.h"
 #include "scip/sepa_rapidlearning.h"
 #include "scip/sepa_rlt.h"
@@ -255,6 +258,7 @@
 #include "scip/table_default.h"
 #include "scip/concsolver_scip.h"
 #include "scip/benders_default.h"
+#include "scip/relax_benders.h"
 #include "scip/cutsel_hybrid.h"
 #include "scip/cutsel_dynamic.h"
 #include "scip/cutsel_ensemble.h"
@@ -263,6 +267,7 @@
 #include "scip/nlpi_ipopt.h"
 #include "scip/nlpi_filtersqp.h"
 #include "scip/nlpi_worhp.h"
+#include "scip/nlpi_conopt.h"
 #include "scip/nlpi_all.h"
 
 #ifdef __cplusplus

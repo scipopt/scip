@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2026 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -33,6 +33,9 @@
 
 #include "scip/scipdefplugins.h"
 #include "scip/reader_nl.h"
+#include "scip/expr_trig.h"
+#include "scip/expr_sum.h"
+#include "scip/expr_var.h"
 
 #include "include/scip_test.h"
 
@@ -304,4 +307,70 @@ Test(readernl, nlobjvar, .description = "check whether initial value of introduc
    /* only if the solution is feasible, it will be available in the transformed problem, too */
    SCIP_CALL( SCIPtransformProb(scip) );
    cr_expect(SCIPgetNSols(scip) == 1);
+}
+
+/* check writing of nl file with negative variable in expression */
+Test(readernl, writenegvar, .description = "check writing of nl file with negated variable")
+{
+   SCIP_CONS* cons;
+   SCIP_VAR* x;
+   SCIP_VAR* xneg;
+   SCIP_EXPR* expr1;
+   SCIP_EXPR* expr2;
+   SCIP_Bool changed;
+   SCIP_Bool infeasible;
+
+   /* skip test if nl reader not available (SCIP compiled with AMPL=false) */
+   if( SCIPfindReader(scip, "nlreader") == NULL )
+      return;
+
+   SCIP_CALL( SCIPcreateProbBasic(scip, "testnegvar") );
+   SCIP_CALL( SCIPcreateVarBasic(scip, &x, "x", 0.0, 1.0, 1.0, SCIP_VARTYPE_BINARY) );
+   SCIP_CALL( SCIPaddVar(scip, x) );
+   SCIP_CALL( SCIPgetNegatedVar(scip, x, &xneg) );
+   SCIP_CALL( SCIPaddVar(scip, xneg) );
+
+   /* we add a constraint sin(~x) == 1 */
+   SCIP_CALL( SCIPcreateExprVar(scip, &expr1, xneg, NULL, NULL) );
+   SCIP_CALL( SCIPcreateExprSin(scip, &expr2, expr1, NULL, NULL) );
+   SCIP_CALL( SCIPcreateConsBasicNonlinear(scip, &cons, "test", expr2, 1.0, 1.0) );
+
+   SCIP_CALL( SCIPreleaseExpr(scip, &expr2) );
+   SCIP_CALL( SCIPreleaseExpr(scip, &expr1) );
+
+   SCIP_CALL( SCIPaddCons(scip, cons) );
+
+   /* SCIP_CALL( SCIPprintOrigProblem(scip, NULL, NULL, FALSE) ); */
+
+   SCIP_CALL( SCIPwriteOrigProblem(scip, "readernl_writenegvartest.nl", "nl", FALSE) );
+
+   SCIP_CALL( SCIPreleaseCons(scip, &cons) );
+   SCIP_CALL( SCIPreleaseVar(scip, &x) );
+
+   SCIP_CALL( SCIPreadProb(scip, "readernl_writenegvartest.nl", NULL) );
+   /* SCIP_CALL( SCIPprintOrigProblem(scip, NULL, NULL, FALSE) ); */
+
+   /* we expect to see a constraint sin(1-x) == 1 */
+   cr_expect(SCIPgetNVars(scip) == 1);
+   cr_expect(SCIPgetNConss(scip) == 1);
+   cons = SCIPgetConss(scip)[0];
+   cr_expect(strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), "nonlinear") == 0);
+
+   /* bring into standard form sum(1, -1*x) for checks */
+   SCIP_CALL( SCIPsimplifyExpr(scip, SCIPgetExprNonlinear(cons), &expr1, &changed, &infeasible, NULL, NULL) );
+
+   cr_expect(SCIPisExprSin(scip, expr1));
+   expr2 = SCIPexprGetChildren(expr1)[0];
+   cr_expect(SCIPisExprSum(scip, expr2));
+   cr_expect(SCIPexprGetNChildren(expr2) == 1);
+   cr_expect(SCIPgetConstantExprSum(expr2) == 1.0);
+   cr_expect(SCIPgetCoefsExprSum(expr2)[0] == -1.0);
+   cr_expect(SCIPisExprVar(scip, SCIPexprGetChildren(expr2)[0]));
+   cr_expect(SCIPgetVarExprVar(SCIPexprGetChildren(expr2)[0]) == SCIPgetVars(scip)[0]);
+
+   SCIP_CALL( SCIPreleaseExpr(scip, &expr1) );
+
+   remove("readernl_writenegvartest.nl");
+   remove("readernl_writenegvartest.col");
+   remove("readernl_writenegvartest.row");
 }

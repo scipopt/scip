@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2026 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -56,18 +56,18 @@ string getToken(char*& str)
    string token;
 
    // skip spaces and ':'
-   while( *str != '\0' && ( isspace(*str) || *str == ':') )
+   while( *str != '\0' && ( isspace((unsigned char)*str) || *str == ':') )
       ++str;
 
    // collect token
-   while( *str != '\0' && *str != ':' && ! isspace(*str) )
+   while( *str != '\0' && *str != ':' && ! isspace((unsigned char)*str) )
    {
       token += *str;
       ++str;
    }
 
    // skip spaces and ':'
-   while( *str != '\0' && ( isspace(*str) || *str == ':') )
+   while( *str != '\0' && ( isspace((unsigned char)*str) || *str == ':') )
       ++str;
 
    return token;

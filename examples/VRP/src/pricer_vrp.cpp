@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2026 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -266,7 +266,7 @@ SCIP_RETCODE ObjPricerVRP::add_tour_variable(
    (void) SCIPsnprintf(var_name, 255, "T");
    for (list<int>::const_iterator it = tour.begin(); it != tour.end(); ++it)  /*lint !e1702*/
    {
-      strncpy(tmp_name, var_name, 255);
+      (void) strncpy(tmp_name, var_name, 255);
       (void) SCIPsnprintf(var_name, 255, "%s_%d", tmp_name, *it);
    }
    SCIPdebugMsg(scip, "new variable <%s>\n", var_name);
@@ -281,7 +281,7 @@ SCIP_RETCODE ObjPricerVRP::add_tour_variable(
                             SCIPinfinity(scip),      // upper bound
                             0.0,                     // objective
                             SCIP_VARTYPE_CONTINUOUS, // variable type
-                            false, false, NULL, NULL, NULL, NULL, NULL) );
+                            FALSE, FALSE, NULL, NULL, NULL, NULL, NULL) );
 
    /* add new variable to the list of variables to price into LP (score: leave 1 here) */
    SCIP_CALL( SCIPaddPricedVar(scip, var, 1.0) );
@@ -319,7 +319,7 @@ namespace
 {
 
 /* types needed for prioity queue -------------------- */
-static const SCIP_Real   eps = 1e-9;
+constexpr SCIP_Real   eps = 1e-9;
 
 struct PQUEUE_KEY
 {
@@ -451,7 +451,7 @@ SCIP_Real ObjPricerVRP::find_shortest_tour(
          for (list<NODE_TABLE::iterator>::iterator it = dominated.begin(); it != dominated.end(); ++it) /*lint !e1702*/
          {
             PQ.remove( (*it)->second.queue_item );
-            next_table.erase( *it );
+            (void) next_table.erase( *it );
          }
 
          /* insert new table and queue entry  */

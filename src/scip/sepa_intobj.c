@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2026 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -44,6 +44,7 @@
 #include "scip/scip_mem.h"
 #include "scip/scip_numerics.h"
 #include "scip/scip_prob.h"
+#include "scip/scip_probing.h"
 #include "scip/scip_sepa.h"
 #include "scip/scip_sol.h"
 #include "scip/scip_solvingstats.h"
@@ -182,7 +183,7 @@ SCIP_RETCODE createObjRow(
 /** searches and adds integral objective cuts that separate the given primal solution */
 static
 SCIP_RETCODE separateCuts(
-   SCIP*                 scip,               /**< SCIP data structure */ 
+   SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SEPA*            sepa,               /**< the intobj separator */
    SCIP_SOL*             sol,                /**< the solution that should be separated, or NULL for LP solution */
    SCIP_RESULT*          result              /**< pointer to store the result */
@@ -325,6 +326,12 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpIntobj)
    if( SCIPgetNLPBranchCands(scip) == 0 )
       return SCIP_OKAY;
 
+   /* only call separator if not in probing with changed objective function
+    * this separator did not track objective changes anymore
+    */
+   if( SCIPisObjChangedProbing(scip) )
+      return SCIP_OKAY;
+
    SCIP_CALL( separateCuts(scip, sepa, NULL, result) );
 
    return SCIP_OKAY;
@@ -352,7 +359,7 @@ SCIP_DECL_SEPAEXECSOL(sepaExecsolIntobj)
 
 
 /*
- * event handler for objective changes
+ * event handler for catching newly added variables
  */
 
 
@@ -360,7 +367,7 @@ SCIP_DECL_SEPAEXECSOL(sepaExecsolIntobj)
 static
 SCIP_DECL_EVENTINIT(eventInitIntobj)
 {  /*lint --e{715}*/
-   SCIP_CALL( SCIPcatchEvent(scip, SCIP_EVENTTYPE_VARADDED | SCIP_EVENTTYPE_OBJCHANGED, eventhdlr, NULL, NULL) );
+   SCIP_CALL( SCIPcatchEvent(scip, SCIP_EVENTTYPE_VARADDED, eventhdlr, NULL, NULL) );
 
    return SCIP_OKAY;
 }
@@ -369,7 +376,7 @@ SCIP_DECL_EVENTINIT(eventInitIntobj)
 static
 SCIP_DECL_EVENTEXIT(eventExitIntobj)
 {  /*lint --e{715}*/
-   SCIP_CALL( SCIPdropEvent(scip, SCIP_EVENTTYPE_VARADDED | SCIP_EVENTTYPE_OBJCHANGED, eventhdlr, NULL, -1) );
+   SCIP_CALL( SCIPdropEvent(scip, SCIP_EVENTTYPE_VARADDED, eventhdlr, NULL, -1) );
 
    return SCIP_OKAY;
 }
@@ -387,33 +394,19 @@ SCIP_DECL_EVENTEXEC(eventExecIntobj)
    eventhdlrdata = SCIPeventhdlrGetData(eventhdlr);
    sepadata = (SCIP_SEPADATA*)eventhdlrdata;
    assert(sepadata != NULL);
+   assert(SCIPeventGetType(event) == SCIP_EVENTTYPE_VARADDED);
 
    /* we don't have anything to do, if the objective value inequality doesn't yet exist */
    if( sepadata->objrow == NULL )
       return SCIP_OKAY;
 
    var = SCIPeventGetVar(event);
+   SCIPdebugMsg(scip, "variable <%s> with obj=%g was added to the problem\n", SCIPvarGetName(var), SCIPvarGetObj(var));
 
-   switch( SCIPeventGetType(event) )
+   objdelta = SCIPvarGetObj(var);
+   if( !SCIPisZero(scip, objdelta) )
    {
-   case SCIP_EVENTTYPE_VARADDED:
-      SCIPdebugMsg(scip, "variable <%s> with obj=%g was added to the problem\n", SCIPvarGetName(var), SCIPvarGetObj(var));
-      objdelta = SCIPvarGetObj(var);
-      if( !SCIPisZero(scip, objdelta) )
-      {
-         SCIP_CALL( SCIPaddVarToRow(scip, sepadata->objrow, var, SCIPvarGetObj(var)) );
-      }
-      break;
-
-   case SCIP_EVENTTYPE_OBJCHANGED:
-      SCIPdebugMsg(scip, "variable <%s> changed objective value from %g to %g\n", SCIPvarGetName(var), SCIPeventGetOldobj(event), SCIPeventGetNewobj(event));
-      objdelta = SCIPeventGetNewobj(event) - SCIPeventGetOldobj(event);
-      SCIP_CALL( SCIPaddVarToRow(scip, sepadata->objrow, var, objdelta) );
-      break;
-
-   default:
-      SCIPerrorMessage("invalid event type %" SCIP_EVENTTYPE_FORMAT "\n", SCIPeventGetType(event));
-      return SCIP_INVALIDDATA;
+      SCIP_CALL( SCIPaddVarToRow(scip, sepadata->objrow, var, SCIPvarGetObj(var)) );
    }
 
    return SCIP_OKAY;

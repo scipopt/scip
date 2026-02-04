@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2026 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -59,6 +59,17 @@ struct SCIP_SepaStore
    int                   ncutsapplied;       /**< total number of cuts applied to the LP */
    SCIP_Bool             initiallp;          /**< is the separation storage currently being filled with the initial LP rows? */
    SCIP_Bool             forcecuts;          /**< should the cuts be used despite the number of cuts parameter limit? */
+};
+
+struct SCIP_SepaStoreExact
+{
+   SCIP_ROWEXACT**       cuts;               /**< array with separated cuts sorted by score */
+   int                   cutssize;           /**< size of cuts and score arrays */
+   int                   ncuts;              /**< number of separated cuts (max. is set->sepa_maxcuts) */
+   int                   ncutsfound;         /**< number of cuts found so far */
+   int                   ncutsfoundround;    /**< number of cuts found so far in this separation round */
+   int                   ncutsapplied;       /**< total number of cuts applied to the LP */
+   SCIP_Bool             initiallp;          /**< is the separation storage currently being filled with the initial LP rows? */
 };
 
 #ifdef __cplusplus

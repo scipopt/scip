@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2026 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -60,7 +60,7 @@ SCIP_RETCODE SCIPsyncstoreCapture(
 /** initialize the syncstore for the given SCIP instance */
 SCIP_EXPORT
 SCIP_RETCODE SCIPsyncstoreInit(
-   SCIP*                 scip                /**< SCIP main datastructure */
+   SCIP*                 scip                /**< SCIP main data structure */
    );
 
 /** deinitializes the synchronization store */
@@ -179,7 +179,7 @@ int SCIPsyncstoreGetWinner(
    SCIP_SYNCSTORE*       syncstore           /**< the synchronization store */
    );
 
-/** how many solvers have already finished synchronizing on this sychronization data */
+/** how many solvers have already finished synchronizing on this synchronization data */
 SCIP_EXPORT
 int SCIPsyncdataGetNSynced(
    SCIP_SYNCDATA*        syncdata            /**< the synchronization data */
@@ -243,7 +243,7 @@ SCIP_EXPORT
 void SCIPsyncdataSetStatus(
    SCIP_SYNCDATA*        syncdata,           /**< the synchronization data the upperbound should be added to */
    SCIP_STATUS           status,             /**< the status */
-   int                   solverid            /**< identifier of te solver that has this status */
+   int                   solverid            /**< identifier of the solver that has this status */
    );
 
 /** adds memory used to the synchronization data */

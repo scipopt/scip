@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2026 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -35,6 +35,7 @@
 
 
 #include "scip/def.h"
+#include "scip/type_rational.h"
 #include "scip/type_sol.h"
 #include "scip/type_primal.h"
 
@@ -52,8 +53,10 @@ struct SCIP_Primal
    SCIP_Longint          nlimbestsolsfound;  /**< number of new best primal CIP solutions respecting the objective limit
                                               *   found up to now */
    SCIP_Real             upperbound;         /**< upper (primal) bound of CIP: objective value of best solution or user bound */
+   SCIP_RATIONAL*        upperboundexact;    /**< upper (primal) bound of CIP: objective value of best solution or user bound */
    SCIP_Real             cutoffbound;        /**< upper bound for better primal solutions (if objective value is always
                                               *   integral, cutoffbound is equal to ceil(upperbound) - 1.0 (+eps) */
+   SCIP_RATIONAL*        cutoffboundexact;   /**< store the exact cutoff bound here, if in exact solving mode */
    SCIP_SOL**            sols;               /**< primal CIP solutions */
    SCIP_SOL**            partialsols;        /**< partial solutions */
    SCIP_SOL**            existingsols;       /**< all existing primal solutions (feasible, partial, and infeasible) */

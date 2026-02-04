@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2026 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -50,6 +50,8 @@ typedef struct SCIP_Conflicthdlr SCIP_CONFLICTHDLR; /**< conflict handler to pro
 typedef struct SCIP_ConflicthdlrData SCIP_CONFLICTHDLRDATA; /**< conflict handler data */
 typedef struct SCIP_ConflictSet SCIP_CONFLICTSET; /**< set of conflicting bound changes */
 typedef struct SCIP_ProofSet SCIP_PROOFSET;       /**< set of variables and coefficients describing a proof-constraint of type a^Tx <= rhs */
+typedef struct SCIP_ConflictRow SCIP_CONFLICTROW; /**< conflict row of type lhs <= a^Tx, semi-sparse representation */
+
 typedef struct SCIP_LPBdChgs SCIP_LPBDCHGS;       /**< set of LP bound changes */
 typedef struct SCIP_Conflict SCIP_CONFLICT;       /**< conflict analysis data structure */
 

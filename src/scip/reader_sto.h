@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2026 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -80,28 +80,6 @@ SCIP_RETCODE SCIPreadSto(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           filename,           /**< full path and name of file to read, or NULL if stdin should be used */
    SCIP_RESULT*          result              /**< pointer to store the result of the file reading call */
-   );
-
-/** writes problem to file */
-SCIP_EXPORT
-SCIP_RETCODE SCIPwriteSto(
-   SCIP*                 scip,               /**< SCIP data structure */
-   FILE*                 file,               /**< output file, or NULL if standard output should be used */
-   const char*           name,               /**< problem name */
-   SCIP_Bool             transformed,        /**< TRUE iff problem is the transformed problem */
-   SCIP_OBJSENSE         objsense,           /**< objective sense */
-   SCIP_Real             objscale,           /**< scalar applied to objective function; external objective value is
-                                              * extobj = objsense * objscale * (intobj + objoffset) */
-   SCIP_Real             objoffset,          /**< objective offset from bound shifting and fixing */
-   SCIP_VAR**            vars,               /**< array with active variables ordered binary, integer, implicit, continuous */
-   int                   nvars,              /**< number of active variables in the problem */
-   int                   nbinvars,           /**< number of binary variables */
-   int                   nintvars,           /**< number of general integer variables */
-   int                   nimplvars,          /**< number of implicit integer variables */
-   int                   ncontvars,          /**< number of continuous variables */
-   SCIP_CONS**           conss,              /**< array with constraints of the problem */
-   int                   nconss,             /**< number of constraints in the problem */
-   SCIP_RESULT*          result              /**< pointer to store the result of the file writing call */
    );
 
 /** returns the total number of scenarios added to the problem */

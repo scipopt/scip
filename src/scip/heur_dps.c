@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2026 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -51,6 +51,7 @@
 #include "scip/scipdefplugins.h"
 #include "scip/scip_cons.h"
 #include "scip/scip_dcmp.h"
+#include "scip/scip_exact.h"
 #include "scip/scip_general.h"
 #include "scip/scip_heur.h"
 #include "scip/scip_mem.h"
@@ -261,6 +262,11 @@ SCIP_RETCODE createSubscip(
 
    /* speed up sub-SCIP by not checking dual LP feasibility */
    SCIP_CALL( SCIPsetBoolParam(*subscip, "lp/checkdualfeas", FALSE) );
+
+   /* even when solving exactly, sub-SCIP heuristics should be run in floating-point mode, since the exactsol constraint
+    * handler is in place to perform a final repair step
+    */
+   SCIP_CALL( SCIPenableExactSolving(*subscip, FALSE) );
 
    return SCIP_OKAY;
 }
@@ -941,11 +947,18 @@ SCIP_RETCODE initCurrent(
                if( origvar == NULL ) /* e.g. variable is negated */
                {
                   *success = FALSE;
-                  return SCIP_OKAY;
+                  break;
                }
                varlpvalue = SCIPvarGetLPSol(origvar);
                lpvalue += varlpvalue * consvals[i];
             }
+
+            SCIPfreeBufferArray(scip, &consvals);
+            SCIPfreeBufferArray(scip, &consvars);
+
+            if( !*success )
+               return SCIP_OKAY;
+
             sumrhs += lpvalue;
             sumlhs += lpvalue;
 
@@ -954,9 +967,6 @@ SCIP_RETCODE initCurrent(
                linking->currentrhs[b] = lpvalue;
             if( linking->haslhs )
                linking->currentlhs[b] = lpvalue;
-
-            SCIPfreeBufferArray(scip, &consvars);
-            SCIPfreeBufferArray(scip, &consvals);
          }
          assert(SCIPisLE(scip, sumrhs, rhs));
          assert(SCIPisGE(scip, sumlhs, lhs));
@@ -2263,6 +2273,9 @@ SCIP_RETCODE SCIPincludeHeurDps(
          HEUR_MAXDEPTH, HEUR_TIMING, HEUR_USESSUBSCIP, heurExecDps, heurdata) );
 
    assert(heur != NULL);
+
+   /* primal heuristic is safe to use in exact solving mode */
+   SCIPheurMarkExact(heur);
 
    /* set non fundamental callbacks via setter functions */
    SCIP_CALL( SCIPsetHeurCopy(scip, heur, heurCopyDps) );

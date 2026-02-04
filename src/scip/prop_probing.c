@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2026 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -258,13 +258,13 @@ SCIP_RETCODE sortVariables(
 
 #ifndef VARIANT_B
          tmp = -MAX(nlocksdown, nlocksup)
-	    + 10.0 * MIN(nimplzero, nimplone)
-	    + 100.0 * MIN(nclqzero, nclqone);
+            + 10.0 * MIN(nimplzero, nimplone)
+            + 100.0 * MIN(nclqzero, nclqone);
 #else
          tmp = - ABS(nlocksdown - nlocksup)
-	    + MIN(nlocksdown, nlocksup)
-	    + 500.0 * nimplzero + 50.0 * nimplone
-	    + 50000.0 * nclqzero + 5000.0 * nclqone;
+            + MIN(nlocksdown, nlocksup)
+            + 500.0 * nimplzero + 50.0 * nimplone
+            + 50000.0 * nclqzero + 5000.0 * nclqone;
 #endif
 
          if( tmp > maxscore )
@@ -496,7 +496,7 @@ SCIP_RETCODE applyProbing(
             {
                SCIP_Bool fixed;
 
-	       if( SCIPgetStage(scip) != SCIP_STAGE_SOLVING || SCIPnodeGetDepth(SCIPgetCurrentNode(scip)) == 0 )
+               if( SCIPgetStage(scip) != SCIP_STAGE_SOLVING || SCIPnodeGetDepth(SCIPgetCurrentNode(scip)) == 0 )
                {
                   /* the variable can be fixed to FALSE */
                   SCIP_CALL( SCIPfixVar(scip, vars[i], 0.0, cutoff, &fixed) );

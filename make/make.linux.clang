@@ -7,6 +7,7 @@ ZLIB_FLAGS	=
 ZLIB_LDFLAGS 	=	-lz
 GMP_FLAGS	=
 GMP_LDFLAGS 	=	-lgmp
+MPFR_LDFLAGS	=	-lmpfr
 READLINE_FLAGS	=
 READLINE_LDFLAGS=	-lreadline -lncurses
 FORTRANLIBS	=	-lgfortran
@@ -52,4 +53,13 @@ CXXFLAGS += $(SANITIZERFLAGS)
 LDFLAGS += $(SANITIZERFLAGS)
 ifeq ($(SHARED),true)
   LIBBUILDFLAGS += $(SANITIZERFLAGS)
+endif
+
+ifeq ($(LTO),true)
+  CFLAGS	+=	-flto
+  CXXFLAGS	+=	-flto
+  LDFLAGS	+=	-flto
+ifeq ($(SHARED),true)
+  LIBBUILDFLAGS +=	-flto
+endif
 endif

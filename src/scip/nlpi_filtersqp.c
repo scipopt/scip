@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2026 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -33,7 +33,7 @@
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 #include <string.h>
-#if defined(_WIN32)
+#ifdef _WIN32
 #include <windows.h>
 #else
 #include <sys/time.h>
@@ -500,7 +500,8 @@ F77_FUNC(hessian,HESSIAN)(
    for( i = 0; i < *m; ++i )
       lambda[i] = -lam[*n+i];
 
-   if( SCIPnlpiOracleEvalHessianLag(problem->scip, problem->oracle, x, TRUE, TRUE, (*phase == 1) ? 0.0 : 1.0, lambda, problem->evalbuffer) == SCIP_OKAY )
+   if( SCIPnlpiOracleEvalHessianLag(problem->scip, problem->oracle, x, TRUE, TRUE, (*phase == 1) ? 0.0 : 1.0, lambda,
+        problem->evalbuffer, FALSE) == SCIP_OKAY )
    {
       *l_hess = nnz;
 
@@ -539,6 +540,7 @@ SCIP_RETCODE setupGradients(
    int ncons;
    int i;
    int c;
+   int nnlnz;
 
    assert(la != NULL);
    assert(lasize != NULL);
@@ -550,7 +552,7 @@ SCIP_RETCODE setupGradients(
    ncons = SCIPnlpiOracleGetNConstraints(oracle);
 
    /* get jacobian sparsity in oracle format: offset are rowstarts in col and col are column indices */
-   SCIP_CALL( SCIPnlpiOracleGetJacobianSparsity(scip, oracle, &offset, &col) );
+   SCIP_CALL( SCIPnlpiOracleGetJacobianRowSparsity(scip, oracle, &offset, &col, NULL, &nnlnz) );
    nnz = offset[ncons];
 
    /* la stores both column indices (first) and rowstarts (at the end) of the objective gradient and Jacobian
@@ -614,7 +616,7 @@ SCIP_RETCODE setupHessian(
    nvars = SCIPnlpiOracleGetNVars(oracle);
 
    /* get Hessian sparsity in oracle format: offset are rowstarts in col and col are column indices */
-   SCIP_CALL( SCIPnlpiOracleGetHessianLagSparsity(scip, oracle, &offset, &col) );
+   SCIP_CALL( SCIPnlpiOracleGetHessianLagSparsity(scip, oracle, &offset, &col, FALSE) );
    nnz = offset[nvars];
 
    /* la stores both column indices (first) and rowstarts (at the end) of the (sparse) Hessian

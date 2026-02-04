@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2026 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -543,9 +543,8 @@ SCIP_Longint SCIPgetExprNewSoltag(
 /** evaluates gradient of an expression for a given point
  *
  * Initiates an expression walk to also evaluate children, if necessary.
- * Value can be received via SCIPgetExprPartialDiffNonlinear().
- * If an error (division by zero, ...) occurs, this value will
- * be set to SCIP_INVALID.
+ * Value can be received from variable expressions via SCIPexprGetDerivative() or via SCIPgetExprPartialDiffNonlinear().
+ * If an error (division by zero, ...) occurs, these functions return SCIP_INVALID.
  */
 SCIP_EXPORT
 SCIP_RETCODE SCIPevalExprGradient(
@@ -577,7 +576,7 @@ SCIP_RETCODE SCIPevalExprHessianDir(
  * @{
  */
 
-/** possibly reevaluates and then returns the activity of the expression
+/** possibly reevaluates the activity of the expression
  *
  * Reevaluate activity if currently stored is no longer uptodate (some bound was changed since last evaluation).
  *

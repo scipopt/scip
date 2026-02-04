@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2026 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -239,6 +239,11 @@ SCIP_RETCODE getMinFeas(
       assert(nlrows[i] != NULL);
 
       SCIP_CALL( SCIPgetNlRowSolFeasibility(scip, nlrows[i], sol, &tmp) );
+      if( tmp == SCIP_INVALID )  /*lint !e777*/
+      {
+         *minfeas = -SCIPinfinity(scip);
+         return SCIP_OKAY;
+      }
       *minfeas = MIN(*minfeas, tmp);
    }
 
@@ -254,7 +259,7 @@ SCIP_RETCODE computeGradient(
    SCIP_HASHMAP*         varindex,           /**< maps variables to indicies between 0,..,SCIPgetNVars(scip)-1 uniquely */
    SCIP_EXPRITER*        exprit,             /**< expression iterator that can be used */
    SCIP_Real*            grad,               /**< buffer to store the gradient; grad[varindex(i)] corresponds to SCIPgetVars(scip)[i] */
-   SCIP_Real*            norm                /**< buffer to store ||grad||^2  */
+   SCIP_Real*            norm                /**< buffer to store ||grad||^2, or SCIP_INVALID if function not differentiable  */
    )
 {
    SCIP_EXPR* expr;
@@ -299,6 +304,12 @@ SCIP_RETCODE computeGradient(
          var = SCIPgetVarExprVar(expr);
          assert(var != NULL);
          assert(getVarIndex(varindex, var) >= 0 && getVarIndex(varindex, var) < SCIPgetNVars(scip));
+
+         if( SCIPexprGetDerivative(expr) == SCIP_INVALID )  /*lint !e777*/
+         {
+            *norm = SCIP_INVALID;
+            return SCIP_OKAY;
+         }
 
          grad[getVarIndex(varindex, var)] += SCIPexprGetDerivative(expr);
       }
@@ -387,18 +398,34 @@ SCIP_RETCODE improvePoint(
 
          SCIP_CALL( SCIPgetNlRowSolFeasibility(scip, nlrows[i], point, &feasibility) );
 
+         if( feasibility == SCIP_INVALID )  /*lint !e777*/
+         {
+#ifdef SCIP_DEBUG_IMPROVEPOINT
+            printf("nlrow cannot be evaluated at current point -> skip nlrow\n");
+#endif
+            continue;
+         }
+
          /* do not consider non-violated constraints */
          if( SCIPisFeasGE(scip, feasibility, 0.0) )
             continue;
 
-         /* increase number of violated nlrows */
-         ++nviolnlrows;
-
-         SCIP_CALL( SCIPgetNlRowSolActivity(scip, nlrows[i], point, &activity) );
          SCIP_CALL( computeGradient(scip, nlrows[i], point, varindex, exprit, grad, &nlrownorm) );
 
          /* update estimated costs for computing gradients */
          *gradcosts += nlrowgradcosts[i];
+
+         /* skip nlrow if gradient is not available at the current point */
+         if( nlrownorm == SCIP_INVALID )  /*lint !e777*/
+         {
+#ifdef SCIP_DEBUG_IMPROVEPOINT
+            printf("gradient not available at current point -> skip nlrow\n");
+#endif
+            continue;
+         }
+
+         /* increase number of violated differentiable nlrows */
+         ++nviolnlrows;
 
          /* stop if the gradient disappears at the current point */
          if( SCIPisZero(scip, nlrownorm) )
@@ -409,12 +436,15 @@ SCIP_RETCODE improvePoint(
             goto TERMINATE;
          }
 
+         SCIP_CALL( SCIPgetNlRowSolActivity(scip, nlrows[i], point, &activity) );
+         assert(activity != SCIP_INVALID);  /*lint !e777*/
+
          /* compute -g(x_k) / ||grad(g)(x_k)||^2 for a constraint g(x_k) <= 0 */
          scale = -feasibility / nlrownorm;
          if( !SCIPisInfinity(scip, SCIPnlrowGetRhs(nlrows[i])) && SCIPisGT(scip, activity, SCIPnlrowGetRhs(nlrows[i])) )
             scale *= -1.0;
 
-         /* skip nonliner row if the scaler is too small or too large */
+         /* skip nonlinear row if the scale is too small or too large */
          if( SCIPisEQ(scip, scale, 0.0) || SCIPisHugeValue(scip, REALABS(scale)) )
             continue;
 
@@ -422,11 +452,11 @@ SCIP_RETCODE improvePoint(
             updatevec[j] += scale * grad[j];
       }
 
-      /* if there are no violated rows, stop since start point is feasible */
+      /* if there are no violated differentiable rows, stop since start point is feasible or we have no direction for improvement */
       if( nviolnlrows == 0 )
       {
          assert(updatevec[i] == 0.0);
-         return SCIP_OKAY;
+         goto TERMINATE;
       }
 
       for( i = 0; i < nvars; ++i )

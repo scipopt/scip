@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2026 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -60,6 +60,9 @@ extern "C" {
  */
 
 /** creates a branching rule and includes it in SCIP
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *      - \ref SCIP_STAGE_INIT
+ *      - \ref SCIP_STAGE_PROBLEM
  *
  *  @note method has all branching rule callbacks as arguments and is thus changed every time a new
  *        callback is added in future releases; consider using SCIPincludeBranchruleBasic() and setter functions
@@ -91,6 +94,10 @@ SCIP_RETCODE SCIPincludeBranchrule(
  *  Optional callbacks can be set via specific setter functions, see SCIPsetBranchruleInit(), SCIPsetBranchruleExit(),
  *  SCIPsetBranchruleCopy(), SCIPsetBranchruleFree(), SCIPsetBranchruleInitsol(), SCIPsetBranchruleExitsol(),
  *  SCIPsetBranchruleExecLp(), SCIPsetBranchruleExecExt(), and SCIPsetBranchruleExecPs().
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *     - \ref SCIP_STAGE_INIT
+ *     - \ref SCIP_STAGE_PROBLEM
  *
  *  @note if you want to set all callbacks with a single method call, consider using SCIPincludeBranchrule() instead
  */
@@ -231,10 +238,10 @@ SCIP_RETCODE SCIPsetBranchruleMaxbounddist(
  */
 
 /** gets branching candidates for LP solution branching (fractional variables) along with solution values,
- *  fractionalities, and number of branching candidates; The number of branching candidates does NOT
- *  account for fractional implicit integer variables which should not be used for branching decisions.
+ *  fractionalities, and number of branching candidates; the number of branching candidates does not
+ *  account for fractional continuous implied integral variables, which should not be used for branching
  *
- *  Fractional implicit integer variables are stored at the positions *nlpcands to *nlpcands + *nfracimplvars - 1
+ *  fractional continuous implied integral variables are stored from *nlpcands to *nlpcands + *nfracimplvars - 1
  *
  *  branching rules should always select the branching candidate among the first npriolpcands of the candidate
  *  list
@@ -255,10 +262,11 @@ SCIP_RETCODE SCIPgetLPBranchCands(
    SCIP_Real**           lpcandsfrac,        /**< pointer to store the array of LP candidate fractionalities, or NULL */
    int*                  nlpcands,           /**< pointer to store the number of LP branching candidates, or NULL */
    int*                  npriolpcands,       /**< pointer to store the number of candidates with maximal priority, or NULL */
-   int*                  nfracimplvars       /**< pointer to store the number of fractional implicit integer variables, or NULL */
+   int*                  nfracimplvars       /**< pointer to store the number of fractional continuous implied integral variables, or NULL */
    );
 
-/** gets number of branching candidates for LP solution branching (number of fractional variables)
+/** gets number of branching candidates for LP solution branching (number of fractional variables); implied integral
+ *  variables with integrality constraints are included
  *
  *  @return the number of branching candidates for LP solution branching (number of fractional variables).
  *

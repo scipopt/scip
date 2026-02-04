@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2026 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -37,7 +37,7 @@
 
 #define DIALOG_NAME            "xyz"
 #define DIALOG_DESC            "xyz user interface dialog"
-#define DIALOG_ISSUBMENU          FALSE 
+#define DIALOG_ISSUBMENU          FALSE
 
 
 
@@ -46,7 +46,9 @@
  * Data structures
  */
 
-/* TODO: fill in the necessary dialog data */
+/* TODO: fill in the necessary dialog data
+ * when this plugin is written in C++, rename SCIP_DialogData to something unique (C++ One-Definition-Rule)
+ */
 
 /** dialog data */
 struct SCIP_DialogData
@@ -163,7 +165,7 @@ SCIP_RETCODE SCIPincludeDialogXyz(
    /* create, include, and release dialog */
    if( !SCIPdialogHasEntry(parentdialog, DIALOG_NAME) )
    {
-      SCIP_CALL( SCIPincludeDialog(scip, &dialog, 
+      SCIP_CALL( SCIPincludeDialog(scip, &dialog,
             dialogCopyXyz, dialogExecXyz, dialogDescXyz, dialogFreeXyz,
             DIALOG_NAME, DIALOG_DESC, DIALOG_ISSUBMENU, dialogdata) );
       SCIP_CALL( SCIPaddDialogEntry(scip, parentdialog, dialog) );

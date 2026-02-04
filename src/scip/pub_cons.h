@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2026 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -94,6 +94,21 @@ SCIP_EXPORT
 void SCIPconshdlrSetData(
    SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
    SCIP_CONSHDLRDATA*    conshdlrdata        /**< new constraint handler user data */
+   );
+
+/** is constraint handler safe to use in exact solving mode? */
+SCIP_EXPORT
+SCIP_Bool SCIPconshdlrIsExact(
+   SCIP_CONSHDLR*        conshdlr            /**< constraint handler */
+   );
+
+/** marks the constraint handler as safe to use in exact solving mode
+ *
+ *  @note Constraint handlers that are not marked as exact are skipped during exact solving mode.
+ */
+SCIP_EXPORT
+void SCIPconshdlrMarkExact(
+   SCIP_CONSHDLR*        conshdlr            /**< constraint handler */
    );
 
 /** sets all separation related callbacks of the constraint handler */
@@ -454,6 +469,13 @@ SCIP_Bool SCIPconshdlrNeedsCons(
    SCIP_CONSHDLR*        conshdlr            /**< constraint handler */
    );
 
+/** sets the needscons flag of constraint handler, for example to disable without constraints */
+SCIP_EXPORT
+void SCIPconshdlrSetNeedsCons(
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   SCIP_Bool             needscons           /**< should be skipped, if no constraints are available? */
+   );
+
 /** does the constraint handler perform presolving? */
 SCIP_EXPORT
 SCIP_Bool SCIPconshdlrDoesPresolve(
@@ -511,6 +533,7 @@ SCIP_PROPTIMING SCIPconshdlrGetPropTiming(
 /*
  * Methods for constraint change sets
  */
+
 /** gets added constraints data for a constraint set change */
 SCIP_EXPORT
 void SCIPconssetchgGetAddedConsData(

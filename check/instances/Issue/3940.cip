@@ -1,0 +1,22 @@
+STATISTICS
+  Problem name     : seed
+  Variables        : 5 (0 binary, 5 integer, 0 implicit integer, 0 continuous)
+  Constraints      : 0 initial, 8 maximal
+OBJECTIVE
+  Sense            : minimize
+VARIABLES
+  [integer] <x0>: obj=-78, original bounds=[-200,+inf]
+  [integer] <x1>: obj=-81.3, original bounds=[-200,+inf]
+  [integer] <x2>: obj=63, original bounds=[-200,+inf]
+  [integer] <x3>: obj=-84.66, original bounds=[0,200]
+  [integer] <x4>: obj=21, original bounds=[-200,+inf]
+CONSTRAINTS
+  [linear] <_C10>:  -24.52<x0>[I] -52.76<x1>[I] +94.84<x2>[I] -20.18<x3>[I] -79.99<x4>[I] >= -4291.3;
+  [linear] <_C11>:  -44<x2>[I] -47<x4>[I] <= 0;
+  [linear] <_C13>:  -49.18<x0>[I] +7.64<x1>[I] -36.45<x2>[I] +20.37<x3>[I] +32.91<x4>[I] <= 3645.24;
+  [linear] <_C14>:  +39<x2>[I] +45<x4>[I] >= 0;
+  [linear] <_C17>:  +81.01<x0>[I] +45.36<x1>[I] +91.01<x2>[I] -47.28<x3>[I] +34.98<x4>[I] <= -2042.31;
+  [linear] <_C4>:  -21<x1>[I] >= 0;
+  [linear] <_C5>:  +59.51<x3>[I] +92.41<x4>[I] >= 0;
+  [linear] <_C6>:  -22.28<x0>[I] -1.96<x1>[I] +84.7<x2>[I] -83.65<x3>[I] +88.9<x4>[I] >= 185.1;
+END

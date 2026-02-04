@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2026 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -115,7 +115,7 @@ SCIP_EXPORT
 SCIP_RETCODE SCIPdecompGetVarsSize(
    SCIP_DECOMP*          decomp,             /**< decomposition data structure */
    int*                  varssize,           /**< array to store variable sizes of blocks*/
-   int                   nblocks             /**< length of variable sizes array */
+   int                   nlabels             /**< length of variable sizes array */
    );
 
 /** gets constraint size for each block, sorted by increasing block label
@@ -130,7 +130,7 @@ SCIP_EXPORT
 SCIP_RETCODE SCIPdecompGetConssSize(
    SCIP_DECOMP*          decomp,             /**< decomposition data structure */
    int*                  consssize,          /**< array to store constraint sizes of blocks*/
-   int                   nblocks             /**< length of constraint sizes array */
+   int                   nlabels             /**< length of constraint sizes array */
    );
 
 /** gets number of border variables of this decomposition

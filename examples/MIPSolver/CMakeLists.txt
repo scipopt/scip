@@ -1,10 +1,15 @@
 cmake_minimum_required(VERSION 3.11)
 
+# INTERPROCEDURAL_OPTIMIZATION is enforced when enabled.
+if(POLICY CMP0069)
+   cmake_policy(SET CMP0069 NEW)
+endif()
+
 project(MIPSolver)
 
 if(TARGET SCIP::SCIP)
   # find package by SCIP PATH
-  find_package(SCIP CONFIG PATHS ${SCIP_BINARY_DIR} REQUIRED)
+  find_package(SCIP CONFIG NO_DEFAULT_PATH PATHS ${SCIP_BINARY_DIR} REQUIRED)
 else()
   find_package(SCIP REQUIRED)
 endif()
@@ -13,6 +18,7 @@ include_directories(BEFORE PUBLIC ${SCIP_INCLUDE_DIRS})
 
 add_executable(scipmip
    src/cppmain.cpp)
+set_property(TARGET scipmip PROPERTY INTERPROCEDURAL_OPTIMIZATION ${LTO_AVAILABLE})
 
 target_link_libraries(scipmip ${SCIP_LIBRARIES})
 target_compile_options(scipmip PRIVATE ${SCIP_COMPILE_FLAGS})

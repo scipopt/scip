@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2026 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -34,6 +34,7 @@
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 #include "blockmemshell/memory.h"
+#include "scip/cons_and.h"
 #include "scip/cons_nonlinear.h"
 #include "scip/cons_indicator.h"
 #include "scip/cons_knapsack.h"
@@ -206,7 +207,7 @@ void appendLine(
    assert( strlen(linebuffer) + strlen(extension) < GMS_MAX_PRINTLEN );
 
    /* NOTE: avoid
-    *   sprintf(linebuffer, "%s%s", linebuffer, extension); 
+    *   sprintf(linebuffer, "%s%s", linebuffer, extension);
     * because of overlapping memory areas in memcpy used in sprintf.
     */
    len = strlen(linebuffer);
@@ -545,7 +546,7 @@ SCIP_RETCODE printLinearCons(
       return SCIP_OKAY;
 
    nactivevars = nvars;
-   if( nvars > 0 ) 
+   if( nvars > 0 )
    {
       /* duplicate variable and value array */
       SCIP_CALL( SCIPduplicateBufferArray(scip, &activevars, vars, nactivevars) );
@@ -572,7 +573,7 @@ SCIP_RETCODE printLinearCons(
       assert( !SCIPisInfinity(scip, rhs) );
 
       /* print equality constraint */
-      SCIP_CALL( printLinearRow(scip, file, rowname, "", "=e=", 
+      SCIP_CALL( printLinearRow(scip, file, rowname, "", "=e=",
             nactivevars, activevars, activevals, rhs - activeconstant) );
    }
    else
@@ -792,6 +793,161 @@ SCIP_RETCODE printSOSCons(
    return SCIP_OKAY;
 }
 
+/** print "and" constraint using a product of binary variables (performing retransformation to active variables) */
+static
+SCIP_RETCODE printAndCons(
+   SCIP*                 scip,               /**< SCIP data structure */
+   FILE*                 file,               /**< output file (or NULL for standard output) */
+   const char*           rowname,            /**< row name */
+   int                   nvars,              /**< number of variables in and */
+   SCIP_VAR**            vars,               /**< variables in and */
+   SCIP_VAR*             resultant,          /**< resultant variable */
+   SCIP_Bool             transformed         /**< transformed constraint? */
+   )
+{
+   char linebuffer[GMS_MAX_PRINTLEN+1] = { '\0' };
+   int linecnt;
+   char name[GMS_MAX_NAMELEN];
+   char buffer[GMS_MAX_PRINTLEN];
+   SCIP_VAR** activevars = NULL;
+   SCIP_Real* activecoefs = NULL;
+   int nactivevars;
+   int activevarssize;
+   SCIP_Real activeconstant = 0.0;
+   SCIP_Bool needsign;
+   int i, v;
+
+   assert( scip != NULL );
+   assert( strlen(rowname) > 0 );
+   assert( vars != NULL );
+   assert( nvars > 0 );
+   assert( resultant != NULL );
+
+   activevarssize = 5;
+   SCIP_CALL( SCIPallocBufferArray(scip, &activevars, activevarssize) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &activecoefs, activevarssize) );
+
+   clearLine(linebuffer, &linecnt);
+
+   /* start each line with a space */
+   appendLine(scip, file, linebuffer, &linecnt, " ");
+
+   /* print equation name */
+   (void) SCIPsnprintf(buffer, GMS_MAX_PRINTLEN, "%s ..", rowname);
+   SCIP_CALL( printConformName(scip, name, GMS_MAX_NAMELEN, buffer) );
+   appendLine(scip, file, linebuffer, &linecnt, name);
+
+   for( v = 0; v < nvars; ++v )
+   {
+      /* if we start a new line, tab this line */
+      if( linecnt == 0 )
+         appendLine(scip, file, linebuffer, &linecnt, "     ");
+
+      activevars[0] = vars[v];
+      activecoefs[0] = 1.0;
+      nactivevars = 1;
+
+      SCIP_CALL( getActiveVariables(scip, &activevars, &activecoefs, &nactivevars, &activevarssize, &activeconstant, transformed) );
+
+      if( nactivevars == 1 && activecoefs[0] == 1.0 && activeconstant == 0.0 )
+      {
+         buffer[0] = ' ';
+         SCIP_CALL( printConformName(scip, buffer+1, GMS_MAX_NAMELEN, SCIPvarGetName(activevars[0])) );
+         appendLine(scip, file, linebuffer, &linecnt, buffer);
+      }
+      else
+      {
+         appendLine(scip, file, linebuffer, &linecnt, " (");
+
+         needsign = FALSE;
+         if( activeconstant != 0.0 )
+         {
+            (void) SCIPsnprintf(buffer, GMS_MAX_PRINTLEN, "%.15g", activeconstant);
+            appendLine(scip, file, linebuffer, &linecnt, buffer);
+            needsign = TRUE;
+         }
+
+         for( i = 0; i < nactivevars; ++i )
+         {
+            if( REALABS(activecoefs[i]) != 1.0 )
+            {
+               (void) SCIPsnprintf(buffer, GMS_MAX_PRINTLEN, needsign ? "%+.15g*" : "%.15g*", activecoefs[i]);
+               appendLine(scip, file, linebuffer, &linecnt, buffer);
+            }
+            else if( activecoefs[i] == 1.0 && needsign )
+            {
+               appendLine(scip, file, linebuffer, &linecnt, "+");
+            }
+            else if( activecoefs[i] == -1.0 )
+            {
+               appendLine(scip, file, linebuffer, &linecnt, "-");
+            }
+
+            SCIP_CALL( printConformName(scip, name, GMS_MAX_NAMELEN, SCIPvarGetName(activevars[i])) );
+            appendLine(scip, file, linebuffer, &linecnt, name);
+
+            needsign = TRUE;
+         }
+
+         appendLine(scip, file, linebuffer, &linecnt, ")");
+      }
+
+      if( v < nvars - 1 )
+         appendLine(scip, file, linebuffer, &linecnt, " *");
+   }
+
+   /* if we start a new line, tab this line */
+   if( linecnt == 0 )
+      appendLine(scip, file, linebuffer, &linecnt, "     ");
+
+   /* print right hand side */
+   appendLine(scip, file, linebuffer, &linecnt, " =e= ");
+
+   activevars[0] = resultant;
+   activecoefs[0] = 1.0;
+   nactivevars = 1;
+
+   SCIP_CALL( getActiveVariables(scip, &activevars, &activecoefs, &nactivevars, &activevarssize, &activeconstant, transformed) );
+
+   needsign = FALSE;
+   if( activeconstant != 0.0 )
+   {
+      (void) SCIPsnprintf(buffer, GMS_MAX_PRINTLEN, "%.15g", activeconstant);
+      appendLine(scip, file, linebuffer, &linecnt, buffer);
+      needsign = TRUE;
+   }
+
+   for( i = 0; i < nactivevars; ++i )
+   {
+      if( REALABS(activecoefs[i]) != 1.0 )
+      {
+         (void) SCIPsnprintf(buffer, GMS_MAX_PRINTLEN, needsign ? "%+.15g*" : "%.15g*", activecoefs[i]);
+         appendLine(scip, file, linebuffer, &linecnt, buffer);
+      }
+      else if( activecoefs[i] == 1.0 && needsign )
+      {
+         appendLine(scip, file, linebuffer, &linecnt, "+");
+      }
+      else if( activecoefs[i] == -1.0 )
+      {
+         appendLine(scip, file, linebuffer, &linecnt, "-");
+      }
+
+      SCIP_CALL( printConformName(scip, name, GMS_MAX_NAMELEN, SCIPvarGetName(activevars[i])) );
+      appendLine(scip, file, linebuffer, &linecnt, name);
+
+      needsign = TRUE;
+   }
+
+   appendLine(scip, file, linebuffer, &linecnt, ";");
+   endLine(scip, file, linebuffer, &linecnt);
+
+   SCIPfreeBufferArray(scip, &activecoefs);
+   SCIPfreeBufferArray(scip, &activevars);
+
+   return SCIP_OKAY;
+}
+
 /** prints expression in GAMS format to file stream */
 static
 SCIP_RETCODE printExpr(
@@ -916,7 +1072,7 @@ SCIP_RETCODE printExpr(
                      SCIPinfoMessage(scip, file, "-");
                   }
 
-                  SCIP_CALL( printConformName(scip, varname, GMS_MAX_NAMELEN, SCIPvarGetName(activevars[0])) );
+                  SCIP_CALL( printConformName(scip, varname, GMS_MAX_NAMELEN, SCIPvarGetName(activevars[i])) );
                   SCIPinfoMessage(scip, file, "%s", varname);
 
                   needsign = TRUE;
@@ -1154,7 +1310,7 @@ SCIP_RETCODE checkVarnames(
 
       if( strlen(SCIPvarGetName(var)) > GMS_MAX_NAMELEN )
       {
-         SCIPwarningMessage(scip, "there is a variable name which has to be cut down to %d characters; GAMS model might be corrupted.\n", 
+         SCIPwarningMessage(scip, "there is a variable name which has to be cut down to %d characters; GAMS model might be corrupted.\n",
             GMS_MAX_NAMELEN - 1);
          break;
       }
@@ -1616,15 +1772,12 @@ SCIP_RETCODE SCIPwriteGms(
             nondefbounds = TRUE;
          }
       }
-      else
+      else if( !SCIPisInfinity(scip, ub) )
       {
          assert(vartype == SCIP_VARTYPE_CONTINUOUS);
          /* continuous variables have default upper bound +inf */
-         if( !SCIPisInfinity(scip, ub) )
-         {
-            SCIPinfoMessage(scip, file, " %s.up = %.15g;\n", varname, ub);
-            nondefbounds = TRUE;
-         }
+         SCIPinfoMessage(scip, file, " %s.up = %.15g;\n", varname, ub);
+         nondefbounds = TRUE;
       }
    }
 
@@ -1672,7 +1825,7 @@ SCIP_RETCODE SCIPwriteGms(
       /* we declare only those constraints which we can print in GAMS format */
       if( strcmp(conshdlrname, "knapsack") != 0 && strcmp(conshdlrname, "logicor") != 0 && strcmp(conshdlrname, "setppc") != 0
           && strcmp(conshdlrname, "linear") != 0 && strcmp(conshdlrname, "SOS1") != 0 && strcmp(conshdlrname, "SOS2") != 0
-          && strcmp(conshdlrname, "nonlinear") != 0
+          && strcmp(conshdlrname, "nonlinear") != 0 && strcmp(conshdlrname, "and") != 0
           && strcmp(conshdlrname, "varbound") != 0
           && strcmp(conshdlrname, "indicator") != 0 )
       {
@@ -1846,6 +1999,16 @@ SCIP_RETCODE SCIPwriteGms(
             SCIPgetNVarsSOS2(scip, cons), SCIPgetVarsSOS2(scip, cons), 2,
             transformed) );
          discrete = TRUE;
+      }
+      else if( strcmp(conshdlrname, "and") == 0 )
+      {
+         SCIP_CALL( printAndCons(scip, file, consname,
+            SCIPgetNVarsAnd(scip, cons), SCIPgetVarsAnd(scip, cons), SCIPgetResultantAnd(scip, cons),
+            transformed) );
+         nlcons = TRUE;
+         /* disable nqcons if no longer quadratic */
+         if( SCIPgetNVarsAnd(scip, cons) > 2 )
+            nqcons = FALSE;
       }
       else
       {

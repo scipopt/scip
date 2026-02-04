@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2026 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -41,7 +41,9 @@
 #include "scip/pub_misc_sort.h"
 #include "scip/pub_sol.h"
 #include "scip/pub_var.h"
+#include "scip/scip_certificate.h"
 #include "scip/scip_event.h"
+#include "scip/scip_exact.h"
 #include "scip/scip_general.h"
 #include "scip/scip_heur.h"
 #include "scip/scip_lp.h"
@@ -1445,11 +1447,14 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
 
    if( !SCIPisLPConstructed(scip) )
    {
-      /* @note this call can have the side effect that variables are created */
+      /* note that this call can have the side effect that variables are created */
       SCIP_CALL( SCIPconstructLP(scip, &cutoff) );
 
-      /* manually cut off the node if the LP construction detected infeasibility (heuristics cannot return such a result) */
-      if( cutoff )
+      /* manually cut off the node if the LP construction detected infeasibility (heuristics cannot return such a
+       * result); the cutoff result is safe to use in exact solving mode, but we don't have enough information to
+       * give a certificate for the cutoff
+       */
+      if( cutoff && !SCIPisCertified(scip) )
       {
          SCIP_CALL( SCIPcutoffNode(scip, SCIPgetCurrentNode(scip)) );
          return SCIP_OKAY;
@@ -2408,6 +2413,9 @@ SCIP_RETCODE SCIPincludeHeurShiftandpropagate(
          HEUR_MAXDEPTH, HEUR_TIMING, HEUR_USESSUBSCIP, heurExecShiftandpropagate, heurdata) );
 
    assert(heur != NULL);
+
+   /* primal heuristic is safe to use in exact solving mode */
+   SCIPheurMarkExact(heur);
 
    /* set non-NULL pointers to callback methods */
    SCIP_CALL( SCIPsetHeurCopy(scip, heur, heurCopyShiftandpropagate) );

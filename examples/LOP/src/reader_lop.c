@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2026 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -65,7 +65,7 @@ SCIP_RETCODE getNextNumber(
    *value = SCIP_INVALID; /* for debugging */
 
    /* skip whitespace */
-   while ( isspace(**s) )
+   while ( isspace((unsigned char)**s) )
       ++(*s);
 
    /* if we reached the end of the line, read new line */
@@ -80,17 +80,17 @@ SCIP_RETCODE getNextNumber(
       *s = buffer;
 
       /* skip whitespace */
-      while ( isspace(**s) )
+      while ( isspace((unsigned char)**s) )
          ++(*s);
    }
 
    /* check whether we found a number */
-   if ( isdigit(**s) || **s == '-' || **s == '+' )
+   if ( isdigit((unsigned char)**s) || **s == '-' || **s == '+' )
    {
       *value = atof(*s);
 
       /* skip number */
-      while ( isdigit(**s) || **s == '-' || **s == '+' )
+      while ( isdigit((unsigned char)**s) || **s == '-' || **s == '+' )
          ++(*s);
    }
    else
@@ -151,12 +151,12 @@ SCIP_RETCODE LOPreadFile(
 
       /* skip whitespace */
       s = buffer;
-      while( isspace(*s) )
+      while( isspace((unsigned char)*s) )
          ++s;
 
       /* check whether rest of line only contains whitespace or numbers */
       nstr = s;
-      while ( *s != '\0' && (isspace(*s) || isdigit(*s)) )
+      while ( *s != '\0' && (isspace((unsigned char)*s) || isdigit((unsigned char)*s)) )
          ++s;
 
       /* if the line only contains a number, use this as the number of elements */
@@ -185,7 +185,7 @@ SCIP_RETCODE LOPreadFile(
 	 SCIP_Real val;
 
          SCIP_CALL( getNextNumber(file, buffer, &s, &val) );
-         assert( val != SCIP_INVALID );
+         assert( val != SCIP_INVALID ); /*lint !e777*/
 	 (*W)[i][j] = val;
       }
    }

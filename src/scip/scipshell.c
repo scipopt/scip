@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2026 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -39,6 +39,7 @@
 #include "scip/scipshell.h"
 #include "scip/message_default.h"
 #include "scip/reader_nl.h"
+#include "scip/rational.h"
 
 /*
  * Message Handler
@@ -130,7 +131,14 @@ SCIP_RETCODE fromCommandLine(
 
          SCIP_CALL( SCIPcreateSolCopy(scip, &origsol, bestsol) );
          SCIP_CALL( SCIPretransformSol(scip, origsol) );
-         SCIP_CALL( SCIPprintSol(scip, origsol, NULL, FALSE) );
+         if( SCIPisExact(scip) && SCIPsolIsExact(bestsol) )
+         {
+            SCIP_CALL( SCIPprintSolExact(scip, origsol, NULL, FALSE) );
+         }
+         else
+         {
+            SCIP_CALL( SCIPprintSol(scip, origsol, NULL, FALSE) );
+         }
          SCIP_CALL( SCIPfreeSol(scip, &origsol) );
       }
    }
@@ -167,7 +175,7 @@ SCIP_RETCODE fromAmpl(
    char fullnlfilename[SCIP_MAXSTRLEN];
    char* logfile;
    SCIP_Bool printstat;
-   char* options;
+   const char* constoptions;
    size_t nlfilenamelen;
 
    SCIP_CALL( SCIPaddBoolParam(scip, "display/statistics",
@@ -184,12 +192,17 @@ SCIP_RETCODE fromAmpl(
    SCIPprintExternalCodes(scip, NULL);
    SCIPinfoMessage(scip, NULL, "\n");
 
-   options = getenv("scip_options");
-   if( options != NULL )
+   constoptions = getenv("scip_options");
+   if( constoptions != NULL )
    {
       /* parse and apply options from scip_options env variable */
+      size_t optionslen;
+      char* options;
       char* optname;
       char* optval;
+
+      optionslen = strlen(constoptions);
+      SCIP_CALL( SCIPduplicateBufferArray(scip, &options, constoptions, optionslen+1) );
 
       SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "applying scip_options:\n");
 
@@ -203,6 +216,8 @@ SCIP_RETCODE fromAmpl(
          optname = strtok(NULL, " ");
          optval = strtok(NULL, " ");
       }
+
+      SCIPfreeBufferArray(scip, &options);
    }
 
    if( defaultsetname != NULL )
@@ -233,17 +248,23 @@ SCIP_RETCODE fromAmpl(
       (void) SCIPsnprintf(fullnlfilename, SCIP_MAXSTRLEN, "%s", nlfilename);
    else
       (void) SCIPsnprintf(fullnlfilename, SCIP_MAXSTRLEN, "%s.nl", nlfilename);
-   SCIPinfoMessage(scip, NULL, "read problem <%s>\n", fullnlfilename);
-   SCIPinfoMessage(scip, NULL, "============\n\n");
-
-   SCIP_CALL( SCIPreadProb(scip, fullnlfilename, "nl") );
 
    if( interactive )
    {
+      char readcommand[SCIP_MAXSTRLEN+6];
+
+      (void) SCIPsnprintf(readcommand, (int)sizeof(readcommand), "read %s", fullnlfilename);
+      SCIP_CALL( SCIPaddDialogInputLine(scip, readcommand) );
+
       SCIP_CALL( SCIPstartInteraction(scip) );
    }
    else
    {
+      SCIPinfoMessage(scip, NULL, "read problem <%s>\n", fullnlfilename);
+      SCIPinfoMessage(scip, NULL, "============\n\n");
+
+      SCIP_CALL( SCIPreadProb(scip, fullnlfilename, "nl") );
+
       SCIPinfoMessage(scip, NULL, "\nsolve problem\n");
       SCIPinfoMessage(scip, NULL, "=============\n\n");
 
@@ -259,7 +280,10 @@ SCIP_RETCODE fromAmpl(
       SCIP_CALL( SCIPprintStatistics(scip, NULL) );
    }
 
-   SCIP_CALL( SCIPwriteSolutionNl(scip) );
+   if( SCIPgetStage(scip) > SCIP_STAGE_PROBLEM )
+   {
+      SCIP_CALL( SCIPwriteSolutionNl(scip) );
+   }
 
    return SCIP_OKAY;
 
@@ -288,6 +312,8 @@ SCIP_RETCODE SCIPprocessShellArguments(
    SCIP_Bool onlyversion;
    SCIP_Real primalreference = SCIP_UNKNOWN;
    SCIP_Real dualreference = SCIP_UNKNOWN;
+   SCIP_RATIONAL* primalreferencerational = NULL;
+   SCIP_RATIONAL* dualreferencerational = NULL;
    const char* dualrefstring;
    const char* primalrefstring;
    int i;
@@ -411,7 +437,7 @@ SCIP_RETCODE SCIPprocessShellArguments(
       {
          /*read a random seed from the command line */
          i++;
-         if( i < argc && isdigit(argv[i][0]) )
+         if( i < argc && isdigit((unsigned char)argv[i][0]) )
          {
             randomseed = atoi(argv[i]);
             randomseedread = TRUE;
@@ -515,21 +541,50 @@ SCIP_RETCODE SCIPprocessShellArguments(
          if( primalrefstring != NULL && dualrefstring != NULL )
          {
             char *endptr;
-            if( ! SCIPparseReal(scip, primalrefstring, &primalreference, &endptr) ||
-                     ! SCIPparseReal(scip, dualrefstring, &dualreference, &endptr) )
+            if( !SCIPisExact(scip) )
             {
-               printf("error parsing primal and dual reference values for validation: %s %s\n", primalrefstring, dualrefstring);
-               return SCIP_ERROR;
+               if( ! SCIPparseReal(scip, primalrefstring, &primalreference, &endptr) ||
+                        ! SCIPparseReal(scip, dualrefstring, &dualreference, &endptr) )
+               {
+                  printf("error parsing primal and dual reference values for validation: %s %s\n", primalrefstring, dualrefstring);
+                  return SCIP_ERROR;
+               }
+               else
+                  validatesolve = TRUE;
             }
             else
-               validatesolve = TRUE;
+            {
+               SCIP_Bool error;
+
+               SCIP_CALL( SCIPrationalCreateBlock(SCIPblkmem(scip), &primalreferencerational) );
+               SCIP_CALL( SCIPrationalCreateBlock(SCIPblkmem(scip), &dualreferencerational) );
+
+               error = !SCIPparseRational(scip, primalrefstring, primalreferencerational, &endptr) ||
+                       !SCIPparseRational(scip, primalrefstring, dualreferencerational, &endptr);
+               if( error )
+               {
+                  printf("error parsing exact primal and dual reference values for validation: %s %s\n", primalrefstring, dualrefstring);
+                  return SCIP_ERROR;
+               }
+               else
+                  validatesolve = TRUE;
+            }
          }
          SCIP_CALL( fromCommandLine(scip, probname) );
 
          /* validate the solve */
          if( validatesolve )
          {
-            SCIP_CALL( SCIPvalidateSolve(scip, primalreference, dualreference, SCIPfeastol(scip), FALSE, NULL, NULL, NULL) );
+            if( !SCIPisExact(scip) )
+            {
+               SCIP_CALL( SCIPvalidateSolve(scip, primalreference, dualreference, SCIPfeastol(scip), FALSE, NULL, NULL, NULL) );
+            }
+            else
+            {
+               SCIP_CALL( SCIPvalidateSolveExact(scip, primalreferencerational, dualreferencerational, FALSE, NULL, NULL, NULL) );
+               SCIPrationalFreeBlock(SCIPblkmem(scip), &dualreferencerational);
+               SCIPrationalFreeBlock(SCIPblkmem(scip), &primalreferencerational);
+            }
          }
       }
       else

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2026 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -772,7 +772,6 @@ SCIP_RETCODE readTim(
       SCIP_CALL_TERMINATE( retcode, createReaderdata(scip, reader, timi), TERMINATE );
    }
 
- /* cppcheck-suppress unusedLabel */
  TERMINATE:
    timinputFree(scip, &timi);
    SCIPfclose(fp);
@@ -828,6 +827,9 @@ SCIP_DECL_READERREAD(readerReadTim)
 
    assert(reader != NULL);
    assert(strcmp(SCIPreaderGetName(reader), READER_NAME) == 0);
+   assert(result != NULL);
+
+   *result = SCIP_DIDNOTRUN;
 
    correader = SCIPfindReader(scip, "correader");
 

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2026 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -153,6 +153,7 @@ SCIP_RETCODE doRelaxCreate(
    (*relax)->nseparated = 0;
    (*relax)->lastsolvednode = -1;
    (*relax)->initialized = FALSE;
+   (*relax)->exact = FALSE;
 
    /* add parameters */
    (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "relaxing/%s/priority", name);
@@ -376,6 +377,10 @@ SCIP_RETCODE SCIPrelaxExec(
 
    relax->lastsolvednode = stat->ntotalnodes;
 
+   /* check, if the relaxator is compatible with exact solving mode */
+   if( set->exact_enable && !relax->exact )
+      return SCIP_OKAY;
+
    if( (depth == 0 && relax->freq == 0) || (relax->freq > 0 && depth % relax->freq == 0) )
    {
       SCIP_Real starttime;
@@ -536,6 +541,16 @@ void SCIPrelaxSetExitsol(
    assert(relax != NULL);
 
    relax->relaxexitsol = relaxexitsol;
+}
+
+/** marks the relaxator as safe to use in exact solving mode */
+void SCIPrelaxMarkExact(
+   SCIP_RELAX*           relax               /**< relaxation handler  */
+   )
+{
+   assert(relax != NULL);
+
+   relax->exact = TRUE;
 }
 
 /** gets name of relaxation handler */
@@ -726,8 +741,8 @@ void SCIPrelaxMarkUnsolved(
    relax->lastsolvednode = -1;
 }
 
-/* 
- *  methods for the global relaxation data 
+/*
+ *  methods for the global relaxation data
  */
 
 /** creates global relaxation data */

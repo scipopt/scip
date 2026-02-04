@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2026 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -32,6 +32,7 @@
 
 #include "scip/clock.h"
 #include "scip/lp.h"
+#include "scip/lpexact.h"
 #include "scip/pricestore.h"
 #include "scip/pub_lp.h"
 #include "scip/pub_message.h"
@@ -44,7 +45,6 @@
 #include "scip/struct_var.h"
 #include "scip/tree.h"
 #include "scip/var.h"
-
 
 
 /*
@@ -341,7 +341,7 @@ SCIP_RETCODE addBoundViolated(
       {
          SCIPsetDebugMsg(set, " -> best bound of <%s> [%g,%g] is not zero but %g\n",
             SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var), bestbound);
-         SCIP_CALL( SCIPpricestoreAddVar(pricestore, blkmem, set, eventqueue, lp, var, 
+         SCIP_CALL( SCIPpricestoreAddVar(pricestore, blkmem, set, eventqueue, lp, var,
                -SCIPvarGetObj(var) * bestbound, (SCIPtreeGetCurrentDepth(tree) == 0)) );
          *added = TRUE;
       }
@@ -439,7 +439,7 @@ SCIP_RETCODE SCIPpricestoreAddProbVars(
                {
                   /* The LP was proven infeasible, so we have an infeasibility proof by the dual Farkas multipliers y.
                    * The valid inequality  y^T A x >= y^T b  is violated by all x, especially by the (for this
-                   * inequality most feasible solution) x' defined by 
+                   * inequality most feasible solution) x' defined by
                    *    x'_i = ub_i, if y^T A_i > 0
                    *    x'_i = lb_i, if y^T A_i <= 0.
                    * Pricing in this case means to add variables i with positive Farkas value, i.e. y^T A_i x'_i > 0
@@ -516,7 +516,9 @@ SCIP_RETCODE SCIPpricestoreApplyVars(
       {
          /* transform loose variable into column variable */
          SCIP_CALL( SCIPvarColumn(var, blkmem, set, stat, prob, lp) );
+         SCIP_CALL( SCIPvarColumnExact(var, blkmem, set, stat, lp->lpexact) );
       }
+
       assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN);
 
       col = SCIPvarGetCol(var);
@@ -525,6 +527,8 @@ SCIP_RETCODE SCIPpricestoreApplyVars(
       SCIPsetDebugMsg(set, "adding bound violated variable <%s> (lb=%g, ub=%g)\n", SCIPvarGetName(var),
          pricestore->bdviolvarslb[v], pricestore->bdviolvarsub[v]);
       SCIP_CALL( SCIPlpAddCol(lp, set, col, SCIPtreeGetCurrentDepth(tree)) );
+
+      SCIP_CALL( SCIPlpExactAddCol(lp->lpexact, set, set->exact_enable ? var->exactdata->colexact : NULL) );
 
       if( !pricestore->initiallp )
          pricestore->nvarsapplied++;
@@ -542,7 +546,9 @@ SCIP_RETCODE SCIPpricestoreApplyVars(
       /* transform variable into column variable, if needed */
       if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE )
       {
+         /* transform loose variable into column variable */
          SCIP_CALL( SCIPvarColumn(var, blkmem, set, stat, prob, lp) );
+         SCIP_CALL( SCIPvarColumnExact(var, blkmem, set, stat, lp->lpexact) );
       }
       assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN);
 
@@ -551,6 +557,8 @@ SCIP_RETCODE SCIPpricestoreApplyVars(
       assert(col->lppos == -1);
       SCIPsetDebugMsg(set, "adding priced variable <%s> (score=%g)\n", SCIPvarGetName(var), pricestore->scores[v]);
       SCIP_CALL( SCIPlpAddCol(lp, set, col, SCIPtreeGetCurrentDepth(tree)) );
+
+      SCIP_CALL( SCIPlpExactAddCol(lp->lpexact, set, set->exact_enable ? var->exactdata->colexact : NULL) );
 
       /* release the variable */
       SCIP_CALL( SCIPvarRelease(&pricestore->vars[v], blkmem, set, eventqueue, lp) );
@@ -676,4 +684,3 @@ int SCIPpricestoreGetNVarsApplied(
 
    return pricestore->nvarsapplied;
 }
-

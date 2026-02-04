@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2026 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -108,10 +108,12 @@ SCIP_DECL_EVENTINIT(eventInitGlobalbnd)
 
    if( eventhdlrdata->filterpos < 0 && SCIPgetSubscipDepth(scip) == 0 && SCIPsyncstoreIsInitialized(SCIPgetSyncstore(scip)) )
    {
-      int        i;
-      int        nvars;
       SCIP_VAR** vars;
+      int nvars;
+      int i;
+
       SCIPdebugMsg(scip, "catching events in " EVENTHDLR_NAME " eventhdlr\n");
+
       /* notify SCIP that this event handler wants to react on global bound change events */
       nvars = SCIPgetNVars(scip);
       vars = SCIPgetVars(scip);
@@ -162,7 +164,9 @@ SCIP_DECL_EVENTEXEC(eventExecGlobalbnd)
    SCIP_BOUNDTYPE      boundtype;
    SCIP_Real           constant;
    SCIP_Real           scalar;
+
    SCIPdebugMsg(scip, "exec method of eventhdlr " EVENTHDLR_NAME "\n");
+
    assert(eventhdlr != NULL);
    assert(strcmp(SCIPeventhdlrGetName(eventhdlr), EVENTHDLR_NAME) == 0);
    assert(event != NULL);
@@ -174,18 +178,18 @@ SCIP_DECL_EVENTEXEC(eventExecGlobalbnd)
    var = SCIPeventGetVar(event);
    switch( SCIPeventGetType(event) )
    {
-      case SCIP_EVENTTYPE_VARADDED:
-         SCIP_CALL( SCIPcatchVarEvent(scip, var, SCIP_EVENTTYPE_GBDCHANGED, eventhdlr, NULL, NULL) );
-         return SCIP_OKAY;
-      case SCIP_EVENTTYPE_GLBCHANGED:
-         boundtype = SCIP_BOUNDTYPE_LOWER;
-         break;
-      case SCIP_EVENTTYPE_GUBCHANGED:
-         boundtype = SCIP_BOUNDTYPE_UPPER;
-         break;
-      default:
-         SCIPABORT();
-         return SCIP_ERROR; /*lint !e527*/
+   case SCIP_EVENTTYPE_VARADDED:
+      SCIP_CALL( SCIPcatchVarEvent(scip, var, SCIP_EVENTTYPE_GBDCHANGED, eventhdlr, NULL, NULL) );
+      return SCIP_OKAY;
+   case SCIP_EVENTTYPE_GLBCHANGED:
+      boundtype = SCIP_BOUNDTYPE_LOWER;
+      break;
+   case SCIP_EVENTTYPE_GUBCHANGED:
+      boundtype = SCIP_BOUNDTYPE_UPPER;
+      break;
+   default:
+      SCIPABORT();
+      return SCIP_ERROR; /*lint !e527*/
    }
 
    if( !eventhdlrdata->storebounds )
@@ -200,11 +204,13 @@ SCIP_DECL_EVENTEXEC(eventExecGlobalbnd)
       int varidx;
 
       varidx = SCIPgetConcurrentVaridx(scip, var);
+      if( varidx >= 0 )
+      {
+         boundtype = scalar < 0.0 ? SCIPboundtypeOpposite(boundtype) : boundtype;
+         newbound = (newbound - constant) / scalar;
 
-      boundtype = scalar < 0.0 ? SCIPboundtypeOpposite(boundtype) : boundtype;
-      newbound = (newbound - constant) / scalar;
-
-      SCIP_CALL( SCIPboundstoreAdd(scip, eventhdlrdata->boundstore, varidx, newbound, boundtype) );
+         SCIP_CALL( SCIPboundstoreAdd(scip, eventhdlrdata->boundstore, varidx, newbound, boundtype) );
+      }
    }
    return SCIP_OKAY;
 }
@@ -214,14 +220,12 @@ SCIP_RETCODE SCIPincludeEventHdlrGlobalbnd(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
-   SCIP_EVENTHDLRDATA* eventhdlrdata;
-   SCIP_EVENTHDLR* eventhdlr;
+   SCIP_EVENTHDLRDATA* eventhdlrdata = NULL;
+   SCIP_EVENTHDLR* eventhdlr = NULL;
 
    /* create globalbnd event handler data */
-   eventhdlrdata = NULL;
    SCIP_CALL( SCIPallocMemory(scip, &eventhdlrdata) );
    eventhdlrdata->filterpos = -1;
-   eventhdlr = NULL;
 
    /* include event handler into SCIP */
 

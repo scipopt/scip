@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2026 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -1180,7 +1180,9 @@ SCIP_RETCODE storeAggrFromMIP(
    assert(backwardarcs != NULL);
    assert(quadvar2aggr != NULL);
    assert(nfoundsofar >= 0);
-   assert(SCIPgetStatus(subscip) < SCIP_STATUS_INFEASIBLE);
+   assert(SCIPgetStatus(subscip) != SCIP_STATUS_INFEASIBLE);
+   assert(SCIPgetStatus(subscip) != SCIP_STATUS_UNBOUNDED);
+   assert(SCIPgetStatus(subscip) != SCIP_STATUS_INFORUNBD);
    assert(SCIPgetNSols(subscip) > 0);
 
    sol = SCIPgetBestSol(subscip);
@@ -1280,7 +1282,7 @@ SCIP_RETCODE searchEcAggrWithMIP(
    SCIP_CALL( SCIPsolve(subscip) );
 
    /* no more aggregation left if the MIP is infeasible */
-   if( SCIPgetStatus(subscip) >= SCIP_STATUS_INFEASIBLE )
+   if( SCIPgetStatus(subscip) == SCIP_STATUS_INFEASIBLE )
    {
       *found = FALSE;
       *aggrleft = FALSE;

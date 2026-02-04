@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2026 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -82,6 +82,7 @@ struct SCIP_Sepa
    SCIP_Bool             delay;              /**< should separator be delayed, if other separators found cuts? */
    SCIP_Bool             lpwasdelayed;       /**< was the LP separation delayed at the last call? */
    SCIP_Bool             solwasdelayed;      /**< was the solution separation delayed at the last call? */
+   SCIP_Bool             exact;              /**< is the separator safe to be used in exact solving mode? */
    SCIP_Bool             initialized;        /**< is separator initialized? */
    SCIP_Bool             isparentsepa;       /**< is separator a parent separator that create cuts of child separators? */
    struct SCIP_Sepa*     parentsepa;         /**< pointer to parent separator or NULL */

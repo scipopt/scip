@@ -1,7 +1,7 @@
 #ifndef __CONFIG_H__
 #define __CONFIG_H__
 
-#cmakedefine CMAKE_BUILD_TYPE "@CMAKE_BUILD_TYPE@"
+#define SCIP_BUILD_TYPE "@CMAKE_BUILD_TYPE@"
 #define SCIP_VERSION_MAJOR @SCIP_VERSION_MAJOR@
 #define SCIP_VERSION_MINOR @SCIP_VERSION_MINOR@
 #define SCIP_VERSION_PATCH @SCIP_VERSION_PATCH@
@@ -21,11 +21,17 @@
 #cmakedefine SCIP_WITH_ZLIB
 #cmakedefine SCIP_WITH_READLINE
 #cmakedefine SCIP_WITH_GMP
+#cmakedefine SCIP_WITH_MPFR
+#cmakedefine SCIP_WITH_QSOPTEX
 #cmakedefine SCIP_WITH_LPSCHECK
 #cmakedefine SCIP_WITH_ZIMPL
 #cmakedefine SCIP_WITH_AMPL
 #cmakedefine SCIP_ROUNDING_FE
 #cmakedefine SCIP_ROUNDING_FP
 #cmakedefine SCIP_ROUNDING_MS
+#cmakedefine SCIP_WITH_EXACTSOLVE
+#cmakedefine SCIP_WITH_EGLIB
+#cmakedefine SCIP_WITH_BOOST
+#cmakedefine SCIP_CHECK_STAGE
 
 #endif

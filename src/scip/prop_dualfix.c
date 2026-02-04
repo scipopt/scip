@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2026 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -74,6 +74,10 @@ SCIP_RETCODE performDualfix(
    SCIP_VAR** vars;
    int nvars;
    int v;
+
+   assert(nfixedvars != NULL);
+   assert(unbounded != NULL);
+   assert(cutoff != NULL);
 
    /* get active problem variables */
    vars = SCIPgetVars(scip);
@@ -188,13 +192,19 @@ SCIP_RETCODE performDualfix(
             continue;
       }
 
-      if( SCIPisInfinity(scip, REALABS(bound)) && !SCIPisZero(scip, obj) )
+      if( SCIPisInfinity(scip, REALABS(bound)) )
       {
-         SCIPdebugMsg(scip, " -> unbounded fixing\n");
-         SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL,
-            "problem infeasible or unbounded: variable <%s> with objective %.15g can be made infinitely %s\n",
-            SCIPvarGetName(var), SCIPvarGetObj(var), bound < 0.0 ? "small" : "large");
-         *unbounded = TRUE;
+         if( !SCIPisZero(scip, obj) )
+         {
+            SCIPdebugMsg(scip, " -> unbounded fixing\n");
+            SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL,
+               "problem infeasible or unbounded: variable <%s> with objective %.15g can be made infinitely %s\n",
+               SCIPvarGetName(var), SCIPvarGetObj(var), bound < 0.0 ? "small" : "large");
+
+            *unbounded = TRUE;
+         }
+
+         SCIPdebugMsg(scip, "changed my mind; not applying fixing of variable <%s> to infinity\n", SCIPvarGetName(var));
          return SCIP_OKAY;
       }
 

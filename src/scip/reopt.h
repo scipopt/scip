@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2026 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -322,15 +322,6 @@ SCIP_RETCODE SCIPreoptGetLeaves(
 /** returns the time needed to store the nodes for reoptimization */
 SCIP_Real SCIPreoptGetSavingtime(
    SCIP_REOPT*           reopt               /**< reoptimization data */
-   );
-
-/** store a global constraint that should be added at the beginning of the next iteration */
-SCIP_RETCODE SCIPreoptAddGlbCons(
-   SCIP_REOPT*           reopt,              /**< reoptimization data */
-   SCIP_VAR**            vars,               /**< array to store the variables of the constraint */
-   SCIP_Real*            vals,               /**< array to store the coefficients of the variables */
-   int                   nvars,              /**< pointer to store the size of the constraints */
-   BMS_BLKMEM*           blkmem              /**< block memory */
    );
 
 /** add the stored constraints globally to the problem */

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2026 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -101,7 +101,7 @@ void SCIPenableNLP(
    scip->transprob->nlpenabled = TRUE;
 }
 
-/** returns, whether an NLP has been constructed
+/** returns whether an NLP has been constructed
  *
  *  @pre This method can be called if SCIP is in one of the following stages:
  *       - \ref SCIP_STAGE_INITSOLVE
@@ -1291,6 +1291,8 @@ SCIP_RETCODE SCIPrecalcNlRowNLPActivity(
 
 /** returns the activity of a nonlinear row in the last NLP solution
  *
+ *  If row cannot be evaluated at NLP solution, then activity is set to SCIP_INVALID.
+ *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
  *
@@ -1318,6 +1320,8 @@ SCIP_RETCODE SCIPgetNlRowNLPActivity(
 }
 
 /** gives the feasibility of a nonlinear row in the last NLP solution: negative value means infeasibility
+ *
+ *  If row cannot be evaluated at NLP solution, then feasibility is set to SCIP_INVALID.
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
@@ -1368,6 +1372,8 @@ SCIP_RETCODE SCIPrecalcNlRowPseudoActivity(
 
 /** gives the activity of a nonlinear row for the current pseudo solution
  *
+ *  If row cannot be evaluated at pseudo solution, then activity is set to SCIP_INVALID.
+ *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
  *
@@ -1389,6 +1395,8 @@ SCIP_RETCODE SCIPgetNlRowPseudoActivity(
 }
 
 /** gives the feasibility of a nonlinear row for the current pseudo solution: negative value means infeasibility
+ *
+ *  If row cannot be evaluated at pseudo solution, then feasibility is set to SCIP_INVALID.
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
@@ -1440,6 +1448,8 @@ SCIP_RETCODE SCIPrecalcNlRowActivity(
 
 /** gives the activity of a nonlinear row in the last NLP or pseudo solution
  *
+ *  If row cannot be evaluated, then activity is set to SCIP_INVALID.
+ *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
  *
@@ -1469,6 +1479,8 @@ SCIP_RETCODE SCIPgetNlRowActivity(
 
 /** gives the feasibility of a nonlinear row in the last NLP or pseudo solution
  *
+ *  If row cannot be evaluated, then feasibility is set to SCIP_INVALID.
+ *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
  *
@@ -1497,6 +1509,8 @@ SCIP_RETCODE SCIPgetNlRowFeasibility(
 }
 
 /** gives the activity of a nonlinear row for the given primal solution or NLP solution or pseudo solution
+ *
+ *  If row cannot be evaluated at given solution, then activity is set to SCIP_INVALID.
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
@@ -1531,6 +1545,8 @@ SCIP_RETCODE SCIPgetNlRowSolActivity(
 }
 
 /** gives the feasibility of a nonlinear row for the given primal solution
+ *
+ *  If row cannot be evaluated at given solution, then feasibility is set to SCIP_INVALID.
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.

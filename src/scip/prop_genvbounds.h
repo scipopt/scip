@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2026 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -97,7 +97,7 @@ SCIP_RETCODE SCIPgenVBoundAdd(
    SCIP_VAR*             var,                /**< LHSs variable */
    SCIP_Real*            coefs,              /**< array of coefficients for the RHSs variables */
    int                   ncoefs,             /**< size of coefs array */
-   SCIP_Real             coefprimalbound,    /**< nonpositive value of the primal bounds multiplier */
+   SCIP_Real             coefcutoffbound,    /**< nonpositive value of the cutoff bounds multiplier */
    SCIP_Real             constant,           /**< constant term */
    SCIP_BOUNDTYPE        boundtype           /**< type of bound provided by the genvbound */
    );

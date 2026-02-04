@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2026 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -73,14 +73,14 @@
                                          *   propagation and enforcement, -1 for no eager evaluations, 0 for first only */
 #define CONSHDLR_NEEDSCONS        FALSE /**< should the constraint handler be skipped, if no constraints are available? */
 
-#define CONSHDLR_PROPFREQ             1 /**< frequency for propagating domains; zero means only preprocessing propagation */
+#define CONSHDLR_PROPFREQ            -1 /**< frequency for propagating domains; zero means only preprocessing propagation */
 #define CONSHDLR_MAXPREROUNDS        -1 /**< maximal number of presolving rounds the constraint handler participates in (-1: no limit) */
 #define CONSHDLR_DELAYPROP         TRUE /**< should propagation method be delayed, if other propagators found reductions? */
 
 #define CONSHDLR_PRESOLTIMING    SCIP_PRESOLTIMING_FINAL  /**< presolving timing of the constraint handler (fast, medium, or exhaustive) */
 #define CONSHDLR_PROP_TIMING     SCIP_PROPTIMING_BEFORELP /**< propagation timing mask of the constraint handler */
 
-#define DEFAULT_MAXDEPTH             -1      /**< maximum depth of a node to run components detection (-1: disable component detection during solving) */
+#define DEFAULT_MAXDEPTH        INT_MAX      /**< maximum depth of a node to run components detection (-1: disable component detection during solving) */
 #define DEFAULT_MAXINTVARS          200      /**< maximum number of integer (or binary) variables to solve a subproblem directly in presolving (-1: no solving) */
 #define DEFAULT_MINSIZE              50      /**< minimum absolute size (in terms of variables) to solve a component individually during branch-and-bound */
 #define DEFAULT_MINRELSIZE          0.1      /**< minimum relative size (in terms of variables) to solve a component individually during branch-and-bound */
@@ -1819,12 +1819,12 @@ SCIP_RETCODE fillDigraph(
       /* clearing variables array to check for consistency */
       if( nconsvars == nvars )
       {
-	 BMSclearMemoryArray(consvars, nconsvars);
+         BMSclearMemoryArray(consvars, nconsvars);
       }
       else
       {
-	 assert(nconsvars < nvars);
-	 BMSclearMemoryArray(consvars, nconsvars + 1);
+         assert(nconsvars < nvars);
+         BMSclearMemoryArray(consvars, nconsvars + 1);
       }
 #endif
 
@@ -1834,8 +1834,8 @@ SCIP_RETCODE fillDigraph(
       if( !(*success) )
       {
 #ifndef NDEBUG
-	 /* it looks strange if returning the number of variables was successful but not returning the variables */
-	 SCIPwarningMessage(scip, "constraint <%s> returned number of variables but returning variables failed\n", SCIPconsGetName(conss[c]));
+         /* it looks strange if returning the number of variables was successful but not returning the variables */
+         SCIPwarningMessage(scip, "constraint <%s> returned number of variables but returning variables failed\n", SCIPconsGetName(conss[c]));
 #endif
          break;
       }
@@ -1843,9 +1843,9 @@ SCIP_RETCODE fillDigraph(
 #ifndef NDEBUG
       /* check if returned variables are consistent with the number of variables that were returned */
       for( v = nconsvars - 1; v >= 0; --v )
-	 assert(consvars[v] != NULL);
+         assert(consvars[v] != NULL);
       if( nconsvars < nvars )
-	 assert(consvars[nconsvars] == NULL);
+         assert(consvars[nconsvars] == NULL);
 #endif
 
       /* transform given variables to active variables */

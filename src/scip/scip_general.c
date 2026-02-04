@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2026 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -44,6 +44,7 @@
 
 #include "blockmemshell/memory.h"
 #include "lpi/lpi.h"
+#include "lpiexact/lpiexact.h"
 #include "scip/exprinterpret.h"
 #include "scip/clock.h"
 #include "scip/debug.h"
@@ -77,13 +78,20 @@
 #include "tpi/tpi.h"
 
 #include <string.h>
-#if defined(_WIN32) || defined(_WIN64)
-#else
+#ifndef _WIN32
 #include <strings.h> /*lint --e{766}*/
+#endif
+
+#ifdef SCIP_WITH_MPFR
+#include <mpfr.h>
 #endif
 
 #ifdef SCIP_WITH_ZLIB
 #include <zlib.h>
+#endif
+
+#ifdef SCIP_WITH_BOOST
+#include <boost/version.hpp>
 #endif
 
 /* In debug mode, the following methods are implemented as function calls to ensure
@@ -93,6 +101,7 @@
  */
 
 #undef SCIPgetStage
+#undef SCIPgetStatus
 #undef SCIPhasPerformedPresolve
 #undef SCIPisStopped
 
@@ -271,6 +280,10 @@ SCIP_RETCODE doScipCreate(
    {
       SCIP_CALL( SCIPsetIncludeExternalCode((*scip)->set, SCIPexprintGetName(), SCIPexprintGetDesc()) );
    }
+   if( strcmp(SCIPlpiExactGetSolverName(), "NONE") != 0 && strcmp(SCIPlpiExactGetSolverName(), SCIPlpiGetSolverName()) != 0 )
+   {
+      SCIP_CALL( SCIPsetIncludeExternalCode((*scip)->set, SCIPlpiExactGetSolverName(), SCIPlpiExactGetSolverDesc()) );
+   }
 
 #ifdef SCIP_WITH_ZLIB
    SCIP_CALL( SCIPsetIncludeExternalCode((*scip)->set, "ZLIB " ZLIB_VERSION, "General purpose compression library by J. Gailly and M. Adler (zlib.net)") );
@@ -287,6 +300,45 @@ SCIP_RETCODE doScipCreate(
       SCIPsnprintf(name, SCIP_MAXSTRLEN, "LAPACK %d.%d.%d", major, minor, patch);
 
       SCIP_CALL( SCIPsetIncludeExternalCode((*scip)->set, name, "General Linear Algebra PACKage (http://www.netlib.org/lapack/)") );
+   }
+#endif
+
+   /* check whether all dependencies for exact solving mode are present */
+#ifdef SCIP_WITH_EXACTSOLVE
+#ifndef SCIP_WITH_GMP
+   SCIPerrorMessage("SCIP was compiled with exact solve support, but without GMP. Please recompile SCIP with GMP.\n");
+   return SCIP_ERROR;
+   /* external code information for GMP added in SCIPincludeConshdlrCountsols() */
+#endif
+#ifndef SCIP_WITH_MPFR
+   SCIPerrorMessage("SCIP was compiled with exact solve support, but without MPFR. Please recompile SCIP with MPFR.\n");
+   return SCIP_ERROR;
+#else
+   {
+      char name[SCIP_MAXSTRLEN];
+
+      (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "MPFR %s", MPFR_VERSION_STRING);
+      SCIP_CALL( SCIPsetIncludeExternalCode((*scip)->set, name, "GNU Multiple Precision Floating-Point Reliable Library (mpfr.org)") );
+   }
+#endif /*lint --e{529}*/
+#ifndef SCIP_WITH_BOOST
+   SCIPerrorMessage("SCIP was compiled with exact solve support, but without Boost. Please recompile SCIP with Boost.\n");
+   return SCIP_ERROR;
+#else
+   {
+      char name[SCIP_MAXSTRLEN];
+      int boost_version_major = BOOST_VERSION / 100000;
+      int boost_version_minor = BOOST_VERSION / 100 % 1000;
+      int boost_version_patch = BOOST_VERSION % 100; /*lint !e778*/
+
+      (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "Boost %d.%d.%d", boost_version_major, boost_version_minor, boost_version_patch);
+      SCIP_CALL( SCIPsetIncludeExternalCode((*scip)->set, name, "Boost C++ Libraries (boost.org)") );
+   }
+#endif
+   if( strcmp(SCIPlpiExactGetSolverName(), "NONE") == 0 )
+   {
+      SCIPerrorMessage("SCIP was compiled with exact solve support, but without an exact LP solver. Please recompile SCIP with an exact LP solver.\n");
+      return SCIP_ERROR;
    }
 #endif
 
@@ -513,14 +565,11 @@ SCIP_STATUS SCIPgetStatus(
 {
    SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPgetStatus", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
 
-   if( scip->set->stage == SCIP_STAGE_INIT || scip->set->stage == SCIP_STAGE_FREE )
-      return SCIP_STATUS_UNKNOWN;
-   else
-   {
-      assert(scip->stat != NULL);
+   assert(scip != NULL);
+   assert(scip->stat != NULL);
+   assert(scip->stat->status == SCIP_STATUS_UNKNOWN || (scip->set->stage != SCIP_STAGE_INIT && scip->set->stage != SCIP_STAGE_FREE));
 
-      return scip->stat->status;
-   }
+   return scip->stat->status;
 }
 
 /** gets name for a solution status */
@@ -602,22 +651,6 @@ SCIP_Bool SCIPisTransformed(
    assert(scip != NULL);
 
    return ((int)scip->set->stage >= (int)SCIP_STAGE_TRANSFORMING);
-}
-
-/** returns whether the solution process should be probably correct
- *
- *  @note This feature is not supported yet!
- *
- *  @return Returns TRUE if \SCIP is exact solving mode, otherwise FALSE
- */
-SCIP_Bool SCIPisExactSolve(
-   SCIP*                 scip                /**< SCIP data structure */
-   )
-{
-   assert(scip != NULL);
-   assert(scip->set != NULL);
-
-   return (scip->set->misc_exactsolve);
 }
 
 /** returns whether the presolving process would be finished given no more presolving reductions are found in this

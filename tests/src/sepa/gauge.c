@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2026 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -48,7 +48,7 @@
 #define EPS 1e-6
 
 static SCIP* scip = NULL;
-static SCIP_NLPI* nlpi = NULL;
+static SCIP_Bool haveipopt = FALSE;
 static SCIP_NLROW* nlrow1 = NULL;
 static SCIP_NLROW* nlrow2 = NULL;
 static SCIP_NLROW* nlrow3 = NULL;
@@ -186,7 +186,8 @@ void evaluation_setup(void)
    if( ! SCIPisIpoptAvailableIpopt() )
       return;
 
-   SCIPincludeNlpSolverIpopt(scip);
+   SCIP_CALL( SCIPincludeNlpSolverIpopt(scip) );
+   haveipopt = TRUE;
 
    /* create a problem */
    SCIP_CALL( SCIPcreateProbBasic(scip, "problem") );
@@ -251,7 +252,7 @@ void evaluate_gauge(CONVEXSIDE* convexsides)
    SCIP_NLROW* nlrows[2];
 
    /* if no IPOPT available, don't run test */
-   if( nlpi == NULL )
+   if( !haveipopt )
       return;
 
    /* create the nl rows */
@@ -363,7 +364,7 @@ Test(evaluation, gradient_cut_convex)
    SCIP_Bool success = FALSE;
 
    /* if no IPOPT available, don't run test */
-   if( nlpi == NULL )
+   if( !haveipopt )
       return;
 
    /* create the nl row */
@@ -400,7 +401,7 @@ Test(evaluation, gradient_cut_concave)
    SCIP_Bool success = FALSE;
 
    /* if no IPOPT available, don't run test */
-   if( nlpi == NULL )
+   if( !haveipopt )
       return;
 
    /* create the nl row */
@@ -437,7 +438,7 @@ Test(evaluation, gradient_complicated_convex)
    SCIP_Bool success = FALSE;
 
    /* if no IPOPT available, don't run test */
-   if( nlpi == NULL )
+   if( !haveipopt )
       return;
 
    /* create compicated nlrow */
@@ -474,7 +475,7 @@ Test(evaluation, gradient_complicated_concave)
    SCIP_Bool success = FALSE;
 
    /* if no IPOPT available, don't run test */
-   if( nlpi == NULL )
+   if( !haveipopt )
       return;
 
    /* create compicated nlrow */
@@ -526,7 +527,7 @@ Test(interior_point, compute_interior_point)
       return;
 
    /* include NLPI's */
-   SCIPincludeNlpSolverIpopt(scip);
+   SCIP_CALL( SCIPincludeNlpSolverIpopt(scip) );
 
    /* include gauge separator */
    SCIP_CALL( SCIPincludeSepaGauge(scip) );

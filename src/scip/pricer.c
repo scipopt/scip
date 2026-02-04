@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2026 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -156,6 +156,7 @@ SCIP_RETCODE doPricerCreate(
    (*pricer)->delay = delay;
    (*pricer)->active = FALSE;
    (*pricer)->initialized = FALSE;
+   (*pricer)->exact = FALSE;
 
    /* add parameters */
    (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "pricers/%s/priority", name);
@@ -398,7 +399,7 @@ SCIP_RETCODE SCIPpricerRedcost(
    SCIP_PROB*            prob,               /**< transformed problem */
    SCIP_Real*            lowerbound,         /**< local lower bound computed by the pricer */
    SCIP_Bool*            stopearly,          /**< should pricing be stopped, although new variables were added? */
-   SCIP_RESULT*          result              /**< result of the pricing process */    
+   SCIP_RESULT*          result              /**< result of the pricing process */
    )
 {
    int oldnvars;
@@ -410,6 +411,10 @@ SCIP_RETCODE SCIPpricerRedcost(
    assert(prob != NULL);
    assert(lowerbound != NULL);
    assert(result != NULL);
+
+   /* check, if the pricer is compatible with exact solving mode */
+   if( set->exact_enable && !pricer->exact )
+      return SCIP_OKAY;
 
    SCIPsetDebugMsg(set, "executing reduced cost pricing of variable pricer <%s>\n", pricer->name);
 
@@ -448,6 +453,10 @@ SCIP_RETCODE SCIPpricerFarkas(
 
    /* check, if pricer implemented a Farkas pricing algorithm */
    if( pricer->pricerfarkas == NULL )
+      return SCIP_OKAY;
+
+   /* check, if the pricer is compatible with exact solving mode */
+   if( set->exact_enable && !pricer->exact )
       return SCIP_OKAY;
 
    SCIPsetDebugMsg(set, "executing Farkas pricing of variable pricer <%s>\n", pricer->name);
@@ -594,6 +603,16 @@ void SCIPpricerSetExitsol(
    assert(pricer != NULL);
 
    pricer->pricerexitsol = pricerexitsol;
+}
+
+/** marks the variable pricer as safe to use in exact solving mode */
+void SCIPpricerMarkExact(
+   SCIP_PRICER*          pricer              /**< pricer */
+   )
+{
+   assert(pricer != NULL);
+
+   pricer->exact = TRUE;
 }
 
 /** gets name of variable pricer */

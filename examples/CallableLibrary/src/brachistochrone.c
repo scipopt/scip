@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2026 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -126,11 +126,11 @@ SCIP_RETCODE setupProblem(
       /* setting up the names of the variables */
       if( i < n )
       {
-         SCIPsnprintf(namet, SCIP_MAXSTRLEN, "t(%d)", i);
-         SCIPsnprintf(namev, SCIP_MAXSTRLEN, "v(%d)", i);
+         (void)SCIPsnprintf(namet, SCIP_MAXSTRLEN, "t(%d)", i);
+         (void)SCIPsnprintf(namev, SCIP_MAXSTRLEN, "v(%d)", i);
       }
-      SCIPsnprintf(namey, SCIP_MAXSTRLEN, "y(%d)", i);
-      SCIPsnprintf(namex, SCIP_MAXSTRLEN, "x(%d)", i);
+      (void)SCIPsnprintf(namey, SCIP_MAXSTRLEN, "y(%d)", i);
+      (void)SCIPsnprintf(namex, SCIP_MAXSTRLEN, "x(%d)", i);
 
       /* fixing y(0), y(N), x(0), x(N) through lower and upper bounds */
       if( i == 0 )
@@ -243,7 +243,7 @@ SCIP_RETCODE setupProblem(
          SCIP_CALL( SCIPcreateExprSum(scip, &expr7, 3, exprs, coefs, 0.0, NULL, NULL) );
 
          /* create the constraint expr7 >= 0, add to the problem, and release it */
-         SCIPsnprintf(consname, SCIP_MAXSTRLEN, "timestep(%d)", i);
+         (void)SCIPsnprintf(consname, SCIP_MAXSTRLEN, "timestep(%d)", i);
          SCIP_CALL( SCIPcreateConsBasicNonlinear(scip, &cons, consname, expr7, 0.0, SCIPinfinity(scip)) );
          SCIP_CALL( SCIPaddCons(scip, cons) );
          SCIP_CALL( SCIPreleaseCons(scip, &cons) );
@@ -273,7 +273,7 @@ SCIP_RETCODE setupProblem(
          quadvars1[5] = x[i];   quadvars2[5] = x[i+1]; quadcoefs[5] = -2.0;
          quadvars1[6] = v[i];   quadvars2[6] = v[i];   quadcoefs[6] = -1.0;
 
-         SCIPsnprintf(consname, SCIP_MAXSTRLEN, "steplength(%d)", i);
+         (void)SCIPsnprintf(consname, SCIP_MAXSTRLEN, "steplength(%d)", i);
          SCIP_CALL( SCIPcreateConsQuadraticNonlinear(scip, &cons, consname, 0, NULL, NULL, 7, quadvars1, quadvars2, quadcoefs, -SCIPinfinity(scip), 0.0, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
          /* add the constraint to the problem and forget it */
@@ -281,7 +281,7 @@ SCIP_RETCODE setupProblem(
          SCIP_CALL( SCIPreleaseCons(scip, &cons) );
 
          /* add constraint x[i] <= x[i+1], if x[0] < x[N], otherwise add x[i+1] <= x[i] */
-         SCIPsnprintf(consname, SCIP_MAXSTRLEN, "xorder(%d)", i);
+         (void)SCIPsnprintf(consname, SCIP_MAXSTRLEN, "xorder(%d)", i);
          SCIP_CALL( SCIPcreateConsBasicLinear(scip, &cons, consname, 0, NULL, NULL, -SCIPinfinity(scip), 0.0) );
          SCIP_CALL( SCIPaddCoefLinear(scip, cons, x[i],   coord[2] < coord[3] ?  1.0 : -1.0) );
          SCIP_CALL( SCIPaddCoefLinear(scip, cons, x[i+1], coord[2] < coord[3] ? -1.0 :  1.0) );
@@ -336,7 +336,7 @@ void visualizeSolutionGnuplot(
       fprintf(stream, "%g %g\n", SCIPgetSolVal(scip, sol, x[i]), SCIPgetSolVal(scip, sol, y[i]));
    fputs("e\n", stream);
 
-   pclose(stream);
+   (void)pclose(stream);
 #endif
 }
 
@@ -360,7 +360,7 @@ SCIP_RETCODE runBrachistochrone(
    SCIPinfoMessage(scip, NULL, "\n");
    SCIPinfoMessage(scip, NULL, "**********************************************\n");
    SCIPinfoMessage(scip, NULL, "* Running Brachistochrone Problem            *\n");
-   SCIPinfoMessage(scip, NULL, "* between A=(%g,%g) and B=(%g,%g) with %d points *\n", coord[2], coord[0], coord[3], coord[1], n);
+   SCIPinfoMessage(scip, NULL, "* between A=(%g,%g) and B=(%g,%g) with %u points *\n", coord[2], coord[0], coord[3], coord[1], n);
    SCIPinfoMessage(scip, NULL, "**********************************************\n");
    SCIPinfoMessage(scip, NULL, "\n");
 
@@ -418,7 +418,7 @@ int main(
        char *end2 = NULL;
        char *end3 = NULL;
 
-       n = strtol(argv[1], &end1, 10);
+       n = (unsigned int) strtol(argv[1], &end1, 10);
        if( argc == 4 )
        {
           coord[1] = strtof(argv[2], &end2);

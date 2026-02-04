@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2026 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -111,7 +111,7 @@
 #define NOINIT    0                     /* A dummy entry for non-initialized variables.
                                          * Must have value 0 because of SCIPallocCleanBufferArray. */
 /* A macro for checking if a variable was fixed during a bound change */
-#define ISFIXED(x, bdchgidx)   (SCIPvarGetUbAtIndex(x, bdchgidx, FALSE) - SCIPvarGetLbAtIndex(x, bdchgidx, FALSE) < 0.5)
+#define ISFIXED(scip, x, bdchgidx)   (SCIPgetVarUbAtIndex(scip, x, bdchgidx, FALSE) - SCIPgetVarLbAtIndex(scip, x, bdchgidx, FALSE) < 0.5)
 
 
 
@@ -1783,6 +1783,52 @@ SCIP_RETCODE SCIPcreateSymbreakCons(
 }
 
 
+/** replace aggregated variables by active variables */
+static
+SCIP_RETCODE replaceAggregatedVarsSymresack(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons                /**< constraint to be processed */
+   )
+{
+   SCIP_CONSDATA* consdata;
+   SCIP_VAR** vars;
+   int nvars;
+   int i;
+
+   assert( scip != NULL );
+   assert( cons != NULL );
+
+   /* get data of constraint */
+   consdata = SCIPconsGetData(cons);
+   assert( consdata != NULL );
+   assert( consdata->vars != NULL );
+
+   nvars = consdata->nvars;
+   vars = consdata->vars;
+
+   /* loop through all variables */
+   for (i = 0; i < nvars; ++i)
+   {
+      SCIP_VAR* var;
+      SCIP_Bool negated;
+
+      assert( SCIPvarGetStatus(vars[i]) != SCIP_VARSTATUS_MULTAGGR ); /* variables are marked as not to be multi-aggregated */
+
+      SCIP_CALL( SCIPgetBinvarRepresentative(scip, vars[i], &var, &negated) );
+      SCIP_UNUSED( negated );
+      assert( SCIPvarIsActive(var) || SCIPvarGetStatus(var) == SCIP_VARSTATUS_NEGATED || SCIPvarGetStatus(var) == SCIP_VARSTATUS_FIXED );
+      if ( var != vars[i] )
+      {
+         SCIP_CALL( SCIPreleaseVar(scip, &vars[i]) );
+         vars[i] = var;
+         SCIP_CALL( SCIPcaptureVar(scip, var) );
+      }
+   }
+
+   return SCIP_OKAY;
+}
+
+
 /*--------------------------------------------------------------------------------------------
  *--------------------------------- SCIP functions -------------------------------------------
  *--------------------------------------------------------------------------------------------*/
@@ -2573,12 +2619,12 @@ SCIP_DECL_CONSRESPROP(consRespropSymresack)
       assert( i != invperm[i] );
 
       /* Up to entry varrow the vectors x and perm[x] are fixed to the same value. */
-      assert( ISFIXED(vars[i], bdchgidx) );
-      assert( ISFIXED(vars[invperm[i]], bdchgidx) );
-      assert( REALABS(SCIPvarGetUbAtIndex(vars[i], bdchgidx, FALSE) -
-         SCIPvarGetUbAtIndex(vars[invperm[i]], bdchgidx, FALSE)) < 0.5 );
-      assert( REALABS(SCIPvarGetLbAtIndex(vars[i], bdchgidx, FALSE) -
-         SCIPvarGetLbAtIndex(vars[invperm[i]], bdchgidx, FALSE)) < 0.5 );
+      assert( ISFIXED(scip, vars[i], bdchgidx) );
+      assert( ISFIXED(scip, vars[invperm[i]], bdchgidx) );
+      assert( REALABS(SCIPgetVarUbAtIndex(scip, vars[i], bdchgidx, FALSE) -
+         SCIPgetVarUbAtIndex(scip, vars[invperm[i]], bdchgidx, FALSE)) < 0.5 );
+      assert( REALABS(SCIPgetVarLbAtIndex(scip, vars[i], bdchgidx, FALSE) -
+         SCIPgetVarLbAtIndex(scip, vars[invperm[i]], bdchgidx, FALSE)) < 0.5 );
 
       /* At iteration i the vars x[i] and x[invperm[i]] are fixed.
        * So only new information is received if i < perm[i] (i.e. there is no j < i with j = invperm[i])
@@ -2619,13 +2665,13 @@ SCIP_DECL_CONSRESPROP(consRespropSymresack)
           * Thus, between entries varrow and infrow of vectorx x and gamma(x) the entries do not have to be fixed.
           * For conflict analysis, only the fixed entries matter.
           */
-         if ( ( i < perm[i] || i == invperm[varrow] ) && ISFIXED(vars[i], bdchgidx) )
+         if ( ( i < perm[i] || i == invperm[varrow] ) && ISFIXED(scip, vars[i], bdchgidx) )
          {
             assert( vars[i] != infervar );
             SCIP_CALL( SCIPaddConflictUb(scip, vars[i], bdchgidx) );
             SCIP_CALL( SCIPaddConflictLb(scip, vars[i], bdchgidx) );
          }
-         if ( ( invperm[i] > i || invperm[i] == varrow ) && ISFIXED(vars[invperm[i]], bdchgidx) )
+         if ( ( invperm[i] > i || invperm[i] == varrow ) && ISFIXED(scip, vars[invperm[i]], bdchgidx) )
          {
             assert( vars[invperm[i]] != infervar );
             SCIP_CALL( SCIPaddConflictUb(scip, vars[invperm[i]], bdchgidx) );
@@ -2642,7 +2688,7 @@ SCIP_DECL_CONSRESPROP(consRespropSymresack)
       {
          /* Changed the lower bound of infervar to 1. That means that this fixing is due to (_, 1) */
          assert( infervar == vars[varrow] );
-         assert( ISFIXED(vars[invperm[varrow]], bdchgidx) );
+         assert( ISFIXED(scip, vars[invperm[varrow]], bdchgidx) );
 
          if ( invperm[varrow] > varrow )
          {
@@ -2654,7 +2700,7 @@ SCIP_DECL_CONSRESPROP(consRespropSymresack)
       {
          /* Changed the lower bound of infervar to 0. That means that this fixing is due to (0, _) */
          assert( infervar == vars[invperm[varrow]] );
-         assert( ISFIXED(vars[varrow], bdchgidx) );
+         assert( ISFIXED(scip, vars[varrow], bdchgidx) );
 
          if ( varrow < perm[varrow] )
          {
@@ -2666,6 +2712,25 @@ SCIP_DECL_CONSRESPROP(consRespropSymresack)
 
    *result = SCIP_SUCCESS;
 
+   return SCIP_OKAY;
+}
+
+
+/** presolving deinitialization method of constraint handler (called after presolving has been finished) */
+static
+SCIP_DECL_CONSEXITPRE(consExitpreSymresack)
+{
+   int c;
+
+   assert( scip != NULL );
+   assert( conshdlr != NULL );
+   assert( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0 );
+
+   for (c = 0; c < nconss; ++c)
+   {
+      /* replace aggregated variables by active variables */
+      SCIP_CALL( replaceAggregatedVarsSymresack(scip, conss[c]) );
+   }
    return SCIP_OKAY;
 }
 
@@ -3108,6 +3173,7 @@ SCIP_RETCODE SCIPincludeConshdlrSymresack(
    SCIP_CALL( SCIPsetConshdlrPrint(scip, conshdlr, consPrintSymresack) );
    SCIP_CALL( SCIPsetConshdlrProp(scip, conshdlr, consPropSymresack, CONSHDLR_PROPFREQ, CONSHDLR_DELAYPROP, CONSHDLR_PROP_TIMING) );
    SCIP_CALL( SCIPsetConshdlrResprop(scip, conshdlr, consRespropSymresack) );
+   SCIP_CALL( SCIPsetConshdlrExitpre(scip, conshdlr, consExitpreSymresack) );
    SCIP_CALL( SCIPsetConshdlrSepa(scip, conshdlr, consSepalpSymresack, consSepasolSymresack, CONSHDLR_SEPAFREQ, CONSHDLR_SEPAPRIORITY, CONSHDLR_DELAYSEPA) );
    SCIP_CALL( SCIPsetConshdlrTrans(scip, conshdlr, consTransSymresack) );
    SCIP_CALL( SCIPsetConshdlrInitlp(scip, conshdlr, consInitlpSymresack) );

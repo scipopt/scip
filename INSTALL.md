@@ -42,6 +42,10 @@ Predefined presets for different use cases are also included in the `CMakePreset
 To use them, specify `--preset <preset>` as argument to `cmake`.
 For example, to build only with dependencies needed for a MIP solver, use `--preset mip`.
 
+A minor speed-up of SCIP can be obtained by enabling link-time-optimization via `-DLTO=on`.
+This way, the compiler additionally optimizes the complete code base across object-file boundaries, which means much higher linking times (and memory use).
+In our experiments, enabling link-time-optimization did not affect the algorithmic decisions of the solving process, but lead to slightly faster running times.
+
 The available presets can be listed with
 ```
 cmake --list-presets
@@ -57,7 +61,7 @@ apt-get install wget cmake g++ m4 xz-utils libgmp-dev unzip zlib1g-dev libboost-
 ```
 Additionally the following dependencies need to be downloaded, compiled and installed:
  - [Hmetis](http://glaros.dtc.umn.edu/gkhome/metis/hmetis/download)
- - [Ipopt](https://github.com/coin-or/Ipopt/releases) with [Mumps](https://github.com/coin-or-tools/ThirdParty-Mumps/releases)
+ - [Ipopt](https://github.com/coin-or/Ipopt/releases) with [Mumps](https://github.com/coin-or-tools/ThirdParty-Mumps/releases) or a different NLP solver
  - [GMP](https://gmplib.org/#DOWNLOAD)
 
 
@@ -177,9 +181,12 @@ e.g., `cmake </path/to/SCIP> -DSOPLEX_DIR=<path/to/SoPlex/build/or/install>`.
 | `AUTOBUILD`            | `on`, `off`                        | --                         | automatically find dependencies on availability, ignores individual flags of these packages |
 | `CMAKE_BUILD_TYPE`     | `Release`, `Debug`, ...            | `OPT=[opt, dbg]`           |                                                                    |
 | `GMP`                  | `on`, `off`                        | `GMP=[true, false]`        | specify `GMP_DIR` if not found automatically                       |
+| `MPFR`                 | `on`, `off`                        | `MPFR=[true, false]`       | specify `MPFR_DIR` if not found automatically                      |
+| `CONOPT`               | `on`, `off`                        | `CONOPT=[true,false]`      | specify `CONOPT_DIR` if not found automatically                    |
 | `IPOPT`                | `on`, `off`                        | `IPOPT=[true,false]`       | requires IPOPT version >= 3.12.0; specify `IPOPT_DIR` if not found automatically |
 | `LAPACK`               | `on`, `off`                        | `LAPACK=[true,false]`      | requires Lapack to be installed on the system                      |
 | `LPS`                  | `spx`, `cpx`, `grb`, `xprs`, ...   | `LPS=...`                  | specify `SOPLEX_DIR`, `CPLEX_DIR`, `MOSEK_DIR`, ... if LP solver is not found automatically |
+| `LPSEXACT`             | `spx`, `qsoex`, `none`, `auto`     | `LPSEXACT=...`             | specify `SOPLEX_DIR`, `QSOEX_DIR` if exact LP solver is not found automatically |
 | `SYM`                  | `nauty`, `snauty`, `none`, ...     | `SYM=[nauty, snauty, none]`| choose symmetry handling                                           |
 | `WORHP`                | `on`, `off`                        | `WORHP=[true,false]`       | should worhp be linked; specify `WORHP_DIR` if not found automatically |
 | `ZIMPL`                | `on`, `off`                        | `ZIMPL=[true, false]`      | specify `ZIMPL_DIR` if not found automatically                     |
@@ -187,6 +194,7 @@ e.g., `cmake </path/to/SCIP> -DSOPLEX_DIR=<path/to/SoPlex/build/or/install>`.
 | `READLINE`             | `on`, `off`                        | `READLINE=[true, false]`   |                                                                    |
 | `..._DIR`              | `<custom/path/to/.../package>`     | --                         | e.g. `IPOPT_DIR`, `CPLEX_DIR`, `WORHP_DIR`, `Readline_DIR` ...     |
 | `BOOST_ROOT`           | `<custom/path/to/.../boost>`       | --                         | hint for location of boost                                         |
+| `EXACTSOLVE`           | `auto`, `on`, `off`                | `EXACTSOLVE=[auto,true,false]` | build with exact solving functionality                         |
 | `CMAKE_INSTALL_PREFIX` | `\<path\>`                         | `INSTALLDIR=\<path\>`      |                                                                    |
 | `SHARED`               | `on`, `off`                        | `SHARED=[true, false]`     |                                                                    |
 | `CXXONLY`              | `on`, `off`                        | --                         | use a C++ compiler for all source files                            |
@@ -200,9 +208,23 @@ e.g., `cmake </path/to/SCIP> -DSOPLEX_DIR=<path/to/SoPlex/build/or/install>`.
 | `MT`                   | `on`, `off`                        |                            | use static runtime libraries for Visual Studio compiler on Windows |
 | `THREADSAFE`           | `on`, `off`                        | `THREADSAFE=[true,false]`  | thread safe compilation                                            |
 | `SANITIZE`             | `on`, `off`, `thread`, `address`, `memory` | `SANITIZE=...`     | sanitizers to enable; if not `off` (default), then enables undefined-behavior sanitizer, `thread` enables also thread sanitizer, `address` enables also address sanitizer, `memory` enables also memory sanitizer |
+| `LTO`                  | `on`, `off`                        | `LTO=[true,false]`         | enable link-time-optimization on Linux/MacOS and gcc/clang         |
 | `TPI`                  | `tny`, `omp`, `none`               | `TPI=[tny,omp,none]`       | enable task processing interface required for concurrent solver    |
 
 Parameters can be set all at once or in subsequent calls to `cmake` - extending or modifying the existing configuration.
+
+Building with exact solving functionality
+-----------------------------------------
+
+In order to build SCIP with exact solving mode, the following dependencies must be available:
+
+- [GMP](https://gmplib.org/) for rational arithmetic in ZIMPL, SoPlex, SCIP, and PaPILO,
+- [Boost](https://www.boost.org/) multiprecision library for rationals in SCIP (and PaPILO, if linked),
+- [MPFR](https://www.mpfr.org/) for approximating rationals with floating-point numbers in SCIP,
+- and an exact LP solver such as SoPlex.
+
+If the EXACTSOLVE flag is set to auto, exact solving mode will be available if and only if all these dependencies are satisfied.
+If the EXACTSOLVE flag is set to true, the build will fail if one of these dependencies is not satisfied.
 
 Testing with CTest
 ------------------
@@ -323,16 +345,22 @@ In your SCIP main directory, enter `make [options]` with the following options:
 
 | parameter and default | options              | description                                                                                      |
 |-----------------------|----------------------|--------------------------------------------------------------------------------------------------|
-| `ARCH=x86_64`         | `[x86_64, x86, sparc, mips, hppa, ppc, pwr4]` | the architecture: try to autodetect                      |
+| `ARCH=x86_64`         | `[x86_64, x86, sparc, mips, hppa, ppc, pwr4]` | the architecture: try to autodetect                                     |
 | `AMPL=true`           | `[true, false]`      | to enable or disable AMPL .nl file reader and support for using SCIP executable as solver in AMPL|
 | `COMP=gnu`            | `[gnu, clang, intel]`| Use Gnu, Clang or Intel compiler.                                                                |
 | `EXPRINT=cppad`       | `[cppad, none]`      | to use CppAD as expressions interpreter                                                          |
 | `FILTERSQP=false`     | `[false, true]`      | to enable or disable FilterSQP interface                                                         |
-| `GMP=true`            | `[true, false]`      | to enable or disable GMP library for exact counting and Zimpl support                            |
+| `GMP=true`            | `[true, false]`      | to enable or disable GMP library needed for exact solving, counting, and Zimpl support           |
+| `BOOST=false`         | `[true, false]`      | to enable or disable Boost library needed for exact solving functionality                        |
+| `MPFR=auto`           | `[true, false, auto]`| to enable or disable MPFR library needed for exact solving functionality (auto = like Boost)     |
+| `EXACTSOLVE=auto`     | `[true, false, auto]`| to build with exact solving functionality (auto = true if all dependencies are available)        |
 | `IPOPT=false`         | `[false, true]`      | to disable or enable IPOPT interface (needs IPOPT >= 3.12.0)                                     |
+| `CONOPT=false`        | `[false, true]`      | to enable or disable the CONOPT interface                                                            |
 | `LAPACK=false`        | `[false, true]`      | link with Lapack; requires Lapack to be installed on the system                                  |
-| `LPS=spx`             | `[spx1, cpx, grb, xprs, msk, clp, glop, qso, highs, none]` | determines the LP-Solver, should be installed seperately. Options to use SoPlex (> version 2.0), SoPlex (>= version 1.4), CPLEX, Gurobi, XPRESS, MOSEK, CLP, Glop, QSopt, HiGHS as LP solver, no LP solver  |
+| `LPS=spx`             | `[spx, cpx, grb, xprs, msk, clp, glop, qso, highs, none]` | determines the LP solver, should be installed seperately. Options to use SoPlex, CPLEX, Gurobi, XPRESS, MOSEK, CLP, Glop, QSopt, HiGHS as LP solver, no LP solver  |
+| `LPSEXACT=spx`        | `[spx, none]`        | determines the exact LP solver                                                                   |
 | `LPSOPT=opt`          | `[opt, dbg, opt-gccold]` | Choose the debug or optimized version (or old GCC optimized) version of the LP-solver (currently only available for SoPlex and CLP). |
+| `LTO=false`           | `[false, true]`      | enable link-time-optimization on Linux/MacOS and gcc/clang                                       |
 | `NOBLKMEM=false`      | `[false, true]`      | Turns the internal SCIP block memory off or on.                                                  |
 | `NOBUFMEM=false`      | `[false, true]`      | Turns the internal SCIP buffer memory off or on.                                                 |
 | `NOBLKBUFMEM=false`   | `[false, true]`      | Turns the internal SCIP block and buffer memory off or on. This way the code can be checked by valgrind or similar tools. |
@@ -373,6 +401,9 @@ In the above example add the settings:
 ```
 USRFLAGS=-I/sw/include USRCPPFLAGS=-I/sw/include USRCFLAGS=-I/sw/include USRLDFLAGS=-L/sw/lib.
 ```
+
+A minor speed-up of SCIP can be obtained by enabling link-time-optimization via `LTO=true`.
+This leads to much higher linking times (and memory use).
 
 ### 2. Installing SCIP
 
@@ -496,7 +527,15 @@ ln -s <file libzimpl-<version>.<options>.a> <path to SCIP>/lib/static/libzimpl.$
 ```
 Note that ZIMPL needs the GNU multiprecision library (GMP) to be installed on your system.
 
-#### i) to use IPOPT as NLP solver
+#### i) to use CONOPT as NLP solver
+
+```
+ln -s <path to CONOPT installation> <path to SCIP>/lib/shared/conoptdir
+(e.g. `cd scip; ln -s /Conopt lib/shared/conoptdir
+```
+The path to the CONOPT installation is the directory that should contain `include/conopt.h` with the CONOPT header files and the directory `lib` with the CONOPT libraries.
+
+#### j) to use IPOPT as NLP solver
 
 ```
 ln -s <path to IPOPT installation> <path to SCIP>/lib/ipopt.$(OSTYPE).$(ARCH).$(COMP).$(IPOPTOPT)
@@ -505,7 +544,7 @@ ln -s <path to IPOPT installation> <path to SCIP>/lib/ipopt.$(OSTYPE).$(ARCH).$(
 The path to the IPOPT installation is the path under where the Ipopt build has been installed.
 It should contain the directories `include/coin-or` with the Ipopt header files, the directory `lib` with the Ipopt libraries, and the file `lib/pkgconfig/ipopt.pc`.
 
-#### j) to use WORHP as NLP solver
+#### k) to use WORHP as NLP solver
 
 ```
 ln -s <path to WORHP installation> <path to SCIP>/lib/shared/worhp.$(OSTYPE).$(ARCH).$(COMP).$(WORHPOPT)
@@ -518,7 +557,7 @@ ln -s /Worhp lib/shared/worhp.linux.x86.gnu.opt
 The path to the WORHP installation is the path under where the Worhp build has been installed.
 It should contain the directories `include/worhp` with the WORHP header files and the directory `lib` with the WORHP libraries.
 
-#### k) to use FilterSQP as NLP solver
+#### l) to use FilterSQP as NLP solver
 
 ```
 ln -s <path to FilterSQP library> <path to SCIP>/lib/libfiltersqp.$(OSTYPE).$(ARCH).$(COMP).a
@@ -526,14 +565,14 @@ ln -s <path to BQPD library> <path to SCIP>/lib/libbqpd.$(OSTYPE).$(ARCH).$(COMP
 ```
 Make sure to replace the paths with your installation location.
 
-#### l) to use GAMS
+#### m) to use GAMS
 
 ```
 ln -s <path to GAMS system directory> <path to SCIP>/lib/shared/gams.$(OSTYPE).$(ARCH).$(COMP)
 ```
 Make sure to replace the paths with your installation location.
 
-#### m) to use HiGHS
+#### n) to use HiGHS
 
 ```
 export LIBRARY_PATH=<path to HiGHS>/lib
@@ -573,6 +612,7 @@ The SCIP makefile supports several targets (used via `make ... "target"`):
 | `depend` | Updates dependencies files. This is only needed if you add checks for preprocessor-defines `WITH_*` in source files. |
 | `check`  | or `test`. Runs the check script.                                         |
 | `lint`   | Statically checks the code via flexelint. The call produces the file `lint.out` which contains all the detected warnings. |
+| `cppcheck` | Statically checks the code via cppcheck. The call produces the file `cppcheck.log` which contains the cppcheck output. |
 | `tags`   | Generates tags which can be used in the editor **emacs** and **xemacs**. |
 
 The SCIP makefiles are structured as follows.
@@ -689,13 +729,13 @@ make[1]: Entering directory '/sw/scip'
 make[1]: Leaving directory '/sw/scip'
 ```
 
-### Example 4 (default: SoPlex, IPOPT, WORHP, FILTERSQP):
+### Example 4 (default: SoPlex, CONOPT, IPOPT, WORHP, FILTERSQP):
 
-Typing `make IPOPT=true WORHP=true FILTERSQP=true` uses SoPlex as LP solver, and activates the interfaces to IPOPT, WORHP, and FilterSQP.
+Typing `make CONOPT=true, IPOPT=true WORHP=true FILTERSQP=true` uses SoPlex as LP solver, and activates the interfaces to CONOPT, IPOPT, WORHP, and FilterSQP.
 You will be asked the following questions on the first call to `make` (example answers are already given):
 
 ```
-- Current settings: LPS=spx2 OSTYPE=linux ARCH=x86_64 COMP=gnu SHARED=false SUFFIX= ZIMPL=false ZIMPLOPT=opt IPOPT=true IPOPTOPT=opt FILTERSQP=true EXPRINT=cppad GAMS=false
+- Current settings: LPS=spx OSTYPE=linux ARCH=x86_64 COMP=gnu SHARED=false SUFFIX= ZIMPL=false ZIMPLOPT=opt CONOPT=true IPOPT=true IPOPTOPT=opt FILTERSQP=true EXPRINT=cppad GAMS=false
 
 * SCIP needs some softlinks to external programs, in particular, LP-solvers.
 * Please insert the paths to the corresponding directories/libraries below.
@@ -705,6 +745,7 @@ You will be asked the following questions on the first call to `make` (example a
   -> 'spxinc' is the path to the SoPlex 'src' directory, e.g., '<SoPlex-path>/src'.
   -> 'libsoplex.*' is the path to the SoPlex library, e.g., '<SoPlex-path>/lib/libsoplex.linux.x86.gnu.opt.a'
   -> 'ipopt.linux.x86_64.gnu.opt' is a directory containing the ipopt installation, i.e., 'ipopt.linux.x86_64.gnu.opt/include/coin/IpIpoptApplication.hpp', 'ipopt.linux.x86_64.gnu.opt/lib/libipopt*', ... should exist.
+  -> "conoptdir" is a directory containing the conopt installation, i.e., "conoptdir/include/conopt.h", "conoptdir/lib/libconopt.so", ... should exist.
   -> 'libfiltersqp.linux.x86_64.gnu.*' is the path to the filterSQP library.
   -> 'libbqpd.linux.x86_64.gnu.*' is the path to the BQPD library.
   -> 'worhp.linux.x86_64.gnu.opt' is a directory containing the WORHP installation, i.e., 'worhp.linux.x86_64.gnu.opt/include/worhp/worhp.h' should exist.
@@ -713,6 +754,10 @@ You will be asked the following questions on the first call to `make` (example a
 > Enter soft-link target file or directory for 'lib/static/ipopt.linux.x86_64.gnu.opt' (return if not needed):
 > /sw/ipopt-3.12.5
 -> creating softlink 'lib/static/ipopt.linux.x86_64.gnu.opt' -> '/sw/ipopt-3.12.5'
+
+> Enter soft-link target file or directory for "lib/shared/conoptdir" (return if not needed):
+> /sw/conopt-4_37-linux-x86_64
+-> creating softlink "lib/shared/conoptdir" -> "/sw/conopt-4_37-linux-x86_64"
 
 > Enter soft-link target file or directory for 'lib/static/libfiltersqp.linux.x86_64.gnu.a' (return if not needed):
 > /sw/libfiltersqp.a
@@ -777,12 +822,6 @@ On some systems, the `sigaction()` method is not available.
 In this case, you have to either add `-DNO_SIGACTION` to the FLAGS in the appropriate `make/make.*` file, or to compile with `make USRFLAGS=-DNO_SIGACTION`.
 Make sure, the file `src/scip/interrupt.c` is recompiled.
 
-### No support for rand_r method
-
-On some systems, the `rand_r()` method is not available.
-In this case, you have to either add `-DNO_RAND_R` to the FLAGS in the appropriate `make/make.*` file, or to compile with `make USRFLAGS=-DNO_RAND_R`.
-Make sure, the file `src/scip/misc.c` is recompiled.
-
 ### No support for strtok_r method
 
 On some systems, the `strtok_r()` method is not available.
@@ -813,6 +852,7 @@ Also removing `$(LINKCXX_l)bz2$(LINKLIBSUFFIX)` may help in some cases.
 
 If you encounter other compiler or linker errors, you should recompile with `make VERBOSE=true ...` in order to get the full compiler invocation.
 This might help to fix the corresponding machine dependent makefile in the make subdirectory.
+
 
 Remarks on Installing under Windows using MinGW
 -----------------------------------------------

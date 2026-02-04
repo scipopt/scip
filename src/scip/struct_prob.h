@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2026 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -50,6 +50,9 @@ struct SCIP_Prob
    SCIP_Real             objoffset;          /**< objective offset from bound shifting and fixing (fixed vars result) */
    SCIP_Real             objscale;           /**< scalar applied to objective function; external objective value is
                                               *   extobj = objsense * objscale * (intobj + objoffset) */
+   SCIP_RATIONAL*        objoffsetexact;     /**< exact objective offset from bound shifting and fixing (fixed vars result) */
+   SCIP_RATIONAL*        objscaleexact;      /**< exact scalar applied to objective function; external objective value is
+                                              *   extobjexact = objsense * objscaleexact * (intobjexact + objoffsetexact) */
    SCIP_Real             objlim;             /**< objective limit as external value (original problem space) */
    SCIP_Real             dualbound;          /**< dual bound as external value (original problem space) which is given or update during presolving */
    char*                 name;               /**< problem name */

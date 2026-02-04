@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2026 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -678,9 +678,8 @@ SCIP_RETCODE SCIPdialoghdlrGetWord(
    if( dialoghdlr->buffer[dialoghdlr->bufferpos] != '\0' )
       dialoghdlr->bufferpos++;
 
-   /* truncate the command word in the buffer */
-   if( dialoghdlr->buffer[pos] != '\0' )
-      dialoghdlr->buffer[pos] = '\0';
+   /* possibly truncate the command word in the buffer */
+   dialoghdlr->buffer[pos] = '\0';
 
    /* remove additional spaces */
    while( isspace((unsigned char)dialoghdlr->buffer[dialoghdlr->bufferpos]) )
@@ -1090,7 +1089,7 @@ int SCIPdialogFindEntry(
 /** displays the dialog's menu */
 SCIP_RETCODE SCIPdialogDisplayMenu(
    SCIP_DIALOG*          dialog,             /**< dialog */
-   SCIP*                 scip                /**< SCIP data structure */   
+   SCIP*                 scip                /**< SCIP data structure */
    )
 {
    int i;
@@ -1124,7 +1123,7 @@ SCIP_RETCODE SCIPdialogDisplayMenu(
 /** displays the entry for the dialog in it's parent's menu */
 SCIP_RETCODE SCIPdialogDisplayMenuEntry(
    SCIP_DIALOG*          dialog,             /**< dialog */
-   SCIP*                 scip                /**< SCIP data structure */   
+   SCIP*                 scip                /**< SCIP data structure */
    )
 {
    char name[SCIP_MAXSTRLEN];
@@ -1158,7 +1157,7 @@ SCIP_RETCODE SCIPdialogDisplayMenuEntry(
 /** displays all dialog entries with names starting with the given "entryname" */
 SCIP_RETCODE SCIPdialogDisplayCompletions(
    SCIP_DIALOG*          dialog,             /**< dialog */
-   SCIP*                 scip,               /**< SCIP data structure */   
+   SCIP*                 scip,               /**< SCIP data structure */
    const char*           entryname           /**< name of the dialog entry to find */
    )
 {

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2026 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -589,17 +589,8 @@ SCIP_RETCODE combineCols(
             for( j = 0; j < nvars; j++ )
             {
 #ifdef SCIP_MORE_DEBUG
-               SCIP_Real oldlb;
-               SCIP_Real oldub;
-#endif
-
-               /* catch the special case where the entire remaining constraint is cancelled */
-               if( j >= nvars )
-                  break;
-
-#ifdef SCIP_MORE_DEBUG
-               oldlb = newlbs[j];
-               oldub = newubs[j];
+               SCIP_Real oldlb = newlbs[j];
+               SCIP_Real oldub = newubs[j];
 #endif
 
                idx = varinds[j];
@@ -1662,11 +1653,10 @@ SCIP_RETCODE dualBoundStrengthening(
          {
             implubvars[nimplubvars] = i;
             nimplubvars++;
-         }
 
-         /* reset implied bounds for further detections of other implied bounds */
-         if( isubimplied[i] )
+            /* reset implied bounds for further detections of other implied bounds */
             tmpubs[i] = SCIPinfinity(scip);
+         }
 
          if( islbimplied[i] )
             tmplbs[i] = -SCIPinfinity(scip);

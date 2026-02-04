@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2026 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -76,12 +76,19 @@
  *
  * normally, SCIP_VARARGS_FIRST_ should be sufficient
  * the SCIP_VARARGS_FIRST_/SCIP_VARARGS_FIRST kludge is to work around a bug in MSVC (https://stackoverflow.com/questions/4750688/how-to-single-out-the-first-parameter-sent-to-a-macro-taking-only-a-variadic-par)
+ * (compiling with -Zc:preprocessor would disable the bug)
  */
 #define SCIP_VARARGS_FIRST_(firstarg, ...) firstarg
 #define SCIP_VARARGS_FIRST(args) SCIP_VARARGS_FIRST_ args
 
-/** get all but the first parameter from variadic arguments */
-#define SCIP_VARARGS_REST(firstarg, ...) __VA_ARGS__
+/** get all but the first parameter from variadic arguments
+ *
+ * normally, SCIP_VARARGS_REST_ should be sufficient
+ * the SCIP_VARARGS_REST_/SCIP_VARARGS_REST kludge is to work around a bug in MSVC
+ * (compiling with -Zc:preprocessor would disable the bug)
+ */
+#define SCIP_VARARGS_REST_(firstarg, ...) __VA_ARGS__
+#define SCIP_VARARGS_REST(args) SCIP_VARARGS_REST_ args
 
 /*
  * Boolean values
@@ -126,7 +133,7 @@
 #define SCIP_VERSION_SUB 0                 /**< @deprecated SCIP sub version number. Always 0. */
 #define SCIP_SUBVERSION  SCIP_VERSION_SUB  /**< @deprecated SCIP sub version number. Always 0. */
 #define SCIP_APIVERSION  SCIP_VERSION_API  /**< SCIP API version number */
-#define SCIP_COPYRIGHT   "Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)"
+#define SCIP_COPYRIGHT   "Copyright (c) 2002-2026 Zuse Institute Berlin (ZIB)"
 
 
 /*
@@ -154,8 +161,10 @@
  */
 
 #define SCIP_Real double                               /**< type used for floating point values */
+
 #define SCIP_REAL_MAX         (SCIP_Real)DBL_MAX
 #define SCIP_REAL_MIN        -(SCIP_Real)DBL_MAX
+#define SCIP_REAL_UNITROUNDOFF        (1.0 / 9007199254740992)
 #define SCIP_REAL_FORMAT               "lf"
 
 #define SCIP_DEFAULT_INFINITY         1e+20  /**< default value considered to be infinity */
@@ -197,13 +206,9 @@
 #define SQR(x)        ((x)*(x))
 #endif
 
-/* platform-dependent specification of the log1p, which is numerically more stable around x = 0.0 */
+/* specification of log1p, which is numerically more stable around x = 0.0 */
 #ifndef LOG1P
-#ifdef _WIN32
-#define LOG1P(x) (log(1.0+x))
-#else
 #define LOG1P(x) (log1p(x))
-#endif
 #endif
 
 #ifndef LOG2

@@ -13,7 +13,7 @@ set -e
 
 APPLICATIONS=$(for f in *;do if [[ -d $f  ]]; then echo $f;fi; done)
 
-LPSOLVERS=(spx2)
+LPSOLVERS=(spx)
 OPTS=(dbg)
 
 # parse command line

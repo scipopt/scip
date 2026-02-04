@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2026 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -231,7 +231,7 @@ SCIP_RETCODE parseBase(
       ++expr;
       debugParse("Done parsing expression, continue with <%s>\n", expr);
    }
-   else if( isdigit(*expr) )
+   else if( isdigit((unsigned char)*expr) )
    {
       /* parse number */
       SCIP_Real value;
@@ -241,9 +241,14 @@ SCIP_RETCODE parseBase(
          return SCIP_READERROR;
       }
       debugParse("Parsed value %g, creating a value-expression.\n", value);
+      if( !SCIPisFinite(value) || SCIPisInfinity(scip, value) )
+      {
+         SCIPerrorMessage("Infinite or nan term value expression within nonlinear expression %s\n", expr);
+         return SCIP_INVALIDDATA;
+      }
       SCIP_CALL( SCIPcreateExprValue(scip, basetree, value, ownercreate, ownercreatedata) );
    }
-   else if( isalpha(*expr) )
+   else if( isalpha((unsigned char)*expr) )
    {
       /* a (function) name is coming, should find exprhandler with such name */
       int i;
@@ -253,7 +258,7 @@ SCIP_RETCODE parseBase(
 
       /* get name */
       i = 0;
-      while( *expr != '(' && *expr != '\0' && !isspace(*expr)
+      while( *expr != '(' && *expr != '\0' && !isspace((unsigned char)*expr)
              && !( *expr == '\\' && *(expr+1) != '\0' && strchr(SCIP_SPACECONTROL, *(expr+1)) ) )
       {
          operatorname[i] = *expr;
@@ -386,7 +391,7 @@ SCIP_RETCODE parseFactor(
          /* no parenthesis, we should see just a positive number */
 
          /* expect a digit */
-         if( isdigit(*expr) )
+         if( isdigit((unsigned char)*expr) )
          {
             if( !SCIPstrToRealValue(expr, &exponent, (char**)&expr) )
             {
@@ -401,6 +406,13 @@ SCIP_RETCODE parseFactor(
             SCIP_CALL( SCIPreleaseExpr(scip, &basetree) );
             return SCIP_READERROR;
          }
+      }
+
+      if( !SCIPisFinite(exponent) || SCIPisInfinity(scip, exponent) )
+      {
+         SCIPerrorMessage("Infinite or nan term exponent in nonlinear expression %s\n", expr);
+         SCIP_CALL( SCIPreleaseExpr(scip, &basetree) );
+         return SCIP_INVALIDDATA;
       }
 
       debugParse("parsed the exponent %g\n", exponent); /*lint !e506 !e681*/
@@ -572,6 +584,13 @@ SCIP_RETCODE parseExpr(
          /* check if we have a "coef * <term>" */
          if( SCIPstrToRealValue(expr, &coef, (char**)newpos) )
          {
+            if( !SCIPisFinite(coef) || SCIPisInfinity(scip, coef) )
+            {
+               SCIPerrorMessage("Infinite or nan term coefficient in nonlinear expression %s\n", expr);
+               SCIP_CALL( SCIPreleaseExpr(scip, exprtree) );
+               return SCIP_INVALIDDATA;
+            }
+
             SCIP_CALL( SCIPskipSpace((char**)newpos) );
 
             if( **newpos == '<' )
@@ -1667,9 +1686,8 @@ SCIP_Longint SCIPgetExprNewSoltag(
 /** evaluates gradient of an expression for a given point
  *
  * Initiates an expression walk to also evaluate children, if necessary.
- * Value can be received via SCIPgetExprPartialDiffNonlinear().
- * If an error (division by zero, ...) occurs, this value will
- * be set to SCIP_INVALID.
+ * Value can be received from variable expressions via SCIPexprGetDerivative() or via SCIPgetExprPartialDiffNonlinear().
+ * If an error (division by zero, ...) occurs, these functions return SCIP_INVALID.
  */
 SCIP_RETCODE SCIPevalExprGradient(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -1709,7 +1727,7 @@ SCIP_RETCODE SCIPevalExprHessianDir(
    return SCIP_OKAY;
 }
 
-/** possibly reevaluates and then returns the activity of the expression
+/** possibly reevaluates the activity of the expression
  *
  * Reevaluate activity if currently stored is no longer uptodate (some bound was changed since last evaluation).
  *

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2026 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -36,7 +36,7 @@
 #include "scip/reader_rlp.h"
 #include "scip/scip_message.h"
 #include "scip/scip_reader.h"
-#include "scip/scip_solvingstats.h"
+#include "scip/scip_prob.h"
 #include <string.h>
 
 #define READER_NAME             "rlpreader"
@@ -80,8 +80,8 @@ SCIP_DECL_READERWRITE(readerWriteRlp)
 {  /*lint --e{715}*/
    if( genericnames )
    {
-      SCIP_CALL( SCIPwriteLp(scip, file, name, transformed, objsense, objscale, objoffset, vars,
-            nvars, nbinvars, nintvars, nimplvars, ncontvars, conss, nconss, result) );
+      SCIP_CALL( SCIPwriteLp(scip, file, name, transformed, objsense, objoffset, objscale, objoffsetexact, objscaleexact,
+            vars, nvars, nbinvars, nintvars, nimplvars, ncontvars, conss, nconss, result) );
    }
    else
    {

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2026 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -253,6 +253,22 @@ SCIP_RETCODE SCIPeventCreateUbChanged(
    SCIP_VAR*             var,                /**< variable whose bound changed */
    SCIP_Real             oldbound,           /**< old bound before bound changed */
    SCIP_Real             newbound            /**< new bound after bound changed */
+   );
+
+/** adds the data for the exact changes to existing bound event */
+SCIP_RETCODE SCIPeventAddExactBdChg(
+   SCIP_EVENT*           event,              /**< the event */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_RATIONAL*        oldbound,           /**< old bound before bound changed */
+   SCIP_RATIONAL*        newbound            /**< new bound after bound changed */
+   );
+
+/** adds the data for the exact changes to existing obj event */
+SCIP_RETCODE SCIPeventAddExactObjChg(
+   SCIP_EVENT*           event,              /**< the event */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_RATIONAL*        oldobj,             /**< old obj before change */
+   SCIP_RATIONAL*        newobj              /**< new obj after change */
    );
 
 /** creates an event for an addition of a global domain hole to a variable */

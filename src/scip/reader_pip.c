@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2026 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -2561,7 +2561,7 @@ SCIP_RETCODE printAggregatedCons(
    SCIP_VAR** activevars;
    SCIP_Real* activevals;
    int nactivevars;
-   SCIP_Real activeconstant = 0.0;
+   SCIP_Real activeconstant;
    char consname[PIP_MAX_NAMELEN];
 
    assert( scip != NULL );
@@ -2622,13 +2622,13 @@ SCIP_Bool isNameValid(
       return FALSE;
 
    /* names cannot start with a number */
-   if( isdigit(name[0]) )
+   if( isdigit((unsigned char)name[0]) )
       return FALSE;
 
    for( i = 0; i < len; ++i )
    {
       /* a-z, A-Z, 0-9 are ok */
-      if( isalnum(name[i]) )
+      if( isalnum((unsigned char)name[i]) )
          continue;
 
       /* characters in namechars are ok, too */
@@ -3266,6 +3266,9 @@ SCIP_RETCODE SCIPreadPip(
 
    assert(scip != NULL);  /* for lint */
    assert(reader != NULL);
+   assert(result != NULL);
+
+   *result = SCIP_DIDNOTRUN;
 
    /* initialize PIP input data */
    pipinput.file = NULL;

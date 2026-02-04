@@ -1,0 +1,2 @@
+# enable dynamic cut selector by setting priority to maximum
+cutselection/dynamic/priority = 1073741823

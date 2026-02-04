@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2026 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -46,7 +46,9 @@
  * Data structures
  */
 
-/* TODO: fill in the necessary branching rule data */
+/* TODO: fill in the necessary branching rule data
+ * when this plugin is written in C++, rename SCIP_BranchruleData to something unique (C++ One-Definition-Rule)
+ */
 
 /** branching rule data */
 struct SCIP_BranchruleData
@@ -225,7 +227,7 @@ SCIP_RETCODE SCIPincludeBranchruleXyz(
    /* use SCIPincludeBranchrule() if you want to set all callbacks explicitly and realize (by getting compiler errors) when
     * new callbacks are added in future SCIP versions
     */
-   SCIP_CALL( SCIPincludeBranchrule(scip, BRANCHRULE_NAME, BRANCHRULE_DESC, BRANCHRULE_PRIORITY, BRANCHRULE_MAXDEPTH, 
+   SCIP_CALL( SCIPincludeBranchrule(scip, BRANCHRULE_NAME, BRANCHRULE_DESC, BRANCHRULE_PRIORITY, BRANCHRULE_MAXDEPTH,
          BRANCHRULE_MAXBOUNDDIST,
          branchCopyXyz, branchFreeXyz, branchInitXyz, branchExitXyz, branchInitsolXyz, branchExitsolXyz,
          branchExeclpXyz, branchExecextXyz, branchExecpsXyz,

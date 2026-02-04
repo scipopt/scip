@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2026 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -50,7 +50,8 @@ extern "C" {
 SCIP_RETCODE SCIPcreateConcurrent(
    SCIP*                 scip,               /**< SCIP datastructure */
    SCIP_CONCSOLVER*      concsolver,         /**< concurrent solver of given SCIP instance */
-   int*                  varperm             /**< permutation of variables for communication */
+   int*                  varperm,            /**< permutation of variables for communication */
+   int                   nvars               /**< number of variables in problem */
    );
 
 /** get number of initialized concurrent solvers */
@@ -85,8 +86,7 @@ SCIP_RETCODE SCIPsynchronize(
    SCIP*                 scip                /**< SCIP datastructure */
    );
 
-/** pass a solution to the given SCIP instance using that was received via synchronization by using
- * the sync heuristic */
+/** pass a solution to the given SCIP instance that was received via synchronization by using the sync heuristic */
 SCIP_RETCODE SCIPaddConcurrentSol(
    SCIP*                 scip,               /**< SCIP datastructure */
    SCIP_SOL*             sol                 /**< solution */

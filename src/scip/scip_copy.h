@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2026 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -968,6 +968,8 @@ void SCIPsetSubscipDepth(
  *        typically incurs a performance cost.
  *  @note Do not change the source SCIP environment during the copying process
  *
+ *  @note Reoptimization and exact solving are explicitly disabled in the target-SCIP.
+ *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
  *
@@ -1042,6 +1044,8 @@ SCIP_RETCODE SCIPcopy(
  *        typically incurs a performance cost.
  *  @note Do not change the source SCIP environment during the copying process
  *
+ *  @note Reoptimization and exact solving are explicitly disabled in the target-SCIP.
+ *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
  *
@@ -1104,6 +1108,8 @@ SCIP_RETCODE SCIPcopyConsCompression(
  *        SCIP instances will be solved in parallel. The usual case is to set this to FALSE, since thread safety
  *        typically incurs a performance cost.
  *  @note Do not change the source SCIP environment during the copying process
+ *
+ *  @note Reoptimization and exact solving are explicitly disabled in the target-SCIP.
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
@@ -1171,6 +1177,8 @@ SCIP_RETCODE SCIPcopyOrig(
  *        SCIP instances will be solved in parallel. The usual case is to set this to FALSE, since thread safety
  *        typically incurs a performance cost.
  *  @note Do not change the source SCIP environment during the copying process
+ *
+ *  @note Reoptimization and exact solving are explicitly disabled in the target-SCIP.
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
@@ -1268,7 +1276,6 @@ SCIP_RETCODE SCIPcopyLimits(
    SCIP*                 sourcescip,         /**< source SCIP data structure */
    SCIP*                 targetscip          /**< target SCIP data structure */
    );
-
 
 /** sets the working limits as well as common search parameters for the auxiliary problem
  *

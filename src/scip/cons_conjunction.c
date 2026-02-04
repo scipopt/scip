@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2026 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -98,12 +98,12 @@ SCIP_RETCODE consdataCreate(
       }
       else
       {
-	 int c;
+         int c;
 
-	 for( c = 0; c < nconss; ++c )
-	 {
-	    SCIP_CALL( SCIPcaptureCons(scip, conss[c]) );
-	 }
+         for( c = 0; c < nconss; ++c )
+         {
+            SCIP_CALL( SCIPcaptureCons(scip, conss[c]) );
+         }
       }
    }
    else
@@ -196,12 +196,12 @@ SCIP_RETCODE addAllConss(
       /* add all inactive constraints to local subproblem */
       for( i = 0; i < consdata->nconss; ++i )
       {
-	 /* update check flag for sub constraints when upgrade takes place */
-	 if( SCIPconsIsChecked(conss[c]) )
-	 {
-	    /* make sure, the constraint is checked for feasibility */
-	    SCIP_CALL( SCIPsetConsChecked(scip, consdata->conss[i], TRUE) );
-	 }
+         /* update check flag for sub constraints when upgrade takes place */
+         if( SCIPconsIsChecked(conss[c]) )
+         {
+            /* make sure, the constraint is checked for feasibility */
+            SCIP_CALL( SCIPsetConsChecked(scip, consdata->conss[i], TRUE) );
+         }
 
          if( !SCIPconsIsActive(consdata->conss[i]) )
          {
@@ -345,7 +345,7 @@ SCIP_DECL_CONSTRANS(consTransConjunction)
    SCIP_CALL( SCIPcreateCons(scip, targetcons, SCIPconsGetName(sourcecons), conshdlr, targetdata,
          SCIPconsIsInitial(sourcecons), SCIPconsIsSeparated(sourcecons), SCIPconsIsEnforced(sourcecons),
          SCIPconsIsChecked(sourcecons), SCIPconsIsPropagated(sourcecons),
-         SCIPconsIsLocal(sourcecons), SCIPconsIsModifiable(sourcecons), 
+         SCIPconsIsLocal(sourcecons), SCIPconsIsModifiable(sourcecons),
          SCIPconsIsDynamic(sourcecons), SCIPconsIsRemovable(sourcecons), SCIPconsIsStickingAtNode(sourcecons)) );
 
    return SCIP_OKAY;
@@ -428,12 +428,12 @@ SCIP_DECL_CONSPRESOL(consPresolConjunction)
       /* add all inactive constraints to the global problem */
       for( i = 0; i < consdata->nconss; ++i )
       {
-	 /* update check flag for sub constraints when upgrade takes place */
-	 if( SCIPconsIsChecked(conss[c]) )
-	 {
-	    /* make sure, the constraint is checked for feasibility */
-	    SCIP_CALL( SCIPsetConsChecked(scip, consdata->conss[i], TRUE) );
-	 }
+         /* update check flag for sub constraints when upgrade takes place */
+         if( SCIPconsIsChecked(conss[c]) )
+         {
+            /* make sure, the constraint is checked for feasibility */
+            SCIP_CALL( SCIPsetConsChecked(scip, consdata->conss[i], TRUE) );
+         }
 
          /* add constraint, if it is not active yet */
          if( !SCIPconsIsActive(consdata->conss[i]) )
@@ -564,83 +564,83 @@ SCIP_DECL_CONSPARSE(consParseConjunction)
    {
       do
       {
-	 int bracketcounter = 0;
+         int bracketcounter = 0;
 
-	 if( *saveptr == '(' )
-	 {
-	    do
-	    {
-	       ++bracketcounter;
-	       ++saveptr;
+         if( *saveptr == '(' )
+         {
+            do
+            {
+               ++bracketcounter;
+               ++saveptr;
 
-	       /* find last ending bracket */
-	       while( bracketcounter > 0 )
-	       {
-		  saveptr = strpbrk(saveptr, "()");
+               /* find last ending bracket */
+               while( bracketcounter > 0 )
+               {
+                  saveptr = strpbrk(saveptr, "()");
 
-		  if( saveptr != NULL )
-		  {
-		     if( *saveptr == '(' )
-			++bracketcounter;
-		     else
-			--bracketcounter;
+                  if( saveptr != NULL )
+                  {
+                     if( *saveptr == '(' )
+                        ++bracketcounter;
+                     else
+                        --bracketcounter;
 
-		     ++saveptr;
-		  }
-		  else
-		  {
-		     SCIPdebugMsg(scip, "error parsing conjunctive constraint: \"%s\"\n", str);
-		     *success = FALSE;
-		     goto TERMINATE;
-		  }
-	       }
+                     ++saveptr;
+                  }
+                  else
+                  {
+                     SCIPdebugMsg(scip, "error parsing conjunctive constraint: \"%s\"\n", str);
+                     *success = FALSE;
+                     goto TERMINATE;
+                  }
+               }
 
-	       saveptr = strpbrk(saveptr, "(,");
-	    }
-	    while( saveptr != NULL && *saveptr == '(' );
-	 }
+               saveptr = strpbrk(saveptr, "(,");
+            }
+            while( saveptr != NULL && *saveptr == '(' );
+         }
 
-	 /* we found a ',' so the end of the first sub-constraint is determined */
-	 if( saveptr != NULL )
-	 {
-	    assert(*saveptr == ',');
+         /* we found a ',' so the end of the first sub-constraint is determined */
+         if( saveptr != NULL )
+         {
+            assert(*saveptr == ',');
 
-	    /* resize constraint array if necessary */
-	    if( nconss == sconss )
-	    {
-	       sconss = SCIPcalcMemGrowSize(scip, nconss+1);
-	       assert(nconss < sconss);
+            /* resize constraint array if necessary */
+            if( nconss == sconss )
+            {
+               sconss = SCIPcalcMemGrowSize(scip, nconss+1);
+               assert(nconss < sconss);
 
-	       SCIP_CALL( SCIPreallocBufferArray(scip, &conss, sconss) );
-	    }
+               SCIP_CALL( SCIPreallocBufferArray(scip, &conss, sconss) );
+            }
             assert(nexttokenstart != NULL); /* for lint */
-	    assert(saveptr > nexttokenstart);
+            assert(saveptr > nexttokenstart);
 
-	    /* extract token for parsing */
-	    SCIP_CALL( SCIPduplicateBufferArray(scip, &token, nexttokenstart, saveptr - nexttokenstart + 1) );
-	    token[saveptr - nexttokenstart] = '\0';
+            /* extract token for parsing */
+            SCIP_CALL( SCIPduplicateBufferArray(scip, &token, nexttokenstart, saveptr - nexttokenstart + 1) );
+            token[saveptr - nexttokenstart] = '\0';
 
-	    SCIPdebugMsg(scip, "conjunctive parsing token(constraint): %s\n", token);
+            SCIPdebugMsg(scip, "conjunctive parsing token(constraint): %s\n", token);
 
-	    /* parsing a constraint, part of the conjunction */
-	    SCIP_CALL( SCIPparseCons(scip, &(conss[nconss]), token, initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode, success) );
+            /* parsing a constraint, part of the conjunction */
+            SCIP_CALL( SCIPparseCons(scip, &(conss[nconss]), token, initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode, success) );
 
-	    SCIPfreeBufferArray(scip, &token);
+            SCIPfreeBufferArray(scip, &token);
 
-	    if( *success )
-	       ++nconss;
-	    else
-	    {
-	       SCIPdebugMsg(scip, "error parsing conjunctive constraint: \"%s\"\n", str);
-	       goto TERMINATE;
-	    }
-	    /* skip ',' delimeter */
-	    ++saveptr;
-	    /* remember token start position */
-	    nexttokenstart = saveptr;
+            if( *success )
+               ++nconss;
+            else
+            {
+               SCIPdebugMsg(scip, "error parsing conjunctive constraint: \"%s\"\n", str);
+               goto TERMINATE;
+            }
+            /* skip ',' delimeter */
+            ++saveptr;
+            /* remember token start position */
+            nexttokenstart = saveptr;
 
-	    saveptr = strpbrk(saveptr, "(,");
-	 }
+            saveptr = strpbrk(saveptr, "(,");
+         }
       }
       while( saveptr != NULL );
    }
@@ -660,8 +660,8 @@ SCIP_DECL_CONSPARSE(consParseConjunction)
       /* resize constraint array if necessary */
       if( nconss == sconss )
       {
-	 ++sconss;
-	 SCIP_CALL( SCIPreallocBufferArray(scip, &conss, sconss) );
+         ++sconss;
+         SCIP_CALL( SCIPreallocBufferArray(scip, &conss, sconss) );
       }
 
       assert(saveptr > nexttokenstart);
@@ -676,7 +676,7 @@ SCIP_DECL_CONSPARSE(consParseConjunction)
       SCIP_CALL( SCIPparseCons(scip, &(conss[nconss]), token, initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode, success) );
 
       if( *success )
-	 ++nconss;
+         ++nconss;
 
       SCIPfreeBufferArray(scip, &token);
    }
@@ -687,7 +687,7 @@ SCIP_DECL_CONSPARSE(consParseConjunction)
    {
       /* create conjunctive constraint */
       SCIP_CALL( SCIPcreateConsConjunction(scip, cons, name, nconss, conss,
-	    enforce, check, local, modifiable, dynamic) );
+            enforce, check, local, modifiable, dynamic) );
    }
 
    /* free parsed constraints */
@@ -821,7 +821,7 @@ SCIP_RETCODE SCIPcreateConsConjunction(
                                               *   Usually set to FALSE. In column generation applications, set to TRUE if pricing
                                               *   adds coefficients to this constraint. */
    SCIP_Bool             dynamic             /**< is constraint subject to aging?
-                                              *   Usually set to FALSE. Set to TRUE for own cuts which 
+                                              *   Usually set to FALSE. Set to TRUE for own cuts which
                                               *   are separated as constraints. */
    )
 {

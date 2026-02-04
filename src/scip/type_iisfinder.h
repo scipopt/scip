@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2026 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -78,10 +78,6 @@ typedef struct SCIP_IIS SCIP_IIS;                     /**< IIS storage data stru
  *  input:
  *  - iis             : The IIS data structure. It contains a subscip.
  *  - iisfinder       : the IIS finder itself
- *  - timelim         : The time limit for the total run
- *  - nodelim         : The node limit for the total run
- *  - removebounds    : Whether bounds should also be considered for removal by the IIS finder
- *  - silent          : Whether algorithm specific information should be output during calculations
  *  - result          : pointer to store the result of the IIS finder call
  *
  *  possible return values for *result (if more than one applies, the first in the list should be used):
@@ -89,7 +85,7 @@ typedef struct SCIP_IIS SCIP_IIS;                     /**< IIS storage data stru
  *  - SCIP_DIDNOTFIND : the IIS finder did not find a small enough infeasible subsystem.
  *  - SCIP_DIDNOTRUN  : the IIS finder did not run because some criteria was not satisfied
  */
-#define SCIP_DECL_IISFINDEREXEC(x) SCIP_RETCODE x (SCIP_IIS* iis, SCIP_IISFINDER* iisfinder, SCIP_Real timelim, SCIP_Longint nodelim, SCIP_Bool removebounds, SCIP_Bool silent, SCIP_RESULT* result)
+#define SCIP_DECL_IISFINDEREXEC(x) SCIP_RETCODE x (SCIP_IIS* iis, SCIP_IISFINDER* iisfinder, SCIP_RESULT* result)
 
 #ifdef __cplusplus
 }

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2026 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -57,8 +57,8 @@
 #define HEUR_TIMING           SCIP_HEURTIMING_DURINGLPLOOP
 #define HEUR_USESSUBSCIP      FALSE          /**< does the heuristic use a secondary SCIP instance? */
 
-#define DEFAULT_SUCCESSFACTOR 100            /**< number of calls per found solution that are considered as standard success, 
-                                              * a higher factor causes the heuristic to be called more often 
+#define DEFAULT_SUCCESSFACTOR 100            /**< number of calls per found solution that are considered as standard success,
+                                              * a higher factor causes the heuristic to be called more often
                                               */
 #define DEFAULT_ONCEPERNODE   FALSE          /**< should the heuristic only be called once per node? */
 
@@ -67,8 +67,8 @@ struct SCIP_HeurData
 {
    SCIP_SOL*             sol;                /**< working solution */
    SCIP_Longint          lastlp;             /**< last LP number where the heuristic was applied */
-   int                   successfactor;      /**< number of calls per found solution that are considered as standard success, 
-                                              * a higher factor causes the heuristic to be called more often 
+   int                   successfactor;      /**< number of calls per found solution that are considered as standard success,
+                                              * a higher factor causes the heuristic to be called more often
                                               */
    SCIP_Bool             oncepernode;        /**< should the heuristic only be called once per node? */
 };
@@ -254,7 +254,7 @@ SCIP_RETCODE selectRounding(
       col = rowcols[c];
       var = SCIPcolGetVar(col);
 
-      if( SCIPvarIsNonimpliedIntegral(var) )
+      if( SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS )
       {
          solval = SCIPgetSolVal(scip, sol, var);
 
@@ -375,7 +375,7 @@ SCIP_RETCODE selectEssentialRounding(
    for( v = 0; v < nlpcands; ++v )
    {
       var = lpcands[v];
-      assert(SCIPvarIsNonimpliedIntegral(var));
+      assert(SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS);
 
       solval = SCIPgetSolVal(scip, sol, var);
       if( !SCIPisFeasIntegral(scip, solval) )
@@ -536,9 +536,9 @@ SCIP_DECL_HEUREXEC(heurExecRounding) /*lint --e{715}*/
    SCIP_Real obj;
    SCIP_Real bestroundval;
    SCIP_Real minobj;
+   int nfrac;
    int nlpcands;
    int nlprows;
-   int nfrac;
    int nviolrows;
    int c;
    int r;
@@ -581,10 +581,9 @@ SCIP_DECL_HEUREXEC(heurExecRounding) /*lint --e{715}*/
 
    /* get fractional variables, that should be integral */
    SCIP_CALL( SCIPgetLPBranchCands(scip, &lpcands, &lpcandssol, NULL, &nlpcands, NULL, NULL) );
-   nfrac = nlpcands;
 
    /* only call heuristic, if LP solution is fractional */
-   if( nfrac == 0 )
+   if( nlpcands == 0 )
       return SCIP_OKAY;
 
    *result = SCIP_DIDNOTFIND;
@@ -592,9 +591,10 @@ SCIP_DECL_HEUREXEC(heurExecRounding) /*lint --e{715}*/
    /* get LP rows */
    SCIP_CALL( SCIPgetLPRowsData(scip, &lprows, &nlprows) );
 
-   SCIPdebugMsg(scip, "executing rounding heuristic: %d LP rows, %d fractionals\n", nlprows, nfrac);
+   SCIPdebugMsg(scip, "executing rounding heuristic: %d LP rows, %d LP candidates\n", nlprows, nlpcands);
 
    /* get memory for activities, violated rows, and row violation positions */
+   nfrac = nlpcands;
    SCIP_CALL( SCIPallocBufferArray(scip, &activities, nlprows) );
    SCIP_CALL( SCIPallocBufferArray(scip, &violrows, nlprows) );
    SCIP_CALL( SCIPallocBufferArray(scip, &violrowpos, nlprows) );
@@ -701,7 +701,7 @@ SCIP_DECL_HEUREXEC(heurExecRounding) /*lint --e{715}*/
          SCIPvarGetName(roundvar), oldsolval, newsolval, SCIPvarGetObj(roundvar));
 
       /* update row activities of globally valid rows */
-      SCIP_CALL( updateActivities(scip, activities, violrows, violrowpos, &nviolrows, nlprows, 
+      SCIP_CALL( updateActivities(scip, activities, violrows, violrowpos, &nviolrows, nlprows,
             roundvar, oldsolval, newsolval) );
 
       /* store new solution value and decrease fractionality counter */
@@ -771,6 +771,9 @@ SCIP_RETCODE SCIPincludeHeurRounding(
          HEUR_MAXDEPTH, HEUR_TIMING, HEUR_USESSUBSCIP, heurExecRounding, heurdata) );
 
    assert(heur != NULL);
+
+   /* primal heuristic is safe to use in exact solving mode */
+   SCIPheurMarkExact(heur);
 
    /* set non-NULL pointers to callback methods */
    SCIP_CALL( SCIPsetHeurCopy(scip, heur, heurCopyRounding) );

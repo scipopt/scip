@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2026 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -50,6 +50,7 @@
 #include "scip/scip_param.h"
 #include "scip/scip_prob.h"
 #include "scip/scip_sol.h"
+#include "scip/type_message.h"
 #include <string.h>
 
 #define BENDERSCUT_NAME             "integer"
@@ -114,7 +115,6 @@ SCIP_RETCODE createBenderscutData(
    /* allocating the memory for the subproblem constants */
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &benderscutdata->subprobconstant, benderscutdata->nsubproblems) );
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &benderscutdata->firstcut, benderscutdata->nsubproblems) );
-
 
    for( i = 0; i < benderscutdata->nsubproblems; i++ )
    {
@@ -600,8 +600,8 @@ SCIP_DECL_BENDERSCUTEXEC(benderscutExecInt)
    /* it is only possible to generate the Laporte and Louveaux cuts when the linking variables are all binary */
    if( !benderscutdata->subprobsvalid )
    {
-      SCIPinfoMessage(scip, NULL, "The integer optimality cuts can only be applied to problems "
-         "where all linking variables are binary. The integer optimality cuts will be disabled.\n");
+      SCIPwarningMessage(scip, "The integer optimality cuts have been disabled because some linking variables are not binary.\n"
+         "Since there is at least one non-convex subproblem, i.e. not LP or convex NLP, the problem will be solved heuristically.\n");
 
       SCIPbenderscutSetEnabled(benderscut, FALSE);
 

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2026 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -103,7 +103,7 @@ SCIP_RETCODE SCIPtreemodelSelectCandidate(
    SCIP_Real*            tiebreakerscore,    /**< scores to use for tie breaking */
    int                   nbranchcands,       /**< the number of branching candidates */
    int*                  bestcand            /**< the best branching candidate found before the call,
-					          and the best candidate after the call (possibly the same) */
+                                                  and the best candidate after the call (possibly the same) */
 );
 
 #ifdef __cplusplus

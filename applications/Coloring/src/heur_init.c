@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2026 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -32,7 +32,7 @@
  *
  * The heuristic is called only one time: before solving the root node.
  *
- * It checks, whether a solution-file was read in and a starting solution already exists.  If this
+ * It checks whether a solution-file was read in and a starting solution already exists.  If this
  * is not the case, an initial possible coloring is computed by a greedy method.  After that, a
  * tabu-search is called, which tries to reduce the number of colors needed. The tabu-search algorithm
  * follows the description in

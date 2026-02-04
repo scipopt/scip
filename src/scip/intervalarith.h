@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2026 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -37,6 +37,7 @@
 
 
 #include "scip/def.h"
+#include "scip/type_rational.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -134,6 +135,13 @@ void SCIPintervalSet(
    SCIP_Real             value               /**< value to store */
    );
 
+/** stores given value as interval */
+SCIP_EXPORT
+void SCIPintervalSetRational(
+   SCIP_INTERVAL*        resultant,          /**< interval to store value into */
+   SCIP_RATIONAL*        value               /**< value to store */
+   );
+
 /** stores given infimum and supremum as interval */
 SCIP_EXPORT
 void SCIPintervalSetBounds(
@@ -189,7 +197,7 @@ SCIP_Bool SCIPintervalIsNegativeInfinity(
  * speed up the algorithms.
  * With SCIPintervalSetBounds we need to be a bit careful, since i and s could use resultant->inf and resultant->sup,
  * e.g., SCIPintervalSetBounds(&resultant, -resultant->sup, -resultant->inf).
- * So we need to make sure that we first evaluate both terms before setting resultant. 
+ * So we need to make sure that we first evaluate both terms before setting resultant.
  */
 
 #define SCIPintervalGetInf(interval)               (interval).inf
@@ -460,7 +468,7 @@ void SCIPintervalSquareRoot(
    );
 
 /** stores operand1 to the power of operand2 in resultant
- * 
+ *
  * uses SCIPintervalPowerScalar if operand2 is a scalar, otherwise computes exp(op2*log(op1))
  */
 SCIP_EXPORT
@@ -544,7 +552,7 @@ void SCIPintervalPowerScalarInverse(
    );
 
 /** stores operand1 to the signed power of the scalar positive operand2 in resultant
- * 
+ *
  * The signed power of x w.r.t. an exponent n &ge; 0 is given as \f$\mathrm{sign}(x) |x|^n\f$.
  *
  * @attention we assume correctly rounded sqrt(double) and pow(double) functions when rounding is to nearest
@@ -604,6 +612,12 @@ void SCIPintervalMax(
    SCIP_INTERVAL         operand2            /**< second operand of operation */
    );
 
+/** returns the maximum of the absolute values of the infimum and supremum of the interval */
+SCIP_EXPORT
+SCIP_Real SCIPintervalAbsMax(
+   SCIP_INTERVAL         interval            /**< interval */
+   );
+
 /** stores absolute value of operand in resultant */
 SCIP_EXPORT
 void SCIPintervalAbs(
@@ -645,7 +659,7 @@ void SCIPintervalEntropy(
    );
 
 /** computes exact upper bound on \f$ a x^2 + b x \f$ for x in [xlb, xub], b an interval, and a scalar
- * 
+ *
  * Uses Algorithm 2.2 from Domes and Neumaier: Constraint propagation on quadratic constraints (2008).
  */
 SCIP_EXPORT
@@ -657,7 +671,7 @@ SCIP_Real SCIPintervalQuadUpperBound(
    );
 
 /** stores range of quadratic term in resultant
- * 
+ *
  * given scalar a and intervals b and x, computes interval for \f$ a x^2 + b x \f$ */
 SCIP_EXPORT
 void SCIPintervalQuad(
@@ -670,7 +684,7 @@ void SCIPintervalQuad(
 
 
 /** computes interval with positive solutions of a quadratic equation with interval coefficients
- * 
+ *
  * Given intervals a, b, and c, this function computes an interval that contains all positive solutions of \f$ a x^2 + b x \in c\f$ within xbnds.
  */
 SCIP_EXPORT
@@ -698,7 +712,7 @@ void SCIPintervalSolveUnivariateQuadExpressionNegative(
    );
 
 /** computes positive solutions of a quadratic equation with scalar coefficients
- * 
+ *
  * Givens scalar a, b, and c, this function computes an interval that contains all positive solutions of \f$ a x^2 + b x \geq c\f$ within xbnds.
  * Implements Algorithm 3.2 from Domes and Neumaier: Constraint propagation on quadratic constraints (2008).
  */

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2026 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -978,10 +978,17 @@ SCIP_RETCODE reconvertSides(
    int nrows;
    int i;
 
-   nrows = lastrow-firstrow+1;
-
    assert(lpi != NULL);
+   assert(firstrow >= 0);
+   nrows = lastrow - firstrow + 1;
    assert(nrows >= 0);
+#ifndef NDEBUG
+   {
+      int ntotalrows;
+      SCIP_CALL( SCIPlpiGetNRows(lpi, &ntotalrows) );
+      assert(lastrow < ntotalrows);
+   }
+#endif
 
    for (i = 0; i < nrows; ++i)
    {
@@ -1193,14 +1200,16 @@ SCIP_RETCODE addRangeInfo(
    int r;
    int i;
 
-   assert( lpi != NULL );
+   assert(lpi != NULL);
+   assert(rngcount >= 0);
+   assert(firstrow >= 0);
 
    /* get rid of range variables */
-   if ( lpi->rngvarsadded )
+   if( lpi->rngvarsadded )
    {
       SCIP_CALL( delRangeVars(lpi) );
    }
-   assert( !lpi->rngvarsadded );
+   assert(!lpi->rngvarsadded);
 
    /* query problem size in terms of SCIP's view */
    SCIP_CALL( SCIPlpiGetNCols(lpi, &ncols) );
@@ -1208,14 +1217,14 @@ SCIP_RETCODE addRangeInfo(
 
    /* set up and extend rngrowmap array */
    SCIP_CALL( ensureRngrowmapMem(lpi, nrows) );
-   for (r = firstrow; r < nrows; r++)
+   for( r = firstrow; r < nrows; r++ )
       lpi->rngrowmap[r] = -1;
 
    /* extend rngrows and rngvals arrays */
    SCIP_CALL( ensureRngrowsMem(lpi, lpi->nrngrows + rngcount) );
 
    /* update maps for ranged rows */
-   for (i = 0; i < rngcount; i++)
+   for( i = 0; i < rngcount; i++ )
    {
       int pos;
       int row;
@@ -1711,20 +1720,24 @@ SCIP_RETCODE SCIPlpiDelCols(
    int* which;
    int j;
 
-   ndelcols = lastcol-firstcol+1;
-
    assert(lpi != NULL);
    assert(lpi->grbmodel != NULL);
+   assert(firstcol >= 0);
+   ndelcols = lastcol - firstcol + 1;
+   assert(ndelcols >= 0);
 #ifndef NDEBUG
    {
-      int temp;
-
-      SCIP_CALL( SCIPlpiGetNCols(lpi, &temp) );
-      assert(0 <= firstcol && firstcol <= lastcol && lastcol < temp);
+      int ncols;
+      SCIP_CALL( SCIPlpiGetNCols(lpi, &ncols) );
+      assert(lastcol < ncols);
    }
 #endif
 
-   SCIPdebugMessage("deleting %d columns from Gurobi\n", lastcol - firstcol + 1);
+   SCIPdebugMessage("deleting %d columns from Gurobi\n", ndelcols);
+
+   /* handle empty range */
+   if( ndelcols <= 0 )  /* cppcheck-suppress knownConditionTrueFalse */
+      return SCIP_OKAY;
 
    invalidateSolution(lpi);
 
@@ -1888,19 +1901,24 @@ SCIP_RETCODE SCIPlpiDelRows(
    int* which;
    int i;
 
-   ndelrows = lastrow-firstrow+1;
-
    assert(lpi != NULL);
    assert(lpi->grbmodel != NULL);
+   assert(firstrow >= 0);
+   ndelrows = lastrow - firstrow + 1;
+   assert(ndelrows >= 0);
 #ifndef NDEBUG
    {
       int nrows;
       SCIP_CALL( SCIPlpiGetNRows(lpi, &nrows) );
-      assert(0 <= firstrow && firstrow <= lastrow && lastrow < nrows);
+      assert(lastrow < nrows);
    }
 #endif
 
    SCIPdebugMessage("deleting %d rows from Gurobi\n", ndelrows);
+
+   /* handle empty range */
+   if( ndelrows <= 0 )  /* cppcheck-suppress knownConditionTrueFalse */
+      return SCIP_OKAY;
 
    invalidateSolution(lpi);
 
@@ -2589,11 +2607,13 @@ SCIP_RETCODE SCIPlpiGetCols(
    assert(lpi->grbmodel != NULL);
    assert((lb != NULL && ub != NULL) || (lb == NULL && ub == NULL));
    assert((nnonz != NULL && beg != NULL && ind != NULL && val != NULL) || (nnonz == NULL && beg == NULL && ind == NULL && val == NULL));
+   assert(firstcol >= 0);
+   assert(firstcol <= lastcol + 1);
 #ifndef NDEBUG
    {
       int ncols;
       SCIP_CALL( SCIPlpiGetNCols(lpi, &ncols) );
-      assert(0 <= firstcol && firstcol <= lastcol && lastcol < ncols);
+      assert(lastcol < ncols);
    }
 #endif
 
@@ -2634,12 +2654,13 @@ SCIP_RETCODE SCIPlpiGetRows(
    assert(lpi->grbmodel != NULL);
    assert((lhs == NULL && rhs == NULL) || (rhs != NULL && lhs != NULL));
    assert((nnonz != NULL && beg != NULL && ind != NULL && val != NULL) || (nnonz == NULL && beg == NULL && ind == NULL && val == NULL));
-
+   assert(firstrow >= 0);
+   assert(firstrow <= lastrow + 1);
 #ifndef NDEBUG
    {
       int nrows;
       SCIP_CALL( SCIPlpiGetNRows(lpi, &nrows) );
-      assert(0 <= firstrow && firstrow <= lastrow && lastrow < nrows);
+      assert(lastrow < nrows);
    }
 #endif
 
@@ -2663,7 +2684,7 @@ SCIP_RETCODE SCIPlpiGetRows(
       /* get matrix entries */
       CHECK_ZERO( lpi->messagehdlr, GRBgetconstrs(lpi->grbmodel, nnonz, beg, ind, val, firstrow, lastrow-firstrow+1) );
 
-      if ( lpi->rngvarsadded )
+      if( lpi->rngvarsadded )
       {
          int i;
 
@@ -2671,31 +2692,32 @@ SCIP_RETCODE SCIPlpiGetRows(
          assert(lpi->rngrows != NULL);
 
          /* remove non-zeros for range variables from rows */
-         for (i = firstrow; i <= lastrow; i++)
+         for( i = firstrow; i <= lastrow; i++ )
          {
             assert(-1 <= lpi->rngrowmap[i] && lpi->rngrowmap[i] < lpi->nrngrows);
-            if ( lpi->rngrowmap[i] >= 0 )
+            if( lpi->rngrowmap[i] >= 0 )
                break;
          }
-         if ( i <= lastrow )
+         if( i <= lastrow )
          {
             /* skip last non-zero of this first ranged row */
             int newnz = (i < lastrow ? beg[i - firstrow +1]-1 : (*nnonz)-1); /*lint !e661*/
 
             /* process remaining rows, moving non-zeros to the front */
-            for (; i <= lastrow; i++)
+            for( ; i <= lastrow; i++ )
             {
                int thebeg;
                int theend;
 
+               assert(i >= firstrow);
                thebeg = beg[i - firstrow]; /*lint !e661*/
                theend = (i < lastrow ? beg[i - firstrow +1] : *nnonz);
 
                assert(-1 <= lpi->rngrowmap[i] && lpi->rngrowmap[i] < lpi->nrngrows);
-               if ( lpi->rngrowmap[i] >= 0 )
+               if( lpi->rngrowmap[i] >= 0 )
                   theend--;
 
-               assert( theend >= thebeg );
+               assert(theend >= thebeg);
                memmove(&ind[newnz], &ind[thebeg], ((size_t) (theend - thebeg)) * sizeof(*ind)); /*lint !e776 !e571*/
                memmove(&val[newnz], &val[thebeg], ((size_t) (theend - thebeg)) * sizeof(*val)); /*lint !e776 !e571*/
                beg[i - firstrow] = newnz; /*lint !e661*/
@@ -2727,8 +2749,18 @@ SCIP_RETCODE SCIPlpiGetColNames(
    assert(namestorage != NULL || namestoragesize == 0);
    assert(namestoragesize >= 0);
    assert(storageleft != NULL);
-   assert(0 <= firstcol && firstcol <= lastcol);
+   assert(firstcol >= 0);
+   assert(firstcol <= lastcol + 1);
+#ifndef NDEBUG
+   {
+      int ncols;
+      SCIP_CALL( SCIPlpiGetNCols(lpi, &ncols) );
+      assert(lastcol < ncols);
+   }
+#endif
+
    SCIPerrorMessage("SCIPlpiGetColNames() has not been implemented yet.\n");
+
    return SCIP_LPERROR;
 }
 
@@ -2749,8 +2781,18 @@ SCIP_RETCODE SCIPlpiGetRowNames(
    assert(namestorage != NULL || namestoragesize == 0);
    assert(namestoragesize >= 0);
    assert(storageleft != NULL);
-   assert(0 <= firstrow && firstrow <= lastrow);
+   assert(firstrow >= 0);
+   assert(firstrow <= lastrow + 1);
+#ifndef NDEBUG
+   {
+      int nrows;
+      SCIP_CALL( SCIPlpiGetNRows(lpi, &nrows) );
+      assert(lastrow < nrows);
+   }
+#endif
+
    SCIPerrorMessage("SCIPlpiGetRowNames() has not been implemented yet.\n");
+
    return SCIP_LPERROR;
 }
 
@@ -2786,8 +2828,16 @@ SCIP_RETCODE SCIPlpiGetObj(
 {
    assert(lpi != NULL);
    assert(lpi->grbmodel != NULL);
-   assert(firstcol <= lastcol);
    assert(vals != NULL);
+   assert(firstcol >= 0);
+   assert(firstcol <= lastcol + 1);
+#ifndef NDEBUG
+   {
+      int ncols;
+      SCIP_CALL( SCIPlpiGetNCols(lpi, &ncols) );
+      assert(lastcol < ncols);
+   }
+#endif
 
    SCIPdebugMessage("getting objective values %d to %d\n", firstcol, lastcol);
 
@@ -2807,11 +2857,13 @@ SCIP_RETCODE SCIPlpiGetBounds(
 {
    assert(lpi != NULL);
    assert(lpi->grbmodel != NULL);
+   assert(firstcol >= 0);
+   assert(firstcol <= lastcol + 1);
 #ifndef NDEBUG
    {
       int ncols;
       SCIP_CALL( SCIPlpiGetNCols(lpi, &ncols) );
-      assert(0 <= firstcol && firstcol <= lastcol && lastcol < ncols);
+      assert(lastcol < ncols);
    }
 #endif
 
@@ -2841,7 +2893,15 @@ SCIP_RETCODE SCIPlpiGetSides(
 {
    assert(lpi != NULL);
    assert(lpi->grbmodel != NULL);
-   assert(firstrow <= lastrow);
+   assert(firstrow >= 0);
+   assert(firstrow <= lastrow + 1);
+#ifndef NDEBUG
+   {
+      int nrows;
+      SCIP_CALL( SCIPlpiGetNRows(lpi, &nrows) );
+      assert(lastrow < nrows);
+   }
+#endif
 
    SCIPdebugMessage("getting row sides %d to %d\n", firstrow, lastrow);
 
@@ -4153,28 +4213,35 @@ SCIP_RETCODE SCIPlpiGetObjval(
 {
    int ret;
 
-#ifndef NDEBUG
-   double oval = GRB_INFINITY;
-   double obnd = -GRB_INFINITY;
-#endif
-
    assert(lpi != NULL);
    assert(lpi->grbmodel != NULL);
    assert(objval != NULL);
 
    SCIPdebugMessage("getting solution's objective value\n");
 
-#ifndef NDEBUG
-   (void)GRBgetdblattr(lpi->grbmodel, GRB_DBL_ATTR_OBJVAL, &oval);
-   (void)GRBgetdblattr(lpi->grbmodel, GRB_DBL_ATTR_OBJBOUND, &obnd);
-
-   assert(lpi->solstat != GRB_OPTIMAL || oval == obnd); /*lint !e777*/
-#endif
-
    /* obtain objective value */
    ret = GRBgetdblattr(lpi->grbmodel, GRB_DBL_ATTR_OBJVAL, objval);
    assert( ret == 0 || ret == GRB_ERROR_DATA_NOT_AVAILABLE );
    SCIP_UNUSED(ret);
+
+#ifndef NDEBUG
+   {
+      /* in older version the barrier method does not seem to return valid objective bounds */
+#if GRB_VERSION_MAJOR < 12
+      double obnd = -GRB_INFINITY;
+      int algo;
+      (void)GRBgetdblattr(lpi->grbmodel, GRB_DBL_ATTR_OBJBOUND, &obnd);
+      (void)GRBgetintparam(lpi->grbenv, GRB_INT_PAR_METHOD, &algo);
+      assert(algo == GRB_METHOD_BARRIER || lpi->solstat != GRB_OPTIMAL || *objval == obnd); /*lint !e777*/
+#else
+      double obnd;
+      double eps;
+      (void)GRBgetdblattr(lpi->grbmodel, GRB_DBL_ATTR_OBJBOUND, &obnd);
+      (void)GRBgetdblparam(lpi->grbenv, GRB_DBL_PAR_FEASIBILITYTOL, &eps);
+      assert(lpi->solstat != GRB_OPTIMAL || fabs(*objval - obnd) <= eps); /*lint !e777*/
+#endif
+   }
+#endif
 
    /* return minus infinity if value not available and we reached the iteration limit (see lpi_cpx) */
    if( lpi->solstat == GRB_ITERATION_LIMIT )
@@ -5362,7 +5429,7 @@ SCIP_RETCODE SCIPlpiFreeState(
    return SCIP_OKAY;
 }
 
-/** checks, whether the given LP state contains simplex basis information */
+/** checks whether the given LP state contains simplex basis information */
 SCIP_Bool SCIPlpiHasStateBasis(
    SCIP_LPI*             lpi,                /**< LP interface structure */
    SCIP_LPISTATE*        lpistate            /**< LP state information (like basis information), or NULL */

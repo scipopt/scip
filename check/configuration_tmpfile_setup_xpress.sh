@@ -4,7 +4,7 @@
 #*                  This file is part of the program and library             *
 #*         SCIP --- Solving Constraint Integer Programs                      *
 #*                                                                           *
-#*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      *
+#*  Copyright (c) 2002-2026 Zuse Institute Berlin (ZIB)                      *
 #*                                                                           *
 #*  Licensed under the Apache License, Version 2.0 (the "License");          *
 #*  you may not use this file except in compliance with the License.         *
@@ -49,6 +49,7 @@ VISUALIZE="${18}"      # - true, if the branch-and-bound search should be visual
 SOLUFILE="${19}"       # - solu file, only necessary if ${SETCUTOFF} is 1
 EMPHBENCHMARK="${20}"  # - use set emphasis benchmark
 CLOCKTYPE="${21}"      # - clocktype (1 = CPU, 2 = wallclock) - currently ignored by XPRESS
+WITHCERTIFICATE="${22}" # - true, if a certificate file should be created - currently ignored by XPRESS
 
 # new environment variables after running this script
 # -None
@@ -58,31 +59,31 @@ SOLFILE="${CLIENTTMPDIR}/${USER}-tmpdir/${SOLBASENAME}.sol"
 
 if test "${p}" -gt 0
 then
-    echo "Warning: XPRESS configuration currently cannot handle instance permutation"
+    echo "Error: XPRESS configuration currently cannot handle instance permutation"
     exit 1
 fi
 
 if test "${SETNAME}" != "default"
 then
-    echo "Warning: XPRESS configuration currently cannot handle non-default settings"
+    echo "Error: XPRESS configuration currently cannot handle non-default settings"
     exit 1
 fi
 
 if test "${REOPT}" = true
 then
-    echo "Warning: XPRESS configuration currently cannot handle reoptimization"
+    echo "Error: XPRESS configuration currently cannot handle reoptimization"
     exit 1
 fi
 
 if test "${VISUALIZE}" = true
 then
-    echo "Warning: XPRESS configuration currently cannot handle visualization"
+    echo "Error: XPRESS configuration currently cannot handle visualization"
     exit 1
 fi
 
 if test "${SETCUTOFF}" = 1 || test "${SETCUTOFF}" = true
 then
-    echo "Warning: Setting a cutoff is currently not supported for XPRESS configuration"
+    echo "Error: Setting a cutoff is currently not supported for XPRESS configuration"
     exit 1
 fi
 
@@ -100,6 +101,7 @@ echo miprelstop = 0.0                                           >> "${TMPFILE}"
 # set non-default feasibility tolerance
 if test "${FEASTOL}" != "default"
 then
+    echo feastol = "${FEASTOL}"                                 >> "${TMPFILE}"
     echo miptol = "${FEASTOL}"                                  >> "${TMPFILE}"
 fi
 echo "maxnode = ${NODELIMIT}"                                   >> "${TMPFILE}"
@@ -113,7 +115,7 @@ echo "treememorysavingtarget = 0.0"                             >> "${TMPFILE}"
 
 echo "format \"timelimit %g\" \$maxtime"                        >> "${TMPFILE}"
 echo "format \"mipgap %g\" \$miprelstop"                        >> "${TMPFILE}"
-echo "format \"feastol %g\" \$miptol"                           >> "${TMPFILE}"
+echo "format \"feastol %g\" \$feastol"                          >> "${TMPFILE}"
 echo "format \"nodelimit %g\" \$maxnode"                        >> "${TMPFILE}"
 echo "format \"memlimit %g\" \$treememorylimit"                 >> "${TMPFILE}"
 echo "format \"percentmemtofile %g\" \$treememorysavingtarget"  >> "${TMPFILE}"

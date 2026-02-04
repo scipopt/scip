@@ -4,7 +4,7 @@
 #*                  This file is part of the program and library             *
 #*         SCIP --- Solving Constraint Integer Programs                      *
 #*                                                                           *
-#*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      *
+#*  Copyright (c) 2002-2026 Zuse Institute Berlin (ZIB)                      *
 #*                                                                           *
 #*  Licensed under the Apache License, Version 2.0 (the "License");          *
 #*  you may not use this file except in compliance with the License.         *
@@ -56,6 +56,7 @@ STARTPERM="${26}"
 PYTHON="${27}"
 EMPHBENCHMARK="${28}"
 CLOCKTYPE="${29}"
+WITHCERTIFICATE="${30}"
 
 # check if all variables defined (by checking the last one)
 if test -z "${CLOCKTYPE}"
@@ -90,6 +91,7 @@ then
     echo "PYTHON        = ${PYTHON}"
     echo "EMPHBENCHMARK = ${EMPHBENCHMARK}"
     echo "CLOCKTYPE     = ${CLOCKTYPE}"
+    echo "WITHCERTIFICATE = ${WITHCERTIFICATE}"
     exit 1;
 fi
 
@@ -198,7 +200,7 @@ do
                 # this may modify the EXECNAME environment variable
                 . "./${CONFFILE}" "${INSTANCE}" "${SCIPPATH}" "${TMPFILE}" "${SETNAME}" "${SETFILE}" "${THREADS}" "${SETCUTOFF}" \
                     "${FEASTOL}" "${TIMELIMIT}" "${MEMLIMIT}" "${NODELIMIT}" "${LPS}" "${DISPFREQ}"  "${REOPT}" "${OPTCOMMAND}" \
-                    "${CLIENTTMPDIR}" "${FILENAME}" "${VISUALIZE}" "${SOLUFILE}" "${EMPHBENCHMARK}" "${CLOCKTYPE}"
+                    "${CLIENTTMPDIR}" "${FILENAME}" "${VISUALIZE}" "${SOLUFILE}" "${EMPHBENCHMARK}" "${CLOCKTYPE}" "${WITHCERTIFICATE}"
 
                 # additional environment variables needed by run.sh
                 export SOLVERPATH="${SCIPPATH}"
@@ -226,12 +228,7 @@ do
 
                 if test "$WRITESETTINGS" = "true"
                 then
-                    if [ $MAXJOBS -eq 1 ]
-                    then
-                        bash write-settings.sh
-                    else
-                        bash write-settings.sh &
-                    fi
+                    bash write-settings.sh
                 fi
 
                 echo "Solving instance ${INSTANCE} with settings ${SETNAME}, hard time ${HARDTIMELIMIT}, hard mem ${HARDMEMLIMIT}"

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2026 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -87,7 +87,9 @@ SCIP_RETCODE SCIPreaderWrite(
    SCIP_READER*          reader,             /**< reader */
    SCIP_PROB*            prob,               /**< problem data */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_MESSAGEHDLR*     msghdlr,            /**< message handler */
    FILE*                 file,               /**< output file (or NULL for standard output) */
+   const char*           filename,           /**< name of output file, or NULL if not available */
    const char*           format,             /**< file format (or NULL) */
    SCIP_Bool             genericnames,       /**< using generic variable and constraint names? */
    SCIP_RESULT*          result              /**< pointer to store the result of the callback method */

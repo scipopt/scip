@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2026 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -155,7 +155,7 @@ SCIP_Real SCIPhistoryGetPseudocostVariance(
    SCIP_BRANCHDIR        direction           /**< direction of variable: 1 for upwards history, 0 for downwards history */
    );
 
-/** returns the (possible fractional) number of (partial) pseudo cost updates performed on this pseudo cost entry in 
+/** returns the (possible fractional) number of (partial) pseudo cost updates performed on this pseudo cost entry in
  *  the given branching direction
  */
 SCIP_Real SCIPhistoryGetPseudocostCount(

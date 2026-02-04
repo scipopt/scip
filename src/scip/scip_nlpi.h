@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2026 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -207,7 +207,7 @@ SCIP_DECL_NLPISOLVE(SCIPsolveNlpiParam);
 #if !defined(_MSC_VER) || _MSC_VER >= 1800
 #define SCIPsolveNlpi(scip, nlpi, ...) \
    SCIPsolveNlpiParam(scip, nlpi, SCIP_VARARGS_FIRST((__VA_ARGS__, ignored)), \
-      (SCIP_NLPPARAM){ SCIP_NLPPARAM_DEFAULT_INITS(scip), SCIP_VARARGS_REST(__VA_ARGS__, .caller = __FILE__) })
+      (SCIP_NLPPARAM){ SCIP_NLPPARAM_DEFAULT_INITS(scip), SCIP_VARARGS_REST((__VA_ARGS__, .caller = __FILE__)) })
 #else
 /* very old MSVC doesn't support C99's designated initializers, so have a version of SCIPsolveNlpi() that just ignores given parameters
  * (compilation of scip_nlpi.c will print a warning)

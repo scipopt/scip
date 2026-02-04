@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2026 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -37,6 +37,7 @@
 #include "scip/type_cons.h"
 #include "scip/type_lp.h"
 #include "scip/type_misc.h"
+#include "scip/type_rational.h"
 #include "scip/type_reopt.h"
 #include "scip/type_retcode.h"
 #include "scip/type_tree.h"
@@ -164,6 +165,12 @@ int SCIPnodeGetDepth(
 /** gets the lower bound of the node */
 SCIP_EXPORT
 SCIP_Real SCIPnodeGetLowerbound(
+   SCIP_NODE*            node                /**< node */
+   );
+
+/** gets the rational lower bound of the node */
+SCIP_EXPORT
+SCIP_RATIONAL* SCIPnodeGetLowerboundExact(
    SCIP_NODE*            node                /**< node */
    );
 

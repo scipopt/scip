@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2026 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -31,7 +31,7 @@
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 #include <assert.h>
-#if defined(_WIN32) || defined(_WIN64)
+#ifdef _WIN32
 #include <windows.h>
 #else
 #include <sys/times.h>
@@ -56,7 +56,7 @@ SCIP_Real cputime2sec(
 {
    clock_t clocks_per_second;
 
-#if defined(_WIN32) || defined(_WIN64)
+#ifdef _WIN32
    clocks_per_second = 100;
 #else
 #ifndef CLK_TCK
@@ -93,7 +93,7 @@ void sec2cputime(
 
    assert(cputime != NULL);
 
-#if defined(_WIN32) || defined(_WIN64)
+#ifdef _WIN32
    clocks_per_second = 100;
 #else
 #ifndef CLK_TCK
@@ -278,7 +278,7 @@ void SCIPclockSetType(
 {
    assert(clck != NULL);
 
-   SCIPdebugMessage("setting type of clock %p (type %d, usedefault=%u) to %d\n", 
+   SCIPdebugMessage("setting type of clock %p (type %d, usedefault=%u) to %d\n",
       (void*)clck, clck->clocktype, clck->usedefault, clocktype);
 
    clck->clocktype = clocktype;
@@ -301,7 +301,7 @@ void SCIPclockStart(
 
       if( clck->nruns == 0 )
       {
-#if defined(_WIN32) || defined(_WIN64)
+#ifdef _WIN32
          FILETIME creationtime;
          FILETIME exittime;
          FILETIME kerneltime;
@@ -316,7 +316,7 @@ void SCIPclockStart(
          switch( clck->clocktype )
          {
          case SCIP_CLOCKTYPE_CPU:
-#if defined(_WIN32) || defined(_WIN64)
+#ifdef _WIN32
             GetProcessTimes(GetCurrentProcess(), &creationtime, &exittime, &kerneltime, &usertime);
             clck->data.cpuclock.user -= usertime.dwHighDateTime * 42950 + usertime.dwLowDateTime / 100000L;
 #else
@@ -327,7 +327,7 @@ void SCIPclockStart(
             break;
 
          case SCIP_CLOCKTYPE_WALL:
-#if defined(_WIN32) || defined(_WIN64)
+#ifdef _WIN32
             clck->data.wallclock.sec -= time(NULL);
 #else
             gettimeofday(&tp, NULL);
@@ -372,7 +372,7 @@ void SCIPclockStop(
       clck->nruns--;
       if( clck->nruns == 0 )
       {
-#if defined(_WIN32) || defined(_WIN64)
+#ifdef _WIN32
          FILETIME creationtime;
          FILETIME exittime;
          FILETIME kerneltime;
@@ -387,7 +387,7 @@ void SCIPclockStop(
          switch( clck->clocktype )
          {
          case SCIP_CLOCKTYPE_CPU:
-#if defined(_WIN32) || defined(_WIN64)
+#ifdef _WIN32
             GetProcessTimes(GetCurrentProcess(), &creationtime, &exittime, &kerneltime, &usertime);
             clck->data.cpuclock.user += usertime.dwHighDateTime * 42950 + usertime.dwLowDateTime / 100000L;
 #else
@@ -397,7 +397,7 @@ void SCIPclockStop(
             break;
 
          case SCIP_CLOCKTYPE_WALL:
-#if defined(_WIN32) || defined(_WIN64)
+#ifdef _WIN32
             clck->data.wallclock.sec += time(NULL);
 #else
             gettimeofday(&tp, NULL);
@@ -471,7 +471,7 @@ SCIP_Real SCIPclockGetTime(
    }
    else
    {
-#if defined(_WIN32) || defined(_WIN64)
+#ifdef _WIN32
       FILETIME creationtime;
       FILETIME exittime;
       FILETIME kerneltime;
@@ -485,7 +485,7 @@ SCIP_Real SCIPclockGetTime(
       switch( clck->clocktype )
       {
       case SCIP_CLOCKTYPE_CPU:
-#if defined(_WIN32) || defined(_WIN64)
+#ifdef _WIN32
           GetProcessTimes(GetCurrentProcess(), &creationtime, &exittime, &kerneltime, &usertime);
           result = cputime2sec(clck->data.cpuclock.user + usertime.dwHighDateTime * 42950 + usertime.dwLowDateTime / 100000L);
 #else
@@ -494,7 +494,7 @@ SCIP_Real SCIPclockGetTime(
 #endif
          break;
       case SCIP_CLOCKTYPE_WALL:
-#if defined(_WIN32) || defined(_WIN64)
+#ifdef _WIN32
          result = walltime2sec(clck->data.wallclock.sec + time(NULL), 0);
 #else
          gettimeofday(&tp, NULL);
@@ -568,7 +568,7 @@ void SCIPclockSetTime(
 
    if( clck->nruns >= 1 )
    {
-#if defined(_WIN32) || defined(_WIN64)
+#ifdef _WIN32
       FILETIME creationtime;
       FILETIME exittime;
       FILETIME kerneltime;
@@ -582,7 +582,7 @@ void SCIPclockSetTime(
       switch( clck->clocktype )
       {
       case SCIP_CLOCKTYPE_CPU:
-#if defined(_WIN32) || defined(_WIN64)
+#ifdef _WIN32
          GetProcessTimes(GetCurrentProcess(), &creationtime, &exittime, &kerneltime, &usertime);
          clck->data.cpuclock.user -= usertime.dwHighDateTime * 42950 + usertime.dwLowDateTime / 100000L;
 #else
@@ -592,7 +592,7 @@ void SCIPclockSetTime(
          break;
 
       case SCIP_CLOCKTYPE_WALL:
-#if defined(_WIN32) || defined(_WIN64)
+#ifdef _WIN32
          clck->data.wallclock.sec -= time(NULL);
 #else
          gettimeofday(&tp, NULL);
@@ -622,7 +622,7 @@ SCIP_Real SCIPclockGetTimeOfDay(
    void
    )
 {
-#if defined(_WIN32) || defined(_WIN64)
+#ifdef _WIN32
    time_t now;
    now = time(NULL);
    return (SCIP_Real)(now % (24*3600));

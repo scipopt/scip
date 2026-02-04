@@ -1,0 +1,17 @@
+STATISTICS
+  Problem name     : seed
+  Variables        : 2 (0 binary, 1 integer, 0 implicit integer, 1 continuous)
+  Constraints      : 0 initial, 6 maximal
+OBJECTIVE
+  Sense            : minimize
+VARIABLES
+  [integer] <x0>: obj=0, original bounds=[-200,200]
+  [continuous] <x1>: obj=0, original bounds=[-200,200]
+CONSTRAINTS
+  [linear] <_C1>:  +36<x0>[I] +68<x1>[C] <= 3970;
+  [linear] <_C10>:  -38<x0>[I] +6<x1>[C] >= -284;
+  [linear] <_C12>:  +90<x0>[I] +44<x1>[C] <= -2928;
+  [linear] <_C13>:  -28<x0>[I] -96<x1>[C] <= -1798;
+  [linear] <_C16>:  -45.3<x0>[I] -43.73<x1>[C] <= 3067.13;
+  [linear] <_C24>:  +24.33<x0>[I] +79.04<x1>[C] <= 1342.84950662;
+END

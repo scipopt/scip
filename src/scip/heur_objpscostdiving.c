@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2026 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -37,6 +37,7 @@
 #include "scip/pub_misc.h"
 #include "scip/pub_var.h"
 #include "scip/scip_branch.h"
+#include "scip/scip_exact.h"
 #include "scip/scip_general.h"
 #include "scip/scip_heur.h"
 #include "scip/scip_lp.h"
@@ -69,7 +70,7 @@
 
 #define DEFAULT_MINRELDEPTH         0.0 /**< minimal relative depth to start diving */
 #define DEFAULT_MAXRELDEPTH         1.0 /**< maximal relative depth to start diving */
-#define DEFAULT_MAXLPITERQUOT      0.01 /**< maximal fraction of diving LP iterations compared to total iteration number */
+#define DEFAULT_MAXLPITERQUOT      0.05 /**< maximal fraction of diving LP iterations compared to total iteration number */
 #define DEFAULT_MAXLPITEROFS       1000 /**< additional number of allowed LP iterations */
 #define DEFAULT_MAXSOLS              -1 /**< total number of feasible solutions found up to which heuristic is called
                                          *   (-1: no limit) */
@@ -344,7 +345,7 @@ SCIP_DECL_HEUREXEC(heurExecObjpscostdiving) /*lint --e{715}*/
    nlpiterations = SCIPgetNNodeLPIterations(scip);
    ncalls = SCIPheurGetNCalls(heur);
    nsolsfound = 10*SCIPheurGetNBestSolsFound(heur) + heurdata->nsuccess;
-   maxnlpiterations = (SCIP_Longint)((1.0 + 10.0*(nsolsfound+1.0)/(ncalls+1.0)) * heurdata->maxlpiterquot * nlpiterations);
+   maxnlpiterations = (SCIP_Longint)(((nsolsfound+1.0)/(ncalls+1.0)) * heurdata->maxlpiterquot * nlpiterations);
    maxnlpiterations += heurdata->maxlpiterofs;
 
    /* don't try to dive, if we took too many LP iterations during diving */
@@ -362,7 +363,8 @@ SCIP_DECL_HEUREXEC(heurExecObjpscostdiving) /*lint --e{715}*/
       return SCIP_OKAY;
 
    /* calculate the maximal diving depth */
-   nvars = SCIPgetNBinVars(scip) + SCIPgetNIntVars(scip);
+   nvars = SCIPgetNVars(scip) - SCIPgetNContVars(scip) - SCIPgetNContImplVars(scip);
+   assert(nvars >= 0);
    if( SCIPgetNSolsFound(scip) == 0 )
       maxdivedepth = (int)(heurdata->depthfacnosol * nvars);
    else
@@ -486,7 +488,7 @@ SCIP_DECL_HEUREXEC(heurExecObjpscostdiving) /*lint --e{715}*/
          SCIP_CALL( SCIPlinkLPSol(scip, heurdata->sol) );
          SCIP_CALL( SCIProundSol(scip, heurdata->sol, &success) );
 
-         if( success )
+         if( success && !SCIPisExact(scip) )
          {
             SCIPdebugMsg(scip, "objpscostdiving found roundable primal solution: obj=%g\n",
                SCIPgetSolOrigObj(scip, heurdata->sol));
@@ -594,7 +596,7 @@ SCIP_DECL_HEUREXEC(heurExecObjpscostdiving) /*lint --e{715}*/
          /* get new fractional variables */
          SCIP_CALL( SCIPgetLPBranchCands(scip, &lpcands, &lpcandssol, &lpcandsfrac, &nlpcands, NULL, NULL) );
       }
-      SCIPdebugMsg(scip, "   -> lpsolstat=%d, nfrac=%d\n", lpsolstat, nlpcands);
+      SCIPdebugMsg(scip, "   -> lpsolstat=%d, nlpcands=%d\n", lpsolstat, nlpcands);
    }
 
    /* check if a solution has been found */
@@ -605,6 +607,13 @@ SCIP_DECL_HEUREXEC(heurExecObjpscostdiving) /*lint --e{715}*/
       /* create solution from diving LP */
       SCIP_CALL( SCIPlinkLPSol(scip, heurdata->sol) );
       SCIPdebugMsg(scip, "objpscostdiving found primal solution: obj=%g\n", SCIPgetSolOrigObj(scip, heurdata->sol));
+
+      /* in exact mode we have to end diving prior to trying the solution */
+      if( SCIPisExact(scip) )
+      {
+         SCIP_CALL( SCIPunlinkSol(scip, heurdata->sol) );
+         SCIP_CALL( SCIPendDive(scip) );
+      }
 
       /* try to add solution to SCIP */
       SCIP_CALL( SCIPtrySol(scip, heurdata->sol, FALSE, FALSE, FALSE, FALSE, FALSE, &success) );
@@ -617,8 +626,11 @@ SCIP_DECL_HEUREXEC(heurExecObjpscostdiving) /*lint --e{715}*/
       }
    }
 
-   /* end diving */
-   SCIP_CALL( SCIPendDive(scip) );
+    /* end diving */
+   if( SCIPinDive(scip) )
+   {
+      SCIP_CALL( SCIPendDive(scip) );
+   }
 
    if( *result == SCIP_FOUNDSOL )
       heurdata->nsuccess++;
@@ -653,6 +665,9 @@ SCIP_RETCODE SCIPincludeHeurObjpscostdiving(
          HEUR_MAXDEPTH, HEUR_TIMING, HEUR_USESSUBSCIP, heurExecObjpscostdiving, heurdata) );
 
    assert(heur != NULL);
+
+   /* primal heuristic is safe to use in exact solving mode */
+   SCIPheurMarkExact(heur);
 
    /* set non-NULL pointers to callback methods */
    SCIP_CALL( SCIPsetHeurCopy(scip, heur, heurCopyObjpscostdiving) );

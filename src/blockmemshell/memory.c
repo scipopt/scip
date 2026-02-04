@@ -3,7 +3,7 @@
 /*                  This file is part of the library                         */
 /*          BMS --- Block Memory Shell                                       */
 /*                                                                           */
-/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2026 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -158,7 +158,7 @@ static MEMLIST*          memlist = NULL;     /**< global memory list for debuggi
 static size_t            memused = 0;        /**< number of allocated bytes */
 
 #ifdef CHECKMEM
-/** checks, whether the number of allocated bytes match the entries in the memory list */
+/** checks whether the number of allocated bytes match the entries in the memory list */
 static
 void checkMemlist(
    void
@@ -783,7 +783,7 @@ int BMSisAligned(
 }
 
 #ifndef NDEBUG
-/** checks, if the given pointer belongs to the given chunk */
+/** checks if the given pointer belongs to the given chunk */
 static
 int isPtrInChunk(
    const CHUNK*          chunk,              /**< memory chunk */
@@ -819,7 +819,7 @@ CHUNK* findChunk(
    return NULL;
 }
 
-/** checks, if a pointer belongs to a chunk of the given chunk block */
+/** checks if a pointer belongs to a chunk of the given chunk block */
 static
 int isPtrInChkmem(
    const BMS_CHKMEM*     chkmem,             /**< chunk block */
@@ -1445,9 +1445,9 @@ void garbagecollectChkmem(
       if( chunk->eagerfreesize == chunk->storesize )
       {
 #ifndef NDEBUG
-	 chkmem->ngarbagefrees++;
+         chkmem->ngarbagefrees++;
 #endif
-	 freeChunk(&chunk, memsize);
+         freeChunk(&chunk, memsize);
       }
       chunk = nexteager;
    }
@@ -1524,10 +1524,11 @@ void BMSclearChunkMemory_call(
    int                   line                /**< line number in source file of the function call */
    )
 {
-   debugMessage("clearing chunk memory %p [elemsize: %d]\n", (void*)chkmem, chkmem->elemsize);
-
    if( chkmem != NULL )
+   {
+      debugMessage("clearing chunk memory %p [elemsize: %d]\n", (void*)chkmem, chkmem->elemsize);
       clearChkmem(chkmem, NULL);
+   }
    else
    {
       printErrorHeader(filename, line);
@@ -1544,10 +1545,11 @@ void BMSdestroyChunkMemory_call(
 {
    assert(chkmem != NULL);
 
-   debugMessage("destroying chunk memory %p [elemsize: %d]\n", (void*)*chkmem, (*chkmem)->elemsize);
-
    if( *chkmem != NULL )
+   {
+      debugMessage("destroying chunk memory %p [elemsize: %d]\n", (void*)*chkmem, (*chkmem)->elemsize);
       destroyChkmem(chkmem, NULL);
+   }
    else
    {
       printErrorHeader(filename, line);
@@ -1755,14 +1757,13 @@ BMS_CHKMEM* findChkmem(
 
 /** calculates hash number of memory size */
 static
-int getHashNumber(
-   int                   size                /**< element size */
+uint32_t getHashNumber(
+   size_t                size                /**< element size */
    )
 {
-   assert(size >= 0);
-   assert(BMSisAligned((size_t)size)); /*lint !e571*/
+   assert(BMSisAligned(size));
 
-   return (int) (((uint32_t)size * UINT32_C(0x9e3779b9))>>(32-CHKHASH_POWER));
+   return ((uint32_t)size * UINT32_C(0x9e3779b9)) >> (32-CHKHASH_POWER);
 }
 
 /** creates a block memory allocation data structure */
@@ -1865,16 +1866,21 @@ void* BMSallocBlockMemory_work(
    )
 {
    BMS_CHKMEM** chkmemptr;
-   int hashnumber;
+   uint32_t hashnumber;
    void* ptr;
 
    assert( blkmem != NULL );
 
+   /* allocating very large memory blocks is currently not possible, because BMS_CHKMEM::elemsize is of type int only */
+   if( size > INT_MAX )
+      return NULL;
+
    /* calculate hash number of given size */
    alignSize(&size);
-   hashnumber = getHashNumber((int)size);
+   hashnumber = getHashNumber(size);
+   assert(hashnumber < CHKHASH_SIZE);
 
-   /* find correspoding chunk block */
+   /* find corresponding chunk block */
    chkmemptr = &(blkmem->chkmemhash[hashnumber]);
    while( *chkmemptr != NULL && (*chkmemptr)->elemsize != (int)size )
       chkmemptr = &((*chkmemptr)->nextchkmem);
@@ -2134,18 +2140,19 @@ void BMSfreeBlockMemory_work(
    )
 {
    BMS_CHKMEM* chkmem;
-   int hashnumber;
+   uint32_t hashnumber;
 
    assert(ptr != NULL);
    assert(*ptr != NULL);
 
    /* calculate hash number of given size */
    alignSize(&size);
-   hashnumber = getHashNumber((int)size);
+   hashnumber = getHashNumber(size);
+   assert(hashnumber < CHKHASH_SIZE);
 
    debugMessage("free    %8llu bytes in %p [%s:%d]\n", (unsigned long long)size, *ptr, filename, line);
 
-   /* find correspoding chunk block */
+   /* find corresponding chunk block */
    assert( blkmem->chkmemhash != NULL );
    chkmem = blkmem->chkmemhash[hashnumber];
    while( chkmem != NULL && chkmem->elemsize != (int)size )
@@ -2442,7 +2449,7 @@ void BMSdisplayBlockMemory_call(
       totalnelems > 0 ? 100.0 * (double) (totalneagerelems + totalnlazyelems) / (double) (totalnelems) : 0.0,
       (double)allocedmem/(1024.0*1024.0));
 #endif
-   printInfo("%d blocks (%d unused), %" LONGINT_FORMAT " bytes allocated, %" LONGINT_FORMAT " bytes free",
+   printInfo("%d blocks (%d unused), %" LONGINT_FORMAT " bytes allocated, %" LONGINT_FORMAT " bytes free",   /* cppcheck-suppress syntaxError */
       nblocks + nunusedblocks, nunusedblocks, allocedmem, freemem);
    if( allocedmem > 0 )
       printInfo(" (%.1f%%)", 100.0 * (double) freemem / (double) allocedmem);
@@ -2696,7 +2703,6 @@ void* BMSallocBufferMemory_work(
    int                   line                /**< line number in source file of the function call */
    )
 {
-   /* cppcheck-suppress unassignedVariable */
    void* ptr;
 #ifndef SCIP_NOBUFFERMEM
    size_t bufnum;

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2026 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -61,7 +61,7 @@ extern "C" {
  * @{
  */
 
-/** returns, whether the LP was or is to be solved in the current node
+/** returns whether the LP was or is to be solved in the current node
  *
  *  @return whether the LP was or is to be solved in the current node.
  *
@@ -75,7 +75,7 @@ SCIP_Bool SCIPhasCurrentNodeLP(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/** returns, whether the LP of the current node is already constructed
+/** returns whether the LP of the current node is already constructed
  *
  *  @return whether the LP of the current node is already constructed.
  *
@@ -910,33 +910,6 @@ SCIP_RETCODE SCIPcreateRowUnspec(
    SCIP_Bool             removable           /**< should the row be removed from the LP due to aging or cleanup? */
    );
 
-/** creates and captures an LP row
- *
- *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
- *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
- *
- *  @pre this method can be called in one of the following stages of the SCIP solving process:
- *       - \ref SCIP_STAGE_SOLVING
- *
- *  @deprecated Please use SCIPcreateRowConshdlr() or SCIPcreateRowSepa() when calling from a constraint handler or separator in order
- *              to facilitate correct statistics. If the call is from neither a constraint handler or separator, use SCIPcreateRowUnspec().
- */
-SCIP_EXPORT
-SCIP_DEPRECATED
-SCIP_RETCODE SCIPcreateRow(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_ROW**            row,                /**< pointer to row */
-   const char*           name,               /**< name of row */
-   int                   len,                /**< number of nonzeros in the row */
-   SCIP_COL**            cols,               /**< array with columns of row entries */
-   SCIP_Real*            vals,               /**< array with coefficients of row entries */
-   SCIP_Real             lhs,                /**< left hand side of row */
-   SCIP_Real             rhs,                /**< right hand side of row */
-   SCIP_Bool             local,              /**< is row only valid locally? */
-   SCIP_Bool             modifiable,         /**< is row modifiable during node processing (subject to column generation)? */
-   SCIP_Bool             removable           /**< should the row be removed from the LP due to aging or cleanup? */
-   );
-
 /** creates and captures an LP row without any coefficients from a constraint handler
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
@@ -1014,31 +987,6 @@ SCIP_RETCODE SCIPcreateEmptyRowSepa(
  */
 SCIP_EXPORT
 SCIP_RETCODE SCIPcreateEmptyRowUnspec(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_ROW**            row,                /**< pointer to row */
-   const char*           name,               /**< name of row */
-   SCIP_Real             lhs,                /**< left hand side of row */
-   SCIP_Real             rhs,                /**< right hand side of row */
-   SCIP_Bool             local,              /**< is row only valid locally? */
-   SCIP_Bool             modifiable,         /**< is row modifiable during node processing (subject to column generation)? */
-   SCIP_Bool             removable           /**< should the row be removed from the LP due to aging or cleanup? */
-   );
-
-/** creates and captures an LP row without any coefficients
- *
- *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
- *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
- *
- *  @pre this method can be called in one of the following stages of the SCIP solving process:
- *       - \ref SCIP_STAGE_INITSOLVE
- *       - \ref SCIP_STAGE_SOLVING
- *
- *  @deprecated Please use SCIPcreateEmptyRowConshdlr() or SCIPcreateEmptyRowSepa() when calling from a constraint handler or separator in order
- *              to facilitate correct statistics. If the call is from neither a constraint handler or separator, use SCIPcreateEmptyRowUnspec().
- */
-SCIP_EXPORT
-SCIP_DEPRECATED
-SCIP_RETCODE SCIPcreateEmptyRow(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_ROW**            row,                /**< pointer to row */
    const char*           name,               /**< name of row */
@@ -1280,6 +1228,20 @@ void SCIPmarkRowNotRemovableLocal(
  */
 SCIP_EXPORT
 int SCIPgetRowNumIntCols(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_ROW*             row                 /**< LP row */
+   );
+
+/** returns number of implied integral columns in the row
+ *
+ *  @return number of implied integral columns in the row
+ *
+ *  @pre this method can be called in one of the following stages of the SCIP solving process:
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ */
+SCIP_EXPORT
+int SCIPgetRowNumImpliedIntCols(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_ROW*             row                 /**< LP row */
    );

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2026 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -89,7 +89,10 @@ enum SYM_Consoptype
    SYM_CONSOPTYPE_PB_LINEAR   = 10,          /**< indicates linear conss in pseudoboolean conss */
    SYM_CONSOPTYPE_PB_SOFT     = 11,          /**< indicates pseudoboolean cons is soft constraint */
    SYM_CONSOPTYPE_PB_OBJ      = 12,          /**< indicates pseudoboolean cons is objective function */
-   SYM_CONSOPTYPE_LAST        = 13           /**< number of predefined enum types, needs to always
+   SYM_CONSOPTYPE_AND         = 13,          /**< encodes the AND-operator in AND-constraints */
+   SYM_CONSOPTYPE_OR          = 14,          /**< encodes the OR-operator in OR-constraints */
+   SYM_CONSOPTYPE_XORINT      = 15,          /**< encodes the internal variable in XOR-constraints */
+   SYM_CONSOPTYPE_LAST        = 16           /**< number of predefined enum types, needs to always
                                               *   hold the biggest value */
 };
 typedef enum SYM_Consoptype SYM_CONSOPTYPE;
@@ -126,8 +129,7 @@ enum SCIP_SSTType
 {
    SCIP_SSTTYPE_BINARY                 = 1,    /**< binary variables */
    SCIP_SSTTYPE_INTEGER                = 2,    /**< integer variables */
-   SCIP_SSTTYPE_IMPLINT                = 4,    /**< implicitly integer variables */
-   SCIP_SSTTYPE_CONTINUOUS             = 8     /**< continuous variables */
+   SCIP_SSTTYPE_CONTINUOUS             = 4     /**< continuous variables */
 };
 
 typedef enum SCIP_SSTType SCIP_SSTTYPE;

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2026 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -346,7 +346,7 @@ int SCIPhypergraphVertexEdgesBeyond(
  */
 SCIP_HYPERGRAPH_EDGE SCIPhypergraphVertexEdgesGetAtIndex(
    SCIP_HYPERGRAPH*      hypergraph,         /**< The hypergraph. */
-   int                   index               /**< Index. */
+   int                   idx                 /**< Index. */
    );
 
 /** @brief returns additional data of \p overlap */
@@ -396,7 +396,7 @@ int SCIPhypergraphEdgesOverlapsBeyond(
  */
 SCIP_HYPERGRAPH_OVERLAP SCIPhypergraphEdgesOverlapsGetAtIndex(
    SCIP_HYPERGRAPH*      hypergraph,         /**< The hypergraph. */
-   int                   index               /**< Index. */
+   int                   idx                 /**< Index. */
    );
 
 /** @brief returns an index for the first edge incident to \p overlap */
@@ -419,7 +419,7 @@ int SCIPhypergraphOverlapsEdgesBeyond(
  */
 SCIP_HYPERGRAPH_OVERLAP SCIPhypergraphOverlapsEdgesGetAtIndex(
    SCIP_HYPERGRAPH*      hypergraph,         /**< The hypergraph. */
-   int                   index               /**< Index. */
+   int                   idx                 /**< Index. */
    );
 
 /** @brief returns an index for the first overlap containing \p vertex */
@@ -442,7 +442,7 @@ int SCIPhypergraphVertexOverlapsBeyond(
  */
 SCIP_HYPERGRAPH_OVERLAP SCIPhypergraphVertexOverlapsGetAtIndex(
    SCIP_HYPERGRAPH*      hypergraph,         /**< The hypergraph. */
-   int                   index               /**< Index. */
+   int                   idx                 /**< Index. */
    );
 
 

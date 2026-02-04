@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2026 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -47,7 +47,9 @@
  * Data structures
  */
 
-/* TODO: fill in the necessary variable pricer data */
+/* TODO: fill in the necessary variable pricer data
+ * when this plugin is written in C++, rename SCIP_PricerData to something unique (C++ One-Definition-Rule)
+ */
 
 /** variable pricer data */
 struct SCIP_PricerData
@@ -213,7 +215,7 @@ SCIP_RETCODE SCIPincludePricerXyz(
     * new callbacks are added in future SCIP versions
     */
    SCIP_CALL( SCIPincludePricer(scip, PRICER_NAME, PRICER_DESC, PRICER_PRIORITY, PRICER_DELAY,
-         pricerCopyXyz, pricerFreeXyz, pricerInitXyz, pricerExitXyz, 
+         pricerCopyXyz, pricerFreeXyz, pricerInitXyz, pricerExitXyz,
          pricerInitsolXyz, pricerExitsolXyz, pricerRedcostXyz, pricerFarkasXyz,
          pricerdata) );
 #else

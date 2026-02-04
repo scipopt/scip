@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2026 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -1074,19 +1074,19 @@ SCIP_RETCODE createCoveringProblem(
 
  TERMINATE:
    SCIPstatistic(
-      {
-	 int nnonzs;
-	 nnonzs = 0;
-	 for( i = 0; i < nvars; ++i)
-	    nnonzs += termcounter[i];
-	 SCIPstatisticPrintf("UCstats nnz/var: %9.6f\n", nnonzs/(SCIP_Real)nvars);
-	 nnonzs = 0;
-	 for( i = 0; i < nvars; ++i)
-	    if( conscounter[i] > 0 )
-	       nnonzs++;
-	 SCIPstatisticPrintf("UCstats nlvars: %6d\n", nnonzs);
-      }
-      );
+   {
+      int nnonzs;
+      nnonzs = 0;
+      for( i = 0; i < nvars; ++i)
+         nnonzs += termcounter[i];
+      SCIPstatisticPrintf("UCstats nnz/var: %9.6f\n", nnonzs/(SCIP_Real)nvars);
+      nnonzs = 0;
+      for( i = 0; i < nvars; ++i)
+         if( conscounter[i] > 0 )
+            nnonzs++;
+      SCIPstatisticPrintf("UCstats nlvars: %6d\n", nnonzs);
+   }
+   );
 
    /* free counter arrays for weighted objectives */
    SCIPfreeBufferArray(scip, &termcounter);
@@ -1207,7 +1207,7 @@ SCIP_RETCODE forbidCover(
    SCIPfreeBufferArray(scip, &consvars);
 
    /* if proven infeasible, we do not even add the constraint; otherwise we add and release the constraint if created
-    * successfully 
+    * successfully
     */
    if( !(*infeas) && cons != NULL )
    {
@@ -1595,7 +1595,7 @@ SCIP_RETCODE getFixingValue(
          int i;
 
          /* restore bounds at start of probing, since otherwise, if in backtrack mode, NLP solver becomes most likely
-          * locally infeasible 
+          * locally infeasible
           */
          SCIP_CALL( SCIPstartDiveNLP(scip) );
 
@@ -2447,7 +2447,7 @@ SCIP_RETCODE SCIPapplyUndercover(
    heurdata->nlpsolved = FALSE;
 
    /* if solving the NLP relaxation has failed too often in previous runs, or NLP and NLP solver is not available, we do
-    * not even try 
+    * not even try
     */
    heurdata->nlpfailed = heurdata->nnlpfails >= MAXNLPFAILS || !SCIPisNLPConstructed(scip) || SCIPgetNNlpis(scip) == 0;
 

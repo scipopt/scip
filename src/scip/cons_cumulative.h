@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2026 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -270,7 +270,7 @@ SCIP_RETCODE SCIPpresolveCumulativeCondition(
    SCIP_Bool*            downlocks,          /**< array storing if the variable has a down lock, or NULL */
    SCIP_Bool*            uplocks,            /**< array storing if the variable has an up lock, or NULL */
    SCIP_CONS*            cons,               /**< constraint which gets propagated, or NULL */
-   SCIP_Bool*            delvars,            /**< array storing the variable which can be deleted from the constraint */
+   SCIP_Bool*            irrelevants,        /**< array storing the variable which can be deleted from the constraint */
    int*                  nfixedvars,         /**< pointer to store the number of fixed variables */
    int*                  nchgsides,          /**< pointer to store the number of changed sides */
    SCIP_Bool*            cutoff              /**< buffer to store whether a cutoff is detected */

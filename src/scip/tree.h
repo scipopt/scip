@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2026 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -43,6 +43,7 @@
 #include "scip/type_cons.h"
 #include "scip/type_event.h"
 #include "scip/type_lp.h"
+#include "scip/type_lpexact.h"
 #include "scip/type_var.h"
 #include "scip/type_prob.h"
 #include "scip/type_primal.h"
@@ -79,7 +80,7 @@ SCIP_RETCODE SCIPnodeCreateChild(
    SCIP_Real             estimate            /**< estimate for (transformed) objective value of best feasible solution in subtree */
    );
 
-/** frees node */
+/** frees node and inactive path iteratively */
 SCIP_RETCODE SCIPnodeFree(
    SCIP_NODE**           node,               /**< node data */
    BMS_BLKMEM*           blkmem,             /**< block memory buffer */
@@ -240,6 +241,33 @@ SCIP_RETCODE SCIPnodeAddBoundinfer(
    SCIP_Bool             probingchange       /**< is the bound change a temporary setting due to probing? */
    );
 
+/** adds exact bound change with inference information to focus node, child of focus node, or probing node;
+ *  if possible, adjusts bound to integral value;
+ *  at most one of infercons and inferprop may be non-NULL
+ */
+SCIP_RETCODE SCIPnodeAddBoundinferExact(
+   SCIP_NODE*            node,               /**< node to add bound change to */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics */
+   SCIP_PROB*            transprob,          /**< transformed problem after presolve */
+   SCIP_PROB*            origprob,           /**< original problem */
+   SCIP_TREE*            tree,               /**< branch and bound tree */
+   SCIP_REOPT*           reopt,              /**< reoptimization data structure */
+   SCIP_LPEXACT*         lpexact,            /**< current LP data */
+   SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_EVENTFILTER*     eventfilter,        /**< global event filter */
+   SCIP_CLIQUETABLE*     cliquetable,        /**< clique table data structure */
+   SCIP_VAR*             var,                /**< variable to change the bounds for */
+   SCIP_RATIONAL*        newbound,           /**< new value for bound */
+   SCIP_BOUNDTYPE        boundtype,          /**< type of bound: lower or upper bound */
+   SCIP_CONS*            infercons,          /**< constraint that deduced the bound change, or NULL */
+   SCIP_PROP*            inferprop,          /**< propagator that deduced the bound change, or NULL */
+   int                   inferinfo,          /**< user information for inference to help resolving the conflict */
+   SCIP_Bool             probingchange       /**< is the bound change a temporary setting due to probing? */
+   );
+
 /** adds bound change to focus node, or child of focus node, or probing node;
  *  if possible, adjusts bound to integral value
  */
@@ -259,6 +287,29 @@ SCIP_RETCODE SCIPnodeAddBoundchg(
    SCIP_CLIQUETABLE*     cliquetable,        /**< clique table data structure */
    SCIP_VAR*             var,                /**< variable to change the bounds for */
    SCIP_Real             newbound,           /**< new value for bound */
+   SCIP_BOUNDTYPE        boundtype,          /**< type of bound: lower or upper bound */
+   SCIP_Bool             probingchange       /**< is the bound change a temporary setting due to probing? */
+   );
+
+/** adds exact bound change to focus node, or child of focus node, or probing node;
+ *  if possible, adjusts bound to integral value
+ */
+SCIP_RETCODE SCIPnodeAddBoundchgExact(
+   SCIP_NODE*            node,               /**< node to add bound change to */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics */
+   SCIP_PROB*            transprob,          /**< transformed problem after presolve */
+   SCIP_PROB*            origprob,           /**< original problem */
+   SCIP_TREE*            tree,               /**< branch and bound tree */
+   SCIP_REOPT*           reopt,              /**< reoptimization data structure */
+   SCIP_LPEXACT*         lpexact,            /**< current LP data */
+   SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_EVENTFILTER*     eventfilter,        /**< global event filter */
+   SCIP_CLIQUETABLE*     cliquetable,        /**< clique table data structure */
+   SCIP_VAR*             var,                /**< variable to change the bounds for */
+   SCIP_RATIONAL*        newbound,           /**< new value for bound */
    SCIP_BOUNDTYPE        boundtype,          /**< type of bound: lower or upper bound */
    SCIP_Bool             probingchange       /**< is the bound change a temporary setting due to probing? */
    );
@@ -308,7 +359,8 @@ SCIP_RETCODE SCIPnodeUpdateLowerbound(
    SCIP_TREE*            tree,               /**< branch and bound tree */
    SCIP_PROB*            transprob,          /**< transformed problem data */
    SCIP_PROB*            origprob,           /**< original problem */
-   SCIP_Real             newbound            /**< new lower bound for the node (if it's larger than the old one) */
+   SCIP_Real             newbound,           /**< new lower bound for the node (if it's larger than the old one) */
+   SCIP_RATIONAL*        newboundexact       /**< new exact lower bound (or NULL if not needed) */
    );
 
 /** updates lower bound of node using lower bound of LP */
@@ -316,6 +368,7 @@ SCIP_RETCODE SCIPnodeUpdateLowerboundLP(
    SCIP_NODE*            node,               /**< node to set lower bound for */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    SCIP_EVENTFILTER*     eventfilter,        /**< global event filter */
    SCIP_TREE*            tree,               /**< branch and bound tree */
    SCIP_PROB*            transprob,          /**< transformed problem after presolve */
@@ -538,13 +591,13 @@ SCIP_Real SCIPtreeCalcNodeselPriority(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< dynamic problem statistics */
    SCIP_VAR*             var,                /**< variable, of which the branching factor should be applied, or NULL */
-   SCIP_BRANCHDIR        branchdir,          /**< type of branching that was performed: upwards, downwards, or fixed 
-                                              * fixed should only be used, when both bounds changed 
+   SCIP_BRANCHDIR        branchdir,          /**< type of branching that was performed: upwards, downwards, or fixed
+                                              * fixed should only be used, when both bounds changed
                                               */
    SCIP_Real             targetvalue         /**< new value of the variable in the child node */
    );
 
-/** calculates an estimate for the objective of the best feasible solution contained in the subtree after applying the given 
+/** calculates an estimate for the objective of the best feasible solution contained in the subtree after applying the given
  *  branching; this estimate can be given to the SCIPcreateChild() call
  */
 SCIP_Real SCIPtreeCalcChildEstimate(
@@ -588,6 +641,28 @@ SCIP_RETCODE SCIPtreeBranchVar(
    SCIP_Real             val,                /**< value to branch on or SCIP_INVALID for branching on current LP/pseudo solution. A branching value is required for branching on continuous variables */
    SCIP_NODE**           downchild,          /**< pointer to return the left child with variable rounded down, or NULL */
    SCIP_NODE**           eqchild,            /**< pointer to return the middle child with variable fixed, or NULL */
+   SCIP_NODE**           upchild             /**< pointer to return the right child with variable rounded up, or NULL */
+   );
+
+/** branches on a variable x; unlike the fp-version this will also branch x <= floor(x'), x >= ceil(x')
+ * if x' is very close to being integral at one of its bounds;
+ * in the fp version this case would be branched in the middle of the domain;
+ * not meant for branching on a continuous variables
+ */
+SCIP_RETCODE SCIPtreeBranchVarExact(
+   SCIP_TREE*            tree,               /**< branch and bound tree */
+   SCIP_REOPT*           reopt,              /**< reoptimization data structure */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics data */
+   SCIP_PROB*            transprob,          /**< transformed problem after presolve */
+   SCIP_PROB*            origprob,           /**< original problem */
+   SCIP_LP*              lp,                 /**< current LP data */
+   SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_EVENTFILTER*     eventfilter,        /**< global event filter */
+   SCIP_VAR*             var,                /**< variable to branch on */
+   SCIP_NODE**           downchild,          /**< pointer to return the left child with variable rounded down, or NULL */
    SCIP_NODE**           upchild             /**< pointer to return the right child with variable rounded up, or NULL */
    );
 
@@ -839,7 +914,7 @@ int SCIPtreeGetFocusDepth(
    SCIP_TREE*            tree                /**< branch and bound tree */
    );
 
-/** returns, whether the LP was or is to be solved in the focus node */
+/** returns whether the LP was or is to be solved in the focus node */
 SCIP_Bool SCIPtreeHasFocusNodeLP(
    SCIP_TREE*            tree                /**< branch and bound tree */
    );
@@ -870,7 +945,7 @@ int SCIPtreeGetCurrentDepth(
    SCIP_TREE*            tree                /**< branch and bound tree */
    );
 
-/** returns, whether the LP was or is to be solved in the current node */
+/** returns whether the LP was or is to be solved in the current node */
 SCIP_Bool SCIPtreeHasCurrentNodeLP(
    SCIP_TREE*            tree                /**< branch and bound tree */
    );
@@ -963,6 +1038,15 @@ SCIP_NODE* SCIPtreeGetBestNode(
 
 /** gets the minimal lower bound of all nodes in the tree */
 SCIP_Real SCIPtreeGetLowerbound(
+   SCIP_TREE*            tree,               /**< branch and bound tree */
+   SCIP_SET*             set                 /**< global SCIP settings */
+   );
+
+/** gets the minimal exact lower bound of all nodes in the tree or NULL if empty
+ *
+ *  @note The user must not modify the return value.
+ */
+SCIP_RATIONAL* SCIPtreeGetLowerboundExact(
    SCIP_TREE*            tree,               /**< branch and bound tree */
    SCIP_SET*             set                 /**< global SCIP settings */
    );

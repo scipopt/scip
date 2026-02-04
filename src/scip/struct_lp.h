@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2026 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -80,6 +80,7 @@
 #include "scip/type_var.h"
 #include "scip/type_event.h"
 #include "lpi/type_lpi.h"
+#include "scip/type_lpexact.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -123,6 +124,7 @@ struct SCIP_LpSolVals
    SCIP_Bool             dualchecked;        /**< was current LP solution checked for primal feasibility? */
    SCIP_Bool             solisbasic;         /**< is current LP solution a basic solution? */
    SCIP_Bool             lpissolved;         /**< is current LP solved? */
+   SCIP_Bool             hasprovedboundexact;     /**< is the current LP provably dual feasible (in exact mode) */
 };
 
 /** LP column;
@@ -138,9 +140,9 @@ struct SCIP_Col
    SCIP_Real             lb;                 /**< current lower bound of column in LP */
    SCIP_Real             ub;                 /**< current upper bound of column in LP */
    SCIP_Real             unchangedobj;       /**< unchanged objective value of column (ignoring diving or probing changes) */
-   SCIP_Real             lazylb;             /**< lazy lower bound of the column; if the current lower bound is not greater than 
+   SCIP_Real             lazylb;             /**< lazy lower bound of the column; if the current lower bound is not greater than
                                               *   the lazy lower bound, then the lower bound has not to be added to the LP */
-   SCIP_Real             lazyub;             /**< lazy upper bound of the column; if the current upper bound is not smaller than 
+   SCIP_Real             lazyub;             /**< lazy upper bound of the column; if the current upper bound is not smaller than
                                               *   the lazy upper bound, then the upper bound has not to be added to the LP */
    SCIP_Real             flushedobj;         /**< objective value of column already flushed to the LP solver */
    SCIP_Real             flushedlb;          /**< lower bound of column already flushed to the LP solver */
@@ -230,6 +232,7 @@ struct SCIP_Row
    SCIP_Real*            vals;               /**< coefficients of row entries */
    int*                  linkpos;            /**< position of row in row vector of the column, or -1 if not yet linked */
    SCIP_EVENTFILTER*     eventfilter;        /**< event filter for events concerning this row */
+   SCIP_ROWEXACT*        rowexact;           /**< pointer to exact row if it exists, or NULL in fp-scip */
    SCIP_Longint          validactivitylp;    /**< LP number for which activity value is valid */
    int                   index;              /**< consecutively numbered row identifier */
    int                   size;               /**< size of the col- and val-arrays */
@@ -243,6 +246,7 @@ struct SCIP_Row
    int                   minidx;             /**< minimal column index of row entries */
    int                   maxidx;             /**< maximal column index of row entries */
    int                   numintcols;         /**< number of integral columns */
+   int                   numimplintcols;     /**< number of implied integral columns */
    int                   nummaxval;          /**< number of coefs with absolute value equal to maxval, zero if maxval invalid */
    int                   numminval;          /**< number of coefs with absolute value equal to minval, zero if minval invalid */
    int                   age;                /**< number of successive times this row was in LP and was not sharp in solution */
@@ -302,6 +306,7 @@ struct SCIP_Lp
    SCIP_COL**            cols;               /**< array with current LP columns in correct order */
    SCIP_COL**            lazycols;           /**< array with current LP lazy columns */
    SCIP_ROW**            rows;               /**< array with current LP rows in correct order */
+   SCIP_LPEXACT*         lpexact;            /**< pointer to exact rational lp, or null if in normal fp soliving mode */
    SCIP_Real*            soldirection;       /**< normalized vector in direction of primal solution from current LP solution */
    SCIP_LPISTATE*        divelpistate;       /**< stores LPI state (basis information) before diving starts */
    SCIP_Real*            divechgsides;       /**< stores the lhs/rhs changed in the current diving */
@@ -372,7 +377,7 @@ struct SCIP_Lp
    SCIP_Bool             dualchecked;        /**< was current LP solution checked for primal feasibility?? */
    SCIP_Bool             solisbasic;         /**< is current LP solution a basic solution? */
    SCIP_Bool             rootlpisrelax;      /**< is root LP a relaxation of the problem and its solution value a valid global lower bound? */
-   SCIP_Bool             isrelax;            /**< is the current LP a relaxation of the problem for which it has been solved and its 
+   SCIP_Bool             isrelax;            /**< is the current LP a relaxation of the problem for which it has been solved and its
                                               *   solution value a valid local lower bound? */
    SCIP_Bool             installing;         /**< whether the solution process is in stalling */
    SCIP_Bool             strongbranching;    /**< whether the lp is used for strong branching */
@@ -401,6 +406,7 @@ struct SCIP_Lp
    SCIP_Bool             divelpwasprimchecked;/**< primal feasibility was checked when diving started */
    SCIP_Bool             divelpwasdualfeas;  /**< dual feasibility when diving started */
    SCIP_Bool             divelpwasdualchecked;/**< dual feasibility was checked when diving started */
+   SCIP_Bool             hasprovedbound;      /**< is the bound of the lp proved to be exactly dual feasible */
 };
 
 #ifdef __cplusplus

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2026 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -101,7 +101,9 @@ struct SCIP_Benders
    SCIP_Bool             cutcheck;           /**< should cuts be generated while checking solutions? */
    SCIP_Bool             threadsafe;         /**< has the copy been created requiring thread safety */
    SCIP_Real             solutiontol;        /**< storing the tolerance for optimality in Benders' decomposition */
+#if SCIP_DISABLED_CODE /* temporarily disabling support for multiple threads in Benders' decomposition */
    int                   numthreads;         /**< the number of threads to use when solving the subproblem */
+#endif
    SCIP_Bool             execfeasphase;      /**< should a feasibility phase be executed during the root node, i.e.
                                                   adding slack variables to constraints to ensure feasibility */
    SCIP_Real             slackvarcoef;       /**< the initial objective coefficient of the slack variables in the subproblem */

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2026 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -107,6 +107,7 @@
 #include "scip/pub_iisfinder.h"
 #include "scip/pub_implics.h"
 #include "scip/pub_lp.h"
+#include "scip/pub_lpexact.h"
 #include "scip/pub_nlp.h"
 #include "scip/pub_matrix.h"
 #include "scip/pub_message.h"
@@ -137,6 +138,7 @@
 #include "scip/scip_benders.h"
 #include "scip/scip_branch.h"
 #include "scip/scip_datatree.h"
+#include "scip/scip_certificate.h"
 #include "scip/scip_compr.h"
 #include "scip/scip_concurrent.h"
 #include "scip/scip_conflict.h"
@@ -149,6 +151,7 @@
 #include "scip/scip_dialog.h"
 #include "scip/scip_disp.h"
 #include "scip/scip_event.h"
+#include "scip/scip_exact.h"
 #include "scip/scip_expr.h"
 #include "scip/scip_general.h"
 #include "scip/scip_heur.h"

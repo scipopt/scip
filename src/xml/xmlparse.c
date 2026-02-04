@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2026 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -46,8 +46,8 @@
 
 #include <sys/types.h>
 #ifdef SCIP_WITH_ZLIB
-#if defined(_WIN32) || defined(_WIN64)
-#define R_OK _A_RDONLY
+#ifdef _WIN32
+#define R_OK 0
 #define access _access
 #include <io.h>
 #else
@@ -381,7 +381,7 @@ int skipSpace(
    {
       c = getsymbol(ppos);
    }
-   while(isspace(c));
+   while(isspace((unsigned char)c));
 
    return c;
 }
@@ -405,14 +405,14 @@ char* getName(
 
    c = getsymbol(ppos);
 
-   if ( ! isalpha(c) && (c != '_') && (c != ':') )
+   if ( ! isalpha((unsigned char)c) && (c != '_') && (c != ':') )
    {
       xmlError(ppos, "Name starting with illegal charater");
       return NULL;
    }
 
    /* The following is wrong: Here almost all characters that we casted to unicode are feasible */
-   while ( isalnum(c) || (c == '_') || (c == ':') || (c == '.') || (c == '-') )
+   while ( isalnum((unsigned char)c) || (c == '_') || (c == ':') || (c == '.') || (c == '-') )
    {
       if ( len + 1 >= size )
       {

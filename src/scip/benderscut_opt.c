@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2026 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -309,6 +309,7 @@ SCIP_RETCODE computeMIRForOptimalityCut(
    for( i = 0; i < nvars; i++ )
    {
       rowinds[i] = SCIPvarGetProbindex(vars[i]);
+      assert(rowinds[i] >= 0);
       rowvals[i] = -vals[i];
    }
 
@@ -322,7 +323,7 @@ SCIP_RETCODE computeMIRForOptimalityCut(
    (*success) = cutsuccess;
 
    /* calculating the MIR coefficients for the optimality cut */
-   SCIP_CALL( SCIPcalcMIR(masterprob, sol, TRUE, 0.9999, TRUE, FALSE, FALSE, NULL, NULL, 0.001, 0.999, 1.0, aggrrow,
+   SCIP_CALL( SCIPcalcMIR(masterprob, sol, TRUE, 0.9999, 1, FALSE, FALSE, NULL, NULL, 0.001, 0.999, 1.0, aggrrow,
          cutcoefs, cutrhs, cutinds, cutnnz, &cutefficacy, &cutrank, &cutislocal, &cutsuccess) );
    (*success) = ((*success) || cutsuccess);
 

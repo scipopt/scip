@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2026 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -26,8 +26,9 @@
  * @ingroup TYPEDEFINITIONS
  * @brief  type definitions for concurrent solvers
  * @author Leona Gottwald
+ * @author Marc Pfetsch
  *
- *  This file defines the interface for concurrent solvers.
+ * This file defines the interface for concurrent solvers.
  *
  */
 
@@ -46,27 +47,27 @@
 extern "C" {
 #endif
 
-typedef struct SCIP_ConcSolverType SCIP_CONCSOLVERTYPE;         /**< the struct defining a concurrent solver class */
-typedef struct SCIP_ConcSolverTypeData SCIP_CONCSOLVERTYPEDATA; /**< concurrent solver class user data */
-typedef struct SCIP_ConcSolver SCIP_CONCSOLVER;                   /**< struct for an instance of a concurrent solver */
-typedef struct SCIP_ConcSolverData SCIP_CONCSOLVERDATA;           /**< concurrent solver user data */
+typedef struct SCIP_ConcSolverType SCIP_CONCSOLVERTYPE;          /**< the struct defining a concurrent solver class */
+typedef struct SCIP_ConcSolverTypeData SCIP_CONCSOLVERTYPEDATA;  /**< concurrent solver class user data */
+typedef struct SCIP_ConcSolver SCIP_CONCSOLVER;                  /**< struct for an instance of a concurrent solver */
+typedef struct SCIP_ConcSolverData SCIP_CONCSOLVERDATA;          /**< concurrent solver user data */
 
 /** creates a concurrent solver instance
  *
  *  input:
- *  - scip               : SCIP main data structure
- *  - concsolvertype     : type of concurrent solver an instance should be created for
- *  - concsolverinstance : pointer to return concurrent solver instance
+ *  - scip            : SCIP main data structure
+ *  - concsolvertype  : type of concurrent solver an instance should be created for
+ *  - concsolver      : pointer to return concurrent solver instance
  *
- * returns SCIP_OKAY if everything worked, otherwise, a suitable error code
+ *  returns SCIP_OKAY if everything worked, otherwise, a suitable error code
  */
 #define SCIP_DECL_CONCSOLVERCREATEINST(x) SCIP_RETCODE x (SCIP* scip, SCIP_CONCSOLVERTYPE* concsolvertype, SCIP_CONCSOLVER* concsolver)
 
 /** destroys a concurrent solver instance
  *
  *  input:
- *  - scip               : SCIP main data structure
- *  - concsolverinstance : concurrent solver instance to destroy
+ *  - scip            : SCIP main data structure
+ *  - concsolver      : concurrent solver instance to destroy
  *
  *  returns SCIP_OKAY if everything worked, otherwise, a suitable error code
  */
@@ -75,8 +76,7 @@ typedef struct SCIP_ConcSolverData SCIP_CONCSOLVERDATA;           /**< concurren
 /** frees data of a concurrent solver type
  *
  *  input:
- *  - scip               : SCIP main data structure
- *  - data               : concurrent solver type data to free
+ *  - data            : concurrent solver type data to free
  *
  *  returns SCIP_OKAY if everything worked, otherwise, a suitable error code
  */
@@ -95,16 +95,17 @@ typedef struct SCIP_ConcSolverData SCIP_CONCSOLVERDATA;           /**< concurren
 /** synchronization method of concurrent solver for writing data
  *
  *  Syncronizes with other solvers. The concurrent solver should pass new solutions
- *  and bounds to the syncstore. For the solutions, no more than maxcandsols of the best solution
+ *  and bounds to the syncstore. For the solutions, no more than maxcandsols of the best solutions
  *  should be considered for sharing. Additionally a maximum if maxsharedsols should be
  *  passed to the syncstore.
  *
  *  input:
  *  - concsolver      : concurrent solver data structure
- *  - spi             : pointer to the SCIP parallel interface
- *  - syncdata        : concurrent solver data structure
- *  - maxcandsols     : how many of the best solutions should be considered for sharing
- *  - maxsharedsols   : the maximum number of solutions that should be shared
+ *  - syncstore       : pointer to the SCIP synchronization store
+ *  - syncdata        : synchronization data
+ *  - maxcandsols     : maximal number of best solutions that should be considered for sharing
+ *  - maxsharedsols   : maximum number of solutions that should be shared
+ *  - nsolsshared     : pointer to return the number of solutions shared
  *
  *  returns SCIP_OKAY if everything worked, otherwise, a suitable error code
  */
@@ -112,13 +113,16 @@ typedef struct SCIP_ConcSolverData SCIP_CONCSOLVERDATA;           /**< concurren
 
 /** synchronization method of concurrent solver for reading data
  *
- *  the concurrent solver should read the solutions and bounds stored in the
- *  given synchronization data
+ *  The concurrent solver should read the solutions and bounds stored in the
+ *  given synchronization data.
  *
  *  input:
  *  - concsolver      : concurrent solver data structure
- *  - spi             : pointer to the SCIP parallel interface
- *  - syncdata        : concurrent solver data structure
+ *  - syncstore       : pointer to the SCIP synchronization store
+ *  - syncdata        : synchronization data
+ *  - nsolsrecvd      : pointer to return the number of received solutions
+ *  - ntighterbnds    : pointer to return the number of tighter bounds
+ *  - ntighterintbnds : pointer to return the number of tighter integer bounds
  *
  *  returns SCIP_OKAY if everything worked, otherwise, a suitable error code
  */
@@ -129,7 +133,10 @@ typedef struct SCIP_ConcSolverData SCIP_CONCSOLVERDATA;           /**< concurren
  *  start solving of the problem given during initialization
  *
  *  input:
- *  - concsolver       : concurrent solver data structure
+ *  - concsolver      : concurrent solver data structure
+ *  - solvingtime     : pointer to return the used solving time
+ *  - nlpiterations   : pointer to return the used number of LP iterations
+ *  - nnodes          : pointer to return the used number of branch-and-bound nodes
  *
  *  returns SCIP_OKAY if everything worked, otherwise, a suitable error code
  */
@@ -144,8 +151,10 @@ typedef struct SCIP_ConcSolverData SCIP_CONCSOLVERDATA;           /**< concurren
  */
 #define SCIP_DECL_CONCSOLVERSTOP(x) SCIP_RETCODE x (SCIP_CONCSOLVER* concsolver)
 
-/** extract the solving data from the concurrent solver and store it into the SCIP datastructure,
- *  so that this SCIP instance has the optimal solution and reports the correct status and statistics.
+/** extract the solving data from the concurrent solver
+ *
+ *  The concurrent solver should get the data and store it into the SCIP datastructure, so that this SCIP instance has
+ *  the optimal solution and reports the correct status and statistics.
  *
  *  input:
  *  - concsolver      : concurrent solver data structure
@@ -154,7 +163,6 @@ typedef struct SCIP_ConcSolverData SCIP_CONCSOLVERDATA;           /**< concurren
  *  returns SCIP_OKAY if everything worked, otherwise, a suitable error code
  */
 #define SCIP_DECL_CONCSOLVERCOPYSOLVINGDATA(x) SCIP_RETCODE x (SCIP_CONCSOLVER* concsolver, SCIP* scip)
-
 
 #ifdef __cplusplus
 }

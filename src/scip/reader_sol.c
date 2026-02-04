@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2026 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -41,6 +41,7 @@
 #include "scip/pub_sol.h"
 #include "scip/reader_sol.h"
 #include "scip/scip_general.h"
+#include "scip/scip_exact.h"
 #include "scip/scip_message.h"
 #include "scip/scip_param.h"
 #include "scip/scip_reader.h"
@@ -82,9 +83,17 @@ SCIP_RETCODE readSol(
    }
 
    /* create zero solution */
-   SCIP_CALL( SCIPcreateSol(scip, &sol, NULL) );
+   if( SCIPisExact(scip) )
+   {
+      SCIP_CALL( SCIPcreateSolExact(scip, &sol, NULL) );
+   }
+   else
+   {
+      SCIP_CALL( SCIPcreateSol(scip, &sol, NULL) );
+   }
 
    SCIP_CALL( SCIPreadSolFile(scip, fname, sol, xml, &partial, &error) );
+   assert(!SCIPsolIsExact(sol) || !SCIPsolIsPartial(sol));
 
    if( !error )
    {
@@ -145,7 +154,7 @@ SCIP_DECL_READERCOPY(readerCopySol)
 }
 
 
-/** problem reading method of reader 
+/** problem reading method of reader
  *
  *  In order to determine the type of the file, we have to open it. Thus, it has to be opened
  *  twice. This might be removed, but is likely to not hurt the performance too much.
@@ -228,7 +237,8 @@ SCIP_RETCODE SCIPincludeReaderSol(
    /* include reader */
    SCIP_CALL( SCIPincludeReaderBasic(scip, &reader, READER_NAME, READER_DESC, READER_EXTENSION, NULL) );
 
-   assert(reader != NULL);
+   /* reader is safe to use in exact solving mode */
+   SCIPreaderMarkExact(reader);
 
    /* set non fundamental callbacks via setter functions */
    SCIP_CALL( SCIPsetReaderCopy(scip, reader, readerCopySol) );

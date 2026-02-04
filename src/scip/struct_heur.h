@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2026 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -120,6 +120,7 @@ struct SCIP_Heur
    int                   ndivesets;          /**< number of diving controllers of this heuristic */
    SCIP_HEURTIMING       timingmask;         /**< positions in the node solving loop where heuristic should be executed */
    SCIP_Bool             usessubscip;        /**< does the heuristic use a secondary SCIP instance? */
+   SCIP_Bool             exact;              /**< is the primal heuristic safe to be used in exact solving mode? */
    SCIP_Bool             initialized;        /**< is primal heuristic initialized? */
    char                  dispchar;           /**< display character of primal heuristic */
 };

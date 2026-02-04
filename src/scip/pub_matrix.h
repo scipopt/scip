@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2026 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -37,6 +37,7 @@
 #include "scip/type_var.h"
 #include "scip/type_cons.h"
 #include "scip/type_matrix.h"
+#include "scip/type_rational.h"
 
 #ifdef NDEBUG
 #include "scip/struct_matrix.h"
@@ -126,6 +127,13 @@ SCIP_Real* SCIPmatrixGetRowValPtr(
    int                   row                 /**< row index */
    );
 
+/** get row based start pointer of values */
+SCIP_EXPORT
+SCIP_RATIONAL** SCIPmatrixGetRowValPtrExact(
+   SCIP_MATRIX*          matrix,             /**< matrix instance */
+   int                   row                 /**< row index */
+   );
+
 /** get row based start pointer of column indices */
 SCIP_EXPORT
 int* SCIPmatrixGetRowIdxPtr(
@@ -163,6 +171,20 @@ SCIP_Real SCIPmatrixGetRowLhs(
 /** get right-hand-side of row */
 SCIP_EXPORT
 SCIP_Real SCIPmatrixGetRowRhs(
+   SCIP_MATRIX*          matrix,             /**< matrix instance */
+   int                   row                 /**< row index */
+   );
+
+/** get left-hand-side of row */
+SCIP_EXPORT
+SCIP_RATIONAL* SCIPmatrixGetRowLhsExact(
+   SCIP_MATRIX*          matrix,             /**< matrix instace */
+   int                   row                 /**< row index */
+   );
+
+/** get right-hand-side of row */
+SCIP_EXPORT
+SCIP_RATIONAL* SCIPmatrixGetRowRhsExact(
    SCIP_MATRIX*          matrix,             /**< matrix instance */
    int                   row                 /**< row index */
    );
@@ -261,12 +283,15 @@ SCIP_Bool SCIPmatrixDownlockConflict(
 #define SCIPmatrixGetVar(matrix,col)                   (matrix->vars[col])
 #define SCIPmatrixGetColName(matrix,col)               (SCIPvarGetName(matrix->vars[col]))
 #define SCIPmatrixGetRowValPtr(matrix,row)             (matrix->rowmatval + matrix->rowmatbeg[row])
+#define SCIPmatrixGetRowValPtrExact(matrix,row)        (matrix->matrixvalsexact->rowmatvalexact + matrix->rowmatbeg[row])
 #define SCIPmatrixGetRowIdxPtr(matrix,row)             (matrix->rowmatind + matrix->rowmatbeg[row])
 #define SCIPmatrixGetRowNNonzs(matrix,row)             (matrix->rowmatcnt[row])
 #define SCIPmatrixGetRowName(matrix,row)               (SCIPconsGetName(matrix->cons[row]))
 #define SCIPmatrixGetNRows(matrix)                     (matrix->nrows)
 #define SCIPmatrixGetRowLhs(matrix,row)                (matrix->lhs[row])
 #define SCIPmatrixGetRowRhs(matrix,row)                (matrix->rhs[row])
+#define SCIPmatrixGetRowLhsExact(matrix,row)           (matrix->matrixvalsexact->lhsexact[row])
+#define SCIPmatrixGetRowRhsExact(matrix,row)           (matrix->matrixvalsexact->rhsexact[row])
 #define SCIPmatrixIsRowRhsInfinity(matrix,row)         (matrix->isrhsinfinite[row])
 #define SCIPmatrixGetNNonzs(matrix)                    (matrix->nnonzs)
 #define SCIPmatrixGetRowMinActivity(matrix,row)        (matrix->minactivity[row])
