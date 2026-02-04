@@ -142,6 +142,9 @@ struct SCIP_SymInfo
    int                   nsymcomps;          /**< number of components in symmetrycomps */
    int                   symcompssize;       /**< size of symcomps array */
    SCIP_Bool             triedhandlesymmetry;/**< Have we already tried to handle symmetries? */
+   SCIP_HASHMAP*         customsymopnodetypes; /**< types of operator nodes introduced
+                                                *   by a user for symmetry detection */
+   int                   nopnodetypes;       /**< current number of operator node types used for symmetry detection */
 };
 
 #ifdef __cplusplus

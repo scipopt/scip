@@ -1910,11 +1910,12 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplayStatistics)
 /** dialog execution method for the display symmetry command */
 SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplaySymmetry)
 {  /*lint --e{715}*/
-   SCIP_PROP* prop;
    assert(scip != NULL);
 
    SCIP_CALL( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, NULL, FALSE) );
 
+   /* @symtodo make this available again */
+#if 0
    SCIPdialogMessage(scip, NULL, "\n");
    prop = SCIPfindProp(scip, "symmetry");
    if( prop == NULL )
@@ -1923,6 +1924,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplaySymmetry)
       return SCIP_OKAY;
    }
    SCIP_CALL( SCIPdisplaySymmetryGenerators(scip, prop) );
+#endif
 
    SCIPdialogMessage(scip, NULL, "\n");
 

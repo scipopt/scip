@@ -45,6 +45,7 @@
 #include "scip/struct_sym.h"
 #include "scip/sym.h"
 #include "scip/struct_scip.h"
+#include "symmetry/type_symmetry.h"
 
 /** internal method for creating a symmetry handler */
 static
@@ -1351,8 +1352,21 @@ SCIP_RETCODE SCIPsyminfoCreate(
    (*syminfo)->nsymcomps = -1;
    (*syminfo)->symcompssize = 0;
    (*syminfo)->triedhandlesymmetry = FALSE;
+   SCIP_CALL( SCIPhashmapCreate(&(*syminfo)->customsymopnodetypes, blkmem, 10) );
+   (*syminfo)->nopnodetypes = (int) SYM_CONSOPTYPE_LAST;
+
 
    return SCIP_OKAY;
+}
+
+/** releases symmetry information data structure */
+SCIP_SYMINFO* SCIPgetSyminfo(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   assert(scip != NULL);
+
+   return scip->syminfo;
 }
 
 /** releases symmetry information data structure */
@@ -1372,6 +1386,9 @@ SCIP_RETCODE SCIPsyminfoFree(
       return SCIP_OKAY;
 
    blkmem = SCIPblkmem(scip);
+
+   assert((*syminfo)->customsymopnodetypes != NULL);
+   SCIPhashmapFree(&(*syminfo)->customsymopnodetypes);
 
    for( i = (*syminfo)->nsymcomps - 1; i >= 0; --i )
    {
@@ -1411,6 +1428,71 @@ SCIP_RETCODE SCIPaddSymhdlrComponent(
       BMSreallocMemoryArray(&symhdlr->symcomps, newlen);
    }
    symhdlr->symcomps[(symhdlr->nsymcomps)++] = symcomp;
+
+   return SCIP_OKAY;
+}
+
+/** creates new operator node type (used for symmetry detection) and returns its representation
+ *
+ *  If the operator node already exists, the function terminates with SCIP_INVALIDDATA.
+ */
+SCIP_RETCODE SCIPcreateSymOpNodeType(
+   SCIP*                 scip,               /**< SCIP pointer */
+   const char*           opnodename,         /**< name of new operator node type */
+   int*                  nodetype            /**< pointer to store the node type */
+   )
+{
+   SCIP_SYMINFO* syminfo;
+
+   assert(scip != NULL);
+   assert(nodetype != NULL);
+
+   syminfo = SCIPgetSyminfo(scip);
+   if( syminfo == NULL )
+   {
+      SCIPerrorMessage("Cannot create operator node type, symmetry information has not been created yet.\n");
+      return SCIP_INVALIDDATA;
+   }
+
+   if( SCIPhashmapExists(syminfo->customsymopnodetypes, (void*) opnodename) )
+   {
+      SCIPerrorMessage("Cannot create operator node type %s, it already exists.\n", opnodename);
+      return SCIP_INVALIDDATA;
+   }
+
+   SCIP_CALL( SCIPhashmapInsertInt(syminfo->customsymopnodetypes, (void*) opnodename, syminfo->nopnodetypes) );
+   *nodetype = syminfo->nopnodetypes++;
+
+   return SCIP_OKAY;
+}
+
+/** returns representation of an operator node type.
+ *
+ *  If the node type does not already exist, a new node type will be created.
+ */
+SCIP_RETCODE SCIPgetSymOpNodeType(
+   SCIP*                 scip,               /**< SCIP pointer */
+   const char*           opnodename,         /**< name of new operator node type */
+   int*                  nodetype            /**< pointer to store the node type */
+   )
+{
+   SCIP_SYMINFO* syminfo;
+
+   assert(scip != NULL);
+
+   syminfo = SCIPgetSyminfo(scip);
+   if( syminfo == NULL )
+   {
+      SCIPerrorMessage("Cannot return operator node type, symmetry information has not been created yet.\n");
+      return SCIP_INVALIDDATA;
+   }
+
+   if( !SCIPhashmapExists(syminfo->customsymopnodetypes, (void*) opnodename) )
+   {
+      SCIP_CALL( SCIPcreateSymOpNodeType(scip, opnodename, nodetype) );
+   }
+   else
+      *nodetype = SCIPhashmapGetImageInt(syminfo->customsymopnodetypes, (void*) opnodename);
 
    return SCIP_OKAY;
 }

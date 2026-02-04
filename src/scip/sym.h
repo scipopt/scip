@@ -239,6 +239,11 @@ SCIP_RETCODE SCIPsyminfoCreate(
    BMS_BLKMEM*           blkmem              /**< block memory */
    );
 
+/** returns the symmetry information data structure */
+SCIP_SYMINFO* SCIPgetSyminfo(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
 /** releases symmetry information data structure */
 SCIP_RETCODE SCIPsyminfoFree(
    SCIP*                 scip,               /**< SCIP data structure */

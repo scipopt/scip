@@ -132,6 +132,9 @@
 /* discounted pseudo cost */
 #define BRANCHRULE_DISCOUNTFACTOR        0.2 /**< default discount factor for discounted pseudo costs.*/
 
+/* @symtodo make filtering possible */
+#define FILTERING FALSE
+
 /** branching rule data */
 struct SCIP_BranchruleData
 {
@@ -238,9 +241,12 @@ SCIP_RETCODE initOrbits(
    assert( branchruledata->varorbitmap == NULL );
    assert( branchruledata->orbitrep == NULL );
 
+#if 0
+   /* @symtodo enable this again */
    /* obtain symmetry including permutations */
    SCIP_CALL( SCIPgetSymmetry(scip, &branchruledata->npermvars, &branchruledata->permvars, &branchruledata->permvarmap,
          &nperms, NULL, &permstrans, NULL, NULL, &components, &componentbegins, &vartocomponent, &ncomponents) );
+#endif
 
    /* turn off symmetry handling if there is no symmetry or the number of variables is not equal */
    if( nperms <= 0 || branchruledata->npermvars != SCIPgetNVars(scip) )
@@ -2468,14 +2474,15 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpRelpscost)
    /* determine whether we should run filtering */
    runfiltering = ! branchruledata->nosymmetry && branchruledata->filtercandssym && SCIPgetSubscipDepth(scip) == 0 && ! SCIPinDive(scip) && ! SCIPinProbing(scip);
 
+   /* @symtodo store symmetry information centrally to access it here */
    /* init orbits if necessary */
-   if( runfiltering )
+   if( runfiltering && FILTERING )
    {
       SCIP_CALL( initOrbits(scip, branchruledata) );
    }
 
    /* determine fractional variables (possibly filter by using symmetries) */
-   if( runfiltering && branchruledata->norbits != 0 )
+   if( runfiltering && branchruledata->norbits != 0 && FILTERING )
    {
       SCIP_CALL( SCIPallocBufferArray(scip, &filteredlpcands, nlpcands) );
       SCIP_CALL( SCIPallocBufferArray(scip, &filteredlpcandssol, nlpcands) );
