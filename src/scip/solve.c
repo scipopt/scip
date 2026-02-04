@@ -2190,6 +2190,7 @@ SCIP_RETCODE SCIPtryAddSymmetryHandlingMethods(
    SCIP_HASHMAP* symvarmap;
    SYM_SYMTYPE symtype;
    SCIP_VAR** symvars;
+   SCIP_Real* vardomcenter;
    int** symmetries;
    int** syms;
    int* componentbegins;
@@ -2260,6 +2261,12 @@ SCIP_RETCODE SCIPtryAddSymmetryHandlingMethods(
       SCIP_CALL( SCIPallocBufferArray(scip, &syms, nsymmmetries) );
    }
 
+   /* compute domain center of variables */
+   /* @symtodo only compute this for signed permutations */
+   SCIP_CALL( SCIPallocBufferArray(scip, &vardomcenter, nsymvars) );
+   for( i = 0; i < nsymvars; ++i )
+      vardomcenter[i] = 0.5 * (SCIPvarGetLbLocal(symvars[i]) + SCIPvarGetUbLocal(symvars[i]));
+
    /* allocate memory for different symmetry components */
    assert(scip->syminfo != NULL);
    assert(scip->syminfo->symcomps == NULL);
@@ -2292,8 +2299,9 @@ SCIP_RETCODE SCIPtryAddSymmetryHandlingMethods(
 
       for( i = 0; i < nsymhdlrs && !success; ++i )
       {
-         SCIP_CALL( SCIPsymhdlrTryadd(symhdlrs[i], scip->set, syms, nsyms, symtype,
-               symvars, nsymvars, symvarmap, NULL, c, &symcompdata, &ntmpconss, &ntmpchgbds, &success) );
+         /* @symtodo provide the symmetry detection graph */
+         SCIP_CALL( SCIPsymhdlrTryadd(symhdlrs[i], scip->set, syms, nsyms, symtype, symvars, nsymvars,
+               vardomcenter, symvarmap, NULL, c, &symcompdata, &ntmpconss, &ntmpchgbds, &success) );
          *naddedconss += ntmpconss;
          *nchgbds += ntmpchgbds;
 
@@ -2307,6 +2315,7 @@ SCIP_RETCODE SCIPtryAddSymmetryHandlingMethods(
       }
    }
 
+   SCIPfreeBufferArray(scip, &vardomcenter);
    SCIPhashmapFree(&symvarmap);
 
    if( ncomponents > 1 )

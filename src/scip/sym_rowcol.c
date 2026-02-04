@@ -1107,6 +1107,7 @@ SCIP_RETCODE tryHandleSingleOrDoubleLexMatrices(
    int                   nperms,             /**< number of permutations */
    SCIP_VAR**            permvars,           /**< variables the permutations act on */
    int                   npermvars,          /**< number of variables */
+   SCIP_Real*            permvardomaincenter,/**< array of centers of variable domains */
    SCIP_Bool             detectsinglelex,    /**< whether single lex matrices shall be detected */
    SCIP_Bool             handlesignedorbitopes,/**< Shall signed orbitopes be handled? */
    SCIP_Bool             usedynamicprop,     /**< Shall dynamic propagation be used for orbitopes? */
@@ -1135,7 +1136,6 @@ SCIP_RETCODE tryHandleSingleOrDoubleLexMatrices(
    SCIP_Bool isorbitope;
    SCIP_Bool locsuccess = FALSE;
    SCIP_Bool* isproperperm;
-   SCIP_Real* permvardomaincenter;
    int nselectedperms = 0;
 
    assert(scip != NULL);
@@ -1187,10 +1187,6 @@ SCIP_RETCODE tryHandleSingleOrDoubleLexMatrices(
       }
       return SCIP_OKAY;
    }
-
-   SCIP_CALL( SCIPallocClearBufferArray(scip, &permvardomaincenter, npermvars) );
-   for( i = 0; i < npermvars; ++i )
-      permvardomaincenter[i] = (SCIPvarGetLbLocal(permvars[i]) + SCIPvarGetUbLocal(permvars[i])) / 2;
 
    SCIP_CALL( SCIPdetectSingleOrDoubleLexMatrices(scip, detectsinglelex, selectedperms, nselectedperms, npermvars,
          &locsuccess, &isorbitope, &lexmatrix, &nrows, &ncols, &lexrowsbegin, &lexcolsbegin,
@@ -1333,7 +1329,6 @@ SCIP_RETCODE tryHandleSingleOrDoubleLexMatrices(
          SCIPfreeBlockMemoryArray(scip, &lexrowsbegin, nrowmatrices + 1);
       }
    }
-   SCIPfreeBufferArray(scip, &permvardomaincenter);
    SCIPfreeBufferArray(scip, &isproperperm);
    if( symtype != SYM_SYMTYPE_PERM )
    {
@@ -1382,7 +1377,7 @@ SCIP_DECL_SYMHDLRTRYADD(symhdlrTryaddRowCol)
    SCIP_CALL( SCIPincludeLexicographicReduction(scip, &(*symcompdata)->lexreddata, symhdlrdata->shadowtreeeventhdlr) );
    assert((*symcompdata)->lexreddata != NULL);
 
-   SCIP_CALL( tryHandleSingleOrDoubleLexMatrices(scip, symtype, perms, nperms, permvars, npermvars,
+   SCIP_CALL( tryHandleSingleOrDoubleLexMatrices(scip, symtype, perms, nperms, permvars, npermvars, permvardomcenter,
          !symhdlrdata->detectdoublelex, symhdlrdata->handlesignedorbitopes, symhdlrdata->usedynamicprop,
          id, nchgbds, (*symcompdata)->lexreddata, &(*symcompdata)->lexredactive, symhdlrdata->orbitopalreddata,
          &(*symcompdata)->conss, &(*symcompdata)->nconss, &(*symcompdata)->maxnconss, success) );

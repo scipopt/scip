@@ -1009,6 +1009,7 @@ SCIP_RETCODE SCIPsymhdlrTryadd(
    SYM_SYMTYPE           symtype,            /**< type of symmetry */
    SCIP_VAR**            symvars,            /**< variables on which symmetries act */
    int                   nsymvars,           /**< number of variables in symvars */
+   SCIP_Real*            symvardomcenter,    /**< domain center of variables */
    SCIP_HASHMAP*         symvarmap,          /**< map of variables to indices in permvars array */
    SYM_GRAPH*            symgraph,           /**< symmetry detection graph */
    int                   id,                 /**< identifier of component for which symmetry handling shall be added */
@@ -1032,8 +1033,8 @@ SCIP_RETCODE SCIPsymhdlrTryadd(
    *naddedconss = 0;
    *nchgbds = 0;
 
-   SCIP_CALL( symhdlr->symtryadd(set->scip, symhdlr, symtype, symmetries, nsymmetries,
-         symvars, nsymvars, symvarmap, symgraph, id, symcompdata, naddedconss, nchgbds, success) );
+   SCIP_CALL( symhdlr->symtryadd(set->scip, symhdlr, symtype, symmetries, nsymmetries, symvars, nsymvars,
+         symvardomcenter, symvarmap, symgraph, id, symcompdata, naddedconss, nchgbds, success) );
 
    /* end timing */
    SCIPclockStop(symhdlr->setuptime, set);

@@ -465,10 +465,10 @@ SCIP_RETCODE addLexRed(
    int                   nmoreperms,         /**< number of additional permutations */
    SCIP_VAR**            permvars,           /**< variables permutations act on */
    int                   npermvars,          /**< numnber of variables */
+   SCIP_Real*            permvardomaincenter,/**< array of centers of variable domains */
    SCIP_Bool*            success             /**< pointer to store whether lexred could be added */
    )
 {
-   SCIP_Real* permvardomaincenter;
    SCIP_Bool locsuccess;
    int p;
 
@@ -480,13 +480,10 @@ SCIP_RETCODE addLexRed(
    assert(moreperms != NULL || nmoreperms == 0);
    assert(permvars != NULL);
    assert(npermvars > 0);
+   assert(permvardomaincenter != NULL);
    assert(success != NULL);
 
    *success = FALSE;
-
-   SCIP_CALL( SCIPallocBufferArray(scip, &permvardomaincenter, npermvars) );
-   for( p = 0; p < npermvars; ++p )
-      permvardomaincenter[p] = (SCIPvarGetUbLocal(permvars[p]) + SCIPvarGetLbLocal(permvars[p])) / 2;
 
    SCIP_CALL( SCIPincludeLexicographicReduction(scip, &symcompdata->lexreddata, shadowtreeeventhdlr) );
    assert(symcompdata->lexreddata != NULL);
@@ -505,8 +502,6 @@ SCIP_RETCODE addLexRed(
       *success |= locsuccess;
    }
    symcompdata->active = *success;
-
-   SCIPfreeBufferArray(scip, &permvardomaincenter);
 
    return SCIP_OKAY;
 }
@@ -890,6 +885,7 @@ SCIP_DECL_SYMHDLRTRYADD(symhdlrTryaddLexOrbRed)
    assert(perms != NULL);
    assert(nperms >= 0);
    assert(permvars != NULL || npermvars == 0);
+   assert(permvardomcenter != NULL);
    assert(naddedconss != NULL);
 
    *success = FALSE;
@@ -968,7 +964,7 @@ SCIP_DECL_SYMHDLRTRYADD(symhdlrTryaddLexOrbRed)
    if( symhdlrdata->uselexred )
    {
       SCIP_CALL( addLexRed(scip, *symcompdata, symhdlrdata->shadowtreeeventhdlr,
-            symtype, perms, nperms, newperms, nnewperms, permvars, npermvars, success) );
+            symtype, perms, nperms, newperms, nnewperms, permvars, npermvars, permvardomcenter, success) );
    }
    if( symhdlrdata->useorbred )
    {

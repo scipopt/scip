@@ -1259,6 +1259,7 @@ SCIP_RETCODE tryAddSSTConss(
    int                   nperms,             /**< number of signed permutations */
    SCIP_VAR**            permvars,           /**< variables on which the (signed) permutations act */
    int                   npermvars,          /**< number of variables */
+   SCIP_Real*            permvardomaincenter,/**< array of centers of variable domains */
    SCIP_HASHMAP*         permvarmap,         /**< map of variables to indices in permvars array */
    int                   id,                 /**< identifier of symmetry component */
    SCIP_CONS***          sstconss,           /**< pointer to hold SST constraints */
@@ -1302,7 +1303,6 @@ SCIP_RETCODE tryAddSSTConss(
    int norbitleadercomponent;
    SCIP_Shortbool* isaffected;
    SCIP_Shortbool* isproperperm;
-   SCIP_Real* permvardomaincenter;
 
    int i;
    int p;
@@ -1428,7 +1428,6 @@ SCIP_RETCODE tryAddSSTConss(
    assert(permstrans != NULL);
 
    /* compute variables that are affected by symmetry in component */
-   /* @symtodo Shall we compute this globally? */
    SCIP_CALL( SCIPallocBufferArray(scip, &isaffected, npermvars) );
    for( i = 0; i < npermvars; ++i )
    {
@@ -1443,24 +1442,7 @@ SCIP_RETCODE tryAddSSTConss(
       }
    }
 
-   /* compute centers of variable domains in case of signed permutations */
-   /* @symtodo Shall we compute this globally? */
-   if( symtype == SYM_SYMTYPE_SIGNPERM )
-   {
-      SCIP_Real lb;
-      SCIP_Real ub;
-
-      SCIP_CALL( SCIPallocBufferArray(scip, &permvardomaincenter, npermvars) );
-      for( i = 0; i < npermvars; ++i )
-      {
-         ub = SCIPvarGetUbGlobal(permvars[i]);
-         lb = SCIPvarGetLbGlobal(permvars[i]);
-
-         permvardomaincenter[i] = 0.5 * (ub + lb);
-      }
-   }
-
-   /* @todo only create the conflict graph for the variable in the current component */
+   /* @todo only create the conflict graph for the variables in the current component */
    /* possibly create conflict graph; graph is not created if no cliques are present */
    if( selectedtype == SCIP_VARTYPE_BINARY && (leaderrule == SST_LEADERRULE_MAXCONFLICTSINORBIT
          || orbitrule == SST_ORBITRULE_MAXCONFLICTSINORBIT) )
@@ -1591,10 +1573,6 @@ SCIP_RETCODE tryAddSSTConss(
    SCIPfreeBufferArray(scip, &inactiveperms);
 
  FREEMEMORY:
-   if( symtype == SYM_SYMTYPE_SIGNPERM )
-   {
-      SCIPfreeBufferArray(scip, &permvardomaincenter);
-   }
    SCIPfreeBufferArray(scip, &isproperperm);
    SCIPfreeBufferArray(scip, &isaffected);
    for( i = 0; i < (symtype == SYM_SYMTYPE_PERM ? npermvars : 2 * npermvars); ++i )
@@ -1635,7 +1613,7 @@ SCIP_DECL_SYMHDLRTRYADD(symhdlrTryaddSST)
    assert(symhdlrdata != NULL);
 
    /* try to add SST constraints */
-   SCIP_CALL( tryAddSSTConss(scip, symtype, perms, nperms, permvars, npermvars, permvarmap, id,
+   SCIP_CALL( tryAddSSTConss(scip, symtype, perms, nperms, permvars, npermvars, permvardomcenter, permvarmap, id,
          &sstconss, &nsstconss, &maxnsstconss, nchgbds, (SST_LEADERRULE)symhdlrdata->leaderrule,
          (SST_ORBITRULE)symhdlrdata->orbitrule, (SST_VARTYPE)symhdlrdata->leadervartype,
          symhdlrdata->computenewperms, symhdlrdata->maxnnewperms, symhdlrdata->addconflictcuts,
