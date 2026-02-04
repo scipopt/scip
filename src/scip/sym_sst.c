@@ -766,40 +766,6 @@ SCIP_RETCODE freeConflictGraphSST(
    return SCIP_OKAY;
 }
 
-/** returns whether a permutation is already contained in a list of permutations */
-static
-SCIP_Bool isPermKnown(
-   int*                  perm,               /**< permutation to be checked */
-   int                   permlen,            /**< length of permutation */
-   int**                 knownperms,         /**< list of known permutations (possibly longer than nknownperms) */
-   int                   nknownperms         /**< number of known permutations to be checked */
-   )
-{
-   int p;
-   int i;
-
-   assert(perm != NULL);
-   assert(permlen >= 0);
-   assert(knownperms != NULL);
-   assert(nknownperms >= 0);
-
-   for( p = 0; p < nknownperms; ++p )
-   {
-      for( i = 0; i < permlen; ++i )
-      {
-         /* knownperms[p] and perm differ */
-         if( perm[i] != knownperms[p][i] )
-            break;
-      }
-      /* loop did not terminate early, knownperms[p] and perm coincide */
-      if( i == permlen )
-         return TRUE;
-   }
-
-   return FALSE;
-}
-
-
 /** returns whether a permutation is an involution */
 static
 SCIP_Bool isInvolution(

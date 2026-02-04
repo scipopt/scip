@@ -98,32 +98,6 @@ struct SCIP_SymhdlrData
  * Local methods
  */
 
-/* @symtodo avoid code duplication */
-/** returns whether a (signed) permutation is a proper permutation */
-static
-SCIP_Bool isProperPerm(
-   SYM_SYMTYPE           symtype,            /**< symmetry type */
-   int*                  perm,               /**< (signed) permutation */
-   int                   nvars               /**< number of variables the permutation acts on */
-   )
-{
-   int i;
-
-   assert(perm != NULL);
-   assert(nvars > 0);
-
-   if( symtype == SYM_SYMTYPE_PERM )
-      return TRUE;
-
-   for( i = 0; i < nvars; ++i )
-   {
-      if( perm[i] >= nvars )
-         return FALSE;
-   }
-
-   return TRUE;
-}
-
 /** orbitopal reduction */
 static
 SCIP_RETCODE addOrbitopesDynamic(

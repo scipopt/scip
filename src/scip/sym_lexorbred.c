@@ -185,40 +185,6 @@ SCIP_Bool checkSortedArraysHaveOverlappingEntry(
    return FALSE;
 }
 
-/* @symtodo avoid code duplication with sym_sst */
-/** returns whether a permutation is already contained in a list of permutations */
-static
-SCIP_Bool isPermKnown(
-   int*                  perm,               /**< permutation to be checked */
-   int                   permlen,            /**< length of permutation */
-   int**                 knownperms,         /**< list of known permutations (possibly longer than nknownperms) */
-   int                   nknownperms         /**< number of known permutations to be checked */
-   )
-{
-   int p;
-   int i;
-
-   assert(perm != NULL);
-   assert(permlen >= 0);
-   assert(knownperms != NULL);
-   assert(nknownperms >= 0);
-
-   for( p = 0; p < nknownperms; ++p )
-   {
-      for( i = 0; i < permlen; ++i )
-      {
-         /* knownperms[p] and perm differ */
-         if( perm[i] != knownperms[p][i] )
-            break;
-      }
-      /* loop did not terminate early, knownperms[p] and perm coincide */
-      if( i == permlen )
-         return TRUE;
-   }
-
-   return FALSE;
-}
-
 /** returns whether a permutation is an involution */
 static
 SCIP_Bool isInvolution(
@@ -425,31 +391,6 @@ SCIP_RETCODE tryGenerateInvolutions(
    }
 
    return SCIP_OKAY;
-}
-
-/** returns whether a (signed) permutation is a proper permutation */
-static
-SCIP_Bool isProperPerm(
-   SYM_SYMTYPE           symtype,            /**< symmetry type */
-   int*                  perm,               /**< (signed) permutation */
-   int                   nvars               /**< number of variables the permutation acts on */
-   )
-{
-   int i;
-
-   assert(perm != NULL);
-   assert(nvars > 0);
-
-   if( symtype == SYM_SYMTYPE_PERM )
-      return TRUE;
-
-   for( i = 0; i < nvars; ++i )
-   {
-      if( perm[i] >= nvars )
-         return FALSE;
-   }
-
-   return TRUE;
 }
 
 /** add lexicographic reduction for given permutations */
