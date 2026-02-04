@@ -1947,8 +1947,6 @@ SCIP_RETCODE determineSymmetry(
    if( *nsymvars <= 0 )
       return SCIP_OKAY;
 
-   /* @symtodo check whether we can rule out that symmetry handling is needed */
-
    /* output message */
    SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL,
       "   (%.1fs) symmetry computation started\n", SCIPgetSolvingTime(scip));
