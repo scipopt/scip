@@ -391,6 +391,8 @@ Miscellaneous:
 
 ### Data Structures
 
+\attention changed the numeric values in the \ref SCIP_STATUS enum
+
 - added struct \ref SCIP_RATIONAL for rational number arithmetic
 - added struct \ref SCIP_LPEXACT and many further data structures to support exact solving mode
 - added structs \ref SCIP_IISFINDER, \ref SCIP_IISFINDERDATA, \ref SCIP_IIS
