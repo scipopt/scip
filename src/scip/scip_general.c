@@ -73,7 +73,7 @@
 #include "scip/struct_scip.h"
 #include "scip/struct_set.h"
 #include "scip/struct_stat.h"
-#include "scip/symmetry.h"
+#include "scip/sym.h"
 #include "scip/syncstore.h"
 #include "scip/lapack_calls.h"
 #include "tpi/tpi.h"

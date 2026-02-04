@@ -216,6 +216,13 @@ SCIP_RETCODE SCIPsymhdlrTryadd(
    SCIP_Bool*            success             /**< pointer to store whether symmetry handling method could be added */
    );
 
+/** adds a component to a symmetry handler */
+SCIP_RETCODE SCIPaddSymhdlrComponent(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SYMHDLR*         symhdlr,            /**< symmetry handler */
+   SCIP_SYMCOMP*         symcomp             /**< symmetry component */
+   );
+
 /** creates a symmetry component */
 SCIP_RETCODE SCIPcreateSymmetryComponent(
    BMS_BLKMEM*           blkmem,             /**< block memory */
@@ -223,6 +230,18 @@ SCIP_RETCODE SCIPcreateSymmetryComponent(
    SCIP_SYMHDLR*         symhdlr,            /**< symmetry handler active on symmetry component */
    SCIP_SYMCOMPDATA*     symcompdata,        /**< symmetry component data */
    int                   id                  /**< numerical identifier of symmetry component */
+   );
+
+/** creates and captures symmetry information data structure */
+SCIP_RETCODE SCIPsyminfoCreate(
+   SCIP_SYMINFO**        syminfo,            /**< pointer to return the created syminfo */
+   BMS_BLKMEM*           blkmem              /**< block memory */
+   );
+
+/** releases symmetry information data structure */
+SCIP_RETCODE SCIPsyminfoFree(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SYMINFO**        syminfo             /**< pointer to the syminfo */
    );
 
 #ifdef __cplusplus

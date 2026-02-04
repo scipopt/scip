@@ -36,6 +36,7 @@
 #include "scip/pub_misc.h"
 #include "scip/pub_var.h"
 #include "scip/scip_cut.h"
+#include "scip/scip_mem.h"
 #include "scip/scip_var.h"
 #include "scip/sepastore.h"
 #include "scip/set.h"
@@ -1334,3 +1335,81 @@ int SCIPsymhdlrGetNChgSides(
    return symhdlr->nchgsides;
 }
 
+/** creates and captures symmetry information data structure */
+SCIP_RETCODE SCIPsyminfoCreate(
+   SCIP_SYMINFO**        syminfo,            /**< pointer to return the created syminfo */
+   BMS_BLKMEM*           blkmem              /**< block memory */
+   )
+{
+   assert(syminfo != NULL);
+   assert(blkmem != NULL);
+
+   SCIP_ALLOC( BMSallocBlockMemory(blkmem, syminfo) );
+
+   (*syminfo)->symcomps = NULL;
+   (*syminfo)->nsymcomps = -1;
+   (*syminfo)->symcompssize = 0;
+   (*syminfo)->triedhandlesymmetry = FALSE;
+
+   return SCIP_OKAY;
+}
+
+/** releases symmetry information data structure */
+SCIP_RETCODE SCIPsyminfoFree(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SYMINFO**        syminfo             /**< pointer to the syminfo */
+   )
+{
+   SCIP_SYMCOMP* symcomp;
+   BMS_BLKMEM* blkmem;
+   int i;
+
+   assert(scip != NULL);
+   assert(syminfo != NULL);
+
+   if( *syminfo == NULL )
+      return SCIP_OKAY;
+
+   blkmem = SCIPblkmem(scip);
+
+   for( i = (*syminfo)->nsymcomps - 1; i >= 0; --i )
+   {
+      symcomp = (*syminfo)->symcomps[i];
+      SCIP_CALL( SCIPsymhdlrDelete(symcomp->symhdlr, scip->set, &symcomp) );
+      BMSfreeBlockMemory(blkmem, &symcomp);
+   }
+   BMSfreeBlockMemoryArrayNull(blkmem, &(*syminfo)->symcomps, (*syminfo)->symcompssize);
+   BMSfreeBlockMemory(blkmem, syminfo);
+   *syminfo = NULL;
+
+   return SCIP_OKAY;
+}
+
+/** adds a component to a symmetry handler */
+SCIP_RETCODE SCIPaddSymhdlrComponent(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SYMHDLR*         symhdlr,            /**< symmetry handler */
+   SCIP_SYMCOMP*         symcomp             /**< symmetry component */
+   )
+{
+   assert(scip != NULL);
+   assert(symhdlr != NULL);
+   assert(symcomp != NULL);
+
+   if( symhdlr->symcompssize == 0 )
+   {
+      BMSallocMemoryArray(&symhdlr->symcomps, 1);
+      symhdlr->symcompssize = 1;
+   }
+   else if( symhdlr->nsymcomps >= symhdlr->symcompssize )
+   {
+      int newlen;
+
+      newlen = SCIPcalcMemGrowSize(scip, symhdlr->nsymcomps + 1);
+
+      BMSreallocMemoryArray(&symhdlr->symcomps, newlen);
+   }
+   symhdlr->symcomps[(symhdlr->nsymcomps)++] = symcomp;
+
+   return SCIP_OKAY;
+}
