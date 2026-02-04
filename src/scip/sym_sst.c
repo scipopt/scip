@@ -1312,7 +1312,7 @@ SCIP_RETCODE tryAddSSTConss(
 
    /* terminate if no variables of a possible leader type is affected */
    if( nvarsselectedtype == 0 )
-      goto FREEMEMORY;
+      return SCIP_OKAY;
 
    ntotalperms = nperms;
    if( computenewperms )
@@ -1538,9 +1538,9 @@ SCIP_RETCODE tryAddSSTConss(
    }
    SCIPfreeBufferArray(scip, &inactiveperms);
 
- FREEMEMORY:
    SCIPfreeBufferArray(scip, &isproperperm);
    SCIPfreeBufferArray(scip, &isaffected);
+
    for( i = 0; i < (symtype == SYM_SYMTYPE_PERM ? npermvars : 2 * npermvars); ++i )
    {
       SCIPfreeBlockMemoryArray(scip, &permstrans[i], ntotalperms);
@@ -1591,7 +1591,7 @@ SCIP_DECL_SYMHDLRTRYADD(symhdlrTryaddSST)
       assert(sstconss == NULL);
       assert(nsstconss == 0);
       assert(maxnsstconss == 0);
-      assert(nchgbds == 0);
+      assert(*nchgbds == 0);
 
       return SCIP_OKAY;
    }
