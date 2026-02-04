@@ -6,7 +6,7 @@
 #define SASSY_H
 
 #define SASSY_VERSION_MAJOR 2
-#define SASSY_VERSION_MINOR 0
+#define SASSY_VERSION_MINOR 1
 
 #include "graph.h"
 #include "ds.h"
@@ -53,7 +53,7 @@ namespace dejavu {
         dejavu::worklist aux_automorphism;
         dejavu::worklist aux_automorphism_supp;
 
-        bool layers_melded = false;
+        bool layers_compressed = false;
 
         bool skipped_preprocessing = false;
 
@@ -135,32 +135,54 @@ namespace dejavu {
     private:
 
         // combine translation layers
-        void meld_translation_layers() {
-            if (layers_melded)
-                return;
-            const int layers = static_cast<int>(translation_layers.size());
+        void compress_translation_layers() {
+            if (layers_compressed) return;
+            int layers = static_cast<int>(translation_layers.size());
+
+            // no preprocessing took place, so we need to initialize some datastructures
             if(layers == 0) {
                 backward_translation_layers.emplace_back();
                 backward_translation_layers[0].reserve(domain_size);
                 for(int i = 0; i < domain_size; ++i) {
                     backward_translation_layers[0].push_back(i);
                 }
-                layers_melded = true;
-                return;
-            }
+                layers_compressed = true;
 
+                automorphism.allocate(domain_size);
+                for (int i = 0; i < domain_size; ++i) {
+                    automorphism.push_back(i);
+                }
+                automorphism_supp.allocate(domain_size);
+                aux_automorphism.allocate(domain_size);
+                for (int i = 0; i < domain_size; ++i) {
+                    aux_automorphism.push_back(i);
+                }
+                aux_automorphism_supp.allocate(domain_size);
+                _automorphism.allocate(domain_size);
+                _automorphism_supp.allocate(domain_size);
+                for (int i = 0; i < domain_size; ++i)
+                    _automorphism[i] = i;
+
+                before_move.allocate(domain_size);
+
+                recovery_strings.clear();
+                recovery_strings.reserve(domain_size);
+                for (int j = 0; j < domain_size; ++j) recovery_strings.emplace_back();
+
+                ++layers;
+            }
 
             const int reduced_size = static_cast<int>(backward_translation_layers[layers - 1].size());
             backward_translation.reserve(reduced_size);
             for (int i = 0; i < reduced_size; ++i) backward_translation.push_back(i);
             for (int i = 0; i < reduced_size; ++i) {
                 int next_v = i;
-                for (int l = layers - 1; l >= 0; --l) { // TODO inefficient
+                for (int l = layers - 1; l >= 0; --l) {
                     next_v = backward_translation_layers[l][next_v];
                 }
                 backward_translation[i] = next_v;
             }
-            layers_melded = true;
+            layers_compressed = true;
 
             baked_recovery_string.reserve(domain_size);
             baked_recovery_string_pt.reserve(domain_size);
@@ -2941,13 +2963,9 @@ namespace dejavu {
         // given automorphism of reduced graph, reconstructs automorphism of the original graph
         void
         pre_hook_buffered(int _n, const int *_aut, int _supp, const int *_aut_supp, dejavu_hook* hook) {
-            if(hook == nullptr) {
-                return;
-            }
+            if(hook == nullptr) return;
 
-            meld_translation_layers();
-            // TODO what this should really do is bake recovery_strings into a single string, and edge attachmenets to
-            // TODO a proper non-linked graph structure
+            compress_translation_layers();
 
             automorphism_supp.reset();
             bool use_aux_auto = false;
