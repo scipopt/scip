@@ -1571,14 +1571,15 @@ SCIP_RETCODE extractProblemDataBeforePresolve(
    SCIP_Bool*            success             /**< was the problem successfully extracted? */
    )
 {
+   SCIP_VAR** vars;
    SCIP_VAR** consvars;
-   SCIP_CONSHDLR* conshdlrsos1;
-   SCIP_CONSHDLR* conshdlrsos2;
-   SCIP_CONSHDLR* conshdlrnonlinear;
+   SCIP_CONS** conss;
+   SCIP_CONSHDLR* conshdlr;
    SCIP_Real* consvals;
    int* consinds;
-   int nconss;
    int nvars;
+   int nconss;
+   int nlinconss;
    int i;
    int j;
 
@@ -1587,23 +1588,41 @@ SCIP_RETCODE extractProblemDataBeforePresolve(
    assert(success != NULL);
 
    *success = FALSE;
+   nvars = SCIPgetNVars(scip);
+   nconss = SCIPgetNConss(scip);
+   nlinconss = 0;
 
-   /* we do not use the heuristic before presolving if sos or non-linear constraints are present */
-   conshdlrsos1 = SCIPfindConshdlr(scip, "SOS1");
-   conshdlrsos2 = SCIPfindConshdlr(scip, "SOS2");
-   conshdlrnonlinear = SCIPfindConshdlr(scip, "nonlinear");
+   conshdlr = SCIPfindConshdlr(scip, "linear");
 
-   if( (conshdlrsos1 != NULL && SCIPconshdlrGetNConss(conshdlrsos1) > 0) ||
-       (conshdlrsos2 != NULL && SCIPconshdlrGetNConss(conshdlrsos2) > 0) ||
-       (conshdlrnonlinear != NULL && SCIPconshdlrGetNConss(conshdlrnonlinear) > 0) )
+   if( conshdlr != NULL )
+      nlinconss += SCIPconshdlrGetNConss(conshdlr);
+
+   conshdlr = SCIPfindConshdlr(scip, "setppc");
+
+   if( conshdlr != NULL )
+      nlinconss += SCIPconshdlrGetNConss(conshdlr);
+
+   conshdlr = SCIPfindConshdlr(scip, "logicor");
+
+   if( conshdlr != NULL )
+      nlinconss += SCIPconshdlrGetNConss(conshdlr);
+
+   conshdlr = SCIPfindConshdlr(scip, "knapsack");
+
+   if( conshdlr != NULL )
+      nlinconss += SCIPconshdlrGetNConss(conshdlr);
+
+   conshdlr = SCIPfindConshdlr(scip, "varbound");
+
+   if( conshdlr != NULL )
+      nlinconss += SCIPconshdlrGetNConss(conshdlr);
+
+   /* only run on linear constraint types */
+   if( nlinconss < nconss )
       return SCIP_OKAY;
 
-   nconss = SCIPgetNConss(scip);
-   nvars = SCIPgetNVars(scip);
-
-   SCIP_CONS** conss = SCIPgetConss(scip);
-   SCIP_VAR** probvars = SCIPgetVars(scip);
-
+   vars = SCIPgetVars(scip);
+   conss = SCIPgetConss(scip);
    consinds = NULL;
    consvals = NULL;
    consvars = NULL;
@@ -1620,10 +1639,10 @@ SCIP_RETCODE extractProblemDataBeforePresolve(
       SCIP_Real obj;
       int idx;
 
-      lb = SCIPvarGetLbLocal(probvars[j]);
-      ub = SCIPvarGetUbLocal(probvars[j]);
-      obj = SCIPvarGetObj(probvars[j]);
-      vartype = SCIPvarIsIntegral(probvars[j]) ? FJ_INTEGER : FJ_CONTINUOUS;
+      lb = SCIPvarGetLbLocal(vars[j]);
+      ub = SCIPvarGetUbLocal(vars[j]);
+      obj = SCIPvarGetObj(vars[j]);
+      vartype = SCIPvarIsIntegral(vars[j]) ? FJ_INTEGER : FJ_CONTINUOUS;
       SCIP_CALL( fjProblemAddVar(scip, problem, vartype, lb, ub, obj, &idx) );
    }
 
