@@ -2113,7 +2113,7 @@ SCIP_RETCODE runFeasjump(
          /* check termination after finding solution */
          SCIP_CALL( fjCheckTermination(scip, solver, problem, heurdata, heur, heurtiming,
                problem->incumbentassignment, &nsols, result, starttime, &terminate) );
-         if( terminate || *result != SCIP_FOUNDSOL )
+         if( terminate )
             break;
       }
 
