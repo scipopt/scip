@@ -2021,7 +2021,14 @@ SCIP_RETCODE runFeasjump(
    {
       SCIP_Bool success;
 
+      if( SCIPgetNVars(scip) == 0 || SCIPgetNConss(scip) == 0 )
+      {
+         SCIP_CALL( fjProblemFree(scip, &problem) );
+         return SCIP_OKAY;
+      }
+
       SCIP_CALL( extractProblemDataBeforePresolve(scip, problem, &success) );
+
       if( !success )
       {
          SCIP_CALL( fjProblemFree(scip, &problem) );
@@ -2033,6 +2040,12 @@ SCIP_RETCODE runFeasjump(
       SCIP_CALL( SCIPgetLPColsData(scip, &cols, &ncols) );
       SCIP_CALL( SCIPgetLPRowsData(scip, &rows, &nrows) );
 
+      if( ncols == 0 || nrows == 0 )
+      {
+         SCIP_CALL( fjProblemFree(scip, &problem) );
+         return SCIP_OKAY;
+      }
+
       SCIP_CALL( extractProblemData(scip, problem, cols, rows, ncols, nrows) );
 
       /* add objective cutoff */
@@ -2041,6 +2054,8 @@ SCIP_RETCODE runFeasjump(
          SCIP_CALL( addObjCutoff(scip, problem, cols, ncols) );
       }
    }
+   assert(problem->nvars >= 1);
+   assert(problem->nconstraints >= 1);
 
    SCIP_CALL( fjSolverCreate(scip, &solver, problem, heurdata->randnumgen, heurdata->verbosity,
          heurdata->weightupdatedecay, SCIPinfinity(scip), heurdata->iterations, heurdata->samplesize,
@@ -2117,7 +2132,7 @@ SCIP_RETCODE runFeasjump(
             break;
       }
 
-      if( SCIPisStopped(scip) || problem->nvars == 0 )
+      if( SCIPisStopped(scip) )
          break;
 
       /* select and perform move */
