@@ -1685,9 +1685,9 @@ SCIP_RETCODE extractProblemDataBeforePresolve(
    *success = TRUE;
 
 TERMINATE:
+   SCIPfreeBufferArray(scip, &consvars);
    SCIPfreeBufferArray(scip, &consvals);
    SCIPfreeBufferArray(scip, &consinds);
-   SCIPfreeBufferArray(scip, &consvars);
 
    return SCIP_OKAY;
 }
