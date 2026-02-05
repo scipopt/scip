@@ -96,7 +96,6 @@
 #define DEFAULT_RANDPROBGOOD   0.001     /**< probability of random selection from good variables */
 #define DEFAULT_RANDPROBVIOL   0.01      /**< probability of random selection from violated constraint */
 #define DEFAULT_CALLBACKEFFORT 500000    /**< effort between callbacks */
-#define DEFAULT_WEIGHTSCALETHRESHOLD 1.0e20 /**< threshold for rescaling weights to avoid overflow */
 
 /* row types */
 enum FJ_Rowtype
@@ -223,7 +222,6 @@ struct FJ_Solver
    SCIP_Real             randprobgood;       /**< probability of random selection from good variables */
    SCIP_Real             randprobviol;       /**< probability of random selection from violated constraint */
    int                   callbackeffort;     /**< effort between callbacks */
-   SCIP_Real             weightscalethreshold; /**< threshold for rescaling weights to avoid overflow */
 };
 typedef struct FJ_Solver FJ_SOLVER;
 
@@ -246,7 +244,6 @@ struct SCIP_HeurData
    SCIP_Real             randprobgood;       /**< probability of random selection from good variables */
    SCIP_Real             randprobviol;       /**< probability of random selection from violated constraint */
    int                   callbackeffort;     /**< effort between callbacks */
-   SCIP_Real             weightscalethreshold; /**< threshold for rescaling weights to avoid overflow */
 };
 
 
@@ -1171,7 +1168,6 @@ SCIP_RETCODE fjSolverUpdateWeights(
    )
 {
    FJ_PROBLEM* problem;
-   SCIP_Bool rescaleallweights = FALSE;
    int i;
    int j;
 
@@ -1188,10 +1184,8 @@ SCIP_RETCODE fjSolverUpdateWeights(
    if( problem->nviolated == 0 )
    {
       solver->objectiveweight += solver->weightupdateincrement;
-      if( solver->objectiveweight > solver->weightscalethreshold )
-         rescaleallweights = TRUE;
-
       solver->totaleffort += problem->nvars;
+
       for( i = 0; i < problem->nvars; ++i )
       {
          FJ_MOVE* move = &solver->jumpmoves[i];
@@ -1207,10 +1201,8 @@ SCIP_RETCODE fjSolverUpdateWeights(
          FJ_CONSTRAINT* constraint = &problem->constraints[cstridx];
 
          constraint->weight += solver->weightupdateincrement;
-         if( constraint->weight > solver->weightscalethreshold )
-            rescaleallweights = TRUE;
-
          solver->totaleffort += constraint->ncoeffs;
+
          for( j = 0; j < constraint->ncoeffs; ++j )
          {
             int cellidx = constraint->coeffs[j].idx;
@@ -1229,23 +1221,6 @@ SCIP_RETCODE fjSolverUpdateWeights(
    }
 
    solver->weightupdateincrement /= solver->weightupdatedecay;
-
-   if( rescaleallweights )
-   {
-      /* TODO check if rescaling the increment makes sense */ 
-      solver->weightupdateincrement /= solver->weightscalethreshold;
-      solver->objectiveweight /= solver->weightscalethreshold;
-
-      for( i = 0; i < problem->nconstraints; ++i )
-         problem->constraints[i].weight /= solver->weightscalethreshold;
-
-      solver->totaleffort += problem->nconstraints;
-
-      for( i = 0; i < problem->nvars; ++i )
-      {
-         SCIP_CALL( fjSolverResetMoves(scip, solver, i) );
-      }
-   }
 
    return SCIP_OKAY;
 }
@@ -1387,8 +1362,7 @@ SCIP_RETCODE fjSolverCreate(
    int                   samplesize,         /**< number of candidates to sample in tournament selection */
    SCIP_Real             randprobgood,       /**< probability of random selection from good variables */
    SCIP_Real             randprobviol,       /**< probability of random selection from violated constraint */
-   int                   callbackeffort,     /**< effort between callbacks */
-   SCIP_Real             weightscalethreshold /**< threshold for rescaling weights to avoid overflow */
+   int                   callbackeffort      /**< effort between callbacks */
    )
 {
    FJ_SOLVER* solv;
@@ -1399,6 +1373,10 @@ SCIP_RETCODE fjSolverCreate(
    assert(problem != NULL);
 
    SCIP_CALL( SCIPallocBlockMemory(scip, &solv) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &solv->jumpmoves, problem->nvars) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &solv->goodvarsset, problem->nvars) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &solv->goodvarssetidx, problem->nvars) );
+
    solv->problem = problem;
    solv->verbosity = verbosity;
    solv->weightupdatedecay = weightupdatedecay;
@@ -1408,9 +1386,7 @@ SCIP_RETCODE fjSolverCreate(
    solv->randprobgood = randprobgood;
    solv->randprobviol = randprobviol;
    solv->callbackeffort = callbackeffort;
-   solv->weightscalethreshold = weightscalethreshold;
 
-   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &solv->jumpmoves, problem->nvars) );
    for( i = 0; i < problem->nvars; ++i )
    {
       solv->jumpmoves[i].value = 0.0;
@@ -1420,16 +1396,13 @@ SCIP_RETCODE fjSolverCreate(
    solv->shiftbuffer = NULL;
    solv->shiftbuffersize = 0;
    solv->nshiftbuffer = 0;
-
-   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &solv->goodvarsset, problem->nvars) );
-   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &solv->goodvarssetidx, problem->nvars) );
    solv->ngoodvars = 0;
    solv->goodvarssize = problem->nvars;
+
    for( i = 0; i < problem->nvars; ++i )
       solv->goodvarssetidx[i] = -1;
 
    solv->randnumgen = randnumgen;
-
    solv->objectiveweight = 0.0;
    solv->bestviolationscore = INT_MAX;
    solv->effortatlastcallback = 0;
@@ -1441,7 +1414,6 @@ SCIP_RETCODE fjSolverCreate(
    solv->iterations = 0;
    solv->weightupdateincrement = 1.0;
    solv->nbumps = 0;
-
    *solver = solv;
 
    return SCIP_OKAY;
@@ -2080,8 +2052,7 @@ SCIP_RETCODE runFeasjump(
 
    SCIP_CALL( fjSolverCreate(scip, &solver, problem, heurdata->randnumgen, heurdata->verbosity,
          heurdata->weightupdatedecay, SCIPinfinity(scip), heurdata->iterations, heurdata->samplesize,
-         heurdata->randprobgood, heurdata->randprobviol, heurdata->callbackeffort,
-         heurdata->weightscalethreshold) );
+         heurdata->randprobgood, heurdata->randprobviol, heurdata->callbackeffort) );
 
    starttime = SCIPgetSolvingTime(scip);
    nsols = 0;
@@ -2327,7 +2298,6 @@ SCIP_RETCODE SCIPincludeHeurFeasjump(
    heurdata->randprobgood = DEFAULT_RANDPROBGOOD;
    heurdata->randprobviol = DEFAULT_RANDPROBVIOL;
    heurdata->callbackeffort = DEFAULT_CALLBACKEFFORT;
-   heurdata->weightscalethreshold = DEFAULT_WEIGHTSCALETHRESHOLD;
    heurdata->randnumgen = NULL;
 
    /* include primal heuristic */
@@ -2396,10 +2366,6 @@ SCIP_RETCODE SCIPincludeHeurFeasjump(
          "heuristics/" HEUR_NAME "/callbackeffort",
          "effort between callbacks",
          &heurdata->callbackeffort, FALSE, DEFAULT_CALLBACKEFFORT, 1, INT_MAX, NULL, NULL) );
-   SCIP_CALL( SCIPaddRealParam(scip,
-         "heuristics/" HEUR_NAME "/weightscalethreshold",
-         "threshold for rescaling weights to avoid overflow",
-         &heurdata->weightscalethreshold, FALSE, DEFAULT_WEIGHTSCALETHRESHOLD, 1.0, SCIP_REAL_MAX, NULL, NULL) );
 
    return SCIP_OKAY;
 }
