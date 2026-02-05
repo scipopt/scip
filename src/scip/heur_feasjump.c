@@ -2002,11 +2002,13 @@ SCIP_RETCODE runFeasjump(
    FJ_SOLVER* solver;
    SCIP_COL** cols;
    SCIP_ROW** rows;
+   SCIP_Real starttime;
+   SCIP_Bool terminate;
    int ncols;
    int nrows;
    int nsols;
    int step;
-   SCIP_Real starttime;
+   int varidx;
 
    assert(scip != NULL);
    assert(heur != NULL);
@@ -2094,16 +2096,11 @@ SCIP_RETCODE runFeasjump(
 
    /* main loop */
    step = 0;
-   while( TRUE )
-   {
-      int varidx;
-      SCIP_Bool terminate = FALSE;
+   terminate = FALSE;
 
-      /* check termination at start of iteration */
-      SCIP_CALL( fjCheckTermination(scip, solver, problem, heurdata, heur, heurtiming, NULL, &nsols, result,
-            starttime, &terminate) );
-      if( terminate )
-         break;
+   while( !terminate && !SCIPisStopped(scip) )
+   {
+      SCIP_Real* solution = NULL;
 
       /* periodic output */
       if( step % 100000 == 0 && heurdata->verbosity >= 1 )
@@ -2112,6 +2109,10 @@ SCIP_RETCODE runFeasjump(
             step, problem->nviolated, solver->ngoodvars, solver->nbumps);
       }
 
+      /* select and perform move */
+      SCIP_CALL( fjSolverSelectVariable(scip, solver, &varidx) );
+      SCIP_CALL( fjSolverDoVariableMove(scip, solver, varidx) );
+
       /* check for improvement */
       if( problem->nviolated < solver->bestviolationscore )
       {
@@ -2119,25 +2120,14 @@ SCIP_RETCODE runFeasjump(
          solver->bestviolationscore = problem->nviolated;
       }
 
+      /* check for solution */
       if( problem->nviolated == 0 && problem->incumbentobjective < solver->bestobjective )
       {
          solver->effortatlastimprovement = solver->totaleffort;
          solver->bestobjective = problem->incumbentobjective;
          solver->percentdecrease = 100;
-
-         /* check termination after finding solution */
-         SCIP_CALL( fjCheckTermination(scip, solver, problem, heurdata, heur, heurtiming,
-               problem->incumbentassignment, &nsols, result, starttime, &terminate) );
-         if( terminate )
-            break;
+         solution = problem->incumbentassignment;
       }
-
-      if( SCIPisStopped(scip) )
-         break;
-
-      /* select and perform move */
-      SCIP_CALL( fjSolverSelectVariable(scip, solver, &varidx) );
-      SCIP_CALL( fjSolverDoVariableMove(scip, solver, varidx) );
 
       /* check progress every N iterations */
       if( step % heurdata->iterations == 0 && step <= heurdata->iterations )
@@ -2157,13 +2147,11 @@ SCIP_RETCODE runFeasjump(
             solver->percentdecrease = (100 * solver->violationsdecrease) / solver->prevviolations;
 
          solver->prevviolations = problem->nviolated;
-
-         /* check termination after checking progress */
-         SCIP_CALL( fjCheckTermination(scip, solver, problem, heurdata, heur, heurtiming, NULL, &nsols, result,
-               starttime, &terminate) );
-         if( terminate )
-            break;
       }
+
+      /* check termination conditions */
+      SCIP_CALL( fjCheckTermination(scip, solver, problem, heurdata, heur, heurtiming, solution, &nsols, result,
+            starttime, &terminate) );
 
       ++step;
    }
