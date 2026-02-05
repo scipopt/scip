@@ -2333,7 +2333,7 @@ SCIP_RETCODE SCIPincludeHeurFeasjump(
          &heurdata->verbosity, FALSE, DEFAULT_VERBOSITY, 0, INT_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
          "heuristics/" HEUR_NAME "/onlywithoutsol",
-         "should the feasibility jump be called only if no solution exists?",
+         "should feasibility jump be called only if no solution exists?",
          &heurdata->onlywithoutsol, FALSE, DEFAULT_ONLYWITHOUTSOL, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
          "heuristics/" HEUR_NAME "/beforepresol",
