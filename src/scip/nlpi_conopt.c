@@ -471,12 +471,12 @@ static int COI_CALLCONV ReadMatrix(
    SCIPdebugMsg(scip, "Jacobian structure information:\n");
    SCIPdebugMsg(scip, "COLSTA = ");
    for( int i = 0; i <= NUMVAR; i++ )
-      SCIPdebugMsgPrint(scip, "%d, ", i, COLSTA[i]);
+      SCIPdebugMsgPrint(scip, "%d, ", COLSTA[i]);
    SCIPdebugMsgPrint(scip, "\n");
 
    SCIPdebugMsg(scip, "ROWNO = ");
    for( int i = 0; i < NUMNZ; i++ )
-      SCIPdebugMsgPrint(scip, "%d, ", i, ROWNO[i]);
+      SCIPdebugMsgPrint(scip, "%d, ", ROWNO[i]);
    SCIPdebugMsgPrint(scip, "\n");
 
    SCIPdebugMsg(scip, "NLFLAG = ");
@@ -667,6 +667,7 @@ static int COI_CALLCONV Status(
       case 9: /* error: setup failure */
       case 10: /* error: solver failure */
       case 11: /* error: internal solver error */
+      case 13: /* error: general system error */
          SCIPdebugMsg(scip, "CONOPT terminated with status %d\n", SOLSTA);
          problem->termstat = SCIP_NLPTERMSTAT_OTHER;
          break;
@@ -734,6 +735,61 @@ static int COI_CALLCONV FDEval(
             SCIPnlpiOracleEvalObjectiveGradient(problem->scip, problem->oracle, X, TRUE, G, JAC);
       if( retcode != SCIP_OKAY )
          *ERRCNT = 1;
+   }
+
+   return 0;
+} /*lint !e715*/
+
+/** CONOPT callback for function and Jacobian interval evaluation
+ *
+ *  The callback has three modes, indicated by MODE:
+ *
+ *  1: Only evaluate the bounds on the sum of the nonlinear terms in row ROWNO and return the interval in [GMIN, GMAX].
+ *  2: Only evaluate the bounds on the nonlinear Jacobian elements in row ROWNO and return the intervals in [JMIN, JMAX].
+ *  3: Perform both option 1 and 2.
+ */
+static int COI_CALLCONV FDInterval(
+   const double          XMIN[],             /**< lower bound on variables (provided by CONOPT) */
+   const double          XMAX[],             /**< upper bound on variables (provided by CONOPT) */
+   double*               GMIN,               /**< buffer for lower bound on function value in constraint ROWNO */
+   double*               GMAX,               /**< buffer for lower bound on function value in constraint ROWNO */
+   double                JMIN[],             /**< buffer for lower bound on the derivatives of the function in constraint ROWNO */
+   double                JMAX[],             /**< buffer for upper bound on the derivatives of the function in constraint ROWNO */
+   int                   ROWNO,              /**< number of the row for which nonlinearities are to be evaluated (provided by CONOPT) */
+   const int             JACNUM[],           /**< list of column numbers for the nonlinear nonzero Jacobian elements in
+                                              *   the current row (provided by CONOPT when MODE = 2 or 3) */
+   int                   MODE,               /**< indicator for mode of evaluation (provided by CONOPT) */
+   double                PINF,               /**< plus infinity (provided by CONOPT) */
+   int                   NUMVAR,             /**< number of variables (provided by CONOPT) */
+   int                   NUMJAC,             /**< number of nonlinear nonzero Jacobian elements in the current row */
+   void*                 USRMEM              /**< user memory pointer (i.e. pointer to SCIP_NLPIPROBLEM) */
+   )
+{
+   SCIP_RETCODE retcode;
+   SCIP_NLPIPROBLEM* problem = (SCIP_NLPIPROBLEM*)USRMEM;
+
+   assert(problem != NULL);
+   assert(ROWNO <= SCIPnlpiOracleGetNConstraints(problem->oracle));
+
+   /* currently do not having interval derivatives, so just return for MODE == 2
+    * (CONOPT has initialized JMIN/JMAX to -/+PINF)
+    */
+   if( MODE == 2 )
+      return 0;
+
+   if( ROWNO < SCIPnlpiOracleGetNConstraints(problem->oracle) )
+   {
+      retcode = SCIPnlpiOracleEvalConstraintInterval(problem->scip, problem->oracle, PINF, ROWNO, XMIN, XMAX, GMIN, GMAX);
+   }
+   else
+   {
+      retcode = SCIPnlpiOracleEvalObjectiveInterval(problem->scip, problem->oracle, PINF, XMIN, XMAX, GMIN, GMAX);
+   }
+
+   if( retcode != SCIP_OKAY )
+   {
+      *GMIN = -PINF;
+      *GMAX = PINF;
    }
 
    return 0;
@@ -943,6 +999,7 @@ static SCIP_RETCODE initConopt(
    COI_Error += COIDEF_Solution(problem->CntVect, Solution);
    COI_Error += COIDEF_ReadMatrix(problem->CntVect, ReadMatrix);
    COI_Error += COIDEF_FDEval(problem->CntVect, FDEval);
+   COI_Error += COIDEF_FDInterval(problem->CntVect, FDInterval);
    COI_Error += COIDEF_Option(problem->CntVect, Option);
    COI_Error += COIDEF_2DLagrStr(problem->CntVect, LagrStr);
    COI_Error += COIDEF_2DLagrVal(problem->CntVect, LagrVal);
