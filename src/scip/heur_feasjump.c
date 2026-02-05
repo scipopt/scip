@@ -2119,11 +2119,9 @@ SCIP_RETCODE runFeasjump(
          solution = problem->incumbentassignment;
       }
 
-      /* check progress every N iterations */
-      if( step % heurdata->iterations == 0 && step <= heurdata->iterations )
-      {
+      /* check progress periodically */
+      if( step == 0 )
          solver->prevviolations = problem->nviolated;
-      }
       else if( step % heurdata->iterations == 0 )
       {
          if( heurdata->verbosity >= 1 )
