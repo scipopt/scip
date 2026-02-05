@@ -1827,8 +1827,8 @@ SCIP_RETCODE addObjCutoff(
    rhs = SCIPgetCutoffbound(scip) - SCIPcutoffbounddelta(scip);
    SCIP_CALL( fjProblemAddConstraint(scip, problem, FJ_LTE, rhs, objnnzs, inds, vals, TRUE, &idx) );
 
-   SCIPfreeBufferArray(scip, &inds);
    SCIPfreeBufferArray(scip, &vals);
+   SCIPfreeBufferArray(scip, &inds);
 
    return SCIP_OKAY;
 }
