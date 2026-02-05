@@ -322,23 +322,16 @@ SCIP_RETCODE fjProblemFree(
    prob = *problem;
    assert(prob != NULL);
 
-   /* free variable data */
-   if( prob->vars != NULL )
-   {
-      for( i = 0; i < prob->nvars; ++i )
-      {
-         if( prob->vars[i].coeffs != NULL )
-         {
-            SCIPfreeBlockMemoryArray(scip, &prob->vars[i].coeffs, prob->vars[i].coeffssize);
-         }
-      }
-      SCIPfreeBlockMemoryArray(scip, &prob->vars, prob->varssize);
-   }
+   if( prob->violatedconstraints != NULL )
+      SCIPfreeBlockMemoryArray(scip, &prob->violatedconstraints, prob->violatedsize);
+
+   if( prob->incumbentassignment != NULL )
+      SCIPfreeBlockMemoryArray(scip, &prob->incumbentassignment, prob->nvars);
 
    /* free constraint data */
    if( prob->constraints != NULL )
    {
-      for( i = 0; i < prob->nconstraints; ++i )
+      for( i = prob->nconstraints - 1; i >= 0; --i )
       {
          if( prob->constraints[i].coeffs != NULL )
          {
@@ -348,11 +341,18 @@ SCIP_RETCODE fjProblemFree(
       SCIPfreeBlockMemoryArray(scip, &prob->constraints, prob->constraintssize);
    }
 
-   if( prob->incumbentassignment != NULL )
-      SCIPfreeBlockMemoryArray(scip, &prob->incumbentassignment, prob->nvars);
-
-   if( prob->violatedconstraints != NULL )
-      SCIPfreeBlockMemoryArray(scip, &prob->violatedconstraints, prob->violatedsize);
+   /* free variable data */
+   if( prob->vars != NULL )
+   {
+      for( i = prob->nvars - 1; i >= 0; --i )
+      {
+         if( prob->vars[i].coeffs != NULL )
+         {
+            SCIPfreeBlockMemoryArray(scip, &prob->vars[i].coeffs, prob->vars[i].coeffssize);
+         }
+      }
+      SCIPfreeBlockMemoryArray(scip, &prob->vars, prob->varssize);
+   }
 
    SCIPfreeBlockMemory(scip, problem);
 
@@ -1462,17 +1462,17 @@ SCIP_RETCODE fjSolverFree(
    solv = *solver;
    assert(solv != NULL);
 
-   SCIPfreeBlockMemoryArray(scip, &solv->goodvarssetidx, solv->problem->nvars);
-   SCIPfreeBlockMemoryArray(scip, &solv->goodvarsset, solv->goodvarssize);
    if( solv->shiftbuffer != NULL )
    {
       int i;
-      for( i = 0; i < solv->shiftbuffersize; ++i )
+      for( i = solv->shiftbuffersize - 1; i >= 0; --i )
       {
          SCIPfreeBlockMemory(scip, &solv->shiftbuffer[i]); /*lint !e866*/
       }
       SCIPfreeBlockMemoryArray(scip, &solv->shiftbuffer, solv->shiftbuffersize);
    }
+   SCIPfreeBlockMemoryArray(scip, &solv->goodvarssetidx, solv->problem->nvars);
+   SCIPfreeBlockMemoryArray(scip, &solv->goodvarsset, solv->goodvarssize);
    SCIPfreeBlockMemoryArray(scip, &solv->jumpmoves, solv->problem->nvars);
    SCIPfreeBlockMemory(scip, solver);
 
