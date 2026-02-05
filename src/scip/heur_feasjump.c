@@ -2078,7 +2078,8 @@ SCIP_RETCODE runFeasjump(
          heurdata->weightupdatedecay, problem->usedrelaxcontinuous);
 
    /* main loop */
-   for( step = 0; step < INT_MAX; ++step )
+   step = 0;
+   while( TRUE )
    {
       int varidx;
       SCIP_Bool terminate = FALSE;
@@ -2148,6 +2149,8 @@ SCIP_RETCODE runFeasjump(
          if( terminate )
             break;
       }
+
+      ++step;
    }
 
    SCIP_CALL( fjSolverFree(scip, &solver) );
