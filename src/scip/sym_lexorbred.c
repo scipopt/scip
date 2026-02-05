@@ -948,7 +948,10 @@ SCIP_DECL_SYMHDLREXITSOL(symhdlrExitsolLexOrbRed)
       assert(symdata != NULL);
       assert(symdata->lexreddata != NULL || !symdata->active);
 
-      SCIP_CALL( SCIPlexicographicReductionReset(scip, symdata->lexreddata) );
+      if( symdata->active )
+      {
+         SCIP_CALL( SCIPlexicographicReductionReset(scip, symdata->lexreddata) );
+      }
    }
    assert(symhdlrdata->orbitalreddata != NULL);
 
