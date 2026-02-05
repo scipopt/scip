@@ -600,7 +600,6 @@ SCIP_RETCODE fjSolverUpdateJumpValue(
    SCIP_Real currentslopestore;
    int currentindexstore;
    int i;
-   int j;
 
    assert(scip != NULL);
    assert(solver != NULL);
@@ -617,148 +616,117 @@ SCIP_RETCODE fjSolverUpdateJumpValue(
    /* compute shift buffer */
    for( i = 0; i < var->ncoeffs; ++i )
    {
-      int cstridx = var->coeffs[i].idx;
+      FJ_CONSTRAINT* constraint;
+      SCIP_Real bounds[2];
+      SCIP_Real residualincumbent;
+      SCIP_Real validrangelb;
+      SCIP_Real validrangeub;
       SCIP_Real cellcoeff = var->coeffs[i].coeff;
-      FJ_CONSTRAINT* constraint = &problem->constraints[cstridx];
-      int nbounds = 0;
-      SCIP_Real bounds[6];
+      int cstridx = var->coeffs[i].idx;
 
-      assert(cellcoeff != 0.0); /*lint !e777*/
+      constraint = &problem->constraints[cstridx];
 
       /* determine bounds based on constraint sense */
       if( constraint->sense == FJ_LTE )
       {
-         bounds[nbounds++] = -SCIPinfinity(scip);
-         bounds[nbounds++] = constraint->rhs;
+         bounds[0] = -SCIPinfinity(scip);
+         bounds[1] = constraint->rhs;
       }
       else if( constraint->sense == FJ_GTE )
       {
-         bounds[nbounds++] = constraint->rhs;
-         bounds[nbounds++] = SCIPinfinity(scip);
+         bounds[0] = constraint->rhs;
+         bounds[1] = SCIPinfinity(scip);
       }
       else
       {
-         bounds[nbounds++] = -SCIPinfinity(scip);
-         bounds[nbounds++] = constraint->rhs;
-         bounds[nbounds++] = constraint->rhs;
-         bounds[nbounds++] = constraint->rhs;
-         bounds[nbounds++] = constraint->rhs;
-         bounds[nbounds++] = SCIPinfinity(scip);
+         bounds[0] = constraint->rhs;
+         bounds[1] = constraint->rhs;
       }
 
-      for( j = 0; j < nbounds; j += 2 )
+      assert(cellcoeff != 0.0); /*lint !e777*/
+      residualincumbent = constraint->incumbentlhs - cellcoeff * varincumbent;
+
+      if( cellcoeff >= 0.0 )
       {
-         SCIP_Real residualincumbent = constraint->incumbentlhs - cellcoeff * varincumbent;
-         SCIP_Real validrangelb;
-         SCIP_Real validrangeub;
-
-         if( cellcoeff >= 0.0 )
+         if( !SCIPisInfinity(scip, -bounds[0]) )
          {
-            if( !SCIPisInfinity(scip, -bounds[j]) )
+            validrangelb = (bounds[0] - residualincumbent) / cellcoeff;
+            if( var->vartype == FJ_INTEGER )
             {
-               validrangelb = (bounds[j] - residualincumbent) / cellcoeff;
-               if( var->vartype == FJ_INTEGER )
-               {
-                  validrangelb = round(validrangelb);
-                  if( SCIPisFeasNegative(scip, validrangelb * cellcoeff + residualincumbent - bounds[j]) )
-                     validrangelb += 1.0;
-               }
-               else
-               {
-                  if( SCIPisFeasNegative(scip, validrangelb * cellcoeff + residualincumbent - bounds[j]) )
-                     validrangelb = nextafter(validrangelb, (SCIP_Real)INFINITY);
-               }
+               validrangelb = round(validrangelb);
+               if( SCIPisFeasNegative(scip, validrangelb * cellcoeff + residualincumbent - bounds[0]) )
+                  validrangelb += 1.0;
             }
             else
-               validrangelb = bounds[j];
-
-            if( !SCIPisInfinity(scip, bounds[j + 1]) )
             {
-               validrangeub = (bounds[j + 1] - residualincumbent) / cellcoeff;
-               if( var->vartype == FJ_INTEGER )
-               {
-                  validrangeub = round(validrangeub);
-                  if( SCIPisFeasPositive(scip, validrangeub * cellcoeff + residualincumbent - bounds[j + 1]) )
-                     validrangeub -= 1.0;
-               }
-               else
-               {
-                  if( SCIPisFeasPositive(scip, validrangeub * cellcoeff + residualincumbent - bounds[j + 1]) )
-                     validrangeub = nextafter(validrangeub, -(SCIP_Real)INFINITY);
-               }
+               if( SCIPisFeasNegative(scip, validrangelb * cellcoeff + residualincumbent - bounds[0]) )
+                  validrangelb = nextafter(validrangelb, (SCIP_Real)INFINITY);
             }
-            else
-               validrangeub = bounds[j + 1];
          }
          else
+            validrangelb = bounds[0];
+
+         if( !SCIPisInfinity(scip, bounds[1]) )
          {
-            if( !SCIPisInfinity(scip, bounds[j + 1]) )
+            validrangeub = (bounds[1] - residualincumbent) / cellcoeff;
+            if( var->vartype == FJ_INTEGER )
             {
-               validrangelb = (bounds[j + 1] - residualincumbent) / cellcoeff;
-               if( var->vartype == FJ_INTEGER )
-               {
-                  validrangelb = round(validrangelb);
-                  if( SCIPisFeasPositive(scip, validrangelb * cellcoeff + residualincumbent - bounds[j + 1]) )
-                     validrangelb += 1.0;
-               }
-               else
-               {
-                  if( SCIPisFeasPositive(scip, validrangelb * cellcoeff + residualincumbent - bounds[j + 1]) )
-                     validrangelb = nextafter(validrangelb, (SCIP_Real)INFINITY);
-               }
+               validrangeub = round(validrangeub);
+               if( SCIPisFeasPositive(scip, validrangeub * cellcoeff + residualincumbent - bounds[1]) )
+                  validrangeub -= 1.0;
             }
             else
-               validrangelb = -bounds[j + 1];
-
-            if( !SCIPisInfinity(scip, -bounds[j]) )
             {
-               validrangeub = (bounds[j] - residualincumbent) / cellcoeff;
-               if( var->vartype == FJ_INTEGER )
-               {
-                  validrangeub = round(validrangeub);
-                  if( SCIPisFeasNegative(scip, validrangeub * cellcoeff + residualincumbent - bounds[j]) )
-                     validrangeub -= 1.0;
-               }
-               else
-               {
-                  if( SCIPisFeasNegative(scip, validrangeub * cellcoeff + residualincumbent - bounds[j]) )
-                     validrangeub = nextafter(validrangeub, -(SCIP_Real)INFINITY);
-               }
+               if( SCIPisFeasPositive(scip, validrangeub * cellcoeff + residualincumbent - bounds[1]) )
+                  validrangeub = nextafter(validrangeub, -(SCIP_Real)INFINITY);
+            }
+         }
+         else
+            validrangeub = bounds[1];
+      }
+      else
+      {
+         if( !SCIPisInfinity(scip, bounds[1]) )
+         {
+            validrangelb = (bounds[1] - residualincumbent) / cellcoeff;
+            if( var->vartype == FJ_INTEGER )
+            {
+               validrangelb = round(validrangelb);
+               if( SCIPisFeasPositive(scip, validrangelb * cellcoeff + residualincumbent - bounds[1]) )
+                  validrangelb += 1.0;
             }
             else
-               validrangeub = -bounds[j];
-         }
-
-         if( validrangelb > validrangeub )
-            continue;
-
-         if( validrangelb > currentvalue )
-         {
-            currentslope -= constraint->weight;
-            if( validrangelb < var->ub )
             {
-               /* ensure capacity */
-               if( solver->nshiftbuffer >= solver->shiftbuffersize )
-               {
-                  int oldsize = solver->shiftbuffersize;
-                  int newsize = SCIPcalcMemGrowSize(scip, solver->nshiftbuffer + 1);
-                  int k;
-                  SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &solver->shiftbuffer, oldsize, newsize) );
-                  for( k = oldsize; k < newsize; ++k )
-                  {
-                     SCIP_CALL( SCIPallocBlockMemory(scip, &solver->shiftbuffer[k]) ); /*lint !e866*/
-                  }
-                  solver->shiftbuffersize = newsize;
-               }
-               solver->shiftbuffer[solver->nshiftbuffer]->value = validrangelb;
-               solver->shiftbuffer[solver->nshiftbuffer]->weight = constraint->weight;
-               solver->nshiftbuffer++;
+               if( SCIPisFeasPositive(scip, validrangelb * cellcoeff + residualincumbent - bounds[1]) )
+                  validrangelb = nextafter(validrangelb, (SCIP_Real)INFINITY);
             }
          }
+         else
+            validrangelb = -bounds[1];
 
-         if( validrangeub <= currentvalue )
-            currentslope += constraint->weight;
-         else if( validrangeub < var->ub )
+         if( !SCIPisInfinity(scip, -bounds[0]) )
+         {
+            validrangeub = (bounds[0] - residualincumbent) / cellcoeff;
+            if( var->vartype == FJ_INTEGER )
+            {
+               validrangeub = round(validrangeub);
+               if( SCIPisFeasNegative(scip, validrangeub * cellcoeff + residualincumbent - bounds[0]) )
+                  validrangeub -= 1.0;
+            }
+            else
+            {
+               if( SCIPisFeasNegative(scip, validrangeub * cellcoeff + residualincumbent - bounds[0]) )
+                  validrangeub = nextafter(validrangeub, -(SCIP_Real)INFINITY);
+            }
+         }
+         else
+            validrangeub = -bounds[0];
+      }
+
+      if( validrangelb > currentvalue )
+      {
+         currentslope -= constraint->weight;
+         if( validrangelb < var->ub )
          {
             /* ensure capacity */
             if( solver->nshiftbuffer >= solver->shiftbuffersize )
@@ -773,10 +741,32 @@ SCIP_RETCODE fjSolverUpdateJumpValue(
                }
                solver->shiftbuffersize = newsize;
             }
-            solver->shiftbuffer[solver->nshiftbuffer]->value = validrangeub;
+            solver->shiftbuffer[solver->nshiftbuffer]->value = validrangelb;
             solver->shiftbuffer[solver->nshiftbuffer]->weight = constraint->weight;
             solver->nshiftbuffer++;
          }
+      }
+
+      if( validrangeub <= currentvalue )
+         currentslope += constraint->weight;
+      else if( validrangeub < var->ub )
+      {
+         /* ensure capacity */
+         if( solver->nshiftbuffer >= solver->shiftbuffersize )
+         {
+            int oldsize = solver->shiftbuffersize;
+            int newsize = SCIPcalcMemGrowSize(scip, solver->nshiftbuffer + 1);
+            int k;
+            SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &solver->shiftbuffer, oldsize, newsize) );
+            for( k = oldsize; k < newsize; ++k )
+            {
+               SCIP_CALL( SCIPallocBlockMemory(scip, &solver->shiftbuffer[k]) ); /*lint !e866*/
+            }
+            solver->shiftbuffersize = newsize;
+         }
+         solver->shiftbuffer[solver->nshiftbuffer]->value = validrangeub;
+         solver->shiftbuffer[solver->nshiftbuffer]->weight = constraint->weight;
+         solver->nshiftbuffer++;
       }
    }
 
