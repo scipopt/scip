@@ -725,6 +725,103 @@ SCIP_RETCODE evalFunctionValue(
    return SCIP_OKAY;
 }
 
+/** computes an interval for a function */
+static
+SCIP_RETCODE evalFunctionInterval(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_NLPIORACLE*      oracle,             /**< pointer to NLPIORACLE data structure */
+   SCIP_NLPIORACLECONS*  cons,               /**< oracle constraint */
+   SCIP_Real             infinity,           /**< value for infinity */
+   const SCIP_Real*      xmin,               /**< lower bound on variable interval */
+   const SCIP_Real*      xmax,               /**< upper bound on variable interval */
+   SCIP_Real*            valmin,             /**< buffer to store lower bound of function */
+   SCIP_Real*            valmax              /**< buffer to store upper bound of function */
+   )
+{
+   SCIP_INTERVAL val;
+   int i;
+
+   assert(oracle != NULL);
+   assert(cons != NULL);
+   assert(xmin != NULL || oracle->nvars == 0);
+   assert(xmax != NULL || oracle->nvars == 0);
+   assert(valmin != NULL);
+   assert(valmax != NULL);
+
+   SCIPdebugMessage("%p eval function interval\n", (void*)oracle);
+
+   if( cons->expr != NULL )
+   {
+      SCIP_EXPRITER* it;
+      SCIP_EXPR* expr;
+      SCIP_INTERVAL exprval;
+
+      /* Iterate through the expression in DFS.
+       * Each time when an expression node is left, its interval (or activity) is evaluated by the
+       * exprhdlrs interval evaluator (no nlhdlrs here), using the values in the children.
+       * For variables, which are given by an index here, the values from xmin/xmax are used.
+       */
+      SCIP_CALL( SCIPcreateExpriter(scip, &it) );
+      SCIP_CALL( SCIPexpriterInit(it, cons->expr, SCIP_EXPRITER_DFS, FALSE) );
+      SCIPexpriterSetStagesDFS(it, SCIP_EXPRITER_LEAVEEXPR);
+
+      for( expr = SCIPexpriterGetCurrent(it); !SCIPexpriterIsEnd(it); expr = SCIPexpriterGetNext(it) )
+      {
+         if( SCIPisExprVaridx(scip, expr) )
+         {
+            int varidx = SCIPgetIndexExprVaridx(expr);
+            assert(varidx >= 0);
+            assert(varidx < SCIPnlpiOracleGetNVars(oracle));
+
+            SCIPintervalSetBounds(&exprval, xmin[varidx] == -infinity ? -SCIP_INTERVAL_INFINITY : xmin[varidx],  /*lint !e777 */
+               xmax[varidx] == infinity ? SCIP_INTERVAL_INFINITY : xmax[varidx]);  /*lint !e777 */
+         }
+         else
+         {
+            /* call the inteval callback of the exprhdlr */
+            SCIP_CALL( SCIPcallExprInteval(scip, expr, &exprval, NULL, NULL) );
+         }
+
+         if( SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, exprval) )
+         {
+            /* abort with empty interval if domain error */
+            *valmin = 1.0;
+            *valmax = -1.0;
+
+            SCIPfreeExpriter(&it);
+            return SCIP_OKAY;
+         }
+
+         /* set exprval as activity in expr, so it will be used by SCIPcallExprInteval() in parents */
+         SCIPexprSetActivity(expr, exprval, 0LL);
+      }
+
+      SCIPfreeExpriter(&it);
+
+      val = SCIPexprGetActivity(cons->expr);
+   }
+   else
+   {
+      SCIPintervalSet(&val, 0.0);
+   }
+
+   /* add the activity of the linear terms */
+   for( i = 0; i < cons->nlinidxs; ++i )
+   {
+      SCIP_INTERVAL interval;
+
+      SCIPintervalSetBounds(&interval, xmin[cons->linidxs[i]] == -infinity ? -SCIP_INTERVAL_INFINITY : xmin[cons->linidxs[i]],  /*lint !e777 */
+         xmax[cons->linidxs[i]] == infinity ? SCIP_INTERVAL_INFINITY : xmax[cons->linidxs[i]]);  /*lint !e777 */
+      SCIPintervalMulScalar(SCIP_INTERVAL_INFINITY, &interval, interval, cons->lincoefs[i]);
+      SCIPintervalAdd(SCIP_INTERVAL_INFINITY, &val, val, interval);
+   }
+
+   *valmin = val.inf <= -SCIP_INTERVAL_INFINITY ? -infinity : val.inf;
+   *valmax = val.sup >=  SCIP_INTERVAL_INFINITY ?  infinity : val.sup;
+
+   return SCIP_OKAY;
+}
+
 /** computes the value and gradient of a function
  *
  * @return SCIP_INVALIDDATA, if the function or its gradient could not be evaluated (domain error, etc.)
@@ -2193,6 +2290,72 @@ SCIP_RETCODE SCIPnlpiOracleEvalConstraintValues(
       if( retcode != SCIP_OKAY )
          break;
    }
+   SCIP_CALL( SCIPstopClock(scip, oracle->evalclock) );
+
+   return retcode;
+}
+
+/** interval evaluate objective function for given variable bounds */
+SCIP_RETCODE SCIPnlpiOracleEvalObjectiveInterval(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_NLPIORACLE*      oracle,             /**< pointer to NLPIORACLE data structure */
+   SCIP_Real             infinity,           /**< value for infinity */
+   const SCIP_Real*      xmin,               /**< lower bound on variable interval */
+   const SCIP_Real*      xmax,               /**< upper bound on variable interval */
+   SCIP_Real*            objmin,             /**< buffer to store lower bound of objective */
+   SCIP_Real*            objmax              /**< buffer to store upper bound of objective */
+   )
+{
+   SCIP_RETCODE retcode;
+
+   assert(oracle != NULL);
+   assert(xmin != NULL || oracle->nvars == 0);
+   assert(xmax != NULL || oracle->nvars == 0);
+   assert(objmin != NULL);
+   assert(objmax != NULL);
+
+   SCIPdebugMessage("%p eval obj interval\n", (void*)oracle);
+
+   SCIP_CALL( SCIPstartClock(scip, oracle->evalclock) );
+   retcode = evalFunctionInterval(scip, oracle, oracle->objective, infinity, xmin, xmax, objmin, objmax);
+   SCIP_CALL( SCIPstopClock(scip, oracle->evalclock) );
+
+   assert(oracle->objective->lhs == oracle->objective->rhs);  /*lint !e777*/
+   if( retcode == SCIP_OKAY )
+   {
+      if( *objmin != -infinity )  /*lint !e777 */
+         *objmin += oracle->objective->lhs;
+      if( *objmax !=  infinity )  /*lint !e777 */
+         *objmax += oracle->objective->lhs;
+   }
+
+   return retcode;
+}
+
+/** interval evaluate one constraint function for given variable bounds */
+SCIP_RETCODE SCIPnlpiOracleEvalConstraintInterval(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_NLPIORACLE*      oracle,             /**< pointer to NLPIORACLE data structure */
+   SCIP_Real             infinity,           /**< value for infinity */
+   int                   considx,            /**< index of constraint to evaluate */
+   const SCIP_Real*      xmin,               /**< lower bound on variable interval */
+   const SCIP_Real*      xmax,               /**< upper bound on variable interval */
+   SCIP_Real*            conmin,             /**< buffer to store lower bound of constraint */
+   SCIP_Real*            conmax              /**< buffer to store upper bound of constraint */
+   )
+{
+   SCIP_RETCODE retcode;
+
+   assert(oracle != NULL);
+   assert(xmin != NULL || oracle->nvars == 0);
+   assert(xmax != NULL || oracle->nvars == 0);
+   assert(conmin != NULL);
+   assert(conmax != NULL);
+
+   SCIPdebugMessage("%p eval cons interval\n", (void*)oracle);
+
+   SCIP_CALL( SCIPstartClock(scip, oracle->evalclock) );
+   retcode = evalFunctionInterval(scip, oracle, oracle->conss[considx], infinity, xmin, xmax, conmin, conmax);
    SCIP_CALL( SCIPstopClock(scip, oracle->evalclock) );
 
    return retcode;

@@ -9,6 +9,8 @@ Features
 Performance improvements
 ------------------------
 
+- Implemented interval function evaluation callback in CONOPT interface.
+
 Fixed bugs
 ----------
 
@@ -19,6 +21,7 @@ Interface changes
 
 - added SCIPcalcBestCut() to try multiple cut generation methods (FlowCover, KnapsackCover, CMIR) on an aggregation row and return the best cut by efficacy
 - added SCIPinitCutGenParams(), SCIPcreateCutGenResult(), and SCIPfreeCutGenResult() as helper functions for SCIPcalcBestCut()
+- added SCIPnlpiOracleEvalObjectiveInterval() and SCIPnlpiOracleEvalConstraintInterval()
 
 ### New parameters
 
