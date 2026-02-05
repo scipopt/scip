@@ -1144,7 +1144,7 @@ SCIP_RETCODE fjSolverResetMoves(
    solver->totaleffort += var->ncoeffs;
    SCIP_CALL( fjSolverUpdateJumpValue(scip, solver, varidx) );
 
-   move->score = solver->objectiveweight * var->objcoeff * (move->value - problem->incumbentassignment[varidx]);
+   move->score = solver->objectiveweight * var->objcoeff * (problem->incumbentassignment[varidx] - move->value);
 
    for( i = 0; i < var->ncoeffs; ++i )
    {
@@ -1196,7 +1196,7 @@ SCIP_RETCODE fjSolverUpdateWeights(
       {
          FJ_MOVE* move = &solver->jumpmoves[i];
          move->score += solver->weightupdateincrement * problem->vars[i].objcoeff
-               * (move->value - problem->incumbentassignment[i]);
+               * (problem->incumbentassignment[i] - move->value);
       }
    }
    else
