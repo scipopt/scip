@@ -1379,6 +1379,37 @@ SCIP_DECL_SYMHDLRTRYADD(symhdlrTryaddRowCol)
    return SCIP_OKAY;
 }
 
+/** solving process deinitialization method of symmetry handler (called before branch and bound process data is freed) */
+static
+SCIP_DECL_SYMHDLREXITSOL(symhdlrExitsolRowCol)
+{ /*lint --e{715}*/
+   SCIP_SYMHDLRDATA* symhdlrdata;
+   SCIP_SYMCOMPDATA* symdata;
+   int s;
+
+   assert(symcomps != NULL || nsymcomps == 0);
+   assert(symhdlr != NULL);
+
+   symhdlrdata = SCIPsymhdlrGetData(symhdlr);
+   assert(symhdlrdata != NULL);
+
+   for( s = 0; s < nsymcomps; ++s )
+   {
+      assert(symcomps[s] != NULL);
+
+      symdata = SCIPsymcompGetData(symcomps[s]);
+      assert(symdata != NULL);
+      assert(symdata->lexreddata != NULL || !symdata->lexredactive);
+
+      SCIP_CALL( SCIPlexicographicReductionReset(scip, symdata->lexreddata) );
+   }
+   assert(symhdlrdata->orbitopalreddata != NULL);
+
+   SCIP_CALL( SCIPorbitopalReductionReset(scip, symhdlrdata->orbitopalreddata) );
+
+   return SCIP_OKAY;
+}
+
 /** deinitialization method of symmetry handler (called before transformed problem is freed) */
 static
 SCIP_DECL_SYMHDLREXIT(symhdlrExitRowCol)
@@ -1552,7 +1583,7 @@ SCIP_RETCODE SCIPincludeSymhdlrRowCol(
    SCIP_CALL( SCIPincludeSymhdlrBasic(scip, SYM_NAME, SYM_DESC, SYM_PRIORITY, SYM_PROPPRIORITY, 0, -1,
          SYM_PROPFREQ, -1, SYM_DELAYPROP, FALSE, 1.0, 1, SYM_PROPTIMING, SCIP_PRESOLTIMING_FAST,
          symhdlrTryaddRowCol, NULL, symhdlrFreeRowCol, NULL, symhdlrExitRowCol,
-         NULL, NULL, NULL, NULL, NULL, NULL, symhdlrPropRowCol,
+         NULL, symhdlrExitsolRowCol, NULL, NULL, NULL, NULL, symhdlrPropRowCol,
          NULL, symhdlrPresolRowCol, symhdlrdata) );
 
    /* include shadow tree event handler if it is not included yet */
