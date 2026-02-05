@@ -74,6 +74,8 @@ SCIP_RETCODE doSymhdlrCreate(
    SCIP_DECL_SYMHDLRFREE ((*symfree)),       /**< destructor method of symmetry handler */
    SCIP_DECL_SYMHDLRINIT ((*syminit)),       /**< initialization method of symmetry handler */
    SCIP_DECL_SYMHDLREXIT ((*symexit)),       /**< deinitialization method of symmetry handler */
+   SCIP_DECL_SYMHDLRINITSOL((*syminitsol)),  /**< solving process initialization method of symmetry handler */
+   SCIP_DECL_SYMHDLREXITSOL((*symexitsol)),  /**< solving process deinitialization method of symmetry handler */
    SCIP_DECL_SYMHDLRDELETE((*symdelete)),    /**< destructor of symmetry component data */
    SCIP_DECL_SYMHDLRTRANS((*symtrans)),      /**< transformation method of symmetry hanlder */
    SCIP_DECL_SYMHDLRSEPALP((*symsepalp)),    /**< separator for LP solutions */
@@ -116,6 +118,8 @@ SCIP_RETCODE doSymhdlrCreate(
    (*symhdlr)->symfree = symfree;
    (*symhdlr)->syminit = syminit;
    (*symhdlr)->symexit = symexit;
+   (*symhdlr)->syminitsol = syminitsol;
+   (*symhdlr)->symexitsol = symexitsol;
    (*symhdlr)->symdelete = symdelete;
    (*symhdlr)->symtrans = symtrans;
    (*symhdlr)->symsepalp = symsepalp;
@@ -289,8 +293,8 @@ SCIP_RETCODE SCIPsymhdlrCreate(
 
    SCIP_CALL_FINALLY( doSymhdlrCreate(symhdlr, set, messagehdlr, blkmem, name, desc, priority, proppriority,
          sepapriority, presolpriority, propfreq, sepafreq, delayprop, delaysepa, maxbounddist, maxprerounds, proptiming,
-         presoltiming, symtryadd, symcopy, symfree, syminit, symexit, symdelete, symtrans, symsepalp, symsepasol,
-         symprop, symresprop, sympresol, symhdlrdata),
+         presoltiming, symtryadd, symcopy, symfree, syminit, symexit, syminitsol, symexitsol, symdelete, symtrans,
+         symsepalp, symsepasol, symprop, symresprop, sympresol, symhdlrdata),
          (void) SCIPsymhdlrFree(symhdlr, set) );
 
    return SCIP_OKAY;
