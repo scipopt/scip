@@ -2325,7 +2325,7 @@ SCIP_RETCODE SCIPincludeHeurFeasjump(
          &heurdata->weightupdatedecay, FALSE, DEFAULT_WEIGHTDECAY, 0.0, SCIP_REAL_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddIntParam(scip,
          "heuristics/" HEUR_NAME "/maxeffort",
-         "maximum effort spend in feasibility jump",
+         "maximum effort spent in feasibility jump",
          &heurdata->maxeffort, FALSE, DEFAULT_MAXEFFORT, 0, INT_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddIntParam(scip,
          "heuristics/" HEUR_NAME "/verbosity",
