@@ -179,7 +179,6 @@ struct FJ_Problem
    int*                  violatedconstraints;/**< violated constraints indices */
    int                   nviolated;          /**< number of violated constraints */
    int                   violatedsize;       /**< size of violated array */
-   SCIP_Bool             usedrelaxcontinuous;/**< was continuous variable relaxation used? */
    int                   nnonzeros;          /**< number of nonzeros */
    SCIP_Real             incumbentobjective; /**< incumbent objective value */
 };
@@ -294,7 +293,6 @@ SCIP_RETCODE fjProblemCreate(
    prob->violatedconstraints = NULL;
    prob->nviolated = 0;
    prob->violatedsize = 0;
-   prob->usedrelaxcontinuous = FALSE;
    prob->nnonzeros = 0;
    prob->incumbentobjective = 0.0;
 
@@ -407,135 +405,30 @@ SCIP_RETCODE fjProblemAddConstraint(
    int                   ncoeffs,            /**< number of coefficients */
    int*                  rowinds,            /**< variable indices */
    SCIP_Real*            rowcoeffs,          /**< coefficients */
-   SCIP_Bool             relaxcontinuous,    /**< should continuous variables be relaxed? */
    int*                  idx                 /**< pointer to store constraint index */
    )
 {
    FJ_CONSTRAINT* constraint;
-   SCIP_Real newrhs;
    SCIP_Real scalar;
    int i;
-   int nnewcoeffs;
 
    assert(scip != NULL);
    assert(problem != NULL);
    assert(rowinds != NULL || ncoeffs == 0);
    assert(rowcoeffs != NULL || ncoeffs == 0);
 
-   if( relaxcontinuous )
-      problem->usedrelaxcontinuous = TRUE;
-
-   /* handle continuous variable relaxation for equality constraints */
-   if( relaxcontinuous && sense == FJ_EQUAL )
-   {
-      SCIP_Bool hascontinuous = FALSE;
-      for( i = 0; i < ncoeffs; ++i )
-      {
-         if( problem->vars[rowinds[i]].vartype == FJ_CONTINUOUS )
-         {
-            hascontinuous = TRUE;
-            break;
-         }
-      }
-
-      if( hascontinuous )
-      {
-         int idx1, idx2;
-         SCIP_CALL( fjProblemAddConstraint(scip, problem, FJ_GTE, rhs, ncoeffs, rowinds, rowcoeffs,
-               relaxcontinuous, &idx1) );
-         SCIP_CALL( fjProblemAddConstraint(scip, problem, FJ_LTE, rhs, ncoeffs, rowinds, rowcoeffs,
-               relaxcontinuous, &idx2) );
-         if( idx != NULL )
-            *idx = INT_MAX;
-         return SCIP_OKAY;
-      }
-   }
-
-   newrhs = rhs;
    scalar = MAX3(rhs, -rhs, 1.0);
-   nnewcoeffs = 0;
-
-   /* adjust rhs if relaxing continuous variables */
-   if( relaxcontinuous )
-   {
-      for( i = 0; i < ncoeffs; ++i )
-      {
-         if( problem->vars[rowinds[i]].vartype == FJ_CONTINUOUS )
-         {
-            if( sense == FJ_LTE )
-            {
-               if( rowcoeffs[i] >= 0.0 )
-               {
-                  if( !SCIPisInfinity(scip, -problem->vars[rowinds[i]].lb) )
-                     newrhs -= rowcoeffs[i] * problem->vars[rowinds[i]].lb;
-                  else
-                  {
-                     if( idx != NULL )
-                        *idx = INT_MAX;
-                     return SCIP_OKAY;
-                  }
-               }
-               else
-               {
-                  if( !SCIPisInfinity(scip, problem->vars[rowinds[i]].ub) )
-                     newrhs -= rowcoeffs[i] * problem->vars[rowinds[i]].ub;
-                  else
-                  {
-                     if( idx != NULL )
-                        *idx = INT_MAX;
-                     return SCIP_OKAY;
-                  }
-               }
-            }
-            else if( sense == FJ_GTE )
-            {
-               if( rowcoeffs[i] >= 0.0 )
-               {
-                  if( !SCIPisInfinity(scip, problem->vars[rowinds[i]].ub) )
-                     newrhs -= rowcoeffs[i] * problem->vars[rowinds[i]].ub;
-                  else
-                  {
-                     if( idx != NULL )
-                        *idx = INT_MAX;
-                     return SCIP_OKAY;
-                  }
-               }
-               else
-               {
-                  if( !SCIPisInfinity(scip, -problem->vars[rowinds[i]].lb) )
-                     newrhs -= rowcoeffs[i] * problem->vars[rowinds[i]].lb;
-                  else
-                  {
-                     if( idx != NULL )
-                        *idx = INT_MAX;
-                     return SCIP_OKAY;
-                  }
-               }
-            }
-            else
-            {
-               if( idx != NULL )
-                  *idx = INT_MIN;
-               return SCIP_OKAY;
-            }
-         }
-         else
-            nnewcoeffs++;
-      }
-   }
-   else
-      nnewcoeffs = ncoeffs;
 
    /* check if constraint is trivially satisfied or infeasible */
-   if( nnewcoeffs == 0 )
+   if( ncoeffs == 0 )
    {
       SCIP_Bool ok;
       if( sense == FJ_LTE )
-         ok = !SCIPisFeasNegative(scip, newrhs / scalar);
+         ok = !SCIPisFeasNegative(scip, rhs / scalar);
       else if( sense == FJ_GTE )
-         ok = !SCIPisFeasPositive(scip, newrhs / scalar);
+         ok = !SCIPisFeasPositive(scip, rhs / scalar);
       else
-         ok = SCIPisFeasZero(scip, newrhs / scalar);
+         ok = SCIPisFeasZero(scip, rhs / scalar);
 
       if( idx != NULL )
          *idx = ok ? INT_MAX : INT_MIN;
@@ -555,9 +448,9 @@ SCIP_RETCODE fjProblemAddConstraint(
 
    constraint = &problem->constraints[problem->nconstraints];
    constraint->sense = sense;
-   constraint->rhs = newrhs / scalar;
+   constraint->rhs = rhs / scalar;
    constraint->ncoeffs = 0;
-   constraint->coeffssize = nnewcoeffs;
+   constraint->coeffssize = ncoeffs;
    constraint->weight = 1.0;
    constraint->incumbentlhs = 0.0;
    constraint->violatedidx = -1;
@@ -568,9 +461,6 @@ SCIP_RETCODE fjProblemAddConstraint(
    for( i = 0; i < ncoeffs; ++i )
    {
       FJ_VAR* var;
-
-      if( relaxcontinuous && problem->vars[rowinds[i]].vartype == FJ_CONTINUOUS )
-         continue;
 
       constraint->coeffs[constraint->ncoeffs].idx = rowinds[i];
       constraint->coeffs[constraint->ncoeffs].coeff = rowcoeffs[i] / scalar;
@@ -1506,9 +1396,9 @@ SCIP_RETCODE addRowInFeasjumpSolver(
    if( !SCIPisInfinity(scip, -lhs) && !SCIPisInfinity(scip, rhs) && !SCIPisEQ(scip, lhs, rhs) )
    {
       solverrhs = lhs;
-      SCIP_CALL( fjProblemAddConstraint(scip, problem, FJ_GTE, solverrhs, consnvars, consinds, consvals, FALSE, &idx) );
+      SCIP_CALL( fjProblemAddConstraint(scip, problem, FJ_GTE, solverrhs, consnvars, consinds, consvals, &idx) );
       solverrhs = rhs;
-      SCIP_CALL( fjProblemAddConstraint(scip, problem, FJ_LTE, solverrhs, consnvars, consinds, consvals, FALSE, &idx) );
+      SCIP_CALL( fjProblemAddConstraint(scip, problem, FJ_LTE, solverrhs, consnvars, consinds, consvals, &idx) );
    }
    else
    {
@@ -1528,8 +1418,7 @@ SCIP_RETCODE addRowInFeasjumpSolver(
          rowtype = FJ_LTE;
          solverrhs = rhs;
       }
-      SCIP_CALL( fjProblemAddConstraint(scip, problem, rowtype, solverrhs, consnvars, consinds, consvals,
-            FALSE, &idx) );
+      SCIP_CALL( fjProblemAddConstraint(scip, problem, rowtype, solverrhs, consnvars, consinds, consvals, &idx) );
    }
 
    return SCIP_OKAY;
@@ -1816,7 +1705,7 @@ SCIP_RETCODE addObjCutoff(
 
    assert(!SCIPisInfinity(scip, SCIPgetCutoffbound(scip)));
    rhs = SCIPgetCutoffbound(scip) - SCIPcutoffbounddelta(scip);
-   SCIP_CALL( fjProblemAddConstraint(scip, problem, FJ_LTE, rhs, objnnzs, inds, vals, TRUE, &idx) );
+   SCIP_CALL( fjProblemAddConstraint(scip, problem, FJ_LTE, rhs, objnnzs, inds, vals, &idx) );
 
    SCIPfreeBufferArray(scip, &vals);
    SCIPfreeBufferArray(scip, &inds);
@@ -2081,8 +1970,10 @@ SCIP_RETCODE runFeasjump(
    }
 
    if( heurdata->verbosity >= 1 )
-      SCIPinfoMessage(scip, NULL, "Feasibility Jump: starting solve. weightUpdateDecay=%g, relaxContinuous=%d  \n",
-         heurdata->weightupdatedecay, problem->usedrelaxcontinuous);
+   {
+      SCIPinfoMessage(scip, NULL, "Feasibility Jump: starting solve. weightUpdateDecay=%g\n",
+         heurdata->weightupdatedecay);
+   }
 
    /* main loop */
    step = 0;
