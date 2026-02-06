@@ -77,6 +77,11 @@
 #define TABLE_POSITION_PROP              7000                   /**< the position of the statistics table */
 #define TABLE_EARLIEST_STAGE_PROP        SCIP_STAGE_TRANSFORMED /**< output of the statistics table is only printed from this stage onwards */
 
+#define TABLE_NAME_SYM                   "symmetry"
+#define TABLE_DESC_SYM                   "symmetry statistics table"
+#define TABLE_POSITION_SYM               7500                   /**< the position of the statistics table *//* @symtodo adapt numbering */
+#define TABLE_EARLIEST_STAGE_SYM         SCIP_STAGE_TRANSFORMED /**< output of the statistics table is only printed from this stage onwards */
+
 #define TABLE_NAME_CONFLICT              "conflict"
 #define TABLE_DESC_CONFLICT              "conflict statistics table"
 #define TABLE_POSITION_CONFLICT          8000                   /**< the position of the statistics table */
@@ -370,6 +375,30 @@ SCIP_DECL_TABLECOLLECT(tableCollectProp)
    assert(table != NULL);
 
    SCIP_CALL( SCIPcollectPropagatorStatistics(scip, datatree) );
+
+   return SCIP_OKAY;
+}
+
+/** output method of statistics table to output file stream 'file' */
+static
+SCIP_DECL_TABLEOUTPUT(tableOutputSym)
+{  /*lint --e{715}*/
+   assert(scip != NULL);
+   assert(table != NULL);
+
+   SCIPprintSymhdlrStatistics(scip, file);
+
+   return SCIP_OKAY;
+}
+
+/** collect method of statistics table to SCIP_DATATREE */
+static
+SCIP_DECL_TABLECOLLECT(tableCollectSym)
+{  /*lint --e{715}*/
+   assert(scip != NULL);
+   assert(table != NULL);
+
+   SCIP_CALL( SCIPcollectSymhdlrStatistics(scip, datatree) );
 
    return SCIP_OKAY;
 }
@@ -865,6 +894,11 @@ SCIP_RETCODE SCIPincludeTableDefault(
    SCIP_CALL( SCIPincludeTable(scip, TABLE_NAME_PROP, TABLE_DESC_PROP, TRUE,
          tableCopyDefault, NULL, NULL, NULL, NULL, NULL, tableOutputProp,tableCollectProp,
          NULL, TABLE_POSITION_PROP, TABLE_EARLIEST_STAGE_PROP) );
+
+   assert(SCIPfindTable(scip, TABLE_NAME_SYM) == NULL);
+   SCIP_CALL( SCIPincludeTable(scip, TABLE_NAME_SYM, TABLE_DESC_SYM, TRUE,
+         tableCopyDefault, NULL, NULL, NULL, NULL, NULL, tableOutputSym, tableCollectSym,
+         NULL, TABLE_POSITION_SYM, TABLE_EARLIEST_STAGE_SYM) );
 
    assert(SCIPfindTable(scip, TABLE_NAME_CONFLICT) == NULL);
    SCIP_CALL( SCIPincludeTable(scip, TABLE_NAME_CONFLICT, TABLE_DESC_CONFLICT, TRUE,

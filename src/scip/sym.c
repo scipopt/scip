@@ -1102,6 +1102,46 @@ SCIP_SYMHDLRDATA* SCIPsymhdlrGetData(
    return symhdlr->symhdlrdata;
 }
 
+/** gets the total number of times, the propagator of the symmetry handler was called */
+SCIP_Longint SCIPsymhdlrGetNPropCalls(
+   SCIP_SYMHDLR*         symhdlr             /**< symmetry handler */
+   )
+{
+   assert(symhdlr != NULL);
+
+   return symhdlr->npropcalls;
+}
+
+/** gets the total number of times, the propagator of the symmetry handler was called for resolving a propagation */
+SCIP_Longint SCIPsymhdlrGetNRespropCalls(
+   SCIP_SYMHDLR*         symhdlr             /**< symmetry handler */
+   )
+{
+   assert(symhdlr != NULL);
+
+   return symhdlr->nrespropcalls;
+}
+
+/** gets total number of times, the symmetry handler's propagator detected a cutoff */
+SCIP_Longint SCIPsymhdlrGetNCutoffs(
+   SCIP_SYMHDLR*         symhdlr             /**< symmetry handler */
+   )
+{
+   assert(symhdlr != NULL);
+
+   return symhdlr->ncutoffs;
+}
+
+/** gets total number of domain reductions found by this symmetry handler's propagator */
+SCIP_Longint SCIPsymhdlrGetNDomredsFound(
+   SCIP_SYMHDLR*         symhdlr             /**< symmetry handler */
+   )
+{
+   assert(symhdlr != NULL);
+
+   return symhdlr->ndomredsfound;
+}
+
 /** returns the timing mask of the symmetry handler's propagator */
 SCIP_PROPTIMING SCIPsymhdlrPropGetTimingmask(
    SCIP_SYMHDLR*         symhdlr             /**< symmetry handler */
@@ -1150,6 +1190,77 @@ SCIP_Bool SCIPsymhdlrPropWasDelayed(
    assert(symhdlr != NULL);
 
    return symhdlr->propwasdelayed;
+}
+
+/** gets the total number of times, the separator of the symmetry handler was called */
+SCIP_Longint SCIPsymhdlrGetNSepaCalls(
+   SCIP_SYMHDLR*         symhdlr             /**< symmetry handler */
+   )
+{
+   assert(symhdlr != NULL);
+
+   return symhdlr->nsepacalls;
+}
+
+/** gets the total number of times the symmetry handler's separator was called */
+SCIP_Longint SCIPsymhdlrGetNCutsFound(
+      SCIP_SYMHDLR*         symhdlr             /**< symmetry handler */
+   )
+{
+   assert(symhdlr != NULL);
+
+   return symhdlr->ncutsfound;
+}
+
+/** gets the total number of cutting planes added by the symmetry handler's separator */
+SCIP_Longint SCIPsymhdlrGetNCutsAdded(
+      SCIP_SYMHDLR*         symhdlr             /**< symmetry handler */
+   )
+{
+   assert(symhdlr != NULL);
+
+   return symhdlr->ncutsapplied;
+}
+
+/** gets time in seconds used in the symmetry handler's separator */
+SCIP_Real SCIPsymhdlrGetSepaTime(
+   SCIP_SYMHDLR*         symhdlr             /**< symmetry handler */
+   )
+{
+   assert(symhdlr != NULL);
+
+   return SCIPclockGetTime(symhdlr->sepatime);
+}
+
+/** gets time in seconds used in the symmetry handler's propagator */
+SCIP_Real SCIPsymhdlrGetPropTime(
+   SCIP_SYMHDLR*         symhdlr             /**< symmetry handler */
+   )
+{
+   assert(symhdlr != NULL);
+
+   return SCIPclockGetTime(symhdlr->proptime);
+}
+
+
+/** gets time in seconds used in the symmetry handler's propagator during strong branching */
+SCIP_Real SCIPsymhdlrGetStrongBranchPropTime(
+   SCIP_SYMHDLR*         symhdlr             /**< symmetry handler */
+   )
+{
+   assert(symhdlr != NULL);
+
+   return SCIPclockGetTime(symhdlr->sbproptime);
+}
+
+/** gets time in seconds used in th symmetry handler's propagator for resolve propagation */
+SCIP_Real SCIPsymhdlrGetRespropTime(
+   SCIP_SYMHDLR*         symhdlr             /**< symmetry handler */
+   )
+{
+   assert(symhdlr != NULL);
+
+   return SCIPclockGetTime(symhdlr->resproptime);
 }
 
 /** compares two symmetry handlers w. r. to their try-add priority */
@@ -1216,6 +1327,17 @@ int SCIPsymhdlrGetPresolPriority(
    assert(symhdlr != NULL);
 
    return symhdlr->presolpriority;
+}
+
+/** gets description of symmetry handler */
+SCIP_EXPORT
+const char* SCIPsymhdlrGetDesc(
+   SCIP_SYMHDLR*         symhdlr             /**< symmetry handler */
+   )
+{
+   assert(symhdlr != NULL);
+
+   return symhdlr->desc;
 }
 
 /** does the symmetry handler perform presolving? */
