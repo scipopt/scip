@@ -2307,6 +2307,8 @@ SCIP_RETCODE SCIPtryAddSymmetryHandlingMethods(
                vardomcenter, symvarmap, NULL, c, &symcompdata, &ntmpconss, &ntmpchgbds, &success) );
          *naddedconss += ntmpconss;
          *nchgbds += ntmpchgbds;
+         symhdlrs[i]->naddconss += ntmpconss;
+         symhdlrs[i]->nchgbds += ntmpchgbds;
 
          if( success )
          {
