@@ -1716,7 +1716,7 @@ SCIP_RETCODE SCIPincludeSymhdlrSST(
 
       SCIP_CALL( SCIPaddIntParam(scip, "symmetries/" SYM_NAME "/leadervartype",
             "bitset encoding allowed variable types for leader  (1: bin, 2: int, 4: cont)",
-            &symhdlrdata->leadervartype, TRUE, DEFAULT_LEADERRULE, 0, 7, NULL, NULL) );
+            &symhdlrdata->leadervartype, TRUE, DEFAULT_LEADERVARTYPE, 0, 7, NULL, NULL) );
 
       SCIP_CALL( SCIPaddBoolParam(scip, "symmetries/" SYM_NAME "/computenewperms",
             "Shall additional permutations of symmetry component be computed?",
