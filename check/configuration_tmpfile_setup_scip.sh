@@ -59,8 +59,9 @@ WITHCERTIFICATE="${22}" # - true, if a certificate file should be created
 # new environment variables after running this script
 # -None
 
-#set solfile
+#set solfile and jsonfile
 SOLFILE="${CLIENTTMPDIR}/${USER}-tmpdir/${SOLBASENAME}.sol"
+JSONFILE="${CLIENTTMPDIR}/${USER}-tmpdir/${SOLBASENAME}.json"
 
 # reset TMPFILE
 echo > "${TMPFILE}"
@@ -171,6 +172,7 @@ then
     echo "display parameters"                                    >> "${TMPFILE}"
     echo "${OPTCOMMAND}"                                         >> "${TMPFILE}"
     echo "display statistics"                                    >> "${TMPFILE}"
+    echo "write statistics ${JSONFILE}"                          >> "${TMPFILE}"
     echo "checksol"                                              >> "${TMPFILE}"
 else
     # read the difflist file

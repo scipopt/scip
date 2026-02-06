@@ -83,6 +83,7 @@ do
     ERRFILE="${DIR}/${EVALFILE}.err"
     SETFILE="${DIR}/${EVALFILE}.set"
     METAFILE="${DIR}/${EVALFILE}.meta"
+    JSONFILE="${DIR}/${EVALFILE}.json"
 
     # check if the eval file exists; if this is the case construct the overall solution files
     if test -e "${DIR}/${EVALFILE}.eval"
@@ -97,9 +98,15 @@ do
         then
             cp "${ERRFILE}" "${ERRFILE}.old-${DATEINT}"
         fi
+        if test -e "${JSONFILE}"
+        then
+            cp "${JSONFILE}" "${JSONFILE}.old-${DATEINT}"
+        fi
 
         echo > "${OUTFILE}"
         echo > "${ERRFILE}"
+        echo "{" > "${JSONFILE}"
+        FIRST_JSON=1
         echo ""
         echo "create overall output and error file for ${EVALFILE}"
 
@@ -162,6 +169,21 @@ do
                 echo                            >> "${ERRFILE}"
             fi
 
+            FILE="${i}.json"
+            if test -e "${FILE}"
+            then
+                if test "${FIRST_JSON}" = "0"
+                then
+                    echo "," >> "${JSONFILE}"
+                fi
+                cat "${FILE}" >> "${JSONFILE}"
+                FIRST_JSON=0
+                if test "${REMOVE}" = "1"
+                then
+                    rm -f "${FILE}"
+                fi
+            fi
+
             FILE="${i}.set"
             if test -e "${FILE}"
             then
@@ -184,6 +206,8 @@ do
                 fi
             fi
         done
+
+        echo "}" >> "${JSONFILE}"
 
         if test "${REMOVE}" = "1"
         then
