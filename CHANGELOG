@@ -7,6 +7,7 @@ Features
 --------
 
 - adds functionality to compute symmetries of entire symmetry detection graph rather than just the restriction to variable nodes
+- primal heuristic feasjump
 
 Interface changes
 -----------------
