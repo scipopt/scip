@@ -120,6 +120,7 @@ set(scipsources
     scip/heur_dps.c
     scip/heur_dualval.c
     scip/heur_farkasdiving.c
+    scip/heur_feasjump.c
     scip/heur_feaspump.c
     scip/heur_fixandinfer.c
     scip/heur_fracdiving.c
@@ -643,6 +644,7 @@ set(scipheaders
     scip/heur_dps.h
     scip/heur_dualval.h
     scip/heur_farkasdiving.h
+    scip/heur_feasjump.h
     scip/heur_feaspump.h
     scip/heur_fixandinfer.h
     scip/heur_fracdiving.h
