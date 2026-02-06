@@ -60,7 +60,7 @@
 /* symmetry handler properties */
 #define SYM_NAME            "sym_lexorbred"
 #define SYM_DESC            "symmetry handler for lexicographic reduction and orbital reduction"
-#define SYM_PRIORITY            -10000       /**< priority of try-add function*/
+#define SYM_PRIORITY           -300000       /**< priority of try-add function*/
 #define SYM_PROPPRIORITY       -100000       /**< priority of propagation method */
 #define SYM_PROPTIMING SCIP_PROPTIMING_BEFORELP /**< timing of propagator method */
 #define SYM_PROPFREQ                 1       /**< frequence of propagator method */
