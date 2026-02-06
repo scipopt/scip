@@ -2056,12 +2056,12 @@ SCIP_RETCODE computeComponentsSym(
 
    /* init array that stores for each variable its component */
    SCIP_CALL( SCIPallocBufferArray(scip, &vartocomp, nsymvars) );
-   for( i = 0; i < nsymvars; ++i )
-      vartocomp[i] = -1;
 
    /* find symmetry components */
    for( i = 0; i < nsymvars; ++i )
    {
+      vartocomp[i] = -1;
+
       for( s = 0; s < nsymmetries; ++s )
       {
          int img;
@@ -2116,7 +2116,7 @@ SCIP_RETCODE computeComponentsSym(
                --(*ncomponents);
             }
 
-            /* possibly merge new component and symvartocopm[s] and ensure the latter
+            /* possibly merge new component and symvartocomp[s] and ensure the latter
              * to have the smallest value */
             if( representative != component1 && representative != component2 )
             {
@@ -2296,7 +2296,7 @@ SCIP_RETCODE SCIPtryAddSymmetryHandlingMethods(
          int s;
 
          for( s = 0, i = componentbegins[c]; i < componentbegins[c + 1]; ++s, ++i )
-            syms[s] = symmetries[i];
+            syms[s] = symmetries[components[i]];
          nsyms = componentbegins[c + 1] - componentbegins[c];
       }
 
