@@ -27,6 +27,19 @@ Interface changes
 ### New parameters
 
 - `iis/<iisfinder>/enable`: whether to enable the iis finder of name <iisfinder>, e.g., greedy
+- `heuristics/feasjump/weightupdatedecay`: decay factor for the weight update
+- `heuristics/feasjump/maxeffort`: maximum effort spent in feasibility jump
+- `heuristics/feasjump/verbosity`: verbosity level of the feasibility jump solver
+- `heuristics/feasjump/onlywithoutsol`: should feasibility jump be called only if no solution exists?
+- `heuristics/feasjump/beforepresol`: should the heuristic be called before presolving?
+- `heuristics/feasjump/useinitialsol`: should the feasibility jump use the best known solution as initialization?
+- `heuristics/feasjump/iterations`: number of iterations to check if the heuristic reduces the total number of violated constraints
+- `heuristics/feasjump/mindecrease`: minimum percentage decrease for the number of violated constraints
+- `heuristics/feasjump/maxsols`: maximum number of solutions to find
+- `heuristics/feasjump/samplesize`: number of candidates to sample in tournament selection
+- `heuristics/feasjump/randprobgood`: probability of random selection from good variables
+- `heuristics/feasjump/randprobviol`: probability of random selection from violated constraint
+- `heuristics/feasjump/callbackeffort`: effort between callbacks
 
 ### Data structures
 
