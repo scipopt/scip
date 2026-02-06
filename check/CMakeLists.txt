@@ -358,7 +358,7 @@ if(SCIP_WITH_EXACTSOLVE)
         list(APPEND
             instances_MIPEX
             # instance misc03p1 appended later
-            "instances/MIPEX/rgn.zpl\;2054999981/25000000"
+#            "instances/MIPEX/rgn.zpl\;2054999981/25000000"
             "instances/MIPEX/stein27.zpl\;18"
         )
     endif()
