@@ -23,6 +23,7 @@ Interface changes
 - added SYMcomputeSymmetryGeneratorsNode() to compute generators of the automorphism group of an entire (node set) of a symmetry detection graph
 - added SCIPiisfinderGetEnable() to check whether an iis finder is enabled
 - added SCIPiisfinderSetEnable() to set whether an iis finder is enabled
+- added SCIPincludeHeurFeasjump() to include feasibility jump primal heuristic
 
 ### New parameters
 
