@@ -2807,6 +2807,9 @@ void SCIPprintPresolverStatistics(
       }
    }
 
+   /* sort symmetry handlers w.r.t. their name */
+   SCIPsetSortSymhdlrsName(scip->set);
+
    /* symmetry handler presolving methods statistics */
    for( i = 0; i < scip->set->nsymhdlrs; ++i )
    {

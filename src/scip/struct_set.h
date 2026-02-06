@@ -195,6 +195,7 @@ struct SCIP_Set
    SCIP_Bool             branchrulessorted;  /**< are the branching rules sorted by priority? */
    SCIP_Bool             branchrulesnamesorted;/**< are the branching rules sorted by name? */
    SCIP_Bool             symhdlrssorted;     /**< are the symmetry handlers sorted by try-add priority? */
+   SCIP_Bool             symhdlrsnamesorted; /**< are the symmetry handlers sorted by name? */
    SCIP_Bool             symhdlrspresolsorted;/**< are the symmetry handlers sorted by presolving priority? */
    SCIP_Bool             symhdlrssepasorted; /**< are the symmetry handlers sorted by separation priority? */
    SCIP_Bool             symhdlrspropsorted; /**< are the symmetry handlers sorted by propagation priority? */

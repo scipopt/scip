@@ -208,6 +208,10 @@ SCIP_DECL_SORTPTRCOMP(SCIPsymhdlrCompProp);
 SCIP_EXPORT
 SCIP_DECL_SORTPTRCOMP(SCIPsymhdlrCompPresol);
 
+/** comparison method for sorting symmetry handlers w.r.t. to their name */
+SCIP_EXPORT
+SCIP_DECL_SORTPTRCOMP(SCIPsymhdlrCompName);
+
 /** creates new operator node type (used for symmetry detection) and returns its representation
  *
  *  If the operator node already exists, the function terminates with SCIP_INVALIDDATA.

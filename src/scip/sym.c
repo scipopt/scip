@@ -1176,6 +1176,13 @@ SCIP_DECL_SORTPTRCOMP(SCIPsymhdlrCompPresol)
    return ((SCIP_SYMHDLR*)elem2)->presolpriority - ((SCIP_SYMHDLR*)elem1)->presolpriority;
 }
 
+/** comparison method for sorting symmetry handlers w.r.t. to their name */
+SCIP_DECL_SORTPTRCOMP(SCIPsymhdlrCompName)
+{
+   return strcmp(SCIPsymhdlrGetName((SCIP_SYMHDLR*)elem1), SCIPsymhdlrGetName((SCIP_SYMHDLR*)elem2));
+}
+
+
 /** creates a symmetry component */
 SCIP_RETCODE SCIPcreateSymmetryComponent(
    BMS_BLKMEM*           blkmem,             /**< block memory */

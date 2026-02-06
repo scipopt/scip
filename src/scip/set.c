@@ -5355,6 +5355,21 @@ void SCIPsetSortSymhdlrsSepa(
    }
 }
 
+/** sorts symmetry handlers by name */
+void SCIPsetSortSymhdlrsName(
+   SCIP_SET*             set                 /**< global SCIP settings */
+   )
+{
+   assert(set != NULL);
+
+   if( !set->symhdlrsnamesorted )
+   {
+      SCIPsortPtr((void**)set->symhdlrs, SCIPsymhdlrCompName, set->nsymhdlrs);
+      set->symhdlrssorted = FALSE;
+      set->symhdlrsnamesorted = TRUE;
+   }
+}
+
 /** returns the symmetry handler of the given name, or NULL if not existing */
 SCIP_SYMHDLR* SCIPsetFindSymhdlr(
    SCIP_SET*             set,                /**< global SCIP settings */
