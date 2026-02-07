@@ -106,6 +106,7 @@ Fixed bugs
 ----------
 
 - propagate focus lower bound to child nodes to avoid outdated global lower bound
+- fixed a bug in sassy/dejavu by updating version
 
 @section RN1001 SCIP 10.0.1
 ***************************
