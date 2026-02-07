@@ -570,8 +570,6 @@ struct SCIP_Set
    SCIP_Real             sepa_maxcoefratiofacrowprep; /**< maximal ratio between coefficients (as factor of 1/feastol) to ensure in rowprep cleanup */
    SCIP_Real             sepa_minefficacy;   /**< minimal efficacy for a cut to enter the LP */
    SCIP_Real             sepa_minefficacyroot; /**< minimal efficacy for a cut to enter the LP in the root node */
-   SCIP_Real             sepa_minortho;      /**< minimal orthogonality for a cut to enter the LP */
-   SCIP_Real             sepa_minorthoroot;  /**< minimal orthogonality for a cut to enter the LP in the root node */
    SCIP_Real             sepa_minactivityquot; /**< minimum cut activity quotient to convert cuts into constraints
                                                 *   during a restart (0.0: all cuts are converted) */
    char                  sepa_orthofunc;     /**< function used for calc. scalar prod. in orthogonality test ('e'uclidean, 'd'iscrete) */
@@ -632,7 +630,6 @@ struct SCIP_Set
 
    /* tree compression parameters (for reoptimization) */
    SCIP_Bool             compr_enable;       /**< should automatic tree compression after presolving be enabled? (only for reoptimization) */
-   SCIP_Real             compr_time;         /**< maximum time to run tree compression heuristics */
 
    /* visualization settings */
    char*                 visual_vbcfilename; /**< name of the VBC tool output file, or - if no VBC output should be created */
