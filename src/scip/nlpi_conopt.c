@@ -471,12 +471,12 @@ static int COI_CALLCONV ReadMatrix(
    SCIPdebugMsg(scip, "Jacobian structure information:\n");
    SCIPdebugMsg(scip, "COLSTA = ");
    for( int i = 0; i <= NUMVAR; i++ )
-      SCIPdebugMsgPrint(scip, "%d, ", i, COLSTA[i]);
+      SCIPdebugMsgPrint(scip, "%d, ", COLSTA[i]);
    SCIPdebugMsgPrint(scip, "\n");
 
    SCIPdebugMsg(scip, "ROWNO = ");
    for( int i = 0; i < NUMNZ; i++ )
-      SCIPdebugMsgPrint(scip, "%d, ", i, ROWNO[i]);
+      SCIPdebugMsgPrint(scip, "%d, ", ROWNO[i]);
    SCIPdebugMsgPrint(scip, "\n");
 
    SCIPdebugMsg(scip, "NLFLAG = ");
@@ -667,6 +667,7 @@ static int COI_CALLCONV Status(
       case 9: /* error: setup failure */
       case 10: /* error: solver failure */
       case 11: /* error: internal solver error */
+      case 13: /* error: general system error */
          SCIPdebugMsg(scip, "CONOPT terminated with status %d\n", SOLSTA);
          problem->termstat = SCIP_NLPTERMSTAT_OTHER;
          break;
