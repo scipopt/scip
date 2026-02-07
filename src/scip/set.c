@@ -1316,6 +1316,7 @@ SCIP_RETCODE SCIPsetCreate(
    (*set)->symhdlrssepasorted = FALSE;
    (*set)->symhdlrspropsorted = FALSE;
    (*set)->symhdlrspresolsorted = FALSE;
+   (*set)->symhdlrsnamesorted = FALSE;
    (*set)->iisfinders = NULL;
    (*set)->niisfinders = 0;
    (*set)->iisfinderssize = 0;
