@@ -5,14 +5,10 @@
 #ifndef DEJAVU_DS_H
 #define DEJAVU_DS_H
 
-#include <list>
-#include <iostream>
 #include <cstring>
-#include <functional>
 #include <algorithm>
 #include <cassert>
 #include "utility.h"
-#include "coloring.h"
 
 namespace dejavu {
 
@@ -115,7 +111,7 @@ namespace dejavu {
                 copy(&other);
             }
 
-            worklist_t(const worklist_t<T>&& other) {
+            worklist_t(worklist_t<T>&& other) {
                 swap(other);
             }
 

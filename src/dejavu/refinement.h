@@ -143,6 +143,7 @@ namespace dejavu {
         class refinement {
             bool g_early_out = false;
             const std::function<type_split_color_hook>* g_split_hook;
+            uint64_t computational_cost = 0;
 
         public:
             /**
@@ -167,6 +168,7 @@ namespace dejavu {
                 if (init_color < 0) {
                     // initialize queue with all classes (except for largest one)
                     for (int i = 0; i < c->domain_size;) {
+                        computational_cost += 1;
                         cell_todo.add_cell(queue_pointer, i);
                         const int col_sz = c->ptn[i];
                         i += col_sz + 1;
@@ -189,6 +191,8 @@ namespace dejavu {
                     // we choose a separate algorithm depending on the size and density of the graph and/or color class
                     const int  test_deg   = g->d[c->lab[next_color_class]];
                     const bool very_dense = test_deg > (g->v_size / (next_color_class_sz + 1));
+                    computational_cost += (static_cast<uint64_t>(test_deg) *
+                                           static_cast<uint64_t>(next_color_class_sz) * 32);
                     //const bool cell_dense = test_deg > (c->cells);
 
                     if (next_color_class_sz == 1 && !(g->dense && very_dense)) { // singleton
@@ -289,6 +293,7 @@ namespace dejavu {
 
                 if (init_color_class < 0) {
                     for (int i = 0; i < c->domain_size;) {
+                        computational_cost += 1;
                         cell_todo.add_cell(queue_pointer, i);
                         const int col_sz = c->ptn[i];
                         if (col_sz == 0) {
@@ -303,7 +308,10 @@ namespace dejavu {
                 while (!cell_todo.empty()) {
                     const int next_color_class = cell_todo.next_cell(queue_pointer, c, singleton_hint);
                     const int next_color_class_sz = c->ptn[next_color_class] + 1;
-                    const bool very_dense = (g->d[c->lab[next_color_class]] > (g->v_size / (next_color_class_sz + 1)));
+                    const int  test_deg   = g->d[c->lab[next_color_class]];
+                    const bool very_dense = (test_deg > (g->v_size / (next_color_class_sz + 1)));
+                    computational_cost += (static_cast<uint64_t>(test_deg) *
+                                           static_cast<uint64_t>(next_color_class_sz) * 16);
 
                     if (next_color_class_sz == 1 && !(g->dense && very_dense)) {
                         // singleton
@@ -323,6 +331,14 @@ namespace dejavu {
                         return;
                     }
                 }
+            }
+
+            uint64_t get_computational_cost() {
+                return computational_cost;
+            }
+
+            void add_computational_cost(uint64_t add) {
+                computational_cost += add;
             }
 
         private:
