@@ -76,6 +76,7 @@ struct SCIP_Symhdlr
    SCIP_DECL_SYMHDLRPROP ((*symprop));       /**< propagate variable domains */
    SCIP_DECL_SYMHDLRRESPROP((*symresprop));  /**< propagation conflict resolving method */
    SCIP_DECL_SYMHDLRPRESOL((*sympresol));    /**< presolving method */
+   SCIP_DECL_SYMHDLRPRINT((*symprint));      /**< print method */
    SCIP_SYMHDLRDATA*     symhdlrdata;        /**< symmetry handler data */
    SCIP_CLOCK*           setuptime;          /**< time spend for setting up this symmetry handler for the next stages */
    SCIP_CLOCK*           presoltime;         /**< time used for presolving of this symmetry handler */

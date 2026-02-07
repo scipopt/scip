@@ -83,6 +83,7 @@ SCIP_RETCODE doSymhdlrCreate(
    SCIP_DECL_SYMHDLRPROP ((*symprop)),       /**< propagation method of symmetry handler */
    SCIP_DECL_SYMHDLRRESPROP((*symresprop)),  /**< propagation conflict resolving method */
    SCIP_DECL_SYMHDLRPRESOL((*sympresol)),    /**< presolving method of symmetry handler */
+   SCIP_DECL_SYMHDLRPRINT((*symprint)),      /**< print method of symmetry handler */
    SCIP_SYMHDLRDATA*     symhdlrdata         /**< symmetry handler data */
    )
 {
@@ -127,6 +128,7 @@ SCIP_RETCODE doSymhdlrCreate(
    (*symhdlr)->symprop = symprop;
    (*symhdlr)->sympresol = sympresol;
    (*symhdlr)->symresprop = symresprop;
+   (*symhdlr)->symprint = symprint;
    (*symhdlr)->symhdlrdata = symhdlrdata;
 
    SCIP_CALL( SCIPclockCreate(&(*symhdlr)->setuptime, SCIP_CLOCKTYPE_DEFAULT) );
@@ -282,6 +284,7 @@ SCIP_RETCODE SCIPsymhdlrCreate(
    SCIP_DECL_SYMHDLRPROP ((*symprop)),       /**< propagation method of symmetry handler */
    SCIP_DECL_SYMHDLRRESPROP((*symresprop)),  /**< propagation conflict resolving method */
    SCIP_DECL_SYMHDLRPRESOL((*sympresol)),    /**< presolving method of symmetry handler */
+   SCIP_DECL_SYMHDLRPRINT((*symprint)),      /**< print method of symmetry handler */
    SCIP_SYMHDLRDATA*     symhdlrdata         /**< symmetry handler data */
    )
 {
@@ -294,7 +297,7 @@ SCIP_RETCODE SCIPsymhdlrCreate(
    SCIP_CALL_FINALLY( doSymhdlrCreate(symhdlr, set, messagehdlr, blkmem, name, desc, priority, proppriority,
          sepapriority, presolpriority, propfreq, sepafreq, delayprop, delaysepa, maxbounddist, maxprerounds, proptiming,
          presoltiming, symtryadd, symcopy, symfree, syminit, symexit, syminitsol, symexitsol, symdelete, symtrans,
-         symsepalp, symsepasol, symprop, symresprop, sympresol, symhdlrdata),
+         symsepalp, symsepasol, symprop, symresprop, sympresol, symprint, symhdlrdata),
          (void) SCIPsymhdlrFree(symhdlr, set) );
 
    return SCIP_OKAY;
@@ -1313,7 +1316,7 @@ SCIP_RETCODE SCIPcreateSymmetryComponent(
    (*symcomp)->symhdlr = symhdlr;
    (*symcomp)->symcompdata = symcompdata;
 
-   (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "symcomp%d", id);
+   (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, (const char*)"symcomp%d", id);
    (*symcomp)->name = name;
 
    return SCIP_OKAY;
@@ -1628,4 +1631,55 @@ SCIP_RETCODE SCIPgetSymOpNodeType(
       *nodetype = SCIPhashmapGetImageInt(syminfo->customsymopnodetypes, (void*) opnodename);
 
    return SCIP_OKAY;
+}
+
+/** outputs symmetry component information to file stream */
+SCIP_RETCODE SCIPsymcompPrint(
+   SCIP_SYMCOMP*         symcomp,            /**< symmetry component to print */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
+   FILE*                 file                /**< output file (or NULL for standard output) */
+   )
+{
+   SCIP_SYMHDLR* symhdlr;
+
+   assert(symcomp != NULL);
+   assert(set != NULL);
+
+   symhdlr = symcomp->symhdlr;
+   assert(symhdlr != NULL);
+
+   SCIPmessageFPrintInfo(messagehdlr, file, "  [%s] symmetry component <%s>: ", symhdlr->name, symcomp->name);
+
+   if( symhdlr->symprint != NULL )
+   {
+      SCIP_CALL( symhdlr->symprint(set->scip, symhdlr, symcomp, file) );
+   }
+   else
+      SCIPmessageFPrintInfo(messagehdlr, file, "symmetry handler <%s> doesn't support printing symmetry components",
+         symhdlr->name);
+
+   return SCIP_OKAY;
+}
+
+/** returns the symmetry components */
+SCIP_SYMCOMP** SCIPgetSymcomps(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   assert(scip != NULL);
+   assert(scip->syminfo != NULL);
+
+   return scip->syminfo->symcomps;
+}
+
+/** returns number of symmetry components */
+int SCIPgetNSymcomps(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   assert(scip != NULL);
+   assert(scip->syminfo != NULL);
+
+   return scip->syminfo->nsymcomps;
 }

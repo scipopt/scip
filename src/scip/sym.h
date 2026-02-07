@@ -77,6 +77,7 @@ SCIP_RETCODE SCIPsymhdlrCreate(
    SCIP_DECL_SYMHDLRPROP ((*symprop)),       /**< propagation method of symmetry handler */
    SCIP_DECL_SYMHDLRRESPROP((*symresprop)),  /**< propagation conflict resolving method */
    SCIP_DECL_SYMHDLRPRESOL((*sympresol)),    /**< presolving method of symmetry handler */
+   SCIP_DECL_SYMHDLRPRINT((*symprint)),      /**< print method of symmetry handler */
    SCIP_SYMHDLRDATA*     symhdlrdata         /**< symmetry handler data */
    );
 
@@ -248,6 +249,24 @@ SCIP_SYMINFO* SCIPgetSyminfo(
 SCIP_RETCODE SCIPsyminfoFree(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SYMINFO**        syminfo             /**< pointer to the syminfo */
+   );
+
+/** outputs symmetry component information to file stream */
+SCIP_RETCODE SCIPsymcompPrint(
+   SCIP_SYMCOMP*         symcomp,            /**< symmetry component to print */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
+   FILE*                 file                /**< output file (or NULL for standard output) */
+   );
+
+/** returns the symmetry components */
+SCIP_SYMCOMP** SCIPgetSymcomps(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/** returns number of symmetry components */
+int SCIPgetNSymcomps(
+   SCIP*                 scip                /**< SCIP data structure */
    );
 
 #ifdef __cplusplus

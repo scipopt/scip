@@ -90,9 +90,10 @@
 #include "scip/scip_sol.h"
 #include "scip/scip_solve.h"
 #include "scip/scip_solvingstats.h"
+#include "scip/scip_sym.h"
 #include "scip/scip_validation.h"
 #include "scip/scip_var.h"
-#include "scip/prop_symmetry.h"
+#include "scip/sym.h"
 #include "scip/rational.h"
 #include "scip/relax_benders.h"
 #include <stdlib.h>
@@ -1910,21 +1911,23 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplayStatistics)
 /** dialog execution method for the display symmetry command */
 SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplaySymmetry)
 {  /*lint --e{715}*/
+   SCIP_SYMCOMP** symcomps;
+   int nsymcomps;
+   int c;
+
    assert(scip != NULL);
 
    SCIP_CALL( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, NULL, FALSE) );
 
-   /* @symtodo make this available again */
-#if 0
-   SCIPdialogMessage(scip, NULL, "\n");
-   prop = SCIPfindProp(scip, "symmetry");
-   if( prop == NULL )
+   /* @symtodo refine this functionality, e.g., only printing generators etc. */
+   symcomps = SCIPgetSymcomps(scip);
+   nsymcomps = SCIPgetNSymcomps(scip);
+   assert(symcomps != NULL || nsymcomps == 0);
+
+   for( c = 0; c < nsymcomps; ++c )
    {
-      SCIPinfoMessage(scip, NULL, "Cannot display symmetries. Symmetry propagator has not been included.\n");
-      return SCIP_OKAY;
+      SCIP_CALL( SCIPprintSymcomp(scip, symcomps[c], NULL) );
    }
-   SCIP_CALL( SCIPdisplaySymmetryGenerators(scip, prop) );
-#endif
 
    SCIPdialogMessage(scip, NULL, "\n");
 

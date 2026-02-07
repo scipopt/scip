@@ -79,6 +79,7 @@ SCIP_RETCODE SCIPincludeSymhdlrBasic(
    SCIP_DECL_SYMHDLRPROP ((*symprop)),       /**< propagation method of symmetry handler */
    SCIP_DECL_SYMHDLRRESPROP((*symresprop)),  /**< propagation conflict resolving method */
    SCIP_DECL_SYMHDLRPRESOL((*sympresol)),    /**< presolving method of symmetry handler */
+   SCIP_DECL_SYMHDLRPRINT((*symprint)),      /**< print method of symmetry handler */
    SCIP_SYMHDLRDATA*     symhdlrdata         /**< symmetry handler data */
    )
 {
@@ -97,7 +98,7 @@ SCIP_RETCODE SCIPincludeSymhdlrBasic(
          name, desc, priority, proppriority, sepapriority, presolpriority, propfreq, sepafreq,
          delayprop, delaysepa, maxbounddist, maxprerounds, proptiming, presoltiming,
          symtryadd, symcopy, symfree, syminit, symexit, syminitsol, symexitsol, symdelete, symtrans,
-         symsepalp, symsepasol, symprop, symresprop, sympresol, symhdlrdata) );
+         symsepalp, symsepasol, symprop, symresprop, sympresol, symprint, symhdlrdata) );
    SCIP_CALL( SCIPsetIncludeSymhdlr(scip->set, symhdlr) );
 
    return SCIP_OKAY;
@@ -138,4 +139,43 @@ int SCIPgetNSymhdlrs(
    assert(scip->set != NULL);
 
    return scip->set->nsymhdlrs;
+}
+
+/** outputs symmetry component information to file stream via the message handler system
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_PROBLEM
+ *       - \ref SCIP_STAGE_TRANSFORMING
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ *       - \ref SCIP_STAGE_EXITSOLVE
+ *       - \ref SCIP_STAGE_FREETRANS
+ *
+ *  @note If the message handler is set to a NULL pointer nothing will be printed.
+ *  @note The file stream will not be flushed directly, this can be achieved by calling SCIPinfoMessage() printing a
+ *        newline character.
+ */
+SCIP_RETCODE SCIPprintSymcomp(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SYMCOMP*         symcomp,            /**< symmetry component */
+   FILE*                 file                /**< output file (or NULL for standard output) */
+   )
+{
+   assert(scip != NULL);
+   assert(symcomp != NULL);
+
+   SCIP_CALL( SCIPcheckStage(scip, "SCIPprintSymcomp", FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE) );
+
+   SCIP_CALL( SCIPsymcompPrint(symcomp, scip->set, scip->messagehdlr, file) );
+
+   return SCIP_OKAY;
 }

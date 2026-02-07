@@ -137,6 +137,12 @@ struct SCIP_SymCompData
    SCIP_CONS**           sstconss;           /**< list of generated SST constraints */
    int                   nsstconss;          /**< number of generated SST constraints */
    int                   maxnsstconss;       /**< maximum number of conss in sstconss */
+   SCIP_VAR**            orbitvars;          /**< variables used in SST cuts, orbits are stored consecutively,
+                                              *   first element per orbit is the leader */
+   int*                  orbitbegins;        /** array indicating begin positions of orbits */
+   int                   norbits;            /**< number of orbits */
+   int                   lenorbitvars;       /**< length of orbitvars array */
+   int                   lenorbitbegins;     /**< length of orbitbegins array */
 };
 
 /** symmetry handler data */
@@ -1216,6 +1222,59 @@ SCIP_RETCODE selectOrbitLeaderSSTConss(
    return SCIP_OKAY;
 }
 
+/** stores information about variables contained in the orbits of added SST cuts */
+static
+SCIP_RETCODE storeOrbitInformation(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR**            permvars,           /**< variables permutations act on */
+   SCIP_VAR***           orbitvars,          /**< pointer to array for storing variables contained in SST cuts */
+   int**                 orbitbegins,        /**< pointer to array for storing begin positions of orbits */
+   int*                  norbits,            /**< pointer to store number of orbits */
+   int*                  lenorbitvars,       /**< pointer to store length of orbitvars array */
+   int*                  lenorbitbegins,     /**< pointer to store length of orbitbeginstostore array */
+   int*                  orbit,              /**< orbit of current round of SST cuts */
+   int                   lenorbit,           /**< length of orbit */
+   int                   orbitleaderidx      /**< position of leader within the orbit */
+   )
+{
+   int nvars;
+   int pos;
+   int i;
+
+   assert(scip != NULL);
+   assert(permvars != NULL);
+   assert(orbitvars != NULL);
+   assert(orbitbegins != NULL);
+   assert(norbits != NULL);
+   assert(lenorbitbegins != NULL);
+   assert(orbit != NULL);
+   assert(lenorbit > 0);
+   assert(0 <= orbitleaderidx && orbitleaderidx < lenorbit);
+
+   nvars = *lenorbitbegins == 0 ? 0 : (*orbitbegins)[*norbits];
+
+   SCIP_CALL( SCIPensureBlockMemoryArray(scip, orbitvars, lenorbitvars, nvars + lenorbit) );
+   SCIP_CALL( SCIPensureBlockMemoryArray(scip, orbitbegins, lenorbitbegins, *norbits + 2) );
+
+   /* update orbitbegins array */
+   if( *norbits == 0 )
+      (*orbitbegins)[0] = 0;
+   (*orbitbegins)[*norbits + 1] = (*orbitbegins)[*norbits] + lenorbit;
+
+   /* store variables of orbit, the leader is the first variable */
+   pos = (*orbitbegins)[*norbits];
+   (*orbitvars)[pos++] = permvars[orbit[orbitleaderidx]];
+   for( i = 0; i < lenorbit; ++i )
+   {
+      if( i == orbitleaderidx )
+         continue;
+      (*orbitvars)[pos++] = permvars[orbit[i]];
+   }
+   ++(*norbits);
+
+   return SCIP_OKAY;
+}
+
 /** tries to add SST constraints */
 static
 SCIP_RETCODE tryAddSSTConss(
@@ -1231,6 +1290,11 @@ SCIP_RETCODE tryAddSSTConss(
    SCIP_CONS***          sstconss,           /**< pointer to hold SST constraints */
    int*                  nsstconss,          /**< pointer to store number of SST constraints */
    int*                  maxnsstconss,       /**< pointer to store length of sstconss array */
+   SCIP_VAR***           orbitvars,          /**< pointer to array storing variables of orbits used for SST cuts */
+   int**                 orbitbeginstostore, /**< pointer to array storing begin positions of orbits */
+   int*                  norbitstostore,     /**< pointer to store number of orbits that are stored*/
+   int*                  lenorbitvars,       /**< pointer to store length of orbitvars array */
+   int*                  lenorbitbegins,     /**< pointer to store length of orbitbegins array */
    int*                  nchgbds,            /**< pointer to store number of changed bounds */
    SST_LEADERRULE        leaderrule,         /**< rule for selecting leaders */
    SST_ORBITRULE         orbitrule,          /**< rule for selecting orbits */
@@ -1277,6 +1341,10 @@ SCIP_RETCODE tryAddSSTConss(
    assert(permvars != NULL);
    assert(npermvars > 0);
    assert(nperms > 0);
+   assert(orbitvars != NULL);
+   assert(orbitbeginstostore != NULL);
+   assert(norbitstostore != NULL);
+   assert(lenorbitbegins != NULL);
    assert(success != NULL);
 
    *success = FALSE;
@@ -1501,6 +1569,9 @@ SCIP_RETCODE tryAddSSTConss(
             permvardomaincenter, leaderrule, orbitrule, addconflictcuts, sstconss, nsstconss, maxnsstconss,
             orbits, orbitbegins, orbitidx, orbitleaderidx, orbitvarinconflict, norbitvarinconflict, &nchanges) );
 
+      SCIP_CALL( storeOrbitInformation(scip, permvars, orbitvars, orbitbeginstostore, norbitstostore, lenorbitvars,
+            lenorbitbegins, &orbits[orbitidx], orbitbegins[orbitidx + 1] - orbitbegins[orbitidx], orbitleaderidx) );
+
       ++norbitleadercomponent;
 
       if( nchgbds != NULL )
@@ -1562,6 +1633,11 @@ SCIP_DECL_SYMHDLRTRYADD(symhdlrTryaddSST)
    SCIP_CONS** sstconss = NULL;
    int nsstconss = 0;
    int maxnsstconss = 0;
+   SCIP_VAR** orbitvars = NULL;
+   int* orbitbegins = NULL;
+   int lenorbitvars = 0;
+   int lenorbitbegins = 0;
+   int norbits = 0;
    int c;
 
    assert(success != NULL);
@@ -1580,10 +1656,10 @@ SCIP_DECL_SYMHDLRTRYADD(symhdlrTryaddSST)
 
    /* try to add SST constraints */
    SCIP_CALL( tryAddSSTConss(scip, symtype, perms, nperms, permvars, npermvars, permvardomcenter, permvarmap, id,
-         &sstconss, &nsstconss, &maxnsstconss, nchgbds, (SST_LEADERRULE)symhdlrdata->leaderrule,
-         (SST_ORBITRULE)symhdlrdata->orbitrule, (SST_VARTYPE)symhdlrdata->leadervartype,
-         symhdlrdata->computenewperms, symhdlrdata->maxnnewperms, symhdlrdata->addconflictcuts,
-         symhdlrdata->mixedcomponents, success) );
+         &sstconss, &nsstconss, &maxnsstconss, &orbitvars, &orbitbegins, &norbits, &lenorbitvars, &lenorbitbegins,
+         nchgbds, (SST_LEADERRULE)symhdlrdata->leaderrule, (SST_ORBITRULE)symhdlrdata->orbitrule,
+         (SST_VARTYPE)symhdlrdata->leadervartype, symhdlrdata->computenewperms, symhdlrdata->maxnnewperms,
+         symhdlrdata->addconflictcuts, symhdlrdata->mixedcomponents, success) );
 
    /* in case of success, store information in symmetry component's data */
    if( !(*success) )
@@ -1591,10 +1667,16 @@ SCIP_DECL_SYMHDLRTRYADD(symhdlrTryaddSST)
       assert(sstconss == NULL);
       assert(nsstconss == 0);
       assert(maxnsstconss == 0);
+      assert(orbitvars == NULL);
+      assert(orbitbegins == NULL);
+      assert(norbits == 0);
+      assert(lenorbitvars == 0);
+      assert(lenorbitbegins == 0);
       assert(*nchgbds == 0);
 
       return SCIP_OKAY;
    }
+
    assert(symcompdata != NULL);
    assert(naddedconss != NULL);
 
@@ -1604,6 +1686,11 @@ SCIP_DECL_SYMHDLRTRYADD(symhdlrTryaddSST)
       (*symcompdata)->sstconss[c] = sstconss[c];
    (*symcompdata)->nsstconss = nsstconss;
    (*symcompdata)->maxnsstconss = nsstconss;
+   (*symcompdata)->orbitvars = orbitvars;
+   (*symcompdata)->orbitbegins = orbitbegins;
+   (*symcompdata)->norbits = norbits;
+   (*symcompdata)->lenorbitvars = lenorbitvars;
+   (*symcompdata)->lenorbitbegins = lenorbitbegins;
    *naddedconss = nsstconss;
 
    SCIPfreeBlockMemoryArray(scip, &sstconss, maxnsstconss);
@@ -1629,6 +1716,8 @@ SCIP_DECL_SYMHDLREXIT(symhdlrExitSST)
          SCIP_CALL( SCIPreleaseCons(scip, &symdata->sstconss[c]) );
       }
 
+      SCIPfreeBlockMemoryArray(scip, &symdata->orbitbegins, symdata->lenorbitbegins);
+      SCIPfreeBlockMemoryArray(scip, &symdata->orbitvars, symdata->lenorbitvars);
       SCIPfreeBlockMemoryArrayNull(scip, &symdata->sstconss, symdata->maxnsstconss);
       SCIPfreeBlockMemory(scip, &symdata);
    }
@@ -1683,7 +1772,36 @@ SCIP_DECL_SYMHDLRPRESOL(symhdlrPresolSST)
             return SCIP_OKAY;
          }
       }
+   }
 
+   return SCIP_OKAY;
+}
+
+/** symmetry component display method of symmetry handler */
+static
+SCIP_DECL_SYMHDLRPRINT(symhdlrPrintSST)
+{  /*lint --e{715}*/
+   SCIP_SYMCOMPDATA* symcompdata;
+   int i;
+   int v;
+
+   assert(symcomp != NULL);
+
+   symcompdata = SCIPsymcompGetData(symcomp);
+   assert(symcompdata != NULL);
+
+   assert(symcompdata->orbitvars != NULL);
+   assert(symcompdata->orbitbegins != NULL);
+
+   SCIPinfoMessage(scip, file, "handled by %d SST cuts\n", symcompdata->nsstconss);
+   for( i = 0; i < symcompdata->norbits; ++i )
+   {
+      SCIPinfoMessage(scip, file, "\torbit %5d: leader <%s>; followers", i,
+         SCIPvarGetName(symcompdata->orbitvars[symcompdata->orbitbegins[i]]));
+
+      for( v = symcompdata->orbitbegins[i] + 1; v < symcompdata->orbitbegins[i + 1]; ++v )
+         SCIPinfoMessage(scip, file, " <%s>", SCIPvarGetName(symcompdata->orbitvars[v]));
+      SCIPinfoMessage(scip, file, "\n");
    }
 
    return SCIP_OKAY;
@@ -1703,7 +1821,7 @@ SCIP_RETCODE SCIPincludeSymhdlrSST(
    SCIP_CALL( SCIPincludeSymhdlrBasic(scip, SYM_NAME, SYM_DESC, SYM_PRIORITY, 0, 0, SYM_PRESOLPRIORITY,
          -1, -1, FALSE, FALSE, 1.0, SYM_MAXPRESOLROUNDS, SCIP_PROPTIMING_BEFORELP, SCIP_PRESOLTIMING_FAST,
          symhdlrTryaddSST, NULL, symhdlrFreeSST, NULL, symhdlrExitSST, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-         NULL, symhdlrPresolSST, symhdlrdata) );
+         NULL, symhdlrPresolSST, symhdlrPrintSST, symhdlrdata) );
 
    /* add parameters */
    SCIP_CALL( SCIPaddIntParam(scip, "symmetries/" SYM_NAME "/leaderrule",

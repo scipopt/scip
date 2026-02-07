@@ -1568,6 +1568,14 @@ SCIP_DECL_SYMHDLRPRESOL(symhdlrPresolRowCol)
    return SCIP_OKAY;
 }
 
+/** symmetry component display method of symmetry handler */
+static
+SCIP_DECL_SYMHDLRPRINT(symhdlrPrintRowCol)
+{  /*lint --e{715}*/
+
+   return SCIP_OKAY;
+}
+
 /** include symmetry handler for row and column symmetries */
 SCIP_RETCODE SCIPincludeSymhdlrRowCol(
    SCIP*                 scip                /**< SCIP data structure */
@@ -1584,7 +1592,7 @@ SCIP_RETCODE SCIPincludeSymhdlrRowCol(
          SYM_PROPFREQ, -1, SYM_DELAYPROP, FALSE, 1.0, 1, SYM_PROPTIMING, SCIP_PRESOLTIMING_FAST,
          symhdlrTryaddRowCol, NULL, symhdlrFreeRowCol, NULL, symhdlrExitRowCol,
          NULL, symhdlrExitsolRowCol, NULL, NULL, NULL, NULL, symhdlrPropRowCol,
-         NULL, symhdlrPresolRowCol, symhdlrdata) );
+         NULL, symhdlrPresolRowCol, symhdlrPrintRowCol, symhdlrdata) );
 
    /* include shadow tree event handler if it is not included yet */
    eventhdlr = SCIPfindEventhdlr(scip, "event_shadowtree");

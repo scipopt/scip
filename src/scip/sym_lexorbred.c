@@ -1121,6 +1121,14 @@ SCIP_DECL_SYMHDLRPRESOL(symhdlrPresolLexOrbRed)
    return SCIP_OKAY;
 }
 
+/** symmetry component display method of symmetry handler */
+static
+SCIP_DECL_SYMHDLRPRINT(symhdlrPrintLexOrbRed)
+{  /*lint --e{715}*/
+
+   return SCIP_OKAY;
+}
+
 /** include symmetry handler for lexicographic reduction and orbital reduction */
 SCIP_RETCODE SCIPincludeSymhdlrLexOrbRed(
    SCIP*                 scip                /**< SCIP data structure */
@@ -1137,7 +1145,7 @@ SCIP_RETCODE SCIPincludeSymhdlrLexOrbRed(
          SYM_PROPFREQ, -1, SYM_DELAYPROP, FALSE, 1.0, 1, SYM_PROPTIMING, SCIP_PRESOLTIMING_FAST,
          symhdlrTryaddLexOrbRed, NULL, symhdlrFreeLexOrbRed, NULL, symhdlrExitLexOrbRed,
          NULL, symhdlrExitsolLexOrbRed, NULL, NULL, NULL, NULL, symhdlrPropLexOrbRed,
-         NULL, symhdlrPresolLexOrbRed, symhdlrdata) );
+         NULL, symhdlrPresolLexOrbRed, symhdlrPrintLexOrbRed, symhdlrdata) );
 
    /* include shadow tree event handler if it is not included yet */
    eventhdlr = SCIPfindEventhdlr(scip, "event_shadowtree");

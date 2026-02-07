@@ -354,6 +354,22 @@ typedef struct SCIP_SymInfo SCIP_SYMINFO;    /**< data structure for storing sym
       int* nfixedvars, int* naggrvars, int* nchgvartypes, int* nchgbds, int* naddholes, \
       int* ndelconss, int* naddconss, int* nupgdconss, int* nchgcoefs, int* nchgsides, SCIP_RESULT* result)
 
+/** symmetry component display method of symmetry handler
+ *
+ *  The symmetry handler can store a representation of the symmetry components into the given text file. Use the method
+ *  SCIPinfoMessage() to push a string into the file stream.
+ *
+ *  @note There are several methods which help to display variables. These are SCIPwriteVarName(), SCIPwriteVarsList(),
+ *        SCIPwriteVarsLinearsum(), and SCIPwriteVarsPolynomial().
+ *
+ *  input:
+ *  - scip            : SCIP main data structure
+ *  - symhdlr         : the symmetry handler itself
+ *  - symcomp         : the symmetry component that should be displayed
+ *  - file            : the text file to store the information into
+ */
+#define SCIP_DECL_SYMHDLRPRINT(x) SCIP_RETCODE x (SCIP* scip, SCIP_SYMHDLR* symhdlr, SCIP_SYMCOMP* symcomp, FILE* file)
+
 #ifdef __cplusplus
 }
 #endif
