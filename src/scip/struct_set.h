@@ -608,6 +608,7 @@ struct SCIP_Set
    SCIP_Bool             concurrent_changechildsel; /**< change the child selection rule in different solvers? */
    SCIP_Bool             concurrent_commvarbnds;    /**< should the concurrent solvers communicate global variable bound changes? */
    SCIP_Bool             concurrent_presolvebefore; /**< should the problem be presolved before it is copied to the concurrent solvers? */
+   SCIP_Bool             concurrent_symmetrybefore; /**< should symmetry be computed before concurrent solving? */
    int                   concurrent_initseed;       /**< the seed for computing the concurrent solver seeds */
    SCIP_Real             concurrent_freqinit;       /**< initial frequency of synchronization */
    SCIP_Real             concurrent_freqmax;        /**< maximal frequency of synchronization */

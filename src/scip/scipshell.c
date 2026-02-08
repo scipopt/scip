@@ -65,7 +65,8 @@ SCIP_RETCODE readParams(
 static
 SCIP_RETCODE fromCommandLine(
    SCIP*                 scip,               /**< SCIP data structure */
-   const char*           filename            /**< input file name */
+   const char*           filename,           /**< input file name */
+   SCIP_Bool             useconcurrent       /**< should we use concurrent solving? */
    )
 {
    SCIP_RETCODE retcode;
@@ -105,10 +106,20 @@ SCIP_RETCODE fromCommandLine(
     *******************/
 
    /* solve problem */
-   SCIPinfoMessage(scip, NULL, "\nsolve problem\n");
-   SCIPinfoMessage(scip, NULL, "=============\n\n");
+   if( useconcurrent )
+   {
+      SCIPinfoMessage(scip, NULL, "\nsolve problem concurrently\n");
+      SCIPinfoMessage(scip, NULL, "==========================\n\n");
 
-   SCIP_CALL( SCIPsolve(scip) );
+      SCIP_CALL( SCIPsolveConcurrent(scip) );
+   }
+   else
+   {
+      SCIPinfoMessage(scip, NULL, "\nsolve problem\n");
+      SCIPinfoMessage(scip, NULL, "=============\n\n");
+
+      SCIP_CALL( SCIPsolve(scip) );
+   }
 
    /*******************
     * Solution Output *
@@ -305,7 +316,9 @@ SCIP_RETCODE SCIPprocessShellArguments(
    char* settingsname = NULL;
    char* logname = NULL;
    int randomseed;
+   int nthreads;
    SCIP_Bool randomseedread;
+   SCIP_Bool nthreadsread;
    SCIP_Bool quiet;
    SCIP_Bool paramerror;
    SCIP_Bool interactive;
@@ -338,7 +351,9 @@ SCIP_RETCODE SCIPprocessShellArguments(
    interactive = FALSE;
    onlyversion = FALSE;
    randomseedread = FALSE;
+   nthreadsread = FALSE;
    randomseed = 0;
+   nthreads = 1;
    primalrefstring = NULL;
    dualrefstring = NULL;
 
@@ -448,6 +463,21 @@ SCIP_RETCODE SCIPprocessShellArguments(
             paramerror = TRUE;
          }
       }
+      else if( strcmp(argv[i], "-t") == 0 )
+      {
+         /* read number of threads from the command line */
+         i++;
+         if( i < argc && isdigit((unsigned char)argv[i][0]) )
+         {
+            nthreads = atoi(argv[i]);
+            nthreadsread = TRUE;
+         }
+         else
+         {
+            printf("Thread limit parameter '-t' followed by something that is not an integer\n");
+            paramerror = TRUE;
+         }
+      }
       else if( strcmp(argv[i], "-o") == 0 )
       {
          if( i >= argc - 2 )
@@ -530,6 +560,15 @@ SCIP_RETCODE SCIPprocessShellArguments(
          SCIP_CALL( SCIPsetIntParam(scip, "randomization/randomseedshift", randomseed) );
       }
 
+      /*************************************
+       * Change thread limit, if specified *
+       *************************************/
+      if( nthreadsread )
+      {
+         SCIP_CALL( SCIPsetIntParam(scip, "parallel/maxnthreads", nthreads) );
+         SCIP_CALL( SCIPsetIntParam(scip, "parallel/minnthreads", nthreads) );
+      }
+
       /**************
        * Start SCIP *
        **************/
@@ -570,7 +609,7 @@ SCIP_RETCODE SCIPprocessShellArguments(
                   validatesolve = TRUE;
             }
          }
-         SCIP_CALL( fromCommandLine(scip, probname) );
+         SCIP_CALL( fromCommandLine(scip, probname, nthreadsread) );
 
          /* validate the solve */
          if( validatesolve )
@@ -595,7 +634,7 @@ SCIP_RETCODE SCIPprocessShellArguments(
    }
    else
    {
-      printf("\nsyntax: %s [-l <logfile>] [-q] [-s <settings>] [-r <randseed>] [-f <problem>] [-b <batchfile>] [-c \"command\"]\n"
+      printf("\nsyntax: %s [-l <logfile>] [-q] [-s <settings>] [-r <randseed>] [-t <threads>] [-f <problem>] [-b <batchfile>] [-c \"command\"]\n"
          "  -v, --version : print version and build options\n"
          "  -l <logfile>  : copy output into log file\n"
          "  -q            : suppress screen messages\n"
@@ -605,6 +644,7 @@ SCIP_RETCODE SCIPprocessShellArguments(
          "  -b <batchfile>: load and execute dialog command batch file (can be used multiple times)\n"
          "  -r <randseed> : nonnegative integer to be used as random seed. "
          "Has priority over random seed specified through parameter settings (.set) file\n"
+         "  -t <threads>  : number of threads (triggers concurrent solving)\n"
          "  -c \"command\"  : execute single line of dialog commands (can be used multiple times)\n",
          argv[0]);
 #ifdef SCIP_WITH_AMPL
