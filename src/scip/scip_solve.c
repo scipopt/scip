@@ -1442,6 +1442,8 @@ SCIP_RETCODE presolve(
                   &scip->stat->npresolchgbds, &scip->stat->npresoladdholes, &scip->stat->npresoldelconss,
                   &scip->stat->npresoladdconss, &scip->stat->npresolupgdconss, &scip->stat->npresolchgcoefs,
                   &scip->stat->npresolchgsides, unbounded, infeasible) );
+
+            /* @symtodo shall we perform var deletions, clean up of clique table, and possibly trigger another presolve round? */
          }
       }
    }
