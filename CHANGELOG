@@ -110,6 +110,7 @@ Fixed bugs
 
 - propagate focus lower bound to child nodes to avoid outdated global lower bound
 - fixed a bug in sassy/dejavu by updating version
+- add missing library exports of SCIPchgVarLbGlobalExact(), SCIPchgVarUbGlobalExact(), SCIPinferVarLbConsExact(), and SCIPinferVarUbConsExact()
 
 @section RN1001 SCIP 10.0.1
 ***************************
