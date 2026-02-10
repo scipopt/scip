@@ -39,10 +39,11 @@ install:	installheaders installlibs installbinary
 installheaders:
 ifneq ($(INSTALLDIR),)
 		@echo "-> install SCIP headers into INSTALLDIR <$(INSTALLDIR)>"
-		@-install -m 755 -d $(INSTALLDIR)/$(INCLUDEDIR)/scip/ $(INSTALLDIR)/$(INCLUDEDIR)/objscip/ $(INSTALLDIR)/$(INCLUDEDIR)/lpi/ $(INSTALLDIR)/$(INCLUDEDIR)/blockmemshell/ $(INSTALLDIR)/$(INCLUDEDIR)/dijkstra/ $(INSTALLDIR)/$(INCLUDEDIR)/symmetry/ $(INSTALLDIR)/$(INCLUDEDIR)/tclique/ $(INSTALLDIR)/$(INCLUDEDIR)/xml/
+		@-install -m 755 -d $(INSTALLDIR)/$(INCLUDEDIR)/scip/ $(INSTALLDIR)/$(INCLUDEDIR)/objscip/ $(INSTALLDIR)/$(INCLUDEDIR)/lpi/ $(INSTALLDIR)/$(INCLUDEDIR)/lpiexact/ $(INSTALLDIR)/$(INCLUDEDIR)/blockmemshell/ $(INSTALLDIR)/$(INCLUDEDIR)/dijkstra/ $(INSTALLDIR)/$(INCLUDEDIR)/symmetry/ $(INSTALLDIR)/$(INCLUDEDIR)/tclique/ $(INSTALLDIR)/$(INCLUDEDIR)/xml/
 		@-install -m 644 -p $(SRCDIR)/scip/*.h $(SCIPCONFIGHFILE) $(SCIPEXPORTHFILE) $(INSTALLDIR)/$(INCLUDEDIR)/scip/
 		@-install -m 644 -p $(OBJSCIPINCSRC) $(INSTALLDIR)/$(INCLUDEDIR)/objscip/
 		@-install -m 644 -p $(SRCDIR)/lpi/*.h $(INSTALLDIR)/$(INCLUDEDIR)/lpi/
+		@-install -m 644 -p $(SRCDIR)/lpiexact/*.h $(INSTALLDIR)/$(INCLUDEDIR)/lpiexact/
 		@-install -m 644 -p $(SRCDIR)/blockmemshell/*.h $(INSTALLDIR)/$(INCLUDEDIR)/blockmemshell/
 		@-install -m 644 -p $(SRCDIR)/dijkstra/*.h $(INSTALLDIR)/$(INCLUDEDIR)/dijkstra/
 		@-install -m 644 -p $(SRCDIR)/symmetry/*.h $(INSTALLDIR)/$(INCLUDEDIR)/symmetry/
@@ -59,19 +60,22 @@ installlibs:	libs
 ifneq ($(INSTALLDIR),)
 		@echo "-> install SCIP libraries into INSTALLDIR <$(INSTALLDIR)>"
 		@-install -m 755 -d $(INSTALLDIR)/$(LIBDIR)/
-		@-install -m 644 -p $(LPILIBFILE) $(TPILIBFILE) $(OBJSCIPLIBFILE) $(INSTALLDIR)/$(LIBDIR)/
+		@-install -m 644 -p $(LPILIBFILE) $(LPIEXLIBFILE) $(TPILIBFILE) $(OBJSCIPLIBFILE) $(INSTALLDIR)/$(LIBDIR)/
 ifeq ($(SHARED),true)
 		@-install -m 644 -p $(SCIPLIBFILE) $(INSTALLDIR)/$(LIBDIR)/
 endif
 		@-install -m 644 -p $(SCIPLIBBASEFILE) $(INSTALLDIR)/$(LIBDIR)/
 ifeq ($(SHARED)$(OSTYPE),truedarwin)
 		@install_name_tool -id $(realpath $(INSTALLDIR)/$(LIBDIR)/$(notdir $(LPILIBFILE))) $(INSTALLDIR)/$(LIBDIR)/$(notdir $(LPILIBFILE))
+		@install_name_tool -id $(realpath $(INSTALLDIR)/$(LIBDIR)/$(notdir $(LPIEXLIBFILE))) $(INSTALLDIR)/$(LIBDIR)/$(notdir $(LPIEXLIBFILE))
 		@install_name_tool -id $(realpath $(INSTALLDIR)/$(LIBDIR)/$(notdir $(TPILIBFILE))) $(INSTALLDIR)/$(LIBDIR)/$(notdir $(TPILIBFILE))
 		@install_name_tool -id $(realpath $(INSTALLDIR)/$(LIBDIR)/$(notdir $(SCIPLIBFILE))) $(INSTALLDIR)/$(LIBDIR)/$(notdir $(SCIPLIBFILE))
 		@install_name_tool -id $(realpath $(INSTALLDIR)/$(LIBDIR)/$(notdir $(OBJSCIPLIBFILE))) $(INSTALLDIR)/$(LIBDIR)/$(notdir $(OBJSCIPLIBFILE))
 endif
 		@-(cd $(INSTALLDIR)/$(LIBDIR)/ && rm -f $(notdir $(LPILIBLINK)) && $(LN_s) $(notdir $(LPILIBFILE)) $(notdir $(LPILIBLINK)));
 		@-(cd $(INSTALLDIR)/$(LIBDIR)/ && rm -f $(notdir $(LPILIBSHORTLINK)) && $(LN_s) $(notdir $(LPILIBLINK)) $(notdir $(LPILIBSHORTLINK)));
+		@-(cd $(INSTALLDIR)/$(LIBDIR)/ && rm -f $(notdir $(LPIEXLIBLINK)) && $(LN_s) $(notdir $(LPIEXLIBFILE)) $(notdir $(LPIEXLIBLINK)));
+		@-(cd $(INSTALLDIR)/$(LIBDIR)/ && rm -f $(notdir $(LPIEXLIBSHORTLINK)) && $(LN_s) $(notdir $(LPIEXLIBLINK)) $(notdir $(LPIEXLIBSHORTLINK)));
 ifeq ($(SHARED),true)
 		@-(cd $(INSTALLDIR)/$(LIBDIR)/ && rm -f $(notdir $(SCIPLIBLINK)) && $(LN_s) $(notdir $(SCIPLIBFILE)) $(notdir $(SCIPLIBLINK)));
 		@-(cd $(INSTALLDIR)/$(LIBDIR)/ && rm -f $(notdir $(SCIPLIBSHORTLINK)) && $(LN_s) $(notdir $(SCIPLIBLINK)) $(notdir $(SCIPLIBSHORTLINK)));
@@ -92,6 +96,7 @@ ifneq ($(INSTALLDIR),)
 		@-install -m 755 -p $(MAINFILE) $(INSTALLDIR)/$(BINDIR)/
 ifeq ($(SHARED)$(OSTYPE),truedarwin)  # update library paths when using shared libs on Mac OS X
 		@install_name_tool -change $(LPILIBFILE) @loader_path/../$(LIBDIR)/$(notdir $(LPILIBFILE)) $(INSTALLDIR)/$(MAINFILE)
+		@install_name_tool -change $(LPIEXLIBFILE) @loader_path/../$(LIBDIR)/$(notdir $(LPIEXLIBFILE)) $(INSTALLDIR)/$(MAINFILE)
 		@install_name_tool -change $(TPILIBFILE) @loader_path/../$(LIBDIR)/$(notdir $(TPILIBFILE)) $(INSTALLDIR)/$(MAINFILE)
 		@install_name_tool -change $(SCIPLIBFILE) @loader_path/../$(LIBDIR)/$(notdir $(SCIPLIBFILE)) $(INSTALLDIR)/$(MAINFILE)
 		@install_name_tool -change $(OBJSCIPLIBFILE) @loader_path/../$(LIBDIR)/$(notdir $(OBJSCIPLIBFILE)) $(INSTALLDIR)/$(MAINFILE)
@@ -107,7 +112,7 @@ ifneq ($(INSTALLDIR),)
 		@echo "-> remove binary from INSTALLDIR <$(INSTALLDIR)>"
 		@-(cd $(INSTALLDIR) && rm -vf $(MAINFILE) $(MAINLINK) $(MAINSHORTLINK));
 		@echo "-> remove libraries from INSTALLDIR <$(INSTALLDIR)>"
-		-(cd $(INSTALLDIR)/$(LIBDIR) && rm -vf $(notdir $(LPILIBFILE)) $(notdir $(LPILIBLINK)) $(notdir $(LPILIBSHORTLINK)) $(notdir $(TPILIBFILE)) $(notdir $(OBJSCIPLIBFILE)) $(notdir $(OBJSCIPLIBLINK)) $(notdir $(OBJSCIPLIBSHORTLINK)));
+		-(cd $(INSTALLDIR)/$(LIBDIR) && rm -vf $(notdir $(LPILIBFILE) $(LPIEXLIBFILE) $(LPILIBLINK) $(LPIEXLIBLINK) $(LPILIBSHORTLINK) $(LPIEXLIBSHORTLINK)) $(notdir $(TPILIBFILE)) $(notdir $(OBJSCIPLIBFILE)) $(notdir $(OBJSCIPLIBLINK)) $(notdir $(OBJSCIPLIBSHORTLINK)));
 ifeq ($(SHARED),true)
 		@-(cd $(INSTALLDIR)/$(LIBDIR) && rm -vf $(notdir $(SCIPLIBFILE)) $(notdir $(SCIPLIBLINK)) $(notdir $(SCIPLIBSHORTLINK)));
 else
@@ -121,6 +126,8 @@ ifeq ($(DELHEADERS), true)
 		@-rm -f $(INSTALLDIR)/$(INCLUDEDIR)/objscip/*.h
 		@-mkdir -p $(INSTALLDIR)/$(INCLUDEDIR)/lpi/
 		@-rm -f $(INSTALLDIR)/$(INCLUDEDIR)/lpi/*.h
+		@-mkdir -p $(INSTALLDIR)/$(INCLUDEDIR)/lpiexact/
+		@-rm -f $(INSTALLDIR)/$(INCLUDEDIR)/lpiexact/*.h
 		@-mkdir -p $(INSTALLDIR)/$(INCLUDEDIR)/blockmemshell/
 		@-rm -f $(INSTALLDIR)/$(INCLUDEDIR)/blockmemshell/*.h
 		@-mkdir -p $(INSTALLDIR)/$(INCLUDEDIR)/dijkstra/
@@ -131,7 +138,7 @@ ifeq ($(DELHEADERS), true)
 		@-rm -f $(INSTALLDIR)/$(INCLUDEDIR)/tclique/*.h
 		@-mkdir -p $(INSTALLDIR)/$(INCLUDEDIR)/xml/
 		@-rm -f $(INSTALLDIR)/$(INCLUDEDIR)/xml/*.h
-		@-rmdir $(INSTALLDIR)/$(INCLUDEDIR)/scip $(INSTALLDIR)/$(INCLUDEDIR)/objscip $(INSTALLDIR)/$(INCLUDEDIR)/lpi/ $(INSTALLDIR)/$(INCLUDEDIR)/blockmemshell/ $(INSTALLDIR)/$(INCLUDEDIR)/dijkstra/ $(INSTALLDIR)/$(INCLUDEDIR)/symmetry/ $(INSTALLDIR)/$(INCLUDEDIR)/tclique/ $(INSTALLDIR)/$(INCLUDEDIR)/xml/
+		@-rmdir $(INSTALLDIR)/$(INCLUDEDIR)/scip $(INSTALLDIR)/$(INCLUDEDIR)/objscip $(INSTALLDIR)/$(INCLUDEDIR)/lpi/ $(INSTALLDIR)/$(INCLUDEDIR)/lpiexact/ $(INSTALLDIR)/$(INCLUDEDIR)/blockmemshell/ $(INSTALLDIR)/$(INCLUDEDIR)/dijkstra/ $(INSTALLDIR)/$(INCLUDEDIR)/symmetry/ $(INSTALLDIR)/$(INCLUDEDIR)/tclique/ $(INSTALLDIR)/$(INCLUDEDIR)/xml/
 else
 		@echo "-> keeping scip headers under <$(INSTALLDIR)/$(INCLUDEDIR)>; rerun with 'DELHEADERS=true' to force deletion"
 endif
