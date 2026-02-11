@@ -246,7 +246,7 @@ typedef struct TreeProfile TREEPROFILE;
 #define DEFAULT_COEFMONOWEIGHT       0.3667  /**< coefficient of tree weight in monotone approximation of search completion */
 #define DEFAULT_COEFMONOSSG          0.6333  /**< coefficient of 1 - SSG in monotone approximation of search completion */
 #define DEFAULT_COMPLETIONTYPE       COMPLETIONTYPE_AUTO /**< default computation of search tree completion */
-#define DEFAULT_ESTIMMETHOD          ESTIMMETHOD_TREEWEIGHT    /**< default tree size estimation method: (c)ompletion, (e)nsemble, time series forecasts on either
+#define DEFAULT_ESTIMMETHOD          ESTIMMETHOD_CHECKPOINT    /**< default tree size estimation method: (c)ompletion, (e)nsemble, time series forecasts on either
                                                             * (g)ap, (l)eaf frequency, (o)open nodes,
                                                             * tree (w)eight, (s)sg, check(p)oint, (t)ree profile or w(b)e */
 #define DEFAULT_TREEPROFILE_ENABLED  FALSE   /**< Should the event handler collect data? */
