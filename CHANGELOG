@@ -61,6 +61,7 @@ Fixed bugs
 - propagate focus lower bound to child nodes to avoid outdated global lower bound
 - fixed a bug in sassy/dejavu by updating version
 - add missing library exports of SCIPchgVarLbGlobalExact(), SCIPchgVarUbGlobalExact(), SCIPinferVarLbConsExact(), and SCIPinferVarUbConsExact()
+- set small coefficients in SCIPvarGetActiveRepresentatives() to 0; in particular for (multi-)aggregations
 
 @section RN1001 SCIP 10.0.1
 ***************************
