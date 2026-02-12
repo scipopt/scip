@@ -5461,7 +5461,7 @@ SCIP_RETCODE SCIPvarGetActiveRepresentatives(
          assert(0 <= var->index && var->index < ntotalvars);
 
          /* due to cancelation, the scalar could become 0 */
-         if( tmpscalars[var->index] != 0.0 )
+         if( ! SCIPsetIsZero(set, tmpscalars[var->index]) )
          {
             vars[*nvars] = var;
             scalars[*nvars] = tmpscalars[var->index];
