@@ -5028,23 +5028,58 @@ static
 SCIP_DECL_CONSCOPY(consCopyLogicor)
 {  /*lint --e{715}*/
    SCIP_VAR** sourcevars;
+   SCIP_VAR** targetvars;
    const char* consname;
    int nvars;
+   int v;
 
-   /* get variables and coefficients of the source constraint */
+   assert(scip != NULL);
+   assert(sourcescip != NULL);
+   assert(sourcecons != NULL);
+   assert(valid != NULL);
+
+   (*valid) = TRUE;
+
+   /* get variables of the source constraint */
    sourcevars = SCIPgetVarsLogicor(sourcescip, sourcecons);
    nvars = SCIPgetNVarsLogicor(sourcescip, sourcecons);
 
-   if( name != NULL )
-      consname = name;
-   else
-      consname = SCIPconsGetName(sourcecons);
+   if( nvars == 0 )
+   {
+      if( name != NULL )
+         consname = name;
+      else
+         consname = SCIPconsGetName(sourcecons);
 
-   /* copy the logic using the linear constraint copy method */
-   SCIP_CALL( SCIPcopyConsLinear(scip, cons, sourcescip, consname, nvars, sourcevars, NULL,
-         1.0, SCIPinfinity(scip), varmap, consmap,
-         initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode, global, valid) );
-   assert(cons != NULL);
+      SCIP_CALL( SCIPcreateConsLogicor(scip, cons, consname, 0, NULL,
+            initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode) );
+
+      return SCIP_OKAY;
+   }
+
+   /* allocate target variable array */
+   SCIP_CALL( SCIPallocBufferArray(scip, &targetvars, nvars) );
+
+   /* map source variables to target variables */
+   for( v = 0; v < nvars && *valid; ++v )
+   {
+      SCIP_CALL( SCIPgetVarCopy(sourcescip, scip, sourcevars[v], &targetvars[v], varmap, consmap, global, valid) );
+      assert(!(*valid) || targetvars[v] != NULL);
+   }
+
+   /* only create the target constraint if all variables were successfully copied */
+   if( *valid )
+   {
+      if( name != NULL )
+         consname = name;
+      else
+         consname = SCIPconsGetName(sourcecons);
+
+      SCIP_CALL( SCIPcreateConsLogicor(scip, cons, consname, nvars, targetvars,
+            initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode) );
+   }
+
+   SCIPfreeBufferArray(scip, &targetvars);
 
    return SCIP_OKAY;
 }

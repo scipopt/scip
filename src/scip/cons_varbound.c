@@ -5475,31 +5475,47 @@ SCIP_DECL_CONSPRINT(consPrintVarbound)
 static
 SCIP_DECL_CONSCOPY(consCopyVarbound)
 {  /*lint --e{715}*/
-   SCIP_VAR** vars;
-   SCIP_Real* coefs;
+   SCIP_VAR* sourcevar;
+   SCIP_VAR* sourcevbdvar;
+   SCIP_VAR* targetvar;
+   SCIP_VAR* targetvbdvar;
    const char* consname;
 
-   SCIP_CALL( SCIPallocBufferArray(scip, &vars, 2) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &coefs, 2) );
+   assert(scip != NULL);
+   assert(sourcescip != NULL);
+   assert(sourcecons != NULL);
+   assert(valid != NULL);
 
-   vars[0] = SCIPgetVarVarbound(sourcescip, sourcecons);
-   vars[1] = SCIPgetVbdvarVarbound(sourcescip, sourcecons);
+   (*valid) = TRUE;
 
-   coefs[0] = 1.0;
-   coefs[1] = SCIPgetVbdcoefVarbound(sourcescip, sourcecons);
+   /* get source variables */
+   sourcevar = SCIPgetVarVarbound(sourcescip, sourcecons);
+   sourcevbdvar = SCIPgetVbdvarVarbound(sourcescip, sourcecons);
 
-   if( name != NULL )
-      consname = name;
-   else
-      consname = SCIPconsGetName(sourcecons);
+   /* map source variables to target variables */
+   SCIP_CALL( SCIPgetVarCopy(sourcescip, scip, sourcevar, &targetvar, varmap, consmap, global, valid) );
+   assert(!(*valid) || targetvar != NULL);
 
-   /* copy the varbound using the linear constraint copy method */
-   SCIP_CALL( SCIPcopyConsLinear(scip, cons, sourcescip, consname, 2, vars, coefs,
-         SCIPgetLhsVarbound(sourcescip, sourcecons), SCIPgetRhsVarbound(sourcescip, sourcecons), varmap, consmap,
-         initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode, global, valid) );
+   if( *valid )
+   {
+      SCIP_CALL( SCIPgetVarCopy(sourcescip, scip, sourcevbdvar, &targetvbdvar, varmap, consmap, global, valid) );
+      assert(!(*valid) || targetvbdvar != NULL);
+   }
 
-   SCIPfreeBufferArray(scip, &coefs);
-   SCIPfreeBufferArray(scip, &vars);
+   /* only create the target constraint if both variables were successfully copied */
+   if( *valid )
+   {
+      if( name != NULL )
+         consname = name;
+      else
+         consname = SCIPconsGetName(sourcecons);
+
+      SCIP_CALL( SCIPcreateConsVarbound(scip, cons, consname, targetvar, targetvbdvar,
+            SCIPgetVbdcoefVarbound(sourcescip, sourcecons),
+            SCIPgetLhsVarbound(sourcescip, sourcecons),
+            SCIPgetRhsVarbound(sourcescip, sourcecons),
+            initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode) );
+   }
 
    return SCIP_OKAY;
 }

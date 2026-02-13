@@ -8892,48 +8892,95 @@ static
 SCIP_DECL_CONSCOPY(consCopySetppc)
 {  /*lint --e{715}*/
    SCIP_VAR** sourcevars;
+   SCIP_VAR** targetvars;
    const char* consname;
-   SCIP_Real lhs;
-   SCIP_Real rhs;
    int nvars;
+   int v;
    SCIP_SETPPCTYPE type;
 
-   /* get variables and coefficients of the source constraint */
+   assert(scip != NULL);
+   assert(sourcescip != NULL);
+   assert(sourcecons != NULL);
+   assert(valid != NULL);
+
+   (*valid) = TRUE;
+
+   /* get variables of the source constraint */
    sourcevars = SCIPgetVarsSetppc(sourcescip, sourcecons);
    nvars = SCIPgetNVarsSetppc(sourcescip, sourcecons);
 
    /* get setppc type */
    type = SCIPgetTypeSetppc(sourcescip, sourcecons);
-   lhs = -SCIPinfinity(scip);
-   rhs = SCIPinfinity(scip);
 
-   switch( type )
+   if( nvars == 0 )
    {
-   case SCIP_SETPPCTYPE_PARTITIONING:
-      lhs = 1.0;
-      rhs = 1.0;
-      break;
-   case SCIP_SETPPCTYPE_PACKING:
-      rhs = 1.0;
-      break;
-   case SCIP_SETPPCTYPE_COVERING:
-      lhs = 1.0;
-      break;
-   default:
-      SCIPerrorMessage("unknown setppc type\n");
-      return SCIP_INVALIDDATA;
+      if( name != NULL )
+         consname = name;
+      else
+         consname = SCIPconsGetName(sourcecons);
+
+      switch( type )
+      {
+      case SCIP_SETPPCTYPE_PARTITIONING:
+         SCIP_CALL( SCIPcreateConsSetpart(scip, cons, consname, 0, NULL,
+               initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode) );
+         break;
+      case SCIP_SETPPCTYPE_PACKING:
+         SCIP_CALL( SCIPcreateConsSetpack(scip, cons, consname, 0, NULL,
+               initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode) );
+         break;
+      case SCIP_SETPPCTYPE_COVERING:
+         SCIP_CALL( SCIPcreateConsSetcover(scip, cons, consname, 0, NULL,
+               initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode) );
+         break;
+      default:
+         SCIPerrorMessage("unknown setppc type\n");
+         return SCIP_INVALIDDATA;
+      }
+
+      return SCIP_OKAY;
    }
 
-   if( name != NULL )
-      consname = name;
-   else
-      consname = SCIPconsGetName(sourcecons);
+   /* allocate target variable array */
+   SCIP_CALL( SCIPallocBufferArray(scip, &targetvars, nvars) );
 
-   /* copy the logic using the linear constraint copy method */
-   SCIP_CALL( SCIPcopyConsLinear(scip, cons, sourcescip, consname, nvars, sourcevars, NULL,
-         lhs, rhs, varmap, consmap,
-         initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode, global, valid) );
-   assert(cons != NULL);
+   /* map source variables to target variables */
+   for( v = 0; v < nvars && *valid; ++v )
+   {
+      SCIP_CALL( SCIPgetVarCopy(sourcescip, scip, sourcevars[v], &targetvars[v], varmap, consmap, global, valid) );
+      assert(!(*valid) || targetvars[v] != NULL);
+   }
+
+   /* only create the target constraint if all variables were successfully copied */
+   if( *valid )
+   {
+      if( name != NULL )
+         consname = name;
+      else
+         consname = SCIPconsGetName(sourcecons);
+
+      switch( type )
+      {
+      case SCIP_SETPPCTYPE_PARTITIONING:
+         SCIP_CALL( SCIPcreateConsSetpart(scip, cons, consname, nvars, targetvars,
+               initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode) );
+         break;
+      case SCIP_SETPPCTYPE_PACKING:
+         SCIP_CALL( SCIPcreateConsSetpack(scip, cons, consname, nvars, targetvars,
+               initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode) );
+         break;
+      case SCIP_SETPPCTYPE_COVERING:
+         SCIP_CALL( SCIPcreateConsSetcover(scip, cons, consname, nvars, targetvars,
+               initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode) );
+         break;
+      default:
+         SCIPfreeBufferArray(scip, &targetvars);
+         SCIPerrorMessage("unknown setppc type\n");
+         return SCIP_INVALIDDATA;
+      }
+   }
+
+   SCIPfreeBufferArray(scip, &targetvars);
 
    return SCIP_OKAY;
 }

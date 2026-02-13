@@ -13241,33 +13241,62 @@ static
 SCIP_DECL_CONSCOPY(consCopyKnapsack)
 {  /*lint --e{715}*/
    SCIP_VAR** sourcevars;
+   SCIP_VAR** targetvars;
    SCIP_Longint* weights;
-   SCIP_Real* coefs;
    const char* consname;
    int nvars;
    int v;
 
-   /* get variables and coefficients of the source constraint */
+   assert(scip != NULL);
+   assert(sourcescip != NULL);
+   assert(sourcecons != NULL);
+   assert(valid != NULL);
+
+   (*valid) = TRUE;
+
+   /* get variables and weights of the source constraint */
    sourcevars = SCIPgetVarsKnapsack(sourcescip, sourcecons);
    nvars = SCIPgetNVarsKnapsack(sourcescip, sourcecons);
    weights = SCIPgetWeightsKnapsack(sourcescip, sourcecons);
 
-   SCIP_CALL( SCIPallocBufferArray(scip, &coefs, nvars) );
-   for( v = 0; v < nvars; ++v )
-      coefs[v] = (SCIP_Real) weights[v];
+   if( nvars == 0 )
+   {
+      if( name != NULL )
+         consname = name;
+      else
+         consname = SCIPconsGetName(sourcecons);
 
-   if( name != NULL )
-      consname = name;
-   else
-      consname = SCIPconsGetName(sourcecons);
+      SCIP_CALL( SCIPcreateConsKnapsack(scip, cons, consname, 0, NULL, NULL,
+            SCIPgetCapacityKnapsack(sourcescip, sourcecons),
+            initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode) );
 
-   /* copy the logic using the linear constraint copy method */
-   SCIP_CALL( SCIPcopyConsLinear(scip, cons, sourcescip, consname, nvars, sourcevars, coefs,
-         -SCIPinfinity(scip), (SCIP_Real) SCIPgetCapacityKnapsack(sourcescip, sourcecons), varmap, consmap,
-         initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode, global, valid) );
-   assert(cons != NULL);
+      return SCIP_OKAY;
+   }
 
-   SCIPfreeBufferArray(scip, &coefs);
+   /* allocate target variable array */
+   SCIP_CALL( SCIPallocBufferArray(scip, &targetvars, nvars) );
+
+   /* map source variables to target variables */
+   for( v = 0; v < nvars && *valid; ++v )
+   {
+      SCIP_CALL( SCIPgetVarCopy(sourcescip, scip, sourcevars[v], &targetvars[v], varmap, consmap, global, valid) );
+      assert(!(*valid) || targetvars[v] != NULL);
+   }
+
+   /* only create the target constraint if all variables were successfully copied */
+   if( *valid )
+   {
+      if( name != NULL )
+         consname = name;
+      else
+         consname = SCIPconsGetName(sourcecons);
+
+      SCIP_CALL( SCIPcreateConsKnapsack(scip, cons, consname, nvars, targetvars, weights,
+            SCIPgetCapacityKnapsack(sourcescip, sourcecons),
+            initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode) );
+   }
+
+   SCIPfreeBufferArray(scip, &targetvars);
 
    return SCIP_OKAY;
 }
