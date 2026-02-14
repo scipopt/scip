@@ -55,7 +55,7 @@ extern "C" {
 #endif
 
 
-int mtx_init(mtx_t *mtx, int type)
+int TNY_mtx_init(TNY_mtx_t *mtx, int type)
 {
 #if defined(_TTHREAD_WIN32_)
   mtx->mAlreadyLocked = FALSE;
@@ -88,7 +88,7 @@ int mtx_init(mtx_t *mtx, int type)
 #endif
 }
 
-void mtx_destroy(mtx_t *mtx)
+void TNY_mtx_destroy(TNY_mtx_t *mtx)
 {
 #if defined(_TTHREAD_WIN32_)
   if (!mtx->mTimed)
@@ -104,7 +104,7 @@ void mtx_destroy(mtx_t *mtx)
 #endif
 }
 
-int mtx_lock(mtx_t *mtx)
+int TNY_mtx_lock(TNY_mtx_t *mtx)
 {
 #if defined(_TTHREAD_WIN32_)
   if (!mtx->mTimed)
@@ -134,7 +134,7 @@ int mtx_lock(mtx_t *mtx)
 #endif
 }
 
-int mtx_timedlock(mtx_t *mtx, const struct timespec *ts)
+int TNY_mtx_timedlock(TNY_mtx_t *mtx, const struct timespec *ts)
 {
 #if defined(_TTHREAD_WIN32_)
   struct timespec current_ts;
@@ -229,7 +229,7 @@ int mtx_timedlock(mtx_t *mtx, const struct timespec *ts)
 #endif
 }
 
-int mtx_trylock(mtx_t *mtx)
+int TNY_mtx_trylock(TNY_mtx_t *mtx)
 {
 #if defined(_TTHREAD_WIN32_)
   int ret;
@@ -261,7 +261,7 @@ int mtx_trylock(mtx_t *mtx)
 #endif
 }
 
-int mtx_unlock(mtx_t *mtx)
+int TNY_mtx_unlock(TNY_mtx_t *mtx)
 {
 #if defined(_TTHREAD_WIN32_)
   mtx->mAlreadyLocked = FALSE;
@@ -384,7 +384,7 @@ int cnd_broadcast(cnd_t *cond)
 }
 
 #if defined(_TTHREAD_WIN32_)
-static int _cnd_timedwait_win32(cnd_t *cond, mtx_t *mtx, DWORD timeout)
+static int _cnd_timedwait_win32(cnd_t *cond, TNY_mtx_t *mtx, DWORD timeout)
 {
   DWORD result;
   int lastWaiter;
@@ -396,7 +396,7 @@ static int _cnd_timedwait_win32(cnd_t *cond, mtx_t *mtx, DWORD timeout)
 
   /* Release the mutex while waiting for the condition (will decrease
      the number of waiters when done)... */
-  mtx_unlock(mtx);
+  TNY_mtx_unlock(mtx);
 
   /* Wait for either event to become signaled due to cnd_signal() or
      cnd_broadcast() being called */
@@ -404,13 +404,13 @@ static int _cnd_timedwait_win32(cnd_t *cond, mtx_t *mtx, DWORD timeout)
   if (result == WAIT_TIMEOUT)
   {
     /* The mutex is locked again before the function returns, even if an error occurred */
-    mtx_lock(mtx);
+    TNY_mtx_lock(mtx);
     return thrd_timedout;
   }
   else if (result == WAIT_FAILED)
   {
     /* The mutex is locked again before the function returns, even if an error occurred */
-    mtx_lock(mtx);
+    TNY_mtx_lock(mtx);
     return thrd_error;
   }
 
@@ -427,19 +427,19 @@ static int _cnd_timedwait_win32(cnd_t *cond, mtx_t *mtx, DWORD timeout)
     if (ResetEvent(cond->mEvents[_CONDITION_EVENT_ALL]) == 0)
     {
       /* The mutex is locked again before the function returns, even if an error occurred */
-      mtx_lock(mtx);
+      TNY_mtx_lock(mtx);
       return thrd_error;
     }
   }
 
   /* Re-acquire the mutex */
-  mtx_lock(mtx);
+  TNY_mtx_lock(mtx);
 
   return thrd_success;
 }
 #endif
 
-int cnd_wait(cnd_t *cond, mtx_t *mtx)
+int cnd_wait(cnd_t *cond, TNY_mtx_t *mtx)
 {
 #if defined(_TTHREAD_WIN32_)
   return _cnd_timedwait_win32(cond, mtx, INFINITE);
@@ -448,7 +448,7 @@ int cnd_wait(cnd_t *cond, mtx_t *mtx)
 #endif
 }
 
-int cnd_timedwait(cnd_t *cond, mtx_t *mtx, const struct timespec *ts)
+int cnd_timedwait(cnd_t *cond, TNY_mtx_t *mtx, const struct timespec *ts)
 {
 #if defined(_TTHREAD_WIN32_)
   struct timespec now;
