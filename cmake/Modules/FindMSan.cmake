@@ -48,7 +48,7 @@ if(${SANITIZE} STREQUAL "memory")
 endif ()
 
 function (add_sanitize_memory TARGET)
-    sanitizer_add_flags(${TARGET} "MemorySanitizer" "MSan" "")
+    sanitizer_add_flags(${TARGET} "MemorySanitizer" "MSan")
 endfunction ()
 
 include(FindPackageHandleStandardArgs)
