@@ -1924,9 +1924,14 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplaySymmetry)
    nsymcomps = SCIPgetNSymcomps(scip);
    assert(symcomps != NULL || nsymcomps == 0);
 
-   for( c = 0; c < nsymcomps; ++c )
+   if( nsymcomps == 0 )
+      SCIPdialogMessage(scip, NULL, "Symmetries cannot be displayed, because no symmetries have been detected.");
+   else
    {
-      SCIP_CALL( SCIPprintSymcomp(scip, symcomps[c], NULL) );
+      for( c = 0; c < nsymcomps; ++c )
+      {
+         SCIP_CALL( SCIPprintSymcomp(scip, symcomps[c], NULL) );
+      }
    }
 
    SCIPdialogMessage(scip, NULL, "\n");
