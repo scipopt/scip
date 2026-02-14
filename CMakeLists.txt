@@ -34,6 +34,8 @@ project(SCIP
     DESCRIPTION "SCIP is currently one of the fastest non-commercial solvers for mixed integer programming (MIP) and mixed integer nonlinear programming (MINLP)"
     )
 
+include(GNUInstallDirs)
+
 get_directory_property(hasParent PARENT_DIRECTORY)
 if(hasParent)
   set(SCIPOptSuite_VERSION_MAJOR ${SCIP_VERSION_MAJOR} PARENT_SCOPE)
@@ -50,7 +52,6 @@ set(CPACK_PACKAGE_VENDOR "Zuse Institute Berlin")
 set(CPACK_PACKAGE_CONTACT "http://scipopt.org")
 include(CPack)
 
-include(GNUInstallDirs)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR}/bin)
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR}/lib)
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR}/lib)
