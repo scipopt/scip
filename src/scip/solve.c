@@ -2235,7 +2235,10 @@ SCIP_RETCODE SCIPtryAddSymmetryHandlingMethods(
    SCIP_CALL( determineSymmetry(scip, symtype, &symmetries, &nsymmmetries, &symmetriessize, &symvars, &nsymvars) );
 
    if( nsymmmetries == 0 )
+   {
+      scip->syminfo->nsymcomps = 0;
       return SCIP_OKAY;
+   }
 
    /* compute independent components of symmetry group */
    SCIP_CALL( computeComponentsSym(scip, symtype, symmetries, nsymmmetries, symvars, nsymvars,
