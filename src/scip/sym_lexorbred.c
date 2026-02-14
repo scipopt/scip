@@ -1125,6 +1125,76 @@ SCIP_DECL_SYMHDLRPRESOL(symhdlrPresolLexOrbRed)
 static
 SCIP_DECL_SYMHDLRPRINT(symhdlrPrintLexOrbRed)
 {  /*lint --e{715}*/
+   SCIP_SYMCOMPDATA* symcompdata;
+   SCIP_SYMHDLRDATA* symhdlrdata;
+
+   assert(symcomp != NULL);
+   assert(symhdlr != NULL);
+
+   symcompdata = SCIPsymcompGetData(symcomp);
+   symhdlrdata = SCIPsymhdlrGetData(symhdlr);
+   assert(symcompdata != NULL);
+   assert(symhdlrdata != NULL);
+
+   if( symcompdata->nconss > 0 )
+   {
+      SCIPinfoMessage(scip, file, "handled by %d static symmetry handling constraints\n", symcompdata->nconss);
+   }
+   if( symcompdata->active )
+   {
+      SCIP_Bool* covered;
+      SCIP_VAR** permvars;
+      int* perm;
+      int lastlen = 0;
+      int varidx;
+      int nperms;
+      int permlen;
+      int p;
+      int v;
+      int w;
+
+      nperms = SCIPlexreddataGetNPerms(symcompdata->lexreddata);
+
+      SCIPinfoMessage(scip, file, "handled by lexicographic reduction on the permutations:\n");
+      SCIP_CALL( SCIPallocClearBufferArray(scip, &covered, SCIPlexreddataGetNPermvars(symcompdata->lexreddata)) );
+
+      for( p = 0; p < nperms; ++p )
+      {
+         /* clear data from previous iteration */
+         for( v = 0; v < lastlen; ++v )
+            covered[v] = FALSE;
+
+         perm = SCIPlexreddataGetPerm(symcompdata->lexreddata, p);
+         permlen = SCIPlexreddataGetPermLen(symcompdata->lexreddata, p);
+         permvars = SCIPlexreddataGetPermVars(symcompdata->lexreddata, p);
+         lastlen = permlen;
+
+         SCIPinfoMessage(scip, file, "permutation %d: ", p);
+         for( v = 0; v < permlen; ++v )
+         {
+            if( covered[v] )
+               continue;
+
+            SCIPinfoMessage(scip, file, "(<%s>", SCIPvarGetName(permvars[v]));
+            w = perm[v];
+            covered[v] = TRUE;
+            while( w != v )
+            {
+               covered[w] = TRUE;
+               varidx = w >= permlen ? w - permlen : w;
+               SCIPinfoMessage(scip, file, ",%s<%s>",
+                  w >= permlen ? "negated" : "", SCIPvarGetName(permvars[varidx]));
+               w = perm[w];
+            }
+            SCIPinfoMessage(scip, file, ")");
+         }
+         SCIPinfoMessage(scip, file, "\n");
+      }
+
+      SCIPfreeBufferArray(scip, &covered);
+   }
+   if( symhdlrdata->useorbred )
+      SCIPinfoMessage(scip, file, "handled by orbital reduction\n");
 
    return SCIP_OKAY;
 }

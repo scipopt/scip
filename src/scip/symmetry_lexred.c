@@ -2167,3 +2167,65 @@ SCIP_RETCODE SCIPincludeLexicographicReduction(
 
    return SCIP_OKAY;
 }
+
+/** returns number of permutations stored in lexreddata */
+int SCIPlexreddataGetNPerms(
+   SCIP_LEXREDDATA*      lexreddata          /**< data for lexicographic reduction propagator */
+   )
+{
+   assert(lexreddata != NULL);
+
+   return lexreddata->nlexdatas;
+}
+
+/** returns number of variables stored in lexreddata */
+int SCIPlexreddataGetNPermvars(
+   SCIP_LEXREDDATA*      lexreddata          /**< data for lexicographic reduction propagator */
+   )
+{
+   assert(lexreddata != NULL);
+
+   return lexreddata->nsymvars;
+}
+
+/** returns a permutation stored in lexreddata*/
+int* SCIPlexreddataGetPerm(
+   SCIP_LEXREDDATA*      lexreddata,         /**< data for lexicographic reduction propagator */
+   int                   permidx             /**< index of permutation */
+   )
+{
+   assert(lexreddata != NULL);
+   assert(permidx >= 0);
+
+   if( permidx >= lexreddata->nlexdatas )
+      SCIPerrorMessage("permutation index %d too large; maximum index is %d\n", permidx, lexreddata->nlexdatas);
+   return lexreddata->lexdatas[permidx]->perm;
+}
+
+/** returns length of permutation stored in lexreddata */
+int SCIPlexreddataGetPermLen(
+   SCIP_LEXREDDATA*      lexreddata,         /**< data for lexicographic reduction propagator */
+   int                   permidx             /**< index of permutation */
+   )
+{
+   assert(lexreddata != NULL);
+   assert(permidx >= 0);
+
+   if( permidx >= lexreddata->nlexdatas )
+      SCIPerrorMessage("permutation index %d too large; maximum index is %d\n", permidx, lexreddata->nlexdatas);
+   return lexreddata->lexdatas[permidx]->nvars;
+}
+
+/** return variables affected by permutation */
+SCIP_VAR** SCIPlexreddataGetPermVars(
+   SCIP_LEXREDDATA*      lexreddata,         /**< data for lexicographic reduction propagator */
+   int                   permidx             /**< index of permutation */
+   )
+{
+   assert(lexreddata != NULL);
+   assert(permidx >= 0);
+
+   if( permidx >= lexreddata->nlexdatas )
+      SCIPerrorMessage("permutation index %d too large; maximum index is %d\n", permidx, lexreddata->nlexdatas);
+   return lexreddata->lexdatas[permidx]->vars;
+}
