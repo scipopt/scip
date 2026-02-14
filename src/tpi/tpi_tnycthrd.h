@@ -37,10 +37,10 @@
 #define _TPI_TINYCTHRD_H_
 
 /* lock */
-#define SCIPtpiInitLock(lock)                 ( mtx_init((lock), mtx_plain) == thrd_success ? SCIP_OKAY : SCIP_ERROR )
-#define SCIPtpiDestroyLock(lock)              ( mtx_destroy(lock) )
-#define SCIPtpiAcquireLock(lock)               ( mtx_lock(lock) == thrd_success ? SCIP_OKAY : SCIP_ERROR )
-#define SCIPtpiReleaseLock(lock)              ( mtx_unlock(lock) == thrd_success ? SCIP_OKAY : SCIP_ERROR )
+#define SCIPtpiInitLock(lock)                 ( TNY_mtx_init((lock), mtx_plain) == thrd_success ? SCIP_OKAY : SCIP_ERROR )
+#define SCIPtpiDestroyLock(lock)              ( TNY_mtx_destroy(lock) )
+#define SCIPtpiAcquireLock(lock)              ( TNY_mtx_lock(lock) == thrd_success ? SCIP_OKAY : SCIP_ERROR )
+#define SCIPtpiReleaseLock(lock)              ( TNY_mtx_unlock(lock) == thrd_success ? SCIP_OKAY : SCIP_ERROR )
 
 /* condition */
 #define SCIPtpiInitCondition(condition)       ( cnd_init(condition) == thrd_success ? SCIP_OKAY : SCIP_ERROR )

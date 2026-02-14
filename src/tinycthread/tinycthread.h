@@ -189,9 +189,9 @@ typedef struct {
   int mAlreadyLocked;         /* TRUE if the mutex is already locked */
   int mRecursive;             /* TRUE if the mutex is recursive */
   int mTimed;                 /* TRUE if the mutex is timed */
-} mtx_t;
+} TNY_mtx_t;
 #else
-typedef pthread_mutex_t mtx_t;
+typedef pthread_mutex_t TNY_mtx_t;
 #endif
 
 /** Create a mutex object.
@@ -204,12 +204,12 @@ typedef pthread_mutex_t mtx_t;
 * @return @ref thrd_success on success, or @ref thrd_error if the request could
 * not be honored.
 */
-int mtx_init(mtx_t *mtx, int type);
+int TNY_mtx_init(TNY_mtx_t *mtx, int type);
 
 /** Release any resources used by the given mutex.
 * @param mtx A mutex object.
 */
-void mtx_destroy(mtx_t *mtx);
+void TNY_mtx_destroy(TNY_mtx_t *mtx);
 
 /** Lock the given mutex.
 * Blocks until the given mutex can be locked. If the mutex is non-recursive, and
@@ -219,11 +219,11 @@ void mtx_destroy(mtx_t *mtx);
 * @return @ref thrd_success on success, or @ref thrd_error if the request could
 * not be honored.
 */
-int mtx_lock(mtx_t *mtx);
+int TNY_mtx_lock(TNY_mtx_t *mtx);
 
 /** NOT YET IMPLEMENTED.
 */
-int mtx_timedlock(mtx_t *mtx, const struct timespec *ts);
+int TNY_mtx_timedlock(TNY_mtx_t *mtx, const struct timespec *ts);
 
 /** Try to lock the given mutex.
 * The specified mutex shall support either test and return or timeout. If the
@@ -233,14 +233,14 @@ int mtx_timedlock(mtx_t *mtx, const struct timespec *ts);
 * requested is already in use, or @ref thrd_error if the request could not be
 * honored.
 */
-int mtx_trylock(mtx_t *mtx);
+int TNY_mtx_trylock(TNY_mtx_t *mtx);
 
 /** Unlock the given mutex.
 * @param mtx A mutex object.
 * @return @ref thrd_success on success, or @ref thrd_error if the request could
 * not be honored.
 */
-int mtx_unlock(mtx_t *mtx);
+int TNY_mtx_unlock(TNY_mtx_t *mtx);
 
 /* Condition variable */
 #if defined(_TTHREAD_WIN32_)
@@ -295,7 +295,7 @@ int cnd_broadcast(cnd_t *cond);
 * @return @ref thrd_success on success, or @ref thrd_error if the request could
 * not be honored.
 */
-int cnd_wait(cnd_t *cond, mtx_t *mtx);
+int cnd_wait(cnd_t *cond, TNY_mtx_t *mtx);
 
 /** Wait for a condition variable to become signaled.
 * The function atomically unlocks the given mutex and endeavors to block until
@@ -309,7 +309,7 @@ int cnd_wait(cnd_t *cond, mtx_t *mtx);
 * specified in the call was reached without acquiring the requested resource, or
 * @ref thrd_error if the request could not be honored.
 */
-int cnd_timedwait(cnd_t *cond, mtx_t *mtx, const struct timespec *ts);
+int cnd_timedwait(cnd_t *cond, TNY_mtx_t *mtx, const struct timespec *ts);
 
 /* Thread */
 #if defined(_TTHREAD_WIN32_)
