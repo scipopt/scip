@@ -41,10 +41,10 @@
 /* macros for direct access */
 
 /* lock */
-#define SCIPtnyInitLock(lock)                 ( mtx_init((lock), mtx_plain) == thrd_success ? SCIP_OKAY : SCIP_ERROR )
-#define SCIPtnyDestroyLock(lock)              ( mtx_destroy(lock) )
-#define SCIPtnyAcquireLock(lock)              ( mtx_lock(lock) == thrd_success ? SCIP_OKAY : SCIP_ERROR )
-#define SCIPtnyReleaseLock(lock)              ( mtx_unlock(lock) == thrd_success ? SCIP_OKAY : SCIP_ERROR )
+#define SCIPtnyInitLock(lock)                 ( TNY_mtx_init((lock), mtx_plain) == thrd_success ? SCIP_OKAY : SCIP_ERROR )
+#define SCIPtnyDestroyLock(lock)              ( TNY_mtx_destroy(lock) )
+#define SCIPtnyAcquireLock(lock)              ( TNY_mtx_lock(lock) == thrd_success ? SCIP_OKAY : SCIP_ERROR )
+#define SCIPtnyReleaseLock(lock)              ( TNY_mtx_unlock(lock) == thrd_success ? SCIP_OKAY : SCIP_ERROR )
 
 /* condition */
 #define SCIPtnyInitCondition(condition)       ( cnd_init(condition) == thrd_success ? SCIP_OKAY : SCIP_ERROR )
@@ -56,7 +56,7 @@
 /** struct containing lock */
 struct SCIP_Lock
 {
-   mtx_t                 lock;
+   TNY_mtx_t             lock;
 };
 
 /** struct containing condition */
@@ -111,7 +111,7 @@ struct SCIP_ThreadPool
    SCIP_Bool             queueopen;          /**< indicates whether the queue is open */
 
    /* mutex and locks for the thread pool */
-   mtx_t                 poollock;           /**< mutex to allow read and write of the pool features */
+   TNY_mtx_t             poollock;           /**< mutex to allow read and write of the pool features */
    cnd_t                 queuenotempty;      /**< condition to broadcast the queue has jobs */
    cnd_t                 queuenotfull;       /**< condition to broadcast the queue is not full */
    cnd_t                 queueempty;         /**< condition to broadcast that the queue is empty */
@@ -732,7 +732,7 @@ SCIP_RETCODE SCIPtpiInitLock(
 
    SCIP_ALLOC( BMSallocMemory(lock) );
 
-   if( mtx_init(&(*lock)->lock, mtx_plain) == thrd_success )
+   if( TNY_mtx_init(&(*lock)->lock, mtx_plain) == thrd_success )
       return SCIP_OKAY;
    else
    {
@@ -748,7 +748,7 @@ void SCIPtpiDestroyLock(
 {
    assert(lock != NULL);
 
-   mtx_destroy(&(*lock)->lock);
+   TNY_mtx_destroy(&(*lock)->lock);
    BMSfreeMemory(lock);
 }
 
@@ -757,7 +757,7 @@ SCIP_RETCODE SCIPtpiAcquireLock(
    SCIP_LOCK*            lock                /**< the lock */
    )
 {
-   if( mtx_lock(&lock->lock) == thrd_success )
+   if( TNY_mtx_lock(&lock->lock) == thrd_success )
       return SCIP_OKAY;
    return SCIP_ERROR;
 }
@@ -767,7 +767,7 @@ SCIP_RETCODE SCIPtpiReleaseLock(
    SCIP_LOCK*            lock                /**< the lock */
    )
 {
-   if( mtx_unlock(&lock->lock) == thrd_success )
+   if( TNY_mtx_unlock(&lock->lock) == thrd_success )
       return SCIP_OKAY;
    return SCIP_ERROR;
 }
