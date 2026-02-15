@@ -5478,7 +5478,7 @@ SCIP_DECL_CONSCOPY(consCopyVarbound)
    SCIP_VAR* sourcevar;
    SCIP_VAR* sourcevbdvar;
    SCIP_VAR* targetvar;
-   SCIP_VAR* targetvbdvar;
+   SCIP_VAR* targetvbdvar = NULL;
    const char* consname;
 
    assert(scip != NULL);
