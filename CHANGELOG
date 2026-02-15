@@ -13,7 +13,7 @@ Fixed bugs
 - add prefix TNY_ for tnycthread functions in order to avoid name clash with POSIX threads functions
 - provide memory allocation for implied integral binary and integer variables in dks heuristic to avoid data corruption
 - an error is produced if the emphasis settings in parameter files are wrong
-- fixed that header files and library of exact LP solver interface (lpiexact) were not installed by make install (non-cmake build)
+- fixed that header files and library of exact LP solver interface (lpiexact) and header files of TPI were not installed by make install (non-cmake build)
 - fixed failing assert when assembling data for writing of JSON statistics and no plugins were included for some plugin types
 - keep sanitizers enabled if only unsupported for some language in cmake
 
