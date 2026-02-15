@@ -13258,20 +13258,7 @@ SCIP_DECL_CONSCOPY(consCopyKnapsack)
    sourcevars = SCIPgetVarsKnapsack(sourcescip, sourcecons);
    nvars = SCIPgetNVarsKnapsack(sourcescip, sourcecons);
    weights = SCIPgetWeightsKnapsack(sourcescip, sourcecons);
-
-   if( nvars == 0 )
-   {
-      if( name != NULL )
-         consname = name;
-      else
-         consname = SCIPconsGetName(sourcecons);
-
-      SCIP_CALL( SCIPcreateConsKnapsack(scip, cons, consname, 0, NULL, NULL,
-            SCIPgetCapacityKnapsack(sourcescip, sourcecons),
-            initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode) );
-
-      return SCIP_OKAY;
-   }
+   assert(nvars >= 0);
 
    /* allocate target variable array */
    SCIP_CALL( SCIPallocBufferArray(scip, &targetvars, nvars) );

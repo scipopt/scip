@@ -5043,19 +5043,7 @@ SCIP_DECL_CONSCOPY(consCopyLogicor)
    /* get variables of the source constraint */
    sourcevars = SCIPgetVarsLogicor(sourcescip, sourcecons);
    nvars = SCIPgetNVarsLogicor(sourcescip, sourcecons);
-
-   if( nvars == 0 )
-   {
-      if( name != NULL )
-         consname = name;
-      else
-         consname = SCIPconsGetName(sourcecons);
-
-      SCIP_CALL( SCIPcreateConsLogicor(scip, cons, consname, 0, NULL,
-            initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode) );
-
-      return SCIP_OKAY;
-   }
+   assert(nvars >= 0);
 
    /* allocate target variable array */
    SCIP_CALL( SCIPallocBufferArray(scip, &targetvars, nvars) );

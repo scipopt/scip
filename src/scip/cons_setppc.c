@@ -8908,38 +8908,10 @@ SCIP_DECL_CONSCOPY(consCopySetppc)
    /* get variables of the source constraint */
    sourcevars = SCIPgetVarsSetppc(sourcescip, sourcecons);
    nvars = SCIPgetNVarsSetppc(sourcescip, sourcecons);
+   assert(nvars >= 0);
 
    /* get setppc type */
    type = SCIPgetTypeSetppc(sourcescip, sourcecons);
-
-   if( nvars == 0 )
-   {
-      if( name != NULL )
-         consname = name;
-      else
-         consname = SCIPconsGetName(sourcecons);
-
-      switch( type )
-      {
-      case SCIP_SETPPCTYPE_PARTITIONING:
-         SCIP_CALL( SCIPcreateConsSetpart(scip, cons, consname, 0, NULL,
-               initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode) );
-         break;
-      case SCIP_SETPPCTYPE_PACKING:
-         SCIP_CALL( SCIPcreateConsSetpack(scip, cons, consname, 0, NULL,
-               initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode) );
-         break;
-      case SCIP_SETPPCTYPE_COVERING:
-         SCIP_CALL( SCIPcreateConsSetcover(scip, cons, consname, 0, NULL,
-               initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode) );
-         break;
-      default:
-         SCIPerrorMessage("unknown setppc type\n");
-         return SCIP_INVALIDDATA;
-      }
-
-      return SCIP_OKAY;
-   }
 
    /* allocate target variable array */
    SCIP_CALL( SCIPallocBufferArray(scip, &targetvars, nvars) );
