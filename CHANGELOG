@@ -62,6 +62,7 @@ Fixed bugs
 - fixed a bug in sassy/dejavu by updating version
 - add missing library exports of SCIPchgVarLbGlobalExact(), SCIPchgVarUbGlobalExact(), SCIPinferVarLbConsExact(), and SCIPinferVarUbConsExact()
 - set small coefficients in SCIPvarGetActiveRepresentatives() to 0; in particular for (multi-)aggregations
+- add prefix TNY_ for tnycthread functions in order to avoid name clash with POSIX threads functions
 
 @section RN1001 SCIP 10.0.1
 ***************************
