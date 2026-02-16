@@ -447,11 +447,11 @@ int tss_set(tss_t key, void *val);
   typedef struct {
     LONG volatile status;
     CRITICAL_SECTION lock;
-  } once_flag;
-  #define ONCE_FLAG_INIT {0,}
+  } TNY_once_flag;
+  #define TNY_ONCE_FLAG_INIT {0,}
 #else
-  #define once_flag pthread_once_t
-  #define ONCE_FLAG_INIT PTHREAD_ONCE_INIT
+  #define TNY_once_flag pthread_once_t
+  #define TNY_ONCE_FLAG_INIT PTHREAD_ONCE_INIT
 #endif
 
 /** Invoke a callback exactly once
@@ -460,9 +460,9 @@ int tss_set(tss_t key, void *val);
  * @param func Callback to invoke.
  */
 #if defined(_TTHREAD_WIN32_)
-  void call_once(once_flag *flag, void (*func)(void));
+  void TNY_call_once(TNY_once_flag *flag, void (*func)(void));
 #else
-  #define call_once(flag,func) pthread_once(flag,func)
+  #define TNY_call_once(flag,func) pthread_once(flag,func)
 #endif
 
 #ifdef __cplusplus
