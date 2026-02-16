@@ -2448,7 +2448,6 @@ SCIP_Real getCheckpointEstimation(
    TREEDATA* treedata;
    long double currentweight;
    long double weightdelta;
-   SCIP_Real estimation;
    SCIP_Longint currentnodes;
    SCIP_Longint nodedelta;
 
@@ -2465,11 +2464,8 @@ SCIP_Real getCheckpointEstimation(
    nodedelta = currentnodes - eventhdlrdata->prenodes;
    assert(nodedelta >= 1);
 
-   /* linear extrapolation: estimate total nodes when weight reaches 1.0 */
-   estimation = (SCIP_Real)eventhdlrdata->prenodes
-         + (SCIP_Real)(nodedelta * ((1.0 - eventhdlrdata->pretreeweight) / weightdelta));
-
-   return estimation;
+   /* estimate total nodes when weight linearly approaches 1.0 */
+   return (SCIP_Real)currentnodes + (SCIP_Real)(nodedelta * ((1.0 - currentweight) / weightdelta));
 }
 
 /** should a restart be applied based on the value of the selected completion method? */
