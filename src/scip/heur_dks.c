@@ -397,7 +397,8 @@ SCIP_RETCODE fillKernels(
    int*                  block2index,        /**< mapping of block labels to block index */
    int*                  varlabels,          /**< array of variable labels */
    int                   blklbl_offset,      /**< optional offset for the blocklabels, if it exists a block 0 */
-   int                   nvars               /**< number of variables */
+   int                   nvars,              /**< number of variables */
+   int                   nbinintvars         /**< number of binary and integer variables */
    )
 {
    SCIP_Real lpval;      /* variable value in LP solution */
@@ -435,6 +436,7 @@ SCIP_RETCODE fillKernels(
       /* compare binaries only to the lower bound of 0.0 and add to kernel or non-kernel variables */
       case SCIP_VARTYPE_BINARY:
          /* adding the variable to the binary and integer variable array */
+         assert(j < nbinintvars);
          binintvars[j++] = vars[i];
 
          if( !SCIPisEQ(scip, lpval, 0.0) )
@@ -459,6 +461,7 @@ SCIP_RETCODE fillKernels(
       /* count separatly if binaries and integers are present */
       case SCIP_VARTYPE_INTEGER:
          /* adding the variable to the binary and integer variable array */
+         assert(j < nbinintvars);
          binintvars[j++] = vars[i];
 
          if(  (!SCIPisEQ(scip, lpval, 0.0) && !SCIPisEQ(scip, lpval, lb))
@@ -1839,9 +1842,9 @@ SCIP_DECL_HEUREXEC(heurExecDKS)
    int nnonkernelvars;
    int nintkernelvars;
    int nintnonkernelvars;
-   int ncontvars;
    int nbinvars;
    int nintvars;
+   int nbinintvars;
    int nbuckets;
    int nconss;
    int nbestbucket;
@@ -1873,16 +1876,12 @@ SCIP_DECL_HEUREXEC(heurExecDKS)
    gapcall = 0;
    blklbl_offset = 0;
    ndecomps = 0;
-   nvars = 0;
    ncontkernelvars = 0;
    ncontnonkernelvars = 0;
    nkernelvars = 0;
    nnonkernelvars = 0;
    nintkernelvars = 0;
    nintnonkernelvars = 0;
-   ncontvars = 0;
-   nbinvars = 0;
-   nintvars = 0;
    nbestbucket = -1;
    iters = 0;
    nblocklabels = 0;
@@ -1915,7 +1914,11 @@ SCIP_DECL_HEUREXEC(heurExecDKS)
       /* Extract the decompositions of the transformed problem */
       SCIPgetDecomps(scip, &alldecomps, &ndecomps, FALSE);
 
-      SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, &nbinvars, &nintvars, NULL, &ncontvars) );
+      /* get all transformed binary, integer, and continuous variables */
+      vars = SCIPgetVars(scip);
+      nvars = SCIPgetNVars(scip);
+      nbinvars = SCIPgetNBinVars(scip) + SCIPgetNBinImplVars(scip);
+      nintvars = SCIPgetNIntVars(scip) + SCIPgetNIntImplVars(scip);
 
       /* create and initialize the hashmap for the original lower bounds */
       SCIP_CALL( SCIPhashmapCreate(&lbvarmap, SCIPblkmem(scip), nvars) );
@@ -1940,14 +1943,18 @@ SCIP_DECL_HEUREXEC(heurExecDKS)
       /* extract the decompositions of the original problem */
       SCIPgetDecomps(scip, &alldecomps, &ndecomps, TRUE);
 
-      /* get variable data like amount of integers, binaries, overall and the variables */
-      SCIP_CALL( SCIPgetOrigVarsData(scip, &vars, &nvars, &nbinvars, &nintvars, NULL, &ncontvars) );
-
-      /* it is necessary to take the original variables here! otherwise they cant be used later on */
+      /* get all original binary, integer, and continuous variables */
       vars = SCIPgetOrigVars(scip);
+      nvars = SCIPgetNOrigVars(scip);
+      nbinvars = SCIPgetNOrigBinVars(scip) + SCIPgetNOrigBinImplVars(scip);
+      nintvars = SCIPgetNOrigIntVars(scip) + SCIPgetNOrigIntImplVars(scip);
+
+      /* it is necessary to take the original constraints here, otherwise they can not be used later on */
       nconss = SCIPgetNOrigConss(scip);
       conss = SCIPgetOrigConss(scip);
    }
+
+   nbinintvars = nbinvars + nintvars;
 
    if( ndecomps > 0 && heurdata->usedecomp )
    {
@@ -1972,10 +1979,10 @@ SCIP_DECL_HEUREXEC(heurExecDKS)
       goto TERMINATE;
    }
 
-   /* verify if the heuristic should be used only for problems with bin vars or for problems with excl bin + int vars */
+   /* verify if the heuristic should be used only for problems with binary and no continuous variables */
    if( heurdata->runbinprobsonly )
    {
-      if( nbinvars == 0 || ncontvars > 0 )
+      if( nbinvars == 0 || nbinintvars < nvars )
       {
          SCIPdebugMsg(scip, "do not run dks if continuous variables or only integer variables are present\n");
          goto TERMINATE;
@@ -2209,7 +2216,7 @@ SCIP_DECL_HEUREXEC(heurExecDKS)
    SCIP_CALL( SCIPallocBufferArray(scip, &nonkernelvars, maxnonkernelsize) );
 
    /* include all binary AND integer variables as a separate array */
-   SCIP_CALL( SCIPallocBufferArray(scip, &binintvars, nbinvars + nintvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &binintvars, nbinintvars) );
 
    /* extract (potential) init kernel vars (value > 0) and not kernel vars for all blocks + the linking one (= "+ 1") */
    SCIP_CALL( SCIPallocClearBufferArray(scip, &bw_contkernelcount, nblocks + 1) );
@@ -2248,16 +2255,18 @@ SCIP_DECL_HEUREXEC(heurExecDKS)
             heurdata->usetransprob, heurdata->translbkernel, bw_contkernelcount,
             bw_contnonkernelcount, bw_kernelcount, bw_nonkernelcount, bw_intkernelcount,
             bw_intnonkernelcount, bw_ncontkernelvars, bw_ncontnonkernelvars, bw_nkernelvars, bw_nnonkernelvars,
-            bw_nintkernelvars, bw_nintnonkernelvars, block2index, varlabels, blklbl_offset, nvars) );
+            bw_nintkernelvars, bw_nintnonkernelvars, block2index, varlabels, blklbl_offset, nvars, nbinintvars) );
    }
    else
+   {
       /* filling of the kernels with the variables */
       SCIP_CALL( fillKernels(scip, vars, binintvars,
             bw_contkernelvars, bw_contnonkernelvars, bw_kernelvars, bw_nonkernelvars, NULL, NULL,
             bestcurrsol, lbvarmap, twolevel, usebestsol, heurdata->usetransprob,
             heurdata->translbkernel, bw_contkernelcount, bw_contnonkernelcount, bw_kernelcount,
             bw_nonkernelcount, NULL, NULL, bw_ncontkernelvars, bw_ncontnonkernelvars, bw_nkernelvars, bw_nnonkernelvars,
-            NULL, NULL, block2index, varlabels, blklbl_offset, nvars) );
+            NULL, NULL, block2index, varlabels, blklbl_offset, nvars, nbinintvars) );
+   }
 
    /* sorting of bucket variables according to the reduced costs in non-decreasing order */
    if( heurdata->redcostsort || heurdata->redcostlogsort )
@@ -2385,7 +2394,7 @@ SCIP_DECL_HEUREXEC(heurExecDKS)
 
       /* do not compute the current bucket if the number of free bin/int variables exceeds some percentage */
       if( SCIPisGT(scip, (SCIP_Real)(nkernelvars + nintkernelvars + bucket->nbucketvars + bucket->nintbucketvars),
-            heurdata->maxbuckfrac * (SCIP_Real)(nintvars + nbinvars)) )
+         heurdata->maxbuckfrac * nbinintvars) )
          continue;
 
       /* fix all integer and binary variables to zero that are neither in the kernel nor in the current bucket */
