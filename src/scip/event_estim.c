@@ -277,8 +277,8 @@ struct SCIP_EventhdlrData
    SCIP_Real             treeprofile_minnodesperdepth;/**< minimum average number of nodes at each depth before producing estimations */
    SCIP_Real             coefmonoweight;     /**< coefficient of tree weight in monotone approximation of search completion */
    SCIP_Real             coefmonossg;        /**< coefficient of 1 - SSG in monotone approximation of search completion */
-   SCIP_Real             prevtreeweight;     /**< previous tree weight for extrapolation */
-   SCIP_Longint          prevnodes;          /**< previous number of nodes for extrapolation */
+   SCIP_Real             pretreeweight;      /**< previous tree weight for extrapolation */
+   SCIP_Longint          prenodes;           /**< previous number of nodes for extrapolation */
    SCIP_Longint          minnodes;           /**< minimum number of nodes in a run before restart is triggered */
    int                   restartlimit;       /**< How often should a restart be triggered? (-1 for no limit) */
    int                   nrestartsperformed; /**< number of restarts performed so far */
@@ -2456,17 +2456,17 @@ SCIP_Real getCheckpointEstimation(
    currentweight = (SCIP_Real)treedata->weight;
    currentnodes = treedata->nnodes;
 
-   weightdelta = currentweight - eventhdlrdata->prevtreeweight;
+   weightdelta = currentweight - eventhdlrdata->pretreeweight;
 
    /* need positive progress in tree weight */
    if( weightdelta <= 1e-9 )
       return 0.0;
 
-   nodedelta = currentnodes - eventhdlrdata->prevnodes;
+   nodedelta = currentnodes - eventhdlrdata->prenodes;
 
    /* linear extrapolation: estimate total nodes when weight reaches 1.0 */
-   estimation = (SCIP_Real)eventhdlrdata->prevnodes +
-                (SCIP_Real)nodedelta * (1.0 - eventhdlrdata->prevtreeweight) / weightdelta;
+   estimation = (SCIP_Real)eventhdlrdata->prenodes +
+                (SCIP_Real)nodedelta * (1.0 - eventhdlrdata->pretreeweight) / weightdelta;
 
    return estimation;
 }
@@ -2508,8 +2508,8 @@ SCIP_Bool shouldApplyRestartEstimation(
    /* update checkpoint if neutral estimation is available */
    if( eventhdlrdata->estimmethod == ESTIMMETHOD_CHECKPOINT && estimation > 0.0 )
    {
-      eventhdlrdata->prevtreeweight = (SCIP_Real)eventhdlrdata->treedata->weight;
-      eventhdlrdata->prevnodes = eventhdlrdata->treedata->nnodes;
+      eventhdlrdata->pretreeweight = (SCIP_Real)eventhdlrdata->treedata->weight;
+      eventhdlrdata->prenodes = eventhdlrdata->treedata->nnodes;
    }
 
    return FALSE;
@@ -2732,8 +2732,8 @@ SCIP_DECL_EVENTINITSOL(eventInitsolEstim)
    eventhdlrdata = SCIPeventhdlrGetData(eventhdlr);
    assert(eventhdlrdata != NULL);
 
-   eventhdlrdata->prevtreeweight = 0.0;
-   eventhdlrdata->prevnodes = 0;
+   eventhdlrdata->pretreeweight = 0.0;
+   eventhdlrdata->prenodes = 0;
    eventhdlrdata->restarthitcounter = 0;
    eventhdlrdata->weightlastreport = 0.0;
    eventhdlrdata->nreports = 0;
