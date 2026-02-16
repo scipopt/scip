@@ -1656,7 +1656,7 @@ SCIP_RETCODE SCIPsymcompPrint(
       SCIP_CALL( symhdlr->symprint(set->scip, symhdlr, symcomp, file) );
    }
    else
-      SCIPmessageFPrintInfo(messagehdlr, file, "symmetry handler <%s> doesn't support printing symmetry components",
+      SCIPmessageFPrintInfo(messagehdlr, file, "symmetry handler <%s> does not support printing symmetry components\n",
          symhdlr->name);
 
    return SCIP_OKAY;
