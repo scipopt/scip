@@ -277,7 +277,7 @@ struct SCIP_EventhdlrData
    SCIP_Real             treeprofile_minnodesperdepth;/**< minimum average number of nodes at each depth before producing estimations */
    SCIP_Real             coefmonoweight;     /**< coefficient of tree weight in monotone approximation of search completion */
    SCIP_Real             coefmonossg;        /**< coefficient of 1 - SSG in monotone approximation of search completion */
-   SCIP_Real             pretreeweight;      /**< previous tree weight for extrapolation */
+   long double           pretreeweight;      /**< previous tree weight for extrapolation */
    SCIP_Longint          prenodes;           /**< previous number of nodes for extrapolation */
    SCIP_Longint          minnodes;           /**< minimum number of nodes in a run before restart is triggered */
    int                   restartlimit;       /**< How often should a restart be triggered? (-1 for no limit) */
@@ -2446,27 +2446,28 @@ SCIP_Real getCheckpointEstimation(
    )
 {
    TREEDATA* treedata;
-   SCIP_Real currentweight;
-   SCIP_Real weightdelta;
+   long double currentweight;
+   long double weightdelta;
    SCIP_Real estimation;
    SCIP_Longint currentnodes;
    SCIP_Longint nodedelta;
 
    treedata = eventhdlrdata->treedata;
-   currentweight = (SCIP_Real)treedata->weight;
+   currentweight = treedata->weight;
    currentnodes = treedata->nnodes;
 
    weightdelta = currentweight - eventhdlrdata->pretreeweight;
 
    /* need positive progress in tree weight */
-   if( weightdelta <= 1e-9 )
+   if( weightdelta <= 0.0 )
       return 0.0;
 
    nodedelta = currentnodes - eventhdlrdata->prenodes;
+   assert(nodedelta >= 1);
 
    /* linear extrapolation: estimate total nodes when weight reaches 1.0 */
-   estimation = (SCIP_Real)eventhdlrdata->prenodes +
-                (SCIP_Real)nodedelta * (1.0 - eventhdlrdata->pretreeweight) / weightdelta;
+   estimation = (SCIP_Real)eventhdlrdata->prenodes
+         + (SCIP_Real)(nodedelta * ((1.0 - eventhdlrdata->pretreeweight) / weightdelta));
 
    return estimation;
 }
@@ -2508,7 +2509,7 @@ SCIP_Bool shouldApplyRestartEstimation(
    /* update checkpoint if neutral estimation is available */
    if( eventhdlrdata->estimmethod == ESTIMMETHOD_CHECKPOINT && estimation > 0.0 )
    {
-      eventhdlrdata->pretreeweight = (SCIP_Real)eventhdlrdata->treedata->weight;
+      eventhdlrdata->pretreeweight = eventhdlrdata->treedata->weight;
       eventhdlrdata->prenodes = eventhdlrdata->treedata->nnodes;
    }
 
