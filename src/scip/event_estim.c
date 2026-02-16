@@ -2463,7 +2463,6 @@ SCIP_Real getCheckpointEstimation(
       return -1.0;
 
    nodedelta = currentnodes - eventhdlrdata->prenodes;
-   assert(nodedelta >= 1);
 
    /* estimate total nodes when weight linearly approaches 1.0 */
    return (SCIP_Real)currentnodes + (SCIP_Real)(nodedelta * ((1.0 - currentweight) / weightdelta));
@@ -2851,6 +2850,10 @@ SCIP_DECL_EVENTEXEC(eventExecEstim)
    /* if nodes have been pruned, things are progressing, don't restart right now */
    if( eventtype == SCIP_EVENTTYPE_NODEDELETE )
       return SCIP_OKAY;
+
+   assert(eventhdlrdata->restartpolicyparam != RESTARTPOLICY_CHAR_ESTIMATION
+      || eventhdlrdata->estimmethod != ESTIMMETHOD_CHECKPOINT
+      || eventhdlrdata->treedata->nnodes > eventhdlrdata->prenodes);
 
    /* check if all conditions are met such that the event handler should run */
    if( !isRestartApplicable(scip, eventhdlrdata) )
