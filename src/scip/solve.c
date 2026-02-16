@@ -2345,7 +2345,7 @@ SCIP_RETCODE SCIPtryAddSymmetryHandlingMethods(
 
       for( i = nallperms - 1; i >= 0; --i )
       {
-         SCIPfreeBlockMemoryArray(scip, &allperms[i], npermvars);
+         SCIPfreeBlockMemoryArray(scip, &allperms[i], symtype == SYM_SYMTYPE_PERM ? npermvars : 2 * npermvars);
       }
       SCIPfreeBlockMemoryArray(scip, &allperms, allpermssize);
    }
