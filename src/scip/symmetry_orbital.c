@@ -1783,7 +1783,7 @@ int* SCIPorbitalreddataGetPerm(
    assert(orbitalreddata != NULL);
    assert(orbitalreddata->componentdatas != NULL);
    assert(0 <= compidx && compidx < orbitalreddata->ncomponents);
-   assert(0 <= permidx && permidx < orbitalreddata->componentdatas[compidx]->perms != NULL);
+   assert(orbitalreddata->componentdatas[compidx]->perms != NULL);
    assert(0 <= permidx && permidx < orbitalreddata->componentdatas[compidx]->nperms);
 
 
