@@ -279,6 +279,7 @@ struct SCIP_EventhdlrData
    SCIP_Real             coefmonossg;        /**< coefficient of 1 - SSG in monotone approximation of search completion */
    long double           pretreeweight;      /**< previous tree weight for extrapolation */
    SCIP_Longint          prenodes;           /**< previous number of nodes for extrapolation */
+   SCIP_Bool             preincrease;        /**< whether tree weight increased previously */
    SCIP_Longint          minnodes;           /**< minimum number of nodes in a run before restart is triggered */
    int                   restartlimit;       /**< How often should a restart be triggered? (-1 for no limit) */
    int                   nrestartsperformed; /**< number of restarts performed so far */
@@ -2502,13 +2503,6 @@ SCIP_Bool shouldApplyRestartEstimation(
       return TRUE;
    }
 
-   /* update checkpoint if neutral estimation is available */
-   if( eventhdlrdata->estimmethod == ESTIMMETHOD_CHECKPOINT && estimation > 0.0 )
-   {
-      eventhdlrdata->pretreeweight = eventhdlrdata->treedata->weight;
-      eventhdlrdata->prenodes = eventhdlrdata->treedata->nnodes;
-   }
-
    return FALSE;
 }
 
@@ -2731,6 +2725,7 @@ SCIP_DECL_EVENTINITSOL(eventInitsolEstim)
 
    eventhdlrdata->pretreeweight = 0.0;
    eventhdlrdata->prenodes = 0;
+   eventhdlrdata->preincrease = FALSE;
    eventhdlrdata->restarthitcounter = 0;
    eventhdlrdata->weightlastreport = 0.0;
    eventhdlrdata->nreports = 0;
@@ -2809,6 +2804,23 @@ SCIP_DECL_EVENTEXEC(eventExecEstim)
          /* update whether the tree is still binary */
          if( nchildren != 2 )
             eventhdlrdata->treeisbinary = FALSE;
+
+         /* set checkpoint at next increase */
+         if( eventhdlrdata->restartpolicyparam == RESTARTPOLICY_CHAR_ESTIMATION
+            && eventhdlrdata->estimmethod == ESTIMMETHOD_CHECKPOINT )
+            eventhdlrdata->preincrease = FALSE;
+      }
+      else
+      {
+         /* hit checkpoint for next estimation */
+         if( eventhdlrdata->restartpolicyparam == RESTARTPOLICY_CHAR_ESTIMATION
+            && eventhdlrdata->estimmethod == ESTIMMETHOD_CHECKPOINT
+            && !eventhdlrdata->preincrease )
+         {
+            eventhdlrdata->pretreeweight = eventhdlrdata->treedata->weight;
+            eventhdlrdata->prenodes = eventhdlrdata->treedata->nnodes;
+            eventhdlrdata->preincrease = TRUE;
+         }
       }
 
       eventnode = SCIPeventGetNode(event);
