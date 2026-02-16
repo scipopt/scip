@@ -2459,7 +2459,7 @@ SCIP_Real getCheckpointEstimation(
 
    /* need positive progress in tree weight */
    if( weightdelta <= 0.0 )
-      return 0.0;
+      return -1.0;
 
    nodedelta = currentnodes - eventhdlrdata->prenodes;
    assert(nodedelta >= 1);
