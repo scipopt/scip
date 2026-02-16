@@ -1908,11 +1908,11 @@ static
 SCIP_RETCODE determineSymmetry(
    SCIP*                 scip,               /**< SCIP instance */
    SYM_SYMTYPE           symtype,            /**< type of symmetries to be computed */
-   int***                symmetries,         /**< pointer to store symmetries */
-   int*                  nsymmetries,        /**< pointer to store number of symmetries */
-   int*                  symmetriessize,     /**< pointer to store size of symmetries array */
-   SCIP_VAR***           symvars,            /**< pointer to store variables on which symmetries act */
-   int*                  nsymvars            /**< pointer to store number of variables in symvars */
+   int***                perms,              /**< pointer to store (signed) permutations */
+   int*                  nperms,             /**< pointer to store number of permutations */
+   int*                  permssize,          /**< pointer to store size of perms array */
+   SCIP_VAR***           permvars,           /**< pointer to store variables on which permutations act */
+   int*                  npermvars           /**< pointer to store number of variables in permvars */
    )
 { /*lint --e{641}*/
    SYM_GRAPH* graph;
@@ -1922,11 +1922,11 @@ SCIP_RETCODE determineSymmetry(
    int maxgenerators;
 
    assert(scip != NULL);
-   assert(symmetries != NULL);
-   assert(nsymmetries != NULL);
-   assert(symmetriessize != NULL);
-   assert(symvars != NULL);
-   assert(nsymvars != NULL);
+   assert(perms != NULL);
+   assert(nperms != NULL);
+   assert(permssize != NULL);
+   assert(permvars != NULL);
+   assert(npermvars != NULL);
 
    /* do not compute symmetry if potentially conflicting methods are enabled */
    if( SCIPisReoptEnabled(scip) || SCIPgetNActiveBenders(scip) > 0 || SCIPgetNActivePricers(scip) > 0 )
@@ -1942,9 +1942,9 @@ SCIP_RETCODE determineSymmetry(
    }
 
    /* avoid trivial cases */
-   *nsymvars = SCIPgetNVars(scip);
-   *symvars = SCIPgetVars(scip);
-   if( *nsymvars <= 0 )
+   *npermvars = SCIPgetNVars(scip);
+   *permvars = SCIPgetVars(scip);
+   if( *npermvars <= 0 )
       return SCIP_OKAY;
 
    /* output message */
@@ -1956,7 +1956,7 @@ SCIP_RETCODE determineSymmetry(
 
    /* determine maximal number of generators depending on the number of variables */
    maxgenerators = scip->set->sym_maxngenerators;
-   maxgenerators = MIN(maxgenerators, MAXGENNUMERATOR / *nsymvars);
+   maxgenerators = MIN(maxgenerators, MAXGENNUMERATOR / *npermvars);
 
    /* get symmetry detection graph */
    SCIP_CALL( extractSDG(scip, &graph, symtype, &success) );
@@ -1970,8 +1970,8 @@ SCIP_RETCODE determineSymmetry(
    }
 
    /* terminate early in case all variables are different */
-   if( (symtype == SYM_SYMTYPE_PERM && SCIPgetSymgraphNVarcolors(graph) == *nsymvars)
-      || (symtype == SYM_SYMTYPE_SIGNPERM && SCIPgetSymgraphNVarcolors(graph) == 2 * (*nsymvars)) )
+   if( (symtype == SYM_SYMTYPE_PERM && SCIPgetSymgraphNVarcolors(graph) == *npermvars)
+      || (symtype == SYM_SYMTYPE_SIGNPERM && SCIPgetSymgraphNVarcolors(graph) == 2 * (*npermvars)) )
    {
       SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "   (%.1fs) no symmetry present (symcode time: %.2f)\n",
          SCIPgetSolvingTime(scip), symcodetime);
@@ -1981,11 +1981,11 @@ SCIP_RETCODE determineSymmetry(
    /*
     * actually compute symmetries
     */
-   SCIP_CALL( SYMcomputeSymmetryGenerators(scip, maxgenerators, graph, nsymmetries, symmetriessize,
-         symmetries, &log10groupsize, &symcodetime) );
+   SCIP_CALL( SYMcomputeSymmetryGenerators(scip, maxgenerators, graph, nperms, permssize,
+         perms, &log10groupsize, &symcodetime) );
 
    /* return if no symmetries found */
-   if( *nsymmetries == 0 )
+   if( *nperms == 0 )
    {
       SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "   (%.1fs) no symmetry present (symcode time: %.2f)\n",
          SCIPgetSolvingTime(scip), symcodetime);
@@ -1995,7 +1995,7 @@ SCIP_RETCODE determineSymmetry(
    /* display statistics */
    SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL,
       "   (%.1fs) symmetry computation finished: %d generators found (max: ",
-      SCIPgetSolvingTime(scip), *nsymmetries);
+      SCIPgetSolvingTime(scip), *nperms);
 
    /* display statistics: maximum number of generators */
    if( maxgenerators == 0 )
@@ -2018,10 +2018,10 @@ static
 SCIP_RETCODE computeComponentsSym(
    SCIP*                 scip,               /**< SCIP instance */
    SYM_SYMTYPE           symtype,            /**< type of symmetries in perms */
-   int**                 symmetries,         /**< generators of symmetry group (nsymmetries * nsymvars matrix) */
-   int                   nsymmetries,        /**< number of symmetries */
-   SCIP_VAR**            symvars ,           /**< variables on which symmetries act */
-   int                   nsymvars,           /**< number of variables the symmetries act on */
+   int**                 perms,              /**< generators of symmetry group (nperms * npermvars matrix) */
+   int                   nperms,             /**< number of (signed) permutations */
+   SCIP_VAR**            permvars ,          /**< variables on which permutation act */
+   int                   npermvars,          /**< number of variables the permutations act on */
    int**                 components,         /**< array containing the indices of symmetries sorted by components */
    int**                 componentbegins,    /**< array containing in i-th position the first position of
                                               *   component i in components array */
@@ -2036,37 +2036,37 @@ SCIP_RETCODE computeComponentsSym(
    int idx;
 
    assert(scip != NULL);
-   assert(symvars != NULL);
-   assert(nsymvars > 0);
-   assert(symmetries != NULL);
+   assert(permvars != NULL);
+   assert(npermvars > 0);
+   assert(perms != NULL);
    assert(components != NULL);
    assert(componentbegins != NULL);
    assert(ncomponents != NULL);
 
-   if( nsymmetries <= 0 )
+   if( nperms <= 0 )
       return SCIP_OKAY;
 
-   SCIP_CALL( SCIPdisjointsetCreate(&componentstovar, SCIPblkmem(scip), nsymvars) );
-   *ncomponents = nsymvars;
+   SCIP_CALL( SCIPdisjointsetCreate(&componentstovar, SCIPblkmem(scip), npermvars) );
+   *ncomponents = npermvars;
 
    /* init array that stores for each symmetry the representative of its affected variables */
-   SCIP_CALL( SCIPallocBufferArray(scip, &symtovarcomp, nsymmetries) );
-   for( s = 0; s < nsymmetries; ++s )
+   SCIP_CALL( SCIPallocBufferArray(scip, &symtovarcomp, nperms) );
+   for( s = 0; s < nperms; ++s )
       symtovarcomp[s] = -1;
 
    /* init array that stores for each variable its component */
-   SCIP_CALL( SCIPallocBufferArray(scip, &vartocomp, nsymvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &vartocomp, npermvars) );
 
    /* find symmetry components */
-   for( i = 0; i < nsymvars; ++i )
+   for( i = 0; i < npermvars; ++i )
    {
       vartocomp[i] = -1;
 
-      for( s = 0; s < nsymmetries; ++s )
+      for( s = 0; s < nperms; ++s )
       {
          int img;
 
-         img = symmetries[s][i];
+         img = perms[s][i];
 
          /* symmetry s affects i -> possibly merge var components */
          if( img != i )
@@ -2075,11 +2075,11 @@ SCIP_RETCODE computeComponentsSym(
             int component2;
             int representative;
 
-            if( img >= nsymvars )
+            if( img >= npermvars )
             {
                assert(symtype == SYM_SYMTYPE_SIGNPERM);
-               img -= nsymvars;
-               assert(0 <= img && img < nsymvars);
+               img -= npermvars;
+               assert(0 <= img && img < npermvars);
             }
 
             component1 = SCIPdisjointsetFind(componentstovar, i);
@@ -2144,16 +2144,16 @@ SCIP_RETCODE computeComponentsSym(
    assert(*ncomponents > 0);
 
    /* update symvartocomp array to final variable representatives */
-   for( s = 0; s < nsymmetries; ++s )
+   for( s = 0; s < nperms; ++s )
       symtovarcomp[s] = SCIPdisjointsetFind(componentstovar, symtovarcomp[s]);
 
    /* init components array by trivial natural order of symmetries */
-   SCIP_CALL( SCIPallocBlockMemoryArray(scip, components, nsymmetries) );
-   for( s = 0; s < nsymmetries; ++s )
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, components, nperms) );
+   for( s = 0; s < nperms; ++s )
       (*components)[s] = s;
 
    /* get correct order of components array */
-   SCIPsortIntInt(symtovarcomp, *components, nsymmetries);
+   SCIPsortIntInt(symtovarcomp, *components, nperms);
 
    /* determine componentbegins and store components for each symmetry */
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, componentbegins, *ncomponents + 1) );
@@ -2161,16 +2161,16 @@ SCIP_RETCODE computeComponentsSym(
    (*componentbegins)[0] = 0;
    idx = 0;
 
-   for( s = 1; s < nsymmetries; ++s )
+   for( s = 1; s < nperms; ++s )
    {
       if( symtovarcomp[s] > symtovarcomp[s - 1] )
          (*componentbegins)[++idx] = s;
 
       assert((*components)[s] >= 0);
-      assert((*components)[s] < nsymmetries);
+      assert((*components)[s] < nperms);
    }
    assert(*ncomponents == idx + 1);
-   (*componentbegins)[++idx] = nsymmetries;
+   (*componentbegins)[++idx] = nperms;
 
    SCIPfreeBufferArray(scip, &vartocomp);
    SCIPfreeBufferArray(scip, &symtovarcomp);
@@ -2187,20 +2187,20 @@ SCIP_RETCODE SCIPtryAddSymmetryHandlingMethods(
    )
 {
    SCIP_SYMHDLR** symhdlrs;
-   SCIP_HASHMAP* symvarmap;
+   SCIP_HASHMAP* permvarmap;
    SYM_SYMTYPE symtype;
-   SCIP_VAR** symvars;
+   SCIP_VAR** permvars;
    SCIP_Real* vardomcenter = NULL;
-   int** symmetries;
-   int** syms;
+   int** allperms;
+   int** perms;
    int* componentbegins;
    int* components;
    int ncomponents;
-   int nsymmmetries;
-   int symmetriessize;
+   int nallperms;
+   int allpermssize;
    int nsymhdlrs;
-   int nsymvars;
-   int nsyms;
+   int npermvars;
+   int nperms;
    int c;
    int i;
 
@@ -2232,45 +2232,45 @@ SCIP_RETCODE SCIPtryAddSymmetryHandlingMethods(
    assert(symhdlrs != NULL);
 
    symtype = scip->set->sym_symtype;
-   SCIP_CALL( determineSymmetry(scip, symtype, &symmetries, &nsymmmetries, &symmetriessize, &symvars, &nsymvars) );
+   SCIP_CALL( determineSymmetry(scip, symtype, &allperms, &nallperms, &allpermssize, &permvars, &npermvars) );
 
-   if( nsymmmetries == 0 )
+   if( nallperms == 0 )
    {
       scip->syminfo->nsymcomps = 0;
       return SCIP_OKAY;
    }
 
    /* compute independent components of symmetry group */
-   SCIP_CALL( computeComponentsSym(scip, symtype, symmetries, nsymmmetries, symvars, nsymvars,
+   SCIP_CALL( computeComponentsSym(scip, symtype, allperms, nallperms, permvars, npermvars,
          &components, &componentbegins, &ncomponents) );
 
    /* create hashmap for storing the indices of variables */
-   SCIP_CALL( SCIPhashmapCreate(&symvarmap, SCIPblkmem(scip), nsymmmetries) );
+   SCIP_CALL( SCIPhashmapCreate(&permvarmap, SCIPblkmem(scip), nallperms) );
 
    /* insert variables into hashmap  */
-   for( i = 0; i < nsymvars; ++i )
+   for( i = 0; i < npermvars; ++i )
    {
-      SCIP_CALL( SCIPhashmapInsertInt(symvarmap, symvars[i], i) );
+      SCIP_CALL( SCIPhashmapInsertInt(permvarmap, permvars[i], i) );
    }
 
    /* allocate temporary memory for storing permutations of components */
    if( ncomponents == 1 )
    {
-      syms = symmetries;
-      nsyms = nsymmmetries;
+      perms = allperms;
+      nperms = nallperms;
    }
    else
    {
-      SCIP_CALL( SCIPallocBufferArray(scip, &syms, nsymmmetries) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &perms, nallperms) );
    }
 
    /* compute domain center of variables */
    /* @symtodo only compute this for signed permutations */
    if( symtype == SYM_SYMTYPE_SIGNPERM )
    {
-      SCIP_CALL( SCIPallocBufferArray(scip, &vardomcenter, nsymvars) );
-      for( i = 0; i < nsymvars; ++i )
-         vardomcenter[i] = 0.5 * (SCIPvarGetLbLocal(symvars[i]) + SCIPvarGetUbLocal(symvars[i]));
+      SCIP_CALL( SCIPallocBufferArray(scip, &vardomcenter, npermvars) );
+      for( i = 0; i < npermvars; ++i )
+         vardomcenter[i] = 0.5 * (SCIPvarGetLbLocal(permvars[i]) + SCIPvarGetUbLocal(permvars[i]));
    }
 
    /* allocate memory for different symmetry components */
@@ -2299,15 +2299,15 @@ SCIP_RETCODE SCIPtryAddSymmetryHandlingMethods(
          int s;
 
          for( s = 0, i = componentbegins[c]; i < componentbegins[c + 1]; ++s, ++i )
-            syms[s] = symmetries[components[i]];
-         nsyms = componentbegins[c + 1] - componentbegins[c];
+            perms[s] = allperms[components[i]];
+         nperms = componentbegins[c + 1] - componentbegins[c];
       }
 
       for( i = 0; i < nsymhdlrs && !success; ++i )
       {
          /* @symtodo provide the symmetry detection graph */
-         SCIP_CALL( SCIPsymhdlrTryadd(symhdlrs[i], scip->set, syms, nsyms, symtype, symvars, nsymvars,
-               vardomcenter, symvarmap, NULL, c, &symcompdata, &ntmpconss, &ntmpchgbds, &success) );
+         SCIP_CALL( SCIPsymhdlrTryadd(symhdlrs[i], scip->set, perms, nperms, symtype, permvars, npermvars,
+               vardomcenter, permvarmap, NULL, c, &symcompdata, &ntmpconss, &ntmpchgbds, &success) );
          *naddedconss += ntmpconss;
          *nchgbds += ntmpchgbds;
          symhdlrs[i]->naddconss += ntmpconss;
@@ -2324,36 +2324,36 @@ SCIP_RETCODE SCIPtryAddSymmetryHandlingMethods(
    }
 
    SCIPfreeBufferArrayNull(scip, &vardomcenter);
-   SCIPhashmapFree(&symvarmap);
+   SCIPhashmapFree(&permvarmap);
 
    if( ncomponents > 1 )
    {
-      SCIPfreeBufferArray(scip, &syms);
+      SCIPfreeBufferArray(scip, &perms);
    }
 
    /* free components of symmetry group */
    if( ncomponents > 0 )
    {
       SCIPfreeBlockMemoryArray(scip, &componentbegins, ncomponents + 1);
-      SCIPfreeBlockMemoryArray(scip, &components, nsymmmetries);
+      SCIPfreeBlockMemoryArray(scip, &components, nallperms);
    }
 
    /* free symmetry information */
-   if( symmetriessize > 0 )
+   if( allpermssize > 0 )
    {
-      assert(symmetries != NULL);
+      assert(allperms != NULL);
 
-      for( i = nsymmmetries - 1; i >= 0; --i )
+      for( i = nallperms - 1; i >= 0; --i )
       {
-         SCIPfreeBlockMemoryArray(scip, &symmetries[i], nsymvars);
+         SCIPfreeBlockMemoryArray(scip, &allperms[i], npermvars);
       }
-      SCIPfreeBlockMemoryArray(scip, &symmetries, symmetriessize);
+      SCIPfreeBlockMemoryArray(scip, &allperms, allpermssize);
    }
 #ifndef NDEBUG
    else
    {
-      assert(nsymmmetries == 0);
-      assert(symmetries == NULL);
+      assert(nallperms == 0);
+      assert(allperms == NULL);
    }
 #endif
 
