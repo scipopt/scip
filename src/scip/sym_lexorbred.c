@@ -1138,9 +1138,17 @@ SCIP_DECL_SYMHDLRPRINT(symhdlrPrintLexOrbRed)
 
    if( symcompdata->nconss > 0 )
    {
+      int c;
+
       SCIPinfoMessage(scip, file, "handled by %d static symmetry handling constraints\n", symcompdata->nconss);
+
+      for( c = 0; c < symcompdata->nconss; ++c )
+      {
+         SCIP_CALL( SCIPprintCons(scip, symcompdata->conss[c], file) );
+         SCIPinfoMessage(scip, file, "\n");
+      }
    }
-   if( symcompdata->active )
+   if( symcompdata->active || symhdlrdata->useorbred )
    {
       SCIP_Bool* covered;
       SCIP_VAR** permvars;
@@ -1153,10 +1161,17 @@ SCIP_DECL_SYMHDLRPRINT(symhdlrPrintLexOrbRed)
       int v;
       int w;
 
-      nperms = SCIPlexreddataGetNPerms(symcompdata->lexreddata);
+      SCIPinfoMessage(scip, file, "handled by%s%s%s on the permutations:\n",
+         symcompdata->active ? " lexicographic reduction" : "",
+         symcompdata->active && symhdlrdata->useorbred ? " and" : "",
+         symhdlrdata->useorbred ? " orbital reduction" : "");
 
-      SCIPinfoMessage(scip, file, "handled by lexicographic reduction on the permutations:\n");
-      SCIP_CALL( SCIPallocClearBufferArray(scip, &covered, SCIPlexreddataGetNPermvars(symcompdata->lexreddata)) );
+      nperms = symcompdata->active ? SCIPlexreddataGetNPerms(symcompdata->lexreddata) :
+         SCIPorbitalreddataGetNPerms(symhdlrdata->orbitalreddata, 0);
+
+      SCIP_CALL( SCIPallocClearBufferArray(scip, &covered, symcompdata->active ?
+            SCIPlexreddataGetNPermvars(symcompdata->lexreddata) :
+            SCIPorbitalreddataGetNPermvars(symhdlrdata->orbitalreddata, 0)) );
 
       for( p = 0; p < nperms; ++p )
       {
@@ -1164,12 +1179,15 @@ SCIP_DECL_SYMHDLRPRINT(symhdlrPrintLexOrbRed)
          for( v = 0; v < lastlen; ++v )
             covered[v] = FALSE;
 
-         perm = SCIPlexreddataGetPerm(symcompdata->lexreddata, p);
-         permlen = SCIPlexreddataGetPermLen(symcompdata->lexreddata, p);
-         permvars = SCIPlexreddataGetPermVars(symcompdata->lexreddata, p);
+         perm = symcompdata->active ? SCIPlexreddataGetPerm(symcompdata->lexreddata, p) :
+            SCIPorbitalreddataGetPerm(symhdlrdata->orbitalreddata, 0, p);
+         permlen = symcompdata->active ? SCIPlexreddataGetPermLen(symcompdata->lexreddata, p) :
+            SCIPorbitalreddataGetPermLen(symhdlrdata->orbitalreddata, 0, p);
+         permvars = symcompdata->active ? SCIPlexreddataGetPermVars(symcompdata->lexreddata, p) :
+            SCIPorbitalreddataGetPermVars(symhdlrdata->orbitalreddata, 0, p);
          lastlen = permlen;
 
-         SCIPinfoMessage(scip, file, "permutation %d: ", p);
+         SCIPinfoMessage(scip, file, "\tpermutation %d: ", p);
          for( v = 0; v < permlen; ++v )
          {
             if( covered[v] )
@@ -1193,8 +1211,6 @@ SCIP_DECL_SYMHDLRPRINT(symhdlrPrintLexOrbRed)
 
       SCIPfreeBufferArray(scip, &covered);
    }
-   if( symhdlrdata->useorbred )
-      SCIPinfoMessage(scip, file, "handled by orbital reduction\n");
 
    return SCIP_OKAY;
 }

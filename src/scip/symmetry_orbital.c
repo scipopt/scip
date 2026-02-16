@@ -1747,3 +1747,73 @@ SCIP_RETCODE SCIPincludeOrbitalReduction(
 
    return SCIP_OKAY;
 }
+
+/** returns number of permutations stored in orbitalreddata */
+int SCIPorbitalreddataGetNPerms(
+   SCIP_ORBITALREDDATA*  orbitalreddata,     /**< data for orbital reduction propagator */
+   int                   compidx             /**< index of symmetry component in orbitalreddata */
+   )
+{
+   assert(orbitalreddata != NULL);
+   assert(orbitalreddata->componentdatas != NULL);
+
+   return orbitalreddata->componentdatas[compidx]->nperms;
+}
+
+/** returns number of variables stored in orbitalreddata */
+int SCIPorbitalreddataGetNPermvars(
+   SCIP_ORBITALREDDATA*  orbitalreddata,     /**< data for orbital reduction propagator */
+   int                   compidx             /**< index of symmetry component in orbitalreddata */
+   )
+{
+   assert(orbitalreddata != NULL);
+   assert(orbitalreddata->componentdatas != NULL);
+   assert(0 <= compidx && compidx < orbitalreddata->ncomponents);
+
+   return orbitalreddata->componentdatas[compidx]->npermvars;
+}
+
+/** returns a permutation stored in orbitalreddata*/
+int* SCIPorbitalreddataGetPerm(
+   SCIP_ORBITALREDDATA*  orbitalreddata,     /**< data for orbital reduction propagator */
+   int                   compidx,            /**< index of symmetry component in orbitalreddata */
+   int                   permidx             /**< index of permutation */
+   )
+{
+   assert(orbitalreddata != NULL);
+   assert(orbitalreddata->componentdatas != NULL);
+   assert(0 <= compidx && compidx < orbitalreddata->ncomponents);
+   assert(0 <= permidx && permidx < orbitalreddata->componentdatas[compidx]->perms != NULL);
+   assert(0 <= permidx && permidx < orbitalreddata->componentdatas[compidx]->nperms);
+
+
+   return orbitalreddata->componentdatas[compidx]->perms[permidx];
+}
+
+/** returns length of permutation stored in orbitalreddata */
+int SCIPorbitalreddataGetPermLen(
+   SCIP_ORBITALREDDATA*  orbitalreddata,     /**< data for orbital reduction propagator */
+   int                   compidx,            /**< index of symmetry component in orbitalreddata */
+   int                   permidx             /**< index of permutation */
+   )
+{
+   assert(orbitalreddata != NULL);
+   assert(orbitalreddata->componentdatas != NULL);
+   assert(0 <= compidx && compidx < orbitalreddata->ncomponents);
+
+   return orbitalreddata->componentdatas[compidx]->npermvars;
+}
+
+/** return variables affected by permutation */
+SCIP_VAR** SCIPorbitalreddataGetPermVars(
+   SCIP_ORBITALREDDATA*  orbitalreddata,     /**< data for orbital reduction propagator */
+   int                   compidx,            /**< index of symmetry component in orbitalreddata */
+   int                   permidx             /**< index of permutation */
+   )
+{
+   assert(orbitalreddata != NULL);
+   assert(orbitalreddata->componentdatas != NULL);
+   assert(0 <= compidx && compidx < orbitalreddata->ncomponents);
+
+   return orbitalreddata->componentdatas[compidx]->permvars;
+}
