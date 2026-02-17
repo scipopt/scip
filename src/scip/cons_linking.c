@@ -3197,6 +3197,7 @@ SCIP_DECL_CONSDEACTIVE(consDeactiveLinking)
 static
 SCIP_DECL_CONSENABLE(consEnableLinking)
 {  /*lint --e{715}*/
+#ifdef SCIP_DISABLED_CODE
    SCIP_CONSHDLRDATA* conshdlrdata;
 #endif
    SCIP_CONSDATA* consdata;
