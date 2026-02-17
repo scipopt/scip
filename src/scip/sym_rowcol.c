@@ -23,6 +23,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   sym_rowcol.c
+ * @ingroup DEFPLUGINS_SYM
  * @brief  symmetry handler for row and column symmetries
  * @author Christopher Hojny
  */
@@ -69,6 +70,7 @@
 #define SYM_DEFAULT_DETECTDOUBLELEX TRUE     /**< Should we check whether the components can be handled by double lex matrices? */
 #define SYM_DEFAULT_HANDLESIGNEDORBITOPES TRUE /**< Shall signed orbitopes be handled? */
 #define SYM_DEFAULT_USEDYNAMICPROP TRUE      /**< Shall dynamic propagation be used for orbitopes? */
+
 
 /*
  * Data structures
@@ -124,7 +126,6 @@ SCIP_RETCODE addOrbitopesDynamic(
    char name[SCIP_MAXSTRLEN];
    int i;
    int j;
-
    SCIP_Bool ispporbitope;
    SCIP_VAR*** varmatrix;
    SCIP_Bool* pprows;
@@ -174,6 +175,7 @@ SCIP_RETCODE addOrbitopesDynamic(
       }
 
       *success = TRUE;
+
       return SCIP_OKAY;
    }
 
@@ -187,6 +189,7 @@ SCIP_RETCODE addOrbitopesDynamic(
 
       SCIP_CALL( SCIPlexicographicReductionAddPermutation(scip, lexreddata,
             permvars, npermvars, orbisackperm, symtype, permvardomaincenter, TRUE, success) );
+
       if( *success )
       {
          *lexredactive = TRUE;
@@ -678,6 +681,7 @@ SCIP_RETCODE handleDoubleLexOrbitope(
       for( j = 0; j < ncols; ++j )
          orbitopevarmatrix[pos++] = permvars[varidxmatrix[i][j]];
    }
+
    SCIP_CALL( SCIPorbitopalReductionAddOrbitope(scip, orbitopalreddata,
          SCIP_ROWORDERING_NONE, SCIP_COLUMNORDERING_NONE,
          orbitopevarmatrix, nrows, ncols, success) );
@@ -704,6 +708,7 @@ SCIP_RETCODE handleDoubleLexOrbitope(
             SCIP_CALL( SCIPcreateConsLinear(scip, &cons, name, 2, consvars, consvals,
                   -SCIPinfinity(scip), 0.0,
                   TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
             (*orbitopeconss)[(*norbitopeconss)++] = cons;
             SCIP_CALL( SCIPaddCons(scip, cons) );
          }
@@ -716,6 +721,7 @@ SCIP_RETCODE handleDoubleLexOrbitope(
                for( i = nactiverows; i < nactrowsprev; ++i )
                   orbitopevarmatrix[pos++] = permvars[varidxmatrix[i][k]];
             }
+
             SCIP_CALL( SCIPorbitopalReductionAddOrbitope(scip, orbitopalreddata,
                   SCIP_ROWORDERING_NONE, SCIP_COLUMNORDERING_NONE,
                   orbitopevarmatrix, ncols, nactrowsprev - nactiverows, success) );
@@ -752,6 +758,7 @@ SCIP_RETCODE handleDoubleLexOrbitope(
             SCIP_CALL( SCIPcreateConsLinear(scip, &cons, name, 2, consvars, consvals,
                   -SCIPinfinity(scip), 0.0,
                   TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
             (*orbitopeconss)[(*norbitopeconss)++] = cons;
             SCIP_CALL( SCIPaddCons(scip, cons) );
          }
@@ -762,6 +769,7 @@ SCIP_RETCODE handleDoubleLexOrbitope(
             for( i = 0; i < nactiverows; ++i )
                orbitopevarmatrix[pos++] = permvars[varidxmatrix[i][j]];
          }
+
          SCIP_CALL( SCIPorbitopalReductionAddOrbitope(scip, orbitopalreddata,
                SCIP_ROWORDERING_NONE, SCIP_COLUMNORDERING_NONE,
                orbitopevarmatrix, ncols, nactiverows, success) );
@@ -781,6 +789,7 @@ SCIP_RETCODE handleDoubleLexOrbitope(
          SCIP_CALL( SCIPcreateConsLinear(scip, &cons, name, 2, consvars, consvals,
                -SCIPinfinity(scip), 0.0,
                TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
          (*orbitopeconss)[(*norbitopeconss)++] = cons;
          SCIP_CALL( SCIPaddCons(scip, cons) );
       }
@@ -1299,10 +1308,12 @@ SCIP_RETCODE tryHandleSingleOrDoubleLexMatrices(
          SCIPfreeBlockMemoryArray(scip, &lexmatrix[i], ncols);
       }
       SCIPfreeBlockMemoryArray(scip, &lexmatrix, nrows);
+
       if( ncolmatrices > 0 )
       {
          SCIPfreeBlockMemoryArray(scip, &lexcolsbegin, ncolmatrices + 1);
       }
+
       if( nrowmatrices > 0 )
       {
          SCIPfreeBlockMemoryArray(scip, &lexrowsbegin, nrowmatrices + 1);
@@ -1499,6 +1510,7 @@ SCIP_DECL_SYMHDLRPROP(symhdlrPropRowCol)
    /* run orbital reduction */
    SCIP_CALL( SCIPorbitopalReductionPropagate(scip, symhdlrdata->orbitopalreddata,
          &infeasible, &nreds, &didrun) );
+
    if( infeasible )
       return SCIP_OKAY;
 
@@ -1516,7 +1528,7 @@ SCIP_DECL_SYMHDLRPROP(symhdlrPropRowCol)
      SCIP_CALL( SCIPlexicographicReductionPropagate(scip, symcompdata->lexreddata,
             &infeasible, &nredlocal, &didrunlocal) );
       nreds += nredlocal;
-      didrun |= didrunlocal;
+      didrun = didrun || didrunlocal;
       if( infeasible )
          return SCIP_OKAY;
    }

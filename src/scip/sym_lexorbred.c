@@ -23,6 +23,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   sym_linorbred.c
+ * @ingroup DEFPLUGINS_SYM
  * @brief  symmetry handler for lexicographic reduction and orbital reduction
  * @author Christopher Hojny
  * @author Jasper van Doornmalen
@@ -102,14 +103,13 @@ struct SCIP_SymhdlrData
                                               *   -1: unbounded */
    SCIP_Bool             useppupgrade;       /**< Shall static constraints be used if at least 50% of perms can be
                                               *   handled by pp-orbisacks? */
-
 };
 
 /** compare function for sorting an array by the addresses of its members  */
 static
 SCIP_DECL_SORTPTRCOMP(sortByPointerValue)
 {
-   /* @todo move to misc.c? */
+   /* @todo move to misc.c? Or even better: use a different sorting function, e.g., according to clique id */
    if ( elem1 < elem2 )
       return -1;
    else if ( elem1 > elem2 )
@@ -199,6 +199,7 @@ SCIP_Bool isInvolution(
    assert(perm != NULL);
    assert(lenperm > 0);
    assert(istransposition != NULL);
+
    *istransposition = FALSE;
 
    for( i = 0; i < lenperm; ++i )
@@ -211,6 +212,7 @@ SCIP_Bool isInvolution(
 
    if( lensupport == 2 )
       *istransposition = TRUE;
+
    return TRUE;
 }
 
@@ -301,6 +303,7 @@ SCIP_RETCODE tryGenerateInvolutions(
             if( perm1[perm2[i]] != perm2[perm1[i]] )
                commute = FALSE;
          }
+
          /* only consider involutions that have non-disjoint support */
          if( commute )
          {
@@ -310,8 +313,10 @@ SCIP_RETCODE tryGenerateInvolutions(
 
             if( isPermKnown(tmpperm, npermvars, perms, nperms) )
                continue;
+
             if ( isPermKnown(tmpperm, npermvars, *newperms, *nnewperms) )
                continue;
+
             if( dynamicmemsize && *nnewperms == *lennewperms )
             {
                SCIP_CALL( SCIPensureBlockMemoryArray(scip, newperms, lennewperms, *lennewperms + 1) );
@@ -336,6 +341,7 @@ SCIP_RETCODE tryGenerateInvolutions(
              **/
             if( isPermKnown(tmpperm, npermvars, perms, nperms) )
                continue;
+
             if( isPermKnown(tmpperm, npermvars, *newperms, *nnewperms) )
                continue;
 
@@ -362,6 +368,7 @@ SCIP_RETCODE tryGenerateInvolutions(
             /* do not store the permutation if it is already known */
             if( isPermKnown(tmpperm, npermvars, perms, nperms) )
                continue;
+
             if ( isPermKnown(tmpperm, npermvars, *newperms, *nnewperms) )
                continue;
 
@@ -370,6 +377,7 @@ SCIP_RETCODE tryGenerateInvolutions(
             {
                SCIP_CALL( SCIPensureBlockMemoryArray(scip, newperms, lennewperms, *lennewperms + 1) );
             }
+
             SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(*newperms)[*nnewperms], permlen) );
             for( i = 0; i < permlen; ++i )
                (*newperms)[*nnewperms][i] = perm2[perm1[perm2[i]]];
@@ -436,6 +444,7 @@ SCIP_RETCODE addLexRed(
             permvars, npermvars, perms[p], (SYM_SYMTYPE) symtype, permvardomaincenter, TRUE, &locsuccess) );
       *success |= locsuccess;
    }
+
    for( p = 0; p < nmoreperms; ++p )
    {
       SCIP_CALL( SCIPlexicographicReductionAddPermutation(scip, symcompdata->lexreddata,
@@ -495,6 +504,7 @@ SCIP_RETCODE addOrbRed(
             ++nproperperms;
          }
       }
+
       for( p = 0; p < nmoreperms; ++p )
       {
          if( isProperPerm(symtype, moreperms[p], npermvars) )
@@ -571,6 +581,7 @@ SCIP_RETCODE tryPackingPartitioningOrbisackUpgrade(
    assert(perms != NULL);
    assert(nperms > 0);
    assert(success != NULL);
+   assert(naddedconss != NULL);
 
    /* we did not upgrade yet */
    *success = FALSE;
@@ -607,8 +618,7 @@ SCIP_RETCODE tryPackingPartitioningOrbisackUpgrade(
    SCIPsortPtr((void**) setppconsssort, sortByPointerValue, nsetppconss);
 
    /* For each permvar, introduce an array of setppc constraints (initially NULL) for each variable,
-    * and populate it with the setppc constraints that it contains. This array follows the ordering by cons ptr address.
-    */
+    * and populate it with the setppc constraints that it contains. This array follows the ordering by cons ptr address. */
    SCIP_CALL( SCIPallocCleanBufferArray(scip, &permvarssetppcconss, npermvars) );
    SCIP_CALL( SCIPallocCleanBufferArray(scip, &npermvarssetppcconss, npermvars) );
    SCIP_CALL( SCIPallocCleanBufferArray(scip, &maxnpermvarssetppcconss, npermvars) );
@@ -631,6 +641,7 @@ SCIP_RETCODE tryPackingPartitioningOrbisackUpgrade(
          {
             SCIP_CALL( SCIPensureBlockMemoryArray(scip, &(permvarssetppcconss[varid]),
                   &maxnpermvarssetppcconss[varid], npermvarssetppcconss[varid] + 1) );
+
             assert(npermvarssetppcconss[varid] < maxnpermvarssetppcconss[varid]);
             permvarssetppcconss[varid][npermvarssetppcconss[varid]++] = cons;
          }
@@ -654,20 +665,25 @@ SCIP_RETCODE tryPackingPartitioningOrbisackUpgrade(
          /* ignore fixed points in permutation */
          if( i == j )
             continue;
+
          /* only check for situations where i and j are binary variables */
          assert(SCIPgetSymInferredVarType(permvars[i]) == SCIPgetSymInferredVarType(permvars[j]));
          if( SCIPgetSymInferredVarType(permvars[i]) != SCIP_VARTYPE_BINARY )
             continue;
+
          /* the permutation must be an involution on binary variables */
          if( perm[j] != i )
-            goto NEXTPERMITER;
+            goto NEXTPERMITER; /* @todo replace by ntwocycles = 0; break; */
+
          /* i and j are a two-cycle, so we find this once for i and once for j. Only handle this once for i < j. */
          if( i > j )
             continue;
+
          /* disqualify permutation if i and j are not in a common set packing constraint */
          if( !checkSortedArraysHaveOverlappingEntry((void**) permvarssetppcconss[i], npermvarssetppcconss[i],
              (void**) permvarssetppcconss[j], npermvarssetppcconss[j], sortByPointerValue) )
-            goto NEXTPERMITER;
+            goto NEXTPERMITER; /* @todo replace by ntwocycles = 0; break; */
+
          ++ntwocycles;
       }
 
@@ -718,10 +734,12 @@ SCIP_RETCODE tryPackingPartitioningOrbisackUpgrade(
             /* ignore fixed points in permutation, and only consider rows with i < j */
             if( i >= j )
                continue;
+
             /* only check for situations where i and j are binary variables */
             assert(SCIPgetSymInferredVarType(permvars[i]) == SCIPgetSymInferredVarType(permvars[j]));
             if( SCIPgetSymInferredVarType(permvars[i]) != SCIP_VARTYPE_BINARY )
                continue;
+
             assert(perm[j] == i);
             assert(checkSortedArraysHaveOverlappingEntry((void**) permvarssetppcconss[i], npermvarssetppcconss[i],
                (void**) permvarssetppcconss[j], npermvarssetppcconss[j], sortByPointerValue));
@@ -762,6 +780,7 @@ SCIP_RETCODE tryPackingPartitioningOrbisackUpgrade(
       assert(npermvarssetppcconss[varid] <= maxnpermvarssetppcconss[varid]);
       if( npermvarssetppcconss[varid] == 0 )
          continue;
+
       SCIPfreeBlockMemoryArray(scip, &permvarssetppcconss[varid], maxnpermvarssetppcconss[varid]);
       permvarssetppcconss[varid] = NULL;
       npermvarssetppcconss[varid] = 0;
@@ -901,18 +920,20 @@ SCIP_DECL_SYMHDLRTRYADD(symhdlrTryaddLexOrbRed)
             goto FREEMEMORY;
       }
    }
+
    if( symhdlrdata->uselexred )
    {
       SCIP_CALL( addLexRed(scip, *symcompdata, symhdlrdata->shadowtreeeventhdlr,
             symtype, perms, nperms, newperms, nnewperms, permvars, npermvars, permvardomcenter, success) );
    }
+
    if( symhdlrdata->useorbred )
    {
       SCIP_Bool locsuccess = FALSE;
 
       SCIP_CALL( addOrbRed(scip, symhdlrdata->orbitalreddata, symtype, perms, nperms, newperms, nnewperms,
             permvars, npermvars, &locsuccess) );
-      *success |= locsuccess;
+      *success = *success || locsuccess;
    }
 
  FREEMEMORY:
@@ -1049,8 +1070,7 @@ SCIP_DECL_SYMHDLRPROP(symhdlrPropLexOrbRed)
    assert(symhdlrdata != NULL);
 
    /* run orbital reduction */
-   SCIP_CALL( SCIPorbitalReductionPropagate(scip, symhdlrdata->orbitalreddata,
-         &infeasible, &nreds, &didrun) );
+   SCIP_CALL( SCIPorbitalReductionPropagate(scip, symhdlrdata->orbitalreddata, &infeasible, &nreds, &didrun) );
    if ( infeasible )
       return SCIP_OKAY;
 
@@ -1068,7 +1088,7 @@ SCIP_DECL_SYMHDLRPROP(symhdlrPropLexOrbRed)
       SCIP_CALL( SCIPlexicographicReductionPropagate(scip, symcompdata->lexreddata,
             &infeasible, &nredlocal, &didrunlocal) );
       nreds += nredlocal;
-      didrun |= didrunlocal;
+      didrun = didrun || didrunlocal;
       if ( infeasible )
          return SCIP_OKAY;
    }
@@ -1148,6 +1168,7 @@ SCIP_DECL_SYMHDLRPRINT(symhdlrPrintLexOrbRed)
          SCIPinfoMessage(scip, file, "\n");
       }
    }
+
    if( symcompdata->active || symhdlrdata->useorbred )
    {
       SCIP_Bool* covered;

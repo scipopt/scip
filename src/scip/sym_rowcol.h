@@ -23,7 +23,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   sym_rowcol.h
- * @ingroup OTHER_CFILES
+ * @ingroup SYMHDLRS
  * @brief  symmetry handler for row and column symmetries
  * @author Christopher Hojny
  */
