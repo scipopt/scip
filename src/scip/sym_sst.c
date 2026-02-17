@@ -110,7 +110,7 @@ struct SST_ConflictData
    int                   nconflictinorbit;   /**< number of variables the node's var is in conflict with */
    int                   orbitsize;          /**< size of the variable's orbit */
    int                   posinorbit;         /**< position of variable in its orbit */
-   SCIP_Bool             active;             /**< whether variable has not been fixed by Schreier Sims code */
+   SCIP_Bool             active;             /**< whether variable has not been fixed by Schreier-Sims code */
    SCIP_CLIQUE**         cliques;            /**< list of setppc constraints */
    int                   ncliques;           /**< number of setppc constraints */
 };
@@ -515,8 +515,8 @@ SCIP_RETCODE addSSTConssOrbitAndUpdateSST(
    int*                  maxnsstconss,       /**< pointer to store maximum number of conss sstconss can hold */
    int*                  orbits,             /**< symmetry orbits */
    int*                  orbitbegins,        /**< array storing begin position for each orbit */
-   int                   orbitidx,           /**< index of orbit for Schreier Sims constraints */
-   int                   orbitleaderidx,     /**< index of leader variable for Schreier Sims constraints */
+   int                   orbitidx,           /**< index of orbit for Schreier-Sims constraints */
+   int                   orbitleaderidx,     /**< index of leader variable for Schreier-Sims constraints */
    SCIP_Shortbool*       orbitvarinconflict, /**< indicator whether orbitvar is in conflict with orbit leader */
    int                   norbitvarinconflict,/**< number of variables in conflict with orbit leader */
    int*                  nchgbds             /**< pointer to store number of bound changes (or NULL) */
@@ -886,6 +886,7 @@ SCIP_RETCODE tryGenerateInvolutions(
             if( perm1[perm2[i]] != perm2[perm1[i]] )
                commute = FALSE;
          }
+
          /* only consider involutions that have non-disjoint support */
          if( commute )
          {
@@ -895,8 +896,10 @@ SCIP_RETCODE tryGenerateInvolutions(
 
             if( isPermKnown(tmpperm, npermvars, perms, nperms) )
                continue;
+
             if ( isPermKnown(tmpperm, npermvars, *newperms, *nnewperms) )
                continue;
+
             if( dynamicmemsize && *nnewperms == *lennewperms )
             {
                SCIP_CALL( SCIPensureBlockMemoryArray(scip, newperms, lennewperms, *lennewperms + 1) );
@@ -918,9 +921,10 @@ SCIP_RETCODE tryGenerateInvolutions(
             /* do not store the permutation if it is already known
              * (also for signed permutations, it is sufficient to iterate over the first npermvars
              *  entries, because the permutation on the negated variables can be derived from these entries)
-             **/
+             */
             if( isPermKnown(tmpperm, npermvars, perms, nperms) )
                continue;
+
             if( isPermKnown(tmpperm, npermvars, *newperms, *nnewperms) )
                continue;
 
@@ -947,6 +951,7 @@ SCIP_RETCODE tryGenerateInvolutions(
             /* do not store the permutation if it is already known */
             if( isPermKnown(tmpperm, npermvars, perms, nperms) )
                continue;
+
             if ( isPermKnown(tmpperm, npermvars, *newperms, *nnewperms) )
                continue;
 
@@ -955,6 +960,7 @@ SCIP_RETCODE tryGenerateInvolutions(
             {
                SCIP_CALL( SCIPensureBlockMemoryArray(scip, newperms, lennewperms, *lennewperms + 1) );
             }
+
             SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(*newperms)[*nnewperms], permlen) );
             for( i = 0; i < permlen; ++i )
                (*newperms)[*nnewperms][i] = perm2[perm1[perm2[i]]];
@@ -978,7 +984,7 @@ SCIP_RETCODE tryGenerateInvolutions(
    return SCIP_OKAY;
 }
 
-/** selection rule of next orbit/leader in orbit for Schreier Sims constraints */
+/** selection rule of next orbit/leader in orbit for Schreier-Sims constraints */
 static
 SCIP_RETCODE selectOrbitLeaderSSTConss(
    SCIP*                 scip,               /**< SCIP instance */
@@ -1103,12 +1109,10 @@ SCIP_RETCODE selectOrbitLeaderSSTConss(
          leader = orbits[orbitbegins[*orbitidx] + *leaderidx];
          assert(leader < nconflictvars);
 
-         if( orbitrule == (int) SST_ORBITRULE_MAXCONFSINORBIT
-            && varconflicts[leader].ncliques > 0 )
+         if( orbitrule == (int) SST_ORBITRULE_MAXCONFSINORBIT && varconflicts[leader].ncliques > 0 )
          {
-            /* count how many active variables in the orbit conflict with "leader"
-             * This is only needed if there are possible conflicts.
-             */
+            /* Count how many active variables in the orbit conflict with "leader".
+             * This is only needed if there are possible conflicts. */
             int varmapid;
 
             orbitsize = orbitbegins[*orbitidx + 1] - orbitbegins[*orbitidx];
@@ -1145,9 +1149,8 @@ SCIP_RETCODE selectOrbitLeaderSSTConss(
    }
    else
    {
-      /* only three possible values for leaderrules, so it must be MAXCONFLICTSINORBIT
-       * In this case, the code must have computed the conflict graph.
-       */
+      /* Only three possible values for leaderrules, so it must be MAXCONFLICTSINORBIT.
+       * In this case, the code must have computed the conflict graph. */
       assert(leaderrule == (int) SST_LEADERRULE_MAXCONFSINORBIT);
       assert(varconflicts != NULL);
 
@@ -1200,6 +1203,7 @@ SCIP_RETCODE selectOrbitLeaderSSTConss(
 
             /* get variable index in conflict graph */
             varmapid = orbits[orbitbegins[*orbitidx] + i];
+
             /* only active variables */
             if( ! varconflicts[varmapid].active )
                continue;
@@ -1313,11 +1317,9 @@ SCIP_RETCODE tryAddSSTConss(
    int nmovedintpermvars;
    int nmovedcontpermvars;
    int ntotalperms;
-
    int* orbits;
    int* orbitbegins;
    int norbits;
-
    int orbitidx;
    int orbitleaderidx;
    SCIP_Shortbool* orbitvarinconflict = NULL;
@@ -1331,7 +1333,6 @@ SCIP_RETCODE tryAddSSTConss(
    int norbitleadercomponent;
    SCIP_Shortbool* isaffected;
    SCIP_Shortbool* isproperperm;
-
    int i;
    int p;
 
@@ -1411,6 +1412,7 @@ SCIP_RETCODE tryAddSSTConss(
             }
          }
       }
+
       for( p = 0; p < nnewperms; ++p )
       {
          isproperperm[nperms + p] = TRUE;
@@ -1493,7 +1495,7 @@ SCIP_RETCODE tryAddSSTConss(
       SCIP_CALL( SCIPallocClearBufferArray(scip, &orbitvarinconflict, npermvars) );
    }
 
-   SCIPdebugMsg(scip, "Start selection of orbits and leaders for Schreier Sims constraints.\n");
+   SCIPdebugMsg(scip, "Start selection of orbits and leaders for Schreier-Sims constraints.\n");
    SCIPdebugMsg(scip, "orbitidx\tleaderidx\torbitsize\n");
 
    /* initialize array indicating whether permutations shall not be considered for orbit permutations */
@@ -1506,7 +1508,7 @@ SCIP_RETCODE tryAddSSTConss(
          ++ninactiveperms;
    }
 
-   /* as long as the stabilizer is non-trivial, add Schreier Sims constraints */
+   /* as long as the stabilizer is non-trivial, add Schreier-Sims constraints */
    norbitleadercomponent = 0;
    while( ninactiveperms < ntotalperms )
    {
@@ -1562,7 +1564,7 @@ SCIP_RETCODE tryAddSSTConss(
       assert(0 <= orbitleaderidx && orbitleaderidx < orbitbegins[orbitidx + 1] - orbitbegins[orbitidx]);
       SCIPdebugMsg(scip, "%d\t\t%d\t\t%d\n", orbitidx, orbitleaderidx, orbitbegins[orbitidx + 1] - orbitbegins[orbitidx]);
 
-      /* add Schreier Sims constraints for the selected orbit and update Schreier Sims table */
+      /* add Schreier-Sims constraints for the selected orbit and update Schreier-Sims table */
       SCIP_CALL( addSSTConssOrbitAndUpdateSST(scip, symtype, id, varconflicts, ntotalperms, permvars, npermvars,
             permvardomaincenter, leaderrule, orbitrule, addconflictcuts, sstconss, nsstconss, maxnsstconss,
             orbits, orbitbegins, orbitidx, orbitleaderidx, orbitvarinconflict, norbitvarinconflict, &nchanges) );
@@ -1590,7 +1592,7 @@ SCIP_RETCODE tryAddSSTConss(
       }
    }
 
-   /* if Schreier Sims constraints have been added, store that Schreier Sims has been used for this component */
+   /* if Schreier-Sims constraints have been added, store that Schreier-Sims has been used for this component */
    if( norbitleadercomponent > 0 )
       *success = TRUE;
 
@@ -1600,6 +1602,7 @@ SCIP_RETCODE tryAddSSTConss(
    }
    SCIPfreeBufferArray(scip, &orbitbegins);
    SCIPfreeBufferArray(scip, &orbits);
+
    if( varconflicts != NULL )
    {
       /* nconflictvars at construction is npermvars */
@@ -1625,7 +1628,7 @@ SCIP_RETCODE tryAddSSTConss(
 
 /** addition method for symmetry method handler plugins (tries to add symmetry handling method for given symmetries) */
 static
-SCIP_DECL_SYMHDLRTRYADD(symhdlrTryaddSST)
+SCIP_DECL_SYMHDLRTRYADD(symhdlrTryAddSST)
 {  /*lint --e{715}*/
    SCIP_SYMHDLRDATA* symhdlrdata;
    SCIP_CONS** sstconss = NULL;
@@ -1748,6 +1751,8 @@ SCIP_DECL_SYMHDLRPRESOL(symhdlrPresolSST)
    int s;
    int c;
 
+   assert(result != NULL);
+
    *result = nsymcomps > 0 ? SCIP_DIDNOTFIND : SCIP_DIDNOTRUN;
 
    for( s = 0; s < nsymcomps; ++s )
@@ -1818,7 +1823,7 @@ SCIP_RETCODE SCIPincludeSymhdlrSST(
 
    SCIP_CALL( SCIPincludeSymhdlrBasic(scip, SYM_NAME, SYM_DESC, SYM_PRIORITY, 0, 0, SYM_PRESOLPRIORITY,
          -1, -1, FALSE, FALSE, 1.0, SYM_MAXPRESOLROUNDS, SCIP_PROPTIMING_BEFORELP, SCIP_PRESOLTIMING_FAST,
-         symhdlrTryaddSST, NULL, symhdlrFreeSST, NULL, symhdlrExitSST, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+         symhdlrTryAddSST, NULL, symhdlrFreeSST, NULL, symhdlrExitSST, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
          NULL, symhdlrPresolSST, symhdlrPrintSST, symhdlrdata) );
 
    /* add parameters */
@@ -1826,30 +1831,30 @@ SCIP_RETCODE SCIPincludeSymhdlrSST(
          "rule to select the leader within the orbit (0: first, 1: last, 2: max. number of conflicts in orbit)",
          &symhdlrdata->leaderrule, TRUE, DEFAULT_LEADERRULE, 0, 2, NULL, NULL) );
 
-      SCIP_CALL( SCIPaddIntParam(scip, "symmetries/" SYM_NAME "/orbitrule",
+   SCIP_CALL( SCIPaddIntParam(scip, "symmetries/" SYM_NAME "/orbitrule",
          "rule to select the orbit for SST cuts (0: min. size, 1: max. size, 2: max. number of conflicts)",
          &symhdlrdata->orbitrule, TRUE, DEFAULT_ORBITRULE, 0, 2, NULL, NULL) );
 
-      SCIP_CALL( SCIPaddIntParam(scip, "symmetries/" SYM_NAME "/leadervartype",
-            "bitset encoding allowed variable types for leader  (1: bin, 2: int, 4: cont)",
-            &symhdlrdata->leadervartype, TRUE, DEFAULT_LEADERVARTYPE, 0, 7, NULL, NULL) );
+   SCIP_CALL( SCIPaddIntParam(scip, "symmetries/" SYM_NAME "/leadervartype",
+         "bitset encoding allowed variable types for leader  (1: bin, 2: int, 4: cont)",
+         &symhdlrdata->leadervartype, TRUE, DEFAULT_LEADERVARTYPE, 0, 7, NULL, NULL) );
 
-      SCIP_CALL( SCIPaddBoolParam(scip, "symmetries/" SYM_NAME "/computenewperms",
-            "Shall additional permutations of symmetry component be computed?",
-            &symhdlrdata->computenewperms, TRUE, DEFAULT_COMPUTENEWPERMS, NULL, NULL) );
+   SCIP_CALL( SCIPaddBoolParam(scip, "symmetries/" SYM_NAME "/computenewperms",
+         "Shall additional permutations of symmetry component be computed?",
+         &symhdlrdata->computenewperms, TRUE, DEFAULT_COMPUTENEWPERMS, NULL, NULL) );
 
-      SCIP_CALL( SCIPaddIntParam(scip, "symmetries/" SYM_NAME "/maxnnewperms",
-            "maximum number of additional permutations of symmetry component that is computed "\
-            "(used to have better approximation of stabilizer); -1: unbounded",
-            &symhdlrdata->maxnnewperms, TRUE, DEFAULT_MAXNNEWPERMS, -1, INT_MAX, NULL, NULL) );
+   SCIP_CALL( SCIPaddIntParam(scip, "symmetries/" SYM_NAME "/maxnnewperms",
+         "maximum number of additional permutations of symmetry component that is computed " \
+         "(used to have better approximation of stabilizer); -1: unbounded",
+         &symhdlrdata->maxnnewperms, TRUE, DEFAULT_MAXNNEWPERMS, -1, INT_MAX, NULL, NULL) );
 
-      SCIP_CALL( SCIPaddBoolParam(scip, "symmetries/" SYM_NAME "/addconflictcuts",
-            "Should SST constraints be added is a conflict-based rule is used?",
-            &symhdlrdata->addconflictcuts, TRUE, DEFAULT_ADDCONFLICTCUTS, NULL, NULL) );
+   SCIP_CALL( SCIPaddBoolParam(scip, "symmetries/" SYM_NAME "/addconflictcuts",
+         "Should SST constraints be added is a conflict-based rule is used?",
+         &symhdlrdata->addconflictcuts, TRUE, DEFAULT_ADDCONFLICTCUTS, NULL, NULL) );
 
-      SCIP_CALL( SCIPaddBoolParam(scip, "symmetries/" SYM_NAME "/mixedcomponents",
-            "Should SST constraints be added is a symmetry component contains variables of different types?",
-            &symhdlrdata->mixedcomponents, TRUE, DEFAULT_MIXEDCOMPONENTS, NULL, NULL) );
+   SCIP_CALL( SCIPaddBoolParam(scip, "symmetries/" SYM_NAME "/mixedcomponents",
+         "Should SST constraints be added is a symmetry component contains variables of different types?",
+         &symhdlrdata->mixedcomponents, TRUE, DEFAULT_MIXEDCOMPONENTS, NULL, NULL) );
 
    return SCIP_OKAY;
 }
