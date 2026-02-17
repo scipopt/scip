@@ -70,6 +70,7 @@ function cleanup {
         ( echo -n "\"${FILENAME}\" : " ;
           cat "${JSONFILE}"
         ) > "${SOLVERPATH}/${OUTPUTDIR}/${BASENAME}.json"
+        rm "${JSONFILE}"
     fi
     # move a solution file
     if [ -f "${SOLFILE}" ] ;
