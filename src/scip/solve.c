@@ -2179,7 +2179,10 @@ SCIP_RETCODE computeComponentsSym(
    return SCIP_OKAY;
 }
 
-/** tries to add symmetry handling methods to CIP */
+/** tries to add symmetry handling methods to CIP
+ *
+ *  Compute symmetry and call each symmetry handler to check whether particular symmetry handling methods can be added.
+ */
 SCIP_RETCODE SCIPtryAddSymmetryHandlingMethods(
    SCIP*                 scip,               /**< SCIP data structure */
    int*                  naddedconss,        /**< pointer to store number of constraints added by symmetry handlers */
@@ -2215,22 +2218,22 @@ SCIP_RETCODE SCIPtryAddSymmetryHandlingMethods(
    if( !scip->set->sym_enabled )
       return SCIP_OKAY;
 
+   /* symmetry handling methods can only be applied if dual reductions are permitted */
+   if( !SCIPallowStrongDualReds(scip) || !SCIPallowWeakDualReds(scip) )
+      return SCIP_OKAY;
+
    /* do not add symmetry handling methods if they have already been added */
    if( scip->syminfo->triedhandlesymmetry )
       return SCIP_OKAY;
    scip->syminfo->triedhandlesymmetry = TRUE;
 
-   /* symmetry handling methods can only be applied if dual reductions are permitted */
-   if( !SCIPallowStrongDualReds(scip) || !SCIPallowWeakDualReds(scip) )
-      return SCIP_OKAY;
-
    /* get symmetry handlers */
-   symhdlrs = SCIPgetSymhdlrs(scip);
    nsymhdlrs = SCIPgetNSymhdlrs(scip);
    if( nsymhdlrs == 0 )
       return SCIP_OKAY;
-   assert(symhdlrs != NULL);
 
+   symhdlrs = SCIPgetSymhdlrs(scip);
+   assert(symhdlrs != NULL);
    symtype = scip->set->sym_symtype;
    SCIP_CALL( determineSymmetry(scip, symtype, &allperms, &nallperms, &allpermssize, &permvars, &npermvars) );
 
@@ -2247,7 +2250,7 @@ SCIP_RETCODE SCIPtryAddSymmetryHandlingMethods(
    /* create hashmap for storing the indices of variables */
    SCIP_CALL( SCIPhashmapCreate(&permvarmap, SCIPblkmem(scip), nallperms) );
 
-   /* insert variables into hashmap  */
+   /* insert variables into hashmap */
    for( i = 0; i < npermvars; ++i )
    {
       SCIP_CALL( SCIPhashmapInsertInt(permvarmap, permvars[i], i) );
@@ -2262,10 +2265,10 @@ SCIP_RETCODE SCIPtryAddSymmetryHandlingMethods(
    else
    {
       SCIP_CALL( SCIPallocBufferArray(scip, &perms, nallperms) );
+      /* nperms will be initialized below */
    }
 
    /* compute domain center of variables */
-   /* @symtodo only compute this for signed permutations */
    if( symtype == SYM_SYMTYPE_SIGNPERM )
    {
       SCIP_CALL( SCIPallocBufferArray(scip, &vardomcenter, npermvars) );
@@ -2279,19 +2282,17 @@ SCIP_RETCODE SCIPtryAddSymmetryHandlingMethods(
    assert(scip->syminfo->nsymcomps == -1);
    assert(scip->syminfo->symcompssize == 0);
 
-   SCIP_ALLOC( BMSallocBlockMemoryArray(scip->mem->probmem, &scip->syminfo->symcomps, ncomponents) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &scip->syminfo->symcomps, ncomponents) );
    scip->syminfo->symcompssize = ncomponents;
    scip->syminfo->nsymcomps = 0;
 
    /* for each component, check whether a symmetry handler applies */
    for( c = 0; c < ncomponents; ++c )
    {
-      SCIP_Bool success;
+      SCIP_Bool success = FALSE;
       SCIP_SYMCOMPDATA* symcompdata;
       int ntmpconss;
       int ntmpchgbds;
-
-      success = FALSE;
 
       /* possibly get symmetries of this component */
       if( ncomponents > 1 )
@@ -2306,7 +2307,7 @@ SCIP_RETCODE SCIPtryAddSymmetryHandlingMethods(
       for( i = 0; i < nsymhdlrs && !success; ++i )
       {
          /* @symtodo provide the symmetry detection graph */
-         SCIP_CALL( SCIPsymhdlrTryadd(symhdlrs[i], scip->set, perms, nperms, symtype, permvars, npermvars,
+         SCIP_CALL( SCIPsymhdlrTryAdd(symhdlrs[i], scip->set, perms, nperms, symtype, permvars, npermvars,
                vardomcenter, permvarmap, NULL, c, &symcompdata, &ntmpconss, &ntmpchgbds, &success) );
          *naddedconss += ntmpconss;
          *nchgbds += ntmpchgbds;
@@ -2365,16 +2366,16 @@ SCIP_RETCODE SCIPpresolveSymmetryHandlingMethods(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_PRESOLTIMING     timing,             /**< current presolving timing */
    int                   nrounds,            /**< number of presolving rounds already done */
-   int*                  nfixedvars,         /**< pointer to total number of variables fixed of all presolvers */
-   int*                  naggrvars,          /**< pointer to total number of variables aggregated of all presolvers */
-   int*                  nchgvartypes,       /**< pointer to total number of variable type changes of all presolvers */
-   int*                  nchgbds,            /**< pointer to total number of variable bounds tightened of all presolvers */
-   int*                  naddholes,          /**< pointer to total number of domain holes added of all presolvers */
-   int*                  ndelconss,          /**< pointer to total number of deleted constraints of all presolvers */
-   int*                  naddconss,          /**< pointer to total number of added constraints of all presolvers */
-   int*                  nupgdconss,         /**< pointer to total number of upgraded constraints of all presolvers */
-   int*                  nchgcoefs,          /**< pointer to total number of changed coefficients of all presolvers */
-   int*                  nchgsides,          /**< pointer to total number of changed left/right hand sides of all presolvers */
+   int*                  nfixedvars,         /**< pointer to store total number of variables fixed of all presolvers */
+   int*                  naggrvars,          /**< pointer to store total number of variables aggregated of all presolvers */
+   int*                  nchgvartypes,       /**< pointer to store total number of variable type changes of all presolvers */
+   int*                  nchgbds,            /**< pointer to store total number of variable bounds tightened of all presolvers */
+   int*                  naddholes,          /**< pointer to store total number of domain holes added of all presolvers */
+   int*                  ndelconss,          /**< pointer to store total number of deleted constraints of all presolvers */
+   int*                  naddconss,          /**< pointer to store total number of added constraints of all presolvers */
+   int*                  nupgdconss,         /**< pointer to store total number of upgraded constraints of all presolvers */
+   int*                  nchgcoefs,          /**< pointer to store total number of changed coefficients of all presolvers */
+   int*                  nchgsides,          /**< pointer to store total number of changed left/right hand sides of all presolvers */
    SCIP_Bool*            unbounded,          /**< pointer to store whether problem is unbounded */
    SCIP_Bool*            infeasible          /**< pointer to store whether problem is infeasible */
    )
@@ -2401,6 +2402,7 @@ SCIP_RETCODE SCIPpresolveSymmetryHandlingMethods(
          *unbounded = TRUE;
          break;
       }
+
       if( result == SCIP_CUTOFF )
       {
          *infeasible = TRUE;
@@ -2412,8 +2414,9 @@ SCIP_RETCODE SCIPpresolveSymmetryHandlingMethods(
 }
 
 /** updates the primal ray stored in primal data
- * clears previously stored primal ray, if existing and there was no LP error
- * stores current primal ray, if LP is unbounded and there has been no error
+ *
+ *  clears previously stored primal ray, if existing and there was no LP error
+ *  stores current primal ray, if LP is unbounded and there has been no error
  */
 static
 SCIP_RETCODE updatePrimalRay(
