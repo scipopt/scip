@@ -23,6 +23,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   sym_sst.c
+ * @ingroup DEFPLUGINS_SYM
  * @brief  symmetry handler for SST cuts
  * @author Christopher Hojny
  * @author Jasper van Doornmalen
@@ -52,7 +53,7 @@
 /* symmetry handler properties */
 #define SYM_NAME            "sym_sst"
 #define SYM_DESC            "symmetry handler for SST cuts"
-#define SYM_PRIORITY           -200000       /**< priority of try-add function*/
+#define SYM_PRIORITY           -200000       /**< priority of try-add function */
 #define SYM_PRESOLPRIORITY    -1000000       /**< priority of presolving method */
 #define SYM_MAXPRESOLROUNDS          1       /**< maximum number of presolving rounds */
 
@@ -78,7 +79,7 @@ enum SST_LeaderRule
 {
    SST_LEADERRULE_FIRSTINORBIT        = 0,       /**< first var in orbit */
    SST_LEADERRULE_LASTINORBIT         = 1,       /**< last var in orbit */
-   SST_LEADERRULE_MAXCONFLICTSINORBIT = 2        /**< var with most conflicting vars in its orbit */
+   SST_LEADERRULE_MAXCONFSINORBIT     = 2        /**< var with most conflicting vars in its orbit */
 };
 typedef enum SST_LeaderRule SST_LEADERRULE;
 
@@ -87,11 +88,11 @@ enum SST_OrbitRule
 {
    SST_ORBITRULE_MINORBIT            = 0,    /**< orbit of minimum size */
    SST_ORBITRULE_MAXORBIT            = 1,    /**< orbit of maximum size */
-   SST_ORBITRULE_MAXCONFLICTSINORBIT = 2     /**< orbit with maximum number of vars in conflict with leader */
+   SST_ORBITRULE_MAXCONFSINORBIT     = 2     /**< orbit with maximum number of vars in conflict with leader */
 };
 typedef enum SST_OrbitRule SST_ORBITRULE;
 
-/** variable types for leader in Schreier Sims cuts */
+/** variable types for leader in Schreier-Sims cuts */
 enum SST_Vartype
 {
    SST_SSTTYPE_BINARY                 = 1,    /**< binary variables */
@@ -110,16 +111,16 @@ struct SST_ConflictData
    int                   orbitsize;          /**< size of the variable's orbit */
    int                   posinorbit;         /**< position of variable in its orbit */
    SCIP_Bool             active;             /**< whether variable has not been fixed by Schreier Sims code */
-   SCIP_CLIQUE**         cliques;            /**< List of setppc constraints. */
-   int                   ncliques;           /**< Number of setppc constraints. */
+   SCIP_CLIQUE**         cliques;            /**< list of setppc constraints */
+   int                   ncliques;           /**< number of setppc constraints */
 };
 typedef struct SST_ConflictData SST_CONFLICTDATA;
 
-/** compare function for sorting an array by the addresses of its members  */
+/** compare function for sorting an array by the addresses of its members */
 static
 SCIP_DECL_SORTPTRCOMP(sortByPointerValue)
 {
-   /* @todo move to misc.c? */
+   /* @todo move to misc.c? Or even better: use a different sorting function, e.g., according to clique id */
    if ( elem1 < elem2 )
       return -1;
    else if ( elem1 > elem2 )
@@ -139,7 +140,7 @@ struct SCIP_SymCompData
    int                   maxnsstconss;       /**< maximum number of conss in sstconss */
    SCIP_VAR**            orbitvars;          /**< variables used in SST cuts, orbits are stored consecutively,
                                               *   first element per orbit is the leader */
-   int*                  orbitbegins;        /** array indicating begin positions of orbits */
+   int*                  orbitbegins;        /**< array indicating begin positions of orbits */
    int                   norbits;            /**< number of orbits */
    int                   lenorbitvars;       /**< length of orbitvars array */
    int                   lenorbitbegins;     /**< length of orbitbegins array */
@@ -159,7 +160,6 @@ struct SCIP_SymhdlrData
    SCIP_Bool             addconflictcuts;    /**< Should SST constraints be added if we use a conflict based rule? */
    SCIP_Bool             mixedcomponents;    /**< Should SST constraints be added if a symmetry component contains
                                               *   variables of different types? */
-
 };
 
 /*
@@ -492,10 +492,11 @@ SCIP_Bool checkSortedArraysHaveOverlappingEntry(
 
    /* no overlap detected */
    assert(it1 >= narr1 || it2 >= narr2);
+
    return FALSE;
 }
 
-/** add Schreier Sims constraints for a specific orbit and update Schreier Sims table */
+/** add Schreier-Sims constraints for a specific orbit and update Schreier-Sims table */
 static
 SCIP_RETCODE addSSTConssOrbitAndUpdateSST(
    SCIP*                 scip,               /**< SCIP instance */
@@ -533,6 +534,8 @@ SCIP_RETCODE addSSTConssOrbitAndUpdateSST(
    SCIP_Bool addcuts = TRUE;
    int i;
 
+   /* @todo Replace SST_CONFLICTDATA* by SST_CONFLICTDATA** */
+
    assert(scip != NULL);
    assert(permvars != NULL);
    assert(orbits != NULL);
@@ -546,8 +549,7 @@ SCIP_RETCODE addSSTConssOrbitAndUpdateSST(
    orbitsize = orbitbegins[orbitidx + 1] - orbitbegins[orbitidx];
 
    /* variables in conflict with leader are fixed and not treated by a cut; trailing -1 to not count the leader */
-   if( leaderrule == SST_LEADERRULE_MAXCONFLICTSINORBIT
-      || orbitrule == SST_ORBITRULE_MAXCONFLICTSINORBIT )
+   if( leaderrule == SST_LEADERRULE_MAXCONFSINORBIT || orbitrule == SST_ORBITRULE_MAXCONFSINORBIT )
       addcuts = addconflictcuts;
 
    if( addcuts )
@@ -1022,7 +1024,7 @@ SCIP_RETCODE selectOrbitLeaderSSTConss(
 
    /* terminate if leader or orbit rule cannot be checked */
    if( varconflicts == NULL && (leaderrule == (int) SCIP_LEADERRULE_MAXCONFLICTSINORBIT
-         || orbitrule == (int) SST_ORBITRULE_MAXCONFLICTSINORBIT) )
+         || orbitrule == (int) SST_ORBITRULE_MAXCONFSINORBIT) )
       return SCIP_OKAY;
 
    /* select the leader and its orbit */
@@ -1044,7 +1046,7 @@ SCIP_RETCODE selectOrbitLeaderSSTConss(
             curcriterion = orbitbegins[i + 1] - orbitbegins[i];
          else
          {
-            assert(orbitrule == (int) SST_ORBITRULE_MAXCONFLICTSINORBIT);
+            assert(orbitrule == (int) SST_ORBITRULE_MAXCONFSINORBIT);
 
             /* get first or last active variable in orbit */
             if( leaderrule == (int) SST_LEADERRULE_FIRSTINORBIT )
@@ -1101,7 +1103,7 @@ SCIP_RETCODE selectOrbitLeaderSSTConss(
          leader = orbits[orbitbegins[*orbitidx] + *leaderidx];
          assert(leader < nconflictvars);
 
-         if( orbitrule == (int) SST_ORBITRULE_MAXCONFLICTSINORBIT
+         if( orbitrule == (int) SST_ORBITRULE_MAXCONFSINORBIT
             && varconflicts[leader].ncliques > 0 )
          {
             /* count how many active variables in the orbit conflict with "leader"
@@ -1146,7 +1148,7 @@ SCIP_RETCODE selectOrbitLeaderSSTConss(
       /* only three possible values for leaderrules, so it must be MAXCONFLICTSINORBIT
        * In this case, the code must have computed the conflict graph.
        */
-      assert(leaderrule == (int) SST_LEADERRULE_MAXCONFLICTSINORBIT);
+      assert(leaderrule == (int) SST_LEADERRULE_MAXCONFSINORBIT);
       assert(varconflicts != NULL);
 
       orbitcriterion = 0;
@@ -1474,8 +1476,8 @@ SCIP_RETCODE tryAddSSTConss(
 
    /* @todo only create the conflict graph for the variables in the current component */
    /* possibly create conflict graph; graph is not created if no cliques are present */
-   if( selectedtype == SCIP_VARTYPE_BINARY && (leaderrule == SST_LEADERRULE_MAXCONFLICTSINORBIT
-         || orbitrule == SST_ORBITRULE_MAXCONFLICTSINORBIT) )
+   if( selectedtype == SCIP_VARTYPE_BINARY && (leaderrule == SST_LEADERRULE_MAXCONFSINORBIT
+         || orbitrule == SST_ORBITRULE_MAXCONFSINORBIT) )
    {
       SCIP_CALL( createConflictGraphSST(scip, &varconflicts, permvars, npermvars, permvarmap) );
       conflictgraphcreated = varconflicts != NULL;
@@ -1539,13 +1541,13 @@ SCIP_RETCODE tryAddSSTConss(
       }
 
       /* possibly adapt the leader and orbit rule */
-      if( leaderrule == SST_LEADERRULE_MAXCONFLICTSINORBIT && !conflictgraphcreated )
+      if( leaderrule == SST_LEADERRULE_MAXCONFSINORBIT && !conflictgraphcreated )
          leaderrule = SST_LEADERRULE_FIRSTINORBIT;
-      if( leaderrule == SST_LEADERRULE_MAXCONFLICTSINORBIT && selectedtype != SCIP_VARTYPE_BINARY )
+      if( leaderrule == SST_LEADERRULE_MAXCONFSINORBIT && selectedtype != SCIP_VARTYPE_BINARY )
          leaderrule = SST_LEADERRULE_FIRSTINORBIT;
-      if( orbitrule == SST_ORBITRULE_MAXCONFLICTSINORBIT && !conflictgraphcreated )
+      if( orbitrule == SST_ORBITRULE_MAXCONFSINORBIT && !conflictgraphcreated )
          orbitrule = SST_ORBITRULE_MAXORBIT;
-      if( orbitrule == SST_ORBITRULE_MAXCONFLICTSINORBIT && selectedtype != SCIP_VARTYPE_BINARY )
+      if( orbitrule == SST_ORBITRULE_MAXCONFSINORBIT && selectedtype != SCIP_VARTYPE_BINARY )
          orbitrule = SST_ORBITRULE_MAXORBIT;
 
       /* select orbit and leader */
