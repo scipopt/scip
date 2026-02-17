@@ -1424,8 +1424,7 @@ SCIP_RETCODE presolve(
       /* possibly add symmetry handling methods */
       if( finished && !*unbounded && !*infeasible && !*vanished && !stopped )
       {
-         /* @symtodo check how to deal with sub-SCIPs */
-         if( scip->set->sym_tryaddtiming == SYM_TIMING_AFTERPRESOL && SCIPgetSubscipDepth(scip) == 0 )
+         if( scip->set->sym_tryaddtiming == SYM_TIMING_AFTERPRESOL )
          {
             int nnewconss = 0;
             int nchgbds = 0;
@@ -2619,11 +2618,10 @@ SCIP_RETCODE SCIPpresolve(
    case SCIP_STAGE_TRANSFORMED:
    case SCIP_STAGE_PRESOLVING:
       /* possibly add symmetry handling methods */
-      /* @symtodo check how to deal with sub-SCIPs */
-      if( scip->set->sym_tryaddtiming == SYM_TIMING_BEFOREPRESOL && SCIPgetSubscipDepth(scip) == 0 )
+      if( scip->set->sym_tryaddtiming == SYM_TIMING_BEFOREPRESOL )
       {
-         int nnewconss = 0;
-         int nchgbds = 0;
+         int nnewconss;
+         int nchgbds;
 
          SCIP_CALL( SCIPtryAddSymmetryHandlingMethods(scip, &nnewconss, &nchgbds) );
 
