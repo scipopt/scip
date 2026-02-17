@@ -96,11 +96,11 @@ SCIP_RETCODE doSymhdlrCreate(
    assert(symsepalp != NULL || symsepasol != NULL || sepafreq == -1);
    assert(symprop != NULL || propfreq == -1);
 
-   SCIP_ALLOC( BMSallocMemory(symhdlr) );
+   SCIP_ALLOC( BMSallocBlockMemory(blkmem, symhdlr) );
    BMSclearMemory(*symhdlr);
 
-   SCIP_ALLOC( BMSduplicateMemoryArray(&(*symhdlr)->name, name, strlen(name)+1) );
-   SCIP_ALLOC( BMSduplicateMemoryArray(&(*symhdlr)->desc, desc, strlen(desc)+1) );
+   SCIP_ALLOC( BMSduplicateBlockMemoryArray(blkmem, &(*symhdlr)->name, name, strlen(name) + 1) );
+   SCIP_ALLOC( BMSduplicateBlockMemoryArray(blkmem, &(*symhdlr)->desc, desc, strlen(desc) + 1) );
 
    (*symhdlr)->tryaddpriority = priority;
    (*symhdlr)->sepapriority = sepapriority;
@@ -205,8 +205,7 @@ SCIP_RETCODE doSymhdlrCreate(
          NULL, NULL) );
 
    (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "symmetries/%s/maxbounddist", name);
-   (void) SCIPsnprintf(paramdesc, SCIP_MAXSTRLEN, "maximal relative distance from current node's dual bound to primal bound compared to best node's dual bound for applying separator <%s> (0.0: only on current best node, 1.0: on all nodes)",
-      name);
+   (void) SCIPsnprintf(paramdesc, SCIP_MAXSTRLEN, "maximal relative distance from current node's dual bound to primal bound compared to best node's dual bound for applying separator <%s> (0.0: only on current best node, 1.0: on all nodes)", name);
    SCIP_CALL( SCIPsetAddRealParam(set, messagehdlr, blkmem, paramname, paramdesc,
          &(*symhdlr)->maxbounddist, TRUE, maxbounddist, 0.0, 1.0, NULL, NULL) );
 
@@ -226,7 +225,8 @@ SCIP_RETCODE doSymhdlrCreate(
          &(*symhdlr)->propfreq, FALSE, propfreq, -1, SCIP_MAXTREEDEPTH, NULL, NULL) );
 
    (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "symmetries/%s/proptiming", name);
-   (void) SCIPsnprintf(paramdesc, SCIP_MAXSTRLEN, "timing when constraint propagation should be called (%u:BEFORELP, %u:DURINGLPLOOP, %u:AFTERLPLOOP, %u:ALWAYS)", SCIP_PROPTIMING_BEFORELP, SCIP_PROPTIMING_DURINGLPLOOP, SCIP_PROPTIMING_AFTERLPLOOP, SCIP_PROPTIMING_ALWAYS);
+   (void) SCIPsnprintf(paramdesc, SCIP_MAXSTRLEN, "timing when constraint propagation should be called (%u:BEFORELP, %u:DURINGLPLOOP, %u:AFTERLPLOOP, %u:ALWAYS)",
+      SCIP_PROPTIMING_BEFORELP, SCIP_PROPTIMING_DURINGLPLOOP, SCIP_PROPTIMING_AFTERLPLOOP, SCIP_PROPTIMING_ALWAYS);
    SCIP_CALL( SCIPsetAddIntParam(set, messagehdlr, blkmem, paramname, paramdesc,
          (int*)(&(*symhdlr)->proptiming), TRUE, (int) proptiming, (int) SCIP_PROPTIMING_BEFORELP, (int) SCIP_PROPTIMING_ALWAYS, NULL, NULL) ); /*lint !e713*/
 
@@ -303,7 +303,7 @@ SCIP_RETCODE SCIPsymhdlrCreate(
    return SCIP_OKAY;
 } /*lint !e715*/
 
-/** copies the given symmetry handler to a new scip */
+/** copies the given symmetry handler to a new SCIP */
 SCIP_RETCODE SCIPsymhdlrCopyInclude(
    SCIP_SYMHDLR*         symhdlr,            /**< symmetry handler */
    SCIP_SET*             set                 /**< SCIP_SET of SCIP to copy to */
@@ -319,6 +319,7 @@ SCIP_RETCODE SCIPsymhdlrCopyInclude(
          SCIPsymhdlrGetName(symhdlr), (void*)set->scip);
       SCIP_CALL( symhdlr->symcopy(set->scip, symhdlr) );
    }
+
    return SCIP_OKAY;
 }
 
@@ -329,6 +330,7 @@ SCIP_RETCODE SCIPsymhdlrFree(
    )
 {
    assert(symhdlr != NULL);
+
    if( *symhdlr == NULL )
       return SCIP_OKAY;
    assert(!(*symhdlr)->initialized);
@@ -347,10 +349,10 @@ SCIP_RETCODE SCIPsymhdlrFree(
    SCIPclockFree(&(*symhdlr)->presoltime);
    SCIPclockFree(&(*symhdlr)->setuptime);
 
-   BMSfreeMemoryArrayNull(&(*symhdlr)->name);
-   BMSfreeMemoryArrayNull(&(*symhdlr)->desc);
-   BMSfreeMemoryArrayNull(&(*symhdlr)->symcomps);
-   BMSfreeMemory(symhdlr);
+   SCIPfreeBlockMemoryArray(set->scip, &(*symhdlr)->name, strlen((*symhdlr)->name) + 1);
+   SCIPfreeBlockMemoryArray(set->scip, &(*symhdlr)->desc, strlen((*symhdlr)->desc) + 1);
+   SCIPfreeBlockMemoryArray(set->scip, &(*symhdlr)->symcomps, (*symhdlr)->symcompssize);
+   SCIPfreeBlockMemory(set->scip, symhdlr);
 
    return SCIP_OKAY;
 }
@@ -1009,7 +1011,7 @@ SCIP_RETCODE SCIPsymhdlrSepaSol(
 }
 
 /** calls try-add method of symmetry handler */
-SCIP_RETCODE SCIPsymhdlrTryadd(
+SCIP_RETCODE SCIPsymhdlrTryAdd(
    SCIP_SYMHDLR*         symhdlr,            /**< symmetry handler */
    SCIP_SET*             set,                /**< global SCIP settings */
    int**                 perms,              /**< array of (signed) permutations */
@@ -1017,11 +1019,11 @@ SCIP_RETCODE SCIPsymhdlrTryadd(
    SYM_SYMTYPE           symtype,            /**< type of symmetry */
    SCIP_VAR**            permvars,           /**< variables on which permutations act */
    int                   npermvars,          /**< number of variables in permvars */
-   SCIP_Real*            vardomcenter,       /**< domain center of variables */
+   SCIP_Real*            vardomcenter,       /**< domain center of variables (or NULL) */
    SCIP_HASHMAP*         permvarmap,         /**< map of variables to indices in permvars array */
-   SYM_GRAPH*            symgraph,           /**< symmetry detection graph */
+   SYM_GRAPH*            symgraph,           /**< symmetry detection graph (or NULL) */
    int                   id,                 /**< identifier of component for which symmetry handling shall be added */
-   SCIP_SYMCOMPDATA**    symcompdata,        /**< pointer for storing data of symmetry component */
+   SCIP_SYMCOMPDATA**    symcompdata,        /**< pointer to store data of symmetry component */
    int*                  naddedconss,        /**< pointer to store number of constraints added by symhdlr */
    int*                  nchgbds,            /**< pointer to store number of changed variable bounds */
    SCIP_Bool*            success             /**< pointer to store whether symmetry handling method could be added */
@@ -1029,11 +1031,13 @@ SCIP_RETCODE SCIPsymhdlrTryadd(
 {
    assert(symhdlr != NULL);
    assert(set != NULL);
+   assert(permvarmap != NULL);
+   assert(symcompdata != NULL);
    assert(naddedconss != NULL);
    assert(nchgbds != NULL);
    assert(success != NULL);
 
-   SCIPsetDebugMsg(set, "try to add symmetry handler of type %s for symmetry component %d\n", symhdlr->name, id);
+   SCIPsetDebugMsg(set, "try to add method of symmetry handler <%s> for symmetry component %d\n", symhdlr->name, id);
 
    /* start timing */
    SCIPclockStart(symhdlr->setuptime, set);
@@ -1306,18 +1310,21 @@ SCIP_RETCODE SCIPcreateSymmetryComponent(
    int                   id                  /**< numerical identifier of symmetry component */
    )
 {
-   char name[SCIP_MAXSTRLEN];
+   int len = 9;
 
    assert(blkmem != NULL);
    assert(symcomp != NULL);
    assert(symhdlr != NULL);
+   assert(id >= 0);
 
    SCIP_ALLOC( BMSallocBlockMemory(blkmem, symcomp) );
    (*symcomp)->symhdlr = symhdlr;
    (*symcomp)->symcompdata = symcompdata;
 
-   (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, (const char*)"symcomp%d", id);
-   (*symcomp)->name = name;
+   if( id > 0 )
+      len = 8 + (int) log10(id) + 1;
+   SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &(*symcomp)->name, len) );
+   (void) snprintf((*symcomp)->name, SCIP_MAXSTRLEN, "symcomp%d", id);
 
    return SCIP_OKAY;
 }
@@ -1502,6 +1509,7 @@ SCIP_SYMINFO* SCIPgetSyminfo(
 {
    assert(scip != NULL);
 
+   /* @symtodo move to scip_sym */
    return scip->syminfo;
 }
 
@@ -1518,6 +1526,7 @@ SCIP_RETCODE SCIPsyminfoFree(
    assert(scip != NULL);
    assert(syminfo != NULL);
 
+   /* @symtodo move to scip_sym */
    if( *syminfo == NULL )
       return SCIP_OKAY;
 
@@ -1552,7 +1561,8 @@ SCIP_RETCODE SCIPaddSymhdlrComponent(
 
    if( symhdlr->symcompssize == 0 )
    {
-      BMSallocMemoryArray(&symhdlr->symcomps, 1);
+      /* @symtodo Replace scip argument by SCIP_SET* and BMS_BLKMEM* and use BMSallocBlockMemory() */
+      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &symhdlr->symcomps, 1) );
       symhdlr->symcompssize = 1;
    }
    else if( symhdlr->nsymcomps >= symhdlr->symcompssize )
@@ -1560,8 +1570,7 @@ SCIP_RETCODE SCIPaddSymhdlrComponent(
       int newlen;
 
       newlen = SCIPcalcMemGrowSize(scip, symhdlr->nsymcomps + 1);
-
-      BMSreallocMemoryArray(&symhdlr->symcomps, newlen);
+      SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &symhdlr->symcomps, symhdlr->symcompssize, newlen) );
    }
    symhdlr->symcomps[(symhdlr->nsymcomps)++] = symcomp;
 
@@ -1583,6 +1592,7 @@ SCIP_RETCODE SCIPcreateSymOpNodeType(
    assert(scip != NULL);
    assert(nodetype != NULL);
 
+   /* @symtodo add syminfo as argument */
    syminfo = SCIPgetSyminfo(scip);
    if( syminfo == NULL )
    {
@@ -1616,6 +1626,7 @@ SCIP_RETCODE SCIPgetSymOpNodeType(
 
    assert(scip != NULL);
 
+   /* @symtodo add syminfo as argument */
    syminfo = SCIPgetSyminfo(scip);
    if( syminfo == NULL )
    {
@@ -1670,6 +1681,7 @@ SCIP_SYMCOMP** SCIPgetSymcomps(
    assert(scip != NULL);
    assert(scip->syminfo != NULL);
 
+   /* @symtodo move to scip_sym */
    return scip->syminfo->symcomps;
 }
 
@@ -1681,5 +1693,6 @@ int SCIPgetNSymcomps(
    assert(scip != NULL);
    assert(scip->syminfo != NULL);
 
+   /* @symtodo move to scip_sym */
    return scip->syminfo->nsymcomps;
 }
