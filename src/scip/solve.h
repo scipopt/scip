@@ -146,7 +146,10 @@ SCIP_RETCODE SCIPprimalHeuristics(
    SCIP_Bool*            unbounded           /**< pointer to store whether an unbounded ray was found in the LP */
    );
 
-/** tries to add symmetry handling methods to CIP */
+/** tries to add symmetry handling methods to CIP
+ *
+ *  Compute symmetry and call each symmetry handler to check whether particular symmetry handling methods can be added.
+ */
 SCIP_RETCODE SCIPtryAddSymmetryHandlingMethods(
    SCIP*                 scip,               /**< SCIP data structure */
    int*                  naddedconss,        /**< pointer to store number of constraints added by symmetry handlers */

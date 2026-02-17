@@ -33,7 +33,6 @@
 #ifndef __SCIP_SCIP_SYM_H__
 #define __SCIP_SCIP_SYM_H__
 
-
 #include "scip/def.h"
 #include "scip/type_sym.h"
 #include "scip/type_result.h"
@@ -45,7 +44,8 @@
 extern "C" {
 #endif
 
-/** creates a symmetyr handler and includes it in SCIP. All non-fundamental (or optional) callbacks will be set to NULL.
+/* @symtodo Replace propagator by symmetry handler */
+/** creates a symmetry handler and includes it in SCIP. All non-fundamental (or optional) callbacks will be set to NULL.
  *  Optional callbacks can be set via specific setter functions, see SCIPsetPropInit(), SCIPsetPropExit(),
  *  SCIPsetPropCopy(), SCIPsetPropFree(), SCIPsetPropInitsol(), SCIPsetPropExitsol(),
  *  SCIPsetPropInitpre(), SCIPsetPropExitpre(), SCIPsetPropPresol(), and SCIPsetPropResprop().
@@ -74,7 +74,7 @@ SCIP_RETCODE SCIPincludeSymhdlrBasic(
    int                   maxprerounds,       /**< maximal number of presolving rounds the symmetry handler participates in (-1: no limit) */
    SCIP_PROPTIMING       proptiming,         /**< positions in the node solving loop where propagation method of symmetry handlers should be executed */
    SCIP_PRESOLTIMING     presoltiming,       /**< timing mask of the symmetry handler's presolving method */
-   SCIP_DECL_SYMHDLRTRYADD((*symhdlrtryadd)), /**< addition method for symmetry method handler plugins */
+   SCIP_DECL_SYMHDLRTRYADD((*symhdlrtryadd)),/**< addition method for symmetry method handler plugins */
    SCIP_DECL_SYMHDLRCOPY ((*symcopy)),       /**< copy method of symmetry handler */
    SCIP_DECL_SYMHDLRFREE ((*symfree)),       /**< destructor method of symmetry handler */
    SCIP_DECL_SYMHDLRINIT ((*syminit)),       /**< initialization method of symmetry handler */
@@ -82,7 +82,7 @@ SCIP_RETCODE SCIPincludeSymhdlrBasic(
    SCIP_DECL_SYMHDLRINITSOL((*syminitsol)),  /**< solving process initialization method of symmetry handler */
    SCIP_DECL_SYMHDLREXITSOL((*symexitsol)),  /**< solving process deinitialization method of symmetry handler */
    SCIP_DECL_SYMHDLRDELETE((*symdelete)),    /**< destructor of symmetry component data */
-   SCIP_DECL_SYMHDLRTRANS((*symtrans)),      /**< transformation method of symmetry hanlder */
+   SCIP_DECL_SYMHDLRTRANS((*symtrans)),      /**< transformation method of symmetry handler */
    SCIP_DECL_SYMHDLRSEPALP((*symsepalp)),    /**< separator for LP solutions */
    SCIP_DECL_SYMHDLRSEPASOL((*symsepasol)),  /**< separator for arbitrary primal solutions */
    SCIP_DECL_SYMHDLRPROP ((*symprop)),       /**< propagation method of symmetry handler */
@@ -124,7 +124,7 @@ SCIP_RETCODE SCIPsetSymhdlrExit(
    SCIP_DECL_SYMHDLRINIT ((*symhdlrexit))    /**< deinitialize symmetry handler */
    );
 
-/** sets destuctor method of symmetry component data */
+/** sets destructor method of symmetry component data */
 SCIP_EXPORT
 SCIP_RETCODE SCIPsetSymhdlrDelete(
    SCIP*                 scip,               /**< SCIP data structure */

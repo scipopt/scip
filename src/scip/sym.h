@@ -23,7 +23,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   sym.h
- * @ingroup OTHER_CFILES
+ * @ingroup INTERNALAPI
  * @brief  methods for symmetry handlers and symmetry components
  * @author Christopher Hojny
  */
@@ -200,7 +200,7 @@ SCIP_RETCODE SCIPsymhdlrSepaSol(
    );
 
 /** calls try-add method of symmetry handler */
-SCIP_RETCODE SCIPsymhdlrTryadd(
+SCIP_RETCODE SCIPsymhdlrTryAdd(
    SCIP_SYMHDLR*         symhdlr,            /**< symmetry handler */
    SCIP_SET*             set,                /**< global SCIP settings */
    int**                 symmetries,         /**< array of symmetries */
@@ -208,11 +208,11 @@ SCIP_RETCODE SCIPsymhdlrTryadd(
    SYM_SYMTYPE           symtype,            /**< type of symmetry */
    SCIP_VAR**            symvars,            /**< variables on which symmetries act */
    int                   nsymvars,           /**< number of variables in symvars */
-   SCIP_Real*            symvardomcenter,    /**< domain center of variables */
+   SCIP_Real*            symvardomcenter,    /**< domain center of variables (or NULL) */
    SCIP_HASHMAP*         symvarmap,          /**< map of variables to indices in permvars array */
-   SYM_GRAPH*            symgraph,           /**< symmetry detection graph */
+   SYM_GRAPH*            symgraph,           /**< symmetry detection graph (or NULL) */
    int                   id,                 /**< identifier of component for which symmetry handling shall be added */
-   SCIP_SYMCOMPDATA**    symcompdata,        /**< pointer for storing data of symmetry component */
+   SCIP_SYMCOMPDATA**    symcompdata,        /**< pointer to store data of symmetry component */
    int*                  naddedconss,        /**< pointer to store number of constraints added by symhdlr */
    int*                  nchgbds,            /**< pointer to store number of changed variable bounds */
    SCIP_Bool*            success             /**< pointer to store whether symmetry handling method could be added */
