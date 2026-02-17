@@ -71,8 +71,12 @@ function cleanup {
           cat "${JSONFILE}"
         ) > "${SOLVERPATH}/${OUTPUTDIR}/${BASENAME}.json"
     fi
+    # move a solution file
+    if [ -f "${SOLFILE}" ] ;
+    then
+        mv "${SOLFILE}" "${SOLVERPATH}/${OUTPUTDIR}/${BASENAME}.sol"
+    fi
     rm -f "${TMPFILE}"
-    rm -f "${SOLFILE}"
 }
 
 # ensure TMPFILE is deleted and results are copied when exiting (normally or due to abort/interrupt)
@@ -242,19 +246,18 @@ then
     rm $CLIENTTMPDIR/${USER}-tmpdir/$BASENAME*vipr*
 fi
 
-if test -e "${SOLFILE}"
+# currently, the solution checker only supports .mps-files
+FILENAMENOGZ=$(basename "${FILENAME}" .gz)
+if [ -e "${SOLFILE}" ] && [ -f "${CHECKERPATH}/bin/solchecker" ] && [[ "${FILENAMENOGZ}" =~ .mps$ ]] ;
 then
     # workaround infinite values for solution checker
-    sed 's/infinity/1e+20/g' "${SOLFILE}" > "${TMPFILE}"
-    mv "${TMPFILE}" "${SOLFILE}"
+    sed 's/infinity/1e+20/g' "${SOLFILE}" > "${SOLFILE}.tmp"
 
-    # check if the link to the solution checker exists
-    if test -f "${CHECKERPATH}/bin/solchecker"
-    then
-        echo
-        "${SHELL}" -c " ${CHECKERPATH}/bin/solchecker ${FILENAME} ${SOLFILE} ${LINTOL} ${INTTOL}" 2>> "${ERRFILE}" | tee -a "${OUTFILE}"
-        echo
-    fi
+    echo
+    "${SHELL}" -c " ${CHECKERPATH}/bin/solchecker ${FILENAME} ${SOLFILE}.tmp ${LINTOL} ${INTTOL}" 2>> "${ERRFILE}" | tee -a "${OUTFILE}"
+    echo
+
+    rm -f "${SOLFILE}.tmp"
 fi
 
 date +"@04 %s"                        >> "${OUTFILE}"

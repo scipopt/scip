@@ -174,18 +174,10 @@ then
     echo "display statistics"                                    >> "${TMPFILE}"
     echo "write statistics ${JSONFILE}"                          >> "${TMPFILE}"
     echo "checksol"                                              >> "${TMPFILE}"
+    echo "write sol ${SOLFILE}"                                  >> "${TMPFILE}"
 else
     # read the difflist file
     cat "${INSTANCE}"                                            >> "${TMPFILE}"
 fi
 
-# currently, the solution checker only supports .mps-files.
-# compare instance name (without .gz) to instance name stripped by .mps.
-#if they are unequal, we have an mps-file
-TMPINSTANCE=$(basename "${INSTANCE}" .gz)
-TMPINSTANCEB=$(basename "${TMPINSTANCE}" .mps)
-if test "${TMPINSTANCEB}" != "${TMPINSTANCE}"
-then
-    echo "write sol ${SOLFILE}"                                  >> "${TMPFILE}"
-fi
 echo "quit"                                                      >> "${TMPFILE}"

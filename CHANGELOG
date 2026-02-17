@@ -16,6 +16,11 @@ Fixed bugs
 - fixed failing assert when assembling data for writing of JSON statistics and no plugins were included for some plugin types
 - keep sanitizers enabled if only unsupported for some language in cmake
 
+Miscellaneous
+-------------
+
+- check scripts now copy solution files to check/results/
+
 @section RN1001 SCIP 10.0.1
 ***************************
 
