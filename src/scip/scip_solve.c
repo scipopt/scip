@@ -36,6 +36,7 @@
  * @author Marc Pfetsch
  * @author Michael Winkler
  * @author Kati Wolter
+ * @author Christopher Hojny
  *
  * @todo check all SCIP_STAGE_* switches, and include the new stages TRANSFORMED and INITSOLVE
  */
@@ -900,11 +901,11 @@ SCIP_RETCODE presolveRound(
                "presolver <%s> detected unboundedness (or infeasibility)\n", SCIPpresolGetName(scip->set->presols[i-1]));
          else if( lastranprop )
             SCIPmessagePrintVerbInfo(scip->messagehdlr, scip->set->disp_verblevel, SCIP_VERBLEVEL_FULL,
-               "propagator <%s> detected  unboundedness (or infeasibility)\n", SCIPpropGetName(scip->set->props_presol[j-1]));
+               "propagator <%s> detected unboundedness (or infeasibility)\n", SCIPpropGetName(scip->set->props_presol[j-1]));
          else
             SCIPmessagePrintVerbInfo(scip->messagehdlr, scip->set->disp_verblevel, SCIP_VERBLEVEL_FULL,
-               "symmetry handler <%s> detected  unboundedness (or infeasibility)\n",
-               SCIPsymhdlrGetName(scip->set->symhdlrs_presol[j-1]));
+               "symmetry handler <%s> detected unboundedness (or infeasibility)\n",
+               SCIPsymhdlrGetName(scip->set->symhdlrs_presol[l-1]));
       }
 
       /* delete the variables from the problems that were marked to be deleted */
@@ -1089,10 +1090,10 @@ SCIP_RETCODE presolveRound(
                "presolver <%s> detected unboundedness (or infeasibility)\n", SCIPpresolGetName(scip->set->presols[i-1]));
          else if( lastranprop )
             SCIPmessagePrintVerbInfo(scip->messagehdlr, scip->set->disp_verblevel, SCIP_VERBLEVEL_FULL,
-               "propagator <%s> detected  unboundedness (or infeasibility)\n", SCIPpropGetName(scip->set->props_presol[j-1]));
+               "propagator <%s> detected unboundedness (or infeasibility)\n", SCIPpropGetName(scip->set->props_presol[j-1]));
          else
             SCIPmessagePrintVerbInfo(scip->messagehdlr, scip->set->disp_verblevel, SCIP_VERBLEVEL_FULL,
-               "symmetry handler <%s> detected  unboundedness (or infeasibility)\n",
+               "symmetry handler <%s> detected unboundedness (or infeasibility)\n",
                SCIPsymhdlrGetName(scip->set->symhdlrs_presol[l-1]));
 
       }
