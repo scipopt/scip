@@ -23,7 +23,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   sym_sst.h
- * @ingroup OTHER_CFILES
+ * @ingroup SYMHDLRS
  * @brief  symmetry handler for SST cuts
  * @author Christopher Hojny
  */
