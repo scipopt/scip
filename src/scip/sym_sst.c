@@ -581,11 +581,14 @@ SCIP_RETCODE addSSTConssOrbitAndUpdateSST(
    *nchgbds = 0;
    for( i = 0, poscur = orbitbegins[orbitidx]; i < orbitsize; ++i, ++poscur )
    {
+      SCIP_CALL addcut;
+
       if( i == orbitleaderidx )
       {
          assert(orbitvarinconflict == NULL || ! orbitvarinconflict[i]);
          continue;
       }
+      addcut = addcuts;
 
       vars[1] = permvars[orbits[poscur]];
 
@@ -611,22 +614,15 @@ SCIP_RETCODE addSSTConssOrbitAndUpdateSST(
                /* deactivate the fixed variable (cannot contribute to a conflict anymore) */
                assert(varconflicts[orbits[poscur]].active);
                varconflicts[orbits[poscur]].active = FALSE;
+               addcut = FALSE;
             }
 
             /* reset value */
             orbitvarinconflict[i] = FALSE;
          }
-         else if( addcuts )
-         {
-            (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "SSTcut_symcomp_%d_%d_%d", id, orbits[posleader], orbits[poscur]);
-            SCIP_CALL( SCIPcreateConsLinear(scip, &cons, name, 2, vars, vals, -SCIPinfinity(scip), rhs,
-                  FALSE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
-
-            SCIP_CALL( SCIPaddCons(scip, cons) );
-            (*sstconss)[(*nsstconss)++] = cons;
-         }
       }
-      else if( addcuts )
+
+      if( addcut )
       {
          (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "SSTcut_symcomp_%d_%d_%d", id, orbits[posleader], orbits[poscur]);
          SCIP_CALL( SCIPcreateConsLinear(scip, &cons, name, 2, vars, vals, -SCIPinfinity(scip), rhs,
