@@ -29,10 +29,8 @@
  * @author Stephen J. Maher
  *
  * The Benders file reader is designed to accept multiple files that correspond to the master and subproblems of a
- * problem decomposed using Benders' decomposition. By default, the instance files will be read in and then the default
- * Benders' decomposition algorithm will be executed. Alternatively, setting the parameter `reading/benders/lbbd` will
- * attempt to use the LBBD algorithm. In this case, the subproblem will be solved both by SCIP and a CP Solver,
- * currently OR-Tools CP-SAT.
+ * problem decomposed using Benders' decomposition. The instance files will be read in and then the default Benders'
+ * decomposition algorithm will be executed.
  *
  * The input file format has the keywords `MASTER` and `SUBPROBLEMS`. The line immediately after the `MASTER` keyword is
  * the instance file for the master problem. The `SUBPROBLEMS` keyword must be followed (on the same line) by the
