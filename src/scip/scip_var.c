@@ -8839,7 +8839,7 @@ SCIP_RETCODE SCIPtightenVarVbounds(
 
                if ( tightened )
                {
-                  printf("Tightened upper variable bound <%s>[%g,%g] <= %g <%s>[B] %+g to <%s> <= %g <%s>[B] %+g.\n",
+                  SCIPdebugMsg(scip, "Tightened upper variable bound <%s>[%g,%g] <= %g <%s>[B] %+g to <%s> <= %g <%s>[B] %+g.\n",
                      SCIPvarGetName(xvar), xlb, xub, c, SCIPvarGetName(zvar), d,
                      SCIPvarGetName(xvar), vubcoefs[b], SCIPvarGetName(zvar), vubconstants[b]);
                   if ( ntightened != NULL )
@@ -8898,7 +8898,7 @@ SCIP_RETCODE SCIPtightenVarVbounds(
 
                if ( tightened )
                {
-                  printf("Tightened lower variable bound <%s>[%g,%g] >= %g <%s>[B] %+g to <%s> >= %g <%s>[B] %+g.\n",
+                  SCIPdebugMsg(scip, "Tightened lower variable bound <%s>[%g,%g] >= %g <%s>[B] %+g to <%s> >= %g <%s>[B] %+g.\n",
                      SCIPvarGetName(xvar), xlb, xub, c, SCIPvarGetName(zvar), d,
                      SCIPvarGetName(xvar), vlbcoefs[b], SCIPvarGetName(zvar), vlbconstants[b]);
                   if ( ntightened != NULL )
