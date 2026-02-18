@@ -351,7 +351,7 @@ SCIP_RETCODE SCIPsymhdlrFree(
 
    SCIPfreeBlockMemoryArray(set->scip, &(*symhdlr)->name, strlen((*symhdlr)->name) + 1);
    SCIPfreeBlockMemoryArray(set->scip, &(*symhdlr)->desc, strlen((*symhdlr)->desc) + 1);
-   SCIPfreeBlockMemoryArray(set->scip, &(*symhdlr)->symcomps, (*symhdlr)->symcompssize);
+   SCIPfreeBlockMemoryArrayNull(set->scip, &(*symhdlr)->symcomps, (*symhdlr)->symcompssize);
    SCIPfreeBlockMemory(set->scip, symhdlr);
 
    return SCIP_OKAY;
@@ -1539,6 +1539,7 @@ SCIP_RETCODE SCIPsyminfoFree(
    {
       symcomp = (*syminfo)->symcomps[i];
       SCIP_CALL( SCIPsymhdlrDelete(symcomp->symhdlr, scip->set, &symcomp) );
+      BMSfreeBlockMemoryArray(blkmem, &symcomp->name, strlen(symcomp->name)+1);
       BMSfreeBlockMemory(blkmem, &symcomp);
    }
    BMSfreeBlockMemoryArrayNull(blkmem, &(*syminfo)->symcomps, (*syminfo)->symcompssize);
@@ -1571,6 +1572,7 @@ SCIP_RETCODE SCIPaddSymhdlrComponent(
 
       newlen = SCIPcalcMemGrowSize(scip, symhdlr->nsymcomps + 1);
       SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &symhdlr->symcomps, symhdlr->symcompssize, newlen) );
+      symhdlr->symcompssize = newlen;
    }
    symhdlr->symcomps[(symhdlr->nsymcomps)++] = symcomp;
 
