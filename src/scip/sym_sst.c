@@ -583,7 +583,7 @@ SCIP_RETCODE addSSTConssOrbitAndUpdateSST(
    *nchgbds = 0;
    for( i = 0, poscur = orbitbegins[orbitidx]; i < orbitsize; ++i, ++poscur )
    {
-      SCIP_CALL addcut;
+      SCIP_Bool addcut;
 
       if( i == orbitleaderidx )
       {
