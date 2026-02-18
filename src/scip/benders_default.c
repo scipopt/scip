@@ -141,6 +141,49 @@ SCIP_RETCODE disableRestarts(
 }
 
 
+/** creates and reads the Benders' decomposition subproblems from the input files */
+static
+SCIP_RETCODE createBendersSubproblems(
+   SCIP*                 scip,               /**< the SCIP data structure */
+   SCIP_BENDERSDATA**    bendersdata,        /**< the Benders' decomposition data */
+   char**                subprobfiles,       /**< the instance files for the Benders' decomposition subproblems */
+   int                   nsubproblems        /**< the number of subproblems in the Benders' decomposition */
+   )
+{
+   int i;
+
+   assert(scip != NULL);
+   assert(subprobfiles != NULL);
+
+   /* allocating the memory for the subproblem array. This also stores the number of subproblems. */
+   SCIP_CALL( allocateSubproblemArray(scip, bendersdata, nsubproblems) );
+
+   /* creating the Benders' decomposition subproblems from the instance files */
+   for( i = 0; i < nsubproblems; i++ )
+   {
+      SCIPinfoMessage(scip, NULL, "subproblem instance file <%s>\n", subprobfiles[i]);
+
+      /* creating the SCIP instance for the subproblem */
+      SCIP_CALL( SCIPcreate(&(*bendersdata)->subproblems[i]) );
+
+      /* include default SCIP plugins */
+      SCIP_CALL( SCIPincludeDefaultPlugins((*bendersdata)->subproblems[i]) );
+
+      /* reading the instance file. The file type is inferred from the file extension. */
+      assert(subprobfiles[i] != NULL);
+      SCIP_CALL( SCIPreadProb((*bendersdata)->subproblems[i], subprobfiles[i], NULL) );
+
+      SCIPinfoMessage(scip, NULL, "\n");
+   }
+
+   /* indicating that the subproblems need to be freed by the plugin */
+   (*bendersdata)->freesubprobs = TRUE;
+
+   (*bendersdata)->subprobscreated = TRUE;
+
+   return SCIP_OKAY;
+}
+
 /** creates the Benders' decomposition data */
 static
 SCIP_RETCODE createBendersData(
@@ -561,26 +604,44 @@ SCIP_RETCODE SCIPcreateBendersDefault(
 }
 
 
-   /* turning restarts off */
-   SCIP_CALL( SCIPgetIntParam(scip, "presolving/maxrestarts", &maxrestarts) );
-   if( SCIPisParamFixed(scip, "presolving/maxrestarts") && maxrestarts != 0)
-   {
-      SCIPerrorMessage("The number of restarts is fixed to %d. The default Benders' decomposition requires the number"
-         " of restarts to be 0.", maxrestarts);
-      return SCIP_ERROR;
-   }
-   else
-   {
-      SCIP_CALL( SCIPsetIntParam(scip, "presolving/maxrestarts", 0) );
-      SCIP_CALL( SCIPfixParam(scip, "presolving/maxrestarts") );
-   }
+/** Creates a default Benders' decomposition algorithm from instance files and activates it in SCIP
+ *
+ *  The instance files are read in the Benders' decomposition plugin and the subproblem SCIP instances are created. At
+ *  the end of the solve, the freeing of the subproblem SCIP instances is handled by the Benders' decomposition plugin
+ *
+ *  @note Every variable that appears in the subproblem constraints must be created in the corresponding subproblem with
+ *  the same name as in the master problem.
+ *
+ *  @note The default Benders' decomposition implementation relies on unique variable names in the master problem and in
+ * each of the subproblems. This is required because a variable mapping is made between the master problem variables and
+ *  the counterparts in the subproblems. This mapping is created using the variable names.
+ */
+SCIP_RETCODE SCIPcreateBendersDefaultFromFiles(
+   SCIP*                 scip,               /**< SCIP data structure */
+   char**                subprobfiles,       /**< the instance files for the Benders' decomposition subproblems */
+   int                   nsubproblems        /**< the number of subproblems in the Benders' decomposition */
+   )
+{
+   SCIP_BENDERS* benders;
+   SCIP_BENDERSDATA* bendersdata;
 
-   SCIP_CALL( createBendersData(scip, subproblems, &bendersdata, nsubproblems) );
+   assert(scip != NULL);
+   assert(subprobfiles != NULL);
+   assert(nsubproblems > 0);
+
+   /* turning restarts off */
+   SCIP_CALL( disableRestarts(scip) );
+
+   benders = SCIPfindBenders(scip, BENDERS_NAME);
+   bendersdata = SCIPbendersGetData(benders);
+
+   SCIP_CALL( createBendersSubproblems(scip, &bendersdata, subprobfiles, nsubproblems) );
 
    SCIP_CALL( SCIPactivateBenders(scip, benders, nsubproblems) );
 
    return SCIP_OKAY;
 }
+
 
 /** creates the default Benders' decomposition and includes it in SCIP */
 SCIP_RETCODE SCIPincludeBendersDefault(
