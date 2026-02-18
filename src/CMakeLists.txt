@@ -220,6 +220,7 @@ set(scipsources
     scip/prop_vbounds.c
     scip/prop_symmetry.c
     scip/prop_sync.c
+    scip/reader_bdr.c
     scip/reader_bnd.c
     scip/reader_ccg.c
     scip/reader_cip.c
