@@ -2857,6 +2857,24 @@ SCIP_RETCODE SCIPaddVarVub(
    int*                  nbdchgs             /**< pointer to store the number of performed bound changes, or NULL */
    );
 
+/** tries to tighten the coefficients of all variable lower/upper bounds for the given variables
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_SOLVING
+ */
+SCIP_EXPORT
+SCIP_RETCODE SCIPtightenVarVbounds(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR**            vars,               /**< problem variables */
+   int                   nvars,              /**< number of variables */
+   int*                  ntightened          /**< pointer to store the number of tightend coeffients, or NULL */
+   );
+
 /** informs binary variable x about a globally valid implication:  x == 0 or x == 1  ==>  y <= b  or  y >= b;
  *  also adds the corresponding implication or variable bound to the implied variable;
  *  if the implication is conflicting, the variable is fixed to the opposite value;
