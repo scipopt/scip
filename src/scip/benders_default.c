@@ -57,6 +57,8 @@
 #include "scip/pub_misc.h"
 #include "scip/pub_var.h"
 #include "scip/scip.h"
+#include "scip/scip_prob.h"
+#include "scip/scipdefplugins.h"
 
 #define BENDERS_NAME                "default"
 #define BENDERS_DESC                "default implementation of Benders' decomposition"
@@ -81,7 +83,7 @@ struct SCIP_BendersData
    int                   nmastervars;        /**< the number of variables in the master problem */
    int                   nsubproblems;       /**< the number of subproblems */
    SCIP_Bool             subprobscreated;    /**< flag to indicate that the Benders' decomposition Data was created */
-   SCIP_Bool             subprobscopied;     /**< were the subproblems copied during the SCIP copy */
+   SCIP_Bool             freesubprobs;       /**< indicates if the subproblems must be freed by the plugin */
    SCIP_Bool             mappingcreated;     /**< flag to indicate whether the variable mapping has been created */
 };
 
@@ -91,6 +93,53 @@ struct SCIP_BendersData
 /*
  * Local methods
  */
+
+/** allocates the memory for the subproblem array. This is needed because the subproblem SCIP instances could either
+ * be supplied by the user or created in the plugin
+ */
+static
+SCIP_RETCODE allocateSubproblemArray(
+   SCIP*                 scip,               /**< the SCIP data structure */
+   SCIP_BENDERSDATA**    bendersdata,        /**< the Benders' decomposition data */
+   int                   nsubproblems        /**< the number of subproblems in the Benders' decomposition */
+   )
+{
+   assert(scip != NULL);
+
+   (*bendersdata)->nsubproblems = nsubproblems;
+
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(*bendersdata)->subproblems, nsubproblems) );
+
+   return SCIP_OKAY;
+}
+
+
+/** disables restarts in the master SCIP instance */
+static
+SCIP_RETCODE disableRestarts(
+   SCIP*                 scip                /**< the SCIP data structure */
+   )
+{
+   int maxrestarts;
+
+   assert(scip != NULL);
+
+   SCIP_CALL( SCIPgetIntParam(scip, "presolving/maxrestarts", &maxrestarts) );
+   if( SCIPisParamFixed(scip, "presolving/maxrestarts") && maxrestarts != 0)
+   {
+      SCIPerrorMessage("The number of restarts is fixed to %d. The default Benders' decomposition requires the number"
+         " of restarts to be 0.", maxrestarts);
+      return SCIP_ERROR;
+   }
+   else
+   {
+      SCIP_CALL( SCIPsetIntParam(scip, "presolving/maxrestarts", 0) );
+      SCIP_CALL( SCIPfixParam(scip, "presolving/maxrestarts") );
+   }
+
+   return SCIP_OKAY;
+}
+
 
 /** creates the Benders' decomposition data */
 static
@@ -106,9 +155,8 @@ SCIP_RETCODE createBendersData(
    assert(scip != NULL);
    assert(subproblems != NULL);
 
-   (*bendersdata)->nsubproblems = nsubproblems;
-
-   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(*bendersdata)->subproblems, nsubproblems) );
+   /* allocating the memory for the subproblem array. This also stores the number of subproblems. */
+   SCIP_CALL( allocateSubproblemArray(scip, bendersdata, nsubproblems) );
 
    /* Copying the subproblem to the Benders' decomposition data. */
    for( i = 0; i < nsubproblems; i++ )
@@ -287,8 +335,8 @@ SCIP_DECL_BENDERSCOPY(bendersCopyDefault)
 
          targetbendersdata = SCIPbendersGetData(targetbenders);
 
-         /* indicating that the subproblems have been copied */
-         targetbendersdata->subprobscopied = TRUE;
+         /* indicating that the subproblems need to be freed because they have been copied */
+         targetbendersdata->freesubprobs = TRUE;
 
          SCIPfreeBufferArray(scip, &subproblems);
       }
@@ -380,7 +428,7 @@ SCIP_DECL_BENDERSEXIT(bendersExitDefault)
    if( bendersdata->subprobscreated )
    {
       /* if the subproblems were copied, then the copy needs to be freed */
-      if( bendersdata->subprobscopied )
+      if( bendersdata->freesubprobs )
       {
          for( i = bendersdata->nsubproblems - 1; i >= 0; i-- )
          {
@@ -494,14 +542,24 @@ SCIP_RETCODE SCIPcreateBendersDefault(
 {
    SCIP_BENDERS* benders;
    SCIP_BENDERSDATA* bendersdata;
-   int maxrestarts;
 
    assert(scip != NULL);
    assert(subproblems != NULL);
    assert(nsubproblems > 0);
 
+   /* turning restarts off */
+   SCIP_CALL( disableRestarts(scip) );
+
    benders = SCIPfindBenders(scip, BENDERS_NAME);
    bendersdata = SCIPbendersGetData(benders);
+
+   SCIP_CALL( createBendersData(scip, subproblems, &bendersdata, nsubproblems) );
+
+   SCIP_CALL( SCIPactivateBenders(scip, benders, nsubproblems) );
+
+   return SCIP_OKAY;
+}
+
 
    /* turning restarts off */
    SCIP_CALL( SCIPgetIntParam(scip, "presolving/maxrestarts", &maxrestarts) );

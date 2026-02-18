@@ -57,7 +57,15 @@ SCIP_RETCODE SCIPincludeBendersDefault(
  * @{
  */
 
-/** Creates a default Benders' decomposition algorithm and activates it in SCIP */
+/** Creates a default Benders' decomposition algorithm and activates it in SCIP
+ *
+ *  @note Every variable that appears in the subproblem constraints must be created in the corresponding subproblem with
+ *  the same name as in the master problem.
+ *
+ *  @note The default Benders' decomposition implementation relies on unique variable names in the master problem and in
+ *  each of the subproblems. This is required because a variable mapping is made between the master problem variables and
+ *  the counterparts in the subproblems. This mapping is created using the variable names.
+ */
 SCIP_EXPORT
 SCIP_RETCODE SCIPcreateBendersDefault(
    SCIP*                 scip,               /**< SCIP data structure */
