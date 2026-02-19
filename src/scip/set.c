@@ -570,6 +570,9 @@ static const char SCIP_DEFAULT_CERTIFICATE_FILENAME[2] = {'-', '\0'}; /**< name 
 #define SCIP_DEFAULT_SYM_SYMTYPE SYM_SYMTYPE_PERM /**< type of symmetries to be considered (0: permutation symmetries, 1: signed permutation symmetries) */
 #define SCIP_DEFAULT_SYM_NAUTYMAXLEVEL    10000 /**< terminate symmetry detection using Nauty when depth level of Nauty's search tree exceeds this number
                                                  *   (avoids call stack overflows in Nauty for deep graphs) */
+#define SCIP_DEFAULT_SYM_FIXEDVARTYPES        0 /**< bitset describing the variable types that shall be fixed by symmetries
+                                                 *   (0: none; 1: binary; 2; integer; 3: binary and integer; 4: continuous;
+                                                 *    5: binary and continuous; 6: integer and continuous; 7: all) */
 
 /* Writing */
 
@@ -3020,6 +3023,14 @@ SCIP_RETCODE SCIPsetCreate(
          "type of symmetries to be considered (0: permutation symmetries, 1: signed permutation symmetries)",
          &(*set)->sym_symtype, FALSE, SCIP_DEFAULT_SYM_SYMTYPE,
          0, 1, NULL, NULL) );
+
+   SCIP_CALL( SCIPsetAddIntParam(*set, messagehdlr, blkmem,
+         "symmetries/fixedvartypes",
+         "bitset describing the variable types that shall be fixed by symmetry: " \
+         "(0: none; 1: binary; 2; integer; 3: binary and integer; 4: continuous; " \
+         "5: binary and continuous; 6: integer and continuous; 7: all)",
+         &(*set)->sym_fixedvartypes, TRUE, SCIP_DEFAULT_SYM_FIXEDVARTYPES,
+         0, 7, NULL, NULL) );
 
    /* for symmetry detection tool Nauty, we add further parameters to terminate it early */
    if ( strncmp(SYMsymmetryGetName(), "Nauty", 5) == 0 )

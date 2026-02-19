@@ -38,8 +38,8 @@ extern "C" {
 #endif
 
 /** symmetry type specification */
-#define SYM_SPEC_INTEGER                UINT32_C(0x00000001)  /**< need symmetries for integer variables only */
-#define SYM_SPEC_BINARY                 UINT32_C(0x00000002)  /**< need symmetries for binary variables only */
+#define SYM_SPEC_INTEGER                UINT32_C(0x00000002)  /**< need symmetries for integer variables only */
+#define SYM_SPEC_BINARY                 UINT32_C(0x00000001)  /**< need symmetries for binary variables only */
 #define SYM_SPEC_REAL                   UINT32_C(0x00000004)  /**< need symmetries also for continuous variables */
 
 typedef uint32_t SYM_SPEC;              /**< types of variables handled by symmetry */

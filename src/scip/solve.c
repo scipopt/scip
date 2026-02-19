@@ -120,6 +120,9 @@
 #define SAFETYFACTOR 1e-2               /**< the probability that SCIP skips the clock call after the time limit has already been reached */
 #define MAXGENNUMERATOR INT_MAX         /**< determine maximal number of generators by dividing this number by the number of variables */
 
+#define ISSYMBINFIXED(x)          (((unsigned) x & SYM_SPEC_BINARY) != 0)
+#define ISSYMINTFIXED(x)          (((unsigned) x & SYM_SPEC_INTEGER) != 0)
+#define ISSYMCONTFIXED(x)         (((unsigned) x & SYM_SPEC_REAL) != 0)
 
 /** returns whether the solving process will be / was stopped before proving optimality;
  *  if the solving process was stopped, stores the reason as status in stat
@@ -1835,6 +1838,7 @@ SCIP_RETCODE extractSDG(
    SCIP*                 scip,               /**< SCIP instance */
    SYM_GRAPH**           graph,              /**< pointer to symmetry detection graph */
    SYM_SYMTYPE           symtype,            /**< type of symmetries to be computed */
+   SYM_SPEC              fixedvartypes,      /**< specification of variable types that shall be fixed by symmetry */
    SCIP_Bool*            success             /**< pointer to store whether graph could be extracted successfully */
    )
 {
@@ -1898,7 +1902,7 @@ SCIP_RETCODE extractSDG(
       }
    }
 
-   SCIP_CALL( SCIPcomputeSymgraphColors(scip, *graph, 0) );
+   SCIP_CALL( SCIPcomputeSymgraphColors(scip, *graph, fixedvartypes) );
 
    return SCIP_OKAY;
 }
@@ -1909,6 +1913,7 @@ static
 SCIP_RETCODE determineSymmetry(
    SCIP*                 scip,               /**< SCIP instance */
    SYM_SYMTYPE           symtype,            /**< type of symmetries to be computed */
+   SYM_SPEC              fixedvartypes,      /**< specification of variable types that shall be fixed by symmetry */
    int***                perms,              /**< pointer to store (signed) permutations */
    int*                  nperms,             /**< pointer to store number of permutations */
    int*                  permssize,          /**< pointer to store size of perms array */
@@ -1921,6 +1926,7 @@ SCIP_RETCODE determineSymmetry(
    SCIP_Real log10groupsize;
    SCIP_Real symcodetime = 0.0;
    int maxgenerators;
+   SCIP_Bool skipsymmetry;
 
    assert(scip != NULL);
    assert(perms != NULL);
@@ -1928,6 +1934,9 @@ SCIP_RETCODE determineSymmetry(
    assert(permssize != NULL);
    assert(permvars != NULL);
    assert(npermvars != NULL);
+
+   *perms = NULL;
+   *nperms = 0;
 
    /* do not compute symmetry if potentially conflicting methods are enabled */
    if( SCIPisReoptEnabled(scip) || SCIPgetNActiveBenders(scip) > 0 || SCIPgetNActivePricers(scip) > 0 )
@@ -1948,6 +1957,22 @@ SCIP_RETCODE determineSymmetry(
    if( *npermvars <= 0 )
       return SCIP_OKAY;
 
+   /* skip symmetry computation if all variables are required to be fixed */
+   skipsymmetry = TRUE;
+   if( (SCIPgetNBinVars(scip) > 0 && !ISSYMBINFIXED(fixedvartypes))
+      || (SCIPgetNIntVars(scip) > 0 && !ISSYMINTFIXED(fixedvartypes))
+      || (SCIPgetNContVars(scip) + SCIPgetNImplVars(scip) > 0 && !ISSYMCONTFIXED(fixedvartypes)) )
+      skipsymmetry = FALSE;
+
+   if( skipsymmetry )
+   {
+      SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL,
+         "   (%.1fs) symmetry computation skipped: all variables need to be fixed by symmetry.\n",
+         SCIPgetSolvingTime(scip));
+
+      return SCIP_OKAY;
+   }
+
    /* output message */
    SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL,
       "   (%.1fs) symmetry computation started\n", SCIPgetSolvingTime(scip));
@@ -1960,7 +1985,7 @@ SCIP_RETCODE determineSymmetry(
    maxgenerators = MIN(maxgenerators, MAXGENNUMERATOR / *npermvars);
 
    /* get symmetry detection graph */
-   SCIP_CALL( extractSDG(scip, &graph, symtype, &success) );
+   SCIP_CALL( extractSDG(scip, &graph, symtype, fixedvartypes, &success) );
 
    /* return if not successful */
    if( !success )
@@ -2236,7 +2261,9 @@ SCIP_RETCODE SCIPtryAddSymmetryHandlingMethods(
    symhdlrs = SCIPgetSymhdlrs(scip);
    assert(symhdlrs != NULL);
    symtype = scip->set->sym_symtype;
-   SCIP_CALL( determineSymmetry(scip, symtype, &allperms, &nallperms, &allpermssize, &permvars, &npermvars) );
+
+   SCIP_CALL( determineSymmetry(scip, symtype, scip->set->sym_fixedvartypes,
+         &allperms, &nallperms, &allpermssize, &permvars, &npermvars) );
 
    if( nallperms == 0 )
    {

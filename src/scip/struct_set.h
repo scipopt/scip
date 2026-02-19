@@ -687,6 +687,9 @@ struct SCIP_Set
    int                   sym_tryaddtiming;   /**< timing for trying to add symmetry handling methods *//* @symtodo: add explanation of int values */
    int                   sym_maxngenerators; /**< maximum number of symmetry group generators to be computed (-1: unbounded) */
    int                   sym_symtype;        /**< type of symmetries to be considered */
+   int                   sym_fixedvartypes;  /**< bitset describing the variable types that shall be fixed by symmetries
+                                              *   (0: none; 1: binary; 2; integer; 3: binary and integer; 4: continuous;
+                                              *    5: binary and continuous; 6: integer and continuous; 7: all) */
 
    /* Writing */
    SCIP_Bool             write_allconss;     /**< should all constraints be written (including the redundant constraints)? */
