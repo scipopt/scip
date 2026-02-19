@@ -1911,28 +1911,21 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplayStatistics)
 /** dialog execution method for the display symmetry command */
 SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplaySymmetry)
 {  /*lint --e{715}*/
-   SCIP_SYMCOMP** symcomps;
-   int nsymcomps;
-   int c;
+   SCIP_SYMINFO* syminfo;
 
    assert(scip != NULL);
 
    SCIP_CALL( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, NULL, FALSE) );
 
-   /* @symtodo refine this functionality, e.g., only printing generators etc. */
-   symcomps = SCIPgetSymcomps(scip);
-   nsymcomps = SCIPgetNSymcomps(scip);
-   assert(symcomps != NULL || nsymcomps == 0);
+   SCIPdialogMessage(scip, NULL, "\n");
 
-   if( nsymcomps == 0 )
-      SCIPdialogMessage(scip, NULL, "Symmetries cannot be displayed, because no symmetries have been detected.");
-   else
+   syminfo = SCIPgetSyminfo(scip);
+   if( syminfo == NULL )
    {
-      for( c = 0; c < nsymcomps; ++c )
-      {
-         SCIP_CALL( SCIPprintSymcomp(scip, symcomps[c], NULL) );
-      }
+      SCIPinfoMessage(scip, NULL, "Cannot display symmetries. Symmetries have not been computed yet.\n");
+      return SCIP_OKAY;
    }
+   SCIP_CALL( SCIPdisplaySymmetryGenerators(scip, syminfo) );
 
    SCIPdialogMessage(scip, NULL, "\n");
 

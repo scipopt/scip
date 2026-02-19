@@ -37,6 +37,7 @@
 #include "scip/pub_var.h"
 #include "scip/scip_cut.h"
 #include "scip/scip_mem.h"
+#include "scip/scip_message.h"
 #include "scip/scip_numerics.h"
 #include "scip/scip_var.h"
 #include "scip/sepastore.h"
@@ -1643,6 +1644,135 @@ SCIP_RETCODE SCIPsyminfoFree(
    SCIPfreeBlockMemoryArrayNull(scip, &(*syminfo)->symcomps, (*syminfo)->symcompssize);
    SCIPfreeBlockMemory(scip, syminfo);
    *syminfo = NULL;
+
+   return SCIP_OKAY;
+}
+
+/** displays the cycle of a symmetry */
+static
+SCIP_RETCODE displayCycleOfSymmetry(
+   SCIP*                 scip,               /**< SCIP pointer */
+   int*                  perm,               /**< symmetry */
+   SYM_SYMTYPE           symtype,            /**< type of symmetry */
+   int                   baseidx,            /**< variable index for which cycle is computed */
+   SCIP_Bool*            covered,            /**< allocated array to store covered variables */
+   int                   nvars,              /**< number of (non-negated) variables in symmetry */
+   SCIP_VAR**            vars                /**< variables on which symmetry acts */
+   )
+{
+   char* string;
+   int varidx;
+   int j;
+
+   assert(scip != NULL);
+   assert(perm != NULL);
+   assert(0 <= baseidx);
+   assert((symtype == SYM_SYMTYPE_PERM && baseidx < nvars) ||
+      (symtype == SYM_SYMTYPE_SIGNPERM && baseidx < 2 * nvars));
+   assert(covered != NULL);
+
+   /* skip fixed points or elements already covered in previous cycle */
+   if( perm[baseidx] == baseidx || covered[baseidx] )
+      return SCIP_OKAY;
+
+   varidx = baseidx >= nvars ? baseidx - nvars : baseidx;
+   string = (char*) SCIPvarGetName(vars[varidx]);
+   SCIPinfoMessage(scip, NULL, "  (%s<%s>", baseidx >= nvars ? "negated " : "", string);
+   j = perm[baseidx];
+   covered[baseidx] = TRUE;
+   while( j != baseidx )
+   {
+      covered[j] = TRUE;
+      varidx = j >= nvars ? j - nvars : j;
+      string = (char*) SCIPvarGetName(vars[varidx]);
+      SCIPinfoMessage(scip, NULL, ",%s<%s>", j >= nvars ? "negated " : "", string);
+      j = perm[j];
+   }
+   SCIPinfoMessage(scip, NULL, ")\n");
+
+   return SCIP_OKAY;
+}
+
+/** displays symmetry information taking components into account */
+static
+SCIP_RETCODE displaySymmetriesWithComponents(
+   SCIP*                 scip,               /**< SCIP pointer */
+   SCIP_SYMINFO*         syminfo             /**< propagator data */
+   )
+{
+   SCIP_Bool* covered;
+   SYM_SYMTYPE symtype;
+   int* perm;
+   int permlen;
+   int npermvars;
+   int i;
+   int p;
+   int c;
+
+   assert(scip != NULL);
+   assert(syminfo != NULL);
+   assert(syminfo->nperms > 0);
+   assert(syminfo->permvars != NULL);
+   assert(syminfo->npermvars > 0);
+   assert(syminfo->ncomponents > 0);
+
+   symtype = syminfo->symtype;
+   npermvars = syminfo->npermvars;
+   permlen = symtype == SYM_SYMTYPE_PERM ? npermvars : 2 * npermvars;
+
+   SCIP_CALL( SCIPallocClearBufferArray(scip, &covered, permlen) );
+
+   if( symtype == SYM_SYMTYPE_PERM )
+      SCIPinfoMessage(scip, NULL, "   Symmetries of different components are displayed as permutations.\n\n");
+   else
+      SCIPinfoMessage(scip, NULL, "   Symmetries of different components are displayed as signed permutations\n\n");
+   for( c = 0; c < syminfo->ncomponents; ++c )
+   {
+      int cnt;
+
+      SCIPinfoMessage(scip, NULL, "Display symmetries of component %d.\n", c);
+
+      for( p = syminfo->componentbegins[c], cnt = 0; p < syminfo->componentbegins[c + 1]; ++p, ++cnt )
+      {
+         SCIPinfoMessage(scip, NULL, "Permutation %d:\n", cnt);
+         perm = syminfo->perms[syminfo->components[p]];
+
+         for( i = 0; i < permlen; ++i )
+         {
+            SCIP_CALL( displayCycleOfSymmetry(scip, perm, symtype, i, covered, npermvars, syminfo->permvars) );
+         }
+
+         for( i = 0; i < permlen; ++i )
+            covered[i] = FALSE;
+      }
+   }
+
+   SCIPfreeBufferArray(scip, &covered);
+
+   return SCIP_OKAY;
+}
+
+/** displays generators of symmetry group, if available */
+SCIP_RETCODE SCIPdisplaySymmetryGenerators(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SYMINFO*         syminfo             /**< symmetry information */
+   )
+{  /*lint --e{715}*/
+   assert(scip != NULL);
+   assert(syminfo != NULL);
+
+   if( syminfo->nperms == -1 )
+   {
+      SCIPinfoMessage(scip, NULL, "Cannot display symmetries. Symmetries have not been computed yet.\n");
+   }
+   else if( syminfo->nperms == 0 )
+   {
+      SCIPinfoMessage(scip, NULL, "Cannot display symmetries. No symmetries detected.\n");
+   }
+   else
+   {
+      SCIP_CALL( displaySymmetriesWithComponents(scip, syminfo) );
+   }
 
    return SCIP_OKAY;
 }

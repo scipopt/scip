@@ -252,6 +252,12 @@ SCIP_RETCODE SCIPsyminfoFree(
    SCIP_SYMINFO**        syminfo             /**< pointer to the syminfo */
    );
 
+/** displays generators of symmetry group, if available */
+SCIP_RETCODE SCIPdisplaySymmetryGenerators(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SYMINFO*         syminfo             /**< symmetry information */
+   );
+
 /** outputs symmetry component information to file stream */
 SCIP_RETCODE SCIPsymcompPrint(
    SCIP_SYMCOMP*         symcomp,            /**< symmetry component to print */
