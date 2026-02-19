@@ -87,9 +87,9 @@ SCIP_RETCODE SCIPincludeSymhdlr(
 
 /** creates a symmetry handler and includes it in SCIP. All non-fundamental (or optional) callbacks will be set to NULL.
  *
- *  Optional callbacks can be set via specific setter functions, see SCIPsetPropInit(), SCIPsetPropExit(),
- *  SCIPsetPropCopy(), SCIPsetPropFree(), SCIPsetPropInitsol(), SCIPsetPropExitsol(),
- *  SCIPsetPropInitpre(), SCIPsetPropExitpre(), SCIPsetPropPresol(), and SCIPsetPropResprop().
+ *  Optional callbacks can be set via specific setter functions, see SCIPsetSymhdlrCopy(), SCIPsetSymhdlrFree(),
+ *  SCIPsetSymhdlrInit(), SCIPsetSymhdlrExit(), SCIPsetSymhdlrTrans(), SCIPsetSymhdlrInitsol(), SCIPsetSymhdlrExitsol(),
+ *  SCIPsetSymhdlrPresol(), SCIPsetSymhdlrResprop(), SCIPsetSymhdlrProp(), SCIPsetSymhdlrSepa().
  *
  *  @pre This method can be called if SCIP is in one of the following stages:
  *       - \ref SCIP_STAGE_INIT
