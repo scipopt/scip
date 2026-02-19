@@ -1248,7 +1248,7 @@ SCIP_RETCODE SCIPincludeSymhdlrLexOrbRed(
 
    SCIP_CALL( SCIPallocBlockMemory(scip, &symhdlrdata) );
 
-   SCIP_CALL( SCIPincludeSymhdlrBasic(scip, SYM_NAME, SYM_DESC, SYM_PRIORITY, SYM_PROPPRIORITY, 0, -1,
+   SCIP_CALL( SCIPincludeSymhdlr(scip, SYM_NAME, SYM_DESC, SYM_PRIORITY, SYM_PROPPRIORITY, 0, -1,
          SYM_PROPFREQ, -1, SYM_DELAYPROP, FALSE, 1.0, 1, SYM_PROPTIMING, SCIP_PRESOLTIMING_FAST,
          symhdlrTryaddLexOrbRed, NULL, symhdlrFreeLexOrbRed, NULL, symhdlrExitLexOrbRed,
          NULL, symhdlrExitsolLexOrbRed, NULL, NULL, NULL, symhdlrPropLexOrbRed,

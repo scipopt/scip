@@ -210,6 +210,71 @@ SCIP_RETCODE SCIPsymhdlrTryAdd(
    SCIP_Bool*            success             /**< pointer to store whether symmetry handling method could be added */
    );
 
+/** sets all separation related callbacks of the symmetry handler */
+void SCIPsymhdlrSetSepa(
+   SCIP_SYMHDLR*         symhdlr,            /**< symmetry handler */
+   SCIP_DECL_SYMHDLRSEPALP((*symsepalp)),    /**< separate cutting planes for LP solution */
+   SCIP_DECL_SYMHDLRSEPASOL((*symsepasol)),  /**< separate cutting planes for arbitrary primal solution */
+   int                   sepafreq,           /**< frequency for separating cuts; zero means to separate only in the root node */
+   int                   sepapriority,       /**< priority of the symmetry handler for separation */
+   SCIP_Bool             delaysepa           /**< should separation method be delayed, if other separators found cuts? */
+   );
+
+/** sets both the propagation callback and the propagation frequency of the symmetry handler */
+void SCIPsymhdlrSetProp(
+   SCIP_SYMHDLR*         symhdlr,            /**< symmetry handler */
+   SCIP_DECL_SYMHDLRPROP ((*symprop)),       /**< propagate variable domains */
+   int                   propfreq,           /**< frequency for propagating domains; zero means only preprocessing propagation */
+   SCIP_Bool             delayprop,          /**< should propagation method be delayed, if other propagators found reductions? */
+   int                   proppriority,       /**< priority of the symmetry handler for propagation */
+   SCIP_PROPTIMING       timingmask          /**< positions in the node solving loop where propagators should be executed */
+   );
+
+/** sets destructor method of symmetry handler */
+void SCIPsymhdlrSetFree(
+   SCIP_SYMHDLR*         symhdlr,            /**< symmetry handler */
+   SCIP_DECL_SYMHDLRFREE ((*symfree))        /**< destructor of symmetry handler */
+   );
+
+/** sets solving process initialization method of symmetry handler */
+void SCIPsymhdlrSetInit(
+   SCIP_SYMHDLR*         symhdlr,            /**< symmetry handler */
+   SCIP_DECL_SYMHDLRINIT ((*syminit))        /**< initialize symmetry handler */
+   );
+
+/** sets deinitialization method of symmetry handler */
+void SCIPsymhdlrSetExit(
+   SCIP_SYMHDLR*         symhdlr,            /**< symmetry handler */
+   SCIP_DECL_SYMHDLREXIT ((*symexit))        /**< deinitialize symmetry handler */
+   );
+
+/** sets solving process initialization method of symmetry handler */
+void SCIPsymhdlrSetInitsol(
+   SCIP_SYMHDLR*         symhdlr,            /**< symmetry handler */
+   SCIP_DECL_SYMHDLRINITSOL((*syminitsol))   /**< solving process initialization method of symmetry handler */
+   );
+
+/** sets solving process deinitialization method of symmetry handler */
+void SCIPsymhdlrSetExitsol(
+   SCIP_SYMHDLR*         symhdlr,            /**< symmetry handler */
+   SCIP_DECL_SYMHDLREXITSOL((*symexitsol))   /**< solving process deinitialization method of symmetry handler */
+   );
+
+/** sets presolving method of symmetry handler */
+SCIP_RETCODE SCIPsymhdlrSetPresol(
+   SCIP_SYMHDLR*         symhdlr,            /**< symmetry handler */
+   SCIP_DECL_SYMHDLRPRESOL((*sympresol)),    /**< presolving method of symmetry handler */
+   int                   maxprerounds,       /**< maximal number of presolving rounds the constraint handler participates in (-1: no limit) */
+   int                   presolpriority,     /**< priority of the symmetry handler for presolving */
+   SCIP_PRESOLTIMING     presoltiming        /**< timing mask of the constraint handler's presolving method */
+   );
+
+/** sets propagation conflict resolving method of symmetry handler */
+void SCIPsymhdlrSetResprop(
+   SCIP_SYMHDLR*         symhdlr,            /**< symmetry handler */
+   SCIP_DECL_SYMHDLRRESPROP((*symresprop))   /**< propagation conflict resolving method */
+   );
+
 /** adds a component to a symmetry handler */
 SCIP_RETCODE SCIPaddSymhdlrComponent(
    SCIP*                 scip,               /**< SCIP data structure */

@@ -1035,6 +1035,145 @@ SCIP_RETCODE SCIPsymhdlrTryAdd(
    return SCIP_OKAY;
 }
 
+/** sets all separation related callbacks of the symmetry handler */
+void SCIPsymhdlrSetSepa(
+   SCIP_SYMHDLR*         symhdlr,            /**< symmetry handler */
+   SCIP_DECL_SYMHDLRSEPALP((*symsepalp)),    /**< separate cutting planes for LP solution */
+   SCIP_DECL_SYMHDLRSEPASOL((*symsepasol)),  /**< separate cutting planes for arbitrary primal solution */
+   int                   sepafreq,           /**< frequency for separating cuts; zero means to separate only in the root node */
+   int                   sepapriority,       /**< priority of the symmetry handler for separation */
+   SCIP_Bool             delaysepa           /**< should separation method be delayed, if other separators found cuts? */
+   )
+{
+   assert(symhdlr != NULL);
+
+   assert(symsepalp != NULL || symsepasol != NULL || sepafreq == -1);
+
+   symhdlr->symsepalp = symsepalp;
+   symhdlr->symsepasol = symsepasol;
+   symhdlr->sepafreq = sepafreq;
+   symhdlr->sepapriority = sepapriority;
+   symhdlr->delaysepa = delaysepa;
+}
+
+/** sets both the propagation callback and the propagation frequency of the symmetry handler */
+void SCIPsymhdlrSetProp(
+   SCIP_SYMHDLR*         symhdlr,            /**< symmetry handler */
+   SCIP_DECL_SYMHDLRPROP ((*symprop)),       /**< propagate variable domains */
+   int                   propfreq,           /**< frequency for propagating domains; zero means only preprocessing propagation */
+   SCIP_Bool             delayprop,          /**< should propagation method be delayed, if other propagators found reductions? */
+   int                   proppriority,       /**< priority of the symmetry handler for propagation */
+   SCIP_PROPTIMING       timingmask          /**< positions in the node solving loop where propagators should be executed */
+   )
+{
+   assert(symhdlr != NULL);
+
+   assert(symprop != NULL || propfreq == -1);
+
+   symhdlr->symprop = symprop;
+   symhdlr->propfreq = propfreq;
+   symhdlr->proppriority = proppriority;
+   symhdlr->delayprop = delayprop;
+}
+
+/** sets destructor method of symmetry handler */
+void SCIPsymhdlrSetFree(
+   SCIP_SYMHDLR*         symhdlr,            /**< symmetry handler */
+   SCIP_DECL_SYMHDLRFREE ((*symfree))        /**< destructor of symmetry handler */
+   )
+{
+   assert(symhdlr != NULL);
+
+   symhdlr->symfree = symfree;
+}
+
+/** sets solving process initialization method of symmetry handler */
+void SCIPsymhdlrSetInit(
+   SCIP_SYMHDLR*         symhdlr,            /**< symmetry handler */
+   SCIP_DECL_SYMHDLRINIT ((*syminit))        /**< initialize symmetry handler */
+   )
+{
+   assert(symhdlr != NULL);
+
+   symhdlr->syminit = syminit;
+}
+
+/** sets deinitialization method of symmetry handler */
+void SCIPsymhdlrSetExit(
+   SCIP_SYMHDLR*         symhdlr,            /**< symmetry handler */
+   SCIP_DECL_SYMHDLREXIT ((*symexit))        /**< deinitialize symmetry handler */
+   )
+{
+   assert(symhdlr != NULL);
+
+   symhdlr->symexit = symexit;
+}
+
+/** sets solving process initialization method of symmetry handler */
+void SCIPsymhdlrSetInitsol(
+   SCIP_SYMHDLR*         symhdlr,            /**< symmetry handler */
+   SCIP_DECL_SYMHDLRINITSOL((*syminitsol))   /**< solving process initialization method of symmetry handler */
+   )
+{
+   assert(symhdlr != NULL);
+
+   symhdlr->syminitsol = syminitsol;
+}
+
+/** sets solving process deinitialization method of symmetry handler */
+void SCIPsymhdlrSetExitsol(
+   SCIP_SYMHDLR*         symhdlr,            /**< symmetry handler */
+   SCIP_DECL_SYMHDLREXITSOL((*symexitsol))   /**< solving process deinitialization method of symmetry handler */
+   )
+{
+   assert(symhdlr != NULL);
+
+   symhdlr->symexitsol = symexitsol;
+}
+
+/** sets presolving method of symmetry handler */
+SCIP_RETCODE SCIPsymhdlrSetPresol(
+   SCIP_SYMHDLR*         symhdlr,            /**< symmetry handler */
+   SCIP_DECL_SYMHDLRPRESOL((*sympresol)),    /**< presolving method of symmetry handler */
+   int                   maxprerounds,       /**< maximal number of presolving rounds the constraint handler participates in (-1: no limit) */
+   int                   presolpriority,     /**< priority of the symmetry handler for presolving */
+   SCIP_PRESOLTIMING     presoltiming        /**< timing mask of the constraint handler's presolving method */
+   )
+{
+   assert(symhdlr != NULL);
+
+   symhdlr->sympresol = sympresol;
+   symhdlr->maxprerounds = maxprerounds;
+
+   /* the interface change from delay flags to timings cannot be recognized at compile time: Exit with an appropriate
+    * error message
+    */
+   if( presoltiming < SCIP_PRESOLTIMING_FAST || presoltiming > SCIP_PRESOLTIMING_MAX )
+   {
+      SCIPmessagePrintError("ERROR: 'PRESOLDELAY'-flag no longer available since SCIP 3.2, use an appropriate "
+         "'SCIP_PRESOLTIMING' for <%s> symmetry handler instead.\n", symhdlr->name);
+
+      return SCIP_PARAMETERWRONGVAL;
+   }
+
+   symhdlr->presoltiming = presoltiming;
+   symhdlr->presolpriority = presolpriority;
+
+   return SCIP_OKAY;
+}
+
+/** sets propagation conflict resolving method of symmetry handler */
+void SCIPsymhdlrSetResprop(
+   SCIP_SYMHDLR*         symhdlr,            /**< symmetry handler */
+   SCIP_DECL_SYMHDLRRESPROP((*symresprop))   /**< propagation conflict resolving method */
+   )
+{
+   assert(symhdlr != NULL);
+
+   symhdlr->symresprop = symresprop;
+}
+
+
 /** gets data of symmetry component */
 SCIP_SYMCOMPDATA* SCIPsymcompGetData(
    SCIP_SYMCOMP*         symcomp             /**< symmetry component */
@@ -1454,6 +1593,26 @@ int SCIPsymhdlrGetNChgSides(
    assert(symhdlr != NULL);
 
    return symhdlr->nchgsides;
+}
+
+/** gets priority of separation method of symmetry handler */
+int SCIPsymhdlrGetSepaPriority(
+   SCIP_SYMHDLR*         symhdlr             /**< symmetry handler */
+   )
+{
+   assert(symhdlr != NULL);
+
+   return symhdlr->sepapriority;
+}
+
+/** gets priority of propagation method of symmetry handler */
+int SCIPsymhdlrGetPropPriority(
+   SCIP_SYMHDLR*         symhdlr             /**< symmetry handler */
+   )
+{
+   assert(symhdlr != NULL);
+
+   return symhdlr->proppriority;
 }
 
 /** compresses information about permutations in symmetry information data structure */

@@ -208,7 +208,7 @@ SCIP_RETCODE SCIPincludeSymhdlrSymresack(
 
    assert(scip != NULL);
 
-   SCIP_CALL( SCIPincludeSymhdlrBasic(scip, SYM_NAME, SYM_DESC,
+   SCIP_CALL( SCIPincludeSymhdlr(scip, SYM_NAME, SYM_DESC,
          SYM_PRIORITY, SYM_PROPPRIORITY, 1, SYM_PRESOLPRIORITY, SYM_PROPFREQ, 1, FALSE, FALSE, 1.0,
          -1, SCIP_PROPTIMING_BEFORELP, SCIP_PRESOLTIMING_FAST,
          symhdlrTryaddSymresack, NULL, symhdlrFreeSymresack, NULL, symhdlrExitSymresack,

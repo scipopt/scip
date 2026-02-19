@@ -161,6 +161,18 @@ int SCIPsymhdlrGetNChgCoefs(
    SCIP_SYMHDLR*         symhdlr             /**< symmetry handler */
    );
 
+/** gets priority of separation method of symmetry handler */
+SCIP_EXPORT
+int SCIPsymhdlrGetSepaPriority(
+   SCIP_SYMHDLR*         symhdlr             /**< symmetry handler */
+   );
+
+/** gets priority of propagation method of symmetry handler */
+SCIP_EXPORT
+int SCIPsymhdlrGetPropPriority(
+   SCIP_SYMHDLR*         symhdlr             /**< symmetry handler */
+   );
+
 /** gets number of constraint sides changed during presolving of symmetry handler */
 SCIP_EXPORT
 int SCIPsymhdlrGetNChgSides(

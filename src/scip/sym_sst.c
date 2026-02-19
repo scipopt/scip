@@ -1821,7 +1821,7 @@ SCIP_RETCODE SCIPincludeSymhdlrSST(
 
    SCIP_CALL( SCIPallocBlockMemory(scip, &symhdlrdata) );
 
-   SCIP_CALL( SCIPincludeSymhdlrBasic(scip, SYM_NAME, SYM_DESC, SYM_PRIORITY, 0, 0, SYM_PRESOLPRIORITY,
+   SCIP_CALL( SCIPincludeSymhdlr(scip, SYM_NAME, SYM_DESC, SYM_PRIORITY, 0, 0, SYM_PRESOLPRIORITY,
          -1, -1, FALSE, FALSE, 1.0, SYM_MAXPRESOLROUNDS, SCIP_PROPTIMING_BEFORELP, SCIP_PRESOLTIMING_FAST,
          symhdlrTryAddSST, NULL, symhdlrFreeSST, NULL, symhdlrExitSST, NULL, NULL, NULL, NULL, NULL, NULL,
          NULL, symhdlrPresolSST, symhdlrPrintSST, symhdlrdata) );

@@ -44,20 +44,14 @@
 extern "C" {
 #endif
 
-/* @symtodo Replace propagator by symmetry handler */
-/** creates a symmetry handler and includes it in SCIP. All non-fundamental (or optional) callbacks will be set to NULL.
- *  Optional callbacks can be set via specific setter functions, see SCIPsetPropInit(), SCIPsetPropExit(),
- *  SCIPsetPropCopy(), SCIPsetPropFree(), SCIPsetPropInitsol(), SCIPsetPropExitsol(),
- *  SCIPsetPropInitpre(), SCIPsetPropExitpre(), SCIPsetPropPresol(), and SCIPsetPropResprop().
+/** creates a symmetry handler and includes it in SCIP.
  *
- *  @pre This method can be called if SCIP is in one of the following stages:
- *       - \ref SCIP_STAGE_INIT
- *       - \ref SCIP_STAGE_PROBLEM
- *
- *  @note if you want to set all callbacks with a single method call, consider using SCIPincludeProp() instead
+ *  @note method has all symmetry handler callbacks as arguments and is thus changed every time a new
+ *        callback is added in future releases; consider using SCIPincludeSymhdlrBasic() and setter functions
+ *        if you seek for a method which is less likely to change in future releases
  */
 SCIP_EXPORT
-SCIP_RETCODE SCIPincludeSymhdlrBasic(
+SCIP_RETCODE SCIPincludeSymhdlr(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           name,               /**< name of symmetry handler */
    const char*           desc,               /**< description of symmetry handler */
@@ -88,6 +82,28 @@ SCIP_RETCODE SCIPincludeSymhdlrBasic(
    SCIP_DECL_SYMHDLRRESPROP((*symresprop)),  /**< propagation conflict resolving method */
    SCIP_DECL_SYMHDLRPRESOL((*sympresol)),    /**< presolving method of symmetry handler */
    SCIP_DECL_SYMHDLRPRINT((*symprint)),      /**< print method of symmetry handler */
+   SCIP_SYMHDLRDATA*     symhdlrdata         /**< symmetry handler data */
+   );
+
+/** creates a symmetry handler and includes it in SCIP. All non-fundamental (or optional) callbacks will be set to NULL.
+ *
+ *  Optional callbacks can be set via specific setter functions, see SCIPsetPropInit(), SCIPsetPropExit(),
+ *  SCIPsetPropCopy(), SCIPsetPropFree(), SCIPsetPropInitsol(), SCIPsetPropExitsol(),
+ *  SCIPsetPropInitpre(), SCIPsetPropExitpre(), SCIPsetPropPresol(), and SCIPsetPropResprop().
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_INIT
+ *       - \ref SCIP_STAGE_PROBLEM
+ *
+ *  @note if you want to set all callbacks with a single method call, consider using SCIPincludeProp() instead
+ */
+SCIP_EXPORT
+SCIP_RETCODE SCIPincludeSymhdlrBasic(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const char*           name,               /**< name of symmetry handler */
+   const char*           desc,               /**< description of symmetry handler */
+   int                   priority,           /**< priority of the symmetry handler */
+   SCIP_DECL_SYMHDLRTRYADD((*symhdlrtryadd)),/**< addition method for symmetry method handler plugins */
    SCIP_SYMHDLRDATA*     symhdlrdata         /**< symmetry handler data */
    );
 
@@ -131,6 +147,22 @@ SCIP_RETCODE SCIPsetSymhdlrTrans(
    SCIP_DECL_SYMHDLRINIT ((*symhdlrtrans))   /**< transform symmetry handler */
    );
 
+/** sets solving process initialization method of symmetry handler */
+SCIP_EXPORT
+SCIP_RETCODE SCIPsetSymhdlrInitsol(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SYMHDLR*         symhdlr,            /**< symmetry handler */
+   SCIP_DECL_SYMHDLRINITSOL((*syminitsol))   /**< solving process initialization method of symmetry handler */
+   );
+
+/** sets solving process deinitialization method of symmetry handler */
+SCIP_EXPORT
+SCIP_RETCODE SCIPsetSymhdlrExitsol(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SYMHDLR*         symhdlr,            /**< symmetry handler */
+   SCIP_DECL_SYMHDLREXITSOL((*symexitsol))   /**< solving process deinitialization method of symmetry handler */
+   );
+
 /** sets presolving method of symmetry handler */
 SCIP_EXPORT
 SCIP_RETCODE SCIPsetSymhdlrPresol(
@@ -142,6 +174,13 @@ SCIP_RETCODE SCIPsetSymhdlrPresol(
    SCIP_PRESOLTIMING     presoltiming        /**< timing mask of the symmetry handler's presolving method */
    );
 
+/** sets propagation conflict resolving method of symmetry handler */
+SCIP_RETCODE SCIPsetSymhdlrResprop(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SYMHDLR*         symhdlr,            /**< symmetry handler */
+   SCIP_DECL_SYMHDLRRESPROP((*symresprop))   /**< propagation conflict resolving method */
+   );
+
 /** sets propagation method of symmetry handler */
 SCIP_EXPORT
 SCIP_RETCODE SCIPsetSymhdlrProp(
@@ -150,6 +189,7 @@ SCIP_RETCODE SCIPsetSymhdlrProp(
    SCIP_DECL_SYMHDLRPROP ((*symhdlrprop)),   /**< propagate variable domains */
    int                   propfreq,           /**< frequency for propagating domains; zero means only preprocessing propagation */
    SCIP_Bool             delayprop,          /**< should propagation method be delayed, if other propagators found reductions? */
+   int                   proppriority,       /**< priority of the symmetry handler for propagation */
    SCIP_PROPTIMING       proptiming          /**< positions in the node solving loop where propagation should be executed */
    );
 
