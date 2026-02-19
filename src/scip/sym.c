@@ -97,11 +97,11 @@ SCIP_RETCODE doSymhdlrCreate(
    assert(symsepalp != NULL || symsepasol != NULL || sepafreq == -1);
    assert(symprop != NULL || propfreq == -1);
 
-   SCIP_ALLOC( BMSallocBlockMemory(blkmem, symhdlr) );
+   SCIP_CALL( SCIPallocBlockMemory(set->scip, symhdlr) );
    BMSclearMemory(*symhdlr);
 
-   SCIP_ALLOC( BMSduplicateBlockMemoryArray(blkmem, &(*symhdlr)->name, name, strlen(name) + 1) );
-   SCIP_ALLOC( BMSduplicateBlockMemoryArray(blkmem, &(*symhdlr)->desc, desc, strlen(desc) + 1) );
+   SCIP_CALL( SCIPduplicateBlockMemoryArray(set->scip, &(*symhdlr)->name, name, strlen(name) + 1) );
+   SCIP_CALL( SCIPduplicateBlockMemoryArray(set->scip, &(*symhdlr)->desc, desc, strlen(desc) + 1) );
 
    (*symhdlr)->tryaddpriority = priority;
    (*symhdlr)->sepapriority = sepapriority;
@@ -350,10 +350,10 @@ SCIP_RETCODE SCIPsymhdlrFree(
    SCIPclockFree(&(*symhdlr)->presoltime);
    SCIPclockFree(&(*symhdlr)->setuptime);
 
-   BMSfreeBlockMemoryArray(set->scip->mem->setmem, &(*symhdlr)->name, strlen((*symhdlr)->name) + 1);
-   BMSfreeBlockMemoryArray(set->scip->mem->setmem, &(*symhdlr)->desc, strlen((*symhdlr)->desc) + 1);
+   SCIPfreeBlockMemoryArray(set->scip, &(*symhdlr)->name, strlen((*symhdlr)->name) + 1);
+   SCIPfreeBlockMemoryArray(set->scip, &(*symhdlr)->desc, strlen((*symhdlr)->desc) + 1);
    SCIPfreeBlockMemoryArrayNull(set->scip, &(*symhdlr)->symcomps, (*symhdlr)->symcompssize);
-   BMSfreeBlockMemory(set->scip->mem->setmem, symhdlr);
+   SCIPfreeBlockMemory(set->scip, symhdlr);
 
    return SCIP_OKAY;
 }
