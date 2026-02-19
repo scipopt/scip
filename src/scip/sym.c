@@ -1645,27 +1645,3 @@ SCIP_RETCODE SCIPsymcompPrint(
 
    return SCIP_OKAY;
 }
-
-/** returns the symmetry components */
-SCIP_SYMCOMP** SCIPgetSymcomps(
-   SCIP*                 scip                /**< SCIP data structure */
-   )
-{
-   assert(scip != NULL);
-   assert(scip->syminfo != NULL);
-
-   /* @symtodo move to scip_sym */
-   return scip->syminfo->symcomps;
-}
-
-/** returns number of symmetry components */
-int SCIPgetNSymcomps(
-   SCIP*                 scip                /**< SCIP data structure */
-   )
-{
-   assert(scip != NULL);
-   assert(scip->syminfo != NULL);
-
-   /* @symtodo move to scip_sym */
-   return scip->syminfo->nsymcomps;
-}

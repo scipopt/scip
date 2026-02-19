@@ -214,6 +214,18 @@ SCIP_RETCODE SCIPprintSymcomp(
    FILE*                 file                /**< output file (or NULL for standard output) */
    );
 
+/** returns the symmetry components */
+SCIP_EXPORT
+SCIP_SYMCOMP** SCIPgetSymcomps(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/** returns number of symmetry components */
+SCIP_EXPORT
+int SCIPgetNSymcomps(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
 /** @} */
 
 #ifdef __cplusplus
