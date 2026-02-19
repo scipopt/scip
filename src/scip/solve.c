@@ -1908,7 +1908,6 @@ SCIP_RETCODE extractSDG(
 }
 
 /** determines symmetry */
-/* @symtodo Add SYM_SPEC as parameter */
 static
 SCIP_RETCODE determineSymmetry(
    SCIP*                 scip,               /**< SCIP instance */
