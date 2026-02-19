@@ -565,7 +565,7 @@ static const char SCIP_DEFAULT_CERTIFICATE_FILENAME[2] = {'-', '\0'}; /**< name 
                                                  *   different */
 /* symmetry settings */
 #define SCIP_DEFAULT_SYM_ENABLED           TRUE /**< is symmetry handling enabled? */
-#define SCIP_DEFAULT_SYM_TRYADDTIMING SYM_TIMING_AFTERPRESOL /**< timing for trying to add symmetry handling methods */ /*@symtodo add explanation of int values */
+#define SCIP_DEFAULT_SYM_TRYADDTIMING SYM_TIMING_AFTERPRESOL /**< timing for trying to add symmetry handling methods (0: before presolinv; 1: after presolving) */
 #define SCIP_DEFAULT_SYM_MAXNGENERATORS    1500 /**< maximum number of symmetry group generators to be computed (-1: unbounded) */
 #define SCIP_DEFAULT_SYM_SYMTYPE SYM_SYMTYPE_PERM /**< type of symmetries to be considered (0: permutation symmetries, 1: signed permutation symmetries) */
 #define SCIP_DEFAULT_SYM_NAUTYMAXLEVEL    10000 /**< terminate symmetry detection using Nauty when depth level of Nauty's search tree exceeds this number
@@ -3008,9 +3008,9 @@ SCIP_RETCODE SCIPsetCreate(
 
    SCIP_CALL( SCIPsetAddIntParam(*set, messagehdlr, blkmem,
          "symmetries/tryaddtiming",
-         "timing for trying to add symmetry handling methods",
+         "timing for trying to add symmetry handling methods (0: before presolving; 1: after presolving)",
          &(*set)->sym_tryaddtiming, FALSE, SCIP_DEFAULT_SYM_TRYADDTIMING,
-         0, 2, NULL, NULL) );    /* @symtodo: add explanation of int values, and check range */
+         0, 1, NULL, NULL) );
 
    SCIP_CALL( SCIPsetAddIntParam(*set, messagehdlr, blkmem,
          "symmetries/maxngenerators",

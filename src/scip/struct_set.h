@@ -684,7 +684,7 @@ struct SCIP_Set
 
    /* symmetry settings */
    SCIP_Bool             sym_enabled;        /**< is symmetry handling enabled? */
-   int                   sym_tryaddtiming;   /**< timing for trying to add symmetry handling methods *//* @symtodo: add explanation of int values */
+   int                   sym_tryaddtiming;   /**< timing for trying to add symmetry handling methods (0: before presolinv; 1: after presolving) */
    int                   sym_maxngenerators; /**< maximum number of symmetry group generators to be computed (-1: unbounded) */
    int                   sym_symtype;        /**< type of symmetries to be considered */
    int                   sym_fixedvartypes;  /**< bitset describing the variable types that shall be fixed by symmetries
