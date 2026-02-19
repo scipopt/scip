@@ -37,6 +37,7 @@
 #include "scip/pub_var.h"
 #include "scip/scip_cut.h"
 #include "scip/scip_mem.h"
+#include "scip/scip_numerics.h"
 #include "scip/scip_var.h"
 #include "scip/sepastore.h"
 #include "scip/set.h"
@@ -47,6 +48,8 @@
 #include "scip/sym.h"
 #include "scip/struct_scip.h"
 #include "symmetry/type_symmetry.h"
+
+#define COMPRESSNVARSLB             25000    /**< lower bound on the number of variables above which compression could be performed */
 
 /** internal method for creating a symmetry handler */
 static
@@ -1452,6 +1455,108 @@ int SCIPsymhdlrGetNChgSides(
    return symhdlr->nchgsides;
 }
 
+/** compresses information about permutations in symmetry information data structure */
+SCIP_RETCODE SCIPsyminfoCompressPermInfo(
+   SCIP*                 scip,               /**< SCIP pointer */
+   SCIP_SYMINFO*         syminfo,            /**< symmetry information */
+   SCIP_VAR**            vars,               /**< vars present at time of symmetry computation */
+   int                   nvars,              /**< number of vars present at time of symmetry computation */
+   SCIP_Real             compressthreshold   /**< if percentage of moved vars is below threshold, compression is done */
+   )
+{
+   SCIP_Real percentagemovedvars;
+   int* labelmovedvars;
+   int* labeltopermvaridx;
+   int nmovedvars = 0;
+   int i;
+   int p;
+
+   assert(scip != NULL);
+   assert(syminfo != NULL);
+   assert(vars != NULL);
+   assert(nvars > 0);
+   assert(SCIPisGE(scip, compressthreshold, 0.0));
+   assert(SCIPisLE(scip, compressthreshold, 1.0));
+   assert(nvars == syminfo->npermvars);
+
+   /* terminate if not enough variables are present */
+   if( nvars < COMPRESSNVARSLB )
+      return SCIP_OKAY;
+
+   /* detect number of moved vars and label moved vars */
+   SCIP_CALL( SCIPallocBufferArray(scip, &labelmovedvars, nvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &labeltopermvaridx, nvars) );
+   for( i = 0; i < nvars; ++i )
+   {
+      labelmovedvars[i] = -1;
+
+      for( p = 0; p < syminfo->nperms; ++p )
+      {
+         if( syminfo->perms[p][i] != i )
+         {
+            labeltopermvaridx[nmovedvars] = i;
+            labelmovedvars[i] = nmovedvars++;
+            break;
+         }
+      }
+   }
+
+   /* check whether compression should be performed */
+   percentagemovedvars = (SCIP_Real) nmovedvars / (SCIP_Real) nvars;
+
+   if( nmovedvars <= 0 || SCIPisGT(scip, percentagemovedvars, compressthreshold) )
+   {
+      SCIPfreeBufferArray(scip, &labeltopermvaridx);
+      SCIPfreeBufferArray(scip, &labelmovedvars);
+
+      return SCIP_OKAY;
+   }
+
+   /* remove variables from permutations that are not affected by any permutation */
+   for( p = 0; p < syminfo->nperms; ++p )
+   {
+      /* iterate over labels and adapt permutation (possibly taking signed permutations into account) */
+      for( i = 0; i < nmovedvars; ++i )
+      {
+         assert(i <= labeltopermvaridx[i]);
+         if( syminfo->perms[p][labeltopermvaridx[i]] >= nvars )
+         {
+            int imgvaridx;
+
+            assert(syminfo->symtype == SYM_SYMTYPE_SIGNPERM);
+
+            imgvaridx = syminfo->perms[p][labeltopermvaridx[i]] - nvars;
+            syminfo->perms[p][i] = labelmovedvars[imgvaridx] + nmovedvars;
+
+            assert(0 <= syminfo->perms[p][i] && syminfo->perms[p][i] < 2 * nmovedvars);
+         }
+         else
+            syminfo->perms[p][i] = labelmovedvars[syminfo->perms[p][labeltopermvaridx[i]]];
+      }
+
+      if( syminfo->symtype == SYM_SYMTYPE_SIGNPERM )
+      {
+         SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &syminfo->perms[p], 2 * nvars, 2 * nmovedvars) );
+      }
+      else
+      {
+         SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &syminfo->perms[p], nvars, nmovedvars) );
+      }
+   }
+
+   /* remove variables from permvars array that are not affected by any symmetry */
+   SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &syminfo->permvars, syminfo->npermvars, nmovedvars) );
+   for (i = 0; i < nmovedvars; ++i)
+      syminfo->permvars[i] = vars[labeltopermvaridx[i]];
+   syminfo->npermvars = nmovedvars;
+
+   SCIPfreeBufferArray(scip, &labeltopermvaridx);
+   SCIPfreeBufferArray(scip, &labelmovedvars);
+
+   return SCIP_OKAY;
+}
+
+
 /** creates and captures symmetry information data structure */
 SCIP_RETCODE SCIPsyminfoCreate(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -1469,7 +1574,16 @@ SCIP_RETCODE SCIPsyminfoCreate(
    (*syminfo)->triedhandlesymmetry = FALSE;
    SCIP_CALL( SCIPhashmapCreate(&(*syminfo)->customsymopnodetypes, SCIPblkmem(scip), 10) );
    (*syminfo)->nopnodetypes = (int) SYM_CONSOPTYPE_LAST;
-
+   (*syminfo)->symtype = SYM_SYMTYPE_PERM;
+   (*syminfo)->perms = NULL;
+   (*syminfo)->nperms = -1;
+   (*syminfo)->permssize = 0;
+   (*syminfo)->permvars = NULL;
+   (*syminfo)->npermvars = 0;
+   (*syminfo)->permvarmap = NULL;
+   (*syminfo)->components = NULL;
+   (*syminfo)->componentbegins = NULL;
+   (*syminfo)->ncomponents = 0;
 
    return SCIP_OKAY;
 }
@@ -1501,6 +1615,22 @@ SCIP_RETCODE SCIPsyminfoFree(
    if( *syminfo == NULL )
       return SCIP_OKAY;
 
+   /* free general symmetry information */
+   if( (*syminfo)->nperms > 0 )
+   {
+      for( i = (*syminfo)->nperms - 1; i >= 0; --i )
+      {
+         SCIPfreeBlockMemoryArray(scip, &(*syminfo)->perms[i],
+            (*syminfo)->symtype == SYM_SYMTYPE_PERM ? (*syminfo)->npermvars : 2 * (*syminfo)->npermvars);
+      }
+      SCIPfreeBlockMemoryArray(scip, &(*syminfo)->perms, (*syminfo)->permssize);
+      SCIPfreeBlockMemoryArray(scip, &(*syminfo)->permvars, (*syminfo)->npermvars);
+      SCIPhashmapFree(&(*syminfo)->permvarmap);
+      SCIPfreeBlockMemoryArray(scip, &(*syminfo)->components, (*syminfo)->nperms);
+      SCIPfreeBlockMemoryArray(scip, &(*syminfo)->componentbegins, (*syminfo)->ncomponents + 1);
+   }
+
+   /* free information about symmetry handling methods */
    assert((*syminfo)->customsymopnodetypes != NULL);
    SCIPhashmapFree(&(*syminfo)->customsymopnodetypes);
 

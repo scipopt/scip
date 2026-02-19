@@ -573,6 +573,7 @@ static const char SCIP_DEFAULT_CERTIFICATE_FILENAME[2] = {'-', '\0'}; /**< name 
 #define SCIP_DEFAULT_SYM_FIXEDVARTYPES        0 /**< bitset describing the variable types that shall be fixed by symmetries
                                                  *   (0: none; 1: binary; 2; integer; 3: binary and integer; 4: continuous;
                                                  *    5: binary and continuous; 6: integer and continuous; 7: all) */
+#define SCIP_DEFAULT_SYM_COMPRESSTHRESHOLD  0.5 /** compress symmetry information if percentage of moved vars is at most the threshold */
 
 /* Writing */
 
@@ -3031,6 +3032,12 @@ SCIP_RETCODE SCIPsetCreate(
          "5: binary and continuous; 6: integer and continuous; 7: all)",
          &(*set)->sym_fixedvartypes, TRUE, SCIP_DEFAULT_SYM_FIXEDVARTYPES,
          0, 7, NULL, NULL) );
+
+   SCIP_CALL( SCIPsetAddRealParam(*set, messagehdlr, blkmem,
+         "symmetries/compressthreshold",
+         "compress symmetry information if percentage of moved vars is at most the threshold",
+         &(*set)->sym_compressthreshold, TRUE, SCIP_DEFAULT_SYM_COMPRESSTHRESHOLD,
+         0.0, 1.0, NULL, NULL) );
 
    /* for symmetry detection tool Nauty, we add further parameters to terminate it early */
    if ( strncmp(SYMsymmetryGetName(), "Nauty", 5) == 0 )

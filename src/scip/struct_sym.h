@@ -138,13 +138,27 @@ struct SCIP_Symhdlr
 /** data structure for storing symmetry information */
 struct SCIP_SymInfo
 {
-   SCIP_SYMCOMP**        symcomps;           /**< components of symmetry group */
+   /* information about symmetry handling methods */
+   SCIP_SYMCOMP**        symcomps;           /**< components of symmetry group handled by some symmetry handler */
    int                   nsymcomps;          /**< number of components in symmetrycomps */
    int                   symcompssize;       /**< size of symcomps array */
    SCIP_Bool             triedhandlesymmetry;/**< Have we already tried to handle symmetries? */
    SCIP_HASHMAP*         customsymopnodetypes; /**< types of operator nodes introduced
                                                 *   by a user for symmetry detection */
    int                   nopnodetypes;       /**< current number of operator node types used for symmetry detection */
+
+   /* general symmetry information */
+   SYM_SYMTYPE           symtype;            /**< type of symmetries */
+   int**                 perms;              /**< (signed) permutations */
+   int                   nperms;             /**< number of permutations */
+   int                   permssize;          /**< size of perms array */
+   SCIP_VAR**            permvars;           /**< array of variables the permutations act on */
+   int                   npermvars;          /**< number of variables stored in permvars */
+   SCIP_HASHMAP*         permvarmap;         /**< map of variables to indicies in permvars array */
+   int*                  components;         /**< array containing the indices of permutations sorted by components */
+   int*                  componentbegins;    /**< array containing in i-th position the first position of
+                                              *   component i in components array */
+   int                   ncomponents;        /**< number of components of symmetry group */
 };
 
 #ifdef __cplusplus

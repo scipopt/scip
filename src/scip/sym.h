@@ -226,6 +226,15 @@ SCIP_RETCODE SCIPcreateSymmetryComponent(
    int                   id                  /**< numerical identifier of symmetry component */
    );
 
+/** compresses information about permutations in symmetry information data structure */
+SCIP_RETCODE SCIPsyminfoCompressPermInfo(
+   SCIP*                 scip,               /**< SCIP pointer */
+   SCIP_SYMINFO*         syminfo,            /**< symmetry information */
+   SCIP_VAR**            vars,               /**< vars present at time of symmetry computation */
+   int                   nvars,              /**< number of vars present at time of symmetry computation */
+   SCIP_Real             compressthreshold   /**< if percentage of moved vars is below threshold, compression is done */
+   );
+
 /** creates and captures symmetry information data structure */
 SCIP_RETCODE SCIPsyminfoCreate(
    SCIP*                 scip,               /**< SCIP data structure */

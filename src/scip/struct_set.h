@@ -690,6 +690,7 @@ struct SCIP_Set
    int                   sym_fixedvartypes;  /**< bitset describing the variable types that shall be fixed by symmetries
                                               *   (0: none; 1: binary; 2; integer; 3: binary and integer; 4: continuous;
                                               *    5: binary and continuous; 6: integer and continuous; 7: all) */
+   SCIP_Real             sym_compressthreshold;/**< compress symmetry information if percentage of moved vars is at most the threshold */
 
    /* Writing */
    SCIP_Bool             write_allconss;     /**< should all constraints be written (including the redundant constraints)? */
