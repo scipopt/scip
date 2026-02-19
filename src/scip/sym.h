@@ -219,7 +219,7 @@ SCIP_RETCODE SCIPaddSymhdlrComponent(
 
 /** creates a symmetry component */
 SCIP_RETCODE SCIPcreateSymmetryComponent(
-   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SYMCOMP**        symcomp,            /**< pointer to symmetry component */
    SCIP_SYMHDLR*         symhdlr,            /**< symmetry handler active on symmetry component */
    SCIP_SYMCOMPDATA*     symcompdata,        /**< symmetry component data */
@@ -228,8 +228,8 @@ SCIP_RETCODE SCIPcreateSymmetryComponent(
 
 /** creates and captures symmetry information data structure */
 SCIP_RETCODE SCIPsyminfoCreate(
-   SCIP_SYMINFO**        syminfo,            /**< pointer to return the created syminfo */
-   BMS_BLKMEM*           blkmem              /**< block memory */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SYMINFO**        syminfo             /**< pointer to return the created syminfo */
    );
 
 /** returns the symmetry information data structure */

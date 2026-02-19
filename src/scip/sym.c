@@ -1275,7 +1275,7 @@ SCIP_DECL_SORTPTRCOMP(SCIPsymhdlrCompName)
 
 /** creates a symmetry component */
 SCIP_RETCODE SCIPcreateSymmetryComponent(
-   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SYMCOMP**        symcomp,            /**< pointer to symmetry component */
    SCIP_SYMHDLR*         symhdlr,            /**< symmetry handler active on symmetry component */
    SCIP_SYMCOMPDATA*     symcompdata,        /**< symmetry component data */
@@ -1284,18 +1284,18 @@ SCIP_RETCODE SCIPcreateSymmetryComponent(
 {
    int len = 9;
 
-   assert(blkmem != NULL);
+   assert(scip != NULL);
    assert(symcomp != NULL);
    assert(symhdlr != NULL);
    assert(id >= 0);
 
-   SCIP_ALLOC( BMSallocBlockMemory(blkmem, symcomp) );
+   SCIP_CALL( SCIPallocBlockMemory(scip, symcomp) );
    (*symcomp)->symhdlr = symhdlr;
    (*symcomp)->symcompdata = symcompdata;
 
    if( id > 0 )
       len = 8 + (int) log10(id) + 1;
-   SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &(*symcomp)->name, len) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(*symcomp)->name, len) );
    (void) snprintf((*symcomp)->name, SCIP_MAXSTRLEN, "symcomp%d", id);
 
    return SCIP_OKAY;
@@ -1454,20 +1454,20 @@ int SCIPsymhdlrGetNChgSides(
 
 /** creates and captures symmetry information data structure */
 SCIP_RETCODE SCIPsyminfoCreate(
-   SCIP_SYMINFO**        syminfo,            /**< pointer to return the created syminfo */
-   BMS_BLKMEM*           blkmem              /**< block memory */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SYMINFO**        syminfo             /**< pointer to return the created syminfo */
    )
 {
+   assert(scip != NULL);
    assert(syminfo != NULL);
-   assert(blkmem != NULL);
 
-   SCIP_ALLOC( BMSallocBlockMemory(blkmem, syminfo) );
+   SCIP_CALL( SCIPallocBlockMemory(scip, syminfo) );
 
    (*syminfo)->symcomps = NULL;
    (*syminfo)->nsymcomps = -1;
    (*syminfo)->symcompssize = 0;
    (*syminfo)->triedhandlesymmetry = FALSE;
-   SCIP_CALL( SCIPhashmapCreate(&(*syminfo)->customsymopnodetypes, blkmem, 10) );
+   SCIP_CALL( SCIPhashmapCreate(&(*syminfo)->customsymopnodetypes, SCIPblkmem(scip), 10) );
    (*syminfo)->nopnodetypes = (int) SYM_CONSOPTYPE_LAST;
 
 
@@ -1492,7 +1492,6 @@ SCIP_RETCODE SCIPsyminfoFree(
    )
 {
    SCIP_SYMCOMP* symcomp;
-   BMS_BLKMEM* blkmem;
    int i;
 
    assert(scip != NULL);
@@ -1502,19 +1501,17 @@ SCIP_RETCODE SCIPsyminfoFree(
    if( *syminfo == NULL )
       return SCIP_OKAY;
 
-   blkmem = SCIPblkmem(scip);
-
    assert((*syminfo)->customsymopnodetypes != NULL);
    SCIPhashmapFree(&(*syminfo)->customsymopnodetypes);
 
    for( i = (*syminfo)->nsymcomps - 1; i >= 0; --i )
    {
       symcomp = (*syminfo)->symcomps[i];
-      BMSfreeBlockMemoryArray(blkmem, &symcomp->name, strlen(symcomp->name)+1);
-      BMSfreeBlockMemory(blkmem, &symcomp);
+      SCIPfreeBlockMemoryArray(scip, &symcomp->name, strlen(symcomp->name)+1);
+      SCIPfreeBlockMemory(scip, &symcomp);
    }
-   BMSfreeBlockMemoryArrayNull(blkmem, &(*syminfo)->symcomps, (*syminfo)->symcompssize);
-   BMSfreeBlockMemory(blkmem, syminfo);
+   SCIPfreeBlockMemoryArrayNull(scip, &(*syminfo)->symcomps, (*syminfo)->symcompssize);
+   SCIPfreeBlockMemory(scip, syminfo);
    *syminfo = NULL;
 
    return SCIP_OKAY;

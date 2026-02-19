@@ -266,7 +266,7 @@ SCIP_RETCODE doScipCreate(
    SCIP_CALL( SCIPclockCreate(&(*scip)->totaltime, SCIP_CLOCKTYPE_DEFAULT) );
    SCIP_CALL( SCIPsyncstoreCreate( &(*scip)->syncstore ) );
    SCIP_CALL( SCIPiisCreate(&(*scip)->iis, (*scip)->set, SCIPblkmem(*scip)) );
-   SCIP_CALL( SCIPsyminfoCreate(&(*scip)->syminfo, SCIPblkmem(*scip)) );
+   SCIP_CALL( SCIPsyminfoCreate(*scip, &(*scip)->syminfo) );
 
    /* include additional core functionality */
    SCIP_CALL( SCIPincludeCorePlugins(*scip) );
