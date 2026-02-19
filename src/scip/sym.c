@@ -41,6 +41,7 @@
 #include "scip/sepastore.h"
 #include "scip/set.h"
 #include "scip/struct_cutpool.h"
+#include "scip/struct_mem.h"
 #include "scip/struct_stat.h"
 #include "scip/struct_sym.h"
 #include "scip/sym.h"
@@ -349,10 +350,10 @@ SCIP_RETCODE SCIPsymhdlrFree(
    SCIPclockFree(&(*symhdlr)->presoltime);
    SCIPclockFree(&(*symhdlr)->setuptime);
 
-   SCIPfreeBlockMemoryArray(set->scip, &(*symhdlr)->name, strlen((*symhdlr)->name) + 1);
-   SCIPfreeBlockMemoryArray(set->scip, &(*symhdlr)->desc, strlen((*symhdlr)->desc) + 1);
+   BMSfreeBlockMemoryArray(set->scip->mem->setmem, &(*symhdlr)->name, strlen((*symhdlr)->name) + 1);
+   BMSfreeBlockMemoryArray(set->scip->mem->setmem, &(*symhdlr)->desc, strlen((*symhdlr)->desc) + 1);
    SCIPfreeBlockMemoryArrayNull(set->scip, &(*symhdlr)->symcomps, (*symhdlr)->symcompssize);
-   SCIPfreeBlockMemory(set->scip, symhdlr);
+   BMSfreeBlockMemory(set->scip->mem->setmem, symhdlr);
 
    return SCIP_OKAY;
 }
