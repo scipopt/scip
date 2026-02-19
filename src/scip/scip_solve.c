@@ -1428,22 +1428,57 @@ SCIP_RETCODE presolve(
          {
             int nnewconss = 0;
             int nchgbds = 0;
+            int npresolfixedvarsold;
+            int npresolaggrvarsold;
+            int npresolchgvartypesold;
+            int npresolchgbdsold;
+            int npresoladdholesold;
+            int npresoldelconssold;
+            int npresoladdconssold;
+            int npresolupgdconssold;
+            int npresolchgcoefsold;
+            int npresolchgsidesold;
 
             SCIP_CALL( SCIPtryAddSymmetryHandlingMethods(scip, &nnewconss, &nchgbds) );
 
             scip->stat->npresoladdconss += nnewconss;
             scip->stat->npresolchgbds += nchgbds;
 
-            /* call presolving methods of symmetry handlers, use timing SCIP_PRESOLTIMING_MAX to guarantee that they are
-             * presolved at least once
-             */
+            /* Call presolving methods of symmetry handlers, use timing SCIP_PRESOLTIMING_MAX to guarantee that they are
+             * presolved at least once. Also keep track of numbers of previous presolving reductions to see whether a
+             * new round of presolving shall be triggered. */
+            npresolfixedvarsold = scip->stat->npresolfixedvars;
+            npresolaggrvarsold = scip->stat->npresolaggrvars;
+            npresolchgvartypesold = scip->stat->npresolchgvartypes;
+            npresolchgbdsold = scip->stat->npresolchgbds;
+            npresoladdholesold = scip->stat->npresoladdholes;
+            npresoldelconssold = scip->stat->npresoldelconss;
+            npresoladdconssold = scip->stat->npresoladdconss;
+            npresolupgdconssold = scip->stat->npresolupgdconss;
+            npresolchgcoefsold = scip->stat->npresolchgcoefs;
+            npresolchgsidesold = scip->stat->npresolchgsides;
+
             SCIP_CALL( SCIPpresolveSymmetryHandlingMethods(scip, SCIP_PRESOLTIMING_MAX, scip->stat->npresolrounds,
                   &scip->stat->npresolfixedvars, &scip->stat->npresolaggrvars, &scip->stat->npresolchgvartypes,
                   &scip->stat->npresolchgbds, &scip->stat->npresoladdholes, &scip->stat->npresoldelconss,
                   &scip->stat->npresoladdconss, &scip->stat->npresolupgdconss, &scip->stat->npresolchgcoefs,
                   &scip->stat->npresolchgsides, unbounded, infeasible) );
 
-            /* @symtodo shall we perform var deletions, clean up of clique table, and possibly trigger another presolve round? */
+            /* continue presolving in case symmetry presolving methods found a reduction */
+            if( !*unbounded && !*infeasible )
+            {
+               if( npresolfixedvarsold < scip->stat->npresolfixedvars
+                  || npresolaggrvarsold < scip->stat->npresolaggrvars
+                  || npresolchgvartypesold < scip->stat->npresolchgvartypes
+                  || npresolchgbdsold < scip->stat->npresolchgbds
+                  || npresoladdholesold < scip->stat->npresoladdholes
+                  || npresoldelconssold < scip->stat->npresoldelconss
+                  || npresoladdconssold < scip->stat->npresoladdconss
+                  || npresolupgdconssold < scip->stat->npresolupgdconss
+                  || npresolchgcoefsold < scip->stat->npresolchgcoefs
+                  || npresolchgsidesold < scip->stat->npresolchgsides )
+                  finished = FALSE;
+            }
          }
       }
    }
