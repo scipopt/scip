@@ -1474,7 +1474,7 @@ SCIP_RETCODE SCIPsyminfoCreate(
    return SCIP_OKAY;
 }
 
-/** releases symmetry information data structure */
+/** returns symmetry information data structure */
 SCIP_SYMINFO* SCIPgetSyminfo(
    SCIP*                 scip                /**< SCIP data structure */
    )
