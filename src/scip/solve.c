@@ -1912,6 +1912,7 @@ SCIP_RETCODE extractSDG(
 static
 SCIP_RETCODE determineSymmetry(
    SCIP*                 scip,               /**< SCIP instance */
+   SYM_GRAPH**           graph,              /**< pointer to store symmetry detection graph */
    SYM_SYMTYPE           symtype,            /**< type of symmetries to be computed */
    SYM_SPEC              fixedvartypes,      /**< specification of variable types that shall be fixed by symmetry */
    int***                perms,              /**< pointer to store (signed) permutations */
@@ -1921,14 +1922,15 @@ SCIP_RETCODE determineSymmetry(
    int*                  npermvars           /**< pointer to store number of variables in permvars */
    )
 { /*lint --e{641}*/
-   SYM_GRAPH* graph;
-   SCIP_Bool success;
+   SCIP_Bool extractsuccess = TRUE;
+   SCIP_Bool success = TRUE;
    SCIP_Real log10groupsize;
    SCIP_Real symcodetime = 0.0;
    int maxgenerators;
    SCIP_Bool skipsymmetry;
 
    assert(scip != NULL);
+   assert(graph != NULL);
    assert(perms != NULL);
    assert(nperms != NULL);
    assert(permssize != NULL);
@@ -1937,6 +1939,7 @@ SCIP_RETCODE determineSymmetry(
 
    *perms = NULL;
    *nperms = 0;
+   *graph = NULL;
 
    /* do not compute symmetry if potentially conflicting methods are enabled */
    if( SCIPisReoptEnabled(scip) || SCIPgetNActiveBenders(scip) > 0 || SCIPgetNActivePricers(scip) > 0 )
@@ -1985,29 +1988,33 @@ SCIP_RETCODE determineSymmetry(
    maxgenerators = MIN(maxgenerators, MAXGENNUMERATOR / *npermvars);
 
    /* get symmetry detection graph */
-   SCIP_CALL( extractSDG(scip, &graph, symtype, fixedvartypes, &success) );
+   SCIP_CALL( extractSDG(scip, graph, symtype, fixedvartypes, &extractsuccess) );
 
    /* return if not successful */
-   if( !success )
+   if( !extractsuccess )
    {
       SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "   (%.1fs) could not compute symmetry\n",
          SCIPgetSolvingTime(scip));
+
+      success = FALSE;
       goto FREEGRAPH;
    }
 
    /* terminate early in case all variables are different */
-   if( (symtype == SYM_SYMTYPE_PERM && SCIPgetSymgraphNVarcolors(graph) == *npermvars)
-      || (symtype == SYM_SYMTYPE_SIGNPERM && SCIPgetSymgraphNVarcolors(graph) == 2 * (*npermvars)) )
+   if( (symtype == SYM_SYMTYPE_PERM && SCIPgetSymgraphNVarcolors(*graph) == *npermvars)
+      || (symtype == SYM_SYMTYPE_SIGNPERM && SCIPgetSymgraphNVarcolors(*graph) == 2 * (*npermvars)) )
    {
       SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "   (%.1fs) no symmetry present (symcode time: %.2f)\n",
          SCIPgetSolvingTime(scip), symcodetime);
+
+      success = FALSE;
       goto FREEGRAPH;
    }
 
    /*
     * actually compute symmetries
     */
-   SCIP_CALL( SYMcomputeSymmetryGenerators(scip, maxgenerators, graph, nperms, permssize,
+   SCIP_CALL( SYMcomputeSymmetryGenerators(scip, maxgenerators, *graph, nperms, permssize,
          perms, &log10groupsize, &symcodetime) );
 
    /* return if no symmetries found */
@@ -2015,6 +2022,8 @@ SCIP_RETCODE determineSymmetry(
    {
       SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "   (%.1fs) no symmetry present (symcode time: %.2f)\n",
          SCIPgetSolvingTime(scip), symcodetime);
+
+      success = FALSE;
       goto FREEGRAPH;
    }
 
@@ -2034,7 +2043,11 @@ SCIP_RETCODE determineSymmetry(
    SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, ") (symcode time: %.2f)\n", symcodetime);
 
  FREEGRAPH:
-   SCIP_CALL( SCIPfreeSymgraph(scip, &graph) );
+   if( !success )
+   {
+      SCIP_CALL( SCIPfreeSymgraph(scip, graph) );
+      *graph = NULL;
+   }
 
    return SCIP_OKAY;
 }
@@ -2218,6 +2231,7 @@ SCIP_RETCODE SCIPtryAddSymmetryHandlingMethods(
    SCIP_SYMHDLR** symhdlrs;
    SCIP_HASHMAP* permvarmap;
    SYM_SYMTYPE symtype;
+   SYM_GRAPH* graph = NULL;
    SCIP_VAR** permvars;
    SCIP_Real* vardomcenter = NULL;
    int** allperms;
@@ -2262,11 +2276,13 @@ SCIP_RETCODE SCIPtryAddSymmetryHandlingMethods(
    assert(symhdlrs != NULL);
    symtype = scip->set->sym_symtype;
 
-   SCIP_CALL( determineSymmetry(scip, symtype, scip->set->sym_fixedvartypes,
+   SCIP_CALL( determineSymmetry(scip, &graph, symtype, scip->set->sym_fixedvartypes,
          &allperms, &nallperms, &allpermssize, &permvars, &npermvars) );
 
    if( nallperms == 0 )
    {
+      assert(graph == NULL);
+
       scip->syminfo->nsymcomps = 0;
       return SCIP_OKAY;
    }
@@ -2334,9 +2350,8 @@ SCIP_RETCODE SCIPtryAddSymmetryHandlingMethods(
 
       for( i = 0; i < nsymhdlrs && !success; ++i )
       {
-         /* @symtodo provide the symmetry detection graph */
          SCIP_CALL( SCIPsymhdlrTryAdd(symhdlrs[i], scip->set, perms, nperms, symtype, permvars, npermvars,
-               vardomcenter, permvarmap, NULL, c, &symcompdata, &ntmpconss, &ntmpchgbds, &success) );
+               vardomcenter, permvarmap, graph, c, &symcompdata, &ntmpconss, &ntmpchgbds, &success) );
          *naddedconss += ntmpconss;
          *nchgbds += ntmpchgbds;
          symhdlrs[i]->naddconss += ntmpconss;
@@ -2354,6 +2369,7 @@ SCIP_RETCODE SCIPtryAddSymmetryHandlingMethods(
 
    SCIPfreeBufferArrayNull(scip, &vardomcenter);
    SCIPhashmapFree(&permvarmap);
+   SCIP_CALL( SCIPfreeSymgraph(scip, &graph) );
 
    if( ncomponents > 1 )
    {
