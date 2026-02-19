@@ -1603,7 +1603,7 @@ SCIP_RETCODE SCIPincludeSymhdlrRowCol(
    SCIP_CALL( SCIPincludeSymhdlrBasic(scip, SYM_NAME, SYM_DESC, SYM_PRIORITY, SYM_PROPPRIORITY, 0, -1,
          SYM_PROPFREQ, -1, SYM_DELAYPROP, FALSE, 1.0, 1, SYM_PROPTIMING, SCIP_PRESOLTIMING_FAST,
          symhdlrTryaddRowCol, NULL, symhdlrFreeRowCol, NULL, symhdlrExitRowCol,
-         NULL, symhdlrExitsolRowCol, NULL, NULL, NULL, NULL, symhdlrPropRowCol,
+         NULL, symhdlrExitsolRowCol, NULL, NULL, NULL, symhdlrPropRowCol,
          NULL, symhdlrPresolRowCol, symhdlrPrintRowCol, symhdlrdata) );
 
    /* include shadow tree event handler if it is not included yet */

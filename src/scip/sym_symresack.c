@@ -212,7 +212,7 @@ SCIP_RETCODE SCIPincludeSymhdlrSymresack(
          SYM_PRIORITY, SYM_PROPPRIORITY, 1, SYM_PRESOLPRIORITY, SYM_PROPFREQ, 1, FALSE, FALSE, 1.0,
          -1, SCIP_PROPTIMING_BEFORELP, SCIP_PRESOLTIMING_FAST,
          symhdlrTryaddSymresack, NULL, symhdlrFreeSymresack, NULL, symhdlrExitSymresack,
-         NULL, NULL, NULL, NULL, symhdlrSepaLPSymresack, symhdlrSepaSolSymresack, symhdlrPropSymresack,
+         NULL, NULL, NULL, symhdlrSepaLPSymresack, symhdlrSepaSolSymresack, symhdlrPropSymresack,
          NULL, symhdlrPresolSymresack, NULL, symhdlrdata) );
 
    return SCIP_OKAY;

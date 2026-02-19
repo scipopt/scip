@@ -77,7 +77,6 @@ SCIP_RETCODE doSymhdlrCreate(
    SCIP_DECL_SYMHDLREXIT ((*symexit)),       /**< deinitialization method of symmetry handler */
    SCIP_DECL_SYMHDLRINITSOL((*syminitsol)),  /**< solving process initialization method of symmetry handler */
    SCIP_DECL_SYMHDLREXITSOL((*symexitsol)),  /**< solving process deinitialization method of symmetry handler */
-   SCIP_DECL_SYMHDLRDELETE((*symdelete)),    /**< destructor of symmetry component data */
    SCIP_DECL_SYMHDLRTRANS((*symtrans)),      /**< transformation method of symmetry hanlder */
    SCIP_DECL_SYMHDLRSEPALP((*symsepalp)),    /**< separator for LP solutions */
    SCIP_DECL_SYMHDLRSEPASOL((*symsepasol)),  /**< separator for arbitrary primal solutions */
@@ -122,7 +121,6 @@ SCIP_RETCODE doSymhdlrCreate(
    (*symhdlr)->symexit = symexit;
    (*symhdlr)->syminitsol = syminitsol;
    (*symhdlr)->symexitsol = symexitsol;
-   (*symhdlr)->symdelete = symdelete;
    (*symhdlr)->symtrans = symtrans;
    (*symhdlr)->symsepalp = symsepalp;
    (*symhdlr)->symsepasol = symsepasol;
@@ -278,7 +276,6 @@ SCIP_RETCODE SCIPsymhdlrCreate(
    SCIP_DECL_SYMHDLREXIT ((*symexit)),       /**< deinitialization method of symmetry handler */
    SCIP_DECL_SYMHDLRINITSOL((*syminitsol)),  /**< solving process initialization method of symmetry handler */
    SCIP_DECL_SYMHDLREXITSOL((*symexitsol)),  /**< solving process deinitialization method of symmetry handler */
-   SCIP_DECL_SYMHDLRDELETE((*symdelete)),    /**< destructor of symmetry component data */
    SCIP_DECL_SYMHDLRTRANS((*symtrans)),      /**< transformation method of symmetry hanlder */
    SCIP_DECL_SYMHDLRSEPALP((*symsepalp)),    /**< separator for LP solutions */
    SCIP_DECL_SYMHDLRSEPASOL((*symsepasol)),  /**< separator for arbitrary primal solutions */
@@ -297,7 +294,7 @@ SCIP_RETCODE SCIPsymhdlrCreate(
 
    SCIP_CALL_FINALLY( doSymhdlrCreate(symhdlr, set, messagehdlr, blkmem, name, desc, priority, proppriority,
          sepapriority, presolpriority, propfreq, sepafreq, delayprop, delaysepa, maxbounddist, maxprerounds, proptiming,
-         presoltiming, symtryadd, symcopy, symfree, syminit, symexit, syminitsol, symexitsol, symdelete, symtrans,
+         presoltiming, symtryadd, symcopy, symfree, syminit, symexit, syminitsol, symexitsol, symtrans,
          symsepalp, symsepasol, symprop, symresprop, sympresol, symprint, symhdlrdata),
          (void) SCIPsymhdlrFree(symhdlr, set) );
 
@@ -458,31 +455,6 @@ SCIP_RETCODE SCIPsymhdlrExitsol(
       SCIPclockStart(symhdlr->setuptime, set);
 
       SCIP_CALL( symhdlr->symexitsol(set->scip, symhdlr, symhdlr->symcomps, symhdlr->nsymcomps, restart) );
-
-      /* stop timing */
-      SCIPclockStop(symhdlr->setuptime, set);
-   }
-
-   return SCIP_OKAY;
-}
-
-/** calls destructore method of symmetry component data */
-SCIP_RETCODE SCIPsymhdlrDelete(
-   SCIP_SYMHDLR*         symhdlr,            /**< symmetry handler */
-   SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_SYMCOMP**        symcomp            /**< pointer to symmetry component */
-   )
-{
-   assert(symhdlr != NULL);
-   assert(set != NULL);
-
-   /* call destructor method of symmetry component data */
-   if( symhdlr->symdelete != NULL )
-   {
-      /* start timing */
-      SCIPclockStart(symhdlr->setuptime, set);
-
-      SCIP_CALL( symhdlr->symdelete(set->scip, symhdlr, symcomp) );
 
       /* stop timing */
       SCIPclockStop(symhdlr->setuptime, set);
@@ -659,7 +631,6 @@ SCIP_RETCODE SCIPsymhdlrProp(
          oldnprobdomchgs = stat->nprobboundchgs + stat->nprobholechgs;
 
          /* start timing */
-         /* @symtodo ensure that symmetry handlers can disable themselves when they are in strong branching */
          if( instrongbranching )
             SCIPclockStart(symhdlr->sbproptime, set);
          else
@@ -1539,7 +1510,6 @@ SCIP_RETCODE SCIPsyminfoFree(
    for( i = (*syminfo)->nsymcomps - 1; i >= 0; --i )
    {
       symcomp = (*syminfo)->symcomps[i];
-      SCIP_CALL( SCIPsymhdlrDelete(symcomp->symhdlr, scip->set, &symcomp) );
       BMSfreeBlockMemoryArray(blkmem, &symcomp->name, strlen(symcomp->name)+1);
       BMSfreeBlockMemory(blkmem, &symcomp);
    }

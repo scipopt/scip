@@ -145,16 +145,6 @@ typedef struct SCIP_SymInfo SCIP_SYMINFO;    /**< data structure for storing sym
  */
 #define SCIP_DECL_SYMHDLREXITSOL(x) SCIP_RETCODE x (SCIP* scip, SCIP_SYMHDLR* symhdlr, SCIP_SYMCOMP** symcomps, int nsymcomps, SCIP_Bool restart)
 
-/* @symtodo do we need this method? */
-/** frees specific symmetry component data
- *
- *  input:
- *  - scip            : SCIP main data structure
- *  - symhdlr         : the symmetry handler itself
- *  - symcomp         : pointer to symmetry component to free
- */
-#define SCIP_DECL_SYMHDLRDELETE(x) SCIP_RETCODE x (SCIP* scip, SCIP_SYMHDLR* symhdlr, SCIP_SYMCOMP** symcomp)
-
 /** transforms data of symmetry handler into data belonging to the transformed problem
  *
  *  input:

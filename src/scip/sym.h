@@ -70,7 +70,6 @@ SCIP_RETCODE SCIPsymhdlrCreate(
    SCIP_DECL_SYMHDLREXIT ((*symexit)),       /**< deinitialization method of symmetry handler */
    SCIP_DECL_SYMHDLRINITSOL((*syminitsol)),  /**< solving process initialization method of symmetry handler */
    SCIP_DECL_SYMHDLREXITSOL((*symexitsol)),  /**< solving process deinitialization method of symmetry handler */
-   SCIP_DECL_SYMHDLRDELETE((*symdelete)),    /**< destructor of symmetry component data */
    SCIP_DECL_SYMHDLRTRANS((*symtrans)),      /**< transformation method of symmetry hanlder */
    SCIP_DECL_SYMHDLRSEPALP((*symsepalp)),    /**< separator for LP solutions */
    SCIP_DECL_SYMHDLRSEPASOL((*symsepasol)),  /**< separator for arbitrary primal solutions */
@@ -116,13 +115,6 @@ SCIP_RETCODE SCIPsymhdlrExitsol(
    SCIP_SYMHDLR*         symhdlr,            /**< symmetry handler */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_Bool             restart             /**< was this exit solve call triggered by a restart? */
-   );
-
-/** calls destructore method of symmetry component data */
-SCIP_RETCODE SCIPsymhdlrDelete(
-   SCIP_SYMHDLR*         symhdlr,            /**< symmetry handler */
-   SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_SYMCOMP**        symcomp             /**< pointer to symmetry component */
    );
 
 /** executes presolving method of symmetry handler */
