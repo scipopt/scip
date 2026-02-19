@@ -2456,13 +2456,19 @@ SCIP_Real getCheckpointEstimation(
    currentweight = treedata->weight;
    currentnodes = treedata->nnodes;
 
-   weightdelta = currentweight - eventhdlrdata->pretreeweight;
+   /* tree is complete */
+   if( currentweight >= 1.0 )
+      return (SCIP_Real)currentnodes;
 
-   /* need positive progress in tree weight */
+   weightdelta = currentweight - eventhdlrdata->pretreeweight;
+   assert(weightdelta >= 0.0);
+
+   /* increase is absent */
    if( weightdelta <= 0.0 )
       return -1.0;
 
    nodedelta = currentnodes - eventhdlrdata->prenodes;
+   assert(nodedelta >= 0);
 
    /* estimate total nodes when weight linearly approaches 1.0 */
    return (SCIP_Real)currentnodes + (SCIP_Real)(nodedelta * ((1.0 - currentweight) / weightdelta));
@@ -2793,7 +2799,7 @@ SCIP_DECL_EVENTEXEC(eventExecEstim)
       || ( SCIPnodeGetType(SCIPeventGetNode(event)) == SCIP_NODETYPE_DEADEND
       && !SCIPwasNodeLastBranchParent(scip, SCIPeventGetNode(event)) ) ) ) )
    {
-      SCIP_NODE* eventnode;
+      SCIP_NODE* eventnode = SCIPeventGetNode(event);
       int nchildren = 0;
 
       if( eventtype == SCIP_EVENTTYPE_NODEBRANCHED )
@@ -2811,10 +2817,10 @@ SCIP_DECL_EVENTEXEC(eventExecEstim)
       }
       else
       {
-         /* hit checkpoint for next estimation */
+         /* hit checkpoint for next estimation with significant node weight */
          if( eventhdlrdata->restartpolicyparam == RESTARTPOLICY_CHAR_ESTIMATION
             && eventhdlrdata->estimmethod == ESTIMMETHOD_CHECKPOINT
-            && !eventhdlrdata->preincrease )
+            && !eventhdlrdata->preincrease && SCIPnodeGetDepth(eventnode) < 50 )
          {
             eventhdlrdata->pretreeweight = eventhdlrdata->treedata->weight;
             eventhdlrdata->prenodes = eventhdlrdata->treedata->nnodes;
@@ -2822,7 +2828,6 @@ SCIP_DECL_EVENTEXEC(eventExecEstim)
          }
       }
 
-      eventnode = SCIPeventGetNode(event);
       SCIP_CALL( updateTreeData(scip, treedata, eventnode, nchildren) );
       SCIP_CALL( updateTreeProfile(scip, eventhdlrdata->treeprofile, eventnode) );
 
