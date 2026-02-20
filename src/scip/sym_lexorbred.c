@@ -59,7 +59,7 @@
 #include "scip/type_set.h"
 
 /* symmetry handler properties */
-#define SYM_NAME            "sym_lexorbred"
+#define SYM_NAME           "lexorbred"
 #define SYM_DESC            "symmetry handler for lexicographic reduction and orbital reduction"
 #define SYM_PRIORITY           -300000       /**< priority of try-add function*/
 #define SYM_PROPPRIORITY       -100000       /**< priority of propagation method */

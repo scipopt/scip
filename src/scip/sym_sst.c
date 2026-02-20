@@ -51,7 +51,7 @@
 #include "scip/type_implics.h"
 
 /* symmetry handler properties */
-#define SYM_NAME            "sym_sst"
+#define SYM_NAME                 "sst"
 #define SYM_DESC            "symmetry handler for SST cuts"
 #define SYM_PRIORITY           -200000       /**< priority of try-add function */
 #define SYM_PRESOLPRIORITY    -1000000       /**< priority of presolving method */
