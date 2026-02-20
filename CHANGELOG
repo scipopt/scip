@@ -41,6 +41,11 @@ Interface changes
 - `heuristics/feasjump/randprobgood`: probability of random selection from good variables
 - `heuristics/feasjump/randprobviol`: probability of random selection from violated constraint
 - `heuristics/feasjump/callbackeffort`: effort between callbacks
+- `estimation/checkpoint/depthlim`: depth below which checkpoint is updated
+
+### Changed parameters
+
+- `estimation/method`: use default setting `p` to apply linear check(p)oint extrapolation in tree size estimation
 
 ### Data structures
 
