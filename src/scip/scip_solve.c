@@ -98,6 +98,7 @@
 #include "scip/scip_sol.h"
 #include "scip/scip_solve.h"
 #include "scip/scip_solvingstats.h"
+#include "scip/scip_sym.h"
 #include "scip/scip_timing.h"
 #include "scip/scip_tree.h"
 #include "scip/scip_var.h"
@@ -287,6 +288,7 @@ SCIP_RETCODE SCIPtransformProb(
    SCIP_CALL( SCIPrelaxationCreate(&scip->relaxation, scip->mem->probmem, scip->set, scip->stat, scip->primal, scip->tree) );
    SCIP_CALL( SCIPconflictCreate(&scip->conflict, scip->mem->probmem, scip->set) );
    SCIP_CALL( SCIPcliquetableCreate(&scip->cliquetable, scip->set, scip->mem->probmem) );
+   SCIP_CALL( SCIPsyminfoCreate(scip, &scip->syminfo) );
 
    /* copy problem in solve memory */
    SCIP_CALL( SCIPprobTransform(scip->origprob, scip->mem->probmem, scip->set, scip->stat, scip->primal, scip->tree,
@@ -2204,6 +2206,7 @@ SCIP_RETCODE freeTransform(
    }
 
    /* free transformed problem data structures */
+   SCIP_CALL( SCIPsyminfoFree(scip, &scip->syminfo) );
    SCIP_CALL( SCIPprobFree(&scip->transprob, scip->messagehdlr, scip->mem->probmem, scip->set, scip->stat, scip->eventqueue, scip->lp) );
    SCIP_CALL( SCIPcliquetableFree(&scip->cliquetable, scip->mem->probmem) );
    SCIP_CALL( SCIPconflictFree(&scip->conflict, scip->mem->probmem) );

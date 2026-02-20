@@ -53,6 +53,71 @@
 
 #define COMPRESSNVARSLB             25000    /**< lower bound on the number of variables above which compression could be performed */
 
+/** initializes statistics and data of symmetry handler*/
+static
+void initSymhdlr(
+   SCIP_SYMHDLR*         symhdlr,            /**< pointer to symmetry handler data structure */
+   SCIP_Bool             ininitphase         /**< whether the method is called during SCIP's initialization phase */
+   )
+{
+   assert(symhdlr != NULL);
+
+   if( !symhdlr->initialized )
+   {
+      SCIPclockReset(symhdlr->setuptime);
+      SCIPclockReset(symhdlr->presoltime);
+      SCIPclockReset(symhdlr->sepatime);
+      SCIPclockReset(symhdlr->proptime);
+      SCIPclockReset(symhdlr->sbproptime);
+      SCIPclockReset(symhdlr->resproptime);
+
+      symhdlr->initialized = ininitphase;
+      symhdlr->nsepacalls = 0;
+      symhdlr->npropcalls = 0;
+      symhdlr->nrespropcalls = 0;
+      symhdlr->ncutoffs = 0;
+      symhdlr->ncutsfound = 0;
+      symhdlr->ncutsapplied = 0;
+      symhdlr->nconssfound = 0;
+      symhdlr->ndomredsfound = 0;
+
+      symhdlr->lastnfixedvars = 0;
+      symhdlr->lastnaggrvars = 0;
+      symhdlr->lastnchgvartypes = 0;
+      symhdlr->lastnchgbds = 0;
+      symhdlr->lastnaddholes = 0;
+      symhdlr->lastndelconss = 0;
+      symhdlr->lastnaddconss = 0;
+      symhdlr->lastnupgdconss = 0;
+      symhdlr->lastnchgcoefs = 0;
+      symhdlr->lastnchgsides = 0;
+      symhdlr->nfixedvars = 0;
+      symhdlr->naggrvars = 0;
+      symhdlr->nchgvartypes = 0;
+      symhdlr->nchgbds = 0;
+      symhdlr->naddholes = 0;
+      symhdlr->ndelconss = 0;
+      symhdlr->naddconss = 0;
+      symhdlr->nupgdconss = 0;
+      symhdlr->nchgcoefs = 0;
+      symhdlr->nchgsides = 0;
+      symhdlr->npresolcalls = 0;
+      symhdlr->lastsepanode = -1;
+      symhdlr->nsepacallsatnode = 0;
+      symhdlr->nseparootcalls = 0;
+      symhdlr->ncutsfoundatnode = 0;
+      symhdlr->nsepacutoffs = 0;
+      symhdlr->nsepadomredsfound = 0;
+      symhdlr->sepalpwasdelayed = FALSE;
+      symhdlr->sepasolwasdelayed = FALSE;
+      symhdlr->propwasdelayed = FALSE;
+
+      symhdlr->symcomps = NULL;
+      symhdlr->nsymcomps = 0;
+      symhdlr->symcompssize = 0;
+   }
+}
+
 /** internal method for creating a symmetry handler */
 static
 SCIP_RETCODE doSymhdlrCreate(
@@ -136,50 +201,7 @@ SCIP_RETCODE doSymhdlrCreate(
    SCIP_CALL( SCIPclockCreate(&(*symhdlr)->sbproptime, SCIP_CLOCKTYPE_DEFAULT) );
    SCIP_CALL( SCIPclockCreate(&(*symhdlr)->resproptime, SCIP_CLOCKTYPE_DEFAULT) );
 
-   (*symhdlr)->initialized = FALSE;
-   (*symhdlr)->nsepacalls = 0;
-   (*symhdlr)->npropcalls = 0;
-   (*symhdlr)->nrespropcalls = 0;
-   (*symhdlr)->ncutoffs = 0;
-   (*symhdlr)->ncutsfound = 0;
-   (*symhdlr)->ncutsapplied = 0;
-   (*symhdlr)->nconssfound = 0;
-   (*symhdlr)->ndomredsfound = 0;
-
-   (*symhdlr)->lastnfixedvars = 0;
-   (*symhdlr)->lastnaggrvars = 0;
-   (*symhdlr)->lastnchgvartypes = 0;
-   (*symhdlr)->lastnchgbds = 0;
-   (*symhdlr)->lastnaddholes = 0;
-   (*symhdlr)->lastndelconss = 0;
-   (*symhdlr)->lastnaddconss = 0;
-   (*symhdlr)->lastnupgdconss = 0;
-   (*symhdlr)->lastnchgcoefs = 0;
-   (*symhdlr)->lastnchgsides = 0;
-   (*symhdlr)->nfixedvars = 0;
-   (*symhdlr)->naggrvars = 0;
-   (*symhdlr)->nchgvartypes = 0;
-   (*symhdlr)->nchgbds = 0;
-   (*symhdlr)->naddholes = 0;
-   (*symhdlr)->ndelconss = 0;
-   (*symhdlr)->naddconss = 0;
-   (*symhdlr)->nupgdconss = 0;
-   (*symhdlr)->nchgcoefs = 0;
-   (*symhdlr)->nchgsides = 0;
-   (*symhdlr)->npresolcalls = 0;
-   (*symhdlr)->lastsepanode = -1;
-   (*symhdlr)->nsepacallsatnode = 0;
-   (*symhdlr)->nseparootcalls = 0;
-   (*symhdlr)->ncutsfoundatnode = 0;
-   (*symhdlr)->nsepacutoffs = 0;
-   (*symhdlr)->nsepadomredsfound = 0;
-   (*symhdlr)->sepalpwasdelayed = FALSE;
-   (*symhdlr)->sepasolwasdelayed = FALSE;
-   (*symhdlr)->propwasdelayed = FALSE;
-
-   (*symhdlr)->symcomps = NULL;
-   (*symhdlr)->nsymcomps = 0;
-   (*symhdlr)->symcompssize = 0;
+   initSymhdlr(*symhdlr, FALSE);
 
    /* add parameters */
    (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "symmetries/%s/tryaddpriority", name);
@@ -325,7 +347,6 @@ SCIP_RETCODE SCIPsymhdlrFree(
 
    SCIPfreeBlockMemoryArray(set->scip, &(*symhdlr)->name, strlen((*symhdlr)->name) + 1);
    SCIPfreeBlockMemoryArray(set->scip, &(*symhdlr)->desc, strlen((*symhdlr)->desc) + 1);
-   SCIPfreeBlockMemoryArrayNull(set->scip, &(*symhdlr)->symcomps, (*symhdlr)->symcompssize);
    SCIPfreeBlockMemory(set->scip, symhdlr);
 
    return SCIP_OKAY;
@@ -355,6 +376,7 @@ SCIP_RETCODE SCIPsymhdlrExit(
       /* stop timing */
       SCIPclockStop(symhdlr->setuptime, set);
    }
+   SCIPfreeBlockMemoryArrayNull(set->scip, &symhdlr->symcomps, symhdlr->symcompssize);
    symhdlr->initialized = FALSE;
 
    return SCIP_OKAY;
@@ -374,6 +396,9 @@ SCIP_RETCODE SCIPsymhdlrInit(
       SCIPerrorMessage("symmetry handler <%s> already initialized\n", symhdlr->name);
       return SCIP_INVALIDCALL;
    }
+
+   /* reset statistics */
+   initSymhdlr(symhdlr, TRUE);
 
    if( symhdlr->syminit != NULL )
    {

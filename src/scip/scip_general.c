@@ -65,7 +65,6 @@
 #include "scip/scip_numerics.h"
 #include "scip/scip_prob.h"
 #include "scip/scip_solvingstats.h"
-#include "scip/scip_sym.h"
 #include "scip/set.h"
 #include "scip/solve.h"
 #include "scip/struct_mem.h"
@@ -266,7 +265,6 @@ SCIP_RETCODE doScipCreate(
    SCIP_CALL( SCIPclockCreate(&(*scip)->totaltime, SCIP_CLOCKTYPE_DEFAULT) );
    SCIP_CALL( SCIPsyncstoreCreate( &(*scip)->syncstore ) );
    SCIP_CALL( SCIPiisCreate(&(*scip)->iis, (*scip)->set, SCIPblkmem(*scip)) );
-   SCIP_CALL( SCIPsyminfoCreate(*scip, &(*scip)->syminfo) );
 
    /* include additional core functionality */
    SCIP_CALL( SCIPincludeCorePlugins(*scip) );
@@ -418,7 +416,6 @@ SCIP_RETCODE SCIPfree(
    /* switch stage to FREE */
    (*scip)->set->stage = SCIP_STAGE_FREE;
 
-   SCIP_CALL( SCIPsyminfoFree(*scip, &(*scip)->syminfo) );
    SCIP_CALL( SCIPiisFree(&(*scip)->iis, SCIPblkmem(*scip)) );
    SCIP_CALL( SCIPsyncstoreRelease(&(*scip)->syncstore) );
    SCIP_CALL( SCIPsetFree(&(*scip)->set, (*scip)->mem->setmem) );
