@@ -8,6 +8,7 @@ Features
 
 - adds functionality to compute symmetries of entire symmetry detection graph rather than just the restriction to variable nodes
 - primal heuristic feasjump
+- simpler restart control based on linear extrapolation since improvement checkpoint in tree size estimation
 
 Interface changes
 -----------------
