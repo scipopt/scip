@@ -660,3 +660,71 @@ SCIP_RETCODE SCIPsyminfoFree(
 
    return SCIP_OKAY;
 }
+
+/** return currently available symmetry group information */
+SCIP_RETCODE SCIPgetSymmetry(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SYM_SYMTYPE*          symtype,            /**< pointer to store type of available symmetries */
+   int*                  npermvars,          /**< pointer to store number of variables for permutations */
+   SCIP_VAR***           permvars,           /**< pointer to store variables on which permutations act */
+   SCIP_HASHMAP**        permvarmap,         /**< pointer to store hash map of permvars (or NULL) */
+   int*                  nperms,             /**< pointer to store number of permutations */
+   int***                perms,              /**< pointer to store permutation generators as (nperms x npermvars) matrix (or NULL)*/
+   int***                permstrans,         /**< pointer to store permutation generators as (npermvars x nperms) matrix (or NULL)*/
+   int**                 components,         /**< pointer to store components of symmetry group (or NULL) */
+   int**                 componentbegins,    /**< pointer to store begin positions of components in components array (or NULL) */
+   int**                 vartocomponent,     /**< pointer to store assignment from variable to its component (or NULL) */
+   int*                  ncomponents         /**< pointer to store number of components (or NULL) */
+   )
+{
+   SCIP_SYMINFO* syminfo;
+
+   assert(scip != NULL);
+   assert(symtype != NULL);
+   assert(npermvars != NULL);
+   assert(permvars != NULL);
+   assert(nperms != NULL);
+   assert(perms != NULL || permstrans != NULL);
+   assert(ncomponents != NULL || (components == NULL && componentbegins == NULL && vartocomponent == NULL));
+
+   syminfo = SCIPgetSyminfo(scip);
+   if( syminfo == NULL )
+   {
+      SCIPerrorMessage("Symmetry information not available.\n");
+      return SCIP_INVALIDCALL;
+   }
+
+   *symtype = syminfo->symtype;
+   *npermvars = syminfo->npermvars;
+   *permvars = syminfo->permvars;
+
+   if( permvarmap != NULL )
+      *permvarmap = syminfo->permvarmap;
+
+   *nperms = syminfo->nperms;
+   if( perms != NULL )
+   {
+      *perms = syminfo->perms;
+      assert(*perms != NULL || *nperms <= 0);
+   }
+
+   if( permstrans != NULL && syminfo->nperms > 0 )
+   {
+      SCIP_CALL( SCIPsyminfoGetPermstrans(scip, syminfo, permstrans) );
+      assert(*permstrans != NULL || *nperms <= 0);
+   }
+
+   if( components != NULL )
+      *components = syminfo->components;
+
+   if( componentbegins != NULL )
+      *componentbegins = syminfo->componentbegins;
+
+   if( vartocomponent )
+      *vartocomponent = syminfo->vartocomponent;
+
+   if( ncomponents )
+      *ncomponents = syminfo->ncomponents;
+
+   return SCIP_OKAY;
+}
