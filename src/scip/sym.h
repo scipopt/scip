@@ -64,19 +64,16 @@ SCIP_RETCODE SCIPsymhdlrCreate(
    SCIP_PROPTIMING       proptiming,         /**< positions in the node solving loop where propagation method of symmetry handlers should be executed */
    SCIP_PRESOLTIMING     presoltiming,       /**< timing mask of the symmetry handler's presolving method */
    SCIP_DECL_SYMHDLRTRYADD((*symtryadd)),    /**< addition method for symmetry method handler plugins */
-   SCIP_DECL_SYMHDLRCOPY ((*symcopy)),       /**< copy method of symmetry handler */
    SCIP_DECL_SYMHDLRFREE ((*symfree)),       /**< destructor method of symmetry handler */
    SCIP_DECL_SYMHDLRINIT ((*syminit)),       /**< initialization method of symmetry handler */
    SCIP_DECL_SYMHDLREXIT ((*symexit)),       /**< deinitialization method of symmetry handler */
    SCIP_DECL_SYMHDLRINITSOL((*syminitsol)),  /**< solving process initialization method of symmetry handler */
    SCIP_DECL_SYMHDLREXITSOL((*symexitsol)),  /**< solving process deinitialization method of symmetry handler */
-   SCIP_DECL_SYMHDLRTRANS((*symtrans)),      /**< transformation method of symmetry hanlder */
    SCIP_DECL_SYMHDLRSEPALP((*symsepalp)),    /**< separator for LP solutions */
    SCIP_DECL_SYMHDLRSEPASOL((*symsepasol)),  /**< separator for arbitrary primal solutions */
    SCIP_DECL_SYMHDLRPROP ((*symprop)),       /**< propagation method of symmetry handler */
    SCIP_DECL_SYMHDLRRESPROP((*symresprop)),  /**< propagation conflict resolving method */
    SCIP_DECL_SYMHDLRPRESOL((*sympresol)),    /**< presolving method of symmetry handler */
-   SCIP_DECL_SYMHDLRPRINT((*symprint)),      /**< print method of symmetry handler */
    SCIP_SYMHDLRDATA*     symhdlrdata         /**< symmetry handler data */
    );
 
@@ -304,14 +301,6 @@ SCIP_RETCODE SCIPsyminfoCompressPermInfo(
 SCIP_RETCODE SCIPdisplaySymmetryGenerators(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SYMINFO*         syminfo             /**< symmetry information */
-   );
-
-/** outputs symmetry component information to file stream */
-SCIP_RETCODE SCIPsymcompPrint(
-   SCIP_SYMCOMP*         symcomp,            /**< symmetry component to print */
-   SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
-   FILE*                 file                /**< output file (or NULL for standard output) */
    );
 
 #ifdef __cplusplus

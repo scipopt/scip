@@ -63,19 +63,16 @@ struct SCIP_Symhdlr
    int                   presolpriority;     /**< priority of the symmetry handler for presolving */
    int                   maxprerounds;       /**< maximal number of presolving rounds the symmetry handler participates in (-1: no limit) */
    SCIP_DECL_SYMHDLRTRYADD((*symtryadd));    /**< try to add symmetry handler */
-   SCIP_DECL_SYMHDLRCOPY ((*symcopy));       /**< copy method of symmetry handler or NULL if you don't want to copy your plugin into sub-SCIPs */
    SCIP_DECL_SYMHDLRFREE ((*symfree));       /**< destructor of symmetry handler */
    SCIP_DECL_SYMHDLRINIT ((*syminit));       /**< initialize symmetry handler */
    SCIP_DECL_SYMHDLREXIT ((*symexit));       /**< deinitialize symmetry handler */
    SCIP_DECL_SYMHDLRINITSOL((*syminitsol));  /**< solving process initialization method of symmetry handler */
    SCIP_DECL_SYMHDLREXITSOL((*symexitsol));  /**< solving process deinitialization method of symmetry handler */
-   SCIP_DECL_SYMHDLRTRANS((*symtrans));      /**< transform symmetry handler data into data belonging to the transformed problem */
    SCIP_DECL_SYMHDLRSEPALP((*symsepalp));    /**< separate cutting planes for LP solution */
    SCIP_DECL_SYMHDLRSEPASOL((*symsepasol));  /**< separate cutting planes for arbitrary primal solution */
    SCIP_DECL_SYMHDLRPROP ((*symprop));       /**< propagate variable domains */
    SCIP_DECL_SYMHDLRRESPROP((*symresprop));  /**< propagation conflict resolving method */
    SCIP_DECL_SYMHDLRPRESOL((*sympresol));    /**< presolving method */
-   SCIP_DECL_SYMHDLRPRINT((*symprint));      /**< print method */
    SCIP_SYMHDLRDATA*     symhdlrdata;        /**< symmetry handler data */
    SCIP_CLOCK*           setuptime;          /**< time spend for setting up this symmetry handler for the next stages */
    SCIP_CLOCK*           presoltime;         /**< time used for presolving of this symmetry handler */

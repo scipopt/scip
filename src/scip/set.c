@@ -939,6 +939,7 @@ SCIP_DECL_PARAMCHGD(paramChgdStatistictiming)
    return SCIP_OKAY;
 }
 
+/* @symtodo What to do with symmetries here? */
 /** copies plugins from sourcescip to targetscip; in case that a constraint handler which does not need constraints
  *  cannot be copied, valid will return FALSE. All plugins can declare that, if their copy process failed, the
  *  copied SCIP instance might not represent the same problem semantics as the original.
@@ -1072,15 +1073,6 @@ SCIP_RETCODE SCIPsetCopyPlugins(
       for( p = 0; p < sourceset->nbranchrules; ++p )
       {
          SCIP_CALL( SCIPbranchruleCopyInclude(sourceset->branchrules[p], targetset) );
-      }
-   }
-
-   /* copy all symmetry handler plugins */
-   if( copysymhdlrs && sourceset->symhdlrs != NULL )
-   {
-      for( p = 0; p < sourceset->nsymhdlrs; ++p )
-      {
-         SCIP_CALL( SCIPsymhdlrCopyInclude(sourceset->symhdlrs[p], targetset) );
       }
    }
 

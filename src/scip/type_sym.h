@@ -78,14 +78,6 @@ typedef struct SCIP_SymInfo SCIP_SYMINFO;    /**< data structure for storing sym
       SCIP_HASHMAP* permvarmap, SYM_GRAPH* symgraph, int id, SCIP_SYMCOMPDATA** symcompdata, int* naddedconss, \
       int* nchgbds, SCIP_Bool* success)
 
-/** copy method for symmetry handler plugins (called when SCIP copies plugins)
- *
- *  input:
- *  - scip            : SCIP main data structure
- *  - symhdlr         : the symmetry handler itself
- */
-#define SCIP_DECL_SYMHDLRCOPY(x) SCIP_RETCODE x (SCIP* scip, SCIP_SYMHDLR* symhdlr)
-
 /** destructor of symmetry handler to free symmetry handler data (called when SCIP is exiting)
  *
  *  input:
@@ -144,16 +136,6 @@ typedef struct SCIP_SymInfo SCIP_SYMINFO;    /**< data structure for storing sym
  *  - restart         : was this exit solve call triggered by a restart?
  */
 #define SCIP_DECL_SYMHDLREXITSOL(x) SCIP_RETCODE x (SCIP* scip, SCIP_SYMHDLR* symhdlr, SCIP_SYMCOMP** symcomps, int nsymcomps, SCIP_Bool restart)
-
-/** transforms data of symmetry handler into data belonging to the transformed problem
- *
- *  input:
- *  - scip            : SCIP main data structure
- *  - symhdlr         : symmetry handler
- *  - sourcesymcomp   : symmetry component to be transformed
- *  - targetsymcomp   : pointer to store transformed symmetry component
- */
-#define SCIP_DECL_SYMHDLRTRANS(x) SCIP_RETCODE x (SCIP* scip, SCIP_SYMHDLR* symhdlr, SCIP_SYMCOMP* sourcesymcomp, SCIP_SYMCOMP** targetsymcomp)
 
 /** LP solution separation method of symmetry handler
  *
@@ -343,22 +325,6 @@ typedef struct SCIP_SymInfo SCIP_SYMINFO;    /**< data structure for storing sym
       int nnewdelconss, int nnewaddconss, int nnewupgdconss, int nnewchgcoefs, int nnewchgsides, \
       int* nfixedvars, int* naggrvars, int* nchgvartypes, int* nchgbds, int* naddholes, \
       int* ndelconss, int* naddconss, int* nupgdconss, int* nchgcoefs, int* nchgsides, SCIP_RESULT* result)
-
-/** symmetry component display method of symmetry handler
- *
- *  The symmetry handler can store a representation of the symmetry components into the given text file. Use the method
- *  SCIPinfoMessage() to push a string into the file stream.
- *
- *  @note There are several methods which help to display variables. These are SCIPwriteVarName(), SCIPwriteVarsList(),
- *        SCIPwriteVarsLinearsum(), and SCIPwriteVarsPolynomial().
- *
- *  input:
- *  - scip            : SCIP main data structure
- *  - symhdlr         : the symmetry handler itself
- *  - symcomp         : the symmetry component that should be displayed
- *  - file            : the text file to store the information into
- */
-#define SCIP_DECL_SYMHDLRPRINT(x) SCIP_RETCODE x (SCIP* scip, SCIP_SYMHDLR* symhdlr, SCIP_SYMCOMP* symcomp, FILE* file)
 
 #ifdef __cplusplus
 }

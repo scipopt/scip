@@ -69,19 +69,16 @@ SCIP_RETCODE SCIPincludeSymhdlr(
    SCIP_PROPTIMING       proptiming,         /**< positions in the node solving loop where propagation method of symmetry handlers should be executed */
    SCIP_PRESOLTIMING     presoltiming,       /**< timing mask of the symmetry handler's presolving method */
    SCIP_DECL_SYMHDLRTRYADD((*symhdlrtryadd)),/**< addition method for symmetry method handler plugins */
-   SCIP_DECL_SYMHDLRCOPY ((*symcopy)),       /**< copy method of symmetry handler */
    SCIP_DECL_SYMHDLRFREE ((*symfree)),       /**< destructor method of symmetry handler */
    SCIP_DECL_SYMHDLRINIT ((*syminit)),       /**< initialization method of symmetry handler */
    SCIP_DECL_SYMHDLREXIT ((*symexit)),       /**< deinitialization method of symmetry handler */
    SCIP_DECL_SYMHDLRINITSOL((*syminitsol)),  /**< solving process initialization method of symmetry handler */
    SCIP_DECL_SYMHDLREXITSOL((*symexitsol)),  /**< solving process deinitialization method of symmetry handler */
-   SCIP_DECL_SYMHDLRTRANS((*symtrans)),      /**< transformation method of symmetry handler */
    SCIP_DECL_SYMHDLRSEPALP((*symsepalp)),    /**< separator for LP solutions */
    SCIP_DECL_SYMHDLRSEPASOL((*symsepasol)),  /**< separator for arbitrary primal solutions */
    SCIP_DECL_SYMHDLRPROP ((*symprop)),       /**< propagation method of symmetry handler */
    SCIP_DECL_SYMHDLRRESPROP((*symresprop)),  /**< propagation conflict resolving method */
    SCIP_DECL_SYMHDLRPRESOL((*sympresol)),    /**< presolving method of symmetry handler */
-   SCIP_DECL_SYMHDLRPRINT((*symprint)),      /**< print method of symmetry handler */
    SCIP_SYMHDLRDATA*     symhdlrdata         /**< symmetry handler data */
    );
 
@@ -108,15 +105,6 @@ SCIP_RETCODE SCIPincludeSymhdlrBasic(
    SCIP_SYMHDLRDATA*     symhdlrdata         /**< symmetry handler data */
    );
 
-/** sets copy method of symmetry handler */
-SCIP_EXPORT
-SCIP_RETCODE SCIPsetSymhdlrCopy(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_SYMHDLR*         symhdlr,            /**< symmetry handler */
-   SCIP_DECL_SYMHDLRCOPY ((*symhdlrcopy))    /**< copy method of symmetry handler */
-   );
-
-/** sets destructor method of symmetry handler */
 SCIP_EXPORT
 SCIP_RETCODE SCIPsetSymhdlrFree(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -138,14 +126,6 @@ SCIP_RETCODE SCIPsetSymhdlrExit(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SYMHDLR*         symhdlr,            /**< symmetry handler */
    SCIP_DECL_SYMHDLRINIT ((*symhdlrexit))    /**< deinitialize symmetry handler */
-   );
-
-/** sets transformation method of symmetry handler */
-SCIP_EXPORT
-SCIP_RETCODE SCIPsetSymhdlrTrans(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_SYMHDLR*         symhdlr,            /**< symmetry handler */
-   SCIP_DECL_SYMHDLRINIT ((*symhdlrtrans))   /**< transform symmetry handler */
    );
 
 /** sets solving process initialization method of symmetry handler */
@@ -223,36 +203,6 @@ SCIP_SYMHDLR** SCIPgetSymhdlrs(
 SCIP_EXPORT
 int SCIPgetNSymhdlrs(
    SCIP*                 scip                /**< SCIP data structure */
-   );
-
-/** outputs symmetry component information to file stream via the message handler system
- *
- *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
- *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
- *
- *  @pre This method can be called if @p scip is in one of the following stages:
- *       - \ref SCIP_STAGE_PROBLEM
- *       - \ref SCIP_STAGE_TRANSFORMING
- *       - \ref SCIP_STAGE_TRANSFORMED
- *       - \ref SCIP_STAGE_INITPRESOLVE
- *       - \ref SCIP_STAGE_PRESOLVING
- *       - \ref SCIP_STAGE_EXITPRESOLVE
- *       - \ref SCIP_STAGE_PRESOLVED
- *       - \ref SCIP_STAGE_INITSOLVE
- *       - \ref SCIP_STAGE_SOLVING
- *       - \ref SCIP_STAGE_SOLVED
- *       - \ref SCIP_STAGE_EXITSOLVE
- *       - \ref SCIP_STAGE_FREETRANS
- *
- *  @note If the message handler is set to a NULL pointer nothing will be printed.
- *  @note The file stream will not be flushed directly, this can be achieved by calling SCIPinfoMessage() printing a
- *        newline character.
- */
-SCIP_EXPORT
-SCIP_RETCODE SCIPprintSymcomp(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_SYMCOMP*         symcomp,            /**< symmetry component */
-   FILE*                 file                /**< output file (or NULL for standard output) */
    );
 
 /** returns the symmetry components */

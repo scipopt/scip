@@ -68,19 +68,16 @@ SCIP_RETCODE SCIPincludeSymhdlr(
    SCIP_PROPTIMING       proptiming,         /**< positions in the node solving loop where propagation method of symmetry handlers should be executed */
    SCIP_PRESOLTIMING     presoltiming,       /**< timing mask of the symmetry handler's presolving method */
    SCIP_DECL_SYMHDLRTRYADD((*symtryadd)),    /**< addition method for symmetry method handler plugins */
-   SCIP_DECL_SYMHDLRCOPY ((*symcopy)),       /**< copy method of symmetry handler */
    SCIP_DECL_SYMHDLRFREE ((*symfree)),       /**< destructor method of symmetry handler */
    SCIP_DECL_SYMHDLRINIT ((*syminit)),       /**< initialization method of symmetry handler */
    SCIP_DECL_SYMHDLREXIT ((*symexit)),       /**< deinitialization method of symmetry handler */
    SCIP_DECL_SYMHDLRINITSOL((*syminitsol)),  /**< solving process initialization method of symmetry handler */
    SCIP_DECL_SYMHDLREXITSOL((*symexitsol)),  /**< solving process deinitialization method of symmetry handler */
-   SCIP_DECL_SYMHDLRTRANS((*symtrans)),      /**< transformation method of symmetry hanlder */
    SCIP_DECL_SYMHDLRSEPALP((*symsepalp)),    /**< separator for LP solutions */
    SCIP_DECL_SYMHDLRSEPASOL((*symsepasol)),  /**< separator for arbitrary primal solutions */
    SCIP_DECL_SYMHDLRPROP ((*symprop)),       /**< propagation method of symmetry handler */
    SCIP_DECL_SYMHDLRRESPROP((*symresprop)),  /**< propagation conflict resolving method */
    SCIP_DECL_SYMHDLRPRESOL((*sympresol)),    /**< presolving method of symmetry handler */
-   SCIP_DECL_SYMHDLRPRINT((*symprint)),      /**< print method of symmetry handler */
    SCIP_SYMHDLRDATA*     symhdlrdata         /**< symmetry handler data */
    )
 {
@@ -98,8 +95,8 @@ SCIP_RETCODE SCIPincludeSymhdlr(
    SCIP_CALL( SCIPsymhdlrCreate(&symhdlr, scip->set, scip->messagehdlr, scip->mem->setmem,
          name, desc, priority, proppriority, sepapriority, presolpriority, propfreq, sepafreq,
          delayprop, delaysepa, maxbounddist, maxprerounds, proptiming, presoltiming,
-         symtryadd, symcopy, symfree, syminit, symexit, syminitsol, symexitsol, symtrans,
-         symsepalp, symsepasol, symprop, symresprop, sympresol, symprint, symhdlrdata) );
+         symtryadd, symfree, syminit, symexit, syminitsol, symexitsol, symsepalp, symsepasol,
+         symprop, symresprop, sympresol, symhdlrdata) );
    SCIP_CALL( SCIPsetIncludeSymhdlr(scip->set, symhdlr) );
 
    return SCIP_OKAY;
@@ -137,7 +134,7 @@ SCIP_RETCODE SCIPincludeSymhdlrBasic(
    SCIP_CALL( SCIPsymhdlrCreate(symhdlr, scip->set, scip->messagehdlr, scip->mem->setmem,
          name, desc, priority, 0, 0, 0, -1, -1, TRUE, TRUE, 0.0, 0, SCIP_PROPTIMING_BEFORELP,
          SCIP_PRESOLTIMING_ALWAYS, symtryadd, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-         NULL, NULL, NULL, NULL, NULL, symhdlrdata) );
+         NULL, NULL, symhdlrdata) );
    SCIP_CALL( SCIPsetIncludeSymhdlr(scip->set, *symhdlr) );
 
    return SCIP_OKAY;
@@ -462,45 +459,6 @@ int SCIPgetNSymhdlrs(
    assert(scip->set != NULL);
 
    return scip->set->nsymhdlrs;
-}
-
-/** outputs symmetry component information to file stream via the message handler system
- *
- *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
- *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
- *
- *  @pre This method can be called if @p scip is in one of the following stages:
- *       - \ref SCIP_STAGE_PROBLEM
- *       - \ref SCIP_STAGE_TRANSFORMING
- *       - \ref SCIP_STAGE_TRANSFORMED
- *       - \ref SCIP_STAGE_INITPRESOLVE
- *       - \ref SCIP_STAGE_PRESOLVING
- *       - \ref SCIP_STAGE_EXITPRESOLVE
- *       - \ref SCIP_STAGE_PRESOLVED
- *       - \ref SCIP_STAGE_INITSOLVE
- *       - \ref SCIP_STAGE_SOLVING
- *       - \ref SCIP_STAGE_SOLVED
- *       - \ref SCIP_STAGE_EXITSOLVE
- *       - \ref SCIP_STAGE_FREETRANS
- *
- *  @note If the message handler is set to a NULL pointer nothing will be printed.
- *  @note The file stream will not be flushed directly, this can be achieved by calling SCIPinfoMessage() printing a
- *        newline character.
- */
-SCIP_RETCODE SCIPprintSymcomp(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_SYMCOMP*         symcomp,            /**< symmetry component */
-   FILE*                 file                /**< output file (or NULL for standard output) */
-   )
-{
-   assert(scip != NULL);
-   assert(symcomp != NULL);
-
-   SCIP_CALL( SCIPcheckStage(scip, "SCIPprintSymcomp", FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE) );
-
-   SCIP_CALL( SCIPsymcompPrint(symcomp, scip->set, scip->messagehdlr, file) );
-
-   return SCIP_OKAY;
 }
 
 /** returns the symmetry components */
