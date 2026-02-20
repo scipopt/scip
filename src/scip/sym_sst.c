@@ -1816,15 +1816,20 @@ SCIP_RETCODE SCIPincludeSymhdlrSST(
    )
 {
    SCIP_SYMHDLRDATA* symhdlrdata = NULL;
+   SCIP_SYMHDLR* symhdlr;
 
    assert(scip != NULL);
 
    SCIP_CALL( SCIPallocBlockMemory(scip, &symhdlrdata) );
 
-   SCIP_CALL( SCIPincludeSymhdlr(scip, SYM_NAME, SYM_DESC, SYM_PRIORITY, 0, 0, SYM_PRESOLPRIORITY,
-         -1, -1, FALSE, FALSE, 1.0, SYM_MAXPRESOLROUNDS, SCIP_PROPTIMING_BEFORELP, SCIP_PRESOLTIMING_FAST,
-         symhdlrTryAddSST, NULL, symhdlrFreeSST, NULL, symhdlrExitSST, NULL, NULL, NULL, NULL, NULL, NULL,
-         NULL, symhdlrPresolSST, symhdlrPrintSST, symhdlrdata) );
+   SCIP_CALL( SCIPincludeSymhdlrBasic(scip, &symhdlr, SYM_NAME, SYM_DESC, SYM_PRIORITY,
+         symhdlrTryAddSST, symhdlrdata) );
+
+   /* include non-fundamental callback methods */
+   SCIP_CALL( SCIPsetSymhdlrFree(scip, symhdlr, symhdlrFreeSST) );
+   SCIP_CALL( SCIPsetSymhdlrExit(scip, symhdlr, symhdlrExitSST) );
+   SCIP_CALL( SCIPsetSymhdlrPresol(scip, symhdlr, symhdlrPresolSST,
+         SYM_MAXPRESOLROUNDS, SYM_PRESOLPRIORITY, SCIP_PRESOLTIMING_FAST) );
 
    /* add parameters */
    SCIP_CALL( SCIPaddIntParam(scip, "symmetries/" SYM_NAME "/leaderrule",

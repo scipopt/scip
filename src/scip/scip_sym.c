@@ -114,6 +114,7 @@ SCIP_RETCODE SCIPincludeSymhdlr(
  */
 SCIP_RETCODE SCIPincludeSymhdlrBasic(
    SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SYMHDLR**        symhdlr,            /**< pointer to stoe symmetry handler */
    const char*           name,               /**< name of symmetry handler */
    const char*           desc,               /**< description of symmetry handler */
    int                   priority,           /**< priority of the symmetry handler */
@@ -121,7 +122,7 @@ SCIP_RETCODE SCIPincludeSymhdlrBasic(
    SCIP_SYMHDLRDATA*     symhdlrdata         /**< symmetry handler data */
    )
 {
-   SCIP_SYMHDLR* symhdlr;
+   assert(scip != NULL);
 
    SCIP_CALL( SCIPcheckStage(scip, "SCIPincludeSymhdlrBasic", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
@@ -132,11 +133,11 @@ SCIP_RETCODE SCIPincludeSymhdlrBasic(
       return SCIP_INVALIDDATA;
    }
 
-   SCIP_CALL( SCIPsymhdlrCreate(&symhdlr, scip->set, scip->messagehdlr, scip->mem->setmem,
+   SCIP_CALL( SCIPsymhdlrCreate(symhdlr, scip->set, scip->messagehdlr, scip->mem->setmem,
          name, desc, priority, 0, 0, 0, -1, -1, TRUE, TRUE, 0.0, 0, SCIP_PROPTIMING_BEFORELP,
          SCIP_PRESOLTIMING_ALWAYS, symtryadd, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
          NULL, NULL, NULL, NULL, NULL, symhdlrdata) );
-   SCIP_CALL( SCIPsetIncludeSymhdlr(scip->set, symhdlr) );
+   SCIP_CALL( SCIPsetIncludeSymhdlr(scip->set, *symhdlr) );
 
    return SCIP_OKAY;
 
@@ -174,7 +175,7 @@ SCIP_RETCODE SCIPsetSymhdlrSepa(
    SCIPsymhdlrSetSepa(symhdlr, symsepalp, symsepasol, sepafreq, sepapriority, delaysepa);
 
    if( oldsepapriority != sepapriority )
-      scip->set->symhdlrs_sepa = FALSE;
+      scip->set->symhdlrssepasorted = FALSE;
 
    name = SCIPsymhdlrGetName(symhdlr);
 
@@ -222,7 +223,7 @@ SCIP_RETCODE SCIPsetSymhdlrProp(
    SCIPsymhdlrSetProp(symhdlr, symprop, propfreq, delayprop, proppriority, proptiming);
 
    if( oldpriority != proppriority )
-      scip->set->symhdlrs_prop = FALSE;
+      scip->set->symhdlrspropsorted = FALSE;
 
    name = SCIPsymhdlrGetName(symhdlr);
 
@@ -389,7 +390,7 @@ SCIP_RETCODE SCIPsetSymhdlrPresol(
    SCIP_CALL( SCIPsymhdlrSetPresol(symhdlr, sympresol, maxprerounds, presolpriority, presoltiming) );
 
    if( oldpriority != presolpriority )
-      scip->set->symhdlrs_presol = FALSE;
+      scip->set->symhdlrspresolsorted = FALSE;
 
    name = SCIPsymhdlrGetName(symhdlr);
 

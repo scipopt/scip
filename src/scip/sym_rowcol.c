@@ -66,6 +66,8 @@
 #define SYM_PROPTIMING SCIP_PROPTIMING_BEFORELP /**< timing of propagator method */
 #define SYM_PROPFREQ                 1       /**< frequence of propagator method */
 #define SYM_DELAYPROP            FALSE       /**< Should propagation method be delayed, if other propagators found reductions? */
+#define SYM_PRESOLPRIORITY    -1000000       /**< priority of presolving method */
+#define SYM_MAXPRESOLROUNDS          1       /**< maximum number of presolving rounds */
 
 /* default value of parameters */
 #define SYM_DEFAULT_DETECTDOUBLELEX TRUE     /**< Should we check whether the components can be handled by double lex matrices? */
@@ -2470,17 +2472,24 @@ SCIP_RETCODE SCIPincludeSymhdlrRowCol(
    )
 {
    SCIP_SYMHDLRDATA* symhdlrdata = NULL;
+   SCIP_SYMHDLR* symhdlr;
    SCIP_EVENTHDLR* eventhdlr;
 
    assert(scip != NULL);
 
    SCIP_CALL( SCIPallocBlockMemory(scip, &symhdlrdata) );
 
-   SCIP_CALL( SCIPincludeSymhdlr(scip, SYM_NAME, SYM_DESC, SYM_PRIORITY, SYM_PROPPRIORITY, 0, -1,
-         SYM_PROPFREQ, -1, SYM_DELAYPROP, FALSE, 1.0, 1, SYM_PROPTIMING, SCIP_PRESOLTIMING_FAST,
-         symhdlrTryaddRowCol, NULL, symhdlrFreeRowCol, NULL, symhdlrExitRowCol,
-         NULL, symhdlrExitsolRowCol, NULL, NULL, NULL, symhdlrPropRowCol,
-         NULL, symhdlrPresolRowCol, symhdlrPrintRowCol, symhdlrdata) );
+   SCIP_CALL( SCIPincludeSymhdlrBasic(scip, &symhdlr, SYM_NAME, SYM_DESC, SYM_PRIORITY,
+         symhdlrTryaddRowCol, symhdlrdata) );
+
+   /* set non-fundamental callback methods */
+   SCIP_CALL( SCIPsetSymhdlrFree(scip, symhdlr, symhdlrFreeRowCol) );
+   SCIP_CALL( SCIPsetSymhdlrExit(scip, symhdlr, symhdlrExitRowCol) );
+   SCIP_CALL( SCIPsetSymhdlrExitsol(scip, symhdlr, symhdlrExitsolRowCol) );
+   SCIP_CALL( SCIPsetSymhdlrProp(scip, symhdlr, symhdlrPropRowCol, SYM_PROPFREQ, SYM_DELAYPROP,
+         SYM_PROPPRIORITY, SYM_PROPTIMING) );
+   SCIP_CALL( SCIPsetSymhdlrPresol(scip, symhdlr, symhdlrPresolRowCol, SYM_MAXPRESOLROUNDS,
+         SYM_PRESOLPRIORITY, SCIP_PRESOLTIMING_FAST) );
 
    /* include shadow tree event handler if it is not included yet */
    eventhdlr = SCIPfindEventhdlr(scip, "event_shadowtree");
