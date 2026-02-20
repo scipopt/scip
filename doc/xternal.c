@@ -7407,7 +7407,7 @@
  * input data, was the underlying formulation incorrect, or is my model simply infeasible by construction?
  * There are two main ways to analyse infeasible instances using SCIP:
  *
- * Firstly, there is IIS (irreducible infeasible subsystem) functionality in SCIP.
+ * Firstly, there is an IIS (irreducible infeasible subsystem) functionality in SCIP.
  * This produces an infeasible problem, which contains a subset of constraints and variable bounds from
  * the original problem. The infeasible problem is also irreducible, in that removing any additional
  * constraints results in the problem becoming feasible. This is a fantastic method for debugging

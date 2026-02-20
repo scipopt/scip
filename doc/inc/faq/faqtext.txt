@@ -415,7 +415,7 @@ SECTION: General Questions about SCIP
        There are two main ways to analyse infeasible instances using SCIP:
     </p>
     <p>
-       Firstly, there is IIS (irreducible infeasible subsystem) functionality in SCIP.
+       Firstly, there is an IIS (irreducible infeasible subsystem) functionality in SCIP.
        This can be called from the command line using <code>iis</code> or from the C API using <code>SCIPgenerateIIS()</code>.
        SCIP will then call its <code>iisfinders</code> and find a minimal subset of constraints (variable bounds too,
        depending on the settings) that still results in an infeasible instance. There is no guarantee that
