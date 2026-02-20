@@ -278,9 +278,6 @@ struct SCIP_EventhdlrData
    SCIP_Real             treeprofile_minnodesperdepth;/**< minimum average number of nodes at each depth before producing estimations */
    SCIP_Real             coefmonoweight;     /**< coefficient of tree weight in monotone approximation of search completion */
    SCIP_Real             coefmonossg;        /**< coefficient of 1 - SSG in monotone approximation of search completion */
-   long double           pretreeweight;      /**< previous tree weight for extrapolation */
-   SCIP_Longint          prenodes;           /**< previous number of nodes for extrapolation */
-   SCIP_Bool             preincrease;        /**< whether tree weight increased previously */
    SCIP_Longint          minnodes;           /**< minimum number of nodes in a run before restart is triggered */
    int                   restartlimit;       /**< How often should a restart be triggered? (-1 for no limit) */
    int                   nrestartsperformed; /**< number of restarts performed so far */
@@ -315,6 +312,9 @@ struct TreeData
    SCIP_Longint          nleaves;            /**< the number of final leaf nodes */
    SCIP_Longint          nvisited;           /**< the number of visited nodes */
    long double           weight;             /**< the current tree weight (sum of leaf weights) */
+   long double           checkpointweight;   /**< previous tree weight for extrapolation */
+   SCIP_Longint          checkpointnodes;    /**< previous number of nodes for extrapolation */
+   SCIP_Bool             checkpointincrease; /**< whether tree weight increased previously */
    SUBTREESUMGAP*        ssg;                /**< subtree sum gap data structure */
 };
 
@@ -1544,6 +1544,11 @@ SCIP_RETCODE resetTreeData(
    treedata->nnodes = 1;
    treedata->nopen = 1;
 
+   /* set up checkpoint */
+   treedata->checkpointweight = 0.0;
+   treedata->checkpointnodes = 0;
+   treedata->checkpointincrease = FALSE;
+
    SCIP_CALL( subtreeSumGapReset(scip, treedata->ssg) );
 
    return SCIP_OKAY;
@@ -2445,16 +2450,14 @@ SCIP_Bool shouldApplyRestartCompletion(
 /** compute tree size estimation using checkpoint-based linear extrapolation */
 static
 SCIP_Real getCheckpointEstimation(
-   SCIP_EVENTHDLRDATA*   eventhdlrdata       /**< event handler data */
+   TREEDATA*             treedata            /**< tree data */
    )
 {
-   TREEDATA* treedata;
    long double currentweight;
    long double weightdelta;
    SCIP_Longint currentnodes;
    SCIP_Longint nodedelta;
 
-   treedata = eventhdlrdata->treedata;
    currentweight = treedata->weight;
    currentnodes = treedata->nnodes;
 
@@ -2462,14 +2465,14 @@ SCIP_Real getCheckpointEstimation(
    if( currentweight >= 1.0 )
       return (SCIP_Real)currentnodes;
 
-   weightdelta = currentweight - eventhdlrdata->pretreeweight;
+   weightdelta = currentweight - treedata->checkpointweight;
    assert(weightdelta >= 0.0);
 
    /* increase is absent */
    if( weightdelta <= 0.0 )
       return -1.0;
 
-   nodedelta = currentnodes - eventhdlrdata->prenodes;
+   nodedelta = currentnodes - treedata->checkpointnodes;
    assert(nodedelta >= 0);
 
    /* estimate total nodes when weight linearly approaches 1.0 */
@@ -2730,9 +2733,6 @@ SCIP_DECL_EVENTINITSOL(eventInitsolEstim)
    eventhdlrdata = SCIPeventhdlrGetData(eventhdlr);
    assert(eventhdlrdata != NULL);
 
-   eventhdlrdata->pretreeweight = 0.0;
-   eventhdlrdata->prenodes = 0;
-   eventhdlrdata->preincrease = FALSE;
    eventhdlrdata->restarthitcounter = 0;
    eventhdlrdata->weightlastreport = 0.0;
    eventhdlrdata->nreports = 0;
@@ -2815,18 +2815,18 @@ SCIP_DECL_EVENTEXEC(eventExecEstim)
          /* set checkpoint at next increase */
          if( eventhdlrdata->restartpolicyparam == RESTARTPOLICY_CHAR_ESTIMATION
             && eventhdlrdata->estimmethod == ESTIMMETHOD_CHECKPOINT )
-            eventhdlrdata->preincrease = FALSE;
+            treedata->checkpointincrease = FALSE;
       }
       else
       {
          /* hit checkpoint for next estimation with significant node weight */
          if( eventhdlrdata->restartpolicyparam == RESTARTPOLICY_CHAR_ESTIMATION
             && eventhdlrdata->estimmethod == ESTIMMETHOD_CHECKPOINT
-            && !eventhdlrdata->preincrease && SCIPnodeGetDepth(eventnode) < eventhdlrdata->checkpointdepthlim )
+            && !treedata->checkpointincrease && SCIPnodeGetDepth(eventnode) < eventhdlrdata->checkpointdepthlim )
          {
-            eventhdlrdata->pretreeweight = eventhdlrdata->treedata->weight;
-            eventhdlrdata->prenodes = eventhdlrdata->treedata->nnodes;
-            eventhdlrdata->preincrease = TRUE;
+            treedata->checkpointweight = treedata->weight;
+            treedata->checkpointnodes = treedata->nnodes;
+            treedata->checkpointincrease = TRUE;
          }
       }
 
@@ -2860,7 +2860,7 @@ SCIP_DECL_EVENTEXEC(eventExecEstim)
 
    assert(eventhdlrdata->restartpolicyparam != RESTARTPOLICY_CHAR_ESTIMATION
       || eventhdlrdata->estimmethod != ESTIMMETHOD_CHECKPOINT
-      || eventhdlrdata->treedata->nnodes > eventhdlrdata->prenodes);
+      || eventhdlrdata->treedata->nnodes > eventhdlrdata->treedata->checkpointnodes);
 
    /* check if all conditions are met such that the event handler should run */
    if( !isRestartApplicable(scip, eventhdlrdata) )
@@ -3145,7 +3145,7 @@ SCIP_Real SCIPgetTreesizeEstimation(
 
    /* checkpoint-based linear extrapolation */
    case ESTIMMETHOD_CHECKPOINT:
-      return getCheckpointEstimation(eventhdlrdata);
+      return getCheckpointEstimation(eventhdlrdata->treedata);
 
    default:
       SCIPerrorMessage("Unknown estimation '%c' method specified, should be one of [%s]\n",
