@@ -1923,6 +1923,8 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplaySymmetry)
    if( syminfo == NULL )
    {
       SCIPinfoMessage(scip, NULL, "Cannot display symmetries. Symmetries have not been computed yet.\n");
+      *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
+
       return SCIP_OKAY;
    }
    SCIP_CALL( SCIPdisplaySymmetryGenerators(scip, syminfo) );
