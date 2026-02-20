@@ -47,6 +47,7 @@ Miscellaneous
 
 - updated ampl/mp to version 4.0.4
 - switch from GetTempPath2A to GetTempPathA in nl writer for Windows for broader compatibility
+- an error is produced if the emphasis settings in parameter files are wrong
 
 @section RN1000 SCIP 10.0.0
 ***************************
