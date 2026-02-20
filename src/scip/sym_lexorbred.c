@@ -77,6 +77,8 @@
                                               *   that is computed (used to have better approximation of stabilizer);
                                               *   -1: unbounded */
 #define DEFAULT_USEPPPUPGRADE     TRUE       /**< Shall static constraints be used if at least 50% of perms can be handled by pp-orbisacks? */
+#define DEFAULT_DISPLAYSYMINFO   FALSE       /**< Should the symmetry handler print information about the added
+                                              *   symmetry handling methods? */
 
 /*
  * Data structures
@@ -105,6 +107,7 @@ struct SCIP_SymhdlrData
                                               *   -1: unbounded */
    SCIP_Bool             useppupgrade;       /**< Shall static constraints be used if at least 50% of perms can be
                                               *   handled by pp-orbisacks? */
+   SCIP_Bool             displaysyminfo;     /**< Shall information about the added SST cuts be displayed? */
 };
 
 /** compare function for sorting an array by the addresses of its members  */
@@ -909,6 +912,12 @@ SCIP_DECL_SYMHDLRTRYADD(symhdlrTryaddLexOrbRed)
                &(*symcompdata)->maxnconss, id, success) );
          *naddedconss = (*symcompdata)->nconss;
 
+         if( *success && symhdlrdata->displaysyminfo )
+         {
+            SCIPinfoMessage(scip, NULL, "Handle symmetry component %d by symmetry handler <" SYM_NAME ">.\n", id);
+            SCIPinfoMessage(scip, NULL, "  Use packing/partitioning orbisacks to handle %d permutations.\n", nallperms);
+         }
+
          if( nnewperms > 0 )
          {
             for( p = nallperms - 1; p >= 0; --p )
@@ -927,6 +936,12 @@ SCIP_DECL_SYMHDLRTRYADD(symhdlrTryaddLexOrbRed)
    {
       SCIP_CALL( addLexRed(scip, *symcompdata, symhdlrdata->shadowtreeeventhdlr,
             symtype, perms, nperms, newperms, nnewperms, permvars, npermvars, permvardomcenter, success) );
+
+      if( *success && symhdlrdata->displaysyminfo )
+      {
+         SCIPinfoMessage(scip, NULL, "Handle symmetry component %d by symmetry handler <" SYM_NAME ">.\n", id);
+         SCIPinfoMessage(scip, NULL, "  Use lexicographic reduction on %d permutations.\n", nperms + nnewperms);
+      }
    }
 
    if( symhdlrdata->useorbred )
@@ -935,6 +950,14 @@ SCIP_DECL_SYMHDLRTRYADD(symhdlrTryaddLexOrbRed)
 
       SCIP_CALL( addOrbRed(scip, symhdlrdata->orbitalreddata, symtype, perms, nperms, newperms, nnewperms,
             permvars, npermvars, &locsuccess) );
+
+      if( locsuccess && symhdlrdata->displaysyminfo )
+      {
+         if( !(*success) )
+            SCIPinfoMessage(scip, NULL, "Handle symmetry component %d by symmetry handler <" SYM_NAME ">.\n", id);
+         SCIPinfoMessage(scip, NULL, "  Use orbital reduction on %d permutations.\n", nperms + nnewperms);
+      }
+
       *success = *success || locsuccess;
    }
 
@@ -1143,101 +1166,6 @@ SCIP_DECL_SYMHDLRPRESOL(symhdlrPresolLexOrbRed)
    return SCIP_OKAY;
 }
 
-/** symmetry component display method of symmetry handler */
-static
-SCIP_DECL_SYMHDLRPRINT(symhdlrPrintLexOrbRed)
-{  /*lint --e{715}*/
-   SCIP_SYMCOMPDATA* symcompdata;
-   SCIP_SYMHDLRDATA* symhdlrdata;
-
-   assert(symcomp != NULL);
-   assert(symhdlr != NULL);
-
-   symcompdata = SCIPsymcompGetData(symcomp);
-   symhdlrdata = SCIPsymhdlrGetData(symhdlr);
-   assert(symcompdata != NULL);
-   assert(symhdlrdata != NULL);
-
-   if( symcompdata->nconss > 0 )
-   {
-      int c;
-
-      SCIPinfoMessage(scip, file, "handled by %d static symmetry handling constraints\n", symcompdata->nconss);
-
-      for( c = 0; c < symcompdata->nconss; ++c )
-      {
-         SCIP_CALL( SCIPprintCons(scip, symcompdata->conss[c], file) );
-         SCIPinfoMessage(scip, file, "\n");
-      }
-   }
-
-   if( symcompdata->active || symhdlrdata->useorbred )
-   {
-      SCIP_Bool* covered;
-      SCIP_VAR** permvars;
-      int* perm;
-      int lastlen = 0;
-      int varidx;
-      int nperms;
-      int permlen;
-      int p;
-      int v;
-      int w;
-
-      SCIPinfoMessage(scip, file, "handled by%s%s%s on the permutations:\n",
-         symcompdata->active ? " lexicographic reduction" : "",
-         symcompdata->active && symhdlrdata->useorbred ? " and" : "",
-         symhdlrdata->useorbred ? " orbital reduction" : "");
-
-      nperms = symcompdata->active ? SCIPlexreddataGetNPerms(symcompdata->lexreddata) :
-         SCIPorbitalreddataGetNPerms(symhdlrdata->orbitalreddata, 0);
-
-      SCIP_CALL( SCIPallocClearBufferArray(scip, &covered, symcompdata->active ?
-            SCIPlexreddataGetNPermvars(symcompdata->lexreddata) :
-            SCIPorbitalreddataGetNPermvars(symhdlrdata->orbitalreddata, 0)) );
-
-      for( p = 0; p < nperms; ++p )
-      {
-         /* clear data from previous iteration */
-         for( v = 0; v < lastlen; ++v )
-            covered[v] = FALSE;
-
-         perm = symcompdata->active ? SCIPlexreddataGetPerm(symcompdata->lexreddata, p) :
-            SCIPorbitalreddataGetPerm(symhdlrdata->orbitalreddata, 0, p);
-         permlen = symcompdata->active ? SCIPlexreddataGetPermLen(symcompdata->lexreddata, p) :
-            SCIPorbitalreddataGetPermLen(symhdlrdata->orbitalreddata, 0, p);
-         permvars = symcompdata->active ? SCIPlexreddataGetPermVars(symcompdata->lexreddata, p) :
-            SCIPorbitalreddataGetPermVars(symhdlrdata->orbitalreddata, 0, p);
-         lastlen = permlen;
-
-         SCIPinfoMessage(scip, file, "\tpermutation %d: ", p);
-         for( v = 0; v < permlen; ++v )
-         {
-            if( covered[v] )
-               continue;
-
-            SCIPinfoMessage(scip, file, "(<%s>", SCIPvarGetName(permvars[v]));
-            w = perm[v];
-            covered[v] = TRUE;
-            while( w != v )
-            {
-               covered[w] = TRUE;
-               varidx = w >= permlen ? w - permlen : w;
-               SCIPinfoMessage(scip, file, ",%s<%s>",
-                  w >= permlen ? "negated" : "", SCIPvarGetName(permvars[varidx]));
-               w = perm[w];
-            }
-            SCIPinfoMessage(scip, file, ")");
-         }
-         SCIPinfoMessage(scip, file, "\n");
-      }
-
-      SCIPfreeBufferArray(scip, &covered);
-   }
-
-   return SCIP_OKAY;
-}
-
 /** include symmetry handler for lexicographic reduction and orbital reduction */
 SCIP_RETCODE SCIPincludeSymhdlrLexOrbRed(
    SCIP*                 scip                /**< SCIP data structure */
@@ -1298,6 +1226,10 @@ SCIP_RETCODE SCIPincludeSymhdlrLexOrbRed(
    SCIP_CALL( SCIPaddBoolParam(scip, "symmetries/" SYM_NAME "/checkppupgrade",
          "Shall static constraints be used if at least 50 percent of perms can be handled by pp-orbisacks?",
          &symhdlrdata->useppupgrade, TRUE, DEFAULT_USEPPPUPGRADE, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip, "symmetries/" SYM_NAME "/displaysyminfo",
+         "Should the symmetry handler print information about the added symmetry handling methods?",
+         &symhdlrdata->displaysyminfo, TRUE, DEFAULT_DISPLAYSYMINFO, NULL, NULL) );
 
    return SCIP_OKAY;
 }

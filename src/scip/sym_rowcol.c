@@ -73,7 +73,8 @@
 #define SYM_DEFAULT_DETECTDOUBLELEX TRUE     /**< Should we check whether the components can be handled by double lex matrices? */
 #define SYM_DEFAULT_HANDLESIGNEDORBITOPES TRUE /**< Shall signed orbitopes be handled? */
 #define SYM_DEFAULT_USEDYNAMICPROP TRUE      /**< Shall dynamic propagation be used for orbitopes? */
-
+#define DEFAULT_DISPLAYSYMINFO   FALSE       /**< Should the symmetry handler print information about the added
+                                              *   symmetry handling methods? */
 
 /*
  * Data structures
@@ -97,6 +98,7 @@ struct SCIP_SymhdlrData
    SCIP_Bool             detectdoublelex;    /**< Should we check whether the components can be handled by double lex matrices? */
    SCIP_Bool             handlesignedorbitopes;/**< Shall signed orbitopes be handled? */
    SCIP_Bool             usedynamicprop;     /**< Shall dynamic propagation be used for orbitopes? */
+   SCIP_Bool             displaysyminfo;     /**< Shall information about the added SST cuts be displayed? */
 };
 
 /*
@@ -998,6 +1000,7 @@ SCIP_RETCODE addOrbitopesDynamic(
    SCIP_ORBITOPALREDDATA* orbitopalreddata,  /**< data needed for orbitopal reduction */
    SCIP_LEXREDDATA*      lexreddata,         /**< data needed for lexicographic reduction */
    SCIP_Bool*            lexredactive,       /**< pointer to store whether lexicographic reduction is active */
+   SCIP_Bool             displaysyminfo,     /**< Shall information about the added SST cuts be displayed? */
    SCIP_Bool*            success             /**< pointer to store whether orbitope could be added successfully */
    )
 {
@@ -1036,6 +1039,9 @@ SCIP_RETCODE addOrbitopesDynamic(
       SCIP_VAR* consvars[2];
       SCIP_Real conscoefs[2] = { -1.0, 1.0 };
 
+      if( displaysyminfo )
+         SCIPinfoMessage(scip, NULL, "  use %d SST cuts to sort first row\n", ncols - 1);
+
       /* for all adjacent column pairs, add linear constraint */
       SCIP_CALL( SCIPensureBlockMemoryArray(scip, orbitopeconss, maxnorbitopeconss, *norbitopeconss + ncols - 1) );
       for( i = 0; i < ncols - 1; ++i )
@@ -1061,6 +1067,9 @@ SCIP_RETCODE addOrbitopesDynamic(
    if( ncols == 2 )
    {
       int* orbisackperm;
+
+      if( displaysyminfo )
+         SCIPinfoMessage(scip, NULL, "  use dynamic lexicographic reduction on columns\n");
 
       /* If the component is an orbitope with 2 columns, then there is 1 generator of order 2. */
       orbisackperm = perms[0];
@@ -1112,6 +1121,9 @@ SCIP_RETCODE addOrbitopesDynamic(
       }
       assert(r == npprows);
 
+      if( displaysyminfo )
+         SCIPinfoMessage(scip, NULL, "  use packing orbitope on %d x %d matrix\n", npprows, ncols);
+
       (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_pp", partialname);
       SCIP_CALL( SCIPcreateConsOrbitope(scip, &cons, name, ppvarsarrayonlypprows, SCIP_ORBITOPETYPE_PACKING,
             npprows, ncols, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
@@ -1132,6 +1144,11 @@ SCIP_RETCODE addOrbitopesDynamic(
       SCIP_VAR** orbitopevarmatrix;
       int nelem;
       int pos = 0;
+
+      if( displaysyminfo )
+      {
+         SCIPinfoMessage(scip, NULL, "  use dynamic orbitopal reduction\n");
+      }
 
       /* variable array */
       nelem = nrows * ncols;
@@ -1305,6 +1322,7 @@ SCIP_RETCODE handleOrbitope(
    int*                  norbitopeconss,     /**< pointer to store number of conss in orbitopeconss */
    int*                  maxnorbitopeconss,  /**< pointer to store maximum number of conss orbitopeconss can hold */
    SCIP_Bool             usedynamicprop,     /**< Shall orbitopes be handled dynamically? */
+   SCIP_Bool             displaysyminfo,     /**< Shall information about the added SST cuts be displayed? */
    SCIP_Bool*            success,            /**< pointer to store whether orbitope could be added successfully */
    int*                  nchgbds             /**< pointer to store number of bound changes (or NULL) */
    )
@@ -1348,6 +1366,15 @@ SCIP_RETCODE handleOrbitope(
       {
          for( j = 0; j < ncols; ++j )
             orbitopevarmatrix[pos++] = permvars[varidxmatrix[i][j]];
+      }
+
+      if( displaysyminfo )
+      {
+         SCIPinfoMessage(scip, NULL, "  use static orbitopal reduction on %d x %d matrix\n", nrows, ncols);
+         SCIPinfoMessage(scip, NULL, "  use %d SST cuts to sort first row of %d x %d matrix\n",
+            ncols - 1, nrows, ncols);
+         if( issigned )
+            SCIPinfoMessage(scip, NULL, "  first row in upper variable domain (signed orbitope)\n");
       }
 
       SCIP_CALL( SCIPorbitopalReductionAddOrbitope(scip, orbitopalreddata, SCIP_ROWORDERING_NONE,
@@ -1409,7 +1436,7 @@ SCIP_RETCODE handleOrbitope(
       {
          SCIP_CALL( addOrbitopesDynamic(scip, symtype, perms, permvars, npermvars, permvardomaincenter, componentid,
                partialname, varidxmatrix, nrows, ncols, orbitopeconss, norbitopeconss, maxnorbitopeconss,
-               orbitopalreddata, lexreddata, lexredactive, success) );
+               orbitopalreddata, lexreddata, lexredactive, displaysyminfo, success) );
       }
       /* static variant only for binary variables */
       else
@@ -1438,6 +1465,11 @@ SCIP_RETCODE handleOrbitope(
 
          if( nbinrows > 0 )
          {
+            if( displaysyminfo )
+            {
+               SCIPinfoMessage(scip, NULL, "  use full orbitope on %d x %d matrix\n", nbinrows, ncols);
+            }
+
             SCIP_CALL( SCIPcreateConsOrbitope(scip, &cons, partialname, orbitopematrix, SCIP_ORBITOPETYPE_FULL,
                   nbinrows, ncols, FALSE, FALSE, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE,
                   FALSE) );
@@ -1476,6 +1508,7 @@ SCIP_RETCODE handleDoubleLexOrbitope(
    SCIP_CONS***          orbitopeconss,      /**< pointer to store array of conss derived from orbitopes */
    int*                  norbitopeconss,     /**< pointer to store number of conss in orbitopeconss */
    int*                  maxnorbitopeconss,  /**< pointer to store maximum number of conss orbitopeconss can hold */
+   SCIP_Bool             displaysyminfo,     /**< Shall information about the added SST cuts be displayed? */
    SCIP_Bool*            success,            /**< pointer to store whether orbitope could be added successfully */
    int*                  nchgbds             /**< pointer to store number of bound changes (or NULL) */
    )
@@ -1535,6 +1568,16 @@ SCIP_RETCODE handleDoubleLexOrbitope(
    }
    else
       nsortconss += nrows - 1;
+
+   if( displaysyminfo )
+   {
+      SCIPinfoMessage(scip, NULL, "  use static orbitopal reduction on %d x %d matrix\n", nrows, ncols);
+      SCIPinfoMessage(scip, NULL, "  use %d SST cuts to sort first row of %d x %d matrix\n",
+         ncols - 1, nrows, ncols);
+      if( nsignedconss > 0 )
+         SCIPinfoMessage(scip, NULL, "  recursively enforce first half of entries per column to "
+            "upper half and sort by static orbitopal reduction\n");
+   }
 
    /* create linear constraints */
    SCIP_CALL( SCIPensureBlockMemoryArray(scip, orbitopeconss, maxnorbitopeconss,
@@ -1717,6 +1760,7 @@ SCIP_RETCODE handleDoublelLexMatrix(
    SCIP_CONS***          orbitopeconss,      /**< pointer to store array of conss derived from orbitopes */
    int*                  norbitopeconss,     /**< pointer to store number of conss in orbitopeconss */
    int*                  maxnorbitopeconss,  /**< pointer to store maximum number of conss orbitopeconss can hold */
+   SCIP_Bool             displaysyminfo,     /**< Shall information about the added SST cuts be displayed? */
    SCIP_Bool*            success,            /**< pointer to store whether orbitope could be added successfully */
    int*                  nchgbds             /**< pointer to store number of bound changes (or NULL) */
    )
@@ -1855,7 +1899,7 @@ SCIP_RETCODE handleDoublelLexMatrix(
 
          SCIP_CALL( handleDoubleLexOrbitope(scip, permvars, permvardomaincenter, orbitopematrix, nrows, ncols,
                partialname, nflipableidx, orbitopalreddata, orbitopeconss, norbitopeconss, maxnorbitopeconss,
-               &tmpsuccess, nchgbds) );
+               displaysyminfo, &tmpsuccess, nchgbds) );
          *success = *success || tmpsuccess;
       }
       else if( hasrowflip )
@@ -1887,7 +1931,7 @@ SCIP_RETCODE handleDoublelLexMatrix(
 
          SCIP_CALL( handleDoubleLexOrbitope(scip, permvars, permvardomaincenter, orbitopematrix, ncols, nrows,
                partialname, nflipableidx, orbitopalreddata, orbitopeconss, norbitopeconss, maxnorbitopeconss,
-               &tmpsuccess, nchgbds) );
+               displaysyminfo, &tmpsuccess, nchgbds) );
          *success = *success || tmpsuccess;
       }
    }
@@ -1920,8 +1964,8 @@ SCIP_RETCODE handleDoublelLexMatrix(
          (void) SCIPsnprintf(partialname, SCIP_MAXSTRLEN, "orbitope_component_%d_doublelex_col_%d", id, p);
 
          SCIP_CALL( handleOrbitope(scip, symtype, perms, permvars, npermvars, permvardomaincenter, id, orbitopematrix,
-               nrows, j, partialname, FALSE, TRUE, lexreddata, lexredactive, orbitopalreddata,
-               orbitopeconss, norbitopeconss, maxnorbitopeconss, usedynamicprop, &tmpsuccess, nchgbds) );
+               nrows, j, partialname, FALSE, TRUE, lexreddata, lexredactive, orbitopalreddata, orbitopeconss,
+               norbitopeconss, maxnorbitopeconss, usedynamicprop, displaysyminfo, &tmpsuccess, nchgbds) );
          *success = *success || tmpsuccess;
       }
 
@@ -1946,7 +1990,7 @@ SCIP_RETCODE handleDoublelLexMatrix(
 
          SCIP_CALL( handleOrbitope(scip, symtype, perms, permvars, npermvars, permvardomaincenter, id, orbitopematrix,
                ncols, i, partialname, FALSE, TRUE, lexreddata, lexredactive, orbitopalreddata, orbitopeconss,
-               norbitopeconss, maxnorbitopeconss, usedynamicprop, &tmpsuccess, nchgbds) );
+               norbitopeconss, maxnorbitopeconss, usedynamicprop, displaysyminfo, &tmpsuccess, nchgbds) );
          *success = *success || tmpsuccess;
       }
    }
@@ -1960,6 +2004,51 @@ SCIP_RETCODE handleDoublelLexMatrix(
       SCIPfreeBufferArray(scip, &orbitopematrix[i]);
    }
    SCIPfreeBufferArray(scip, &orbitopematrix);
+
+   return SCIP_OKAY;
+}
+
+/** prints general information about symmetry component to terminal */
+static
+SCIP_RETCODE printSyminfoGroupAction(
+   SCIP*                 scip,               /**< SCIP pointer */
+   int                   id,                 /**< numerical identifier of symmetry component */
+   SCIP_Bool             isorbitope,         /**< whether group action is orbitopal */
+   SCIP_Bool             isdoublelex,        /**< whether group action id doublelex */
+   int                   nrows,              /**< number of rows for matrix actions */
+   int                   ncols,              /**< number of columns for matrix actions */
+   int                   nrowmatrices,       /**< number of row matrices (for doublelex) */
+   int                   ncolmatrices,       /**< number of column matrices (for doublelex) */
+   int*                  rowsbegin,          /**< array to indicate length of row matrices (for doublelex) */
+   int*                  colsbegin           /**< array to indicate length of column matrices (for doublelex) */
+   )
+{
+   assert(scip != NULL);
+   assert(isorbitope || rowsbegin != NULL);
+   assert(isorbitope || colsbegin != NULL);
+
+   SCIPinfoMessage(scip, NULL, "Handle symmetry component %d by symmetry handler <" SYM_NAME ">.\n", id);
+   SCIPinfoMessage(scip, NULL, "  Group action:\t\t\t");
+   if ( isorbitope )
+      SCIPinfoMessage(scip, NULL, "column action on %d x %d matrix\n", nrows, ncols);
+   else if ( isdoublelex )
+   {
+      int i;
+
+      SCIPinfoMessage(scip, NULL, "row and column action on %d x %d matrix\n", nrows, ncols);
+      SCIPinfoMessage(scip, NULL, "  number of row blocks:\t\t%d (blocks of length %d", nrowmatrices,
+         rowsbegin[1] - rowsbegin[0]);
+      for (i = 1; i < nrowmatrices; ++i)
+         SCIPinfoMessage(scip, NULL, ", %d", rowsbegin[i + 1] - rowsbegin[i]);
+      SCIPinfoMessage(scip, NULL, ")\n");
+      SCIPinfoMessage(scip, NULL, "  number of column blocks:\t%d (blocks of length %d", ncolmatrices,
+         colsbegin[1] - colsbegin[0]);
+      for (i = 1; i < ncolmatrices; ++i)
+         SCIPinfoMessage(scip, NULL, ", %d", colsbegin[i + 1] - colsbegin[i]);
+      SCIPinfoMessage(scip, NULL, ")\n");
+   }
+   else
+      SCIPinfoMessage(scip, NULL, "unknown\n");
 
    return SCIP_OKAY;
 }
@@ -1985,6 +2074,7 @@ SCIP_RETCODE tryHandleSingleOrDoubleLexMatrices(
    SCIP_CONS***          orbitopeconss,      /**< pointer to store array of conss derived from orbitopes */
    int*                  norbitopeconss,     /**< pointer to store number of conss in orbitopeconss */
    int*                  maxnorbitopeconss,  /**< pointer to store maximum number of conss orbitopeconss can hold */
+   SCIP_Bool             displaysyminfo,     /**< Shall information about the added SST cuts be displayed? */
    SCIP_Bool*            success             /**< pointer to store whether symmetries are handled */
    )
 {
@@ -2100,6 +2190,11 @@ SCIP_RETCODE tryHandleSingleOrDoubleLexMatrices(
                goto FREEMEMORY;
          }
 
+         if( displaysyminfo )
+         {
+            SCIP_CALL( printSyminfoGroupAction(scip, cidx, TRUE, FALSE, nrows, ncols, 0, 0, NULL, NULL) );
+         }
+
          (void) SCIPsnprintf(partialname, SCIP_MAXSTRLEN, "orbitope_component_%d", cidx);
 
          if( handlesignedorbitopes )
@@ -2152,7 +2247,8 @@ SCIP_RETCODE tryHandleSingleOrDoubleLexMatrices(
 
                SCIP_CALL( handleOrbitope(scip, symtype, perms, permvars, npermvars, permvardomaincenter, cidx,
                      orbitopematrix, nrows, ncols, partialname, TRUE, TRUE, lexreddata, lexredactive, orbitopalreddata,
-                     orbitopeconss, norbitopeconss, maxnorbitopeconss, usedynamicprop, &locsuccess, nchgbds) );
+                     orbitopeconss, norbitopeconss, maxnorbitopeconss, usedynamicprop, displaysyminfo, &locsuccess,
+                     nchgbds) );
 
                for( i = nrows - 1; i >= 0; --i )
                {
@@ -2168,15 +2264,21 @@ SCIP_RETCODE tryHandleSingleOrDoubleLexMatrices(
          {
             SCIP_CALL( handleOrbitope(scip, symtype, perms, permvars, npermvars, permvardomaincenter, cidx, lexmatrix,
                   nrows, ncols, partialname, FALSE, FALSE, lexreddata, lexredactive, orbitopalreddata, orbitopeconss,
-                  norbitopeconss, maxnorbitopeconss, usedynamicprop, &locsuccess, nchgbds) );
+                  norbitopeconss, maxnorbitopeconss, usedynamicprop, displaysyminfo, &locsuccess, nchgbds) );
          }
       }
       else
       {
+         if( displaysyminfo )
+         {
+            SCIP_CALL( printSyminfoGroupAction(scip, cidx, FALSE, TRUE, nrows, ncols,
+                  nrowmatrices, ncolmatrices, lexrowsbegin, lexcolsbegin) );
+         }
+
          SCIP_CALL( handleDoublelLexMatrix(scip, symtype, perms, permvars, npermvars, permvardomaincenter, cidx,
                lexmatrix, nrows, ncols, lexrowsbegin, lexcolsbegin, nrowmatrices, ncolmatrices, selectedperms, nselectedperms,
                handlesignedorbitopes, usedynamicprop, lexreddata, lexredactive, orbitopalreddata, orbitopeconss,
-               norbitopeconss, maxnorbitopeconss, &locsuccess, nchgbds) );
+               norbitopeconss, maxnorbitopeconss, displaysyminfo, &locsuccess, nchgbds) );
       }
 
    FREEMEMORY:
@@ -2248,7 +2350,8 @@ SCIP_DECL_SYMHDLRTRYADD(symhdlrTryaddRowCol)
    SCIP_CALL( tryHandleSingleOrDoubleLexMatrices(scip, symtype, perms, nperms, permvars, npermvars, permvardomcenter,
          !symhdlrdata->detectdoublelex, symhdlrdata->handlesignedorbitopes, symhdlrdata->usedynamicprop,
          id, nchgbds, (*symcompdata)->lexreddata, &(*symcompdata)->lexredactive, symhdlrdata->orbitopalreddata,
-         &(*symcompdata)->conss, &(*symcompdata)->nconss, &(*symcompdata)->maxnconss, success) );
+         &(*symcompdata)->conss, &(*symcompdata)->nconss, &(*symcompdata)->maxnconss, symhdlrdata->displaysyminfo,
+         success) );
 
    if( !(*success) )
    {
@@ -2458,14 +2561,6 @@ SCIP_DECL_SYMHDLRPRESOL(symhdlrPresolRowCol)
    return SCIP_OKAY;
 }
 
-/** symmetry component display method of symmetry handler */
-static
-SCIP_DECL_SYMHDLRPRINT(symhdlrPrintRowCol)
-{  /*lint --e{715}*/
-
-   return SCIP_OKAY;
-}
-
 /** include symmetry handler for row and column symmetries */
 SCIP_RETCODE SCIPincludeSymhdlrRowCol(
    SCIP*                 scip                /**< SCIP data structure */
@@ -2516,6 +2611,10 @@ SCIP_RETCODE SCIPincludeSymhdlrRowCol(
    SCIP_CALL( SCIPaddBoolParam(scip, "symmetries/" SYM_NAME "/usedynamicprop",
          "Shall dynamic orbitope propagation be used?",
          &symhdlrdata->usedynamicprop, TRUE, SYM_DEFAULT_USEDYNAMICPROP, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip, "symmetries/" SYM_NAME "/displaysyminfo",
+         "Should the symmetry handler print information about the added symmetry handling methods?",
+         &symhdlrdata->displaysyminfo, TRUE, DEFAULT_DISPLAYSYMINFO, NULL, NULL) );
 
    return SCIP_OKAY;
 }
