@@ -162,7 +162,7 @@ typedef enum RestartPolicy RESTARTPOLICY;
 #define ESTIMMETHOD_SSG          's'             /**< estimation based on double exponential smoothing for sum of subtree gaps */
 #define ESTIMMETHOD_TPROF        't'             /**< estimation based on tree profile method */
 #define ESTIMMETHOD_TREEWEIGHT   'w'             /**< estimation based on double exponential smoothing for tree weight */
-#define ESTIMMETHOD_CHECKPOINT   'p'             /**< estimation based on checkpoint-based linear extrapolation */
+#define ESTIMMETHOD_CHECKPOINT   'p'             /**< estimation based on linear extrapolation since last increase */
 
 #define ESTIMMETHODS "bceglopstw"
 
@@ -246,9 +246,9 @@ typedef struct TreeProfile TREEPROFILE;
 #define DEFAULT_COEFMONOWEIGHT       0.3667  /**< coefficient of tree weight in monotone approximation of search completion */
 #define DEFAULT_COEFMONOSSG          0.6333  /**< coefficient of 1 - SSG in monotone approximation of search completion */
 #define DEFAULT_COMPLETIONTYPE       COMPLETIONTYPE_AUTO /**< default computation of search tree completion */
-#define DEFAULT_ESTIMMETHOD          ESTIMMETHOD_CHECKPOINT    /**< default tree size estimation method: (c)ompletion, (e)nsemble, time series forecasts on either
-                                                            * (g)ap, (l)eaf frequency, (o)open nodes,
-                                                            * tree (w)eight, (s)sg, check(p)oint, (t)ree profile or w(b)e */
+#define DEFAULT_ESTIMMETHOD          ESTIMMETHOD_CHECKPOINT /**< default tree size estimation method: (c)ompletion, (e)nsemble, time series forecasts on either
+                                               * (g)ap, (l)eaf frequency, (o)open nodes,
+                                               * tree (w)eight, (s)sg, check(p)oint, (t)ree profile or w(b)e */
 #define DEFAULT_TREEPROFILE_ENABLED  FALSE   /**< Should the event handler collect data? */
 #define DEFAULT_TREEPROFILE_MINNODESPERDEPTH 20.0 /**< minimum average number of nodes at each depth before producing estimations */
 #define DEFAULT_RESTARTPOLICY        'e'     /**< default restart policy: (a)lways, (c)ompletion, (e)stimation, (n)ever */
@@ -290,7 +290,7 @@ struct SCIP_EventhdlrData
    char                  restartpolicyparam; /**< restart policy parameter */
    char                  estimmethod;        /**< tree size estimation method: (c)ompletion, (e)nsemble, time series forecasts on either
                                                * (g)ap, (l)eaf frequency, (o)open nodes,
-                                               * tree (w)eight, (s)sg, or (t)ree profile or w(b)e */
+                                               * tree (w)eight, (s)sg, check(p)oint, (t)ree profile or w(b)e */
    char                  completiontypeparam;/**< approximation of search tree completion:
                                               *   (a)uto, (g)ap, tree (w)eight, (m)onotone regression, (r)egression forest, (s)sg */
    SCIP_Bool             countonlyleaves;    /**< Should only leaves count for the minnodes parameter? */
@@ -2812,14 +2812,17 @@ SCIP_DECL_EVENTEXEC(eventExecEstim)
          if( nchildren != 2 )
             eventhdlrdata->treeisbinary = FALSE;
 
-         /* set checkpoint at next increase */
+         /* for checkpoint estimation, at a branching plan checkpoint before the next tree weight increase */
          if( eventhdlrdata->restartpolicyparam == RESTARTPOLICY_CHAR_ESTIMATION
             && eventhdlrdata->estimmethod == ESTIMMETHOD_CHECKPOINT )
             treedata->checkpointincrease = FALSE;
       }
       else
       {
-         /* hit checkpoint for next estimation with significant node weight */
+         /* for checkpoint estimation, at a deletion with previous branching and significant node weight contribution
+          * a checkpoint is hit; exclude deep node to avoid restart triggers based on instable extrapolation because
+          * its tree weight delta can cancel numerically
+          */
          if( eventhdlrdata->restartpolicyparam == RESTARTPOLICY_CHAR_ESTIMATION
             && eventhdlrdata->estimmethod == ESTIMMETHOD_CHECKPOINT
             && !treedata->checkpointincrease && SCIPnodeGetDepth(eventnode) < eventhdlrdata->checkpointdepthlim )
@@ -2858,6 +2861,7 @@ SCIP_DECL_EVENTEXEC(eventExecEstim)
    if( eventtype == SCIP_EVENTTYPE_NODEDELETE )
       return SCIP_OKAY;
 
+   /* a branching event increases the number of nodes */
    assert(eventhdlrdata->restartpolicyparam != RESTARTPOLICY_CHAR_ESTIMATION
       || eventhdlrdata->estimmethod != ESTIMMETHOD_CHECKPOINT
       || eventhdlrdata->treedata->nnodes > eventhdlrdata->treedata->checkpointnodes);
