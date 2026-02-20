@@ -1040,7 +1040,6 @@ SCIPLIBOBJ	=	scip/boundstore.o \
 			scip/sym_lexorbred.o \
 			scip/sym_rowcol.o \
 			scip/sym_sst.o \
-			scip/sym_symresack.o \
 			scip/symmetry.o \
 			scip/symmetry_graph.o \
 			scip/symmetry_orbitopal.o \
