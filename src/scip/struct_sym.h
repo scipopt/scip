@@ -160,6 +160,8 @@ struct SCIP_SymInfo
    int*                  componentbegins;    /**< array containing in i-th position the first position of
                                               *   component i in components array */
    int                   ncomponents;        /**< number of components of symmetry group */
+   int*                  vartocomponent;     /**< array containing for each permvar the index of the component it is
+                                              *   contained in (-1 if not affected) */
 };
 
 #ifdef __cplusplus

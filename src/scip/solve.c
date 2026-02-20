@@ -2063,11 +2063,12 @@ SCIP_RETCODE computeComponentsSym(
    int**                 components,         /**< array containing the indices of symmetries sorted by components */
    int**                 componentbegins,    /**< array containing in i-th position the first position of
                                               *   component i in components array */
-   int*                  ncomponents         /**< pointer to store number of components of symmetry group */
+   int*                  ncomponents,        /**< pointer to store number of components of symmetry group */
+   int**                 vartocomp           /**< pointer to store array containing for each permvar the index
+                                              *   of the component it is contained in (-1 if not affected) */
    )
 {
    SCIP_DISJOINTSET* componentstovar = NULL;
-   int* vartocomp;
    int* symtovarcomp;
    int s;
    int i;
@@ -2080,6 +2081,7 @@ SCIP_RETCODE computeComponentsSym(
    assert(components != NULL);
    assert(componentbegins != NULL);
    assert(ncomponents != NULL);
+   assert(vartocomp != NULL);
 
    if( nperms <= 0 )
       return SCIP_OKAY;
@@ -2093,12 +2095,12 @@ SCIP_RETCODE computeComponentsSym(
       symtovarcomp[s] = -1;
 
    /* init array that stores for each variable its component */
-   SCIP_CALL( SCIPallocBufferArray(scip, &vartocomp, npermvars) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, vartocomp, npermvars) );
 
    /* find symmetry components */
    for( i = 0; i < npermvars; ++i )
    {
-      vartocomp[i] = -1;
+      (*vartocomp)[i] = -1;
 
       for( s = 0; s < nperms; ++s )
       {
@@ -2122,8 +2124,8 @@ SCIP_RETCODE computeComponentsSym(
 
             component1 = SCIPdisjointsetFind(componentstovar, i);
             component2 = SCIPdisjointsetFind(componentstovar, img);
-            vartocomp[i] = s;
-            vartocomp[img] = s;
+            (*vartocomp)[i] = s;
+            (*vartocomp)[img] = s;
 
             /* ensure component1 <= component2 */
             if( component2 < component1 )
@@ -2176,7 +2178,7 @@ SCIP_RETCODE computeComponentsSym(
       }
 
       /* reduce the number of components by singletons */
-      if( vartocomp[i] == -1 )
+      if( (*vartocomp)[i] == -1 )
          --(*ncomponents);
    }
    assert(*ncomponents > 0);
@@ -2210,7 +2212,6 @@ SCIP_RETCODE computeComponentsSym(
    assert(*ncomponents == idx + 1);
    (*componentbegins)[++idx] = nperms;
 
-   SCIPfreeBufferArray(scip, &vartocomp);
    SCIPfreeBufferArray(scip, &symtovarcomp);
    SCIPdisjointsetFree(&componentstovar, SCIPblkmem(scip));
 
@@ -2284,7 +2285,8 @@ SCIP_RETCODE SCIPtryAddSymmetryHandlingMethods(
 
    /* compute independent components of symmetry group */
    SCIP_CALL( computeComponentsSym(scip, syminfo->symtype, syminfo->perms, syminfo->nperms, syminfo->permvars,
-         syminfo->npermvars, &syminfo->components, &syminfo->componentbegins, &syminfo->ncomponents) );
+         syminfo->npermvars, &syminfo->components, &syminfo->componentbegins, &syminfo->ncomponents,
+         &syminfo->vartocomponent) );
 
    /* create hashmap for storing the indices of variables */
    SCIP_CALL( SCIPhashmapCreate(&syminfo->permvarmap, SCIPblkmem(scip), syminfo->nperms) );

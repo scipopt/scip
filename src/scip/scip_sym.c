@@ -563,6 +563,7 @@ SCIP_RETCODE SCIPsyminfoCreate(
    (*syminfo)->components = NULL;
    (*syminfo)->componentbegins = NULL;
    (*syminfo)->ncomponents = 0;
+   (*syminfo)->vartocomponent = NULL;
 
    return SCIP_OKAY;
 }
@@ -640,6 +641,7 @@ SCIP_RETCODE SCIPsyminfoFree(
       SCIPhashmapFree(&(*syminfo)->permvarmap);
       SCIPfreeBlockMemoryArray(scip, &(*syminfo)->components, (*syminfo)->nperms);
       SCIPfreeBlockMemoryArray(scip, &(*syminfo)->componentbegins, (*syminfo)->ncomponents + 1);
+      SCIPfreeBlockMemoryArray(scip, &(*syminfo)->vartocomponent, (*syminfo)->npermvars);
    }
 
    /* free information about symmetry handling methods */
