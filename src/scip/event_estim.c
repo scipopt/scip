@@ -259,6 +259,7 @@ typedef struct TreeProfile TREEPROFILE;
 #define DEFAULT_RESTARTNONLINEAR     FALSE   /**< whether to apply a restart when nonlinear constraints are present */
 #define DEFAULT_RESTARTACTPRICERS    FALSE   /**< whether to apply a restart when active pricers are used */
 #define DEFAULT_HITCOUNTERLIM        50      /**< limit on the number of successive samples to really trigger a restart */
+#define DEFAULT_CHECKPOINT_DEPTHLIM  50      /**< depth below which checkpoint is updated */
 #define DEFAULT_SSG_NMAXSUBTREES     -1      /**< the maximum number of individual SSG subtrees; the old split is kept if
                                                *  a new split exceeds this number of subtrees ; -1: no limit */
 #define DEFAULT_SSG_NMINNODESLASTSPLIT   0L  /**< minimum number of nodes to process between two consecutive SSG splits */
@@ -288,6 +289,7 @@ struct SCIP_EventhdlrData
    int                   nreports;           /**< the number of reports already printed */
    int                   reportfreq;         /**< report frequency on estimation: -1: never, 0:always, k >= 1: k times evenly during search */
    int                   lastrestartrun;     /**< the last run at which this event handler triggered restart */
+   int                   checkpointdepthlim; /**< depth below which checkpoint is updated */
    char                  restartpolicyparam; /**< restart policy parameter */
    char                  estimmethod;        /**< tree size estimation method: (c)ompletion, (e)nsemble, time series forecasts on either
                                                * (g)ap, (l)eaf frequency, (o)open nodes,
@@ -2820,7 +2822,7 @@ SCIP_DECL_EVENTEXEC(eventExecEstim)
          /* hit checkpoint for next estimation with significant node weight */
          if( eventhdlrdata->restartpolicyparam == RESTARTPOLICY_CHAR_ESTIMATION
             && eventhdlrdata->estimmethod == ESTIMMETHOD_CHECKPOINT
-            && !eventhdlrdata->preincrease && SCIPnodeGetDepth(eventnode) < 50 )
+            && !eventhdlrdata->preincrease && SCIPnodeGetDepth(eventnode) < eventhdlrdata->checkpointdepthlim )
          {
             eventhdlrdata->pretreeweight = eventhdlrdata->treedata->weight;
             eventhdlrdata->prenodes = eventhdlrdata->treedata->nnodes;
@@ -3044,6 +3046,10 @@ SCIP_RETCODE SCIPincludeEventHdlrEstim(
    SCIP_CALL( SCIPaddBoolParam(scip, "estimation/showstats",
          "should statistics be shown at the end?",
          &eventhdlrdata->showstats, TRUE, DEFAULT_SHOWSTATS, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddIntParam(scip, "estimation/checkpoint/depthlim",
+         "depth below which checkpoint is updated",
+         &eventhdlrdata->checkpointdepthlim, TRUE, DEFAULT_CHECKPOINT_DEPTHLIM, 0, INT_MAX, NULL, NULL) );
 
    /* SSG parameters */
    SCIP_CALL( SCIPaddIntParam(scip, "estimation/ssg/nmaxsubtrees",
