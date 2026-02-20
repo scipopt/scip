@@ -8,6 +8,7 @@ Features
 
 - adds functionality to compute symmetries of entire symmetry detection graph rather than just the restriction to variable nodes
 - primal heuristic feasjump
+- simpler restart control based on linear extrapolation since improvement checkpoint in tree size estimation
 
 Interface changes
 -----------------
@@ -41,6 +42,11 @@ Interface changes
 - `heuristics/feasjump/randprobgood`: probability of random selection from good variables
 - `heuristics/feasjump/randprobviol`: probability of random selection from violated constraint
 - `heuristics/feasjump/callbackeffort`: effort between callbacks
+- `estimation/checkpoint/depthlim`: depth below which checkpoint is updated
+
+### Changed parameters
+
+- `estimation/method`: use default setting `p` to apply linear check(p)oint extrapolation in tree size estimation
 
 ### Data structures
 
