@@ -33,6 +33,7 @@
 #include "scip/pub_message.h"
 #include "scip/pub_misc.h"
 #include "scip/set.h"
+#include "scip/scip_mem.h"
 #include "scip/scip_sym.h"
 #include "scip/struct_mem.h"
 #include "scip/struct_scip.h"
@@ -522,4 +523,138 @@ int SCIPgetNSymcomps(
    assert(scip->syminfo != NULL);
 
    return scip->syminfo->nsymcomps;
+}
+
+/** returns symmetry information data structure */
+SCIP_SYMINFO* SCIPgetSyminfo(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   assert(scip != NULL);
+
+   return scip->syminfo;
+}
+
+/** creates and captures symmetry information data structure */
+SCIP_RETCODE SCIPsyminfoCreate(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SYMINFO**        syminfo             /**< pointer to return the created syminfo */
+   )
+{
+   assert(scip != NULL);
+   assert(syminfo != NULL);
+
+   SCIP_CALL( SCIPallocBlockMemory(scip, syminfo) );
+
+   (*syminfo)->symcomps = NULL;
+   (*syminfo)->nsymcomps = -1;
+   (*syminfo)->symcompssize = 0;
+   (*syminfo)->triedhandlesymmetry = FALSE;
+   SCIP_CALL( SCIPhashmapCreate(&(*syminfo)->customsymopnodetypes, SCIPblkmem(scip), 10) );
+   (*syminfo)->nopnodetypes = (int) SYM_CONSOPTYPE_LAST;
+   (*syminfo)->symtype = SYM_SYMTYPE_PERM;
+   (*syminfo)->perms = NULL;
+   (*syminfo)->permstrans = NULL;
+   (*syminfo)->nperms = -1;
+   (*syminfo)->permssize = 0;
+   (*syminfo)->permvars = NULL;
+   (*syminfo)->npermvars = 0;
+   (*syminfo)->permvarmap = NULL;
+   (*syminfo)->components = NULL;
+   (*syminfo)->componentbegins = NULL;
+   (*syminfo)->ncomponents = 0;
+
+   return SCIP_OKAY;
+}
+
+/** returns transposed permutations matrix, and generates it if it does not exist yet */
+SCIP_RETCODE SCIPsyminfoGetPermstrans(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SYMINFO*         syminfo,            /**< pointer to the syminfo */
+   int***                permstrans          /**< pointer to permstrans */
+   )
+{
+   assert(scip != NULL);
+   assert(syminfo != NULL);
+   assert(permstrans != NULL);
+
+   /* generate permstrans if it does not exist yet */
+   if( syminfo->permstrans == NULL )
+   {
+      int permlen;
+      int p;
+      int v;
+
+      permlen = syminfo->symtype == SYM_SYMTYPE_PERM ? syminfo->npermvars : 2 * syminfo->npermvars;
+
+      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &syminfo->permstrans, permlen) );
+      for( v = 0; v < permlen; ++v )
+      {
+         SCIP_CALL( SCIPallocBlockMemoryArray(scip, &syminfo->permstrans[v], syminfo->nperms) );
+
+         for( p = 0; p < syminfo->nperms; ++p )
+            syminfo->permstrans[v][p] = syminfo->perms[p][v];
+      }
+   }
+   *permstrans = syminfo->permstrans;
+
+   return SCIP_OKAY;
+}
+
+/** releases symmetry information data structure */
+SCIP_RETCODE SCIPsyminfoFree(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SYMINFO**        syminfo             /**< pointer to the syminfo */
+   )
+{
+   SCIP_SYMCOMP* symcomp;
+   int i;
+
+   assert(scip != NULL);
+   assert(syminfo != NULL);
+
+   if( *syminfo == NULL )
+      return SCIP_OKAY;
+
+   /* free general symmetry information */
+   if( (*syminfo)->nperms > 0 )
+   {
+      int permlen;
+
+      permlen = (*syminfo)->symtype == SYM_SYMTYPE_PERM ? (*syminfo)->npermvars : 2 * (*syminfo)->npermvars;
+
+      for( i = (*syminfo)->nperms - 1; i >= 0; --i )
+      {
+         SCIPfreeBlockMemoryArray(scip, &(*syminfo)->perms[i], permlen);
+      }
+      SCIPfreeBlockMemoryArray(scip, &(*syminfo)->perms, (*syminfo)->permssize);
+      if( (*syminfo)->permstrans != NULL )
+      {
+         for( i = permlen - 1; i >= 0; --i )
+         {
+            SCIPfreeBlockMemoryArray(scip, &(*syminfo)->permstrans[i], (*syminfo)->nperms);
+         }
+         SCIPfreeBlockMemoryArray(scip, &(*syminfo)->permstrans, (*syminfo)->npermvars);
+      }
+      SCIPfreeBlockMemoryArray(scip, &(*syminfo)->permvars, (*syminfo)->npermvars);
+      SCIPhashmapFree(&(*syminfo)->permvarmap);
+      SCIPfreeBlockMemoryArray(scip, &(*syminfo)->components, (*syminfo)->nperms);
+      SCIPfreeBlockMemoryArray(scip, &(*syminfo)->componentbegins, (*syminfo)->ncomponents + 1);
+   }
+
+   /* free information about symmetry handling methods */
+   assert((*syminfo)->customsymopnodetypes != NULL);
+   SCIPhashmapFree(&(*syminfo)->customsymopnodetypes);
+
+   for( i = (*syminfo)->nsymcomps - 1; i >= 0; --i )
+   {
+      symcomp = (*syminfo)->symcomps[i];
+      SCIPfreeBlockMemoryArray(scip, &symcomp->name, strlen(symcomp->name)+1);
+      SCIPfreeBlockMemory(scip, &symcomp);
+   }
+   SCIPfreeBlockMemoryArrayNull(scip, &(*syminfo)->symcomps, (*syminfo)->symcompssize);
+   SCIPfreeBlockMemory(scip, syminfo);
+   *syminfo = NULL;
+
+   return SCIP_OKAY;
 }

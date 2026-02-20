@@ -300,23 +300,6 @@ SCIP_RETCODE SCIPsyminfoCompressPermInfo(
    SCIP_Real             compressthreshold   /**< if percentage of moved vars is below threshold, compression is done */
    );
 
-/** creates and captures symmetry information data structure */
-SCIP_RETCODE SCIPsyminfoCreate(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_SYMINFO**        syminfo             /**< pointer to return the created syminfo */
-   );
-
-/** returns the symmetry information data structure */
-SCIP_SYMINFO* SCIPgetSyminfo(
-   SCIP*                 scip                /**< SCIP data structure */
-   );
-
-/** releases symmetry information data structure */
-SCIP_RETCODE SCIPsyminfoFree(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_SYMINFO**        syminfo             /**< pointer to the syminfo */
-   );
-
 /** displays generators of symmetry group, if available */
 SCIP_RETCODE SCIPdisplaySymmetryGenerators(
    SCIP*                 scip,               /**< SCIP data structure */

@@ -267,6 +267,34 @@ int SCIPgetNSymcomps(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
+/** returns the symmetry information data structure */
+SCIP_EXPORT
+SCIP_SYMINFO* SCIPgetSyminfo(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/** creates and captures symmetry information data structure */
+SCIP_EXPORT
+SCIP_RETCODE SCIPsyminfoCreate(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SYMINFO**        syminfo             /**< pointer to return the created syminfo */
+   );
+
+/** returns transposed permutations matrix, and generates it if it does not exist yet */
+SCIP_EXPORT
+SCIP_RETCODE SCIPsyminfoGetPermstrans(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SYMINFO*         syminfo,            /**< pointer to the syminfo */
+   int***                permstrans          /**< pointer to permstrans */
+   );
+
+/** releases symmetry information data structure */
+SCIP_EXPORT
+SCIP_RETCODE SCIPsyminfoFree(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SYMINFO**        syminfo             /**< pointer to the syminfo */
+   );
+
 /** @} */
 
 #ifdef __cplusplus

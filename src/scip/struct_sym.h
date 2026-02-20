@@ -150,6 +150,7 @@ struct SCIP_SymInfo
    /* general symmetry information */
    SYM_SYMTYPE           symtype;            /**< type of symmetries */
    int**                 perms;              /**< (signed) permutations */
+   int**                 permstrans;         /**< transposed (signed) permutations matrix */
    int                   nperms;             /**< number of permutations */
    int                   permssize;          /**< size of perms array */
    SCIP_VAR**            permvars;           /**< array of variables the permutations act on */
