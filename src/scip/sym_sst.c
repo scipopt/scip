@@ -1643,6 +1643,20 @@ SCIP_DECL_SYMHDLRTRYADD(symhdlrTryAddSST)
    return SCIP_OKAY;
 }
 
+/** copy method for symmetry handler plugins (called when SCIP copies plugins) */
+static
+SCIP_DECL_SYMHDLRCOPY(symhdlrCopySST)
+{  /*lint --e{715}*/
+   assert(scip != NULL);
+   assert(symhdlr != NULL);
+   assert(strcmp(SCIPsymhdlrGetName(symhdlr), SYM_NAME) == 0);
+
+   /* call inclusion method of symmetry handler */
+   SCIP_CALL( SCIPincludeSymhdlrSST(scip) );
+
+   return SCIP_OKAY;
+}
+
 /** deinitialization method of symmetry handler (called before transformed problem is freed) */
 static
 SCIP_DECL_SYMHDLREXIT(symhdlrExitSST)
@@ -1737,6 +1751,7 @@ SCIP_RETCODE SCIPincludeSymhdlrSST(
          symhdlrTryAddSST, symhdlrdata) );
 
    /* include non-fundamental callback methods */
+   SCIP_CALL( SCIPsetSymhdlrCopy(scip, symhdlr, symhdlrCopySST) );
    SCIP_CALL( SCIPsetSymhdlrFree(scip, symhdlr, symhdlrFreeSST) );
    SCIP_CALL( SCIPsetSymhdlrExit(scip, symhdlr, symhdlrExitSST) );
    SCIP_CALL( SCIPsetSymhdlrPresol(scip, symhdlr, symhdlrPresolSST,

@@ -972,6 +972,21 @@ SCIP_DECL_SYMHDLRTRYADD(symhdlrTryaddLexOrbRed)
    return SCIP_OKAY;
 }
 
+/** copy method for symmetry handler plugins (called when SCIP copies plugins) */
+static
+SCIP_DECL_SYMHDLRCOPY(symhdlrCopyLexOrbRed)
+{  /*lint --e{715}*/
+   assert(scip != NULL);
+   assert(symhdlr != NULL);
+   assert(strcmp(SCIPsymhdlrGetName(symhdlr), SYM_NAME) == 0);
+
+   /* call inclusion method of symmetry handler */
+   SCIP_CALL( SCIPincludeSymhdlrLexOrbRed(scip) );
+   printf("i am here\n");
+
+   return SCIP_OKAY;
+}
+
 /** solving process deinitialization method of symmetry handler (called before branch and bound process data is freed) */
 static
 SCIP_DECL_SYMHDLREXITSOL(symhdlrExitsolLexOrbRed)
@@ -1183,6 +1198,7 @@ SCIP_RETCODE SCIPincludeSymhdlrLexOrbRed(
          symhdlrTryaddLexOrbRed, symhdlrdata) );
 
    /* set non-fundamental callback methods */
+   SCIP_CALL( SCIPsetSymhdlrCopy(scip, symhdlr, symhdlrCopyLexOrbRed) );
    SCIP_CALL( SCIPsetSymhdlrFree(scip, symhdlr, symhdlrFreeLexOrbRed) );
    SCIP_CALL( SCIPsetSymhdlrExit(scip, symhdlr, symhdlrExitLexOrbRed) );
    SCIP_CALL( SCIPsetSymhdlrExitsol(scip, symhdlr, symhdlrExitsolLexOrbRed) );
