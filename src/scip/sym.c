@@ -1920,7 +1920,6 @@ SCIP_RETCODE SCIPcreateSymOpNodeType(
    assert(scip != NULL);
    assert(nodetype != NULL);
 
-   /* @symtodo add syminfo as argument */
    syminfo = SCIPgetSyminfo(scip);
    if( syminfo == NULL )
    {
@@ -1954,7 +1953,6 @@ SCIP_RETCODE SCIPgetSymOpNodeType(
 
    assert(scip != NULL);
 
-   /* @symtodo add syminfo as argument */
    syminfo = SCIPgetSyminfo(scip);
    if( syminfo == NULL )
    {
