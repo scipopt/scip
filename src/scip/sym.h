@@ -228,6 +228,12 @@ void SCIPsymhdlrSetProp(
    SCIP_PROPTIMING       timingmask          /**< positions in the node solving loop where propagators should be executed */
    );
 
+/** sets copy metod of symmetry handler */
+void SCIPsymhdlrSetCopy(
+   SCIP_SYMHDLR*         symhdlr,            /**< symmetry handler */
+   SCIP_DECL_SYMHDLRCOPY ((*symcopy))        /**< copy symmetry handler */
+   );
+
 /** sets destructor method of symmetry handler */
 void SCIPsymhdlrSetFree(
    SCIP_SYMHDLR*         symhdlr,            /**< symmetry handler */

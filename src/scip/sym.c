@@ -1095,6 +1095,17 @@ void SCIPsymhdlrSetProp(
    symhdlr->delayprop = delayprop;
 }
 
+/** sets copy metod of symmetry handler */
+void SCIPsymhdlrSetCopy(
+   SCIP_SYMHDLR*         symhdlr,            /**< symmetry handler */
+   SCIP_DECL_SYMHDLRCOPY ((*symcopy))        /**< copy symmetry handler */
+   )
+{
+   assert(symhdlr != NULL);
+
+   symhdlr->symcopy = symcopy;
+}
+
 /** sets destructor method of symmetry handler */
 void SCIPsymhdlrSetFree(
    SCIP_SYMHDLR*         symhdlr,            /**< symmetry handler */

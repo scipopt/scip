@@ -238,6 +238,30 @@ SCIP_RETCODE SCIPsetSymhdlrProp(
    return SCIP_OKAY;
 }
 
+/** sets copy method of symmetry handler
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_INIT
+ *       - \ref SCIP_STAGE_PROBLEM
+ */
+SCIP_RETCODE SCIPsetSymhdlrCopy(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SYMHDLR*         symhdlr,            /**< symmetry handler */
+   SCIP_DECL_SYMHDLRCOPY ((*symcopy))        /**< copy method of symmetry handler */
+   )
+{
+   SCIP_CALL( SCIPcheckStage(scip, "SCIPsetSymhdlrFree", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   assert(symhdlr != NULL);
+
+   SCIPsymhdlrSetCopy(symhdlr, symcopy);
+
+   return SCIP_OKAY;
+}
+
 /** sets destructor method of symmetry handler
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
