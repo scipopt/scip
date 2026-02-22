@@ -1076,6 +1076,15 @@ SCIP_RETCODE SCIPsetCopyPlugins(
       }
    }
 
+   /* copy all symmetry handler plugins */
+   if( copysymhdlrs && sourceset->symhdlrs != NULL )
+   {
+      for( p = 0; p < sourceset->nsymhdlrs; ++p )
+      {
+         SCIP_CALL( SCIPsymhdlrCopyInclude(sourceset->symhdlrs[p], targetset) );
+      }
+   }
+
    /* copy all iis finder plugins */
    if( copyiisfinders && sourceset->iisfinders != NULL )
    {

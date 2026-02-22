@@ -141,6 +141,7 @@ SCIP_RETCODE doSymhdlrCreate(
    SCIP_PROPTIMING       proptiming,         /**< positions in the node solving loop where propagation method of symmetry handlers should be executed */
    SCIP_PRESOLTIMING     presoltiming,       /**< timing mask of the symmetry handler's presolving method */
    SCIP_DECL_SYMHDLRTRYADD((*symtryadd)),    /**< addition method for symmetry method handler plugins */
+   SCIP_DECL_SYMHDLRCOPY ((*symcopy)),       /**< copy method of symmetry handler */
    SCIP_DECL_SYMHDLRFREE ((*symfree)),       /**< destructor method of symmetry handler */
    SCIP_DECL_SYMHDLRINIT ((*syminit)),       /**< initialization method of symmetry handler */
    SCIP_DECL_SYMHDLREXIT ((*symexit)),       /**< deinitialization method of symmetry handler */
@@ -170,6 +171,7 @@ SCIP_RETCODE doSymhdlrCreate(
    SCIP_CALL( SCIPduplicateBlockMemoryArray(set->scip, &(*symhdlr)->desc, desc, strlen(desc) + 1) );
 
    (*symhdlr)->tryaddpriority = priority;
+   (*symhdlr)->symcopy = symcopy;
    (*symhdlr)->sepapriority = sepapriority;
    (*symhdlr)->sepafreq = sepafreq;
    (*symhdlr)->proppriority = proppriority;
@@ -291,6 +293,7 @@ SCIP_RETCODE SCIPsymhdlrCreate(
    SCIP_PROPTIMING       proptiming,         /**< positions in the node solving loop where propagation method of symmetry handlers should be executed */
    SCIP_PRESOLTIMING     presoltiming,       /**< timing mask of the symmetry handler's presolving method */
    SCIP_DECL_SYMHDLRTRYADD((*symtryadd)),    /**< addition method for symmetry method handler plugins */
+   SCIP_DECL_SYMHDLRCOPY ((*symcopy)),       /**< copy method of symmetry handler */
    SCIP_DECL_SYMHDLRFREE ((*symfree)),       /**< destructor method of symmetry handler */
    SCIP_DECL_SYMHDLRINIT ((*syminit)),       /**< initialization method of symmetry handler */
    SCIP_DECL_SYMHDLREXIT ((*symexit)),       /**< deinitialization method of symmetry handler */
@@ -312,12 +315,31 @@ SCIP_RETCODE SCIPsymhdlrCreate(
 
    SCIP_CALL_FINALLY( doSymhdlrCreate(symhdlr, set, messagehdlr, blkmem, name, desc, priority, proppriority,
          sepapriority, presolpriority, propfreq, sepafreq, delayprop, delaysepa, maxbounddist, maxprerounds, proptiming,
-         presoltiming, symtryadd, symfree, syminit, symexit, syminitsol, symexitsol, symsepalp, symsepasol, symprop,
-         symresprop, sympresol, symhdlrdata),
-         (void) SCIPsymhdlrFree(symhdlr, set) );
+         presoltiming, symtryadd, symcopy, symfree, syminit, symexit, syminitsol, symexitsol, symsepalp, symsepasol,
+         symprop, symresprop, sympresol, symhdlrdata), (void) SCIPsymhdlrFree(symhdlr, set) );
 
    return SCIP_OKAY;
 } /*lint !e715*/
+
+/** copies the given symmetry handler to a new SCIP */
+SCIP_RETCODE SCIPsymhdlrCopyInclude(
+   SCIP_SYMHDLR*         symhdlr,            /**< symmetry handler */
+   SCIP_SET*             set                 /**< SCIP_SET of SCIP to copy to */
+   )
+{
+   assert(symhdlr != NULL);
+   assert(set != NULL);
+   assert(set->scip != NULL);
+
+   if( symhdlr->symcopy != NULL )
+   {
+      SCIPsetDebugMsg(set, "including symmetry handler %s in subscip %p\n",
+         SCIPsymhdlrGetName(symhdlr), (void*)set->scip);
+      SCIP_CALL( symhdlr->symcopy(set->scip, symhdlr) );
+   }
+
+   return SCIP_OKAY;
+}
 
 /** calls destructor and frees memory of symmetry handler */
 SCIP_RETCODE SCIPsymhdlrFree(

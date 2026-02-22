@@ -69,6 +69,7 @@ SCIP_RETCODE SCIPincludeSymhdlr(
    SCIP_PROPTIMING       proptiming,         /**< positions in the node solving loop where propagation method of symmetry handlers should be executed */
    SCIP_PRESOLTIMING     presoltiming,       /**< timing mask of the symmetry handler's presolving method */
    SCIP_DECL_SYMHDLRTRYADD((*symhdlrtryadd)),/**< addition method for symmetry method handler plugins */
+   SCIP_DECL_SYMHDLRCOPY ((*symcopy)),       /**< copy method of symmetry handler */
    SCIP_DECL_SYMHDLRFREE ((*symfree)),       /**< destructor method of symmetry handler */
    SCIP_DECL_SYMHDLRINIT ((*syminit)),       /**< initialization method of symmetry handler */
    SCIP_DECL_SYMHDLREXIT ((*symexit)),       /**< deinitialization method of symmetry handler */
@@ -105,6 +106,15 @@ SCIP_RETCODE SCIPincludeSymhdlrBasic(
    SCIP_SYMHDLRDATA*     symhdlrdata         /**< symmetry handler data */
    );
 
+/** sets copy method of symmetry handler */
+SCIP_EXPORT
+SCIP_RETCODE SCIPsetSymhdlrCopy(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SYMHDLR*         symhdlr,            /**< symmetry handler */
+   SCIP_DECL_SYMHDLRCOPY ((*symhdlrcopy))    /**< copy method of symmetry handler */
+   );
+
+/** sets destructor method of symmetry handler */
 SCIP_EXPORT
 SCIP_RETCODE SCIPsetSymhdlrFree(
    SCIP*                 scip,               /**< SCIP data structure */

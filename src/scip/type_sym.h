@@ -78,6 +78,14 @@ typedef struct SCIP_SymInfo SCIP_SYMINFO;    /**< data structure for storing sym
       SCIP_HASHMAP* permvarmap, SYM_GRAPH* symgraph, int id, SCIP_SYMCOMPDATA** symcompdata, int* naddedconss, \
       int* nchgbds, SCIP_Bool* success)
 
+/** copy method for symmetry handler plugins (called when SCIP copies plugins)
+ *
+ *  input:
+ *  - scip            : SCIP main data structure
+ *  - symhdlr         : the symmetry handler itself
+ */
+#define SCIP_DECL_SYMHDLRCOPY(x) SCIP_RETCODE x (SCIP* scip, SCIP_SYMHDLR* symhdlr)
+
 /** destructor of symmetry handler to free symmetry handler data (called when SCIP is exiting)
  *
  *  input:

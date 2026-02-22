@@ -63,6 +63,7 @@ struct SCIP_Symhdlr
    int                   presolpriority;     /**< priority of the symmetry handler for presolving */
    int                   maxprerounds;       /**< maximal number of presolving rounds the symmetry handler participates in (-1: no limit) */
    SCIP_DECL_SYMHDLRTRYADD((*symtryadd));    /**< try to add symmetry handler */
+   SCIP_DECL_SYMHDLRCOPY ((*symcopy));       /**< copy method of symmetry handler or NULL if you don't want to copy your plugin into sub-SCIPs */
    SCIP_DECL_SYMHDLRFREE ((*symfree));       /**< destructor of symmetry handler */
    SCIP_DECL_SYMHDLRINIT ((*syminit));       /**< initialize symmetry handler */
    SCIP_DECL_SYMHDLREXIT ((*symexit));       /**< deinitialize symmetry handler */
