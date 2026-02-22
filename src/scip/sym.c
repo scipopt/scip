@@ -377,7 +377,8 @@ SCIP_RETCODE SCIPsymhdlrFree(
 /** calls exit method of symmetry handler */
 SCIP_RETCODE SCIPsymhdlrExit(
    SCIP_SYMHDLR*         symhdlr,            /**< symmetry handler data structure */
-   SCIP_SET*             set                 /**< global SCIP settings */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   BMS_BLKMEM*           blkmem              /**< block memory */
    )
 {
    assert(symhdlr != NULL);
@@ -398,7 +399,7 @@ SCIP_RETCODE SCIPsymhdlrExit(
       /* stop timing */
       SCIPclockStop(symhdlr->setuptime, set);
    }
-   SCIPfreeBlockMemoryArrayNull(set->scip, &symhdlr->symcomps, symhdlr->symcompssize);
+   BMSfreeBlockMemoryArrayNull(blkmem, &symhdlr->symcomps, symhdlr->symcompssize);
    symhdlr->initialized = FALSE;
 
    return SCIP_OKAY;
@@ -1877,27 +1878,28 @@ SCIP_RETCODE SCIPdisplaySymmetryGenerators(
 
 /** adds a component to a symmetry handler */
 SCIP_RETCODE SCIPaddSymhdlrComponent(
-   SCIP*                 scip,               /**< SCIP data structure */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_SYMHDLR*         symhdlr,            /**< symmetry handler */
    SCIP_SYMCOMP*         symcomp             /**< symmetry component */
    )
 {
-   assert(scip != NULL);
+   assert(blkmem != NULL);
+   assert(set != NULL);
    assert(symhdlr != NULL);
    assert(symcomp != NULL);
 
    if( symhdlr->symcompssize == 0 )
    {
-      /* @symtodo Replace scip argument by SCIP_SET* and BMS_BLKMEM* and use BMSallocBlockMemory() */
-      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &symhdlr->symcomps, 1) );
+      SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &symhdlr->symcomps, 1) );
       symhdlr->symcompssize = 1;
    }
    else if( symhdlr->nsymcomps >= symhdlr->symcompssize )
    {
       int newlen;
 
-      newlen = SCIPcalcMemGrowSize(scip, symhdlr->nsymcomps + 1);
-      SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &symhdlr->symcomps, symhdlr->symcompssize, newlen) );
+      newlen = SCIPcalcMemGrowSize(set->scip, symhdlr->nsymcomps + 1);
+      SCIP_ALLOC( BMSreallocBlockMemoryArray(blkmem, &symhdlr->symcomps, symhdlr->symcompssize, newlen) );
       symhdlr->symcompssize = newlen;
    }
    symhdlr->symcomps[(symhdlr->nsymcomps)++] = symcomp;

@@ -93,7 +93,8 @@ SCIP_RETCODE SCIPsymhdlrFree(
 /** calls exit method of symmetry handler */
 SCIP_RETCODE SCIPsymhdlrExit(
    SCIP_SYMHDLR*         symhdlr,            /**< symmetry handler data structure */
-   SCIP_SET*             set                 /**< global SCIP settings */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   BMS_BLKMEM*           blkmem              /**< block memory */
    );
 
 /** calls exit method of symmetry handler */
@@ -281,7 +282,8 @@ void SCIPsymhdlrSetResprop(
 
 /** adds a component to a symmetry handler */
 SCIP_RETCODE SCIPaddSymhdlrComponent(
-   SCIP*                 scip,               /**< SCIP data structure */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_SYMHDLR*         symhdlr,            /**< symmetry handler */
    SCIP_SYMCOMP*         symcomp             /**< symmetry component */
    );

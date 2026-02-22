@@ -6003,7 +6003,7 @@ SCIP_RETCODE SCIPsetExitPlugins(
    /* symmetry handlers */
    for( i = 0; i < set->nsymhdlrs; ++i )
    {
-      SCIP_CALL( SCIPsymhdlrExit(set->symhdlrs[i], set) );
+      SCIP_CALL( SCIPsymhdlrExit(set->symhdlrs[i], set, blkmem) );
    }
 
    /* display columns */
