@@ -8746,7 +8746,7 @@ SCIP_RETCODE SCIPaddVarVub(
  *  c' = c + d - xlb and d' = xlb.
  *
  *  L2) If c < 0, we want c' * zub + d' = xlb and c' * zlb + d' = c * zlb + d, i.e., c' + d' = xlb, d' = d. This yields:
- *  c' = d - xlb and d' = d.
+ *  c' = xlb - d and d' = d.
  *
  *  These arguments only work for binary variables.
  *
