@@ -982,7 +982,6 @@ SCIP_DECL_SYMHDLRCOPY(symhdlrCopyLexOrbRed)
 
    /* call inclusion method of symmetry handler */
    SCIP_CALL( SCIPincludeSymhdlrLexOrbRed(scip) );
-   printf("i am here\n");
 
    return SCIP_OKAY;
 }
