@@ -173,6 +173,18 @@ SCIP_VAR* SCIPiisGetSubscipVar(
    SCIP_VAR*             var                 /**< variable from the original model */
    );
 
+/** get the varsmap of an IIS */
+SCIP_EXPORT
+SCIP_HASHMAP* SCIPiisGetVarsmap(
+   SCIP_IIS*             iis                 /**< pointer to the IIS */
+   );
+
+/** get the conssmap of an IIS */
+SCIP_EXPORT
+SCIP_HASHMAP* SCIPiisGetConssmap(
+   SCIP_IIS*             iis                 /**< pointer to the IIS */
+   );
+
 /**@}
  *
  * @addtogroup PublicIISfinderMethods
