@@ -8843,7 +8843,7 @@ SCIP_RETCODE SCIPtightenVarVbounds(
                      SCIPvarGetName(xvar), xlb, xub, c, SCIPvarGetName(zvar), d,
                      SCIPvarGetName(xvar), vubcoefs[b], SCIPvarGetName(zvar), vubconstants[b]);
                   if ( ntightened != NULL )
-                     ++(ntightened);
+                     ++(*ntightened);
                }
             }
          }
