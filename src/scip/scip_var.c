@@ -8762,7 +8762,7 @@ SCIP_RETCODE SCIPtightenVarVbounds(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR**            vars,               /**< problem variables */
    int                   nvars,              /**< number of variables */
-   int*                  ntightened          /**< pointer to store the number of tightend coeffients, or NULL */
+   int*                  ntightened          /**< pointer to store the number of tightened coeffients, or NULL */
    )
 {
    int v;
