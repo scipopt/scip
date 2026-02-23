@@ -8732,7 +8732,7 @@ SCIP_RETCODE SCIPaddVarVub(
  *
  *  For variable upper bounds, this works as follows:
  *
- *  U1) If c > 0, we want to choose c', d' such that c' * zub + d' = * xub and c' * zlb + d' = c * zlb + d. This means
+ *  U1) If c > 0, we want to choose c', d' such that c' * zub + d' = xub and c' * zlb + d' = c * zlb + d. This means
  *  that for zlb, we want to get the same bound as before. For zub, we want to get xub. Plugging in the values zlb = 0
  *  and zub = 1, we obtain c' + d' = xub and d' = d, i.e.
  *  c'= xub - d and d' = d.
