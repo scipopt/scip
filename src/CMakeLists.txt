@@ -215,9 +215,7 @@ set(scipsources
     scip/prop_pseudoobj.c
     scip/prop_redcost.c
     scip/prop_rootredcost.c
-    scip/prop_symmetry.c
     scip/prop_vbounds.c
-    scip/prop_symmetry.c
     scip/prop_sync.c
     scip/reader_bnd.c
     scip/reader_ccg.c
@@ -379,6 +377,7 @@ set(scipsources
     scip/scip_sol.c
     scip/scip_solve.c
     scip/scip_solvingstats.c
+    scip/scip_sym.c
     scip/scip_table.c
     scip/scip_timing.c
     scip/scip_tree.c
@@ -396,6 +395,10 @@ set(scipsources
     scip/sol.c
     scip/solve.c
     scip/stat.c
+    scip/sym.c
+    scip/sym_lexorbred.c
+    scip/sym_rowcol.c
+    scip/sym_sst.c
     scip/symmetry.c
     scip/symmetry_graph.c
     scip/symmetry_orbitopal.c
@@ -768,7 +771,6 @@ set(scipheaders
     scip/prop_pseudoobj.h
     scip/prop_redcost.h
     scip/prop_rootredcost.h
-    scip/prop_symmetry.h
     scip/prop_sync.h
     scip/prop_vbounds.h
     scip/pub_branch.h
@@ -904,6 +906,7 @@ set(scipheaders
     scip/scip_sol.h
     scip/scip_solve.h
     scip/scip_solvingstats.h
+    scip/scip_sym.h
     scip/scip_table.h
     scip/scip_timing.h
     scip/scip_tree.h
@@ -996,6 +999,10 @@ set(scipheaders
     scip/struct_var.h
     scip/struct_visual.h
     scip/datatree.h
+    scip/sym.h
+    scip/sym_lexorbred.h
+    scip/sym_rowcol.h
+    scip/sym_sst.h
     scip/symmetry.h
     scip/symmetry_graph.h
     scip/symmetry_orbitopal.h
