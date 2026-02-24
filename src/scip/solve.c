@@ -119,6 +119,9 @@
 #define NINITCALLS 1000L                /**< minimum number of calls to SCIPsolveIsStopped() prior to dynamic clock skips */
 #define SAFETYFACTOR 1e-2               /**< the probability that SCIP skips the clock call after the time limit has already been reached */
 #define MAXGENNUMERATOR INT_MAX         /**< determine maximal number of generators by dividing this number by the number of variables */
+#define SYMEDGELEVEL1   100000          /**< first level of staggered scheme for estimating number of edges in SDG */
+#define SYMEDGELEVEL2  1000000          /**< second level of staggered scheme for estimating number of edges in SDG */
+#define SYMEDGELEVEL3 16700000          /**< third level of staggered scheme for estimating number of edges in SDG */
 
 #define ISSYMBINFIXED(x)          (((unsigned) x & SYM_SPEC_BINARY) != 0)
 #define ISSYMINTFIXED(x)          (((unsigned) x & SYM_SPEC_INTEGER) != 0)
@@ -1819,11 +1822,11 @@ SCIP_RETCODE estimateSymgraphSize(
     * In most cases, edges represent variable coefficients from linear constraints.
     * For this reason, use number of variables as proxy.
     */
-   if( nvars <= 100000 )
+   if( nvars <= SYMEDGELEVEL1 )
       *nedges = 100 * nvars;
-   else if( nvars <= 1000000 )
+   else if( nvars <= SYMEDGELEVEL2 )
       *nedges = 32 * nvars;
-   else if( nvars <= 16700000 )
+   else if( nvars <= SYMEDGELEVEL3 )
       *nedges = 16 * nvars;
    else
       *nedges = INT_MAX / 10;
