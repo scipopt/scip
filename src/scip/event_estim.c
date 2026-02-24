@@ -50,7 +50,6 @@
 #include <string.h>
 #include "blockmemshell/memory.h"
 #include "scip/event_estim.h"
-#include "scip/prop_symmetry.h"
 #include "scip/pub_disp.h"
 #include "scip/pub_event.h"
 #include "scip/pub_fileio.h"
@@ -59,6 +58,7 @@
 #include "scip/pub_tree.h"
 #include "scip/scip_disp.h"
 #include "scip/scip_event.h"
+#include "scip/scip_exact.h"
 #include "scip/scip_general.h"
 #include "scip/scip_mem.h"
 #include "scip/scip_message.h"
