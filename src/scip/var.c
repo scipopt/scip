@@ -16331,6 +16331,8 @@ SCIP_RETCODE SCIPtightenVariableLowerAndUpperBounds(
                   newcoef = xub - d;
                   if ( SCIPsetIsFeasGT(set, newcoef, 0.0) )
                   {
+                     SCIP_CALL( SCIPdebugCheckVbound(set, xvar, SCIP_BOUNDTYPE_UPPER, zvar, newcoef, d) );
+
                      vubcoefs[b] = newcoef;
                      tightened = TRUE;
                   }
@@ -16340,6 +16342,8 @@ SCIP_RETCODE SCIPtightenVariableLowerAndUpperBounds(
                   newcoef = c + d - xub;
                   if ( SCIPsetIsFeasLT(set, newcoef, 0.0) )
                   {
+                     SCIP_CALL( SCIPdebugCheckVbound(set, xvar, SCIP_BOUNDTYPE_UPPER, zvar, newcoef, xub) );
+
                      vubcoefs[b] = newcoef;
                      vubconstants[b] = xub;
                      tightened = TRUE;
@@ -16393,6 +16397,8 @@ SCIP_RETCODE SCIPtightenVariableLowerAndUpperBounds(
                   newcoef = c + d - xlb;
                   if ( SCIPsetIsFeasGT(set, newcoef, 0.0) )
                   {
+                     SCIP_CALL( SCIPdebugCheckVbound(set, xvar, SCIP_BOUNDTYPE_LOWER, zvar, newcoef, xlb) );
+
                      vlbcoefs[b] = newcoef;
                      vlbconstants[b] = xlb;
                      tightened = TRUE;
@@ -16403,6 +16409,8 @@ SCIP_RETCODE SCIPtightenVariableLowerAndUpperBounds(
                   newcoef = xlb - d;
                   if ( SCIPsetIsFeasLT(set, newcoef, 0.0) )
                   {
+                     SCIP_CALL( SCIPdebugCheckVbound(set, xvar, SCIP_BOUNDTYPE_LOWER, zvar, newcoef, d) );
+
                      vlbcoefs[b] = newcoef;
                      tightened = TRUE;
                   }
