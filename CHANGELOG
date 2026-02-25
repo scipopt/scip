@@ -12,6 +12,7 @@ Fixed bugs
 - set small coefficients in SCIPvarGetActiveRepresentatives() to 0; in particular for (multi-)aggregations
 - add prefix TNY_ for tnycthread functions in order to avoid name clash with POSIX threads functions
 - provide memory allocation for implied integral binary and integer variables in dks heuristic to avoid data corruption
+- an error is produced if the emphasis settings in parameter files are wrong
 
 @section RN1001 SCIP 10.0.1
 ***************************
@@ -47,7 +48,6 @@ Miscellaneous
 
 - updated ampl/mp to version 4.0.4
 - switch from GetTempPath2A to GetTempPathA in nl writer for Windows for broader compatibility
-- an error is produced if the emphasis settings in parameter files are wrong
 
 @section RN1000 SCIP 10.0.0
 ***************************
