@@ -162,8 +162,9 @@ typedef enum RestartPolicy RESTARTPOLICY;
 #define ESTIMMETHOD_SSG          's'             /**< estimation based on double exponential smoothing for sum of subtree gaps */
 #define ESTIMMETHOD_TPROF        't'             /**< estimation based on tree profile method */
 #define ESTIMMETHOD_TREEWEIGHT   'w'             /**< estimation based on double exponential smoothing for tree weight */
+#define ESTIMMETHOD_CHECKPOINT   'p'             /**< estimation based on linear extrapolation since last increase */
 
-#define ESTIMMETHODS "bceglostw"
+#define ESTIMMETHODS "bceglopstw"
 
 /* constants and default values for treeprofile parameters */
 #define TREEPROFILE_MINSIZE    512                /**< minimum size (depth) that tree profile can hold */
@@ -245,9 +246,9 @@ typedef struct TreeProfile TREEPROFILE;
 #define DEFAULT_COEFMONOWEIGHT       0.3667  /**< coefficient of tree weight in monotone approximation of search completion */
 #define DEFAULT_COEFMONOSSG          0.6333  /**< coefficient of 1 - SSG in monotone approximation of search completion */
 #define DEFAULT_COMPLETIONTYPE       COMPLETIONTYPE_AUTO /**< default computation of search tree completion */
-#define DEFAULT_ESTIMMETHOD          ESTIMMETHOD_TREEWEIGHT    /**< default tree size estimation method: (c)ompletion, (e)nsemble, time series forecasts on either
-                                                            * (g)ap, (l)eaf frequency, (o)open nodes,
-                                                            * tree (w)eight, (s)sg, or (t)ree profile or w(b)e */
+#define DEFAULT_ESTIMMETHOD          ESTIMMETHOD_CHECKPOINT /**< default tree size estimation method: (c)ompletion, (e)nsemble, time series forecasts on either
+                                               * (g)ap, (l)eaf frequency, (o)open nodes,
+                                               * tree (w)eight, (s)sg, check(p)oint, (t)ree profile or w(b)e */
 #define DEFAULT_TREEPROFILE_ENABLED  FALSE   /**< Should the event handler collect data? */
 #define DEFAULT_TREEPROFILE_MINNODESPERDEPTH 20.0 /**< minimum average number of nodes at each depth before producing estimations */
 #define DEFAULT_RESTARTPOLICY        'e'     /**< default restart policy: (a)lways, (c)ompletion, (e)stimation, (n)ever */
@@ -258,6 +259,7 @@ typedef struct TreeProfile TREEPROFILE;
 #define DEFAULT_RESTARTNONLINEAR     FALSE   /**< whether to apply a restart when nonlinear constraints are present */
 #define DEFAULT_RESTARTACTPRICERS    FALSE   /**< whether to apply a restart when active pricers are used */
 #define DEFAULT_HITCOUNTERLIM        50      /**< limit on the number of successive samples to really trigger a restart */
+#define DEFAULT_CHECKPOINT_DEPTHLIM  50      /**< depth below which checkpoint is updated */
 #define DEFAULT_SSG_NMAXSUBTREES     -1      /**< the maximum number of individual SSG subtrees; the old split is kept if
                                                *  a new split exceeds this number of subtrees ; -1: no limit */
 #define DEFAULT_SSG_NMINNODESLASTSPLIT   0L  /**< minimum number of nodes to process between two consecutive SSG splits */
@@ -284,10 +286,11 @@ struct SCIP_EventhdlrData
    int                   nreports;           /**< the number of reports already printed */
    int                   reportfreq;         /**< report frequency on estimation: -1: never, 0:always, k >= 1: k times evenly during search */
    int                   lastrestartrun;     /**< the last run at which this event handler triggered restart */
+   int                   checkpointdepthlim; /**< depth below which checkpoint is updated */
    char                  restartpolicyparam; /**< restart policy parameter */
    char                  estimmethod;        /**< tree size estimation method: (c)ompletion, (e)nsemble, time series forecasts on either
                                                * (g)ap, (l)eaf frequency, (o)open nodes,
-                                               * tree (w)eight, (s)sg, or (t)ree profile or w(b)e */
+                                               * tree (w)eight, (s)sg, check(p)oint, (t)ree profile or w(b)e */
    char                  completiontypeparam;/**< approximation of search tree completion:
                                               *   (a)uto, (g)ap, tree (w)eight, (m)onotone regression, (r)egression forest, (s)sg */
    SCIP_Bool             countonlyleaves;    /**< Should only leaves count for the minnodes parameter? */
@@ -309,6 +312,9 @@ struct TreeData
    SCIP_Longint          nleaves;            /**< the number of final leaf nodes */
    SCIP_Longint          nvisited;           /**< the number of visited nodes */
    long double           weight;             /**< the current tree weight (sum of leaf weights) */
+   long double           checkpointweight;   /**< previous tree weight for extrapolation */
+   SCIP_Longint          checkpointnodes;    /**< previous number of nodes for extrapolation */
+   SCIP_Bool             checkpointincrease; /**< whether tree weight increased previously */
    SUBTREESUMGAP*        ssg;                /**< subtree sum gap data structure */
 };
 
@@ -1538,6 +1544,11 @@ SCIP_RETCODE resetTreeData(
    treedata->nnodes = 1;
    treedata->nopen = 1;
 
+   /* set up checkpoint */
+   treedata->checkpointweight = 0.0;
+   treedata->checkpointnodes = 0;
+   treedata->checkpointincrease = FALSE;
+
    SCIP_CALL( subtreeSumGapReset(scip, treedata->ssg) );
 
    return SCIP_OKAY;
@@ -2436,6 +2447,38 @@ SCIP_Bool shouldApplyRestartCompletion(
    return FALSE;
 }
 
+/** compute tree size estimation using checkpoint-based linear extrapolation */
+static
+SCIP_Real getCheckpointEstimation(
+   TREEDATA*             treedata            /**< tree data */
+   )
+{
+   long double currentweight;
+   long double weightdelta;
+   SCIP_Longint currentnodes;
+   SCIP_Longint nodedelta;
+
+   currentweight = treedata->weight;
+   currentnodes = treedata->nnodes;
+
+   /* tree is complete */
+   if( currentweight >= 1.0 )
+      return (SCIP_Real)currentnodes;
+
+   weightdelta = currentweight - treedata->checkpointweight;
+   assert(weightdelta >= 0.0);
+
+   /* increase is absent */
+   if( weightdelta <= 0.0 )
+      return -1.0;
+
+   nodedelta = currentnodes - treedata->checkpointnodes;
+   assert(nodedelta >= 0);
+
+   /* estimate total nodes when weight linearly approaches 1.0 */
+   return (SCIP_Real)currentnodes + (SCIP_Real)(nodedelta * ((1.0 - currentweight) / weightdelta));
+}
+
 /** should a restart be applied based on the value of the selected completion method? */
 static
 SCIP_Bool shouldApplyRestartEstimation(
@@ -2758,7 +2801,7 @@ SCIP_DECL_EVENTEXEC(eventExecEstim)
       || ( SCIPnodeGetType(SCIPeventGetNode(event)) == SCIP_NODETYPE_DEADEND
       && !SCIPwasNodeLastBranchParent(scip, SCIPeventGetNode(event)) ) ) ) )
    {
-      SCIP_NODE* eventnode;
+      SCIP_NODE* eventnode = SCIPeventGetNode(event);
       int nchildren = 0;
 
       if( eventtype == SCIP_EVENTTYPE_NODEBRANCHED )
@@ -2768,9 +2811,28 @@ SCIP_DECL_EVENTEXEC(eventExecEstim)
          /* update whether the tree is still binary */
          if( nchildren != 2 )
             eventhdlrdata->treeisbinary = FALSE;
+
+         /* for checkpoint estimation, at a branching plan checkpoint before the next tree weight increase */
+         if( eventhdlrdata->restartpolicyparam == RESTARTPOLICY_CHAR_ESTIMATION
+            && eventhdlrdata->estimmethod == ESTIMMETHOD_CHECKPOINT )
+            treedata->checkpointincrease = FALSE;
+      }
+      else
+      {
+         /* for checkpoint estimation, at a deletion with previous branching and significant node weight contribution
+          * a checkpoint is hit; exclude deep node to avoid restart triggers based on instable extrapolation because
+          * its tree weight delta can cancel numerically
+          */
+         if( eventhdlrdata->restartpolicyparam == RESTARTPOLICY_CHAR_ESTIMATION
+            && eventhdlrdata->estimmethod == ESTIMMETHOD_CHECKPOINT
+            && !treedata->checkpointincrease && SCIPnodeGetDepth(eventnode) < eventhdlrdata->checkpointdepthlim )
+         {
+            treedata->checkpointweight = treedata->weight;
+            treedata->checkpointnodes = treedata->nnodes;
+            treedata->checkpointincrease = TRUE;
+         }
       }
 
-      eventnode = SCIPeventGetNode(event);
       SCIP_CALL( updateTreeData(scip, treedata, eventnode, nchildren) );
       SCIP_CALL( updateTreeProfile(scip, eventhdlrdata->treeprofile, eventnode) );
 
@@ -2798,6 +2860,11 @@ SCIP_DECL_EVENTEXEC(eventExecEstim)
    /* if nodes have been pruned, things are progressing, don't restart right now */
    if( eventtype == SCIP_EVENTTYPE_NODEDELETE )
       return SCIP_OKAY;
+
+   /* a branching event increases the number of nodes */
+   assert(eventhdlrdata->restartpolicyparam != RESTARTPOLICY_CHAR_ESTIMATION
+      || eventhdlrdata->estimmethod != ESTIMMETHOD_CHECKPOINT
+      || eventhdlrdata->treedata->nnodes > eventhdlrdata->treedata->checkpointnodes);
 
    /* check if all conditions are met such that the event handler should run */
    if( !isRestartApplicable(scip, eventhdlrdata) )
@@ -2922,7 +2989,7 @@ SCIP_RETCODE SCIPincludeEventHdlrEstim(
    SCIP_CALL( SCIPaddCharParam(scip, "estimation/method",
             "tree size estimation method: (c)ompletion, (e)nsemble, "
             "time series forecasts on either (g)ap, (l)eaf frequency, (o)open nodes, tree (w)eight, (s)sg, "
-            "or (t)ree profile or w(b)e",
+            "check(p)oint, (t)ree profile or w(b)e",
          &eventhdlrdata->estimmethod, FALSE, DEFAULT_ESTIMMETHOD, ESTIMMETHODS, NULL, NULL) );
 
    SCIP_CALL( SCIPaddIntParam(scip, "estimation/restarts/restartlimit", "restart limit",
@@ -2983,6 +3050,10 @@ SCIP_RETCODE SCIPincludeEventHdlrEstim(
    SCIP_CALL( SCIPaddBoolParam(scip, "estimation/showstats",
          "should statistics be shown at the end?",
          &eventhdlrdata->showstats, TRUE, DEFAULT_SHOWSTATS, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddIntParam(scip, "estimation/checkpoint/depthlim",
+         "depth below which checkpoint is updated",
+         &eventhdlrdata->checkpointdepthlim, TRUE, DEFAULT_CHECKPOINT_DEPTHLIM, 0, INT_MAX, NULL, NULL) );
 
    /* SSG parameters */
    SCIP_CALL( SCIPaddIntParam(scip, "estimation/ssg/nmaxsubtrees",
@@ -3075,6 +3146,10 @@ SCIP_Real SCIPgetTreesizeEstimation(
    /* Weighted backtrack estimation */
    case ESTIMMETHOD_WBE:
       return treeDataGetWbe(eventhdlrdata->treedata);
+
+   /* checkpoint-based linear extrapolation */
+   case ESTIMMETHOD_CHECKPOINT:
+      return getCheckpointEstimation(eventhdlrdata->treedata);
 
    default:
       SCIPerrorMessage("Unknown estimation '%c' method specified, should be one of [%s]\n",
