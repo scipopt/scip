@@ -16326,27 +16326,34 @@ SCIP_RETCODE SCIPtightenVariableLowerAndUpperBounds(
                d = vubconstants[b];
                tightened = FALSE;
 
-               if ( c > 0.0 && SCIPsetIsFeasLT(set, xub, c + d) )
+               if ( c > 0.0 )
                {
-                  newcoef = xub - d;
-                  if ( SCIPsetIsFeasGT(set, newcoef, 0.0) )
+                  if ( SCIPsetIsFeasLT(set, xub, c + d) )
                   {
-                     SCIP_CALL( SCIPdebugCheckVbound(set, xvar, SCIP_BOUNDTYPE_UPPER, zvar, newcoef, d) );
+                     newcoef = xub - d;
+                     if ( SCIPsetIsFeasGT(set, newcoef, 0.0) )
+                     {
+                        SCIP_CALL( SCIPdebugCheckVbound(set, xvar, SCIP_BOUNDTYPE_UPPER, zvar, newcoef, d) );
 
-                     vubcoefs[b] = newcoef;
-                     tightened = TRUE;
+                        vubcoefs[b] = newcoef;
+                        tightened = TRUE;
+                     }
                   }
                }
-               else if ( c < 0.0 && SCIPsetIsFeasLT(set, xub, d) )
+               else
                {
-                  newcoef = c + d - xub;
-                  if ( SCIPsetIsFeasLT(set, newcoef, 0.0) )
+                  assert( c < 0.0 );
+                  if ( SCIPsetIsFeasLT(set, xub, d) )
                   {
-                     SCIP_CALL( SCIPdebugCheckVbound(set, xvar, SCIP_BOUNDTYPE_UPPER, zvar, newcoef, xub) );
+                     newcoef = c + d - xub;
+                     if ( SCIPsetIsFeasLT(set, newcoef, 0.0) )
+                     {
+                        SCIP_CALL( SCIPdebugCheckVbound(set, xvar, SCIP_BOUNDTYPE_UPPER, zvar, newcoef, xub) );
 
-                     vubcoefs[b] = newcoef;
-                     vubconstants[b] = xub;
-                     tightened = TRUE;
+                        vubcoefs[b] = newcoef;
+                        vubconstants[b] = xub;
+                        tightened = TRUE;
+                     }
                   }
                }
 
@@ -16392,27 +16399,34 @@ SCIP_RETCODE SCIPtightenVariableLowerAndUpperBounds(
                d = vlbconstants[b];
                tightened = FALSE;
 
-               if ( c > 0.0 && SCIPsetIsFeasGT(set, xlb, d) )
+               if ( c > 0.0 )
                {
-                  newcoef = c + d - xlb;
-                  if ( SCIPsetIsFeasGT(set, newcoef, 0.0) )
+                  if ( SCIPsetIsFeasGT(set, xlb, d) )
                   {
-                     SCIP_CALL( SCIPdebugCheckVbound(set, xvar, SCIP_BOUNDTYPE_LOWER, zvar, newcoef, xlb) );
+                     newcoef = c + d - xlb;
+                     if ( SCIPsetIsFeasGT(set, newcoef, 0.0) )
+                     {
+                        SCIP_CALL( SCIPdebugCheckVbound(set, xvar, SCIP_BOUNDTYPE_LOWER, zvar, newcoef, xlb) );
 
-                     vlbcoefs[b] = newcoef;
-                     vlbconstants[b] = xlb;
-                     tightened = TRUE;
+                        vlbcoefs[b] = newcoef;
+                        vlbconstants[b] = xlb;
+                        tightened = TRUE;
+                     }
                   }
                }
-               else if ( c < 0.0 && SCIPsetIsFeasGT(set, xlb, c + d) )
+               else
                {
-                  newcoef = xlb - d;
-                  if ( SCIPsetIsFeasLT(set, newcoef, 0.0) )
+                  assert( c < 0.0 );
+                  if ( SCIPsetIsFeasGT(set, xlb, c + d) )
                   {
-                     SCIP_CALL( SCIPdebugCheckVbound(set, xvar, SCIP_BOUNDTYPE_LOWER, zvar, newcoef, d) );
+                     newcoef = xlb - d;
+                     if ( SCIPsetIsFeasLT(set, newcoef, 0.0) )
+                     {
+                        SCIP_CALL( SCIPdebugCheckVbound(set, xvar, SCIP_BOUNDTYPE_LOWER, zvar, newcoef, d) );
 
-                     vlbcoefs[b] = newcoef;
-                     tightened = TRUE;
+                        vlbcoefs[b] = newcoef;
+                        tightened = TRUE;
+                     }
                   }
                }
 
