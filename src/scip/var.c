@@ -16283,8 +16283,8 @@ SCIP_RETCODE SCIPtightenVariableLowerAndUpperBounds(
       SCIP_Real c;
       SCIP_Real d;
       SCIP_Bool tightened;
-      int nvlbs;
-      int nvubs;
+      int nvlbs = 0;
+      int nvubs = 0;
       int b;
 
       xvar = vars[v];
@@ -16296,13 +16296,16 @@ SCIP_RETCODE SCIPtightenVariableLowerAndUpperBounds(
       if ( SCIPsetIsFeasEQ(set, xlb, xub) )
          continue;
 
-      nvubs = SCIPvboundsGetNVbds(xvar->vubs);
+      if ( xvar->vubs == NULL )
+         nvubs = SCIPvboundsGetNVbds(xvar->vubs);
+
       if ( nvubs > 0 )
       {
          SCIP_VAR** vubvars;
          SCIP_Real* vubcoefs;
          SCIP_Real* vubconstants;
 
+         assert( xvar->vubs != NULL );
          vubvars = SCIPvboundsGetVars(xvar->vubs);
          vubcoefs = SCIPvboundsGetCoefs(xvar->vubs);
          vubconstants = SCIPvboundsGetCoefs(xvar->vubs);
@@ -16355,13 +16358,16 @@ SCIP_RETCODE SCIPtightenVariableLowerAndUpperBounds(
          }
       }
 
-      nvlbs = SCIPvboundsGetNVbds(xvar->vlbs);
+      if ( xvar->vlbs != NULL )
+         nvlbs = SCIPvboundsGetNVbds(xvar->vlbs);
+
       if ( nvlbs > 0 )
       {
          SCIP_VAR** vlbvars;
          SCIP_Real* vlbcoefs;
          SCIP_Real* vlbconstants;
 
+         assert( xvar->vlbs != NULL );
          vlbvars = SCIPvboundsGetVars(xvar->vlbs);
          vlbcoefs = SCIPvboundsGetCoefs(xvar->vlbs);
          vlbconstants = SCIPvboundsGetCoefs(xvar->vlbs);
