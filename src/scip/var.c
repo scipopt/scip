@@ -16312,17 +16312,17 @@ SCIP_RETCODE SCIPtightenVariableLowerAndUpperBounds(
             zvar = vubvars[b];
             assert( zvar != NULL );
 
-            /* skip fixed variables (should have dealt with otherwise) */
-            if ( SCIPvarGetLbGlobal(zvar) + 0.5 > SCIPvarGetUbGlobal(zvar) )
-               continue;
-
-            c = vubcoefs[b];
-            assert( ! SCIPsetIsFeasZero(set, c) );
-            d = vubconstants[b];
-            tightened = FALSE;
-
             if ( SCIPvarIsBinary(zvar) )
             {
+               /* skip fixed variables (should have dealt with otherwise) */
+               if ( SCIPvarGetLbGlobal(zvar) + 0.5 > SCIPvarGetUbGlobal(zvar) )
+                  continue;
+
+               c = vubcoefs[b];
+               assert( ! SCIPsetIsFeasZero(set, c) );
+               d = vubconstants[b];
+               tightened = FALSE;
+
                if ( c > 0.0 && SCIPsetIsFeasLT(set, xub, c + d) )
                {
                   newcoef = xub - d;
@@ -16371,17 +16371,17 @@ SCIP_RETCODE SCIPtightenVariableLowerAndUpperBounds(
             zvar = vlbvars[b];
             assert( zvar != NULL );
 
-            /* skip fixed variables */
-            if ( SCIPvarGetLbGlobal(zvar) + 0.5 > SCIPvarGetUbGlobal(zvar) )
-               continue;
-
-            c = vlbcoefs[b];
-            assert( ! SCIPsetIsFeasZero(set, c) );
-            d = vlbconstants[b];
-            tightened = FALSE;
-
             if ( SCIPvarIsBinary(zvar) )
             {
+               /* skip fixed variables */
+               if ( SCIPvarGetLbGlobal(zvar) + 0.5 > SCIPvarGetUbGlobal(zvar) )
+                  continue;
+
+               c = vlbcoefs[b];
+               assert( ! SCIPsetIsFeasZero(set, c) );
+               d = vlbconstants[b];
+               tightened = FALSE;
+
                if ( c > 0.0 && SCIPsetIsFeasGT(set, xlb, d) )
                {
                   newcoef = c + d - xlb;
