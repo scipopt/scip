@@ -16308,7 +16308,7 @@ SCIP_RETCODE SCIPtightenVariableLowerAndUpperBounds(
          assert( xvar->vubs != NULL );
          vubvars = SCIPvboundsGetVars(xvar->vubs);
          vubcoefs = SCIPvboundsGetCoefs(xvar->vubs);
-         vubconstants = SCIPvboundsGetCoefs(xvar->vubs);
+         vubconstants = SCIPvboundsGetConstants(xvar->vubs);
 
          for (b = 0; b < nvubs; ++b)
          {
@@ -16381,7 +16381,7 @@ SCIP_RETCODE SCIPtightenVariableLowerAndUpperBounds(
          assert( xvar->vlbs != NULL );
          vlbvars = SCIPvboundsGetVars(xvar->vlbs);
          vlbcoefs = SCIPvboundsGetCoefs(xvar->vlbs);
-         vlbconstants = SCIPvboundsGetCoefs(xvar->vlbs);
+         vlbconstants = SCIPvboundsGetConstants(xvar->vlbs);
 
          for (b = 0; b < nvlbs; ++b)
          {
