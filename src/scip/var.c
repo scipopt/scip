@@ -16408,7 +16408,7 @@ SCIP_RETCODE SCIPtightenVariableLowerAndUpperBounds(
                      SCIPvarGetName(xvar), xlb, xub, c, SCIPvarGetName(zvar), d,
                      SCIPvarGetName(xvar), vlbcoefs[b], SCIPvarGetName(zvar), vlbconstants[b]);
                   if ( ntightened != NULL )
-                     ++(ntightened);
+                     ++(*ntightened);
                }
             }
          }
