@@ -16232,6 +16232,192 @@ SCIP_RETCODE SCIPvarAddVub(
    return SCIP_OKAY;
 }
 
+/** tries to tighten the coefficients of all variable lower/upper bounds for the given variables
+ *
+ *  The variable lower and upper bounds take the form x >= c * z + d or x <= c * z + d.
+ *  The goal is to tighten c (and possibly modify d) if z is a binary variable.
+ *
+ *  Let xlb and xub be lower and upper bounds for x, respectively. Let zlb = 0 and zub = 1 be the lower and upper bounds
+ *  on z.. Let c' and d' the new values for c and d, respectively.
+ *
+ *  For variable upper bounds, this works as follows:
+ *
+ *  U1) If c > 0, we want to choose c', d' such that c' * zub + d' = xub and c' * zlb + d' = c * zlb + d. This means
+ *  that for zlb, we want to get the same bound as before. For zub, we want to get xub. Plugging in the values zlb = 0
+ *  and zub = 1, we obtain c' + d' = xub and d' = d, i.e.
+ *  c'= xub - d and d' = d.
+ *
+ *  U2) If c < 0, we want c' * zlb + d' = xub and c' * zub + d' = c * zub + d, i.e., d' = xub and c' + d' = c + d. This yields:
+ *  c' = c + d - xub and d' = xub.
+ *
+ * For variable lower bounds, we get the following:
+ *
+ *  L1) If c > 0, we want c' * zlb + d' = xlb and c' * zub + d' = c * zub + d, i.e., d'= xlb, c' + d'= c + d. This yields:
+ *  c' = c + d - xlb and d' = xlb.
+ *
+ *  L2) If c < 0, we want c' * zub + d' = xlb and c' * zlb + d' = c * zlb + d, i.e., c' + d' = xlb, d' = d. This yields:
+ *  c' = xlb - d and d' = d.
+ *
+ *  These arguments only work for binary variables.
+ */
+SCIP_RETCODE SCIPtightenVariableLowerAndUpperBounds(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_PROB*            transprob,          /**< transformed problem */
+   int*                  ntightened          /**< pointer to store the number of tightened coeffients, or NULL */
+   )
+{
+   SCIP_VAR** vars;
+   int nvars;
+   int v;
+
+   nvars = transprob->nvars;
+   vars = transprob->vars;
+
+   for (v = 0; v < nvars; ++v)
+   {
+      SCIP_VAR* xvar;
+      SCIP_VAR* zvar;
+      SCIP_Real xlb;
+      SCIP_Real xub;
+      SCIP_Real newcoef;
+      SCIP_Real c;
+      SCIP_Real d;
+      SCIP_Bool tightened;
+      int nvlbs;
+      int nvubs;
+      int b;
+
+      xvar = vars[v];
+      assert( xvar != NULL );
+
+      /* get bounds of variable x */
+      xlb = SCIPvarGetLbGlobal(xvar);
+      xub = SCIPvarGetUbGlobal(xvar);
+      if ( SCIPsetIsFeasEQ(set, xlb, xub) )
+         continue;
+
+      nvubs = SCIPvboundsGetNVbds(xvar->vubs);
+      if ( nvubs > 0 )
+      {
+         SCIP_VAR** vubvars;
+         SCIP_Real* vubcoefs;
+         SCIP_Real* vubconstants;
+
+         vubvars = SCIPvboundsGetVars(xvar->vubs);
+         vubcoefs = SCIPvboundsGetCoefs(xvar->vubs);
+         vubconstants = SCIPvboundsGetCoefs(xvar->vubs);
+
+         for (b = 0; b < nvubs; ++b)
+         {
+            zvar = vubvars[b];
+            assert( zvar != NULL );
+
+            /* skip fixed variables (should have dealt with otherwise) */
+            if ( SCIPvarGetLbGlobal(zvar) + 0.5 > SCIPvarGetUbGlobal(zvar) )
+               continue;
+
+            c = vubcoefs[b];
+            assert( ! SCIPsetIsFeasZero(set, c) );
+            d = vubconstants[b];
+            tightened = FALSE;
+
+            if ( SCIPvarIsBinary(zvar) )
+            {
+               if ( c > 0.0 && SCIPsetIsFeasLT(set, xub, c + d) )
+               {
+                  newcoef = xub - d;
+                  if ( SCIPsetIsFeasGT(set, newcoef, 0.0) )
+                  {
+                     vubcoefs[b] = newcoef;
+                     tightened = TRUE;
+                  }
+               }
+               else if ( c < 0.0 && SCIPsetIsFeasLT(set, xub, d) )
+               {
+                  newcoef = c + d - xub;
+                  if ( SCIPsetIsFeasLT(set, newcoef, 0.0) )
+                  {
+                     vubcoefs[b] = newcoef;
+                     vubconstants[b] = xub;
+                     tightened = TRUE;
+                  }
+               }
+
+               if ( tightened )
+               {
+                  SCIPsetDebugMsg(set, "Tightened upper variable bound <%s>[%g,%g] <= %g <%s>[B] %+g to <%s> <= %g <%s>[B] %+g.\n",
+                     SCIPvarGetName(xvar), xlb, xub, c, SCIPvarGetName(zvar), d,
+                     SCIPvarGetName(xvar), vubcoefs[b], SCIPvarGetName(zvar), vubconstants[b]);
+                  if ( ntightened != NULL )
+                     ++(*ntightened);
+               }
+            }
+         }
+      }
+
+      nvlbs = SCIPvboundsGetNVbds(xvar->vlbs);
+      if ( nvlbs > 0 )
+      {
+         SCIP_VAR** vlbvars;
+         SCIP_Real* vlbcoefs;
+         SCIP_Real* vlbconstants;
+
+         vlbvars = SCIPvboundsGetVars(xvar->vlbs);
+         vlbcoefs = SCIPvboundsGetCoefs(xvar->vlbs);
+         vlbconstants = SCIPvboundsGetCoefs(xvar->vlbs);
+
+         for (b = 0; b < nvlbs; ++b)
+         {
+            zvar = vlbvars[b];
+            assert( zvar != NULL );
+
+            /* skip fixed variables */
+            if ( SCIPvarGetLbGlobal(zvar) + 0.5 > SCIPvarGetUbGlobal(zvar) )
+               continue;
+
+            c = vlbcoefs[b];
+            assert( ! SCIPsetIsFeasZero(set, c) );
+            d = vlbconstants[b];
+            tightened = FALSE;
+
+            if ( SCIPvarIsBinary(zvar) )
+            {
+               if ( c > 0.0 && SCIPsetIsFeasGT(set, xlb, d) )
+               {
+                  newcoef = c + d - xlb;
+                  if ( SCIPsetIsFeasGT(set, newcoef, 0.0) )
+                  {
+                     vlbcoefs[b] = newcoef;
+                     vlbconstants[b] = xlb;
+                     tightened = TRUE;
+                  }
+               }
+               else if ( c < 0.0 && SCIPsetIsFeasGT(set, xlb, c + d) )
+               {
+                  newcoef = xlb - d;
+                  if ( SCIPsetIsFeasLT(set, newcoef, 0.0) )
+                  {
+                     vlbcoefs[b] = newcoef;
+                     tightened = TRUE;
+                  }
+               }
+
+               if ( tightened )
+               {
+                  SCIPsetDebugMsg(set, "Tightened lower variable bound <%s>[%g,%g] >= %g <%s>[B] %+g to <%s> >= %g <%s>[B] %+g.\n",
+                     SCIPvarGetName(xvar), xlb, xub, c, SCIPvarGetName(zvar), d,
+                     SCIPvarGetName(xvar), vlbcoefs[b], SCIPvarGetName(zvar), vlbconstants[b]);
+                  if ( ntightened != NULL )
+                     ++(ntightened);
+               }
+            }
+         }
+      }
+   }
+
+   return SCIP_OKAY;
+}
+
 /** informs binary variable x about a globally valid implication:  x == 0 or x == 1  ==>  y <= b  or  y >= b;
  *  also adds the corresponding implication or variable bound to the implied variable;
  *  if the implication is conflicting, the variable is fixed to the opposite value;

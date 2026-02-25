@@ -24,7 +24,7 @@ Interface changes
 - added SCIPiisfinderGetEnable() to check whether an iis finder is enabled
 - added SCIPiisfinderSetEnable() to set whether an iis finder is enabled
 - added SCIPincludeHeurFeasjump() to include feasibility jump primal heuristic
-- added SCIPtightenVarVbounds() to tighten the variable bounds attached to a list of variables
+- added SCIPtightenVariableLowerAndUpperBounds() to tighten the variable bounds attached to a list of variables
 
 ### New parameters
 

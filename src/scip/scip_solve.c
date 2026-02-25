@@ -1314,7 +1314,7 @@ SCIP_RETCODE presolve(
    /* tighten variable lower/upper bounds at end of presolving */
    if( !stopped && !(*unbounded) && !(*infeasible) && !(*vanished) )
    {
-      SCIP_CALL( SCIPtightenVarVbounds(scip, SCIPgetVars(scip), SCIPgetNVars(scip), NULL) );
+      SCIP_CALL( SCIPtightenVariableLowerAndUpperBounds(scip->set, scip->transprob, NULL) );
    }
 
    /* first change status of scip, so that all plugins in their exitpre callbacks can ask SCIP for the correct status */
