@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2026 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -871,7 +871,8 @@ SCIP_DECL_READERCOPY(readerCopyCip)
 {  /*lint --e{715}*/
    assert(scip != NULL);
    assert(reader != NULL);
-   assert(strcmp(SCIPreaderGetName(reader), READER_NAME) == 0);
+
+   SCIP_STRINGEQ( SCIPreaderGetName(reader), READER_NAME, SCIP_INVALIDCALL );
 
    /* call inclusion method of reader */
    SCIP_CALL( SCIPincludeReaderCip(scip) );
@@ -885,7 +886,8 @@ SCIP_DECL_READERFREE(readerFreeCip)
 {
    SCIP_READERDATA* readerdata;
 
-   assert(strcmp(SCIPreaderGetName(reader), READER_NAME) == 0);
+   SCIP_STRINGEQ( SCIPreaderGetName(reader), READER_NAME, SCIP_INVALIDCALL );
+
    readerdata = SCIPreaderGetData(reader);
    assert(readerdata != NULL);
    SCIPfreeBlockMemory(scip, &readerdata);
@@ -1065,7 +1067,8 @@ SCIP_DECL_READERWRITE(readerWriteCip)
    int i;
 
    assert(reader != NULL);
-   assert(strcmp(SCIPreaderGetName(reader), READER_NAME) == 0);
+
+   SCIP_STRINGEQ( SCIPreaderGetName(reader), READER_NAME, SCIP_INVALIDCALL );
 
    SCIPinfoMessage(scip, file, "STATISTICS\n");
    SCIPinfoMessage(scip, file, "  Problem name     : %s\n", name);

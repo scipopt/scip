@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2026 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -65,7 +65,8 @@ SCIP_RETCODE readParams(
 static
 SCIP_RETCODE fromCommandLine(
    SCIP*                 scip,               /**< SCIP data structure */
-   const char*           filename            /**< input file name */
+   const char*           filename,           /**< input file name */
+   SCIP_Bool             useconcurrent       /**< should we use concurrent solving? */
    )
 {
    SCIP_RETCODE retcode;
@@ -105,10 +106,20 @@ SCIP_RETCODE fromCommandLine(
     *******************/
 
    /* solve problem */
-   SCIPinfoMessage(scip, NULL, "\nsolve problem\n");
-   SCIPinfoMessage(scip, NULL, "=============\n\n");
+   if( useconcurrent )
+   {
+      SCIPinfoMessage(scip, NULL, "\nsolve problem concurrently\n");
+      SCIPinfoMessage(scip, NULL, "==========================\n\n");
 
-   SCIP_CALL( SCIPsolve(scip) );
+      SCIP_CALL( SCIPsolveConcurrent(scip) );
+   }
+   else
+   {
+      SCIPinfoMessage(scip, NULL, "\nsolve problem\n");
+      SCIPinfoMessage(scip, NULL, "=============\n\n");
+
+      SCIP_CALL( SCIPsolve(scip) );
+   }
 
    /*******************
     * Solution Output *
@@ -175,7 +186,7 @@ SCIP_RETCODE fromAmpl(
    char fullnlfilename[SCIP_MAXSTRLEN];
    char* logfile;
    SCIP_Bool printstat;
-   char* options;
+   const char* constoptions;
    size_t nlfilenamelen;
 
    SCIP_CALL( SCIPaddBoolParam(scip, "display/statistics",
@@ -192,12 +203,17 @@ SCIP_RETCODE fromAmpl(
    SCIPprintExternalCodes(scip, NULL);
    SCIPinfoMessage(scip, NULL, "\n");
 
-   options = getenv("scip_options");
-   if( options != NULL )
+   constoptions = getenv("scip_options");
+   if( constoptions != NULL )
    {
       /* parse and apply options from scip_options env variable */
+      size_t optionslen;
+      char* options;
       char* optname;
       char* optval;
+
+      optionslen = strlen(constoptions);
+      SCIP_CALL( SCIPduplicateBufferArray(scip, &options, constoptions, optionslen+1) );
 
       SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "applying scip_options:\n");
 
@@ -211,6 +227,8 @@ SCIP_RETCODE fromAmpl(
          optname = strtok(NULL, " ");
          optval = strtok(NULL, " ");
       }
+
+      SCIPfreeBufferArray(scip, &options);
    }
 
    if( defaultsetname != NULL )
@@ -241,17 +259,23 @@ SCIP_RETCODE fromAmpl(
       (void) SCIPsnprintf(fullnlfilename, SCIP_MAXSTRLEN, "%s", nlfilename);
    else
       (void) SCIPsnprintf(fullnlfilename, SCIP_MAXSTRLEN, "%s.nl", nlfilename);
-   SCIPinfoMessage(scip, NULL, "read problem <%s>\n", fullnlfilename);
-   SCIPinfoMessage(scip, NULL, "============\n\n");
-
-   SCIP_CALL( SCIPreadProb(scip, fullnlfilename, "nl") );
 
    if( interactive )
    {
+      char readcommand[SCIP_MAXSTRLEN+6];
+
+      (void) SCIPsnprintf(readcommand, (int)sizeof(readcommand), "read %s", fullnlfilename);
+      SCIP_CALL( SCIPaddDialogInputLine(scip, readcommand) );
+
       SCIP_CALL( SCIPstartInteraction(scip) );
    }
    else
    {
+      SCIPinfoMessage(scip, NULL, "read problem <%s>\n", fullnlfilename);
+      SCIPinfoMessage(scip, NULL, "============\n\n");
+
+      SCIP_CALL( SCIPreadProb(scip, fullnlfilename, "nl") );
+
       SCIPinfoMessage(scip, NULL, "\nsolve problem\n");
       SCIPinfoMessage(scip, NULL, "=============\n\n");
 
@@ -267,7 +291,10 @@ SCIP_RETCODE fromAmpl(
       SCIP_CALL( SCIPprintStatistics(scip, NULL) );
    }
 
-   SCIP_CALL( SCIPwriteSolutionNl(scip) );
+   if( SCIPgetStage(scip) > SCIP_STAGE_PROBLEM )
+   {
+      SCIP_CALL( SCIPwriteSolutionNl(scip) );
+   }
 
    return SCIP_OKAY;
 
@@ -289,7 +316,9 @@ SCIP_RETCODE SCIPprocessShellArguments(
    char* settingsname = NULL;
    char* logname = NULL;
    int randomseed;
+   int nthreads;
    SCIP_Bool randomseedread;
+   SCIP_Bool nthreadsread;
    SCIP_Bool quiet;
    SCIP_Bool paramerror;
    SCIP_Bool interactive;
@@ -322,7 +351,9 @@ SCIP_RETCODE SCIPprocessShellArguments(
    interactive = FALSE;
    onlyversion = FALSE;
    randomseedread = FALSE;
+   nthreadsread = FALSE;
    randomseed = 0;
+   nthreads = 1;
    primalrefstring = NULL;
    dualrefstring = NULL;
 
@@ -421,7 +452,7 @@ SCIP_RETCODE SCIPprocessShellArguments(
       {
          /*read a random seed from the command line */
          i++;
-         if( i < argc && isdigit(argv[i][0]) )
+         if( i < argc && isdigit((unsigned char)argv[i][0]) )
          {
             randomseed = atoi(argv[i]);
             randomseedread = TRUE;
@@ -429,6 +460,21 @@ SCIP_RETCODE SCIPprocessShellArguments(
          else
          {
             printf("Random seed parameter '-r' followed by something that is not an integer\n");
+            paramerror = TRUE;
+         }
+      }
+      else if( strcmp(argv[i], "-t") == 0 )
+      {
+         /* read number of threads from the command line */
+         i++;
+         if( i < argc && isdigit((unsigned char)argv[i][0]) )
+         {
+            nthreads = atoi(argv[i]);
+            nthreadsread = TRUE;
+         }
+         else
+         {
+            printf("Thread limit parameter '-t' followed by something that is not an integer\n");
             paramerror = TRUE;
          }
       }
@@ -514,6 +560,15 @@ SCIP_RETCODE SCIPprocessShellArguments(
          SCIP_CALL( SCIPsetIntParam(scip, "randomization/randomseedshift", randomseed) );
       }
 
+      /*************************************
+       * Change thread limit, if specified *
+       *************************************/
+      if( nthreadsread )
+      {
+         SCIP_CALL( SCIPsetIntParam(scip, "parallel/maxnthreads", nthreads) );
+         SCIP_CALL( SCIPsetIntParam(scip, "parallel/minnthreads", nthreads) );
+      }
+
       /**************
        * Start SCIP *
        **************/
@@ -554,7 +609,7 @@ SCIP_RETCODE SCIPprocessShellArguments(
                   validatesolve = TRUE;
             }
          }
-         SCIP_CALL( fromCommandLine(scip, probname) );
+         SCIP_CALL( fromCommandLine(scip, probname, nthreadsread) );
 
          /* validate the solve */
          if( validatesolve )
@@ -579,7 +634,7 @@ SCIP_RETCODE SCIPprocessShellArguments(
    }
    else
    {
-      printf("\nsyntax: %s [-l <logfile>] [-q] [-s <settings>] [-r <randseed>] [-f <problem>] [-b <batchfile>] [-c \"command\"]\n"
+      printf("\nsyntax: %s [-l <logfile>] [-q] [-s <settings>] [-r <randseed>] [-t <threads>] [-f <problem>] [-b <batchfile>] [-c \"command\"]\n"
          "  -v, --version : print version and build options\n"
          "  -l <logfile>  : copy output into log file\n"
          "  -q            : suppress screen messages\n"
@@ -589,6 +644,7 @@ SCIP_RETCODE SCIPprocessShellArguments(
          "  -b <batchfile>: load and execute dialog command batch file (can be used multiple times)\n"
          "  -r <randseed> : nonnegative integer to be used as random seed. "
          "Has priority over random seed specified through parameter settings (.set) file\n"
+         "  -t <threads>  : number of threads (triggers concurrent solving)\n"
          "  -c \"command\"  : execute single line of dialog commands (can be used multiple times)\n",
          argv[0]);
 #ifdef SCIP_WITH_AMPL

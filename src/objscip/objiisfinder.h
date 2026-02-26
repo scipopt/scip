@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2026 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -66,27 +66,32 @@ public:
    /** priority of the iis finder */
    const int scip_priority_;
 
+   /** whether the iis finder should be enabled */
+   SCIP_Bool scip_enable_;
+
    /** default constructor */
    ObjIISfinder(
       SCIP*              scip,               /**< SCIP data structure */
       const char*        name,               /**< name of iis finder */
       const char*        desc,               /**< description of iis finder */
-      int                priority            /**< priority of the iis finder */
+      int                priority,           /**< priority of the iis finder */
+      SCIP_Bool          enable              /**< whether the IIS finder should be enabled */
       )
       : scip_(scip),
         scip_name_(0),
         scip_desc_(0),
-        scip_priority_(priority)
+        scip_priority_(priority),
+        scip_enable_(enable)
    {
       SCIP_CALL_ABORT( SCIPduplicateMemoryArray(scip_, &scip_name_, name, std::strlen(name)+1) );
       SCIP_CALL_ABORT( SCIPduplicateMemoryArray(scip_, &scip_desc_, desc, std::strlen(desc)+1) );
    }
 
    /** copy constructor */
-   ObjIISfinder(const ObjIISfinder& o) : ObjIISfinder(o.scip_, o.scip_name_, o.scip_desc_, o.scip_priority_) {}
+   ObjIISfinder(const ObjIISfinder& o) : ObjIISfinder(o.scip_, o.scip_name_, o.scip_desc_, o.scip_priority_, o.scip_enable_) {}
 
    /** move constructor */
-   ObjIISfinder(ObjIISfinder&& o) : scip_(o.scip_), scip_name_(0), scip_desc_(0), scip_priority_(o.scip_priority_)
+   ObjIISfinder(ObjIISfinder&& o) : scip_(o.scip_), scip_name_(0), scip_desc_(0), scip_priority_(o.scip_priority_), scip_enable_(o.scip_enable_)
    {
       std::swap(scip_name_, o.scip_name_);
       std::swap(scip_desc_, o.scip_desc_);

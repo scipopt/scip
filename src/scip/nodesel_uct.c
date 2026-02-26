@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2026 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -79,7 +79,7 @@
 #include "scip/scip_param.h"
 #include "scip/scip_solvingstats.h"
 #include "scip/scip_tree.h"
-#include <string.h>
+
 
 #define NODESEL_NAME            "uct"
 #define NODESEL_DESC            "node selector which balances exploration and exploitation "
@@ -459,9 +459,10 @@ SCIP_DECL_NODESELSELECT(nodeselSelectUct)
    int nchildren;
 
    assert(nodesel != NULL);
-   assert(strcmp(SCIPnodeselGetName(nodesel), NODESEL_NAME) == 0);
    assert(scip != NULL);
    assert(selnode != NULL);
+
+   SCIP_STRINGEQ( SCIPnodeselGetName(nodesel), NODESEL_NAME, SCIP_INVALIDCALL );
 
    *selnode = NULL;
 

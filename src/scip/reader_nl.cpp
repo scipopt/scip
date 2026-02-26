@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2026 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -112,7 +112,7 @@
  */
 
 /// problem data stored in SCIP
-struct SCIP_ProbData
+struct SCIP_ProbNlData
 {
    char*                 filenamestub;       /**< name of input file, without .nl extension; array is long enough to hold 5 extra chars */
    int                   filenamestublen;    /**< length of filenamestub string */
@@ -128,6 +128,7 @@ struct SCIP_ProbData
 
    SCIP_Bool             islp;               /**< whether problem is an LP (only linear constraints, only continuous vars) */
 };
+typedef struct SCIP_ProbNlData SCIP_PROBNLDATA;
 
 /*
  * Local methods
@@ -141,7 +142,7 @@ class AMPLProblemHandler : public mp::NLHandler<AMPLProblemHandler, SCIP_EXPR*>
 {
 private:
    SCIP* scip;
-   SCIP_PROBDATA* probdata;
+   SCIP_PROBNLDATA* probdata;
 
    // variable expressions corresponding to nonlinear variables
    // created in OnHeader() and released in destructor
@@ -191,7 +192,7 @@ private:
       const char*&       namesbegin,         /**< current pointer into names string, or NULL */
       const char*        namesend,           /**< pointer to end of names string */
       char*              name                /**< buffer to store name, should have length SCIP_MAXSTRLEN */
-   )
+      )
    {
       if( namesbegin == NULL )
          return false;
@@ -304,7 +305,7 @@ public:
          ++probname;
 
       // initialize empty SCIP problem
-      SCIP_CALL_THROW( SCIPcreateProb(scip, probname, probdataDelOrigNl, NULL, NULL, NULL, NULL, NULL, probdata) );
+      SCIP_CALL_THROW( SCIPcreateProb(scip, probname, probdataDelOrigNl, NULL, NULL, NULL, NULL, NULL, (SCIP_PROBDATA*)probdata) );
 
       // try to open files with variable and constraint names
       // temporarily add ".col" and ".row", respectively, to filenamestub
@@ -962,7 +963,7 @@ public:
 
    /// handling of suffices for variable and constraint flags and SOS constraints
    ///
-   /// regarding SOS in AMPL, see https://ampl.com/faqs/how-can-i-use-the-solvers-special-ordered-sets-feature/
+   /// regarding SOS in AMPL, see https://discuss.ampl.com/t/how-can-i-use-the-solver-s-special-ordered-sets-feature/45
    /// we pass the .ref suffix as weight to the SOS constraint handlers
    /// for a SOS2, the weights determine the order of variables in the set
    template<typename T> class SuffixHandler
@@ -2861,26 +2862,28 @@ public:
 static
 SCIP_DECL_PROBDELORIG(probdataDelOrigNl)
 {
+   SCIP_PROBNLDATA* probnldata = (SCIP_PROBNLDATA*)*probdata;
    int i;
 
-   assert((*probdata)->vars != NULL || (*probdata)->nvars == 0);
-   assert((*probdata)->conss != NULL || (*probdata)->conss == 0);
+   assert(probnldata != NULL);
+   assert(probnldata->vars != NULL || probnldata->nvars == 0);
+   assert(probnldata->conss != NULL || probnldata->conss == 0);
 
-   for( i = 0; i < (*probdata)->nconss; ++i )
+   for( i = 0; i < probnldata->nconss; ++i )
    {
-      SCIP_CALL( SCIPreleaseCons(scip, &(*probdata)->conss[i]) );
+      SCIP_CALL( SCIPreleaseCons(scip, &probnldata->conss[i]) );
    }
-   SCIPfreeBlockMemoryArrayNull(scip, &(*probdata)->conss, (*probdata)->nconss);
+   SCIPfreeBlockMemoryArrayNull(scip, &probnldata->conss, probnldata->nconss);
 
-   for( i = 0; i < (*probdata)->nvars; ++i )
+   for( i = 0; i < probnldata->nvars; ++i )
    {
-      SCIP_CALL( SCIPreleaseVar(scip, &(*probdata)->vars[i]) );
+      SCIP_CALL( SCIPreleaseVar(scip, &probnldata->vars[i]) );
    }
-   SCIPfreeBlockMemoryArrayNull(scip, &(*probdata)->vars, (*probdata)->nvars);
+   SCIPfreeBlockMemoryArrayNull(scip, &probnldata->vars, probnldata->nvars);
 
-   SCIPfreeBlockMemoryArrayNull(scip, &(*probdata)->filenamestub, (*probdata)->filenamestublen+5);
+   SCIPfreeBlockMemoryArrayNull(scip, &probnldata->filenamestub, probnldata->filenamestublen+5);
 
-   SCIPfreeMemory(scip, probdata);
+   SCIPfreeMemory(scip, (SCIP_PROBNLDATA**)probdata);
 
    return SCIP_OKAY;
 }
@@ -3009,7 +3012,7 @@ SCIP_DECL_READERWRITE(readerWriteNl)
       /* construct a temporary directory in /tmp/scipnlwrite-XXXXXX */
 #ifdef _WIN32
       TCHAR systemtmp[MAX_PATH + 1];
-      DWORD gettemprc = GetTempPath2A(MAX_PATH + 1, systemtmp);
+      DWORD gettemprc = GetTempPathA(MAX_PATH + 1, systemtmp);
       if( gettemprc == 0 || gettemprc > MAX_PATH + 1 )
       {
          SCIPerrorMessage("Cannot get name of directory for temporary files: error %d\n", errno);
@@ -3219,7 +3222,7 @@ SCIP_DECL_READERWRITE(readerWriteNl)
 /** includes the AMPL .nl file reader in SCIP */
 SCIP_RETCODE SCIPincludeReaderNl(
    SCIP*                 scip                /**< SCIP data structure */
-)
+   )
 {
    SCIP_READER* reader = NULL;
 
@@ -3240,7 +3243,7 @@ SCIP_RETCODE SCIPincludeReaderNl(
          "reading/" READER_NAME "/comments", "should comments be written to nl files",
          NULL, FALSE, FALSE, NULL, NULL) );
 
-   SCIP_CALL( SCIPincludeExternalCodeInformation(scip, "AMPL/MP 4.0.3", "AMPL .nl file reader library (github.com/ampl/mp)") );
+   SCIP_CALL( SCIPincludeExternalCodeInformation(scip, "AMPL/MP 4.0.4", "AMPL .nl file reader library (github.com/ampl/mp)") );
 
    return SCIP_OKAY;
 }
@@ -3253,11 +3256,11 @@ SCIP_RETCODE SCIPwriteSolutionNl(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
-   SCIP_PROBDATA* probdata;
+   SCIP_PROBNLDATA* probdata;
 
    assert(scip != NULL);
 
-   probdata = SCIPgetProbData(scip);
+   probdata = (SCIP_PROBNLDATA*)SCIPgetProbData(scip);
    if( probdata == NULL )
    {
       SCIPerrorMessage("No AMPL nl file read. Cannot write AMPL solution.\n");

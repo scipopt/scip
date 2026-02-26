@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2026 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -156,9 +156,12 @@ void printGMP(
 {
    char* buffer;
    buffer = (char*) malloc(mpz_sizeinbase(mpq_numref(val), 10) + mpz_sizeinbase(mpq_denref(val), 10) + 3);
-   (void)mpq_get_str(buffer, 10, val);
-   printf("%s \n", buffer);
-   free(buffer);
+   if( buffer != NULL )
+   {
+      (void)mpq_get_str(buffer, 10, val);
+      printf("%s \n", buffer);
+      free(buffer);
+   }
 }
 
 /** returns the number of packets needed to store column packet information */

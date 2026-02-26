@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2026 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -62,13 +62,11 @@
  * SCIP_DEBUG_SINGLEROWLP
  */
 
-#include <assert.h>
-
 #include "scip/cons_linear.h"
 #include "scip/scipdefplugins.h"
 #include "scip/pub_matrix.h"
 #include "scip/presol_tworowbnd.h"
-#include <string.h>
+
 
 #define PRESOL_NAME                    "tworowbnd"
 #define PRESOL_DESC                    "do bound tigthening by using two rows"
@@ -1276,7 +1274,8 @@ SCIP_DECL_PRESOLCOPY(presolCopyTworowbnd)
 
    assert(scip != NULL);
    assert(presol != NULL);
-   assert(strcmp(SCIPpresolGetName(presol), PRESOL_NAME) == 0);
+
+   SCIP_STRINGEQ( SCIPpresolGetName(presol), PRESOL_NAME, SCIP_INVALIDCALL );
 
    /* call inclusion method of presolver if copying is enabled */
    presoldata = SCIPpresolGetData(presol);

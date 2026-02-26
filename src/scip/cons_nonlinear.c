@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2026 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -1374,14 +1374,12 @@ SCIP_RETCODE createCons(
       return SCIP_INVALIDCALL;
    }
 
-
    if( isnan(lhs) || isnan(rhs) )
    {
       SCIPerrorMessage("%s hand side of nonlinear constraint <%s> is nan\n",
             isnan(lhs) ? "left" : "right", name);
       return SCIP_INVALIDDATA;
    }
-
 
    /* create constraint data */
    SCIP_CALL( SCIPallocClearBlockMemory(scip, &consdata) );
@@ -11044,7 +11042,8 @@ SCIP_DECL_CONSHDLRCOPY(conshdlrCopyNonlinear)
    assert(scip != NULL);
    assert(conshdlr != NULL);
    assert(valid != NULL);
-   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
+
+   SCIP_STRINGEQ( SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME, SCIP_INVALIDCALL );
 
    /* create basic data of constraint handler and include it to scip */
    SCIP_CALL( SCIPincludeConshdlrNonlinear(scip) );
@@ -13007,12 +13006,12 @@ SCIP_RETCODE SCIPcreateConsBasicSOCNonlinear(
    /* check values for infinity or nan */
    for( i = 0; i < nvars; ++i )
    {
-      if( !SCIPisFinite(coefs[i]) || SCIPisInfinity(scip, coefs[i]) )
+      if( coefs != NULL && ( !SCIPisFinite(coefs[i]) || SCIPisInfinity(scip, coefs[i]) ) )
       {
          SCIPerrorMessage("Second-order cone term with infinite or nan coefficient of variable %s in nonlinear constraint %s\n", SCIPvarGetName(vars[i]), name);
          return SCIP_INVALIDDATA;
       }
-      if( offsets != NULL && (!SCIPisFinite(offsets[i]) || SCIPisInfinity(scip, coefs[i])) )
+      if( offsets != NULL && (!SCIPisFinite(offsets[i]) || SCIPisInfinity(scip, offsets[i])) )
       {
          SCIPerrorMessage("Second-order cone term with infinite or nan offset for variable %s in nonlinear constraint %s\n", SCIPvarGetName(vars[i]), name);
          return SCIP_INVALIDDATA;
@@ -13984,7 +13983,8 @@ SCIP_EXPR* SCIPgetExprNonlinear(
    SCIP_CONSDATA* consdata;
 
    assert(cons != NULL);
-   assert(strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) == 0);
+
+   SCIP_STRINGEQ( SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME, NULL );
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
@@ -14000,7 +14000,8 @@ SCIP_Real SCIPgetLhsNonlinear(
    SCIP_CONSDATA* consdata;
 
    assert(cons != NULL);
-   assert(strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) == 0);
+
+   SCIP_STRINGEQ( SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME, SCIP_INVALID );
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
@@ -14016,7 +14017,8 @@ SCIP_Real SCIPgetRhsNonlinear(
    SCIP_CONSDATA* consdata;
 
    assert(cons != NULL);
-   assert(strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) == 0);
+
+   SCIP_STRINGEQ( SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME, SCIP_INVALID );
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
@@ -14035,7 +14037,8 @@ SCIP_RETCODE SCIPgetNlRowNonlinear(
 
    assert(cons  != NULL);
    assert(nlrow != NULL);
-   assert(strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) == 0);
+
+   SCIP_STRINGEQ( SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME, SCIP_INVALIDCALL );
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
@@ -14061,7 +14064,8 @@ SCIP_EXPRCURV SCIPgetCurvatureNonlinear(
    SCIP_CONSDATA* consdata;
 
    assert(cons != NULL);
-   assert(strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) == 0);
+
+   SCIP_STRINGEQ( SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME, SCIP_EXPRCURV_UNKNOWN );
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
@@ -14086,7 +14090,8 @@ SCIP_RETCODE SCIPcheckQuadraticNonlinear(
    assert(scip != NULL);
    assert(cons != NULL);
    assert(isquadratic != NULL);
-   assert(strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) == 0);
+
+   SCIP_STRINGEQ( SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME, SCIP_INVALIDCALL );
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
@@ -14116,7 +14121,8 @@ SCIP_RETCODE SCIPchgLhsNonlinear(
 
    assert(scip != NULL);
    assert(cons != NULL);
-   assert(strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) == 0);
+
+   SCIP_STRINGEQ( SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME, SCIP_INVALIDCALL );
 
    if( SCIPgetStage(scip) != SCIP_STAGE_PROBLEM )
    {
@@ -14155,7 +14161,8 @@ SCIP_RETCODE SCIPchgRhsNonlinear(
 
    assert(scip != NULL);
    assert(cons != NULL);
-   assert(strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) == 0);
+
+   SCIP_STRINGEQ( SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME, SCIP_INVALIDCALL );
 
    if( SCIPgetStage(scip) != SCIP_STAGE_PROBLEM )
    {
@@ -14208,7 +14215,8 @@ SCIP_RETCODE SCIPchgExprNonlinear(
 
    conshdlr = SCIPconsGetHdlr(cons);
    assert(conshdlr != NULL);
-   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
+
+   SCIP_STRINGEQ( SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME, SCIP_INVALIDCALL );
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
@@ -14266,7 +14274,8 @@ SCIP_RETCODE SCIPaddLinearVarNonlinear(
 
    conshdlr = SCIPconsGetHdlr(cons);
    assert(conshdlr != NULL);
-   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
+
+   SCIP_STRINGEQ( SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME, SCIP_INVALIDCALL );
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
@@ -14339,7 +14348,8 @@ SCIP_RETCODE SCIPaddExprNonlinear(
 
    conshdlr = SCIPconsGetHdlr(cons);
    assert(conshdlr != NULL);
-   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
+
+   SCIP_STRINGEQ( SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME, SCIP_INVALIDCALL );
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);

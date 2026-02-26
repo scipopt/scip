@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2026 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -500,6 +500,7 @@
 #define SCIP_DEFAULT_CONCURRENT_CHANGECHILDSEL  TRUE /**< should the concurrent solvers use different child selection rules? */
 #define SCIP_DEFAULT_CONCURRENT_COMMVARBNDS     TRUE /**< should the concurrent solvers communicate variable bounds? */
 #define SCIP_DEFAULT_CONCURRENT_PRESOLVEBEFORE  TRUE /**< should the problem be presolved before it is copied to the concurrent solvers? */
+#define SCIP_DEFAULT_CONCURRENT_SYMMETRYBEFORE  TRUE /**< should symmetry be computed before concurrent solving? */
 #define SCIP_DEFAULT_CONCURRENT_INITSEED     5131912 /**< the seed used to initialize the random seeds for the concurrent solvers */
 #define SCIP_DEFAULT_CONCURRENT_FREQINIT        10.0 /**< initial frequency of synchronization with other threads
                                                       *   (fraction of time required for solving the root LP) */
@@ -2789,6 +2790,11 @@ SCIP_RETCODE SCIPsetCreate(
          "concurrent/presolvebefore",
          "should the problem be presolved before it is copied to the concurrent solvers?",
          &(*set)->concurrent_presolvebefore, FALSE, SCIP_DEFAULT_CONCURRENT_PRESOLVEBEFORE,
+         NULL, NULL) );
+   SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
+         "concurrent/symmetrybefore",
+         "should symmetry be computed before concurrent solving?",
+         &(*set)->concurrent_symmetrybefore, FALSE, SCIP_DEFAULT_CONCURRENT_SYMMETRYBEFORE,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddIntParam(*set, messagehdlr, blkmem,
          "concurrent/initseed",
@@ -8000,7 +8006,7 @@ void SCIPsetPrintDebugMessage(
    assert( scip != NULL );
 
    /* strip directory from filename */
-#if defined(_WIN32) || defined(_WIN64)
+#ifdef _WIN32
    filename = strrchr(sourcefile, '\\');
 #else
    filename = strrchr(sourcefile, '/');

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2026 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -29,9 +29,6 @@
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
-
-#include <assert.h>
-#include <string.h>
 
 #include "scip/certificate.h"
 #include "scip/conflictstore.h"
@@ -67,9 +64,10 @@ static
 SCIP_DECL_EVENTEXEC(eventExecConflictstore)
 {/*lint --e{715}*/
    assert(eventhdlr != NULL);
-   assert(strcmp(SCIPeventhdlrGetName(eventhdlr), EVENTHDLR_NAME) == 0);
    assert(event != NULL);
    assert(SCIPeventGetType(event) & SCIP_EVENTTYPE_BESTSOLFOUND);
+
+   SCIP_STRINGEQ( SCIPeventhdlrGetName(eventhdlr), EVENTHDLR_NAME, SCIP_INVALIDCALL );
 
    if( SCIPgetStage(scip) == SCIP_STAGE_PRESOLVING || SCIPgetStage(scip) == SCIP_STAGE_SOLVING )
    {
@@ -87,7 +85,8 @@ SCIP_DECL_EVENTINITSOL(eventInitsolConflictstore)
 
    assert(scip != NULL);
    assert(eventhdlr != NULL);
-   assert(strcmp(SCIPeventhdlrGetName(eventhdlr), EVENTHDLR_NAME) == 0);
+
+   SCIP_STRINGEQ( SCIPeventhdlrGetName(eventhdlr), EVENTHDLR_NAME, SCIP_INVALIDCALL );
 
    SCIP_CALL( SCIPgetBoolParam(scip, "conflict/cleanboundexceedings", &cleanboundexceeding) );
 
@@ -107,7 +106,8 @@ SCIP_DECL_EVENTEXITSOL(eventExitsolConflictstore)
 
    assert(scip != NULL);
    assert(eventhdlr != NULL);
-   assert(strcmp(SCIPeventhdlrGetName(eventhdlr), EVENTHDLR_NAME) == 0);
+
+   SCIP_STRINGEQ( SCIPeventhdlrGetName(eventhdlr), EVENTHDLR_NAME, SCIP_INVALIDCALL );
 
    SCIP_CALL( SCIPgetBoolParam(scip, "conflict/cleanboundexceedings", &cleanboundexceeding) );
 

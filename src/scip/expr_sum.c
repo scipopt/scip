@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2026 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -32,7 +32,6 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#include <string.h>
 #include <stddef.h>
 
 #include "scip/expr_sum.h"
@@ -906,11 +905,11 @@ SCIP_DECL_EXPRINITESTIMATES(initEstimatesSum)
 #endif
    assert(scip != NULL);
    assert(expr != NULL);
-   assert(strcmp(SCIPexprhdlrGetName(SCIPexprGetHdlr(expr)), EXPRHDLR_NAME) == 0);
-
    assert(coefs[0] != NULL);
    assert(constant != NULL);
    assert(nreturned != NULL);
+
+   SCIP_STRINGEQ( SCIPexprhdlrGetName(SCIPexprGetHdlr(expr)), EXPRHDLR_NAME, SCIP_INVALIDCALL );
 
    exprdata = SCIPexprGetData(expr);
    assert(exprdata != NULL);
@@ -930,10 +929,11 @@ SCIP_DECL_EXPRESTIMATE(estimateSum)
 
    assert(scip != NULL);
    assert(expr != NULL);
-   assert(strcmp(SCIPexprhdlrGetName(SCIPexprGetHdlr(expr)), EXPRHDLR_NAME) == 0);
    assert(islocal != NULL);
    assert(success != NULL);
    assert(branchcand != NULL);
+
+   SCIP_STRINGEQ( SCIPexprhdlrGetName(SCIPexprGetHdlr(expr)), EXPRHDLR_NAME, SCIP_INVALIDCALL );
 
    exprdata = SCIPexprGetData(expr);
    assert(exprdata != NULL);

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2026 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -201,9 +201,9 @@ SCIP_RETCODE SCIPincrementConcurrentTime(
    SCIP_Real             val                 /**< value by which the time counter for synchronization is incremented */
    )
 {
-   SCIP_Real           syncfreq;
-   SCIP*               mainscip;
-   SCIP_CLOCK*         wallclock;
+   SCIP_Real syncfreq;
+   SCIP* mainscip;
+   SCIP_CLOCK* wallclock;
 
    assert(scip != NULL);
 
@@ -232,6 +232,7 @@ SCIP_RETCODE SCIPincrementConcurrentTime(
    else
    {
       SCIP_Real timesincelastsync;
+
       timesincelastsync = SCIPgetClockTime(mainscip, wallclock);
 
       if( timesincelastsync >= syncfreq )
@@ -378,8 +379,7 @@ SCIP_Longint SCIPgetConcurrentNTightenedIntBnds(
    return scip->concurrent->propsync != NULL ? SCIPpropSyncGetNTightenedIntBnds(scip->concurrent->propsync) : 0;
 }
 
-/** pass a solution to the given SCIP instance using that was received via synchronization by using
- * the sync heuristic */
+/** pass a solution to the given SCIP instance that was received via synchronization by using the sync heuristic */
 SCIP_RETCODE SCIPaddConcurrentSol(
    SCIP*                 scip,               /**< SCIP datastructure */
    SCIP_SOL*             sol                 /**< solution */
@@ -444,11 +444,14 @@ int SCIPgetConcurrentVaridx(
    assert(var != NULL);
    assert(SCIPvarIsOriginal(var));
 
-   /* variables with index larger than nvars do not correspond to active variables in the original */
-   idx = SCIPvarGetIndex(var);
-   assert( idx >= 0 );
-   if( idx < scip->concurrent->nvars )
+   /* the map only is valid for variables with a probindex */
+   idx = SCIPvarGetProbindex(var);
+   if( idx >= 0 )
+   {
+      assert( 0 <= idx && idx < scip->concurrent->nvars );
       return scip->concurrent->varperm[idx];
+   }
+
    return -1;
 }
 
@@ -506,14 +509,14 @@ SCIP_RETCODE SCIPconcurrentSolve(
    SCIP*                 scip                /**< pointer to scip datastructure */
    )
 {
-   SCIP_SYNCSTORE*   syncstore;
-   int               idx;
-   int               jobid;
-   int               i;
-   SCIP_RETCODE      retcode;
    SCIP_CONCSOLVER** concsolvers;
-   int               nconcsolvers;
+   SCIP_SYNCSTORE* syncstore;
+   SCIP_RETCODE retcode;
    SCIP_CONCURRENTDATA** concurrentdata;
+   int nconcsolvers;
+   int idx;
+   int jobid;
+   int i;
 
    assert(scip != NULL);
 
@@ -539,7 +542,7 @@ SCIP_RETCODE SCIPconcurrentSolve(
       {
          for( i = 0; i < nconcsolvers; ++i )
          {
-            SCIP_JOB*         job;
+            SCIP_JOB* job;
             SCIP_SUBMITSTATUS status;
 
             concurrentdata[i]->scip = scip;
@@ -576,21 +579,21 @@ SCIP_RETCODE SCIPcopyConcurrentSolvingStats(
    SCIP*                 target              /**< target SCIP data structure */
    )
 {
-   SCIP_Real     tmptime;
-   SCIP_HEUR*    heur;
-   SCIP_NODE*    root;
-   SCIP_PROP*    prop;
-   SCIP_SEPA*    sepa;
-   SCIP_PRESOL*  presol;
-   SCIP_HEUR**   heurs;
-   int           nheurs;
-   SCIP_PROP**   props;
-   int           nprops;
-   SCIP_SEPA**   sepas;
-   int           nsepas;
+   SCIP_HEUR* heur;
+   SCIP_NODE* root;
+   SCIP_PROP* prop;
+   SCIP_SEPA* sepa;
+   SCIP_PRESOL* presol;
+   SCIP_HEUR** heurs;
+   SCIP_PROP** props;
+   SCIP_SEPA** sepas;
    SCIP_PRESOL** presols;
-   int           npresols;
-   int           i;
+   SCIP_Real tmptime;
+   int nheurs;
+   int nprops;
+   int nsepas;
+   int npresols;
+   int i;
 
    assert(source != NULL);
    assert(target != NULL);
@@ -607,6 +610,7 @@ SCIP_RETCODE SCIPcopyConcurrentSolvingStats(
          heurs[i]->nbestsolsfound += heur->nbestsolsfound;
          heurs[i]->ncalls += heur->ncalls;
          heurs[i]->nsolsfound += heur->nsolsfound;
+
          /* TODO divesets */
          tmptime = SCIPgetClockTime(target, heurs[i]->setuptime);
          tmptime += SCIPgetClockTime(source, heur->setuptime);

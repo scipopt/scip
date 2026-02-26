@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2026 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -34,8 +34,6 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#include <assert.h>
-#include <string.h>
 #include <ctype.h>
 
 #include "reader_sch.h"
@@ -357,7 +355,8 @@ SCIP_DECL_READERCOPY(readerCopySch)
 {  /*lint --e{715}*/
    assert(scip != NULL);
    assert(reader != NULL);
-   assert(strcmp(SCIPreaderGetName(reader), READER_NAME) == 0);
+
+   SCIP_STRINGEQ( SCIPreaderGetName(reader), READER_NAME, SCIP_INVALIDCALL );
 
    /* call inclusion method of reader handler */
    SCIP_CALL( SCIPincludeReaderSch(scip) );

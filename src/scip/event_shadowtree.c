@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2026 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -66,7 +66,6 @@
 #include "scip/struct_tree.h"
 #include "scip/symmetry.h"
 #include <ctype.h>
-#include <string.h>
 #include <memory.h>
 #include "scip/event_shadowtree.h"
 
@@ -423,7 +422,7 @@ SCIP_DECL_EVENTEXEC(eventExec)
 {
    SCIP_EVENTHDLRDATA* eventhdlrdata;
 
-   assert( strcmp(SCIPeventhdlrGetName(eventhdlr), EVENTHDLR_NAME) == 0 );
+   SCIP_STRINGEQ( SCIPeventhdlrGetName(eventhdlr), EVENTHDLR_NAME, SCIP_INVALIDCALL );
 
    eventhdlrdata = (SCIP_EVENTHDLRDATA*) SCIPeventhdlrGetData(eventhdlr);
    assert( eventhdlrdata != NULL );
@@ -627,7 +626,9 @@ SCIP_SHADOWTREE* SCIPgetShadowTree(
 {
    SCIP_EVENTHDLRDATA* eventhdlrdata;
    assert( eventhdlr != NULL );
-   assert( strcmp(SCIPeventhdlrGetName(eventhdlr), EVENTHDLR_NAME) == 0 );
+
+   SCIP_STRINGEQ( SCIPeventhdlrGetName(eventhdlr), EVENTHDLR_NAME, NULL );
+
    eventhdlrdata = SCIPeventhdlrGetData(eventhdlr);
    assert( eventhdlrdata != NULL );
 
@@ -643,7 +644,9 @@ SCIP_RETCODE SCIPactivateShadowTree(
 {
    SCIP_EVENTHDLRDATA* eventhdlrdata;
    assert( eventhdlr != NULL );
-   assert( strcmp(SCIPeventhdlrGetName(eventhdlr), EVENTHDLR_NAME) == 0 );
+
+   SCIP_STRINGEQ( SCIPeventhdlrGetName(eventhdlr), EVENTHDLR_NAME, SCIP_INVALIDCALL );
+
    eventhdlrdata = SCIPeventhdlrGetData(eventhdlr);
    assert( eventhdlrdata != NULL );
    assert( eventhdlrdata->scip == scip );

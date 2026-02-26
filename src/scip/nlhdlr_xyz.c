@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2026 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -32,6 +32,7 @@
 #include "scip/cons_nonlinear.h"
 #include "scip/pub_misc_rowprep.h"
 
+
 /* fundamental nonlinear handler properties */
 #define NLHDLR_NAME               "xyz"
 #define NLHDLR_DESC               "xyz handler for expressions"
@@ -42,7 +43,9 @@
  * Data structures
  */
 
-/* TODO: fill in the necessary nonlinear handler data */
+/* TODO: fill in the necessary nonlinear handler data
+ * when this plugin is written in C++, rename SCIP_NlhdlrData and SCIP_NlhdlrExprData to something unique (C++ One-Definition-Rule)
+ */
 
 /** nonlinear handler data */
 struct SCIP_NlhdlrData

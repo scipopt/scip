@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2026 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -76,7 +76,6 @@
 #include "scip/symmetry_graph.h"
 #include "symmetry/struct_symmetry.h"
 #include <ctype.h>
-#include <string.h>
 
 
 /**@name Constraint handler properties
@@ -4791,7 +4790,8 @@ SCIP_DECL_CONSHDLRCOPY(conshdlrCopyVarbound)
 {  /*lint --e{715}*/
    assert(scip != NULL);
    assert(conshdlr != NULL);
-   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
+
+   SCIP_STRINGEQ( SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME, SCIP_INVALIDCALL );
 
    /* call inclusion method of constraint handler */
    SCIP_CALL( SCIPincludeConshdlrVarbound(scip) );
@@ -4809,7 +4809,8 @@ SCIP_DECL_CONSFREE(consFreeVarbound)
 
    assert(scip != NULL);
    assert(conshdlr != NULL);
-   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
+
+   SCIP_STRINGEQ( SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME, SCIP_INVALIDCALL );
 
    /* free constraint handler data */
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
@@ -5204,8 +5205,9 @@ SCIP_DECL_CONSPRESOL(consPresolVarbound)
 
    assert(scip != NULL);
    assert(conshdlr != NULL);
-   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
    assert(result != NULL);
+
+   SCIP_STRINGEQ( SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME, SCIP_INVALIDCALL );
 
    /* get constraint handler data */
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
@@ -5533,7 +5535,7 @@ SCIP_DECL_CONSPARSE(consParseVarbound)
    /* ignore whitespace */
    SCIP_CALL( SCIPskipSpace((char**)&str) );
 
-   if( isdigit(str[0]) || ((str[0] == '-' || str[0] == '+') && isdigit(str[1])) )
+   if( isdigit((unsigned char)str[0]) || ((str[0] == '-' || str[0] == '+') && isdigit((unsigned char)str[1])) )
    {
       if( !SCIPparseReal(scip, str, &lhs, &endstr) )
       {
@@ -5884,12 +5886,7 @@ SCIP_Real SCIPgetLhsVarbound(
 
    assert(scip != NULL);
 
-   if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
-   {
-      SCIPerrorMessage("constraint is not a variable bound constraint\n");
-      SCIPABORT();
-      return SCIP_INVALID;  /*lint !e527*/
-   }
+   SCIP_STRINGEQ( SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME, SCIP_INVALID );
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
@@ -5907,12 +5904,7 @@ SCIP_Real SCIPgetRhsVarbound(
 
    assert(scip != NULL);
 
-   if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
-   {
-      SCIPerrorMessage("constraint is not a variable bound constraint\n");
-      SCIPABORT();
-      return SCIP_INVALID;  /*lint !e527*/
-   }
+   SCIP_STRINGEQ( SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME, SCIP_INVALID );
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
@@ -5930,12 +5922,7 @@ SCIP_VAR* SCIPgetVarVarbound(
 
    assert(scip != NULL);
 
-   if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
-   {
-      SCIPerrorMessage("constraint is not a variable bound constraint\n");
-      SCIPABORT();
-      return NULL;  /*lint !e527*/
-   }
+   SCIP_STRINGEQ( SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME, NULL );
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
@@ -5953,12 +5940,7 @@ SCIP_VAR* SCIPgetVbdvarVarbound(
 
    assert(scip != NULL);
 
-   if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
-   {
-      SCIPerrorMessage("constraint is not a variable bound constraint\n");
-      SCIPABORT();
-      return NULL;  /*lint !e527*/
-   }
+   SCIP_STRINGEQ( SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME, NULL );
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
@@ -5976,12 +5958,7 @@ SCIP_Real SCIPgetVbdcoefVarbound(
 
    assert(scip != NULL);
 
-   if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
-   {
-      SCIPerrorMessage("constraint is not a variable bound constraint\n");
-      SCIPABORT();
-      return SCIP_INVALID;  /*lint !e527*/
-   }
+   SCIP_STRINGEQ( SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME, SCIP_INVALID );
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
@@ -5999,12 +5976,7 @@ SCIP_Real SCIPgetDualsolVarbound(
 
    assert(scip != NULL);
 
-   if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
-   {
-      SCIPerrorMessage("constraint is not a variable bound constraint\n");
-      SCIPABORT();
-      return SCIP_INVALID;  /*lint !e527*/
-   }
+   SCIP_STRINGEQ( SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME, SCIP_INVALID );
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
@@ -6025,12 +5997,7 @@ SCIP_Real SCIPgetDualfarkasVarbound(
 
    assert(scip != NULL);
 
-   if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
-   {
-      SCIPerrorMessage("constraint is not a variable bound constraint\n");
-      SCIPABORT();
-      return SCIP_INVALID;  /*lint !e527*/
-   }
+   SCIP_STRINGEQ( SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME, SCIP_INVALID );
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
@@ -6053,12 +6020,7 @@ SCIP_ROW* SCIPgetRowVarbound(
 
    assert(scip != NULL);
 
-   if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
-   {
-      SCIPerrorMessage("constraint is not a variable bound constraint\n");
-      SCIPABORT();
-      return NULL;  /*lint !e527*/
-   }
+   SCIP_STRINGEQ( SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME, NULL );
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
@@ -6076,12 +6038,7 @@ SCIP_RETCODE SCIPcreateRowVarbound(
 
    assert(scip != NULL);
 
-   if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
-   {
-      SCIPerrorMessage("constraint is not a variable bound constraint\n");
-      SCIPABORT();
-      return SCIP_ERROR; /*lint !e527*/
-   }
+   SCIP_STRINGEQ( SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME, SCIP_ERROR );
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);

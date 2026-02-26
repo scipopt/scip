@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2026 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -50,7 +50,7 @@
 #include "scip/scip_param.h"
 #include "scip/scip_reader.h"
 #include "scip/scip_var.h"
-#include <string.h>
+
 
 #define READER_NAME             "ppmreader"
 #define READER_DESC             "file writer for portable pixmap file format (PPM), open with common graphic viewer programs (e.g. xview)"
@@ -453,7 +453,8 @@ SCIP_DECL_READERCOPY(readerCopyPpm)
 {  /*lint --e{715}*/
    assert(scip != NULL);
    assert(reader != NULL);
-   assert(strcmp(SCIPreaderGetName(reader), READER_NAME) == 0);
+
+   SCIP_STRINGEQ( SCIPreaderGetName(reader), READER_NAME, SCIP_INVALIDCALL );
 
    /* call inclusion method of reader */
    SCIP_CALL( SCIPincludeReaderPpm(scip) );
@@ -467,7 +468,8 @@ SCIP_DECL_READERFREE(readerFreePpm)
 {
    SCIP_READERDATA* readerdata;
 
-   assert(strcmp(SCIPreaderGetName(reader), READER_NAME) == 0);
+   SCIP_STRINGEQ( SCIPreaderGetName(reader), READER_NAME, SCIP_INVALIDCALL );
+
    readerdata = SCIPreaderGetData(reader);
    assert(readerdata != NULL);
    SCIPfreeBlockMemory(scip, &readerdata);
@@ -482,7 +484,8 @@ SCIP_DECL_READERWRITE(readerWritePpm)
 {  /*lint --e{715}*/
    SCIP_READERDATA* readerdata;
 
-   assert(strcmp(SCIPreaderGetName(reader), READER_NAME) == 0);
+   SCIP_STRINGEQ( SCIPreaderGetName(reader), READER_NAME, SCIP_INVALIDCALL );
+
    readerdata = SCIPreaderGetData(reader);
    assert(readerdata != NULL);
 

@@ -2120,6 +2120,7 @@ class NLProblemBuilder {
     AddVariables(h);
     if (int n = h.num_common_exprs())
       builder_.AddCommonExprs(n);
+    builder_.NotifyObjChoice(h.num_objs, multiobj(), objno());
     int n_objs = resulting_nobj( h.num_objs );
     if (n_objs != 0)
       builder_.AddObjs( n_objs );
@@ -2533,13 +2534,19 @@ public:
   /// Returns the name of the item at specified index.
   /// @param i2: if >=0,
   ///   from this index, generic name 2 is used
-  fmt::StringRef name(std::size_t index, std::size_t i2=-1);
+	/// @param any_empty: if non-0, set true if the read
+	///   name was empty (it is replaced by a standard name then).
+	fmt::StringRef name(
+			std::size_t index, std::size_t i2=-1, bool* was_empty=0);
 
   /// Return vector of names, length n.
   /// If number_read() < n, generic names are filled.
   /// @param i2: if >=0,
   ///   from this index, generic name 2 is used
-  std::vector<std::string> get_names(size_t n, size_t i2=-1);
+	/// @param any_empty: if non-0, true iff had any empty names
+	///   in the input (they were replaced by standard names then).
+	std::vector<std::string> get_names(
+			size_t n, size_t i2=-1, bool* p_any_empty=0);
 
 private:
   std::vector<const char *> names_;

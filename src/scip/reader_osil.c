@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2026 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -63,7 +63,7 @@
 #include "scip/scip_reader.h"
 #include "scip/scip_var.h"
 #include <stdlib.h>
-#include <string.h>
+
 #include "xml/xml.h"
 
 #define READER_NAME             "osilreader"
@@ -1778,7 +1778,7 @@ SCIP_RETCODE readExpression(
          *doingfine = FALSE;
          goto TERMINATE_TWO_ARGS;
       }
-      else /* if( strcmp(exprname, "max") == 0 ) */
+      else
       {
          assert(strcmp(exprname, "max") == 0);
 

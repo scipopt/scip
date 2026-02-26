@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2026 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -24,13 +24,14 @@
 
 /**@file   heur_sync.h
  * @ingroup PRIMALHEURISTICS
- * @brief  primal heuristic that adds given solutions
+ * @brief  primal heuristic that adds solutions from synchronization
  * @author Leona Gottwald
  *
  * This heuristic takes solutions from somewhere else via the function SCIPheurSyncPassSol(). It
- * then tries to commit this solution. It is used by the concurrent solvers, when solutions are
- * communicated between solvers, but cannot directly submitted because SCIP might be in a stage where
+ * then tries to add this solution. It is used by the concurrent solvers, when solutions are
+ * communicated between solvers, but cannot directly added, because SCIP might be in a stage where
  * this is not allowed.
+ *
  * If multiple solutions are passed it will keep the best N solutions depending on the parameter setting
  * "concsolvers/sync/maxnsols"
  */

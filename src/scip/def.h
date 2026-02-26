@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2026 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -38,18 +38,20 @@
 #define __STDC_CONSTANT_MACROS
 #endif
 
+#include <assert.h>
 #include <stdio.h>
 #include <stdint.h>
+#include <string.h>
 #include <math.h>
 #include <limits.h>
 #include <float.h>
-#include <assert.h>
 
 /*
  * include build configuration flags
  */
 #include "scip/config.h"
 #include "scip/scip_export.h"
+
 
 /*
  * GNU COMPILER VERSION define
@@ -76,12 +78,19 @@
  *
  * normally, SCIP_VARARGS_FIRST_ should be sufficient
  * the SCIP_VARARGS_FIRST_/SCIP_VARARGS_FIRST kludge is to work around a bug in MSVC (https://stackoverflow.com/questions/4750688/how-to-single-out-the-first-parameter-sent-to-a-macro-taking-only-a-variadic-par)
+ * (compiling with -Zc:preprocessor would disable the bug)
  */
 #define SCIP_VARARGS_FIRST_(firstarg, ...) firstarg
 #define SCIP_VARARGS_FIRST(args) SCIP_VARARGS_FIRST_ args
 
-/** get all but the first parameter from variadic arguments */
-#define SCIP_VARARGS_REST(firstarg, ...) __VA_ARGS__
+/** get all but the first parameter from variadic arguments
+ *
+ * normally, SCIP_VARARGS_REST_ should be sufficient
+ * the SCIP_VARARGS_REST_/SCIP_VARARGS_REST kludge is to work around a bug in MSVC
+ * (compiling with -Zc:preprocessor would disable the bug)
+ */
+#define SCIP_VARARGS_REST_(firstarg, ...) __VA_ARGS__
+#define SCIP_VARARGS_REST(args) SCIP_VARARGS_REST_ args
 
 /*
  * Boolean values
@@ -126,7 +135,7 @@
 #define SCIP_VERSION_SUB 0                 /**< @deprecated SCIP sub version number. Always 0. */
 #define SCIP_SUBVERSION  SCIP_VERSION_SUB  /**< @deprecated SCIP sub version number. Always 0. */
 #define SCIP_APIVERSION  SCIP_VERSION_API  /**< SCIP API version number */
-#define SCIP_COPYRIGHT   "Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)"
+#define SCIP_COPYRIGHT   "Copyright (c) 2002-2026 Zuse Institute Berlin (ZIB)"
 
 
 /*
@@ -420,6 +429,30 @@
 #else
 #  define SCIP_DEPRECATED
 #endif
+#endif
+
+
+/** checks if name matches reference */
+#ifdef SCIP_CHECK_NAME
+
+#define SCIP_STRINGEQ(name, reference, retcode)                                                                       \
+   do                                                                                                                 \
+   {                                                                                                                  \
+      const char* _name_ = name;                                                                                      \
+      const char* _reference_ = reference;                                                                            \
+      if( strcmp(_name_, _reference_) != 0 )                                                                          \
+      {                                                                                                               \
+         SCIPerrorMessage("<%s> does not match <%s>\n", _name_, _reference_);                                         \
+         SCIPABORT();                                                                                                 \
+         return retcode; /*lint !e527*/                                                                               \
+      }                                                                                                               \
+   }                                                                                                                  \
+   while( FALSE )
+
+#else
+
+#define SCIP_STRINGEQ(name, reference, retcode)
+
 #endif
 
 #endif

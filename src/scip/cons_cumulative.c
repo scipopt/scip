@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2026 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -49,9 +49,6 @@
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
-
-#include <assert.h>
-#include <string.h>
 
 #include "tclique/tclique.h"
 #include "scip/cons_cumulative.h"
@@ -218,7 +215,6 @@ struct SCIP_ConshdlrData
 
    SCIP_DECL_SOLVECUMULATIVE((*solveCumulative)); /**< method to use a single cumulative condition */
 
-
    /* statistic values which are collected if SCIP_STATISTIC is defined */
 #ifdef SCIP_STATISTIC
    SCIP_Longint          nlbtimetable;       /**< number of times the lower bound was tightened by the time-table propagator */
@@ -310,8 +306,8 @@ int inferInfoToInt(
 /** rounds real to int and maps for large absolute values */
 static
 int boundedConvertRealToInt(
-   SCIP*                 scip,             /**< scip data structure */
-   SCIP_Real             real              /**< double bound to convert */
+   SCIP*                 scip,               /**< scip data structure */
+   SCIP_Real             real                /**< double bound to convert */
    )
 {
    int maxval;
@@ -2308,8 +2304,9 @@ SCIP_RETCODE consdataCollectLinkingCons(
 
       assert(SCIPexistsConsLinking(scip, var));
       assert(consdata->linkingconss[v] != NULL);
-      assert(strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(consdata->linkingconss[v])), "linking") == 0 );
       assert(SCIPgetConsLinking(scip, var) == consdata->linkingconss[v]);
+
+      SCIP_STRINGEQ( SCIPconshdlrGetName(SCIPconsGetHdlr(consdata->linkingconss[v])), "linking", SCIP_INVALIDCALL );
    }
 
    return SCIP_OKAY;
@@ -8500,7 +8497,7 @@ SCIP_RETCODE createCapacityRestriction(
       }
 
       SCIP_CALL( SCIPflushRowExtensions(scip, row) );
-      SCIPdebug( SCIP_CALL(SCIPprintRow(scip, row, NULL)) );
+      SCIPdebug( SCIP_CALL( SCIPprintRow(scip, row, NULL) ) );
 
       if( consdata->demandrowssize == 0 )
       {
@@ -8984,7 +8981,7 @@ SCIP_RETCODE createCapacityRestrictionIntvars(
    }
 
    SCIP_CALL( SCIPflushRowExtensions(scip, row) );
-   SCIPdebug( SCIP_CALL(SCIPprintRow(scip, row, NULL)) );
+   SCIPdebug( SCIP_CALL( SCIPprintRow(scip, row, NULL) ) );
 
    SCIP_CALL( SCIPaddRow(scip, row, TRUE, cutoff) );
 
@@ -12454,9 +12451,10 @@ SCIP_RETCODE enforceConstraint(
    SCIP_CONSHDLRDATA* conshdlrdata;
 
    assert(conshdlr != NULL);
-   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
    assert(nconss == 0 || conss != NULL);
    assert(result != NULL);
+
+   SCIP_STRINGEQ( SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME, SCIP_INVALIDCALL );
 
    if( solinfeasible )
    {
@@ -12548,7 +12546,8 @@ SCIP_DECL_CONSHDLRCOPY(conshdlrCopyCumulative)
 {  /*lint --e{715}*/
    assert(scip != NULL);
    assert(conshdlr != NULL);
-   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
+
+   SCIP_STRINGEQ( SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME, SCIP_INVALIDCALL );
 
    /* call inclusion method of constraint handler */
    SCIP_CALL( SCIPincludeConshdlrCumulative(scip) );
@@ -12567,7 +12566,8 @@ SCIP_DECL_CONSFREE(consFreeCumulative)
    SCIP_CONSHDLRDATA* conshdlrdata;
 
    assert(conshdlr != NULL);
-   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
+
+   SCIP_STRINGEQ( SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME, SCIP_INVALIDCALL );
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
@@ -12663,7 +12663,8 @@ SCIP_DECL_CONSEXITSOL(consExitsolCumulative)
    int c;
 
    assert(conshdlr != NULL);
-   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
+
+   SCIP_STRINGEQ( SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME, SCIP_INVALIDCALL );
 
    /* release the rows of all constraints */
    for( c = 0; c < nconss; ++c )
@@ -12683,9 +12684,10 @@ static
 SCIP_DECL_CONSDELETE(consDeleteCumulative)
 {  /*lint --e{715}*/
    assert(conshdlr != NULL);
-   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
    assert(consdata != NULL );
    assert(*consdata != NULL );
+
+   SCIP_STRINGEQ( SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME, SCIP_INVALIDCALL );
 
    /* if constraint belongs to transformed problem space, drop bound change events on variables */
    if( (*consdata)->nvars > 0 && SCIPvarIsTransformed((*consdata)->vars[0]) )
@@ -12753,8 +12755,10 @@ SCIP_DECL_CONSINITLP(consInitlpCumulative)
    SCIP_CONSHDLRDATA* conshdlrdata;
    int c;
 
-   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
    assert(conshdlr != NULL);
+
+   SCIP_STRINGEQ( SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME, SCIP_INVALIDCALL );
+
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
 
@@ -12795,9 +12799,11 @@ SCIP_DECL_CONSSEPALP(consSepalpCumulative)
    SCIPdebugMsg(scip, "consSepalpCumulative\n");
 
    assert(conshdlr != NULL);
-   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
    assert(nconss == 0 || conss != NULL);
    assert(result != NULL);
+
+   SCIP_STRINGEQ( SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME, SCIP_INVALIDCALL );
+
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
 
@@ -12857,9 +12863,10 @@ SCIP_DECL_CONSSEPASOL(consSepasolCumulative)
    int c;
 
    assert(conshdlr != NULL);
-   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
    assert(nconss == 0 || conss != NULL);
    assert(result != NULL);
+
+   SCIP_STRINGEQ( SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME, SCIP_INVALIDCALL );
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
@@ -12934,9 +12941,10 @@ SCIP_DECL_CONSENFOPS(consEnfopsCumulative)
    SCIPdebugMsg(scip, "method: enforce pseudo solution\n");
 
    assert(conshdlr != NULL);
-   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
    assert(nconss == 0 || conss != NULL);
    assert(result != NULL);
+
+   SCIP_STRINGEQ( SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME, SCIP_INVALIDCALL );
 
    if( objinfeasible )
    {
@@ -12961,9 +12969,10 @@ SCIP_DECL_CONSCHECK(consCheckCumulative)
    int c;
 
    assert(conshdlr != NULL);
-   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
    assert(nconss == 0 || conss != NULL);
    assert(result != NULL);
+
+   SCIP_STRINGEQ( SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME, SCIP_INVALIDCALL );
 
    *result = SCIP_FEASIBLE;
 
@@ -12995,9 +13004,10 @@ SCIP_DECL_CONSPROP(consPropCumulative)
    SCIPdebugMsg(scip, "propagate %d of %d useful cumulative constraints\n", nusefulconss, nconss);
 
    assert(conshdlr != NULL);
-   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
    assert(nconss == 0 || conss != NULL);
    assert(result != NULL);
+
+   SCIP_STRINGEQ( SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME, SCIP_INVALIDCALL );
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
@@ -13073,9 +13083,10 @@ SCIP_DECL_CONSPRESOL(consPresolCumulative)
    int c;
 
    assert(conshdlr != NULL);
-   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
    assert(scip != NULL);
    assert(result != NULL);
+
+   SCIP_STRINGEQ( SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME, SCIP_INVALIDCALL );
 
    SCIPdebugMsg(scip, "presolve %d cumulative constraints\n", nconss);
 
@@ -13179,11 +13190,12 @@ SCIP_DECL_CONSRESPROP(consRespropCumulative)
    SCIP_CONSDATA* consdata;
 
    assert(conshdlr != NULL);
-   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
    assert(scip != NULL);
    assert(result != NULL);
    assert(infervar != NULL);
    assert(bdchgidx != NULL);
+
+   SCIP_STRINGEQ( SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME, SCIP_INVALIDCALL );
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
@@ -13486,8 +13498,9 @@ SCIP_DECL_EVENTEXEC(eventExecCumulative)
    assert(scip != NULL);
    assert(eventhdlr != NULL);
    assert(eventdata != NULL);
-   assert(strcmp(SCIPeventhdlrGetName(eventhdlr), EVENTHDLR_NAME) == 0);
    assert(event != NULL);
+
+   SCIP_STRINGEQ( SCIPeventhdlrGetName(eventhdlr), EVENTHDLR_NAME, SCIP_INVALIDCALL );
 
    consdata = (SCIP_CONSDATA*)eventdata;
    assert(consdata != NULL);
@@ -13758,11 +13771,8 @@ SCIP_RETCODE SCIPsetHminCumulative(
    )
 {
    SCIP_CONSDATA* consdata;
-   if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
-   {
-      SCIPerrorMessage("constraint is not a cumulative constraint\n");
-      return SCIP_INVALIDCALL;
-   }
+
+   SCIP_STRINGEQ( SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME, SCIP_INVALIDCALL );
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
@@ -13786,12 +13796,8 @@ int SCIPgetHminCumulative(
    )
 {
    SCIP_CONSDATA* consdata;
-   if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
-   {
-      SCIPerrorMessage("constraint is not a cumulative constraint\n");
-      SCIPABORT();
-      return 0;  /*lint !e527*/
-   }
+
+   SCIP_STRINGEQ( SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME, 0 );
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
@@ -13807,12 +13813,8 @@ SCIP_RETCODE SCIPsetHmaxCumulative(
    )
 {
    SCIP_CONSDATA* consdata;
-   if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
-   {
-      SCIPerrorMessage("constraint is not a cumulative constraint\n");
-      SCIPABORT();
-      return SCIP_INVALIDCALL; /*lint !e527*/
-   }
+
+   SCIP_STRINGEQ( SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME, SCIP_INVALIDCALL );
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
@@ -13836,12 +13838,8 @@ int SCIPgetHmaxCumulative(
    )
 {
    SCIP_CONSDATA* consdata;
-   if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
-   {
-      SCIPerrorMessage("constraint is not a cumulative constraint\n");
-      SCIPABORT();
-      return 0;  /*lint !e527*/
-   }
+
+   SCIP_STRINGEQ( SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME, 0 );
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
@@ -13857,12 +13855,7 @@ SCIP_VAR** SCIPgetVarsCumulative(
 {
    SCIP_CONSDATA* consdata;
 
-   if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
-   {
-      SCIPerrorMessage("constraint is not a cumulative constraint\n");
-      SCIPABORT();
-      return NULL;  /*lint !e527*/
-   }
+   SCIP_STRINGEQ( SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME, NULL );
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
@@ -13878,12 +13871,7 @@ int SCIPgetNVarsCumulative(
 {
    SCIP_CONSDATA* consdata;
 
-   if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
-   {
-      SCIPerrorMessage("constraint is not a cumulative constraint\n");
-      SCIPABORT();
-      return -1;  /*lint !e527*/
-   }
+   SCIP_STRINGEQ( SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME, -1 );
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
@@ -13899,12 +13887,7 @@ int SCIPgetCapacityCumulative(
 {
    SCIP_CONSDATA* consdata;
 
-   if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
-   {
-      SCIPerrorMessage("constraint is not a cumulative constraint\n");
-      SCIPABORT();
-      return -1;  /*lint !e527*/
-   }
+   SCIP_STRINGEQ( SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME, -1 );
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
@@ -13920,12 +13903,7 @@ int* SCIPgetDurationsCumulative(
 {
    SCIP_CONSDATA* consdata;
 
-   if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
-   {
-      SCIPerrorMessage("constraint is not a cumulative constraint\n");
-      SCIPABORT();
-      return NULL;  /*lint !e527*/
-   }
+   SCIP_STRINGEQ( SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME, NULL );
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
@@ -13941,12 +13919,7 @@ int* SCIPgetDemandsCumulative(
 {
    SCIP_CONSDATA* consdata;
 
-   if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
-   {
-      SCIPerrorMessage("constraint is not a cumulative constraint\n");
-      SCIPABORT();
-      return NULL;  /*lint !e527*/
-   }
+   SCIP_STRINGEQ( SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME, NULL );
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);

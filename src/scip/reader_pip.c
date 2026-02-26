@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2026 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -61,7 +61,6 @@
 #include "scip/scip_reader.h"
 #include "scip/scip_var.h"
 #include <stdlib.h>
-#include <string.h>
 #include <ctype.h>
 
 #define READER_NAME             "pipreader"
@@ -2622,13 +2621,13 @@ SCIP_Bool isNameValid(
       return FALSE;
 
    /* names cannot start with a number */
-   if( isdigit(name[0]) )
+   if( isdigit((unsigned char)name[0]) )
       return FALSE;
 
    for( i = 0; i < len; ++i )
    {
       /* a-z, A-Z, 0-9 are ok */
-      if( isalnum(name[i]) )
+      if( isalnum((unsigned char)name[i]) )
          continue;
 
       /* characters in namechars are ok, too */
@@ -3198,7 +3197,8 @@ SCIP_DECL_READERCOPY(readerCopyPip)
 {  /*lint --e{715}*/
    assert(scip != NULL);
    assert(reader != NULL);
-   assert(strcmp(SCIPreaderGetName(reader), READER_NAME) == 0);
+
+   SCIP_STRINGEQ( SCIPreaderGetName(reader), READER_NAME, SCIP_INVALIDCALL );
 
    /* call inclusion method of reader */
    SCIP_CALL( SCIPincludeReaderPip(scip) );

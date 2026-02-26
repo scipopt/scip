@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2026 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -30,8 +30,6 @@
 
 /* TODO: support more constraint types: cons_nonlinear, cons_indicator and symmetry constraints */
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
-
-#include <assert.h>
 
 #include "scip/presol_implint.h"
 #include "scip/pub_cons.h"
@@ -311,7 +309,7 @@ static
 SCIP_Bool matrixColIsImpliedIntegral(
    IMPLINT_MATRIX*       matrix,             /**< the matrix data structure */
    int                   column              /**< the column */
-)
+   )
 {
    assert(matrix != NULL);
    assert(column >= 0);
@@ -656,7 +654,7 @@ SCIP_RETCODE addXorLinearization(
    }
    else if( noperands == 3 )
    {
-      /** in the special case of 3 variables and c = 0, the following linear system is created:
+      /*  in the special case of 3 variables and c = 0, the following linear system is created:
        *    + x - y - z <= 0
        *    - x + y - z <= 0
        *    - x - y + z <= 0
@@ -2201,7 +2199,8 @@ SCIP_DECL_PRESOLCOPY(presolCopyImplint)
 
    assert(scip != NULL);
    assert(presol != NULL);
-   assert(strcmp(SCIPpresolGetName(presol), PRESOL_NAME) == 0);
+
+   SCIP_STRINGEQ( SCIPpresolGetName(presol), PRESOL_NAME, SCIP_INVALIDCALL );
 
    /* call inclusion method of presolver */
    SCIP_CALL( SCIPincludePresolImplint(scip) );

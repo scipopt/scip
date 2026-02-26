@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2026 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -242,7 +242,7 @@
 #include "scip/scip_var.h"
 #include "scip/symmetry_graph.h"
 #include "symmetry/struct_symmetry.h"
-#include <string.h>
+
 
 /* #define SCIP_OUTPUT */
 /* #define SCIP_ENABLE_IISCHECK */
@@ -617,8 +617,9 @@ SCIP_DECL_EVENTEXEC(eventExecIndicatorBound)
 
    assert( eventhdlr != NULL );
    assert( eventdata != NULL );
-   assert( strcmp(SCIPeventhdlrGetName(eventhdlr), EVENTHDLR_BOUND_NAME) == 0 );
    assert( event != NULL );
+
+   SCIP_STRINGEQ( SCIPeventhdlrGetName(eventhdlr), EVENTHDLR_BOUND_NAME, SCIP_INVALIDCALL );
 
    cons = (SCIP_CONS*)eventdata;
    assert( cons != NULL );
@@ -710,9 +711,10 @@ SCIP_DECL_EVENTEXEC(eventExecIndicatorLinconsBound)
 
    assert( eventhdlr != NULL );
    assert( eventdata != NULL );
-   assert( strcmp(SCIPeventhdlrGetName(eventhdlr), EVENTHDLR_LINCONSBOUND_NAME) == 0 );
    assert( event != NULL );
    assert( SCIPeventGetType(event) == SCIP_EVENTTYPE_UBTIGHTENED || SCIPeventGetType(event) == SCIP_EVENTTYPE_LBTIGHTENED );
+
+   SCIP_STRINGEQ( SCIPeventhdlrGetName(eventhdlr), EVENTHDLR_LINCONSBOUND_NAME, SCIP_INVALIDCALL );
 
 #ifdef SCIP_MORE_DEBUG
    SCIPdebugMsg(scip, "Changed upper bound of variable <%s> from %g to %g.\n",
@@ -745,8 +747,9 @@ SCIP_DECL_EVENTEXEC(eventExecIndicatorRestart)
    assert( scip != NULL );
    assert( eventhdlr != NULL );
    assert( eventdata != NULL );
-   assert( strcmp(SCIPeventhdlrGetName(eventhdlr), EVENTHDLR_RESTART_NAME) == 0 );
    assert( event != NULL );
+
+   SCIP_STRINGEQ( SCIPeventhdlrGetName(eventhdlr), EVENTHDLR_RESTART_NAME, SCIP_INVALIDCALL );
 
    conshdlrdata = (SCIP_CONSHDLRDATA*)eventdata;
    assert( conshdlrdata != NULL );
@@ -850,7 +853,8 @@ SCIP_DECL_CONFLICTFREE(conflictFreeIndicator)
 
    assert( scip != NULL );
    assert( conflicthdlr != NULL );
-   assert( strcmp(SCIPconflicthdlrGetName(conflicthdlr), CONFLICTHDLR_NAME) == 0 );
+
+   SCIP_STRINGEQ( SCIPconflicthdlrGetName(conflicthdlr), CONFLICTHDLR_NAME, SCIP_INVALIDCALL );
 
    conflicthdlrdata = SCIPconflicthdlrGetData(conflicthdlr);
    SCIPfreeBlockMemory(scip, &conflicthdlrdata);
@@ -875,9 +879,10 @@ SCIP_DECL_CONFLICTEXEC(conflictExecIndicator)
    int i;
 
    assert( conflicthdlr != NULL );
-   assert( strcmp(SCIPconflicthdlrGetName(conflicthdlr), CONFLICTHDLR_NAME) == 0 );
    assert( bdchginfos != NULL || nbdchginfos == 0 );
    assert( result != NULL );
+
+   SCIP_STRINGEQ( SCIPconflicthdlrGetName(conflicthdlr), CONFLICTHDLR_NAME, SCIP_INVALIDCALL );
 
    /* don't process already resolved conflicts */
    if ( resolved )
@@ -937,7 +942,8 @@ SCIP_DECL_CONFLICTEXEC(conflictExecIndicator)
       SCIPdebugMsg(scip, "Found conflict involving slack variables that can be remodelled.\n");
 
       assert( conflicthdlrdata->conshdlr != NULL );
-      assert( strcmp(SCIPconshdlrGetName(conflicthdlrdata->conshdlr), CONSHDLR_NAME) == 0 );
+
+      SCIP_STRINGEQ( SCIPconshdlrGetName(conflicthdlrdata->conshdlr), CONSHDLR_NAME, SCIP_INVALIDCALL );
 
       nconss = SCIPconshdlrGetNConss(conflicthdlrdata->conshdlr);
       conss = SCIPconshdlrGetConss(conflicthdlrdata->conshdlr);
@@ -1526,7 +1532,8 @@ SCIP_RETCODE consdataEnsureAddLinConsSize(
 
    assert( scip != NULL );
    assert( conshdlr != NULL );
-   assert( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0 );
+
+   SCIP_STRINGEQ( SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME, SCIP_INVALIDCALL );
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert( conshdlrdata != NULL );
@@ -1566,7 +1573,8 @@ SCIP_RETCODE initAlternativeLP(
    SCIP_Real rhs = -1.0;
 
    assert( scip != NULL );
-   assert( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0 );
+
+   SCIP_STRINGEQ( SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME, SCIP_INVALIDCALL );
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert( conshdlrdata != NULL );
@@ -2495,7 +2503,8 @@ SCIP_RETCODE addAltLPConstraint(
    assert( conshdlr != NULL );
    assert( lincons != NULL );
    assert( colindex != NULL );
-   assert( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0 );
+
+   SCIP_STRINGEQ( SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME, SCIP_INVALIDCALL );
 
    *colindex = -1;
 
@@ -2597,7 +2606,8 @@ SCIP_RETCODE addAltLPRow(
    assert( conshdlr != NULL );
    assert( row != NULL );
    assert( colindex != NULL );
-   assert( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0 );
+
+   SCIP_STRINGEQ( SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME, SCIP_INVALIDCALL );
 
    /* initialize data */
    *colindex = -1;
@@ -2664,7 +2674,8 @@ SCIP_RETCODE addObjcut(
 
    assert( scip != NULL );
    assert( conshdlr != NULL );
-   assert( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0 );
+
+   SCIP_STRINGEQ( SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME, SCIP_INVALIDCALL );
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert( conshdlrdata != NULL );
@@ -2730,7 +2741,8 @@ SCIP_RETCODE deleteAltLPConstraint(
    assert( scip != NULL );
    assert( conshdlr != NULL );
    assert( cons != NULL );
-   assert( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0 );
+
+   SCIP_STRINGEQ( SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME, SCIP_INVALIDCALL );
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert( conshdlrdata != NULL );
@@ -5168,8 +5180,9 @@ SCIP_DECL_LINCONSUPGD(linconsUpgdIndicator)
 
    assert( scip != NULL );
    assert( upgdcons != NULL );
-   assert( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), "linear") == 0 );
    assert( ! SCIPconsIsModifiable(cons) );
+
+   SCIP_STRINGEQ( SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), "linear", SCIP_INVALIDCALL );
 
    /* do not upgrade if there are at most 2 variables (2 variables should be upgraded to a varbound constraint) */
    if ( nvars <= 2 )
@@ -5388,8 +5401,9 @@ SCIP_DECL_CONSHDLRCOPY(conshdlrCopyIndicator)
 {  /*lint --e{715}*/
    assert( scip != NULL );
    assert( conshdlr != NULL );
-   assert( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0 );
    assert( valid != NULL );
+
+   SCIP_STRINGEQ( SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME, SCIP_INVALIDCALL );
 
    /* call inclusion method of constraint handler */
    SCIP_CALL( SCIPincludeConshdlrIndicator(scip) );
@@ -5408,7 +5422,8 @@ SCIP_DECL_CONSINIT(consInitIndicator)
 
    assert( scip != NULL );
    assert( conshdlr != NULL );
-   assert( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0 );
+
+   SCIP_STRINGEQ( SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME, SCIP_INVALIDCALL );
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert( conshdlrdata != NULL );
@@ -5436,7 +5451,8 @@ SCIP_DECL_CONSEXIT(consExitIndicator)
 
    assert( scip != NULL );
    assert( conshdlr != NULL );
-   assert( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0 );
+
+   SCIP_STRINGEQ( SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME, SCIP_INVALIDCALL );
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
 
@@ -5487,7 +5503,8 @@ SCIP_DECL_CONSFREE(consFreeIndicator)
 
    assert( scip != NULL );
    assert( conshdlr != NULL );
-   assert( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0 );
+
+   SCIP_STRINGEQ( SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME, SCIP_INVALIDCALL );
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert( conshdlrdata != NULL );
@@ -5521,7 +5538,8 @@ SCIP_DECL_CONSINITSOL(consInitsolIndicator)
 
    assert( scip != NULL );
    assert( conshdlr != NULL );
-   assert( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0 );
+
+   SCIP_STRINGEQ( SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME, SCIP_INVALIDCALL );
 
    if ( SCIPgetStatus(scip) == SCIP_STATUS_OPTIMAL || SCIPgetStatus(scip) == SCIP_STATUS_INFEASIBLE ||
         SCIPgetStatus(scip) == SCIP_STATUS_UNBOUNDED || SCIPgetStatus(scip) == SCIP_STATUS_INFORUNBD )
@@ -5839,7 +5857,8 @@ SCIP_DECL_CONSEXITSOL(consExitsolIndicator)
 
    assert( scip != NULL );
    assert( conshdlr != NULL );
-   assert( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0 );
+
+   SCIP_STRINGEQ( SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME, SCIP_INVALIDCALL );
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert( conshdlrdata != NULL );
@@ -5910,7 +5929,8 @@ SCIP_DECL_CONSDELETE(consDeleteIndicator)
    assert( conshdlr != NULL );
    assert( cons != NULL );
    assert( consdata != NULL );
-   assert( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0 );
+
+   SCIP_STRINGEQ( SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME, SCIP_INVALIDCALL );
 
 #ifdef SCIP_MORE_DEBUG
    SCIPdebugMsg(scip, "Deleting indicator constraint <%s>.\n", SCIPconsGetName(cons) );
@@ -6020,9 +6040,10 @@ SCIP_DECL_CONSTRANS(consTransIndicator)
 
    assert( scip != NULL );
    assert( conshdlr != NULL );
-   assert( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0 );
    assert( sourcecons != NULL );
    assert( targetcons != NULL );
+
+   SCIP_STRINGEQ( SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME, SCIP_INVALIDCALL );
 
    /* get constraint handler data */
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
@@ -6112,7 +6133,8 @@ SCIP_DECL_CONSINITPRE(consInitpreIndicator)
 
    assert( scip != NULL );
    assert( conshdlr != NULL );
-   assert( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0 );
+
+   SCIP_STRINGEQ( SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME, SCIP_INVALIDCALL );
 
    if ( SCIPgetStatus(scip) != SCIP_STATUS_UNKNOWN )
       return SCIP_OKAY;
@@ -6133,7 +6155,8 @@ SCIP_DECL_CONSINITPRE(consInitpreIndicator)
 
       /* if not happened already, get transformed linear constraint */
       assert( consdata->lincons != NULL );
-      assert( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(consdata->lincons)), "linear") == 0 );
+
+      SCIP_STRINGEQ( SCIPconshdlrGetName(SCIPconsGetHdlr(consdata->lincons)), "linear", SCIP_INVALIDCALL );
 
       /* in a restart the linear constraint might already be transformed */
       if ( ! SCIPconsIsTransformed(consdata->lincons) )
@@ -6181,8 +6204,9 @@ SCIP_DECL_CONSPRESOL(consPresolIndicator)
 
    assert( scip != NULL );
    assert( conshdlr != NULL );
-   assert( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0 );
    assert( result != NULL );
+
+   SCIP_STRINGEQ( SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME, SCIP_INVALIDCALL );
 
    *result = SCIP_DIDNOTRUN;
 
@@ -6223,8 +6247,9 @@ SCIP_DECL_CONSPRESOL(consPresolIndicator)
 
          assert( consdata->lincons != NULL );
          assert( consdata->slackvar != NULL );
-         assert( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(consdata->lincons)), "linear") == 0 );
          assert( SCIPconsIsTransformed(consdata->lincons) );
+
+         SCIP_STRINGEQ( SCIPconshdlrGetName(SCIPconsGetHdlr(consdata->lincons)), "linear", SCIP_INVALIDCALL );
 
          /* add implications if not yet done */
          if ( ! consdata->implicationadded )
@@ -6358,7 +6383,8 @@ SCIP_DECL_CONSINITLP(consInitlpIndicator)
 
    assert( scip != NULL );
    assert( conshdlr != NULL );
-   assert( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0 );
+
+   SCIP_STRINGEQ( SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME, SCIP_INVALIDCALL );
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert( conshdlrdata != NULL );
@@ -6452,8 +6478,9 @@ SCIP_DECL_CONSSEPALP(consSepalpIndicator)
    assert( scip != NULL );
    assert( conshdlr != NULL );
    assert( conss != NULL );
-   assert( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0 );
    assert( result != NULL );
+
+   SCIP_STRINGEQ( SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME, SCIP_INVALIDCALL );
 
    /* perform separation */
    SCIP_CALL( separateIndicators(scip, conshdlr, nconss, nusefulconss, conss, NULL, SCIP_TYPE_SEPALP, result) );
@@ -6469,8 +6496,9 @@ SCIP_DECL_CONSSEPASOL(consSepasolIndicator)
    assert( scip != NULL );
    assert( conshdlr != NULL );
    assert( conss != NULL );
-   assert( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0 );
    assert( result != NULL );
+
+   SCIP_STRINGEQ( SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME, SCIP_INVALIDCALL );
 
    /* perform separation */
    SCIP_CALL( separateIndicators(scip, conshdlr, nconss, nusefulconss, conss, sol, SCIP_TYPE_SEPASOL, result) );
@@ -6488,8 +6516,9 @@ SCIP_DECL_CONSENFOLP(consEnfolpIndicator)
    assert( scip != NULL );
    assert( conshdlr != NULL );
    assert( conss != NULL );
-   assert( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0 );
    assert( result != NULL );
+
+   SCIP_STRINGEQ( SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME, SCIP_INVALIDCALL );
 
    if ( solinfeasible )
    {
@@ -6516,8 +6545,9 @@ SCIP_DECL_CONSENFORELAX(consEnforelaxIndicator)
    assert( scip != NULL );
    assert( conshdlr != NULL );
    assert( conss != NULL );
-   assert( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0 );
    assert( result != NULL );
+
+   SCIP_STRINGEQ( SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME, SCIP_INVALIDCALL );
 
    if ( solinfeasible )
    {
@@ -6542,8 +6572,9 @@ SCIP_DECL_CONSENFOPS(consEnfopsIndicator)
    assert( scip != NULL );
    assert( conshdlr != NULL );
    assert( conss != NULL );
-   assert( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0 );
    assert( result != NULL );
+
+   SCIP_STRINGEQ( SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME, SCIP_INVALIDCALL );
 
    if ( solinfeasible )
    {
@@ -6576,8 +6607,9 @@ SCIP_DECL_CONSCHECK(consCheckIndicator)
    assert( scip != NULL );
    assert( conshdlr != NULL );
    assert( conss != NULL );
-   assert( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0 );
    assert( result != NULL );
+
+   SCIP_STRINGEQ( SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME, SCIP_INVALIDCALL );
 
    SCIPdebugMsg(scip, "Checking %d indicator constraints <%s>.\n", nconss, SCIPconshdlrGetName(conshdlr) );
 
@@ -6775,8 +6807,9 @@ SCIP_DECL_CONSPROP(consPropIndicator)
    assert( scip != NULL );
    assert( conshdlr != NULL );
    assert( conss != NULL );
-   assert( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0 );
    assert( result != NULL );
+
+   SCIP_STRINGEQ( SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME, SCIP_INVALIDCALL );
 
    *result = SCIP_DIDNOTRUN;
 
@@ -6915,10 +6948,11 @@ SCIP_DECL_CONSRESPROP(consRespropIndicator)
 
    assert( scip != NULL );
    assert( cons != NULL );
-   assert( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0 );
    assert( infervar != NULL );
    assert( bdchgidx != NULL );
    assert( result != NULL );
+
+   SCIP_STRINGEQ( SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME, SCIP_INVALIDCALL );
 
    *result = SCIP_DIDNOTFIND;
    SCIPdebugMsg(scip, "Propagation resolution method of indicator constraint <%s>.\n", SCIPconsGetName(cons));
@@ -7000,7 +7034,9 @@ SCIP_DECL_CONSLOCK(consLockIndicator)
    assert( scip != NULL );
    assert( conshdlr != NULL );
    assert( cons != NULL );
-   assert( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0 );
+
+   SCIP_STRINGEQ( SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME, SCIP_INVALIDCALL );
+
    consdata = SCIPconsGetData(cons);
    assert( consdata != NULL );
    assert( consdata->binvar != NULL );
@@ -7078,7 +7114,8 @@ SCIP_DECL_CONSPRINT(consPrintIndicator)
    assert( scip != NULL );
    assert( conshdlr != NULL );
    assert( cons != NULL );
-   assert( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0 );
+
+   SCIP_STRINGEQ( SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME, SCIP_INVALIDCALL );
 
    consdata = SCIPconsGetData(cons);
    assert( consdata != NULL );
@@ -7117,7 +7154,8 @@ SCIP_DECL_CONSCOPY(consCopyIndicator)
    assert( scip != NULL );
    assert( sourcescip != NULL );
    assert( sourcecons != NULL );
-   assert( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(sourcecons)), CONSHDLR_NAME) == 0 );
+
+   SCIP_STRINGEQ( SCIPconshdlrGetName(SCIPconsGetHdlr(sourcecons)), CONSHDLR_NAME, SCIP_INVALIDCALL );
 
    *valid = TRUE;
 
@@ -7371,7 +7409,8 @@ SCIP_DECL_CONSENABLE(consEnableIndicator)
    assert( scip != NULL );
    assert( conshdlr != NULL );
    assert( cons != NULL );
-   assert( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0 );
+
+   SCIP_STRINGEQ( SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME, SCIP_INVALIDCALL );
 
 #ifdef SCIP_MORE_DEBUG
    SCIPdebugMsg(scip, "Enabling constraint <%s>.\n", SCIPconsGetName(cons));
@@ -7406,7 +7445,8 @@ SCIP_DECL_CONSDISABLE(consDisableIndicator)
    assert( scip != NULL );
    assert( conshdlr != NULL );
    assert( cons != NULL );
-   assert( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0 );
+
+   SCIP_STRINGEQ( SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME, SCIP_INVALIDCALL );
 
 #ifdef SCIP_MORE_DEBUG
    SCIPdebugMsg(scip, "Disabling constraint <%s>.\n", SCIPconsGetName(cons));
@@ -7537,10 +7577,11 @@ SCIP_DECL_CONSGETDIVEBDCHGS(consGetDiveBdChgsIndicator)
 
    assert(scip != NULL);
    assert(conshdlr != NULL);
-   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
    assert(diveset != NULL);
    assert(success != NULL);
    assert(infeasible != NULL);
+
+   SCIP_STRINGEQ( SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME, SCIP_INVALIDCALL );
 
    *success = FALSE;
    *infeasible = FALSE;
@@ -8234,7 +8275,7 @@ SCIP_RETCODE SCIPcreateConsBasicIndicator(
 }
 
 /** creates and captures an indicator constraint with given linear constraint and slack variable
- *  in a generic version, i. e., with a flag activeone indicating whether the constraint is active on
+ *  in a generic version, i.e., with a flag activeone indicating whether the constraint is active on
  *  value 1 or 0 of the binary variable.
 
  *  @note @a binvar is checked to be binary only later. This enables a change of the type in
@@ -8280,10 +8321,8 @@ SCIP_RETCODE SCIPcreateConsIndicatorGenericLinCons(
    SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONSDATA* consdata = NULL;
    SCIP_VAR** vars;
-   SCIP_Real* vals;
    SCIP_Bool modifiable = FALSE;
    SCIP_Bool linconsactive;
-   SCIP_Bool integral = TRUE;
    int nvars;
    int v;
 
@@ -8294,11 +8333,8 @@ SCIP_RETCODE SCIPcreateConsIndicatorGenericLinCons(
 
    /* check whether lincons is really a linear constraint */
    conshdlr = SCIPconsGetHdlr(lincons);
-   if ( strcmp(SCIPconshdlrGetName(conshdlr), "linear") != 0 )
-   {
-      SCIPerrorMessage("Lincons constraint is not linear.\n");
-      return SCIP_INVALIDDATA;
-   }
+
+   SCIP_STRINGEQ( SCIPconshdlrGetName(conshdlr), "linear", SCIP_INVALIDDATA );
 
    /* find the indicator constraint handler */
    conshdlr = SCIPfindConshdlr(scip, CONSHDLR_NAME);
@@ -8317,45 +8353,21 @@ SCIP_RETCODE SCIPcreateConsIndicatorGenericLinCons(
       return SCIP_INVALIDDATA;
    }
 
-   /* determine integrality of slack variable and whether problem is decomposed if no variables are integral */
+   /* determine whether the linear constraint needs to be active */
    nvars = SCIPgetNVarsLinear(scip, lincons);
    vars = SCIPgetVarsLinear(scip, lincons);
-   vals = SCIPgetValsLinear(scip, lincons);
-   linconsactive = !conshdlrdata->nolinconscont;
-   for ( v = 0; v < nvars; ++v )
+   linconsactive = ! conshdlrdata->nolinconscont;
+   for ( v = 0; v < nvars && ! linconsactive; ++v )
    {
       if ( vars[v] == slackvar )
          continue;
 
       if ( SCIPvarIsIntegral(vars[v]) )
-      {
          linconsactive = TRUE;
-         if ( !integral )
-            break;
-         if ( !SCIPisIntegral(scip, vals[v]) )
-         {
-            integral = FALSE;
-            break;
-         }
-      }
-      else
-      {
-         integral = FALSE;
-         if ( linconsactive )
-            break;
-      }
    }
 
-   /* make sure that the type of the slack is as general as necessary */
-   if ( !integral && SCIPvarIsIntegral(slackvar) )
-   {
-      SCIP_Bool infeasible;
-
-      SCIP_CALL( SCIPchgVarType(scip, slackvar, SCIP_VARTYPE_CONTINUOUS, &infeasible) );
-      assert( !infeasible );
-      SCIP_CALL( SCIPchgVarImplType(scip, slackvar, SCIP_IMPLINTTYPE_NONE, &infeasible) );
-      assert( !infeasible );
-   }
+   /* Note that we do not change the type of the slackvariable here, because it might appear in other constraints and
+    * the locks are note yet set up if we are copying. */
 
    /* mark slack variable not to be multi-aggregated */
    SCIP_CALL( SCIPmarkDoNotMultaggrVar(scip, slackvar) );
@@ -8552,11 +8564,8 @@ SCIP_RETCODE SCIPcreateConsIndicatorGenericLinConsPure(
 
    /* check whether lincons is really a linear constraint */
    conshdlr = SCIPconsGetHdlr(lincons);
-   if ( strcmp(SCIPconshdlrGetName(conshdlr), "linear") != 0 )
-   {
-      SCIPerrorMessage("Lincons constraint is not linear.\n");
-      return SCIP_INVALIDDATA;
-   }
+
+   SCIP_STRINGEQ( SCIPconshdlrGetName(conshdlr), "linear", SCIP_INVALIDDATA );
 
    /* find the indicator constraint handler */
    conshdlr = SCIPfindConshdlr(scip, CONSHDLR_NAME);
@@ -8767,7 +8776,8 @@ SCIP_RETCODE SCIPaddVarIndicator(
    SCIP_CONSDATA* consdata;
 
    assert( cons != NULL );
-   assert( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) == 0 );
+
+   SCIP_STRINGEQ( SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME, SCIP_INVALIDCALL );
 
    consdata = SCIPconsGetData(cons);
    assert( consdata != NULL );
@@ -8801,7 +8811,8 @@ SCIP_CONS* SCIPgetLinearConsIndicator(
    SCIP_CONSDATA* consdata;
 
    assert( cons != NULL );
-   assert( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) == 0 );
+
+   SCIP_STRINGEQ( SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME, NULL );
 
    consdata = SCIPconsGetData(cons);
    assert( consdata != NULL );
@@ -8830,7 +8841,8 @@ SCIP_RETCODE SCIPsetLinearConsIndicator(
    assert( cons != NULL );
    conshdlr = SCIPconsGetHdlr(cons);
 
-   assert( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0 );
+   SCIP_STRINGEQ( SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME, SCIP_INVALIDCALL );
+
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert( conshdlrdata != NULL );
 
@@ -8875,7 +8887,8 @@ SCIP_Bool SCIPgetActiveOnIndicator(
    SCIP_CONSDATA* consdata;
 
    assert( cons != NULL );
-   assert( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) == 0 );
+
+   SCIP_STRINGEQ( SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME, FALSE );
 
    consdata = SCIPconsGetData(cons);
    assert( consdata != NULL );
@@ -8892,7 +8905,8 @@ SCIP_VAR* SCIPgetBinaryVarIndicator(
    SCIP_CONSDATA* consdata;
 
    assert( cons != NULL );
-   assert( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) == 0 );
+
+   SCIP_STRINGEQ( SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME, NULL );
 
    consdata = SCIPconsGetData(cons);
    assert( consdata != NULL );
@@ -8909,7 +8923,8 @@ SCIP_VAR* SCIPgetBinaryVarIndicatorGeneric(
    SCIP_VAR* binvar;
 
    assert(cons != NULL);
-   assert(strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) == 0);
+
+   SCIP_STRINGEQ( SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME, NULL );
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
@@ -8933,7 +8948,8 @@ SCIP_RETCODE SCIPsetBinaryVarIndicator(
 
    assert( cons != NULL );
    assert( binvar != NULL );
-   assert( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) == 0 );
+
+   SCIP_STRINGEQ( SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME, SCIP_INVALIDCALL );
 
    consdata = SCIPconsGetData(cons);
    assert( consdata != NULL );
@@ -8971,7 +8987,9 @@ SCIP_RETCODE SCIPsetBinaryVarIndicator(
 
       conshdlr = SCIPconsGetHdlr(cons);
       assert( conshdlr != NULL );
-      assert( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0 );
+
+      SCIP_STRINGEQ( SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME, SCIP_INVALIDCALL );
+
       conshdlrdata = SCIPconshdlrGetData(conshdlr);
       assert( conshdlrdata != NULL );
       assert( conshdlrdata->eventhdlrbound != NULL );
@@ -9011,7 +9029,8 @@ SCIP_VAR* SCIPgetSlackVarIndicator(
    SCIP_CONSDATA* consdata;
 
    assert( cons != NULL );
-   assert( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) == 0 );
+
+   SCIP_STRINGEQ( SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME, NULL );
 
    consdata = SCIPconsGetData(cons);
    assert( consdata != NULL );
@@ -9039,7 +9058,8 @@ SCIP_RETCODE SCIPsetSlackVarUb(
 
    assert( scip != NULL );
    assert( cons != NULL );
-   assert( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) == 0 );
+
+   SCIP_STRINGEQ( SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME, SCIP_INVALIDCALL );
 
    consdata = SCIPconsGetData(cons);
    assert( consdata != NULL );
@@ -9131,9 +9151,10 @@ SCIP_RETCODE SCIPmakeIndicatorFeasible(
    int v;
 
    assert( cons != NULL );
-   assert( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) == 0 );
    assert( sol != NULL );
    assert( changed != NULL );
+
+   SCIP_STRINGEQ( SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME, SCIP_INVALIDCALL );
 
    *changed = FALSE;
 
@@ -9297,9 +9318,10 @@ SCIP_RETCODE SCIPmakeIndicatorsFeasible(
    int c;
 
    assert( conshdlr != NULL );
-   assert( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0 );
    assert( sol != NULL );
    assert( changed != NULL );
+
+   SCIP_STRINGEQ( SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME, SCIP_INVALIDCALL );
 
    *changed = FALSE;
 
@@ -9339,8 +9361,9 @@ SCIP_RETCODE SCIPaddLinearConsIndicator(
    )
 {
    assert( scip != NULL );
-   assert( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0 );
    assert( lincons != NULL );
+
+   SCIP_STRINGEQ( SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME, SCIP_INVALIDCALL );
 
    /* do not add locally valid constraints (this would require much more bookkeeping) */
    if ( ! SCIPconsIsLocal(lincons) && ! SCIPconsIsModifiable(lincons) )
@@ -9371,8 +9394,9 @@ SCIP_RETCODE SCIPaddRowIndicator(
    )
 {
    assert( scip != NULL );
-   assert( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0 );
    assert( row != NULL );
+
+   SCIP_STRINGEQ( SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME, SCIP_INVALIDCALL );
 
    /* skip local cuts (local cuts would require to dynamically add and remove columns from the alternative polyhedron */
    if ( ! SCIProwIsLocal(row) )

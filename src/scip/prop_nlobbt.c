@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2026 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -56,7 +56,7 @@
 #include "scip/scip_timing.h"
 #include "scip/scip_tree.h"
 #include "scip/scip_var.h"
-#include <string.h>
+
 
 #define PROP_NAME              "nlobbt"
 #define PROP_DESC              "propagator template"
@@ -622,7 +622,8 @@ SCIP_DECL_PROPCOPY(propCopyNlobbt)
 {  /*lint --e{715}*/
    assert(scip != NULL);
    assert(prop != NULL);
-   assert(strcmp(SCIPpropGetName(prop), PROP_NAME) == 0);
+
+   SCIP_STRINGEQ( SCIPpropGetName(prop), PROP_NAME, SCIP_INVALIDCALL );
 
    /* call inclusion method of propagator */
    SCIP_CALL( SCIPincludePropNlobbt(scip) );

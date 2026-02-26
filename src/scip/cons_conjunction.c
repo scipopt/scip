@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2026 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -41,8 +41,6 @@
 #include "scip/scip_message.h"
 #include "scip/scip_prob.h"
 #include "scip/scip_sol.h"
-#include <string.h>
-
 
 
 /* constraint handler properties */
@@ -290,7 +288,8 @@ SCIP_DECL_CONSHDLRCOPY(conshdlrCopyConjunction)
 {  /*lint --e{715}*/
    assert(scip != NULL);
    assert(conshdlr != NULL);
-   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
+
+   SCIP_STRINGEQ( SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME, SCIP_INVALIDCALL );
 
    /* call inclusion method of constraint handler */
    SCIP_CALL( SCIPincludeConshdlrConjunction(scip) );
@@ -882,11 +881,7 @@ SCIP_RETCODE SCIPaddConsElemConjunction(
    assert(cons != NULL);
    assert(addcons != NULL);
 
-   if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
-   {
-      SCIPerrorMessage("constraint is not a conjunction constraint\n");
-      return SCIP_INVALIDDATA;
-   }
+   SCIP_STRINGEQ( SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME, SCIP_INVALIDDATA );
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);

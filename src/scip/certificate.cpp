@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2026 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -460,7 +460,7 @@ SCIP_RETCODE SCIPcertificateInit(
    certificate->transfile = SCIPfopen(set->certificate_filename, "wT");
    certificate->maxfilesize = set->certificate_maxfilesize;
 
-   bufferlen = (int) strlen(name);
+   bufferlen = (int) strlen(name); /*lint !e668*/
    SCIP_ALLOC( BMSallocMemoryArray(&certificate->derivationfilename, filenamelen+5) );
    SCIP_ALLOC( BMSallocMemoryArray(&certificate->origfilename, filenamelen+5) );
    BMScopyMemoryArray(certificate->derivationfilename, name, bufferlen);
@@ -2082,7 +2082,6 @@ SCIP_RETCODE SCIPcertificatePrintMirCut(
    }
    SCIP_CALL( SCIPhashmapInsertLong(certificate->rowdatahash, SCIProwGetRowExact(row), certificate->indexcounter - 1) );
 
-
    SCIP_CALL( SCIPcertificateFreeAggrInfo(set, certificate, lp, aggrinfo, row) );
    SCIP_CALL( SCIPcertificateFreeMirInfo(set, certificate, lp, mirinfo, row) );
 
@@ -3385,7 +3384,7 @@ SCIP_RETCODE SCIPcertificatePrintCutoffConflictingBounds(
       ubindex = SCIPvarGetUbCertificateIndexLocal(var);
    }
    assert( SCIPrationalIsGT(lb, ub) );
-   SCIP_CALL(SCIPrationalCreateBuffer(SCIPbuffer(scip), &lowerbound));
+   SCIP_CALL( SCIPrationalCreateBuffer(SCIPbuffer(scip), &lowerbound) );
 
    SCIPcertificatePrintProofMessage(certificate, "BoundConflict%d ", certificate->indexcounter);
    SCIPcertificatePrintProofMessage(certificate, "G ");
@@ -3501,7 +3500,7 @@ SCIP_RETCODE SCIPconsPrintCertificateExactLinear(
    /* add row to hashmap */
    if( image != SCIP_LONGINT_MAX )
    {
-      SCIPmessageFPrintWarning(scip->messagehdlr, "%lu \n", (size_t) SCIPhashmapGetImage(certificate->rowdatahash, row));
+      SCIPmessageFPrintWarning(scip->messagehdlr, "%zu \n", (size_t) SCIPhashmapGetImage(certificate->rowdatahash, row));
       SCIPerrorMessage("Duplicate row in certificate row hashmap\n");
       SCIPABORT();
       return SCIP_ERROR;

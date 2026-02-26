@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2026 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -312,7 +312,6 @@ SCIP_RETCODE proofsetAddAggrrow(
       assert(proofset->certificateline == SCIP_LONGINT_MAX);
       proofset->certificateline = (SCIP_Longint)aggrrow->certificateline;
    }
-
 
    return SCIP_OKAY;
 }
@@ -993,8 +992,8 @@ SCIP_RETCODE createAndAddProofcons(
       SCIP_RATIONAL** coefs_exact;
       SCIP_VAR** consvars;
 
-      SCIP_CALL(SCIPrationalCreateBuffer(SCIPbuffer(set->scip), &lhs_exact));
-      SCIP_CALL(SCIPrationalCreateBuffer(SCIPbuffer(set->scip), &rhs_exact));
+      SCIP_CALL( SCIPrationalCreateBuffer(SCIPbuffer(set->scip), &lhs_exact) );
+      SCIP_CALL( SCIPrationalCreateBuffer(SCIPbuffer(set->scip), &rhs_exact) );
       SCIPrationalSetNegInfinity(lhs_exact);
       SCIPrationalSetReal(rhs_exact, rhs);
       SCIP_CALL( SCIPrationalCreateBufferArray(SCIPbuffer(set->scip), &coefs_exact, nnz) );

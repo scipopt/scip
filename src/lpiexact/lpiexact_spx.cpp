@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2026 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -268,7 +268,7 @@ class SPxexSCIP : public SoPlex
    SCIP_MESSAGEHDLR*     _messagehdlr;       /**< messagehdlr handler for printing messages, or NULL */
 
 public:
-   SPxexSCIP(
+   explicit SPxexSCIP(
       SCIP_MESSAGEHDLR*  messagehdlr = NULL, /**< message handler */
       const char*        probname = NULL     /**< name of problem */
       )
@@ -1645,26 +1645,13 @@ SCIP_RETCODE SCIPlpiExactGetCols(
 
    if( lb != NULL )
    {
-      if( lpi->spx->boolParam(SoPlex::PERSISTENTSCALING) )
-      {
-         const VectorRational& lbvec = lpi->spx->lowerRational();
-         const VectorRational& ubvec = lpi->spx->upperRational();
+      const VectorRational& lbvec = lpi->spx->lowerRational();
+      const VectorRational& ubvec = lpi->spx->upperRational();
 
-         for( i = firstcol; i <= lastcol; ++i )
-         {
-            RsetSpxR(lpi, lb[i-firstcol], lbvec[i]);
-            RsetSpxR(lpi, ub[i-firstcol], ubvec[i]);
-         }
-      }
-      else
+      for( i = firstcol; i <= lastcol; ++i )
       {
-         const VectorRational& lbvec = lpi->spx->lowerRational();
-         const VectorRational& ubvec = lpi->spx->upperRational();
-         for( i = firstcol; i <= lastcol; ++i )
-         {
-            RsetSpxR(lpi, lb[i-firstcol], lbvec[i]);
-            RsetSpxR(lpi, ub[i-firstcol], ubvec[i]);
-         }
+         RsetSpxR(lpi, lb[i-firstcol], lbvec[i]);
+         RsetSpxR(lpi, ub[i-firstcol], ubvec[i]);
       }
    }
 

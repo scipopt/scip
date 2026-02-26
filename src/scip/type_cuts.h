@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2026 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -35,5 +35,17 @@
 #define __SCIP_TYPE_CUTS_H__
 
 typedef struct SCIP_AggrRow SCIP_AGGRROW;
+
+typedef uint32_t SCIP_CUTGENMETHOD;                               /**< cut generation methods (bit field) */
+
+/** cut generation method bit flags */
+#define SCIP_CUTGENMETHOD_NONE          UINT32_C(0x0)             /**< no method (for initialization only) */
+#define SCIP_CUTGENMETHOD_FLOWCOVER     UINT32_C(0x1)             /**< flow cover cut */
+#define SCIP_CUTGENMETHOD_KNAPSACKCOVER UINT32_C(0x2)             /**< knapsack cover cut */
+#define SCIP_CUTGENMETHOD_CMIR          UINT32_C(0x4)             /**< complemented MIR cut */
+#define SCIP_CUTGENMETHOD_ALL           ((SCIP_CUTGENMETHOD)(-1)) /**< all methods (all bits set) */
+
+typedef struct SCIP_CutGenParams SCIP_CUTGENPARAMS;               /**< parameters for cut generation methods */
+typedef struct SCIP_CutGenResult SCIP_CUTGENRESULT;               /**< result of cut generation attempt */
 
 #endif

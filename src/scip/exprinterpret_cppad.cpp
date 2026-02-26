@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2026 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -240,9 +240,9 @@ public:
  */
 static
 bool univariate_for_sparse_jac(
-   size_t                     q,             /**< number of columns in R */
+   size_t                q,                  /**< number of columns in R */
    const CppAD::vector<bool>& r,             /**< sparsity of R, columnwise */
-   CppAD::vector<bool>&       s              /**< vector to store sparsity of S, columnwise */
+   CppAD::vector<bool>&  s                   /**< vector to store sparsity of S, columnwise */
    )
 {
    assert(r.size() == q);
@@ -260,9 +260,9 @@ bool univariate_for_sparse_jac(
  */
 static
 bool univariate_rev_sparse_jac(
-   size_t                     q,             /**< number of rows in R */
+   size_t                q,                  /**< number of rows in R */
    const CppAD::vector<bool>& r,             /**< sparsity of R, rowwise */
-   CppAD::vector<bool>&       s              /**< vector to store sparsity of S, rowwise */
+   CppAD::vector<bool>&  s                   /**< vector to store sparsity of S, rowwise */
    )
 {
    assert(r.size() == q);
@@ -810,7 +810,6 @@ private:
    {
       return univariate_rev_sparse_hes(vx, s, t, q, r, u, v);
    }
-
 };
 
 /** template for evaluation for signpower operator */

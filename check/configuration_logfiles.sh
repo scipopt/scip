@@ -4,7 +4,7 @@
 #*                  This file is part of the program and library             *
 #*         SCIP --- Solving Constraint Integer Programs                      *
 #*                                                                           *
-#*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      *
+#*  Copyright (c) 2002-2026 Zuse Institute Berlin (ZIB)                      *
 #*                                                                           *
 #*  Licensed under the Apache License, Version 2.0 (the "License");          *
 #*  you may not use this file except in compliance with the License.         *
@@ -62,7 +62,7 @@ STARTPERM="${15}"    # the starting permutation
 CHECKBASENAME="${SCIPPATH}/${OUTPUTDIR}/check.${TSTNAME}.${BINID}.${QUEUE}.${SETNAME}"
 
 # if number of threads is larger than 1, add postfix
-if test "${THREADS}" -gt 1
+if [[ "${BINID}" =~ ^fscip ]] && [ "${THREADS}" -gt 1 ] ;
 then
     CHECKBASENAME="${CHECKBASENAME}-t${THREADS}"
 fi
@@ -171,7 +171,7 @@ SHORTPROBNAME="${NEWSHORTPROBNAME}"
 FILENAME="${USER}.${TSTNAME}.${COUNT}"_"${SHORTPROBNAME}.${BINID}.${QUEUE}.${SETNAME}"
 
 # if number of threads is larger than 1, add postfix
-if test "${THREADS}" -gt 1
+if [[ "${BINID}" =~ ^fscip ]] && [ "${THREADS}" -gt 1 ] ;
 then
     FILENAME="${FILENAME}-t${THREADS}"
 fi

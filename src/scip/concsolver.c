@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2026 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -65,7 +65,7 @@ SCIP_RETCODE doConcsolverTypeCreate(
    SCIP_DECL_CONCSOLVERSYNCWRITE ((*concsolversyncwrite)),/**< synchronization method of concurrent solver */
    SCIP_DECL_CONCSOLVERSYNCREAD ((*concsolversyncread)),/**< synchronization method of concurrent solver */
    SCIP_DECL_CONCSOLVERTYPEFREEDATA ((*concsolvertypefreedata)),/**< method to free data of concurrent solver type */
-   SCIP_CONCSOLVERTYPEDATA* data             /**< the concurent solver type's data */
+   SCIP_CONCSOLVERTYPEDATA* data             /**< the concurrent solver type's data */
    )
 {
    char paramname[SCIP_MAXSTRLEN];
@@ -103,8 +103,8 @@ SCIP_RETCODE doConcsolverTypeCreate(
    (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "concurrent/%s/prefprio", name);
    (void) SCIPsnprintf(paramdesc, SCIP_MAXSTRLEN, "the preferred number concurrent solvers of type <%s> with respect to the number of threads", name);
    SCIP_CALL( SCIPsetAddRealParam(set, messagehdlr, blkmem, paramname, paramdesc,
-                                  &(*concsolvertype)->prefprio, FALSE, prefpriodefault, 0.0, 1.0,
-                                  NULL, NULL) ); /*lint !e740*/
+         &(*concsolvertype)->prefprio, FALSE, prefpriodefault, 0.0, 1.0,
+         NULL, NULL) ); /*lint !e740*/
 
    return SCIP_OKAY;
 }
@@ -126,7 +126,7 @@ SCIP_RETCODE SCIPconcsolverTypeCreate(
    SCIP_DECL_CONCSOLVERSYNCWRITE ((*concsolversyncwrite)),/**< synchronization method of concurrent solver */
    SCIP_DECL_CONCSOLVERSYNCREAD ((*concsolversyncread)),/**< synchronization method of concurrent solver */
    SCIP_DECL_CONCSOLVERTYPEFREEDATA ((*concsolvertypefreedata)),/**< method to free data of concurrent solver type */
-   SCIP_CONCSOLVERTYPEDATA* data             /**< the concurent solver type's data */
+   SCIP_CONCSOLVERTYPEDATA* data             /**< the concurrent solver type's data */
    )
 {
    assert(concsolvertype != NULL);
@@ -155,6 +155,7 @@ void SCIPconcsolverTypeFree(
    )
 {
    assert(concsolvertype != NULL);
+
    if( *concsolvertype == NULL )
       return;
 
@@ -233,6 +234,7 @@ SCIP_RETCODE SCIPconcsolverCreateInstance(
    /* initialize synchronization fields */
    (*concsolver)->nsyncs = 0;
    (*concsolver)->syncdelay = 0.0;
+   (*concsolver)->timesincelastsync = 0.0;
 
    /* in deterministic mode use number of nonzeros and variables to get a good initial synchronization frequency
     * in opportunistic mode use the frequency as set by the user
@@ -245,6 +247,7 @@ SCIP_RETCODE SCIPconcsolverCreateInstance(
    (*concsolver)->syncdata = NULL;
 
    SCIPdebugMessage("concsolver %s initialized sync freq to %f\n", (*concsolver)->name, (*concsolver)->syncfreq);
+
    /* register concurrent solver */
    (*concsolver)->idx = SCIPgetNConcurrentSolvers(set->scip);
    SCIP_CALL( concsolvertype->concsolvercreateinst(set->scip, concsolvertype, *concsolver) );
@@ -316,7 +319,9 @@ SCIP_RETCODE SCIPconcsolverInitSeeds(
    assert(concsolver->type != NULL);
 
    if( concsolver->type->concsolverinitseeds != NULL )
+   {
       SCIP_CALL( concsolver->type->concsolverinitseeds(concsolver, seed) );
+   }
 
    return SCIP_OKAY;
 }
@@ -342,7 +347,7 @@ SCIP_RETCODE SCIPconcsolverExec(
 /** gets solving data of concurrent solver and stores it in the given SCIP instance */
 SCIP_RETCODE SCIPconcsolverGetSolvingData(
    SCIP_CONCSOLVER*      concsolver,         /**< concurrent solver */
-   SCIP*                 scip                /**< SCIP datastructure */
+   SCIP*                 scip                /**< SCIP data structure */
    )
 {
    assert(concsolver != NULL);
@@ -369,9 +374,7 @@ SCIP_RETCODE SCIPconcsolverStop(
    return SCIP_OKAY;
 }
 
-/** let the given concurrent solver synchronize, i.e. pass its own solutions and bounds to
- *  the SPI.
- */
+/** let the given concurrent solver synchronize, i.e., pass its own solutions and bounds to syncstore */
 SCIP_RETCODE SCIPconcsolverSync(
    SCIP_CONCSOLVER*      concsolver,         /**< concurrent solver */
    SCIP_SET*             set                 /**< global SCIP settings */
@@ -506,7 +509,7 @@ SCIP_RETCODE SCIPconcsolverSync(
    return SCIP_OKAY;
 }
 
-/** gets the current synchronization frequency of the concurent solver */
+/** gets the current synchronization frequency of the concurrent solver */
 SCIP_Real SCIPconcsolverGetSyncFreq(
    SCIP_CONCSOLVER*      concsolver          /**< concurrent solver */
    )
@@ -516,7 +519,7 @@ SCIP_Real SCIPconcsolverGetSyncFreq(
    return concsolver->syncfreq;
 }
 
-/** gets the total memory used by the concurent solver */
+/** gets the total memory used by the concurrent solver */
 SCIP_Longint SCIPconcsolverGetMemTotal(
    SCIP_CONCSOLVER*      concsolver          /**< concurrent solver */
    )

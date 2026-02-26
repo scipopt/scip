@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2026 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -135,7 +135,7 @@
 #include "scip/symmetry_lexred.h"
 
 #include <math.h>
-#include <string.h>
+
 
 /* propagator properties */
 #define PROP_NAME            "symmetry"
@@ -3570,9 +3570,7 @@ SCIP_RETCODE addWeakSBCsSubgroup(
          ++propdata->ngenlinconss;
       }
       if ( orbitsize[activeorb] > 0 && propdata->dispsyminfo )
-         SCIPinfoMessage(scip, NULL, "  use %d SST cuts for leader %s\n",
-            orbitsize[activeorb] - 1, SCIPvarGetName(vars[0]));
-
+         SCIPinfoMessage(scip, NULL, "  use %d SST cuts for leader %s\n", orbitsize[activeorb] - 1, SCIPvarGetName(vars[0]));
 
       /* possibly store lexicographic order defined by weak SBCs */
       if ( storelexorder )
@@ -7837,7 +7835,8 @@ SCIP_DECL_PROPEXITPRE(propExitpreSymmetry)
 
    assert( scip != NULL );
    assert( prop != NULL );
-   assert( strcmp(SCIPpropGetName(prop), PROP_NAME) == 0 );
+
+   SCIP_STRINGEQ( SCIPpropGetName(prop), PROP_NAME, SCIP_INVALIDCALL );
 
    SCIPdebugMsg(scip, "Exitpre method of propagator <%s> ...\n", PROP_NAME);
 
@@ -7868,7 +7867,8 @@ SCIP_DECL_PROPEXITSOL(propExitsolSymmetry)
 
    assert( scip != NULL );
    assert( prop != NULL );
-   assert( strcmp(SCIPpropGetName(prop), PROP_NAME) == 0 );
+
+   SCIP_STRINGEQ( SCIPpropGetName(prop), PROP_NAME, SCIP_INVALIDCALL );
 
    SCIPdebugMsg(scip, "Exitpre method of propagator <%s> ...\n", PROP_NAME);
 
@@ -8054,7 +8054,8 @@ SCIP_DECL_PROPEXIT(propExitSymmetry)
 
    assert( scip != NULL );
    assert( prop != NULL );
-   assert( strcmp(SCIPpropGetName(prop), PROP_NAME) == 0 );
+
+   SCIP_STRINGEQ( SCIPpropGetName(prop), PROP_NAME, SCIP_INVALIDCALL );
 
    SCIPdebugMsg(scip, "Exiting propagator <%s>.\n", PROP_NAME);
 
@@ -8102,7 +8103,8 @@ SCIP_DECL_PROPFREE(propFreeSymmetry)
 
    assert( scip != NULL );
    assert( prop != NULL );
-   assert( strcmp(SCIPpropGetName(prop), PROP_NAME) == 0 );
+
+   SCIP_STRINGEQ( SCIPpropGetName(prop), PROP_NAME, SCIP_INVALIDCALL );
 
    SCIPdebugMsg(scip, "Freeing symmetry propagator.\n");
 
@@ -8467,7 +8469,8 @@ SCIP_RETCODE SCIPgetSymmetry(
       return SCIP_PLUGINNOTFOUND;
    }
    assert( prop != NULL );
-   assert( strcmp(SCIPpropGetName(prop), PROP_NAME) == 0 );
+
+   SCIP_STRINGEQ( SCIPpropGetName(prop), PROP_NAME, SCIP_INVALIDCALL );
 
    propdata = SCIPpropGetData(prop);
    assert( propdata != NULL );

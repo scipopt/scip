@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2026 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -113,7 +113,6 @@
 #include "scip/symmetry.h"
 #include "scip/event_shadowtree.h"
 #include <ctype.h>
-#include <string.h>
 #include <memory.h>
 
 
@@ -1484,8 +1483,9 @@ SCIP_DECL_EVENTEXEC(eventExecGlobalBoundChange)
 
    assert( eventhdlr != NULL );
    assert( eventdata != NULL );
-   assert( strcmp(SCIPeventhdlrGetName(eventhdlr), EVENTHDLR_SYMMETRY_NAME) == 0 );
    assert( event != NULL );
+
+   SCIP_STRINGEQ( SCIPeventhdlrGetName(eventhdlr), EVENTHDLR_SYMMETRY_NAME, SCIP_INVALIDCALL );
 
    orcdata = (ORCDATA*) eventdata;
    assert( orcdata != NULL );

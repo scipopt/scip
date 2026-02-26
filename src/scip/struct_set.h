@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2026 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -341,7 +341,6 @@ struct SCIP_Set
    SCIP_Real             iisfinder_time;          /**< maximal time in seconds for all IIS finders to run */
    SCIP_Longint          iisfinder_nodes;         /**< maximal number of nodes to process for all IIS finders (-1: no limit) */
 
-
    /* limit settings */
    SCIP_Real             limit_time;         /**< maximal time in seconds to run */
    SCIP_Real             limit_memory;       /**< maximal memory usage in MB */
@@ -583,8 +582,6 @@ struct SCIP_Set
    SCIP_Real             sepa_maxcoefratiofacrowprep; /**< maximal ratio between coefficients (as factor of 1/feastol) to ensure in rowprep cleanup */
    SCIP_Real             sepa_minefficacy;   /**< minimal efficacy for a cut to enter the LP */
    SCIP_Real             sepa_minefficacyroot; /**< minimal efficacy for a cut to enter the LP in the root node */
-   SCIP_Real             sepa_minortho;      /**< minimal orthogonality for a cut to enter the LP */
-   SCIP_Real             sepa_minorthoroot;  /**< minimal orthogonality for a cut to enter the LP in the root node */
    SCIP_Real             sepa_minactivityquot; /**< minimum cut activity quotient to convert cuts into constraints
                                                 *   during a restart (0.0: all cuts are converted) */
    char                  sepa_orthofunc;     /**< function used for calc. scalar prod. in orthogonality test ('e'uclidean, 'd'iscrete) */
@@ -623,6 +620,7 @@ struct SCIP_Set
    SCIP_Bool             concurrent_changechildsel; /**< change the child selection rule in different solvers? */
    SCIP_Bool             concurrent_commvarbnds;    /**< should the concurrent solvers communicate global variable bound changes? */
    SCIP_Bool             concurrent_presolvebefore; /**< should the problem be presolved before it is copied to the concurrent solvers? */
+   SCIP_Bool             concurrent_symmetrybefore; /**< should symmetry be computed before concurrent solving? */
    int                   concurrent_initseed;       /**< the seed for computing the concurrent solver seeds */
    SCIP_Real             concurrent_freqinit;       /**< initial frequency of synchronization */
    SCIP_Real             concurrent_freqmax;        /**< maximal frequency of synchronization */
@@ -645,7 +643,6 @@ struct SCIP_Set
 
    /* tree compression parameters (for reoptimization) */
    SCIP_Bool             compr_enable;       /**< should automatic tree compression after presolving be enabled? (only for reoptimization) */
-   SCIP_Real             compr_time;         /**< maximum time to run tree compression heuristics */
 
    /* visualization settings */
    char*                 visual_vbcfilename; /**< name of the VBC tool output file, or - if no VBC output should be created */

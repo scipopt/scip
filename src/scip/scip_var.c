@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2026 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -1213,7 +1213,7 @@ SCIP_RETCODE SCIPparseVarsPolynomial(
             state = SCIPPARSEPOLYNOMIAL_STATE_VARS;
             coef = 1.0;
          }
-         else if( *str == '-' || *str == '+' || isdigit(*str) )
+         else if( *str == '-' || *str == '+' || isdigit((unsigned char)*str) )
             state = SCIPPARSEPOLYNOMIAL_STATE_COEF;
          else
             state = SCIPPARSEPOLYNOMIAL_STATE_END;
@@ -1228,7 +1228,7 @@ SCIP_RETCODE SCIPparseVarsPolynomial(
             /* there seem to come another variable */
             state = SCIPPARSEPOLYNOMIAL_STATE_VARS;
          }
-         else if( *str == '-' || *str == '+' || isdigit(*str) )
+         else if( *str == '-' || *str == '+' || isdigit((unsigned char)*str) )
          {
             /* there seem to come a coefficient, which means the next monomial */
             state = SCIPPARSEPOLYNOMIAL_STATE_BEGIN;
@@ -1241,13 +1241,13 @@ SCIP_RETCODE SCIPparseVarsPolynomial(
 
       case SCIPPARSEPOLYNOMIAL_STATE_COEF:
       {
-         if( *str == '+' && !isdigit(str[1]) )
+         if( *str == '+' && !isdigit((unsigned char)str[1]) )
          {
             /* only a plus sign, without number */
             coef =  1.0;
             ++str;
          }
-         else if( *str == '-' && !isdigit(str[1]) )
+         else if( *str == '-' && !isdigit((unsigned char)str[1]) )
          {
             /* only a minus sign, without number */
             coef = -1.0;
@@ -1556,7 +1556,7 @@ SCIP_RETCODE SCIPparseVarsPolynomialExact(
             state = SCIPPARSEPOLYNOMIAL_STATE_VARS;
             SCIPrationalSetString(coef, "1");
          }
-         else if( *str == '-' || *str == '+' || isdigit(*str) )
+         else if( *str == '-' || *str == '+' || isdigit((unsigned char)*str) )
             state = SCIPPARSEPOLYNOMIAL_STATE_COEF;
          else
             state = SCIPPARSEPOLYNOMIAL_STATE_END;
@@ -1571,7 +1571,7 @@ SCIP_RETCODE SCIPparseVarsPolynomialExact(
             /* there seem to come another variable */
             state = SCIPPARSEPOLYNOMIAL_STATE_VARS;
          }
-         else if( *str == '-' || *str == '+' || isdigit(*str) )
+         else if( *str == '-' || *str == '+' || isdigit((unsigned char)*str) )
          {
             /* there seem to come a coefficient, which means the next monomial */
             state = SCIPPARSEPOLYNOMIAL_STATE_BEGIN;
@@ -1584,13 +1584,13 @@ SCIP_RETCODE SCIPparseVarsPolynomialExact(
 
       case SCIPPARSEPOLYNOMIAL_STATE_COEF:
       {
-         if( *str == '+' && !isdigit(str[1]) )
+         if( *str == '+' && !isdigit((unsigned char)str[1]) )
          {
             /* only a plus sign, without number */
             SCIPrationalSetString(coef, "1");
             ++str;
          }
-         else if( *str == '-' && !isdigit(str[1]) )
+         else if( *str == '-' && !isdigit((unsigned char)str[1]) )
          {
             /* only a minus sign, without number */
             SCIPrationalSetString(coef, "-1");
@@ -5670,7 +5670,7 @@ SCIP_Real SCIPadjustedVarUbExactFloat(
    SCIP_Real             ub                  /**< upper bound value to adjust */
    )
 {
-   SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPadjustedVarUb", FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE) );
+   SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPadjustedVarUbExactFloat", FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE) );
 
    SCIPvarAdjustUbExactFloat(var, scip->set, &ub);
 

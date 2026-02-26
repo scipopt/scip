@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2026 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -75,9 +75,7 @@
 #include "scip/var.h"
 #include "scip/sepastoreexact.h"
 #include <ctype.h>
-#include <string.h>
-#if defined(_WIN32) || defined(_WIN64)
-#else
+#ifndef _WIN32
 #include <strings.h> /*lint --e{766}*/
 #endif
 
@@ -3837,7 +3835,8 @@ SCIP_RETCODE performVarDeletions(
    assert(conshdlr != NULL);
    assert(conss != NULL);
    assert(nconss >= 0);
-   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
+
+   SCIP_STRINGEQ( SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME, SCIP_INVALIDCALL );
 
    /* iterate over all constraints */
    for( i = 0; i < nconss; i++ )
@@ -4217,7 +4216,8 @@ SCIP_RETCODE printActivityConflictToCertificate(
 
    if( !SCIPisCertified(scip) )
       return SCIP_OKAY;
-   SCIP_CALL(SCIPrationalCreateBuffer(SCIPbuffer(scip), &diff));
+
+   SCIP_CALL( SCIPrationalCreateBuffer(SCIPbuffer(scip), &diff) );
 
    if( rhs )
    {
@@ -4772,7 +4772,6 @@ SCIP_RETCODE tightenBounds(
 
          SCIP_CALL( tightenVarBounds(scip, cons, v, cutoff, nchgbds, force) );
 
-
          /* if there was no progress, skip the rest of the binary variables */
          if( *cutoff )
          {
@@ -4931,14 +4930,14 @@ SCIP_RETCODE createRows(
    assert(consdata != NULL);
    assert(consdata->rowexact == NULL);
 
-   /** create empty fp-rows */
+   /* create empty fp-rows */
    SCIP_CALL( SCIPcreateEmptyRowCons(scip, &(consdata->rowrhs), cons, SCIPconsGetName(cons), -SCIPinfinity(scip), SCIPinfinity(scip),
       SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons), SCIPconsIsRemovable(cons)) );
 
    SCIP_CALL( SCIPcreateEmptyRowCons(scip, &(consdata->rowlhs), cons, SCIPconsGetName(cons), -SCIPinfinity(scip), SCIPinfinity(scip),
       SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons), SCIPconsIsRemovable(cons)) );
 
-   /** create exact row */
+   /* create exact row */
    SCIP_CALL( SCIPcreateEmptyRowConsExact(scip, &consdata->rowexact, consdata->rowlhs, consdata->rowrhs,
       consdata->lhs, consdata->rhs, consdata->hasfprelax) );
 
@@ -5220,8 +5219,9 @@ SCIP_RETCODE enforceConstraint(
 
    assert(scip != NULL);
    assert(conshdlr != NULL);
-   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
    assert(result != NULL);
+
+   SCIP_STRINGEQ( SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME, SCIP_INVALIDCALL );
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
@@ -5286,7 +5286,8 @@ SCIP_DECL_CONSHDLRCOPY(conshdlrCopyExactLinear)
 {  /*lint --e{715}*/
    assert(scip != NULL);
    assert(conshdlr != NULL);
-   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
+
+   SCIP_STRINGEQ( SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME, SCIP_INVALIDCALL );
 
    /* call inclusion method of constraint handler */
    SCIP_CALL( SCIPincludeConshdlrExactLinear(scip) );
@@ -5304,7 +5305,8 @@ SCIP_DECL_CONSFREE(consFreeExactLinear)
 
    assert(scip != NULL);
    assert(conshdlr != NULL);
-   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
+
+   SCIP_STRINGEQ( SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME, SCIP_INVALIDCALL );
 
    /* free constraint handler data */
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
@@ -5457,7 +5459,8 @@ SCIP_DECL_CONSDEACTIVE(consDeactiveExactLinear)
       SCIP_CONSDATA* consdata;
 
       assert(conshdlr != NULL);
-      assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
+
+      SCIP_STRINGEQ( SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME, SCIP_INVALIDCALL );
 
       /* get constraint data */
       consdata = SCIPconsGetData(cons);
@@ -5488,7 +5491,8 @@ SCIP_DECL_CONSDELETE(consDeleteExactLinear)
    assert(scip != NULL);
    assert(SCIPisExact(scip));
    assert(conshdlr != NULL);
-   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
+
+   SCIP_STRINGEQ( SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME, SCIP_INVALIDCALL );
 
    if( (*consdata)->eventdata != NULL )
    {
@@ -5518,10 +5522,11 @@ SCIP_DECL_CONSTRANS(consTransExactLinear)
    assert(scip != NULL);
    assert(SCIPisExact(scip));
    assert(conshdlr != NULL);
-   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
    assert(SCIPgetStage(scip) == SCIP_STAGE_TRANSFORMING);
    assert(sourcecons != NULL);
    assert(targetcons != NULL);
+
+   SCIP_STRINGEQ( SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME, SCIP_INVALIDCALL );
 
    sourcedata = SCIPconsGetData(sourcecons);
    assert(sourcedata != NULL);
@@ -5552,7 +5557,8 @@ SCIP_DECL_CONSINITLP(consInitlpExactLinear)
 
    assert(scip != NULL);
    assert(SCIPisExact(scip) || nconss == 0);
-   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
+
+   SCIP_STRINGEQ( SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME, SCIP_INVALIDCALL );
 
    *infeasible = FALSE;
 
@@ -5581,8 +5587,9 @@ SCIP_DECL_CONSSEPALP(consSepalpExactLinear)
    assert(scip != NULL);
    assert(SCIPisExact(scip) || nconss == 0);
    assert(conshdlr != NULL);
-   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
    assert(result != NULL);
+
+   SCIP_STRINGEQ( SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME, SCIP_INVALIDCALL );
 
    if( !SCIPisExact(scip) )
       return SCIP_OKAY;
@@ -5638,8 +5645,9 @@ SCIP_DECL_CONSSEPASOL(consSepasolExactLinear)
    assert(scip != NULL);
    assert(SCIPisExact(scip) || nconss == 0);
    assert(conshdlr != NULL);
-   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
    assert(result != NULL);
+
+   SCIP_STRINGEQ( SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME, SCIP_INVALIDCALL );
 
    if( !SCIPisExact(scip) )
       return SCIP_OKAY;
@@ -5721,8 +5729,9 @@ SCIP_DECL_CONSENFOPS(consEnfopsExactLinear)
    assert(scip != NULL);
    assert(SCIPisExact(scip) || nconss == 0);
    assert(conshdlr != NULL);
-   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
    assert(result != NULL);
+
+   SCIP_STRINGEQ( SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME, SCIP_INVALIDCALL );
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
@@ -5773,8 +5782,9 @@ SCIP_DECL_CONSCHECK(consCheckExactLinear)
    assert(scip != NULL);
    assert(SCIPisExact(scip) || nconss == 0);
    assert(conshdlr != NULL);
-   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
    assert(result != NULL);
+
+   SCIP_STRINGEQ( SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME, SCIP_INVALIDCALL );
 
    *result = SCIP_FEASIBLE;
 
@@ -5851,8 +5861,9 @@ SCIP_DECL_CONSPROP(consPropExactLinear)
    assert(scip != NULL);
    assert(SCIPisExact(scip) || nconss == 0);
    assert(conshdlr != NULL);
-   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
    assert(result != NULL);
+
+   SCIP_STRINGEQ( SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME, SCIP_INVALIDCALL );
 
    if( !SCIPisExact(scip) )
       return SCIP_OKAY;
@@ -6338,8 +6349,9 @@ SCIP_DECL_EVENTEXEC(eventExecExactLinear)
    assert(SCIPisExact(scip));
    assert(eventhdlr != NULL);
    assert(eventdata != NULL);
-   assert(strcmp(SCIPeventhdlrGetName(eventhdlr), EVENTHDLR_NAME) == 0);
    assert(event != NULL);
+
+   SCIP_STRINGEQ( SCIPeventhdlrGetName(eventhdlr), EVENTHDLR_NAME, SCIP_INVALIDCALL );
 
    cons = eventdata->cons;
    assert(cons != NULL);
@@ -6928,11 +6940,7 @@ SCIP_RETCODE SCIPaddCoefExactLinear(
    assert(cons != NULL);
    assert(var != NULL);
 
-   if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
-   {
-      SCIPerrorMessage("constraint is not of type exactlinear\n");
-      return SCIP_INVALIDDATA;
-   }
+   SCIP_STRINGEQ( SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME, SCIP_INVALIDDATA );
 
    /* terminate if coefficient is infinite */
    if( SCIPrationalIsAbsInfinity(val) )
@@ -7015,8 +7023,8 @@ SCIP_RETCODE SCIPaddCoefExactLinear(
       }
 
       /* update left and right hand sides */
-      SCIP_CALL( chgLhs(scip, cons, lhs));
-      SCIP_CALL( chgRhs(scip, cons, rhs));
+      SCIP_CALL( chgLhs(scip, cons, lhs) );
+      SCIP_CALL( chgRhs(scip, cons, rhs) );
 
       SCIPrationalFreeBuffer(SCIPbuffer(scip), &constant);
       SCIPfreeBufferArray(scip, &consvals);
@@ -7053,11 +7061,7 @@ SCIP_RETCODE SCIPchgCoefExactLinear(
    assert(cons != NULL);
    assert(var != NULL);
 
-   if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
-   {
-      SCIPerrorMessage("constraint is not of type exactlinear\n");
-      return SCIP_INVALIDDATA;
-   }
+   SCIP_STRINGEQ( SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME, SCIP_INVALIDDATA );
 
    if( SCIPgetStage(scip) > SCIP_STAGE_PROBLEM || !SCIPconsIsOriginal(cons) || !SCIPvarIsOriginal(var) )
    {
@@ -7137,12 +7141,7 @@ SCIP_RATIONAL* SCIPgetLhsExactLinear(
    assert(scip != NULL);
    assert(cons != NULL);
 
-   if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
-   {
-      SCIPerrorMessage("constraint is not of type exactlinear\n");
-      SCIPABORT();
-      return NULL; /*lint !e527*/
-   }
+   SCIP_STRINGEQ( SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME, NULL );
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
@@ -7161,12 +7160,7 @@ SCIP_RATIONAL* SCIPgetRhsExactLinear(
    assert(scip != NULL);
    assert(cons != NULL);
 
-   if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
-   {
-      SCIPerrorMessage("constraint is not of type exactlinear\n");
-      SCIPABORT();
-      return NULL; /*lint !e527*/
-   }
+   SCIP_STRINGEQ( SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME, NULL );
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
@@ -7183,12 +7177,9 @@ SCIP_RETCODE SCIPchgLhsExactLinear(
 {
    assert(scip != NULL);
    assert(cons != NULL);
+   assert(lhs != NULL);
 
-   if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
-   {
-      SCIPerrorMessage("constraint is not of type exactlinear\n");
-      return SCIP_INVALIDDATA;
-   }
+   SCIP_STRINGEQ( SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME, SCIP_INVALIDDATA );
 
    SCIP_CALL( chgLhs(scip, cons, lhs) );
 
@@ -7202,11 +7193,11 @@ SCIP_RETCODE SCIPchgRhsExactLinear(
    SCIP_RATIONAL*        rhs                 /**< new right hand side */
    )
 {
-   if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
-   {
-      SCIPerrorMessage("constraint is not of type exactlinear\n");
-      return SCIP_INVALIDDATA;
-   }
+   assert(scip != NULL);
+   assert(cons != NULL);
+   assert(rhs != NULL);
+
+   SCIP_STRINGEQ( SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME, SCIP_INVALIDDATA );
 
    SCIP_CALL( chgRhs(scip, cons, rhs) );
 
@@ -7224,12 +7215,7 @@ int SCIPgetNVarsExactLinear(
    assert(scip != NULL);
    assert(cons != NULL);
 
-   if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
-   {
-      SCIPerrorMessage("constraint is not of type exactlinear\n");
-      SCIPABORT();
-      return -1;  /*lint !e527*/
-   }
+   SCIP_STRINGEQ( SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME, -1 );
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
@@ -7248,12 +7234,7 @@ SCIP_VAR** SCIPgetVarsExactLinear(
    assert(scip != NULL);
    assert(cons != NULL);
 
-   if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
-   {
-      SCIPerrorMessage("constraint is not of type exactlinear\n");
-      SCIPABORT();
-      return NULL;  /*lint !e527*/
-   }
+   SCIP_STRINGEQ( SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME, NULL );
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
@@ -7272,12 +7253,7 @@ SCIP_INTERVAL* SCIPgetValsRealExactLinear(
    assert(scip != NULL);
    assert(cons != NULL);
 
-   if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
-   {
-      SCIPerrorMessage("constraint is not of type exactlinear\n");
-      SCIPABORT();
-      return NULL;  /*lint !e527*/
-   }
+   SCIP_STRINGEQ( SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME, NULL );
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
@@ -7296,12 +7272,7 @@ SCIP_RATIONAL** SCIPgetValsExactLinear(
    assert(scip != NULL);
    assert(cons != NULL);
 
-   if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
-   {
-      SCIPerrorMessage("constraint is not of type exactlinear\n");
-      SCIPABORT();
-      return NULL;  /*lint !e527*/
-   }
+   SCIP_STRINGEQ( SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME, NULL );
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
@@ -7325,12 +7296,7 @@ SCIP_RETCODE SCIPgetActivityExactLinear(
    assert(scip != NULL);
    assert(cons != NULL);
 
-   if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
-   {
-      SCIPerrorMessage("constraint is not of type exactlinear\n");
-      SCIPABORT();
-      SCIPrationalSetInfinity(ret);  /*lint !e527*/
-   }
+   SCIP_STRINGEQ( SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME, SCIP_INVALIDCALL );
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
@@ -7358,11 +7324,7 @@ SCIP_RETCODE SCIPgetFeasibilityExactLinear(
    assert(scip != NULL);
    assert(cons != NULL);
 
-   if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
-   {
-      SCIPerrorMessage("constraint is not of type exactlinear\n");
-      SCIPABORT();
-   }
+   SCIP_STRINGEQ( SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME, SCIP_INVALIDCALL );
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
@@ -7391,11 +7353,7 @@ void SCIPgetFpDualsolExactLinear(
    assert(cons != NULL);
    assert(!SCIPconsIsOriginal(cons)); /* original constraints would always return 0 */
 
-   if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
-   {
-      SCIPerrorMessage("constraint is not of type exactlinear\n");
-      SCIPABORT();
-   }
+   SCIP_STRINGEQ( SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME, /**@todo return SCIP_INVALIDCALL type */ );
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
@@ -7422,11 +7380,7 @@ void SCIPgetFpDualfarkasExactLinear(
    assert(cons != NULL);
    assert(!SCIPconsIsOriginal(cons)); /* original constraints would always return 0 */
 
-   if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
-   {
-      SCIPerrorMessage("constraint is not of type exactlinear\n");
-      SCIPABORT();
-   }
+   SCIP_STRINGEQ( SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME, /**@todo return SCIP_INVALIDCALL type */ );
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
@@ -7450,12 +7404,7 @@ SCIP_ROW* SCIPgetRowExactLinear(
    assert(scip != NULL);
    assert(cons != NULL);
 
-   if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
-   {
-      SCIPerrorMessage("constraint is not of type exactlinear\n");
-      SCIPABORT();
-      return NULL;  /*lint !e527*/
-   }
+   SCIP_STRINGEQ( SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME, NULL );
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
@@ -7476,12 +7425,7 @@ SCIP_ROWEXACT* SCIPgetRowExactExactLinear(
    assert(scip != NULL);
    assert(cons != NULL);
 
-   if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
-   {
-      SCIPerrorMessage("constraint is not of type exactlinear\n");
-      SCIPABORT();
-      return NULL;  /*lint !e527*/
-   }
+   SCIP_STRINGEQ( SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME, NULL );
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);

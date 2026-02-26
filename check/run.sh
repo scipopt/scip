@@ -4,7 +4,7 @@
 #*                  This file is part of the program and library             *
 #*         SCIP --- Solving Constraint Integer Programs                      *
 #*                                                                           *
-#*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      *
+#*  Copyright (c) 2002-2026 Zuse Institute Berlin (ZIB)                      *
 #*                                                                           *
 #*  Licensed under the Apache License, Version 2.0 (the "License");          *
 #*  you may not use this file except in compliance with the License.         *
@@ -45,6 +45,7 @@ OUTFILE="${TMPPATH}/${BASENAME}.out"
 ERRFILE="${TMPPATH}/${BASENAME}.err"
 SOLFILE="${TMPPATH}/${BASENAME}.sol"
 DATFILE="${TMPPATH}/${BASENAME}.dat"
+JSONFILE="${TMPPATH}/${BASENAME}.json"
 TMPFILE="${SOLVERPATH}/${OUTPUTDIR}/${BASENAME}.tmp"
 
 uname -a                            > "${OUTFILE}"
@@ -62,6 +63,13 @@ function cleanup {
     if [ -f "${DATFILE}" ] ;
     then
         mv "${DATFILE}" "${SOLVERPATH}/${OUTPUTDIR}/${BASENAME}.dat"
+    fi
+    # move JSON statistics file
+    if [ -f "${JSONFILE}" ] ;
+    then
+        ( echo -n "\"${FILENAME}\" : " ;
+          cat "${JSONFILE}"
+        ) > "${SOLVERPATH}/${OUTPUTDIR}/${BASENAME}.json"
     fi
     rm -f "${TMPFILE}"
     rm -f "${SOLFILE}"

@@ -26,13 +26,15 @@ set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_DEBUG} ${CMAKE_CXX_FLAGS_R
 set(SCIP_VERSION_MAJOR 11)
 set(SCIP_VERSION_MINOR 0)
 set(SCIP_VERSION_PATCH 0)
-set(SCIP_VERSION_API 156)
+set(SCIP_VERSION_API 162)
 
 project(SCIP
     VERSION ${SCIP_VERSION_MAJOR}.${SCIP_VERSION_MINOR}.${SCIP_VERSION_PATCH}
     LANGUAGES CXX C
     DESCRIPTION "SCIP is currently one of the fastest non-commercial solvers for mixed integer programming (MIP) and mixed integer nonlinear programming (MINLP)"
     )
+
+include(GNUInstallDirs)
 
 get_directory_property(hasParent PARENT_DIRECTORY)
 if(hasParent)
@@ -108,13 +110,11 @@ if(LTO)
         message(STATUS "LTO available")
 
         # with link-time optimization enabled, we get additional warnings at link time on
-        # - reader_nl and presol_milp violating the C++ One Definition Rule (-Wodr) due to
-        #   using struct names SCIP_ProbData and SCIP_PresolData that are also used in objscip (C++ interface)
         # - some presumed malloc() calls with size 18446744073709551608 ((uint)-1)
         # - some presumed memmove() calls in boost::container::short_vector via papilo to a 0-length memory
         # we disable these warnings (need to pass them to the compiler when linking)
         if((CMAKE_CXX_COMPILER_ID MATCHES "GNU") OR (CMAKE_CXX_COMPILER_ID MATCHES "CLANG"))
-           add_link_options(-Wno-odr -Wno-alloc-size-larger-than -Wno-stringop-overflow)
+           add_link_options(-Wno-alloc-size-larger-than -Wno-stringop-overflow)
         endif()
     else(LTO_AVAILABLE)
         message(STATUS "LTO not available: ${output}")
@@ -135,6 +135,10 @@ string(TOUPPER ${EXACTSOLVE} EXACTSOLVE_UPPER) # Also allow "auto"
 set(CHECKSTAGE AUTO CACHE STRING "enable stage checks")
 set_property(CACHE CHECKSTAGE PROPERTY STRINGS AUTO ON OFF)
 string(TOUPPER ${CHECKSTAGE} CHECKSTAGE)
+
+set(CHECKNAME AUTO CACHE STRING "enable name checks")
+set_property(CACHE CHECKNAME PROPERTY STRINGS AUTO ON OFF)
+string(TOUPPER ${CHECKNAME} CHECKNAME)
 
 # Initialize SCIP_WITH_EXACTSOLVE.
 if(EXACTSOLVE)
@@ -249,6 +253,12 @@ elseif(SYM STREQUAL "none")
 else()
     message(FATAL_ERROR "option SYM has wrong value")
 endif()
+if(SYM STREQUAL "sbliss" OR SYM STREQUAL "snauty" OR SYM STREQUAL "dejavu")
+  install(FILES ${PROJECT_SOURCE_DIR}/src/dejavu/LICENSE DESTINATION ${CMAKE_INSTALL_DATADIR}/licenses/scip/dejavu)
+endif()
+if(SYM STREQUAL "nauty" OR SYM STREQUAL "snauty")
+  install(FILES ${PROJECT_SOURCE_DIR}/src/nauty/COPYRIGHT DESTINATION ${CMAKE_INSTALL_DATADIR}/licenses/scip/nauty)
+endif()
 
 # if changing these flags, also update GCCWARN/GXXWARN in make/make.project
 set(ADD_C_AND_CXX_FLAGS -pedantic -Wall -W -Wpointer-arith -Wcast-align -Wwrite-strings -Wshadow  -Wredundant-decls -Wdisabled-optimization -Wno-long-long -Wno-unknown-pragmas -Wno-unused-parameter)
@@ -323,6 +333,7 @@ endif()
 #set expression interpreter file that should be used
 if(EXPRINT STREQUAL "cppad")
     set(exprinterpret scip/exprinterpret_cppad.cpp)
+    install(FILES ${PROJECT_SOURCE_DIR}/src/cppad/COPYING DESTINATION ${CMAKE_INSTALL_DATADIR}/licenses/scip/cppad)
 elseif(EXPRINT STREQUAL "none")
     set(exprinterpret scip/exprinterpret_none.c)
 else()
@@ -344,6 +355,7 @@ elseif(TPI STREQUAL "tny")
     set(tpisources tpi/tpi_tnycthrd.c tinycthread/tinycthread.c)
     find_package(Threads REQUIRED)
     set(THREAD_LIBRARIES ${CMAKE_THREAD_LIBS_INIT})
+    install(FILES ${PROJECT_SOURCE_DIR}/src/tinycthread/COPYRIGHT DESTINATION ${CMAKE_INSTALL_DATADIR}/licenses/scip/tinycthread)
 elseif(TPI STREQUAL "omp")
     set(TPI_OMP on)
     set(tpisources tpi/tpi_openmp.c)
@@ -441,7 +453,10 @@ endif()
 if(SCIP_WITH_GMP OR AUTOBUILD)
     message(STATUS "Finding GMP")
     find_package(GMP)
-    if(NOT GMP_FOUND)
+    if(GMP_FOUND)
+        set(SCIP_WITH_GMP ON)
+        message(STATUS "Finding GMP - found")
+    else()
         set(SCIP_WITH_EXACTSOLVE OFF)
         set(SCIP_WITH_GMP OFF)
         if(NOT AUTOBUILD) # GMP was explicitly requested.
@@ -455,7 +470,7 @@ if(SCIP_WITH_GMP OR AUTOBUILD)
         endif()
     endif()
 else()
-    message(STATUS "Skipping GMP.")
+    message(STATUS "Support GMP: OFF")
 endif()
 if(SCIP_WITH_GMP)
     # TODO: Avoid global usage.
@@ -468,7 +483,9 @@ endif()
 if(SCIP_WITH_EXACTSOLVE AND SCIP_WITH_MPFR)
     message(STATUS "Finding MPFR")
     find_package(MPFR)
-    if(NOT MPFR_FOUND)
+    if(MPFR_FOUND)
+        message(STATUS "Finding MPFR - found")
+    else()
         set(SCIP_WITH_MPFR OFF)
         set(SCIP_WITH_EXACTSOLVE OFF)
         if(MPFR AND NOT (MPFR STREQUAL "AUTO")) # MPFR was explicitly requested.
@@ -480,7 +497,7 @@ if(SCIP_WITH_EXACTSOLVE AND SCIP_WITH_MPFR)
         endif()
     endif()
 else()
-   message(STATUS "Skipping MPFR.")
+    message(STATUS "Support MPFR: OFF")
 endif()
 
 # look for presolvelib
@@ -690,7 +707,6 @@ if(SCIP_WITH_EXACTSOLVE)
 endif()
 
 # Find exact LP solvers.
-set(TEST_EXAXTSOLVE OFF)
 set(SCIP_WITH_LPSEXACT OFF) # Human-readable name of exact LP solver
 if(SCIP_WITH_EXACTSOLVE)
     # SoPlex
@@ -712,7 +728,6 @@ if(SCIP_WITH_EXACTSOLVE)
         endif()
         if(SOPLEX_FOUND AND SOPLEX_WITH_MPFR)
             set(SCIP_WITH_LPSEXACT "SoPlex")
-            set(TEST_EXAXTSOLVE ON)
         elseif(LPSEXACT_UPPER STREQUAL "SPX" AND NOT (EXACTSOLVE_UPPER STREQUAL "AUTO")) # SoPlex and EXACTSOLVE were explicitly requested.
             message(FATAL_ERROR "LP solver SoPlex ${BAD_SOPLEX_REASON}, which is required for EXACTSOLVE; try specifying SOPLEX_DIR.")
         elseif(LPSEXACT_UPPER STREQUAL "SPX") # SoPlex was explicitly requested, but EXACTSOLVE is AUTO.
@@ -733,7 +748,6 @@ if(SCIP_WITH_EXACTSOLVE)
         if(QSOEX_FOUND AND EGLIB_FOUND)
             set(SCIP_WITH_LPSEXACT "QSopt_ex")
             set(SCIP_WITH_EGLIB ON)
-            set(TEST_EXAXTSOLVE ON)
         elseif(LPSEXACT_UPPER STREQUAL "QSOEX" AND NOT (EXACTSOLVE_UPPER STREQUAL "AUTO")) # QSopt_ex and EXACTSOLVE were explicitly requested.
             message(FATAL_ERROR "Exact LP solver QSopt_ex not found, which is required for EXACTSOLVE; try specifying QSOEX_DIR.")
         elseif(LPSEXACT_UPPER STREQUAL "QSOEX") # QSopt_ex was explicitly requested, but EXACTSOLVE is AUTO.
@@ -876,6 +890,7 @@ if(AMPL)
     set(SCIP_WITH_AMPL ON)
     include_directories(BEFORE ${CMAKE_CURRENT_SOURCE_DIR}/src/amplmp/include)
     set(amplsrc scip/reader_nl.cpp amplmp/src/dtoa.cpp amplmp/src/format.cpp amplmp/src/expr-info.cpp amplmp/src/nl-reader.cpp amplmp/src/nl-utils.cpp amplmp/src/nl-writer2.cpp amplmp/src/os.cpp amplmp/src/posix.cpp)
+    install(FILES ${PROJECT_SOURCE_DIR}/src/amplmp/LICENSE.rst DESTINATION ${CMAKE_INSTALL_DATADIR}/licenses/scip/amplmp)
 else()
     message(STATUS "Support AMPL: OFF")
     set(SCIP_WITH_AMPL OFF)
@@ -981,6 +996,15 @@ if((CHECKSTAGE STREQUAL "AUTO" AND CMAKE_BUILD_TYPE STREQUAL "Debug") OR (NOT CH
     set(SCIP_CHECK_STAGE on)
 endif()
 
+if((CHECKNAME STREQUAL "AUTO" AND CMAKE_BUILD_TYPE STREQUAL "Debug") OR (NOT CHECKNAME STREQUAL "AUTO" AND CHECKNAME))
+    if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+        message(STATUS "Enabling name checks")
+    else()
+        message(WARNING "Enabling name checks decreases performance")
+    endif()
+    set(SCIP_CHECK_NAME on)
+endif()
+
 message(STATUS "Finding CRITERION")
 find_package(CRITERION)
 if(CRITERION_FOUND)
@@ -1055,6 +1079,7 @@ log_option(EXACTSOLVE)
 log_option(LPSEXACT)
 log_option(MPFR)
 log_option(CHECKSTAGE)
+log_option(CHECKNAME)
 
 if(AUTOBUILD)
   file(APPEND ${CMAKE_BINARY_DIR}/cmake.log "-DAUTOBUILD=on")

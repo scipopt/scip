@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2026 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -359,7 +359,7 @@ static
 SCIP_RETCODE addInitialSolution(
    SCIP*                 scip,               /**< the SCIP instance */
    SCIP_RELAXDATA*       relaxdata           /**< the relaxator data */
-)
+   )
 {
    SCIP* masterprob;
    SCIP_SOL* sol;
@@ -447,7 +447,7 @@ SCIP_RETCODE solveBendersSubproblems(
    SCIP*                 scip,               /**< the SCIP data structure */
    SCIP_RELAX*           relax,              /**< the relaxator */
    SCIP_Bool*            infeasible          /**< indicates whether the best solution is infeasible */
-)
+   )
 {
    SCIP_RELAXDATA* relaxdata;
    SCIP* masterprob;
@@ -518,7 +518,7 @@ SCIP_RETCODE setSolutionValues(
    SCIP*                 scip,               /**< the original SCIP instance */
    SCIP_RELAX*           relax,              /**< the relaxator */
    SCIP_SOL*             sol                 /**< the solution for the original SCIP instance */
-)
+   )
 {
    SCIP_RELAXDATA* relaxdata;
    SCIP_DECOMP* decomp;
@@ -644,7 +644,7 @@ static
 SCIP_RETCODE freeBendersSubproblems(
    SCIP*                 scip,               /**< the SCIP data structure */
    SCIP_RELAX*           relax               /**< the relaxator */
-)
+   )
 {
    SCIP_RELAXDATA* relaxdata;
    SCIP* masterprob;
@@ -681,7 +681,7 @@ SCIP_RETCODE createOriginalSolution(
    SCIP*                 scip,               /**< the SCIP data structure */
    SCIP_RELAX*           relax,              /**< the relaxator */
    SCIP_Bool*            infeasible          /**< indicates whether the best solution is infeasible */
-)
+   )
 {
    SCIP_SOL* sol;
    SCIP_Bool success;
@@ -731,7 +731,7 @@ static
 SCIP_RETCODE freeDecomposition(
    SCIP*                 scip,               /**< the SCIP data structure */
    SCIP_RELAX*           relax               /**< the relaxator */
-)
+   )
 {
    SCIP_RELAXDATA* relaxdata;
    int i;
@@ -900,17 +900,14 @@ SCIP_DECL_RELAXEXEC(relaxExecBenders)
    masterstatus = SCIPgetStatus(relaxdata->masterprob);
 
    SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL,
-      "\nBenders' decomposition solve has completed with status %s.", SCIPstatusName(masterstatus));
+      "\nBenders' decomposition solve has completed.\n\n");
 
    /* if the problem is solved to be infeasible, then the result needs to be set to CUTOFF. */
    if( masterstatus == SCIP_STATUS_INFEASIBLE )
    {
-      SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL, "\n\n");
       (*result) = SCIP_CUTOFF;
       return SCIP_OKAY;
    }
-
-   SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL, " Copying the solution to the original problem variables\n\n");
 
    /* a solution for the original SCIP needs to be created. This will transfer the best found solution from the
     * Benders decomposition solve back to the original SCIP instance.

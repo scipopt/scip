@@ -120,6 +120,7 @@ set(scipsources
     scip/heur_dps.c
     scip/heur_dualval.c
     scip/heur_farkasdiving.c
+    scip/heur_feasjump.c
     scip/heur_feaspump.c
     scip/heur_fixandinfer.c
     scip/heur_fracdiving.c
@@ -646,6 +647,7 @@ set(scipheaders
     scip/heur_dps.h
     scip/heur_dualval.h
     scip/heur_farkasdiving.h
+    scip/heur_feasjump.h
     scip/heur_feaspump.h
     scip/heur_fixandinfer.h
     scip/heur_fracdiving.h
@@ -1258,6 +1260,18 @@ install(TARGETS scip libscip EXPORT scip-targets
         ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
         RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
         INCLUDES DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
+
+# install the debug program database files
+if(MSVC)
+  install(FILES $<TARGET_PDB_FILE:scip> DESTINATION ${CMAKE_INSTALL_BINDIR} OPTIONAL)
+  if(BUILD_SHARED_LIBS)
+    install(FILES $<TARGET_PDB_FILE:libscip> DESTINATION ${CMAKE_INSTALL_BINDIR} OPTIONAL)
+  endif()
+endif()
+
+# Install SCIP's own and tclique license files
+install(FILES ${PROJECT_SOURCE_DIR}/LICENSE DESTINATION ${CMAKE_INSTALL_DATADIR}/licenses/scip)
+install(FILES ${PROJECT_SOURCE_DIR}/src/tclique/LICENSE DESTINATION ${CMAKE_INSTALL_DATADIR}/licenses/scip/tclique)
 
 # Add all targets to the build-tree export set
 export(TARGETS scip libscip

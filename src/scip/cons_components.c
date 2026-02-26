@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2026 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -63,7 +63,7 @@
 #include "scip/scip_timing.h"
 #include "scip/scip_tree.h"
 #include "scip/scip_var.h"
-#include <string.h>
+
 
 #define CONSHDLR_NAME          "components"
 #define CONSHDLR_DESC          "independent components constraint handler"
@@ -2099,7 +2099,8 @@ SCIP_DECL_CONSHDLRCOPY(conshdlrCopyComponents)
 {  /*lint --e{715}*/
    assert(scip != NULL);
    assert(conshdlr != NULL);
-   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
+
+   SCIP_STRINGEQ( SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME, SCIP_INVALIDCALL );
 
    /* call inclusion method of constraint handler */
    SCIP_CALL( SCIPincludeConshdlrComponents(scip) );
@@ -2134,10 +2135,11 @@ SCIP_DECL_CONSPROP(consPropComponents)
    SCIP_Longint nodelimit;
 
    assert(conshdlr != NULL);
-   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
    assert(result != NULL);
    assert(SCIPconshdlrGetNActiveConss(conshdlr) >= 0);
    assert(SCIPconshdlrGetNActiveConss(conshdlr) <= 1);
+
+   SCIP_STRINGEQ( SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME, SCIP_INVALIDCALL );
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
@@ -2308,10 +2310,11 @@ SCIP_DECL_CONSPRESOL(consPresolComponents)
    int nvars;
 
    assert(conshdlr != NULL);
-   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
    assert(result != NULL);
    assert(SCIPconshdlrGetNActiveConss(conshdlr) >= 0);
    assert(SCIPconshdlrGetNActiveConss(conshdlr) <= 1);
+
+   SCIP_STRINGEQ( SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME, SCIP_INVALIDCALL );
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
@@ -2521,9 +2524,10 @@ static
 SCIP_DECL_CONSDELETE(consDeleteComponents)
 {  /*lint --e{715}*/
    assert(conshdlr != NULL);
-   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
    assert(consdata != NULL);
    assert(*consdata != NULL);
+
+   SCIP_STRINGEQ( SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME, SCIP_INVALIDCALL );
 
    SCIP_CALL( freeProblem((PROBLEM**) consdata) );
 

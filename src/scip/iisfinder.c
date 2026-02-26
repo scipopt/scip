@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2026 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -64,16 +64,19 @@ SCIP_RETCODE createSubscipIIS(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_IIS*             iis,                /**< pointer to store IIS */
    SCIP_Real             timelim,            /**< timelimit */
-   SCIP_Longint          nodelim             /**< nodelimit */
+   SCIP_Longint          nodelim,            /**< nodelimit */
+   SCIP_Bool*            success             /**< whether the created subscip is complete */
    )
 {
    SCIP_VAR** vars;
-   SCIP_Bool success;
    int nvars;
    int i;
 
-   assert( set != NULL );
-   assert( iis != NULL );
+   assert(set != NULL);
+   assert(iis != NULL);
+   assert(success != NULL);
+
+   *success = FALSE;
 
    /* Create the subscip used for storing the IIS */
    if( iis->subscip != NULL )
@@ -96,11 +99,11 @@ SCIP_RETCODE createSubscipIIS(
    SCIP_CALL( SCIPhashmapCreate(&(iis->conssmap), SCIPblkmem(set->scip), SCIPgetNOrigConss(set->scip)) );
 
    /* create problem in sub-SCIP */
-   SCIP_CALL( SCIPcopyOrig(set->scip, iis->subscip, iis->varsmap, iis->conssmap, "iis", TRUE, FALSE, FALSE, FALSE,
-         &success) );
+   SCIP_CALL( SCIPcopyOrig(set->scip, iis->subscip, iis->varsmap, iis->conssmap, "iis", TRUE, FALSE, FALSE, TRUE,
+         success) );
 
-   if( ! success )
-      return SCIP_ERROR;
+   if( !(*success) )
+      return SCIP_OKAY;
 
    /* Remove the objective */
    vars = SCIPgetOrigVars(iis->subscip);
@@ -244,14 +247,17 @@ SCIP_RETCODE doIISfinderCreate(
    const char*           name,               /**< name of IIS finder */
    const char*           desc,               /**< description of IIS finder */
    int                   priority,           /**< priority of the IIS finder */
+   SCIP_Bool             enable,             /**< whether the IIS finder should be enabled */
    SCIP_DECL_IISFINDERCOPY ((*iisfindercopy)), /**< copy method of IIS finder or NULL if you don't want to copy your plugin into sub-SCIPs */
    SCIP_DECL_IISFINDERFREE ((*iisfinderfree)), /**< destructor of IIS finder */
    SCIP_DECL_IISFINDEREXEC ((*iisfinderexec)), /**< IIS finder execution method */
    SCIP_IISFINDERDATA*   iisfinderdata       /**< IIS finder data */
    )
 {
-   char paramname[SCIP_MAXSTRLEN];
-   char paramdesc[SCIP_MAXSTRLEN];
+   char priorityparamname[SCIP_MAXSTRLEN];
+   char priorityparamdesc[SCIP_MAXSTRLEN];
+   char enableparamname[SCIP_MAXSTRLEN];
+   char enableparamdesc[SCIP_MAXSTRLEN];
 
    assert(iisfinder != NULL);
    assert(name != NULL);
@@ -263,6 +269,7 @@ SCIP_RETCODE doIISfinderCreate(
    SCIP_ALLOC( BMSduplicateBlockMemoryArray(blkmem, &(*iisfinder)->name, name, strlen(name)+1) );
    SCIP_ALLOC( BMSduplicateBlockMemoryArray(blkmem, &(*iisfinder)->desc, desc, strlen(desc)+1) );
    (*iisfinder)->priority = priority;
+   (*iisfinder)->enable = enable;
    (*iisfinder)->iisfindercopy = iisfindercopy;
    (*iisfinder)->iisfinderfree = iisfinderfree;
    (*iisfinder)->iisfinderexec = iisfinderexec;
@@ -272,11 +279,15 @@ SCIP_RETCODE doIISfinderCreate(
    SCIP_CALL( SCIPclockCreate(&(*iisfinder)->iisfindertime, SCIP_CLOCKTYPE_DEFAULT) );
 
    /* add parameters */
-   (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "iis/%s/priority", name);
-   (void) SCIPsnprintf(paramdesc, SCIP_MAXSTRLEN, "priority of iis generation rule <%s>", name);
-   SCIP_CALL( SCIPsetAddIntParam(set, messagehdlr, blkmem, paramname, paramdesc,
+   (void) SCIPsnprintf(priorityparamname, SCIP_MAXSTRLEN, "iis/%s/priority", name);
+   (void) SCIPsnprintf(priorityparamdesc, SCIP_MAXSTRLEN, "priority of iis generation rule <%s>", name);
+   SCIP_CALL( SCIPsetAddIntParam(set, messagehdlr, blkmem, priorityparamname, priorityparamdesc,
          &(*iisfinder)->priority, FALSE, priority, INT_MIN/4, INT_MAX/2,
          paramChgdIISfinderPriority, (SCIP_PARAMDATA*)(*iisfinder)) ); /*lint !e740*/
+   (void) SCIPsnprintf(enableparamname, SCIP_MAXSTRLEN, "iis/%s/enable", name);
+   (void) SCIPsnprintf(enableparamdesc, SCIP_MAXSTRLEN, "whether the iis finder <%s> should be enabled", name);
+   SCIP_CALL( SCIPsetAddBoolParam(set, messagehdlr, blkmem, enableparamname, enableparamdesc,
+         &(*iisfinder)->enable, FALSE, enable, NULL, NULL) );
 
    return SCIP_OKAY;
 }
@@ -291,6 +302,7 @@ SCIP_RETCODE SCIPiisfinderCreate(
    const char*           name,               /**< name of IIS finder */
    const char*           desc,               /**< description of IIS finder */
    int                   priority,           /**< priority of the IIS finder in standard mode */
+   SCIP_Bool             enable,             /**< whether the IIS finder should be enabled */
    SCIP_DECL_IISFINDERCOPY ((*iisfindercopy)), /**< copy method of IIS finder or NULL if you don't want to copy your plugin into sub-SCIPs */
    SCIP_DECL_IISFINDERFREE ((*iisfinderfree)), /**< destructor of IIS finder */
    SCIP_DECL_IISFINDEREXEC ((*iisfinderexec)), /**< IIS finder execution method */
@@ -302,7 +314,7 @@ SCIP_RETCODE SCIPiisfinderCreate(
    assert(desc != NULL);
    assert(iisfinderexec != NULL);
 
-   SCIP_CALL_FINALLY( doIISfinderCreate(iisfinder, set, messagehdlr, blkmem, name, desc, priority,
+   SCIP_CALL_FINALLY( doIISfinderCreate(iisfinder, set, messagehdlr, blkmem, name, desc, priority, enable,
          iisfindercopy, iisfinderfree, iisfinderexec, iisfinderdata), (void) SCIPiisfinderFree(iisfinder, set, blkmem) );
 
    return SCIP_OKAY;
@@ -327,6 +339,7 @@ SCIP_RETCODE SCIPiisGenerate(
    SCIP_VAR** vars;
    SCIP_IIS* iis;
    SCIP_RESULT result = SCIP_DIDNOTFIND;
+   SCIP_RETCODE retcode;
    SCIP_Real timelim;
    SCIP_Longint nodelim;
    SCIP_Bool silent;
@@ -335,30 +348,52 @@ SCIP_RETCODE SCIPiisGenerate(
    SCIP_Bool removeunusedvars;
    SCIP_Bool trivial;
    SCIP_Bool islinear;
+   SCIP_Bool success;
    int nconss;
    int nvars;
    int nbounds;
    int i;
    int j;
 
+   /* exact mode is not supported */
+   if( set->exact_enable )
+   {
+      SCIPinfoMessage(set->scip, NULL, "IIS generation does not yet support exact mode.\n");
+      return SCIP_OKAY;
+   }
+
    /* sort the iis finders by priority */
    SCIPsetSortIISfinders(set);
 
    /* Get the IIS data. */
    iis = SCIPgetIIS(set->scip);
-
-   /* Create the subscip used for storing the IIS */
    SCIP_CALL( SCIPiisReset(&iis) );
    SCIP_CALL( SCIPgetRealParam(set->scip, "iis/time", &timelim) );
    SCIP_CALL( SCIPgetLongintParam(set->scip, "iis/nodes", &nodelim) );
-   SCIP_CALL( createSubscipIIS(set, iis, timelim, nodelim) );
+
+   /* Create the subscip used for storing the IIS */
+   SCIP_CALL( createSubscipIIS(set, iis, timelim, nodelim, &success) );
+
+   if( !success )
+   {
+      SCIPinfoMessage(iis->subscip, NULL, "Error copying  original problem instance. IIS generation suspended.\n");
+      return SCIP_OKAY;
+   }
 
    SCIPclockStart(iis->iistime, set);
 
    /* If the model is not yet shown to be infeasible then check for infeasibility */
    if( SCIPgetStage(set->scip) == SCIP_STAGE_PROBLEM )
    {
-      SCIP_CALL( SCIPsolve(iis->subscip) );
+      retcode = SCIPsolve(iis->subscip);
+
+      if( retcode != SCIP_OKAY )
+      {
+         SCIPinfoMessage(iis->subscip, NULL, "Error proving infeasibility of initial problem. IIS generation suspended.\n");
+         SCIPclockStop(iis->iistime, set);
+         return SCIP_OKAY;
+      }
+
       if( SCIPgetStage(iis->subscip) == SCIP_STAGE_SOLVED )
       {
          switch( SCIPgetStatus(iis->subscip) )
@@ -446,6 +481,10 @@ SCIP_RETCODE SCIPiisGenerate(
          iisfinder = set->iisfinders[i];
          assert( iis->infeasible );
 
+         /* skip disabled IIS finders */
+         if( !iisfinder->enable )
+            continue;
+
          /* start timing */
          SCIPclockStart(iisfinder->iisfindertime, set);
 
@@ -459,7 +498,8 @@ SCIP_RETCODE SCIPiisGenerate(
          /* recreate the initial subscip if the IIS finder has produced an invalid infeasible subsystem */
          if( !iis->infeasible )
          {
-            SCIP_CALL( createSubscipIIS(set, iis, timelim, nodelim) );
+            SCIP_CALL( createSubscipIIS(set, iis, timelim, nodelim, &success) );
+            assert(success);
          }
 
          if( timelim - SCIPclockGetTime(iis->iistime) <= 0 || (nodelim != -1 && iis->nnodes > nodelim) )
@@ -515,7 +555,7 @@ SCIP_RETCODE SCIPiisGenerate(
       vars = SCIPgetOrigVars(iis->subscip);
       for( i = nvars - 1; i >= 0; i-- )
       {
-         if( SCIPvarGetNUses(vars[i]) <= 1 && SCIPvarGetLbOriginal(vars[i]) <= SCIPvarGetUbOriginal(vars[i]) )
+         if( SCIPvarGetNUses(vars[i]) <= 1 && SCIPvarIsDeletable(vars[i]) && SCIPvarGetLbOriginal(vars[i]) <= SCIPvarGetUbOriginal(vars[i]) )
          {
             SCIP_CALL( SCIPdelVar(iis->subscip, vars[i], &deleted) );
             assert( deleted );
@@ -653,6 +693,16 @@ int SCIPiisfinderGetPriority(
    return iisfinder->priority;
 }
 
+/** returns whether IIS finder is enabled */
+SCIP_Bool SCIPiisfinderGetEnable(
+   SCIP_IISFINDER*       iisfinder           /**< IIS finder */
+   )
+{
+   assert(iisfinder != NULL);
+
+   return iisfinder->enable;
+}
+
 /** enables or disables all clocks of @p iisfinder, depending on the value of the flag */
 void SCIPiisfinderEnableOrDisableClocks(
    SCIP_IISFINDER*       iisfinder,          /**< the IIS finder for which all clocks should be enabled or disabled */
@@ -698,6 +748,17 @@ void SCIPiisfinderSetPriority(
 
    iisfinder->priority = priority;
    set->iisfinderssorted = FALSE;
+}
+
+/** enables/disables IIS finder */
+void SCIPiisfinderSetEnable(
+   SCIP_IISFINDER*       iisfinder,          /**< IIS finder */
+   SCIP_Bool             enable              /**< whether the IIS finder should be enabled */
+   )
+{
+   assert(iisfinder != NULL);
+
+   iisfinder->enable = enable;
 }
 
 /** gets time in seconds used in this IIS finder */

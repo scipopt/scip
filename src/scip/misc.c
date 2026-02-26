@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2026 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -161,7 +161,7 @@ SCIP_Real SCIPerf(
    SCIP_Real             x                   /**< value to evaluate */
    )
 {
-#if defined(_WIN32) || defined(_WIN64)
+#ifdef _WIN32
    SCIP_Real a1, a2, a3, a4, a5, p, t, y;
    int sign;
 
@@ -9950,7 +9950,7 @@ SCIP_RETCODE SCIPcalcIntegralScalarExact(
          break;
       }
 
-      scalable = ((SCIP_Real)scm/(SCIP_Real)gcd <= maxscale);
+      scalable = ((SCIP_Real)scm/(SCIP_Real)gcd <= maxscale); /*lint !e838*/
    }
 
    if( scalable )
@@ -10725,7 +10725,7 @@ void SCIPprintSysError(
 #else
    char buf[SCIP_MAXSTRLEN];
 
-#if defined(_WIN32) || defined(_WIN64)
+#ifdef _WIN32
    /* strerror_s returns 0 on success; the string is \0 terminated. */
    if ( strerror_s(buf, SCIP_MAXSTRLEN, errno) != 0 )
       SCIPmessagePrintError("Unknown error number %d or error message too long.\n", errno);
@@ -10798,13 +10798,13 @@ void SCIPescapeString(
       if( s[i] == '\\' )
       {
          t[p] = s[i];
-         ++p;
-         ++i;
+         ++p; /*lint !e850*/
+         ++i; /*lint !e850*/
       }
       else if( s[i] == ' ' || s[i] == '\"' || s[i] == '\'' )
       {
          t[p] = '\\';
-         ++p;
+         ++p;  /*lint !e850*/
       }
       if( i <= len && p < bufsize )
          t[p] = s[i];
@@ -10817,7 +10817,7 @@ SCIP_RETCODE SCIPskipSpace(
    char**                s                   /**< pointer to string pointer */
    )
 {
-   while( isspace(**s) || ( **s == '\\' && *(*s+1) != '\0' && strchr(SCIP_SPACECONTROL, *(*s+1)) ) )
+   while( isspace((unsigned char)**s) || ( **s == '\\' && *(*s+1) != '\0' && strchr(SCIP_SPACECONTROL, *(*s+1)) ) )
       *s += **s == '\\' ? 2 : 1;
 
    return SCIP_OKAY;

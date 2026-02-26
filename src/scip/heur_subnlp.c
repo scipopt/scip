@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2026 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -64,7 +64,7 @@
 #include "scip/scip_solvingstats.h"
 #include "scip/scip_timing.h"
 #include "scip/scip_var.h"
-#include <string.h>
+
 
 #define HEUR_NAME        "subnlp"
 #define HEUR_DESC        "primal heuristic that performs a local search in an NLP after fixing integer variables and presolving"
@@ -1408,7 +1408,8 @@ SCIP_DECL_HEURCOPY(heurCopySubNlp)
 {  /*lint --e{715}*/
    assert(scip != NULL);
    assert(heur != NULL);
-   assert(strcmp(SCIPheurGetName(heur), HEUR_NAME) == 0);
+
+   SCIP_STRINGEQ( SCIPheurGetName(heur), HEUR_NAME, SCIP_INVALIDCALL );
 
    /* call inclusion method of primal heuristic */
    SCIP_CALL( SCIPincludeHeurSubNlp(scip) );
@@ -1946,9 +1947,10 @@ SCIP_RETCODE SCIPupdateStartpointHeurSubNlp(
 
    assert(scip != NULL);
    assert(heur != NULL);
-   assert(strcmp(SCIPheurGetName(heur), HEUR_NAME) == 0);
    assert(solcand != NULL);
    assert(SCIPisPositive(scip, violation));
+
+   SCIP_STRINGEQ( SCIPheurGetName(heur), HEUR_NAME, SCIP_INVALIDCALL );
 
    /* too early or the game is over already: no more interest in starting points */
    if( SCIPgetStage(scip) != SCIP_STAGE_SOLVING )
@@ -2012,7 +2014,8 @@ SCIP_SOL* SCIPgetStartCandidateHeurSubNlp(
 
    assert(scip != NULL);
    assert(heur != NULL);
-   assert(strcmp(SCIPheurGetName(heur), HEUR_NAME) == 0);
+
+   SCIP_STRINGEQ( SCIPheurGetName(heur), HEUR_NAME, NULL );
 
    heurdata = SCIPheurGetData(heur);
    assert(heurdata != NULL);

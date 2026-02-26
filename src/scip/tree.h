@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2026 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -649,7 +649,6 @@ SCIP_RETCODE SCIPtreeBranchVar(
 /** branches on a variable x; unlike the fp-version this will also branch x <= floor(x'), x >= ceil(x')
  * if x' is very close to being integral at one of its bounds;
  * in the fp version this case would be branched in the middle of the domain;
- * if x' is almost integral but not at a bound, this will branch (x <= x'-1, x == x', x >= x'+1);
  * not meant for branching on a continuous variables
  */
 SCIP_RETCODE SCIPtreeBranchVarExact(
@@ -666,7 +665,6 @@ SCIP_RETCODE SCIPtreeBranchVarExact(
    SCIP_EVENTFILTER*     eventfilter,        /**< global event filter */
    SCIP_VAR*             var,                /**< variable to branch on */
    SCIP_NODE**           downchild,          /**< pointer to return the left child with variable rounded down, or NULL */
-   SCIP_NODE**           eqchild,            /**< pointer to return the middle child with variable fixed, or NULL */
    SCIP_NODE**           upchild             /**< pointer to return the right child with variable rounded up, or NULL */
    );
 

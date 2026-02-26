@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2026 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -329,7 +329,7 @@ SCIP_RETCODE SCIPtransformProb(
          sol =  scip->origprimal->sols[s];
 
          /* recompute objective function, since the objective might have changed in the meantime */
-         SCIPsolRecomputeObj(sol, scip->set, scip->stat, scip->origprob);
+         SCIP_CALL( SCIPrecomputeSolObj(scip, sol) );
 
          /* SCIPprimalTrySol() can only be called on transformed solutions; therefore check solutions in original problem
           * including modifiable constraints
@@ -340,27 +340,20 @@ SCIP_RETCODE SCIPtransformProb(
 
          if( feasible )
          {
-            SCIP_Real abssolobj;
+            SCIP_SOL* bestsol = SCIPgetBestSol(scip);
+            SCIP_Bool stored;
 
-            abssolobj = REALABS(SCIPsolGetObj(sol, scip->set, scip->transprob, scip->origprob));
+            /* add primal solution to solution storage by copying it */
+            SCIP_CALL( SCIPprimalAddSol(scip->primal, scip->mem->probmem, scip->set, scip->messagehdlr, scip->stat,
+                  scip->origprob, scip->transprob, scip->tree, scip->reopt, scip->lp, scip->eventqueue,
+                  scip->eventfilter, sol, &stored) );
 
-            /* we do not want to add solutions with objective value +infinity */
-            if( !SCIPisInfinity(scip, abssolobj) )
+            if( stored )
             {
-               SCIP_SOL* bestsol = SCIPgetBestSol(scip);
-               SCIP_Bool stored;
+               nfeassols++;
 
-               /* add primal solution to solution storage by copying it */
-               SCIP_CALL( SCIPprimalAddSol(scip->primal, scip->mem->probmem, scip->set, scip->messagehdlr, scip->stat, scip->origprob, scip->transprob,
-                     scip->tree, scip->reopt, scip->lp, scip->eventqueue, scip->eventfilter, sol, &stored) );
-
-               if( stored )
-               {
-                  nfeassols++;
-
-                  if( bestsol != SCIPgetBestSol(scip) )
-                     SCIPstoreSolutionGap(scip);
-               }
+               if( bestsol != SCIPgetBestSol(scip) )
+                  SCIPstoreSolutionGap(scip);
             }
          }
 
@@ -467,7 +460,7 @@ SCIP_RETCODE SCIPtransformProb(
 static
 SCIP_RETCODE initPresolve(
    SCIP*                 scip                /**< SCIP data structure */
-)
+   )
 {
 #ifndef NDEBUG
    size_t nusedbuffers;
@@ -3151,17 +3144,18 @@ SCIP_RETCODE SCIPsolveConcurrent(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
-   SCIP_RETCODE     retcode;
-   int              i;
+   SCIP_RETCODE retcode;
    SCIP_RANDNUMGEN* rndgen;
-   int              minnthreads;
-   int              maxnthreads;
+   int minnthreads;
+   int maxnthreads;
+   int usesymmetry;
+   int i;
 
    SCIP_CALL( SCIPcheckStage(scip, "SCIPsolveConcurrent", FALSE, TRUE, FALSE, TRUE, FALSE, TRUE, FALSE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
 
    if( !SCIPtpiIsAvailable() )
    {
-      SCIPerrorMessage("SCIP was compiled without task processing interface. Concurrent solve not possible\n");
+      SCIPerrorMessage("SCIP was compiled without task processing interface. Concurrent solve not possible.\n");
       return SCIP_PLUGINNOTFOUND;
    }
 
@@ -3182,21 +3176,29 @@ SCIP_RETCODE SCIPsolveConcurrent(
       SCIPerrorMessage("minimum number of threads greater than maximum number of threads\n");
       return SCIP_INVALIDDATA;
    }
+
    if( scip->concurrent == NULL )
    {
-      int                   nconcsolvertypes;
       SCIP_CONCSOLVERTYPE** concsolvertypes;
-      int                   nthreads;
-      SCIP_Real             memorylimit;
-      int*                  solvertypes;
-      SCIP_Longint*         weights;
-      SCIP_Real*            prios;
-      int                   ncandsolvertypes;
-      SCIP_Real             prefpriosum;
+      SCIP_Longint* weights;
+      SCIP_Real* prios;
+      SCIP_Real memorylimit;
+      SCIP_Real prefpriosum;
+      int* solvertypes;
+      int nconcsolvertypes;
+      int ncandsolvertypes;
+      int nthreads = INT_MAX;
 
-      /* check if concurrent solve is configured to presolve the problem
-       * before setting up the concurrent solvers
-       */
+      /* temporarily disable symmetry if symmetrybefore is FALSE */
+      if( scip->set->concurrent_symmetrybefore )
+         usesymmetry = -1;
+      else
+      {
+         usesymmetry = scip->set->misc_usesymmetry;
+         scip->set->misc_usesymmetry = 0;
+      }
+
+      /* check whether concurrent solve is configured to presolve the problem before setting up the concurrent solvers */
       if( scip->set->concurrent_presolvebefore )
       {
          /* if yes, then presolve the problem */
@@ -3210,35 +3212,41 @@ SCIP_RETCODE SCIPsolveConcurrent(
 
          /* if not, transform the problem and switch stage to presolved */
          SCIP_CALL( SCIPtransformProb(scip) );
+
          SCIP_CALL( initPresolve(scip) );
          SCIP_CALL( exitPresolve(scip, TRUE, &infeas) );
          assert(!infeas);
       }
 
-      /* the presolving must have run into a limit, so we stop here */
+      /* restore symmetry setting for concurrent solvers */
+      if( usesymmetry >= 0 )
+         scip->set->misc_usesymmetry = usesymmetry;
+
+      /* if presolving has run into a limit, we stop here */
       if( scip->set->stage < SCIP_STAGE_PRESOLVED )
       {
          SCIP_CALL( displayRelevantStats(scip) );
          return SCIP_OKAY;
       }
 
-      nthreads = INT_MAX;
-      /* substract the memory already used by the main SCIP and the estimated memory usage of external software */
+      /* estimate memory */
       memorylimit = scip->set->limit_memory;
       if( memorylimit < SCIP_MEM_NOLIMIT )
       {
+         /* substract the memory already used by the main SCIP and the estimated memory usage of external software */
          memorylimit -= SCIPgetMemUsed(scip)/1048576.0;
          memorylimit -= SCIPgetMemExternEstim(scip)/1048576.0;
+
          /* estimate maximum number of copies that be created based on memory limit */
          if( !scip->set->misc_avoidmemout )
          {
             nthreads = MAX(1, memorylimit / (4.0*SCIPgetMemExternEstim(scip)/1048576.0));  /*lint !e666 !e524*/
-            SCIPverbMessage(scip, SCIP_VERBLEVEL_FULL, NULL, "estimated a maximum of %d threads based on memory limit\n", nthreads);
+            SCIPverbMessage(scip, SCIP_VERBLEVEL_FULL, NULL, "Estimated a maximum of %d threads based on memory limit.\n", nthreads);
          }
          else
          {
             nthreads = minnthreads;
-            SCIPverbMessage(scip, SCIP_VERBLEVEL_FULL, NULL, "ignoring memory limit; all threads can be created\n");
+            SCIPverbMessage(scip, SCIP_VERBLEVEL_FULL, NULL, "Ignoring memory limit; all threads can be created.\n");
          }
       }
       nconcsolvertypes = SCIPgetNConcsolverTypes(scip);
@@ -3249,19 +3257,19 @@ SCIP_RETCODE SCIPsolveConcurrent(
          SCIP_CALL( initSolve(scip, TRUE) );
          scip->stat->status = SCIP_STATUS_MEMLIMIT;
          SCIPsyncstoreSetSolveIsStopped(SCIPgetSyncstore(scip), TRUE);
-         SCIPwarningMessage(scip, "requested minimum number of threads could not be satisfied with given memory limit\n");
+         SCIPwarningMessage(scip, "Requested minimum number of threads could not be satisfied with given memory limit.\n");
          SCIP_CALL( displayRelevantStats(scip) );
          return SCIP_OKAY;
       }
 
       if( nthreads == 1 )
       {
-         SCIPwarningMessage(scip, "can only use 1 thread, doing sequential solve instead\n");
+         SCIPwarningMessage(scip, "Can only use 1 thread, performing sequential solve instead.\n");
          SCIP_CALL( SCIPfreeConcurrent(scip) );
          return SCIPsolve(scip);
       }
       nthreads = MIN(nthreads, maxnthreads);
-      SCIPverbMessage(scip, SCIP_VERBLEVEL_FULL, NULL, "using %d threads for concurrent solve\n", nthreads);
+      SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "Using %d threads for concurrent solve.\n", nthreads);
 
       /* now set up nthreads many concurrent solvers that will be used for the concurrent solve
        * using the preferred priorities of each concurrent solver
@@ -3277,8 +3285,9 @@ SCIP_RETCODE SCIPsolveConcurrent(
       SCIP_CALL( SCIPallocBufferArray(scip, &prios, nthreads + nconcsolvertypes) );
       for( i = 0; i < nconcsolvertypes; ++i )
       {
-         int j;
          SCIP_Real prio;
+         int j;
+
          prio = nthreads * SCIPconcsolverTypeGetPrefPrio(concsolvertypes[i]) / prefpriosum;
          while( prio > 0.0 )
          {
@@ -3290,11 +3299,10 @@ SCIP_RETCODE SCIPsolveConcurrent(
             prio = prio - 1.0;
          }
       }
-      /* select nthreads many concurrent solver types to create instances
-       * according to the preferred prioriteis the user has set
-       * This basically corresponds to a knapsack problem
-       * with unit weights and capacity nthreads, where the profits are
-       * the unrounded fraction of the total number of threads to be used.
+
+      /* Select nthreads many concurrent solver types to create instances according to the preferred priorities the user
+       * has set. This basically corresponds to a knapsack problem with unit weights and capacity nthreads, where the
+       * profits are the unrounded fraction of the total number of threads to be used.
        */
       SCIPselectDownRealInt(prios, solvertypes, nthreads, ncandsolvertypes);
 

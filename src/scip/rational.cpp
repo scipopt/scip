@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2026 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -65,6 +65,7 @@ using namespace scip;
 #endif
 
 /** print SCIP_RATIONAL to output stream */
+static
 std::ostream& operator<<(
    std::ostream&         os,                 /**< output stream */
    SCIP_RATIONAL const & r                   /**< rational to print */
@@ -81,7 +82,7 @@ std::ostream& operator<<(
 extern "C" {
 
 #ifdef SCIP_THREADSAFE
-const static SCIP_Real infinity = SCIP_DEFAULT_INFINITY; /* values above this are considered to be infinite */
+constexpr static SCIP_Real infinity = SCIP_DEFAULT_INFINITY; /* values above this are considered to be infinite */
 #else
 static SCIP_Real infinity = SCIP_DEFAULT_INFINITY; /* values above this are considered to be infinite */
 #endif
@@ -709,7 +710,7 @@ SCIP_Bool SCIPrationalIsString(
       }
    }
 
-   return *desc == '\0';
+   return (SCIP_Bool) (*desc == '\0');
 }
 
 /** sets a rational to the value described by a string */
@@ -1409,10 +1410,10 @@ SCIP_Bool SCIPrationalIsEQ(
    assert(rat1 != nullptr && rat2 != nullptr);
 
    if( rat1->val == rat2->val )
-      return (rat1->isinf == rat2->isinf);
+      return (SCIP_Bool)(rat1->isinf == rat2->isinf);
 
    if( rat1->isinf && rat2->isinf )
-      return (rat1->val.sign() == rat2->val.sign());
+      return (SCIP_Bool)(rat1->val.sign() == rat2->val.sign());
 
    return FALSE;
 }
@@ -1426,7 +1427,7 @@ SCIP_Bool SCIPrationalIsAbsEQ(
    assert(rat1 != nullptr && rat2 != nullptr);
 
    if( abs(rat1->val) == abs(rat2->val) )
-      return rat1->isinf == rat2->isinf;
+      return (SCIP_Bool)(rat1->isinf == rat2->isinf);
    if( rat1->isinf && rat2->isinf )
       return TRUE;
 
@@ -1442,9 +1443,9 @@ SCIP_Bool SCIPrationalIsEQReal(
    assert(rat != nullptr);
 
    if( REALABS(real) >= infinity && rat->isinf )
-      return (real > 0 && SCIPrationalIsPositive(rat)) || (real < 0 && SCIPrationalIsNegative(rat));
+      return (SCIP_Bool) ((real > 0 && SCIPrationalIsPositive(rat)) || (real < 0 && SCIPrationalIsNegative(rat)));
 
-   return !rat->isinf && rat->val == scip::Rational(real);
+   return (SCIP_Bool) (!rat->isinf && rat->val == scip::Rational(real));
 }
 
 /** checks if real approx of rational and real are equal */
@@ -1495,7 +1496,7 @@ SCIP_Bool SCIPrationalIsGT(
    }
    else
    {
-      return rat1->val > rat2->val;
+      return (SCIP_Bool)(rat1->val > rat2->val);
    }
 }
 
@@ -1514,7 +1515,7 @@ SCIP_Bool SCIPrationalIsGE(
    SCIP_RATIONAL*        rat2                /**< the second rational */
    )
 {
-   return !SCIPrationalIsGT(rat2, rat1);
+   return (SCIP_Bool) !SCIPrationalIsGT(rat2, rat1);
 }
 
 /** checks if first rational is less or equal than second rational */
@@ -1523,7 +1524,7 @@ SCIP_Bool SCIPrationalIsLE(
    SCIP_RATIONAL*        rat2                /**< the second rational */
    )
 {
-   return !SCIPrationalIsGT(rat1, rat2);
+   return (SCIP_Bool) !SCIPrationalIsGT(rat1, rat2);
 }
 
 /** checks if first rational is greater than second rational */
@@ -1539,7 +1540,7 @@ SCIP_Bool SCIPrationalIsAbsGT(
    else if( rat2->isinf )
       return FALSE;
    else
-      return abs(rat1->val) > abs(rat2->val);
+      return (SCIP_Bool) (abs(rat1->val) > abs(rat2->val));
 }
 
 /** checks if rational is greater than real */
@@ -1568,7 +1569,7 @@ SCIP_Bool SCIPrationalIsGTReal(
    }
    else
    {
-      return rat->val > real;
+      return (SCIP_Bool) (rat->val > real);
    }
 }
 
@@ -1598,7 +1599,7 @@ SCIP_Bool SCIPrationalIsLTReal(
    }
    else
    {
-      return rat->val < real;
+      return (SCIP_Bool) (rat->val < real);
    }
 }
 
@@ -1608,7 +1609,7 @@ SCIP_Bool SCIPrationalIsGEReal(
    SCIP_Real             real                /**< the real */
    )
 {
-   return !SCIPrationalIsLTReal(rat, real);
+   return (SCIP_Bool) !SCIPrationalIsLTReal(rat, real);
 }
 
 /** checks if rational is less or equal than real */
@@ -1617,7 +1618,7 @@ SCIP_Bool SCIPrationalIsLEReal(
    SCIP_Real             real                /**< the real */
    )
 {
-   return !SCIPrationalIsGTReal(rat, real);
+   return (SCIP_Bool) !SCIPrationalIsGTReal(rat, real);
 }
 
 /** checks if rational is zero */
@@ -1643,7 +1644,7 @@ SCIP_Bool SCIPrationalIsPositive(
 {
    assert(rational != nullptr);
 
-   return rational->val.sign() > 0;
+   return (SCIP_Bool) (rational->val.sign() > 0);
 }
 
 /** checks if rational is negative */
@@ -1653,7 +1654,7 @@ SCIP_Bool SCIPrationalIsNegative(
 {
    assert(rational != nullptr);
 
-   return rational->val.sign() < 0;
+   return (SCIP_Bool) (rational->val.sign() < 0);
 }
 
 /** checks if rational is positive infinity */
@@ -1663,7 +1664,7 @@ SCIP_Bool SCIPrationalIsInfinity(
 {
    assert(rational != nullptr);
 
-   return rational->isinf && rational->val.sign() > 0;
+   return (SCIP_Bool) (rational->isinf && rational->val.sign() > 0);
 }
 
 /** checks if rational is negative infinity */
@@ -1673,7 +1674,7 @@ SCIP_Bool SCIPrationalIsNegInfinity(
 {
    assert(rational != nullptr);
 
-   return rational->isinf && rational->val.sign() < 0;
+   return (SCIP_Bool) (rational->isinf && rational->val.sign() < 0);
 }
 
 /** checks if rational is negative infinity */
@@ -1702,7 +1703,7 @@ SCIP_Bool SCIPrationalIsIntegral(
    else
    {
       SCIPrationalCanonicalize(rational);
-      return (denominator(rational->val) == 1);
+      return (SCIP_Bool) (denominator(rational->val) == 1);
    }
 }
 
@@ -1783,7 +1784,7 @@ int SCIPrationalStrLen(
       return 9;
    /* quotient */
    else
-      return rational->val.str().length();
+      return (int) rational->val.str().length();
 }
 
 /** prints rational into a file using message handler */
@@ -1834,10 +1835,8 @@ void SCIPrationalPrint(
 {
    if( rational == NULL )
       std::cout << "unknown" << std::flush;
-   else if( rational->isinf )
-      std::cout << (rational->val.sign() > 0 ? "+" : "-") << "infinity" << std::flush;
    else
-      std::cout << rational->val << std::flush;
+      std::cout << *rational << std::flush;
 }
 
 /** printf extension for rationals (not supporting all format options) */
@@ -1946,7 +1945,7 @@ void SCIPrationalPrintDebugMessage(
    assert(sourcefile != NULL );
 
    /* strip directory from filename */
-#if defined(_WIN32) || defined(_WIN64)
+#ifdef _WIN32
    filename = strrchr(sourcefile, '\\');
 #else
    filename = strrchr(sourcefile, '/');
@@ -2012,7 +2011,7 @@ SCIP_Bool SCIPrationalDenominatorIsLE(
    return denominator <= val;
 }
 
-#else
+#else /* the following is for the dummy class present for systems where Boost is not available */
 
 /** returns the numerator of a rational as a long */
 SCIP_Longint SCIPrationalNumerator(
@@ -2020,7 +2019,7 @@ SCIP_Longint SCIPrationalNumerator(
    )
 {
    assert(rational != nullptr);
-   return rational->val.val;
+   return (SCIP_Longint) rational->val.val;
 }
 
 /** returns the denominator of a rational as a long */
@@ -2029,7 +2028,7 @@ SCIP_Longint SCIPrationalDenominator(
    )
 {
    assert(rational != nullptr);
-   return 1.0;
+   return 1;
 }
 
 /** returns the denominator of a rational as a long */
@@ -2041,6 +2040,7 @@ SCIP_Bool SCIPrationalDenominatorIsLE(
    assert(rational != nullptr);
    return TRUE;
 }
+
 #endif
 
 /** returns the sign of the rational (1 if positive, -1 if negative, 0 if zero) */
@@ -2085,8 +2085,6 @@ SCIP_Real SCIPrationalGetReal(
    SCIP_RATIONAL*        rational            /**< the rational */
    )
 {
-   SCIP_Real retval = 0.0;
-
    assert(rational != nullptr);
 
 #ifdef SCIP_WITH_BOOST
@@ -2095,12 +2093,13 @@ SCIP_Real SCIPrationalGetReal(
 
 #ifdef SCIP_WITH_GMP
    /* mpq_get_d is faster than the boost internal implementation */
-   retval = mpq_get_d(rational->val.backend().data()); /*lint !e838*/
+   return mpq_get_d(rational->val.backend().data()); /*lint !e838*/
 #else
-   retval = rational->val.convert_to<SCIP_Real>(); /*lint !e838*/
+   return rational->val.convert_to<SCIP_Real>(); /*lint !e838*/
 #endif
+#else
+   return 0.0;
 #endif
-   return retval;
 }
 
 /** gets the relaxation of a rational as a real
@@ -2207,8 +2206,6 @@ SCIP_Bool SCIPrationalRoundLong(
    SCIP_ROUNDMODE_RAT    roundmode           /**< the rounding direction */
    )
 {
-   SCIP_Bool success = FALSE;
-
    assert(src != nullptr);
    assert(res != nullptr);
 
@@ -2239,21 +2236,21 @@ SCIP_Bool SCIPrationalRoundLong(
    }
    *res = roundint.convert_to<SCIP_Longint>();
    if( *res == roundint )
-      success = TRUE;
+      return TRUE;
 #endif
-   return success;
+   return FALSE;
 }
 
 #ifdef SCIP_WITH_BOOST
 /** choose the best semiconvergent with demnominator <= maxdenom between p1/q1 and p2/q2 */
 static
 void chooseSemiconv(
-   scip::Integer&        resnum,            /**< the resulting numerator */
-   scip::Integer&        resden,            /**< the resulting denominator */
-   scip::Integer*        p,                 /**< the last 3 numerators of convergents */
-   scip::Integer*        q,                 /**< the last 3 denominators of convergents */
-   const scip::Integer&  ai,                /**< the coefficient in the continuous fraction */
-   const scip::Integer&  maxdenom           /**< the maximal denominator */
+   scip::Integer&        resnum,             /**< the resulting numerator */
+   scip::Integer&        resden,             /**< the resulting denominator */
+   scip::Integer*        p,                  /**< the last 3 numerators of convergents */
+   scip::Integer*        q,                  /**< the last 3 denominators of convergents */
+   const scip::Integer&  ai,                 /**< the coefficient in the continuous fraction */
+   const scip::Integer&  maxdenom            /**< the maximal denominator */
    )
 {
    scip::Integer j = (maxdenom - q[0]) / q[1];
@@ -2360,7 +2357,7 @@ void SCIPrationalComputeApproximationLong(
          res->isinf = FALSE;
          res->isfprepresentable = SCIP_ISFPREPRESENTABLE_UNKNOWN;
 
-         SCIPdebug(std::cout << "approximating " << src->val << " by " << res->val << std::endl);
+         SCIPdebug(std::cout << "approximating " << *src << " by " << *res << std::endl);
 
          return;
       }
@@ -2384,7 +2381,7 @@ void SCIPrationalComputeApproximationLong(
 
       done = 0;
 
-      SCIPdebug(std::cout << "approximating " << src->val << " by continued fractions with maxdenom " << maxdenom << std::endl);
+      SCIPdebug(std::cout << "approximating " << *src << " by continued fractions with maxdenom " << maxdenom << std::endl);
       SCIPdebug(std::cout << "confrac initial values: p0 " << p[1] << " q0 " << q[1] << " p1 " << p[2] << " q1 " << q[2] << std::endl);
 
       /* if q is already big, skip loop */
@@ -2565,7 +2562,7 @@ void SCIPrationalComputeApproximation(
          res->isinf = FALSE;
          res->isfprepresentable = SCIP_ISFPREPRESENTABLE_UNKNOWN;
 
-         SCIPdebug(std::cout << "approximating " << src->val << " by " << res->val << std::endl);
+         SCIPdebug(std::cout << "approximating " << *src << " by " << *res << std::endl);
 
          return;
       }
@@ -2586,7 +2583,7 @@ void SCIPrationalComputeApproximation(
 
       done = 0;
 
-      SCIPdebug(std::cout << "approximating " << src->val << " by continued fractions with maxdenom " << maxdenom << std::endl);
+      SCIPdebug(std::cout << "approximating " << *src << " by continued fractions with maxdenom " << maxdenom << std::endl);
       SCIPdebug(std::cout << "confrac initial values: p0 " << p[1] << " q0 " << q[1] << " p1 " << p[2] << " q1 " << q[2] << std::endl);
 
       /* if q is already big, skip loop */

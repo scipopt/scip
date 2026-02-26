@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2026 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -81,6 +81,7 @@ namespace scip
       inline int sign() const { return 0; }
       inline bool is_zero() const { return this->val == 0; }
       inline std::string str() const { return ""; }
+      Rational& operator=(const double& r){val = r; return *this;};
       Rational& operator=(const int& i){val = i; return *this;};
       Rational& operator+(const Rational& r){return *this;};
       Rational& operator+(const double& r){return *this;};
@@ -111,11 +112,11 @@ namespace scip
    };
    using Integer = Rational;
    using sparsevec = std::vector<SCIP_RATIONAL>;
-   Rational& abs(Rational& r){return r;}
-   Rational& max(Rational& r1, Rational& r2){return r1;}
-   Rational& min(Rational& r1, Rational& r2){return r1;}
-   SCIP_Longint denominator(Rational& r){return 0L;}
-   SCIP_Longint numerator(Rational& r){return 0L;}
+   INLINE Rational& abs(Rational& r){return r;}
+   INLINE Rational& max(Rational& r1, Rational& r2){return r1;}
+   INLINE Rational& min(Rational& r1, Rational& r2){return r1;}
+   INLINE SCIP_Longint denominator(Rational& r){return 0L;}
+   INLINE SCIP_Longint numerator(Rational& r){return 0L;}
 }
 #endif
 

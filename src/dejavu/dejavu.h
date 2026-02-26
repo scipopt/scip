@@ -19,7 +19,7 @@
 #include "inprocess.h"
 #include "components.h"
 
-#if ((defined(_MSVC_LANG) && _MSVC_LANG < 201402L) || __cplusplus < 201402L)
+#if ((defined(_MSVC_LANG) && _MSVC_LANG < 201402L) || (!defined(_MSVC_LANG) && __cplusplus < 201402L))
 #  error "dejavu requires to be compiled with C++ 2014 or newer"
 #endif
 
@@ -272,9 +272,9 @@ namespace dejavu {
         bool s_limit_reached             = false; /**< did the last run reach the resource limits? */
         big_number s_grp_sz;                      /**< order of the automorphism group computed in last run */
 
-        int  h_limit_budget           = -1; /**< limit backtracking not due to symmetry */
-        long h_limit_schreier_support = -1; /**< limit total support of Schreier table  */
-        long h_limit_component        = -1; /**< limit for maximal component size       */
+        int     h_limit_budget           = -1; /**< limit backtracking not due to symmetry */
+        int64_t h_limit_schreier_support = -1; /**< limit total support of Schreier table  */
+        int64_t h_limit_component        = -1; /**< limit for maximal component size       */
 
     public:
         /**
@@ -340,7 +340,7 @@ namespace dejavu {
          *
          * @param limit_component limit for number of vertices in component (-1 means no limit)
          */
-        void set_limit_component(long limit_component = -1) {
+        void set_limit_component(int64_t limit_component = -1) {
             h_limit_component = limit_component;
         }
 
@@ -831,8 +831,8 @@ namespace dejavu {
                                                        * lot! */
 
                         // let's stick to the memory limits...
-                        const long s_bfs_est_mem = static_cast<long>(round(s_bfs_next_level_nodes *
-                                                                     (1 - s_path_fail1_avg) * g->v_size));
+                        const int64_t s_bfs_est_mem = static_cast<int64_t>(round(s_bfs_next_level_nodes *
+                                                                          (1 - s_path_fail1_avg) * g->v_size));
                         if (next_routine == bfs_ir && (s_bfs_est_mem > h_bfs_memory_limit)) next_routine = random_ir;
 
                         // let's stick to the budget...

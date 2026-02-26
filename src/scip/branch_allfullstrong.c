@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2026 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -63,7 +63,6 @@
 #include "scip/scip_solvingstats.h"
 #include "scip/scip_tree.h"
 #include "scip/scip_var.h"
-#include <string.h>
 
 
 #define BRANCHRULE_NAME          "allfullstrong"
@@ -107,9 +106,10 @@ SCIP_RETCODE branch(
    int bestpseudocand;
 
    assert(branchrule != NULL);
-   assert(strcmp(SCIPbranchruleGetName(branchrule), BRANCHRULE_NAME) == 0);
    assert(scip != NULL);
    assert(result != NULL);
+
+   SCIP_STRINGEQ( SCIPbranchruleGetName(branchrule), BRANCHRULE_NAME, SCIP_INVALIDCALL );
 
    /* check, if all existing columns are in LP, and thus the strong branching results give lower bounds */
    allcolsinlp = SCIPallColsInLP(scip);
@@ -207,7 +207,8 @@ SCIP_DECL_BRANCHCOPY(branchCopyAllfullstrong)
 {  /*lint --e{715}*/
    assert(scip != NULL);
    assert(branchrule != NULL);
-   assert(strcmp(SCIPbranchruleGetName(branchrule), BRANCHRULE_NAME) == 0);
+
+   SCIP_STRINGEQ( SCIPbranchruleGetName(branchrule), BRANCHRULE_NAME, SCIP_INVALIDCALL );
 
    /* call inclusion method of branchrule */
    SCIP_CALL( SCIPincludeBranchruleAllfullstrong(scip) );

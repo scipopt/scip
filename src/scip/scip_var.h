@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2026 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -2426,6 +2426,7 @@ SCIP_RETCODE SCIPinferBinvarCons(
  *
  *  @note During presolving, an integer variable whose bound changes to {0,1} is upgraded to a binary variable.
  */
+SCIP_EXPORT
 SCIP_RETCODE SCIPinferVarUbConsExact(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< variable to change the bound for */
@@ -2454,6 +2455,7 @@ SCIP_RETCODE SCIPinferVarUbConsExact(
  *
  *  @note During presolving, an integer variable whose bound changes to {0,1} is upgraded to a binary variable.
  */
+SCIP_EXPORT
 SCIP_RETCODE SCIPinferVarLbConsExact(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< variable to change the bound for */
@@ -4703,6 +4705,7 @@ SCIP_RETCODE SCIPchgVarObjExact(
  *       - \ref SCIP_STAGE_PROBLEM
  *
  */
+SCIP_EXPORT
 SCIP_RETCODE SCIPchgVarUbGlobalExact(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< variable to change the bound for */
@@ -4719,6 +4722,7 @@ SCIP_RETCODE SCIPchgVarUbGlobalExact(
  *       - \ref SCIP_STAGE_PROBLEM
  *
  */
+SCIP_EXPORT
 SCIP_RETCODE SCIPchgVarLbGlobalExact(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< variable to change the bound for */

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2026 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -2405,7 +2405,7 @@ SCIP_RETCODE SCIPexprPrintDot(
       /* make up some color from the expression type (it's name) */
       color = 0.0;
       for( c = 0; expr->exprhdlr->name[c] != '\0'; ++c )
-         color += (tolower(expr->exprhdlr->name[c]) - 'a') / 26.0;
+         color += (tolower((unsigned char)expr->exprhdlr->name[c]) - 'a') / 26.0;
       color = SCIPsetFrac(set, color);
       fprintf(printdata->file, "n%p [fillcolor=\"%g,%g,%g\", label=\"", (void*)expr, color, color, color);
 

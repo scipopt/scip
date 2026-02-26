@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2026 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -64,7 +64,7 @@
 #include "scip/scip_tree.h"
 #include "scip/scip_var.h"
 #include "scip/symmetry.h"
-#include <string.h>
+
 
 #define BRANCHRULE_NAME          "relpscost"
 #define BRANCHRULE_DESC          "reliability branching on pseudo cost values"
@@ -904,7 +904,6 @@ SCIP_Real cdfProbability(
          return 0.0;
       else
          return zeroprob + (1.0 - zeroprob) * (1.0 - pow(mingain / proposedgain, rate));
-
    }
    else if(distributioncdf == EXPONENTIALDISTRIBUTION)
    {
@@ -932,7 +931,6 @@ SCIP_Real expectedTreeSize(
    int                   distributioncdf     /**< distribution type (PARETODISTRIBUTION, EXPONENTIALDISTRIBUTION, LOGNORMALDISTRIBUTION) */
    )
 {
-
    SCIP_Real ptotal = 0.0;
    SCIP_Real totalimprovedtree = 0.0;
 
@@ -1762,7 +1760,6 @@ SCIP_RETCODE execRelpscost(
 
       for( i = 0; continueStrongBranchingLookahead(scip, i, ninitcands, lookahead, maxlookahead, nbdchgs, nbdconflicts, maxbdchgs, maxnsblpiterations) && continueStrongBranchingTreeSizeEstimation(scip, branchruledata, lookahead, maxlookahead); ++i )
       {
-
          SCIP_Real down;
          SCIP_Real up;
          SCIP_Real downgain;
@@ -2349,7 +2346,8 @@ SCIP_DECL_BRANCHCOPY(branchCopyRelpscost)
 {  /*lint --e{715}*/
    assert(scip != NULL);
    assert(branchrule != NULL);
-   assert(strcmp(SCIPbranchruleGetName(branchrule), BRANCHRULE_NAME) == 0);
+
+   SCIP_STRINGEQ( SCIPbranchruleGetName(branchrule), BRANCHRULE_NAME, SCIP_INVALIDCALL );
 
    /* call inclusion method of branchrule */
    SCIP_CALL( SCIPincludeBranchruleRelpscost(scip) );
@@ -2440,9 +2438,10 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpRelpscost)
    int nlpcands;
 
    assert(branchrule != NULL);
-   assert(strcmp(SCIPbranchruleGetName(branchrule), BRANCHRULE_NAME) == 0);
    assert(scip != NULL);
    assert(result != NULL);
+
+   SCIP_STRINGEQ( SCIPbranchruleGetName(branchrule), BRANCHRULE_NAME, SCIP_INVALIDCALL );
 
    SCIPdebugMsg(scip, "Execlp method of relpscost branching in node %" SCIP_LONGINT_FORMAT "\n", SCIPnodeGetNumber(SCIPgetCurrentNode(scip)));
 

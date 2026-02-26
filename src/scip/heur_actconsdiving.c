@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2026 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -44,7 +44,7 @@
 #include "scip/scip_numerics.h"
 #include "scip/scip_prob.h"
 #include "scip/scip_sol.h"
-#include <string.h>
+
 
 #define HEUR_NAME             "actconsdiving"
 #define HEUR_DESC             "LP diving heuristic that chooses fixings w.r.t. the active constraints"
@@ -207,7 +207,8 @@ SCIP_DECL_HEURCOPY(heurCopyActconsdiving)
 {  /*lint --e{715}*/
    assert(scip != NULL);
    assert(heur != NULL);
-   assert(strcmp(SCIPheurGetName(heur), HEUR_NAME) == 0);
+
+   SCIP_STRINGEQ( SCIPheurGetName(heur), HEUR_NAME, SCIP_INVALIDCALL );
 
    /* call inclusion method of primal heuristic */
    SCIP_CALL( SCIPincludeHeurActconsdiving(scip) );
@@ -222,8 +223,9 @@ SCIP_DECL_HEURFREE(heurFreeActconsdiving) /*lint --e{715}*/
    SCIP_HEURDATA* heurdata;
 
    assert(heur != NULL);
-   assert(strcmp(SCIPheurGetName(heur), HEUR_NAME) == 0);
    assert(scip != NULL);
+
+   SCIP_STRINGEQ( SCIPheurGetName(heur), HEUR_NAME, SCIP_INVALIDCALL );
 
    /* free heuristic data */
    heurdata = SCIPheurGetData(heur);
@@ -243,7 +245,8 @@ SCIP_DECL_HEURINIT(heurInitActconsdiving) /*lint --e{715}*/
    SCIP_HEURDATA* heurdata;
 
    assert(heur != NULL);
-   assert(strcmp(SCIPheurGetName(heur), HEUR_NAME) == 0);
+
+   SCIP_STRINGEQ( SCIPheurGetName(heur), HEUR_NAME, SCIP_INVALIDCALL );
 
    /* get heuristic data */
    heurdata = SCIPheurGetData(heur);
@@ -263,7 +266,8 @@ SCIP_DECL_HEUREXIT(heurExitActconsdiving) /*lint --e{715}*/
    SCIP_HEURDATA* heurdata;
 
    assert(heur != NULL);
-   assert(strcmp(SCIPheurGetName(heur), HEUR_NAME) == 0);
+
+   SCIP_STRINGEQ( SCIPheurGetName(heur), HEUR_NAME, SCIP_INVALIDCALL );
 
    /* get heuristic data */
    heurdata = SCIPheurGetData(heur);

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2026 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -138,6 +138,7 @@ SCIP_RETCODE SCIPincludePresolMILP(
 #define DEFAULT_ENABLEPROBING      TRUE      /**< should the probing presolver be enabled within the presolve library? */
 #define DEFAULT_ENABLESPARSIFY     FALSE     /**< should the sparsify presolver be enabled within the presolve library? */
 #define DEFAULT_ENABLECLIQUEMERGE  FALSE     /**< should the clique merging presolver be enabled within the presolve library? */
+#define DEFAULT_ENABLEGF2          FALSE     /**< should the GF2 presolver be enabled within the presolve library? */
 
 /** parameters tied to a certain presolve technique in PaPILO */
 #define DEFAULT_MAXBADGESIZE_SEQ   15000     /**< the max badge size in Probing if PaPILO is executed in sequential mode */
@@ -160,7 +161,7 @@ SCIP_RETCODE SCIPincludePresolMILP(
  */
 
 /** presolver data */
-struct SCIP_PresolData
+struct SCIP_PresolMilpData
 {
    int lastncols;                            /**< the number of columns from the last call */
    int lastnrows;                            /**< the number of rows from the last call */
@@ -189,6 +190,9 @@ struct SCIP_PresolData
 #if PAPILO_APIVERSION >= 6
    SCIP_Bool enablecliquemerging;            /**< should the clique merging presolver be enabled within the presolve library? */
 #endif
+#if PAPILO_APIVERSION >= 13
+   SCIP_Bool enableGF2;                      /**< should the GF2 presolver be enabled within the presolve library? */
+#endif
    SCIP_Real modifyconsfac;                  /**< modify SCIP constraints when the number of nonzeros or rows is at most this
                                               *   factor times the number of nonzeros or rows before presolving */
    SCIP_Real markowitztolerance;             /**< the markowitz tolerance used for substitutions */
@@ -199,6 +203,7 @@ struct SCIP_PresolData
 
    char* filename = NULL;                    /**< filename to store the instance before presolving */
 };
+typedef struct SCIP_PresolMilpData SCIP_PRESOLMILPDATA;
 
 using namespace papilo;
 
@@ -350,7 +355,7 @@ static
 SCIP_RETCODE setupPresolve(
    SCIP*                 scip,               /**< SCIP data structure */
    Presolve<T>&          presolve,           /**< PaPILO's presolve object */
-   SCIP_PRESOLDATA*      data,               /**< presolver data structure */
+   SCIP_PRESOLMILPDATA*  data,               /**< presolver data structure */
    SCIP_Bool             allowconsmodification /**< whether constraint modifications are allowed */
    )
 {
@@ -426,6 +431,10 @@ SCIP_RETCODE setupPresolve(
       presolve.addPresolveMethod( uptr( cliquemerging ) );
    }
 #endif
+#if PAPILO_APIVERSION >= 13
+   if( data->enableGF2 )
+      presolve.addPresolveMethod( uptr( new GF2<T>() ) );
+#endif
 
    /* exhaustive presolvers*/
    presolve.addPresolveMethod( uptr( new ImplIntDetection<T>() ) );
@@ -443,6 +452,10 @@ SCIP_RETCODE setupPresolve(
       {
          probing->set_max_badge_size( data->maxbadgesizepar );
       }
+#if PAPILO_APIVERSION >= 12
+      // TODO: enable this after performance test. On MIPLIB this brought 3% on instances with cliques.
+      probing->set_numcliquefails(0);
+#endif
       presolve.addPresolveMethod( uptr( probing ) );
 #else
       presolve.addPresolveMethod( uptr( new Probing<T>() ) );
@@ -503,7 +516,7 @@ static
 SCIP_RETCODE performRationalPresolving(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_MATRIX*          matrix,             /**< initialized SCIP_MATRIX data structure */
-   SCIP_PRESOLDATA*      data,               /**< plugin specific presol data */
+   SCIP_PRESOLMILPDATA*  data,               /**< plugin specific presol data */
    SCIP_Bool             initialized,        /**< was the matrix initialized */
    int*                  nfixedvars,         /**< store number of fixed variables */
    int*                  naggrvars,          /**< store number of aggregated variables */
@@ -776,7 +789,6 @@ SCIP_RETCODE performRationalPresolving(
             assert(side == res.postsolve.values[first + 2]);
             assert(res.postsolve.indices[first + 1] == 0);
             assert(res.postsolve.indices[first + 2] == 0);
-
          }
          assert( type == ReductionType::kSubstitutedCol || type == ReductionType::kSubstitutedColWithDual );
 #else
@@ -1054,7 +1066,7 @@ static
 SCIP_RETCODE performRealPresolving(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_MATRIX*          matrix,             /**< initialized SCIP_MATRIX data structure */
-   SCIP_PRESOLDATA*      data,               /**< plugin specific presol data */
+   SCIP_PRESOLMILPDATA*  data,               /**< plugin specific presol data */
    SCIP_Bool             initialized,        /**< was the matrix initialized */
    int*                  nfixedvars,         /**< store number of fixed variables */
    int*                  naggrvars,          /**< store number of aggregated variables */
@@ -1607,7 +1619,7 @@ SCIP_DECL_PRESOLCOPY(presolCopyMILP)
 static
 SCIP_DECL_PRESOLFREE(presolFreeMILP)
 {  /*lint --e{715}*/
-   SCIP_PRESOLDATA* data = SCIPpresolGetData(presol);
+   SCIP_PRESOLMILPDATA* data = (SCIP_PRESOLMILPDATA*)SCIPpresolGetData(presol);
    assert(data != NULL);
 
    SCIPpresolSetData(presol, NULL);
@@ -1619,7 +1631,7 @@ SCIP_DECL_PRESOLFREE(presolFreeMILP)
 static
 SCIP_DECL_PRESOLINIT(presolInitMILP)
 {  /*lint --e{715}*/
-   SCIP_PRESOLDATA* data = SCIPpresolGetData(presol);
+   SCIP_PRESOLMILPDATA* data = (SCIP_PRESOLMILPDATA*)SCIPpresolGetData(presol);
    assert(data != NULL);
 
    data->lastncols = -1;
@@ -1634,14 +1646,14 @@ static
 SCIP_DECL_PRESOLEXEC(presolExecMILP)
 {  /*lint --e{715}*/
    SCIP_MATRIX* matrix;
-   SCIP_PRESOLDATA* data;
+   SCIP_PRESOLMILPDATA* data;
    SCIP_Bool initialized;
    SCIP_Bool complete;
    SCIP_Bool infeasible;
 
    *result = SCIP_DIDNOTRUN;
 
-   data = SCIPpresolGetData(presol);
+   data = (SCIP_PRESOLMILPDATA*)SCIPpresolGetData(presol);
 
    int nvars = SCIPgetNVars(scip);
    int nconss = SCIPgetNConss(scip);
@@ -1706,7 +1718,7 @@ SCIP_RETCODE SCIPincludePresolMILP(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
-   SCIP_PRESOLDATA* presoldata;
+   SCIP_PRESOLMILPDATA* presoldata;
    SCIP_PRESOL* presol;
 
 #if defined(PAPILO_VERSION_TWEAK) && PAPILO_VERSION_TWEAK != 0
@@ -1738,7 +1750,7 @@ SCIP_RETCODE SCIPincludePresolMILP(
    /* include presolver */
    SCIP_CALL( SCIPincludePresolBasic(scip, &presol, PRESOL_NAME, PRESOL_DESC, PRESOL_PRIORITY, PRESOL_MAXROUNDS, PRESOL_TIMING,
          presolExecMILP,
-         presoldata) );
+         (SCIP_PRESOLDATA*)presoldata) );
 
    assert(presol != NULL);
 
@@ -1881,7 +1893,7 @@ SCIP_RETCODE SCIPincludePresolMILP(
    SCIP_CALL( SCIPaddBoolParam(scip,
          "presolving/" PRESOL_NAME "/enablecliquemerging",
          "should the clique merging presolver be enabled within the presolve library?",
-         &presoldata->enablecliquemerging, TRUE, DEFAULT_ENABLESPARSIFY, NULL, NULL) );
+         &presoldata->enablecliquemerging, TRUE, DEFAULT_ENABLECLIQUEMERGE, NULL, NULL) );
    SCIP_CALL( SCIPaddIntParam(scip,
          "presolving/" PRESOL_NAME "/maxedgesparallel",
          "maximal amount of edges in the parallel clique merging graph",
@@ -1898,6 +1910,12 @@ SCIP_RETCODE SCIPincludePresolMILP(
          "presolving/" PRESOL_NAME "/maxgreedycalls",
          "maximal number of greedy max clique calls in a single thread",
          &presoldata->maxgreedycalls, FALSE, DEFAULT_MAXGREEDYCALLS, -1, INT_MAX, NULL, NULL) );
+#endif
+#if PAPILO_APIVERSION >= 13
+   SCIP_CALL( SCIPaddBoolParam(scip,
+         "presolving/" PRESOL_NAME "/enableGF2",
+         "should the GF2 presolver be enabled within the presolve library?",
+         &presoldata->enableGF2, TRUE, DEFAULT_ENABLEGF2, NULL, NULL) );
 #endif
 
    return SCIP_OKAY;

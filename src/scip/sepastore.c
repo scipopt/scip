@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2026 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -1040,7 +1040,7 @@ SCIP_RETCODE SCIPsepastoreApplyCuts(
                   SCIP_CALL( SCIPaddPoolCut(set->scip, cut) );
                }
 
-               SCIP_CALL( SCIPaddRowExact(set->scip, cut->rowexact));
+               SCIP_CALL( SCIPaddRowExact(set->scip, cut->rowexact) );
             }
 
             /* add cut to the LP and update orthogonalities */

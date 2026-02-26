@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2026 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -34,10 +34,7 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#include <assert.h>
-#include <string.h>
-#if defined(_WIN32) || defined(_WIN64)
-#else
+#ifndef _WIN32
 #include <strings.h> /*lint --e{766}*/
 #endif
 
@@ -2406,7 +2403,10 @@ SCIP_RETCODE emphasisParse(
    while ( *line == ' ' || *line == '\t' || *line == '\r' )
       line++;
    if ( *line == '\0' || *line == '\n' || *line == '#' )
-      return SCIP_OKAY;
+   {
+      SCIPerrorMessage("specification of emphasis type is missing.\n");
+      return SCIP_READERROR;
+   }
    paramname = line;
 
    /* find the end of the parameter name */
@@ -2481,7 +2481,7 @@ SCIP_RETCODE emphasisParse(
       ++line;
    if ( *line == '\0' || *line == '\n' || *line == '#' )
    {
-      SCIPerrorMessage("emphasis parameter value is missing\n");
+      SCIPerrorMessage("emphasis parameter value is missing.\n");
       return SCIP_READERROR;
    }
    paramvaluestr = line;
@@ -2517,7 +2517,7 @@ SCIP_RETCODE emphasisParse(
       paramsetting = SCIP_PARAMSETTING_OFF;
    else
    {
-      SCIPerrorMessage("unkown parameter setting: %s.\n", paramvaluestr);
+      SCIPerrorMessage("unkown emphasis parameter setting: %s (available: default, aggressive, fast, off).\n", paramvaluestr);
       return SCIP_READERROR;
    }
 
@@ -2534,6 +2534,12 @@ SCIP_RETCODE emphasisParse(
    {
       SCIP_CALL( SCIPsetSetSeparating(set, messagehdlr, paramsetting, FALSE) );
    }
+   else
+   {
+      SCIPerrorMessage("unkown emphasis type: %s (available: heuristics, presolving, separating).\n", paramname);
+      return SCIP_READERROR;
+   }
+
 
    return SCIP_OKAY;
 }

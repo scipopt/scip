@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2026 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -28,8 +28,6 @@
  * @author Benjamin Mueller
  * @author Stefan Vigerske
  */
-
-#include <string.h>
 
 #include "scip/nlhdlr_convex.h"
 #include "scip/pub_nlhdlr.h"
@@ -300,7 +298,7 @@ SCIP_RETCODE exprstackPush(
       SCIP_CALL( SCIPreallocBufferArray(scip, &exprstack->stack, exprstack->stacksize) );
    }
 
-   memcpy(exprstack->stack + (exprstack->stackpos+1), exprs, nexprs * sizeof(SCIP_EXPR*));  /*lint !e679*/ /*lint !e737*/
+   memcpy(exprstack->stack + (exprstack->stackpos+1), exprs, nexprs * sizeof(SCIP_EXPR*));  /*lint !e679*/ /*lint !e737*/ /*lint !e420*/
    exprstack->stackpos += nexprs;
 
    return SCIP_OKAY;
@@ -2202,7 +2200,8 @@ SCIP_DECL_NLHDLRCOPYHDLR(nlhdlrCopyhdlrConvex)
 { /*lint --e{715}*/
    assert(targetscip != NULL);
    assert(sourcenlhdlr != NULL);
-   assert(strcmp(SCIPnlhdlrGetName(sourcenlhdlr), CONVEX_NLHDLR_NAME) == 0);
+
+   SCIP_STRINGEQ( SCIPnlhdlrGetName(sourcenlhdlr), CONVEX_NLHDLR_NAME, SCIP_INVALIDCALL );
 
    SCIP_CALL( SCIPincludeNlhdlrConvex(targetscip) );
 
@@ -2565,7 +2564,8 @@ SCIP_DECL_NLHDLRCOPYHDLR(nlhdlrCopyhdlrConcave)
 { /*lint --e{715}*/
    assert(targetscip != NULL);
    assert(sourcenlhdlr != NULL);
-   assert(strcmp(SCIPnlhdlrGetName(sourcenlhdlr), CONCAVE_NLHDLR_NAME) == 0);
+
+   SCIP_STRINGEQ( SCIPnlhdlrGetName(sourcenlhdlr), CONCAVE_NLHDLR_NAME, SCIP_INVALIDCALL );
 
    SCIP_CALL( SCIPincludeNlhdlrConcave(targetscip) );
 

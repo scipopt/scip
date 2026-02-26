@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2026 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -366,6 +366,7 @@ void SCIPstatReset(
    stat->firstprimalheur = NULL;
    stat->firstprimaltime = SCIP_DEFAULT_INFINITY;
    stat->firstprimalbound = SCIP_DEFAULT_INFINITY;
+   stat->firstprimaldepth = -1;
    stat->firstsolgap = SCIP_DEFAULT_INFINITY;
    stat->lastsolgap = SCIP_DEFAULT_INFINITY;
    stat->primalzeroittime = 0.0;
@@ -917,7 +918,7 @@ void SCIPstatPrintDebugMessage(
    assert( stat != NULL );
 
    /* strip directory from filename */
-#if defined(_WIN32) || defined(_WIN64)
+#ifdef _WIN32
    filename = strrchr(sourcefile, '\\');
 #else
    filename = strrchr(sourcefile, '/');
@@ -933,7 +934,7 @@ void SCIPstatPrintDebugMessage(
       printf("[%s:%d] debug: ", filename, sourceline);
 
    va_start(ap, formatstr); /*lint !e838*/
-   vprintf(formatstr, ap);
+   (void)vprintf(formatstr, ap);
    va_end(ap);
 }
 

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2026 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -52,7 +52,7 @@ struct SCIP_SyncStore
    SCIP_Bool             initialized;        /**< flag to indicate whether the syncstore has been initialized */
    int                   ninitvars;          /**< number of variables it has been initialized for */
    SCIP_SYNCDATA*        syncdata;           /**< array of size nsyncdata, containing the synchronization data
-                                              *   for each active synchroization */
+                                              *   for each active synchronization */
    SCIP_SYNCDATA*        lastsync;           /**< pointer to the last synchronization data that has been synchronized
                                               *   by all threads */
 
@@ -62,11 +62,10 @@ struct SCIP_SyncStore
    SCIP_Bool             stopped;            /**< flag to indicate if the solving is stopped */
    SCIP_LOCK*            lock;               /**< lock to protect the syncstore data structure from data races */
 
-   /* SPI settings */
    int                   nsyncdata;          /**< the size of the synchronization data array */
    SCIP_Real             minsyncdelay;       /**< the minimum delay before a synchronization data may be read */
    int                   maxnsyncdelay;      /**< maximum number of synchronizations before the reading of the next
-                                              *   synchronization data is enforced regardless of the minimal synchroization
+                                              *   synchronization data is enforced regardless of the minimal synchronization
                                               *   delay */
    SCIP_Real             syncfreqinit;       /**< the initial synchronization frequency which is read from the settings
                                               *   of the main SCIP when the syncstore is initialized */
@@ -83,9 +82,9 @@ struct SCIP_SyncData
    int*                  solsource;          /**< the solverid of the solution came from */
    int                   nsols;              /**< number of solutions currently stored in the synchronization data */
    SCIP_Real             bestlowerbound;     /**< largest lower bound on the objective value that was stored in this
-                                              *   synchroization data */
-   SCIP_Real             bestupperbound;     /**< smalles upper bound on the objective value that was stored in this
-                                              *   synchroization data */
+                                              *   synchronization data */
+   SCIP_Real             bestupperbound;     /**< smallest upper bound on the objective value that was stored in this
+                                              *   synchronization data */
    SCIP_Longint          syncnum;            /**< the synchronization number of this synchronization data */
    int                   winner;             /**< the solverid of the solver with the best status */
    SCIP_STATUS           status;             /**< the best status that was stored in this synchronization data */
@@ -95,11 +94,11 @@ struct SCIP_SyncData
                                               *   synchronization data */
    SCIP_BOUNDSTORE*      boundstore;         /**< a boundstore for storing all the bound changes that were added to this
                                               *   synchronization data */
-   SCIP_Real             syncfreq;           /**< the synchroization frequency that was set in this synchronization data */
+   SCIP_Real             syncfreq;           /**< the synchronization frequency that was set in this synchronization data */
    SCIP_Longint          memtotal;           /**< the total amount of memory used by all solvers including the main SCIP */
 };
 
-/** struct for storing the position of avariables lower and upper bound in the boundstore */
+/** struct for storing the position of variables lower and upper bound in the boundstore */
 typedef struct
 {
    int                   pos[2];             /**< stores at pos[SCIP_BOUNDTYPE_LOWER] the position of the lowerbound and
@@ -109,7 +108,7 @@ typedef struct
 /** struct for storing a single boundchange in the boundstore */
 typedef struct
 {
-   int                   varidx;             /**< the variables position in the variable array of the main scip */
+   int                   varidx;             /**< the variables position in the variable array of the main SCIP */
    SCIP_Real             newbound;           /**< the variables new bound */
    SCIP_BOUNDTYPE        boundtype;          /**< the type of the variables new bound */
 } BoundChg;

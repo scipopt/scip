@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2026 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -52,6 +52,7 @@ struct SCIP_IISfinder
    SCIP_CLOCK*           iisfindertime;      /**< IIS finder execution time */
    SCIP_IISFINDERDATA*   iisfinderdata;      /**< IIS finder data */
    int                   priority;           /**< priority of the IIS finder */
+   SCIP_Bool             enable;             /**< whether the IIS finder should be enabled */
 };
 
 /** IIS */

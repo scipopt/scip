@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2026 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -34,10 +34,7 @@
 
 #include <ctype.h>
 #include <stdarg.h>
-#include <assert.h>
-#include <string.h>
-#if defined(_WIN32) || defined(_WIN64)
-#else
+#ifndef _WIN32
 #include <strings.h> /*lint --e{766}*/
 #endif
 
@@ -302,7 +299,8 @@ SCIP_RETCODE SCIPcertifyActivityVarBoundExact(
    assert(scip != NULL);
    assert(scip->stat != NULL);
    assert(scip->stat != NULL);
-   assert(strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(constraint)), "exactlinear") == 0);
+
+   SCIP_STRINGEQ( SCIPconshdlrGetName(SCIPconsGetHdlr(constraint)), "exactlinear", SCIP_INVALIDCALL );
 
    certificate = scip->stat->certificate;
 
@@ -616,7 +614,6 @@ SCIP_RETCODE SCIPfreeCertificateActiveAggrInfo(
    certificate = SCIPgetCertificate(scip);
 
    assert(certificate != NULL);
-
 
    /* if the mirinfo is used it gets tranformed into sparse format, don't free it in that case */
    if( !certificate->workingaggrinfo )

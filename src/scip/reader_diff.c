@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2026 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -56,7 +56,7 @@
 #include "scip/scip_reader.h"
 #include "scip/scip_solve.h"
 #include <stdlib.h>
-#include <string.h>
+
 
 #define READER_NAME             "diffreader"
 #define READER_DESC             "file reader for changes in the LP file"
@@ -500,7 +500,7 @@ SCIP_Bool isNewSection(
 
       while( lpinput->token[c] != '\0' )
       {
-         token[c] = toupper(lpinput->token[c]); /*lint !e734*/
+         token[c] = toupper((unsigned char)lpinput->token[c]); /*lint !e734*/
          ++c;
          assert(c < 16);
       }
@@ -960,7 +960,8 @@ SCIP_DECL_READERCOPY(readerCopyDiff)
 {  /*lint --e{715}*/
    assert(scip != NULL);
    assert(reader != NULL);
-   assert(strcmp(SCIPreaderGetName(reader), READER_NAME) == 0);
+
+   SCIP_STRINGEQ( SCIPreaderGetName(reader), READER_NAME, SCIP_INVALIDCALL );
 
    /* call inclusion method of reader */
    SCIP_CALL( SCIPincludeReaderDiff(scip) );

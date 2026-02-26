@@ -3,7 +3,7 @@
 #*                  This file is part of the program and library             *
 #*         SCIP --- Solving Constraint Integer Programs                      *
 #*                                                                           *
-#*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      *
+#*  Copyright (c) 2002-2026 Zuse Institute Berlin (ZIB)                      *
 #*                                                                           *
 #*  Licensed under the Apache License, Version 2.0 (the "License");          *
 #*  you may not use this file except in compliance with the License.         *
@@ -78,6 +78,7 @@ NOBLKMEM        ?= false
 NOBUFMEM        ?= false
 NOBLKBUFMEM     ?= false
 CHECKSTAGE      ?= auto
+CHECKNAME       ?= auto
 EXACTSOLVE      ?= auto
 THREADSAFE      ?= true
 # enable debug-solution mechanism
@@ -172,7 +173,7 @@ SPLINT          ?= splint
 SCIP_VERSION_MAJOR = 11
 SCIP_VERSION_MINOR = 0
 SCIP_VERSION_PATCH = 0
-SCIP_VERSION_API = 156
+SCIP_VERSION_API = 162
 SCIP_VERSION = $(SCIP_VERSION_MAJOR).$(SCIP_VERSION_MINOR).$(SCIP_VERSION_PATCH)
 
 #-----------------------------------------------------------------------------
@@ -495,10 +496,12 @@ endif
 endif
 
 #-------------------------------------------------------
-# add flags for exact SoPlex
+# add flags for exact SoPlex, if there were not added due to LPS=spx already
 ifeq ($(LPSEXACT),spx)
-LPSLDFLAGS	=	$(LINKCXX_L)$(SCIPREALPATH)/$(LIBDIR)/$(LIBEXTTYPE) $(LINKCXX_l)soplex.$(OSTYPE).$(ARCH).$(COMP).$(LPSOPT)$(LINKLIBSUFFIX)
-LPSLIBFILES	=	$(SCIPREALPATH)/$(LIBDIR)/$(LIBEXTTYPE)/libsoplex.$(OSTYPE).$(ARCH).$(COMP).$(LIBEXTEXT)
+ifneq ($(LPS),spx)
+LPSLDFLAGS	+=	$(LINKCXX_L)$(SCIPREALPATH)/$(LIBDIR)/$(LIBEXTTYPE) $(LINKCXX_l)soplex.$(OSTYPE).$(ARCH).$(COMP).$(LPSOPT)$(LINKLIBSUFFIX)
+LPSLIBFILES	+=	$(SCIPREALPATH)/$(LIBDIR)/$(LIBEXTTYPE)/libsoplex.$(OSTYPE).$(ARCH).$(COMP).$(LIBEXTEXT)
+endif
 endif
 
 #-------------------------------------------------------
@@ -744,6 +747,14 @@ endif
 
 ifeq ($(EXPRINT),cppad)
 LINKER		=	CPP
+endif
+
+ifeq ($(CHECKNAME),auto)
+ ifeq ($(OPT),dbg)
+  CHECKNAME = true
+ else
+  CHECKNAME = false
+ endif
 endif
 
 ifeq ($(CHECKSTAGE),auto)

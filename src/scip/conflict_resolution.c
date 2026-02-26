@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2026 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -79,8 +79,7 @@
 #include "scip/var.h"
 
 #include <string.h>
-#if defined(_WIN32) || defined(_WIN64)
-#else
+#ifndef _WIN32
 #include <strings.h> /*lint --e{766}*/
 #endif
 
@@ -1329,6 +1328,7 @@ SCIP_RETCODE computeSlack(
       {
          if( fixsides != NULL && fixsides[v] == 1 ) /* if the variable is fixed */
          {
+            assert(fixbounds != NULL);
             bound = fixbounds[v];
          }
          else
@@ -1341,6 +1341,7 @@ SCIP_RETCODE computeSlack(
       {
          if( fixsides != NULL && fixsides[v] == -1 ) /* if the variable is fixed */
          {
+            assert(fixbounds != NULL);
             bound = fixbounds[v];
          }
          else
@@ -1478,7 +1479,6 @@ SCIP_RETCODE MirReduction(
    /* apply MIR */
    SCIP_CALL( SCIPcalcMIR(set->scip, refsol, POSTPROCESS, BOUNDSWITCH, USEVBDS, FALSE, FIXINTEGRALRHS, NULL, NULL,
          MINFRAC, MAXFRAC, 1.0, aggrrow, cutcoefs, &cutrhs, cutinds, &cutnnz, NULL, NULL, &cutislocal, &success) );
-
 
    if( success )
    {
@@ -1745,7 +1745,7 @@ SCIP_RETCODE slackReducingContinuousBdchgQueue(
    if( SCIPpqueueNElems(conflict->continuousbdchgqueue) != 0 )
       SCIPpqueueClear(conflict->continuousbdchgqueue);
 
-   /** For a row of the form ax >= b, we can add all continuous bound changes before inferbdchgidx that reduce the slack
+   /*  For a row of the form ax >= b, we can add all continuous bound changes before inferbdchgidx that reduce the slack
     *  for each continuous variable x_k with coefficient a_k:
     *  - a_k > 0: then add bound changes (if not already present). Uses SCIPvarGetUbchgInfo() to get the latest
     *    bound change used in the slack of row.
@@ -2040,7 +2040,7 @@ SCIP_RETCODE SCIPconflictAddConflictCon(
 
       boundtype = conflictrow->vals[idx] > 0.0 ? SCIP_BOUNDTYPE_LOWER : SCIP_BOUNDTYPE_UPPER;
 
-      /** Since the conflictrow is in the form a*x >= b:
+      /*  Since the conflictrow is in the form a*x >= b:
        *  For integer variables:
        *    coef > 0: The lower bound change is equal to ceil(lhs / coef)
        *    coef < 0: The upper bound change is equal to floor(lhs / coef)
@@ -2181,7 +2181,6 @@ SCIP_Real computeScaleReason(
 
    scale = REALABS( coefconf / coefreas );
    return scale;
-
 }
 
 /** compute the resolved conflict row resolvedrow = row1 + scale * row2 */
@@ -2356,20 +2355,22 @@ SCIP_RETCODE reasonRowFromLpRow(
          if( (SCIPbdchginfoGetBoundtype(bdchginfo) == SCIP_BOUNDTYPE_LOWER && vals[i] < 0) ||
               (SCIPbdchginfoGetBoundtype(bdchginfo) == SCIP_BOUNDTYPE_UPPER && vals[i] > 0) )
          {
-            if( strcmp(SCIPconshdlrGetName(bdchginfo->inferencedata.reason.cons->conshdlr), "knapsack") != 0 )
-               assert(!SCIPsetIsInfinity(set, rowrhs));
+            assert(!SCIPsetIsInfinity(set, rowrhs)
+               || strcmp(SCIPconshdlrGetName(bdchginfo->inferencedata.reason.cons->conshdlr), "knapsack") == 0);
+
             changesign = TRUE;
          }
          else if( (SCIPbdchginfoGetBoundtype(bdchginfo) == SCIP_BOUNDTYPE_LOWER && vals[i] > 0 ) ||
                 (SCIPbdchginfoGetBoundtype(bdchginfo) == SCIP_BOUNDTYPE_UPPER && vals[i] < 0))
          {
-            if( strcmp(SCIPconshdlrGetName(bdchginfo->inferencedata.reason.cons->conshdlr), "knapsack") != 0 )
-               assert(!SCIPsetIsInfinity(set, -rowlhs));
+            assert(!SCIPsetIsInfinity(set, -rowlhs)
+               || strcmp(SCIPconshdlrGetName(bdchginfo->inferencedata.reason.cons->conshdlr), "knapsack") == 0);
+
             changesign = FALSE;
          }
          else
          {
-            assert(FALSE);
+            SCIPABORT();
          }
          isincon = TRUE;
       }
@@ -2451,7 +2452,7 @@ SCIP_RETCODE conflictRowFromLpRow(
          }
          else
          {
-            assert(FALSE);
+            SCIPABORT();
          }
          isincon = TRUE;
       }
@@ -2523,11 +2524,8 @@ SCIP_RETCODE getReasonRow(
          e.g. negated cliques in cons_knapsack or ranged row propagation in cons_linear. */
 
       /* this happens if the reason is a negated clique found in the knapsack constraint handler */
-      if( strcmp(SCIPconshdlrGetName(reasoncon->conshdlr), "knapsack") != 0 )
-      {
-         assert(!SCIPsetIsInfinity(set, -reasonrow->lhs) || !SCIPsetIsInfinity(set, reasonrow->lhs));
-      }
-      else if( SCIPsetIsInfinity(set, -reasonrow->lhs) || SCIPsetIsInfinity(set, reasonrow->lhs) )
+      if( SCIPsetIsInfinity(set, REALABS(reasonrow->lhs))
+         && strcmp(SCIPconshdlrGetName(reasoncon->conshdlr), "knapsack") == 0 )
       {
          *success = FALSE;
          return SCIP_OKAY;
@@ -2622,7 +2620,7 @@ SCIP_RETCODE getConflictRow(
       SCIP_CALL( computeSlack(set, vars, conflictrow, currbdchginfo, NULL, NULL) );
    }
 
-   /** The conflict row might not be infeasible.
+   /*  The conflict row might not be infeasible.
     *  This may not be true is if the conflict is found by some non-linear propagation argument:
     *  - by a negated clique in the knapsack constraint handler
     *  - by propagating a ranged row with a gcd argument
@@ -2687,7 +2685,6 @@ SCIP_RETCODE executeResolutionStep(
 
    if( !(*successresolution) )
       return SCIP_OKAY;
-
 
    SCIP_CALL( computeSlack(set, vars, resolvedconflictrow, currbdchginfo, fixbounds, fixsides) );
 
@@ -2807,7 +2804,6 @@ SCIP_RETCODE executeResolutionStep(
                                  residx, successresolution) );
 
             SCIP_CALL( computeSlack(set, vars, resolvedconflictrow, currbdchginfo, fixbounds, fixsides) );
-
          }
       }
    }
@@ -2939,7 +2935,6 @@ SCIP_RETCODE addConflictRows(
 
       if( SCIPsetIsLT(set, conflictrowtoadd->coefquotient, set->conf_maxcoefquot) )
       {
-
          SCIP_Bool success;
 
          SCIP_CALL( SCIPconflictAddConflictCon(conflict, blkmem, set, stat, transprob, origprob, tree, reopt,
@@ -3104,14 +3099,14 @@ SCIP_RETCODE conflictAnalyzeResolution(
    SCIP_CALL( SCIPsetAllocBufferArray(set, &fixsides, nvars) );
    SCIP_CALL( SCIPsetAllocBufferArray(set, &fixbounds, nvars) );
 
-   /** set value in fixsides to 0 to indicate that a variable is not fixed
+   /* set value in fixsides to 0 to indicate that a variable is not fixed
     * if a variable is set at an upper bound, then the value is 1
     * if a variable is set at a lower bound, then the value is -1
     */
    for( i = 0; i < nvars; ++i )
       fixsides[i] = 0;
 
-   /** main loop:
+   /* main loop:
     * --------------------------------
     * - we start with the initial conflict row and the first bound change to
     *   resolve
@@ -3222,7 +3217,7 @@ SCIP_RETCODE conflictAnalyzeResolution(
 
          SCIPdebug(printConflictRow(conflictrow, set, vars, RESOLVED_CONFLICT_ROWTYPE));
 
-         /** A positive slack means that the conflict row is not infeasible anymore.
+         /*  A positive slack means that the conflict row is not infeasible anymore.
           *  Unfortunately we cannot guarrante that the slack becomes zero after reducing
           *  the reason (even if we have only binary variables).
           *  Two issues are non-linear propagations, e.g.
@@ -3325,8 +3320,8 @@ SCIP_RETCODE conflictAnalyzeResolution(
 
       nconstoadd = (set->conf_resfuiplevels > 0) ? MIN(set->conf_resfuiplevels, conflict->nconflictrows) : conflict->nconflictrows;
 
-      SCIP_CALL(addConflictRows(conflict, blkmem, set, stat, transprob, origprob, tree, reopt, lp, branchcand, eventqueue,
-            eventfilter, cliquetable, nconstoadd, nconss, nconfvars));
+      SCIP_CALL( addConflictRows(conflict, blkmem, set, stat, transprob, origprob, tree, reopt, lp, branchcand, eventqueue,
+            eventfilter, cliquetable, nconstoadd, nconss, nconfvars) );
    }
 
    freeConflictResources(conflict, blkmem, set, fixbounds, fixsides);

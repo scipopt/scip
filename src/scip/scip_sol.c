@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2026 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -41,8 +41,6 @@
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
-
-#include <string.h>
 
 #include "blockmemshell/memory.h"
 #include "scip/cons.h"
@@ -2069,6 +2067,7 @@ void SCIPgetSolTransObjExact(
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
  *
  *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_TRANSFORMED
  *       - \ref SCIP_STAGE_PRESOLVING
  *       - \ref SCIP_STAGE_SOLVING
  *
@@ -2082,9 +2081,12 @@ SCIP_RETCODE SCIPrecomputeSolObj(
    assert(sol != NULL);
    assert(sol->scip == scip);
 
-   SCIP_CALL( SCIPcheckStage(scip, "SCIPrecomputeSolObj", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+   SCIP_CALL( SCIPcheckStage(scip, "SCIPrecomputeSolObj", FALSE, FALSE, FALSE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
-   SCIPsolRecomputeObj(sol, scip->set, scip->stat, scip->origprob);
+   if( SCIPsolIsExact(sol) )
+      SCIPsolRecomputeInternObjExact(sol, scip->set, scip->stat, scip->origprob);
+   else
+      SCIPsolRecomputeObj(sol, scip->set, scip->stat, scip->origprob);
 
    return SCIP_OKAY;
 }
@@ -2634,9 +2636,9 @@ SCIP_RETCODE SCIPgetDualSolVal(
    assert(scip != NULL);
    assert(cons != NULL);
    assert(dualsolval != NULL);
-
    assert(SCIPconsGetHdlr(cons) != NULL);
-   assert(strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), "linear" ) == 0);
+
+   SCIP_STRINGEQ( SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), "linear", SCIP_INVALIDCALL );
 
    SCIP_CALL( SCIPconsGetNVars(cons, scip->set, &nvars, &success) );
    assert(success);  /* is always successful, since we only have linear constraints */
@@ -2671,10 +2673,13 @@ SCIP_RETCODE SCIPgetDualSolVal(
 
          activity = SCIPvarGetLPSol(vars[0]) * vals[0];
 
-         /* return the reduced cost of the variable if the constraint would be tight */
+         /* return the reduced cost of the variable divided by the coefficient if the constraint would be tight */
          if( SCIPsetIsEQ(scip->set, activity, SCIPgetRhsLinear(scip, cons))
           || SCIPsetIsEQ(scip->set, activity, SCIPgetLhsLinear(scip, cons)) )
-            (*dualsolval) = SCIPgetVarRedcost(scip, vars[0]);
+         {
+            assert(vals[0] != 0.0);
+            (*dualsolval) = SCIPgetVarRedcost(scip, vars[0]) / vals[0];
+         }
          else
             (*dualsolval) = 0.0;
       }

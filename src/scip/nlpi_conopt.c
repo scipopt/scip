@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2026 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -226,7 +226,7 @@ static int COI_CALLCONV ReadMatrix(
    int                   VSTA[],             /**< initial status values for the variable (used if coidef_inistat() was called with IniStat = 1 or 2) */
    int                   TYPE[],             /**< constraint types (equation, inequality, free) */
    double                RHS[],              /**< right hand sides values of constraints (default is zero) */
-   int                   ESTA[],             /**<initial status values for constraint slacks (used if coidef_inistat() was called with IniStat = 1 or 2) */
+   int                   ESTA[],             /**< initial status values for constraint slacks (used if coidef_inistat() was called with IniStat = 1 or 2) */
    int                   COLSTA[],           /**< starting indices of Jacobian columns in ROWNO */
    int                   ROWNO[],            /**< row numbers of Jacobian nonzeros */
    double                VALUE[],            /**< values of the Jacobian elements (defined for all constant Jacobian elements) */
@@ -469,28 +469,37 @@ static int COI_CALLCONV ReadMatrix(
 
 #ifdef STRUCTURE_DEBUG
    SCIPdebugMsg(scip, "Jacobian structure information:\n");
-   SCIPdebugMsg(scip, "COLSTA =\n");
+   SCIPdebugMsg(scip, "COLSTA = ");
    for( int i = 0; i <= NUMVAR; i++ )
-      printf("%d, ", COLSTA[i]);
-   printf("\n");
+      SCIPdebugMsgPrint(scip, "%d, ", COLSTA[i]);
+   SCIPdebugMsgPrint(scip, "\n");
 
-   SCIPdebugMsg(scip, "ROWNO =\n");
+   SCIPdebugMsg(scip, "ROWNO = ");
    for( int i = 0; i < NUMNZ; i++ )
-      printf("%d, ", ROWNO[i]);
-   printf("\n");
+      SCIPdebugMsgPrint(scip, "%d, ", ROWNO[i]);
+   SCIPdebugMsgPrint(scip, "\n");
 
-   SCIPdebugMsg(scip, "NLFLAG =\n");
+   SCIPdebugMsg(scip, "NLFLAG = ");
    for( int i = 0; i < NUMNZ; i++ )
-      printf("%d, ", NLFLAG[i]);
-   printf("\n");
+      SCIPdebugMsgPrint(scip, "%d, ", NLFLAG[i]);
+   SCIPdebugMsgPrint(scip, "\n");
 
-   SCIPdebugMsg(scip, "VALUE =\n");
+   SCIPdebugMsg(scip, "VALUE = ");
    for( int i = 0; i < NUMNZ; i++ )
-      if( SCIPisInfinity(scip, VALUE[i]) )
-         printf("inf, ");
+      if( VALUE[i] == 1.234e34 )  /*lint !e777*/  /* CONOPT's special value for "undefined" */
+         SCIPdebugMsgPrint(scip, "undef, ");
       else
-         printf("%g, ", VALUE[i]);
-   printf("\n");
+         SCIPdebugMsgPrint(scip, "%g, ", VALUE[i]);
+   SCIPdebugMsgPrint(scip, "\n");
+   /*
+   for( int i = 0; i < NUMVAR; i++ )
+   {
+      SCIPdebugMsg(scip, "var %d:", i);
+      for( int j = COLSTA[i]; j < COLSTA[i+1]; ++j )
+         SCIPdebugMsgPrint(scip, " %d", ROWNO[j]);
+      SCIPdebugMsgPrint(scip, "\n");
+   }
+   */
    fflush(stdout);
 #endif
 
@@ -510,11 +519,20 @@ static int COI_CALLCONV Message(
 
    assert(problem != NULL);
    assert(problem->scip != NULL);
+   assert(NMSG <= DMSG);  /* conopt docu says that NMSG is always <= DMSG */
 
-   if( problem->verblevel > 0 )
+   switch( problem->verblevel )
    {
-      for( int i = 0; i < SMSG; i++ )
-         SCIPinfoMessage(problem->scip, NULL, "%s\n", MSGV[i]);
+      case 0:
+         break;
+      case 1:
+         for( int i = 0; i < SMSG; i++ )
+            SCIPinfoMessage(problem->scip, NULL, "%s\n", MSGV[i]);
+         break;
+      default:
+         for( int i = 0; i < SMSG || i < DMSG; i++ )
+            SCIPinfoMessage(problem->scip, NULL, "%s\n", MSGV[i]);
+         break;
    }
 
    return 0;
@@ -649,6 +667,7 @@ static int COI_CALLCONV Status(
       case 9: /* error: setup failure */
       case 10: /* error: solver failure */
       case 11: /* error: internal solver error */
+      case 13: /* error: general system error */
          SCIPdebugMsg(scip, "CONOPT terminated with status %d\n", SOLSTA);
          problem->termstat = SCIP_NLPTERMSTAT_OTHER;
          break;
@@ -682,7 +701,7 @@ static int COI_CALLCONV FDEval(
    double                JAC[],              /**< vector of Jacobian values */
    int                   ROWNO,              /**< number of the row for which nonlinearities are to be evaluated (provided by CONOPT) */
    const int             JACNUM[],           /**< list of column numbers for the nonlinear nonzero Jacobian elements in
-                                                  the current row (provided by CONOPT when MODE = 2 or 3) */
+                                              *   the current row (provided by CONOPT when MODE = 2 or 3) */
    int                   MODE,               /**< indicator for mode of evaluation (provided by CONOPT) */
    int                   IGNERR,             /**< indicator whether CONOPT assumes the point to be safe (0) or potentially unsafe (1) */
    int*                  ERRCNT,             /**< scalar function evaluation error indicator (set to 1 if a function value cannot be computed */
@@ -721,6 +740,61 @@ static int COI_CALLCONV FDEval(
    return 0;
 } /*lint !e715*/
 
+/** CONOPT callback for function and Jacobian interval evaluation
+ *
+ *  The callback has three modes, indicated by MODE:
+ *
+ *  1: Only evaluate the bounds on the sum of the nonlinear terms in row ROWNO and return the interval in [GMIN, GMAX].
+ *  2: Only evaluate the bounds on the nonlinear Jacobian elements in row ROWNO and return the intervals in [JMIN, JMAX].
+ *  3: Perform both option 1 and 2.
+ */
+static int COI_CALLCONV FDInterval(
+   const double          XMIN[],             /**< lower bound on variables (provided by CONOPT) */
+   const double          XMAX[],             /**< upper bound on variables (provided by CONOPT) */
+   double*               GMIN,               /**< buffer for lower bound on function value in constraint ROWNO */
+   double*               GMAX,               /**< buffer for lower bound on function value in constraint ROWNO */
+   double                JMIN[],             /**< buffer for lower bound on the derivatives of the function in constraint ROWNO */
+   double                JMAX[],             /**< buffer for upper bound on the derivatives of the function in constraint ROWNO */
+   int                   ROWNO,              /**< number of the row for which nonlinearities are to be evaluated (provided by CONOPT) */
+   const int             JACNUM[],           /**< list of column numbers for the nonlinear nonzero Jacobian elements in
+                                              *   the current row (provided by CONOPT when MODE = 2 or 3) */
+   int                   MODE,               /**< indicator for mode of evaluation (provided by CONOPT) */
+   double                PINF,               /**< plus infinity (provided by CONOPT) */
+   int                   NUMVAR,             /**< number of variables (provided by CONOPT) */
+   int                   NUMJAC,             /**< number of nonlinear nonzero Jacobian elements in the current row */
+   void*                 USRMEM              /**< user memory pointer (i.e. pointer to SCIP_NLPIPROBLEM) */
+   )
+{
+   SCIP_RETCODE retcode;
+   SCIP_NLPIPROBLEM* problem = (SCIP_NLPIPROBLEM*)USRMEM;
+
+   assert(problem != NULL);
+   assert(ROWNO <= SCIPnlpiOracleGetNConstraints(problem->oracle));
+
+   /* currently do not having interval derivatives, so just return for MODE == 2
+    * (CONOPT has initialized JMIN/JMAX to -/+PINF)
+    */
+   if( MODE == 2 )
+      return 0;
+
+   if( ROWNO < SCIPnlpiOracleGetNConstraints(problem->oracle) )
+   {
+      retcode = SCIPnlpiOracleEvalConstraintInterval(problem->scip, problem->oracle, PINF, ROWNO, XMIN, XMAX, GMIN, GMAX);
+   }
+   else
+   {
+      retcode = SCIPnlpiOracleEvalObjectiveInterval(problem->scip, problem->oracle, PINF, XMIN, XMAX, GMIN, GMAX);
+   }
+
+   if( retcode != SCIP_OKAY )
+   {
+      *GMIN = -PINF;
+      *GMAX = PINF;
+   }
+
+   return 0;
+} /*lint !e715*/
+
 /** CONOPT callback to pass some of the options (not supported via COIDEF_* functions) to CONOPT */
 static int COI_CALLCONV Option(
    int                   NCALL,              /**< number of callback call (provided by CONOPT) */
@@ -748,6 +822,10 @@ static int COI_CALLCONV Option(
          strcpy(NAME, "RTREDG");
          *RVAL = problem->opttol;
          break;
+      case 2: /* turn definitional constraints off for now (conopt#103) */
+         strcpy(NAME, "Flg_NoDefc");
+         *LVAL = 1;
+         break;
       default:
          *NAME = '\0';
    }
@@ -759,7 +837,7 @@ static int COI_CALLCONV Option(
 static int COI_CALLCONV LagrStr(
    int                   HSRW[],             /**< row numbers of the lower triangular part of the Hessian */
    int                   HSCL[],             /**< column numbers of the lower triangular part of the Hessian; elements must be
-                                                  sorted column-wise, and within each column, row-wise */
+                                              *   sorted column-wise, and within each column, row-wise */
    int*                  NODRV,              /**< can be set to 1 if the derivatives could not be computed */
    int                   NUMVAR,             /**< number of variables as defined in coidef_numvar() (provided by CONOPT) */
    int                   NUMCON,             /**< number of constraints as defined in coidef_numcon() (provided by CONOPT) */
@@ -802,7 +880,7 @@ static int COI_CALLCONV LagrVal(
    const double          U[],                /**< vector of weights on the individual constraints (provided by CONOPT) */
    const int             HSRW[],             /**< row numbers of the lower triangular part of the Hessian (provided by CONOPT) */
    const int             HSCL[],             /**< column numbers of the lower triangular part of the Hessian; elements must be
-                                                  sorted column-wise, and within each column, row-wise (provided by CONOPT) */
+                                              *   sorted column-wise, and within each column, row-wise (provided by CONOPT) */
    double                HSVL[],             /**< values of Hessian entries */
    int*                  NODRV,              /**< can be set to 1 if the derivatives could not be computed */
    int                   NUMVAR,             /**< number of variables as defined in coidef_numvar() (provided by CONOPT) */
@@ -848,7 +926,7 @@ static SCIP_RETCODE initConopt(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NLPIDATA*        data,               /**< pointer to NLPIDATA structure */
    SCIP_NLPIPROBLEM*     problem             /**< pointer to NLPI problem structure */
-)
+   )
 {
    int COI_Error = 0; /* CONOPT error counter */
    int nrangeconss = 0;
@@ -921,6 +999,7 @@ static SCIP_RETCODE initConopt(
    COI_Error += COIDEF_Solution(problem->CntVect, Solution);
    COI_Error += COIDEF_ReadMatrix(problem->CntVect, ReadMatrix);
    COI_Error += COIDEF_FDEval(problem->CntVect, FDEval);
+   COI_Error += COIDEF_FDInterval(problem->CntVect, FDInterval);
    COI_Error += COIDEF_Option(problem->CntVect, Option);
    COI_Error += COIDEF_2DLagrStr(problem->CntVect, LagrStr);
    COI_Error += COIDEF_2DLagrVal(problem->CntVect, LagrVal);
@@ -944,7 +1023,7 @@ static SCIP_RETCODE initConopt(
 static void handleConoptParam(
    SCIP_NLPIPROBLEM*     problem,            /**< pointer to problem data structure */
    const SCIP_NLPPARAM   param               /**< NLP solve parameters */
-)
+   )
 {
    int COI_Error = 0; /* CONOPT error counter */
 

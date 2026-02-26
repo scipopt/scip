@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2026 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -29,13 +29,12 @@
  * @author Paul Meinhold
  */
 
-#include <assert.h>
-
 #include "scip/iisfinder_greedy.h"
 
 #define IISFINDER_NAME           "greedy"
 #define IISFINDER_DESC           "greedy deletion or addition constraint deletion"
 #define IISFINDER_PRIORITY        8000
+#define IISFINDER_ENABLE          TRUE
 
 #define DEFAULT_TIMELIMPERITER   1e+20 /**< time limit of optimization process for each individual subproblem */
 #define DEFAULT_NODELIMPERITER   -1L   /**< node limit of optimization process for each individual subproblem */
@@ -517,7 +516,7 @@ SCIP_RETCODE deletionFilterBatch(
    int nconss;
    int nvars;
    int batchindex;
-   int batchsize;
+   int batchsize = initbatchsize;
    int iteration;
    int i;
    int k;
@@ -977,7 +976,8 @@ SCIP_DECL_IISFINDERCOPY(iisfinderCopyGreedy)
 {  /*lint --e{715}*/
    assert(scip != NULL);
    assert(iisfinder != NULL);
-   assert(strcmp(SCIPiisfinderGetName(iisfinder), IISFINDER_NAME) == 0);
+
+   SCIP_STRINGEQ( SCIPiisfinderGetName(iisfinder), IISFINDER_NAME, SCIP_INVALIDCALL );
 
    /* call inclusion method of IIS finder */
    SCIP_CALL( SCIPincludeIISfinderGreedy(scip) );
@@ -1039,7 +1039,7 @@ SCIP_RETCODE SCIPincludeIISfinderGreedy(
    BMSclearMemory(iisfinderdata);
 
    SCIP_CALL( SCIPincludeIISfinderBasic(scip, &iisfinder, IISFINDER_NAME, IISFINDER_DESC, IISFINDER_PRIORITY,
-         iisfinderExecGreedy, iisfinderdata) );
+         IISFINDER_ENABLE, iisfinderExecGreedy, iisfinderdata) );
 
    assert(iisfinder != NULL);
 
@@ -1112,7 +1112,6 @@ SCIP_RETCODE SCIPincludeIISfinderGreedy(
          "iis/" IISFINDER_NAME "/batchupdateinterval",
          "the number of iterations to run with a constant batchsize before updating (1: always update)",
          &iisfinderdata->batchupdateinterval, TRUE, DEFAULT_BATCHUPDATEINTERVAL, 1, INT_MAX, NULL, NULL) );
-
 
    return SCIP_OKAY;
 }

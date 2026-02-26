@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2026 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -34,7 +34,6 @@
 
 #define _USE_MATH_DEFINES   /* to get M_E on Windows */  /*lint !750 */
 
-#include <string.h>
 #include <math.h>
 
 #include "scip/expr_exp.h"
@@ -310,13 +309,14 @@ SCIP_DECL_EXPRESTIMATE(estimateExp)
    assert(scip != NULL);
    assert(expr != NULL);
    assert(SCIPexprGetNChildren(expr) == 1);
-   assert(strcmp(SCIPexprhdlrGetName(SCIPexprGetHdlr(expr)), EXPRHDLR_NAME) == 0);
    assert(coefs != NULL);
    assert(constant != NULL);
    assert(islocal != NULL);
    assert(branchcand != NULL);
    assert(*branchcand == TRUE);
    assert(success != NULL);
+
+   SCIP_STRINGEQ( SCIPexprhdlrGetName(SCIPexprGetHdlr(expr)), EXPRHDLR_NAME, SCIP_INVALIDCALL );
 
    *success = TRUE;
    *coefs = 0.0;
@@ -352,7 +352,8 @@ SCIP_DECL_EXPRINITESTIMATES(initestimatesExp)
    assert(scip != NULL);
    assert(expr != NULL);
    assert(SCIPexprGetNChildren(expr) == 1);
-   assert(strcmp(SCIPexprhdlrGetName(SCIPexprGetHdlr(expr)), EXPRHDLR_NAME) == 0);
+
+   SCIP_STRINGEQ( SCIPexprhdlrGetName(SCIPexprGetHdlr(expr)), EXPRHDLR_NAME, SCIP_INVALIDCALL );
 
    /* get expression data */
    child = SCIPexprGetChildren(expr)[0];

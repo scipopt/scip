@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2026 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -37,9 +37,6 @@
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 #include "cons_lop.h"
-
-#include <assert.h>
-#include <string.h>
 
 
 /* constraint handler properties */
@@ -170,8 +167,9 @@ SCIP_DECL_CONSHDLRCOPY(conshdlrCopyLOP)
 {  /*lint --e{715}*/
    assert( scip != NULL );
    assert( conshdlr != NULL );
-   assert( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0 );
    assert( valid != NULL );
+
+   SCIP_STRINGEQ( SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME, SCIP_INVALIDCALL );
 
    /* call inclusion method of constraint handler */
    SCIP_CALL( SCIPincludeConshdlrLOP(scip) );
@@ -190,11 +188,12 @@ SCIP_DECL_CONSDELETE(consDeleteLOP)
 
    assert( scip != NULL );
    assert( conshdlr != NULL );
-   assert( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0 );
    assert( cons != NULL );
    assert( consdata != NULL);
    assert( *consdata != NULL);
    assert( (*consdata)->vars != NULL );
+
+   SCIP_STRINGEQ( SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME, SCIP_INVALIDCALL );
 
    SCIPdebugMsg(scip, "deleting linear ordering constraint <%s>.\n", SCIPconsGetName(cons));
 
@@ -222,7 +221,8 @@ SCIP_DECL_CONSEXIT(consExitLOP)
 
    assert( scip != NULL );
    assert( conshdlr != NULL );
-   assert( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0 );
+
+   SCIP_STRINGEQ( SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME, SCIP_INVALIDCALL );
 
    SCIPdebugMsg(scip, "exiting linear ordering constraint handler <%s>.\n", SCIPconshdlrGetName(conshdlr));
 
@@ -305,9 +305,10 @@ SCIP_DECL_CONSTRANS(consTransLOP)
 
    assert( scip != NULL );
    assert( conshdlr != NULL );
-   assert( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0 );
    assert( sourcecons != NULL );
    assert( targetcons != NULL );
+
+   SCIP_STRINGEQ( SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME, SCIP_INVALIDCALL );
 
    SCIPdebugMsg(scip, "transforming linear ordering constraint <%s>.\n", SCIPconsGetName(sourcecons) );
 
@@ -359,8 +360,9 @@ SCIP_DECL_CONSINITLP(consInitlpLOP)
 
    assert( scip != NULL );
    assert( conshdlr != NULL );
-   assert( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0 );
    assert( infeasible != NULL );
+
+   SCIP_STRINGEQ( SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME, SCIP_INVALIDCALL );
 
    *infeasible = FALSE;
 
@@ -423,9 +425,10 @@ SCIP_DECL_CONSSEPALP(consSepalpLOP)
 
    assert( scip != NULL );
    assert( conshdlr != NULL );
-   assert( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0 );
    assert( conss != NULL );
    assert( result != NULL );
+
+   SCIP_STRINGEQ( SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME, SCIP_INVALIDCALL );
 
    *result = SCIP_DIDNOTRUN;
 
@@ -467,9 +470,10 @@ SCIP_DECL_CONSSEPASOL(consSepasolLOP)
 
    assert( scip != NULL );
    assert( conshdlr != NULL );
-   assert( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0 );
    assert( conss != NULL );
    assert( result != NULL );
+
+   SCIP_STRINGEQ( SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME, SCIP_INVALIDCALL );
 
    *result = SCIP_DIDNOTRUN;
 
@@ -511,9 +515,10 @@ SCIP_DECL_CONSENFOLP(consEnfolpLOP)
 
    assert( scip != NULL );
    assert( conshdlr != NULL );
-   assert( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0 );
    assert( conss != NULL );
    assert( result != NULL );
+
+   SCIP_STRINGEQ( SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME, SCIP_INVALIDCALL );
 
    *result = SCIP_DIDNOTRUN;
 
@@ -636,9 +641,10 @@ SCIP_DECL_CONSENFOPS(consEnfopsLOP)
 
    assert( scip != NULL );
    assert( conshdlr != NULL );
-   assert( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0 );
    assert( conss != NULL );
    assert( result != NULL );
+
+   SCIP_STRINGEQ( SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME, SCIP_INVALIDCALL );
 
    /* loop through all constraints */
    for (c = 0; c < nconss; ++c)
@@ -722,9 +728,10 @@ SCIP_DECL_CONSCHECK(consCheckLOP)
 
    assert( scip != NULL );
    assert( conshdlr != NULL );
-   assert( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0 );
    assert( conss != NULL );
    assert( result != NULL );
+
+   SCIP_STRINGEQ( SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME, SCIP_INVALIDCALL );
 
    /* loop through all constraints */
    for (c = 0; c < nconss; ++c)
@@ -826,9 +833,10 @@ SCIP_DECL_CONSPROP(consPropLOP)
 
    assert( scip != NULL );
    assert( conshdlr != NULL );
-   assert( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0 );
    assert( conss != NULL );
    assert( result != NULL );
+
+   SCIP_STRINGEQ( SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME, SCIP_INVALIDCALL );
 
    *result = SCIP_DIDNOTRUN;
 
@@ -991,11 +999,12 @@ SCIP_DECL_CONSRESPROP(consRespropLOP)
 
    assert( scip != NULL );
    assert( conshdlr != NULL );
-   assert( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0 );
    assert( cons != NULL );
    assert( infervar != NULL );
    assert( bdchgidx != NULL );
    assert( result != NULL );
+
+   SCIP_STRINGEQ( SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME, SCIP_INVALIDCALL );
 
    SCIPdebugMsg(scip, "Propagation resolution of constraint <%s>.\n", SCIPconsGetName(cons));
    *result = SCIP_DIDNOTFIND;
@@ -1115,8 +1124,9 @@ SCIP_DECL_CONSLOCK(consLockLOP)
 
    assert( scip != NULL );
    assert( conshdlr != NULL );
-   assert( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0 );
    assert( cons != NULL );
+
+   SCIP_STRINGEQ( SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME, SCIP_INVALIDCALL );
 
    SCIPdebugMsg(scip, "Locking linear ordering constraint <%s>.\n", SCIPconsGetName(cons));
 
@@ -1154,8 +1164,9 @@ SCIP_DECL_CONSPRINT(consPrintLOP)
 
    assert( scip != NULL );
    assert( conshdlr != NULL );
-   assert( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0 );
    assert( cons != NULL );
+
+   SCIP_STRINGEQ( SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME, SCIP_INVALIDCALL );
 
    consdata = SCIPconsGetData(cons);
    assert( consdata != NULL );
@@ -1198,12 +1209,13 @@ SCIP_DECL_CONSCOPY(consCopyLOP)
 
    assert( scip != NULL );
    assert( sourceconshdlr != NULL );
-   assert( strcmp(SCIPconshdlrGetName(sourceconshdlr), CONSHDLR_NAME) == 0 );
    assert( cons != NULL );
    assert( sourcescip != NULL );
    assert( sourcecons != NULL );
    assert( varmap != NULL );
    assert( valid != NULL );
+
+   SCIP_STRINGEQ( SCIPconshdlrGetName(sourceconshdlr), CONSHDLR_NAME, SCIP_INVALIDCALL );
 
    *valid = TRUE;
 

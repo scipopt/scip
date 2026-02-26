@@ -1645,8 +1645,8 @@ struct FormatSpec : AlignSpec {
   char type_;
 
   FormatSpec(
-    unsigned width = 0, char type = 0, wchar_t fill = ' ')
-  : AlignSpec(width, fill), flags_(0), precision_(-1), type_(type) {}
+    unsigned width = 0, char type = 0, wchar_t fill = ' ', int prec = -1)
+  : AlignSpec(width, fill), flags_(0), precision_(prec), type_(type) {}
 
   bool flag(unsigned f) const { return (flags_ & f) != 0; }
   int precision() const { return precision_; }
@@ -2344,8 +2344,19 @@ class SystemError : public internal::RuntimeError {
 template <typename Char>
 class BasicWriter {
  private:
-  // Output buffer.
+  /// Output buffer.
   Buffer<Char> &buffer_;
+
+   FormatSpec fmtspec_double_
+      {
+          0, 0, ' ',
+          std::numeric_limits<double>::max_digits10
+      };
+  FormatSpec fmtspec_long_double_
+       {
+           0, 0, ' ',
+           std::numeric_limits<long double>::max_digits10
+       };
 
   FMT_DISALLOW_COPY_AND_ASSIGN(BasicWriter);
 
@@ -2548,7 +2559,7 @@ class BasicWriter {
   }
 
   BasicWriter &operator<<(double value) {
-    write_double(value, FormatSpec());
+    write_double(value, fmtspec_double_);
     return *this;
   }
 
@@ -2559,7 +2570,7 @@ class BasicWriter {
     \endrst
    */
   BasicWriter &operator<<(long double value) {
-    write_double(value, FormatSpec());
+    write_double(value, fmtspec_long_double_);
     return *this;
   }
 

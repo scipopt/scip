@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2026 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -53,7 +53,7 @@
 #include "tinycthread/tinycthread.h"
 
 /* do defines for windows directly here to make the lpi more independent */
-#if defined(_WIN32) || defined(_WIN64)
+#ifdef _WIN32
 #define snprintf _snprintf
 #endif
 
@@ -903,6 +903,7 @@ SCIP_RETCODE SCIPlpiCreate(
    /* disable warnings for large bounds */
    MOSEK_CALL( MSK_putdouparam((*lpi)->task, MSK_DPAR_DATA_TOL_BOUND_WRN, MSK_INFINITY));
 
+   (*lpi)->optimizecount = 0;
    (*lpi)->termcode = MSK_RES_OK;
    (*lpi)->itercount = 0;
    (*lpi)->pricing = SCIP_PRICING_LPIDEFAULT;
@@ -4468,7 +4469,7 @@ SCIP_RETCODE SCIPlpiGetBInvCol(
  */
 SCIP_RETCODE SCIPlpiGetBInvARow(
    SCIP_LPI*             lpi,                /**< LP interface structure */
-   int                   row,                /**< row number */
+   int                   r,                  /**< row number */
    const SCIP_Real*      binvrow,            /**< row in (A_B)^-1 from prior call to SCIPlpiGetBInvRow(), or NULL */
    SCIP_Real*            coef,               /**< vector to return coefficients of the row */
    int*                  inds,               /**< array to store the non-zero indices, or NULL */
@@ -4510,7 +4511,7 @@ SCIP_RETCODE SCIPlpiGetBInvARow(
 
       /* get dense vector */
       SCIP_ALLOC( BMSallocMemoryArray(&binv, nrows) );
-      SCIP_CALL( SCIPlpiGetBInvRow(lpi, row, binv, NULL, NULL) );
+      SCIP_CALL( SCIPlpiGetBInvRow(lpi, r, binv, NULL, NULL) );
    }
    else
       binv = (SCIP_Real*)binvrow;

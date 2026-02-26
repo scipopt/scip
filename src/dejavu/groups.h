@@ -520,6 +520,15 @@ namespace dejavu {
             dej_nodiscard int nsupp() const {
                 return automorphism_supp.cur_pos;
             }
+
+            /**
+             *
+             * @return Size of the support. If support01 is set, only returns 0 or 1 depending on whether support is
+             * trivial.
+             */
+            dej_nodiscard int get_domain_size() const {
+                return domain_size;
+            }
         };
 
         /**
@@ -842,6 +851,7 @@ namespace dejavu {
              */
             void store(int new_domain_size, automorphism_workspace &automorphism, markset &helper) {
                 domain_size = new_domain_size;
+                data.reset();
                 dej_assert(data.empty());
 
                 // automorphism may be encoded with support01, hence we compute the support if necessary
@@ -973,6 +983,34 @@ namespace dejavu {
                 return static_cast<int>(num);
             }
 
+            /**
+             * Add a generator to this generating set.
+             *
+             * @param w The Schreier workspace.
+             * @param automorphism The automorphism to be stored as a generator
+             * @return Identifier of the new generator in the generating set.
+             */
+            int add_generator(markset& scratch, automorphism_workspace &automorphism) {
+                // store the automorphism
+                generators.emplace_back(new stored_automorphism);
+                const auto num = generators.size() - 1;
+                generators[num]->store(domain_size, automorphism, scratch);
+
+                // update statistic on sparse and dense generators
+                s_stored_sparse += (generators[num]->get_store_type() ==
+                                    stored_automorphism::stored_automorphism_type::STORE_SPARSE);
+                s_stored_dense += (generators[num]->get_store_type() ==
+                                   stored_automorphism::stored_automorphism_type::STORE_DENSE);
+
+                // update support size
+                if (generators[num]->get_store_type() == stored_automorphism::stored_automorphism_type::STORE_DENSE)
+                    support_size += domain_size;
+                else
+                    support_size += automorphism.nsupp();
+
+                return static_cast<int>(num);
+            }
+
             void remove_generator(size_t num) {
                 dej_assert(num >= 0);
                 dej_assert(num < generators.size());
@@ -1061,12 +1099,14 @@ namespace dejavu {
             };*/
             int fixed = -1;                       /**< vertex fixed by this transversal */
             int sz_upb = INT32_MAX;               /**< upper bound for size of the transversal (e.g. color class size) */
-            int level = -1;
+            int level     = -1;
             bool finished = false;
+            uint64_t* s_computational_cost = nullptr;
 
             std::vector<int> fixed_orbit;         /**< contains vertices of orbit at this schreier level */
             std::vector<int> fixed_orbit_to_perm; /**< maps fixed_orbit[i] to generators[i] in class \ref schreier. */
             std::vector<int> fixed_orbit_to_pwr;  /**< power that should to be applied to generators[i] in class \ref schreier. */
+
 
             //stored_transversal_type store_type = STORE_SPARSE; /**< whether above structures are stored dense or sparse */
 
@@ -1076,6 +1116,7 @@ namespace dejavu {
              * @param w The schreier_workspace to which the orbit is loaded.
              */
             void load_orbit_to_scratch(schreier_workspace &w) const {
+                if(s_computational_cost) *s_computational_cost += fixed_orbit.size();
                 w.scratch1.reset();
                 for (int p : fixed_orbit) {
                     w.scratch1.set(p);
@@ -1111,7 +1152,8 @@ namespace dejavu {
              * @param pwr A power that is applied to the generator first.
              */
             static void apply_perm(schreier_workspace &w, automorphism_workspace &automorphism,
-                                   generating_set &generators, const int gen_num, const int pwr) {
+                                   generating_set &generators, const int gen_num, const int pwr,
+                                   uint64_t* computational_cost = nullptr) {
                 // load perm into workspace
                 auto generator = generators[gen_num];
 
@@ -1121,8 +1163,10 @@ namespace dejavu {
                     generator->load(w.loader, w.scratch_auto);
                     // multiply
                     if(generator->get_store_type() == stored_automorphism::STORE_DENSE) {
+                        if(computational_cost) *computational_cost += w.scratch_auto.get_domain_size();
                         automorphism.apply(w.scratch_apply1, w.scratch_apply2, w.scratch_apply3, w.loader.p(), pwr);
                     } else {
+                        if(computational_cost) *computational_cost += w.scratch_auto.nsupp() * pwr;
                         automorphism.apply_sparse(w.scratch_apply1, w.scratch_apply2, w.scratch_apply3, w.loader.p(),
                                                   w.scratch_auto.supp(), w.scratch_auto.nsupp(), pwr);
                     }
@@ -1131,6 +1175,8 @@ namespace dejavu {
             }
 
         public:
+
+            shared_transversal() {}
 
             /**
              * @return Size of the transversal.
@@ -1146,6 +1192,8 @@ namespace dejavu {
             dej_nodiscard int get_size_upper_bound() const {
                 return sz_upb;
             }
+
+
             /**
              * Check whether a point \p p is contained in transversal.
              *
@@ -1212,12 +1260,14 @@ namespace dejavu {
              * @param level Position of the transversal in the base of Schreier structure.
              * @param sz_upb Upper bound for the size of transversal (e.g., color class size in combinatorial base).
              */
-            void initialize(const int fixed_vertex, const int new_level, const int new_sz_upb) {
+            void initialize(const int fixed_vertex, const int new_level, const int new_sz_upb,
+                            uint64_t* computational_cost) {
                 dej_assert(fixed_vertex >= 0);
                 dej_assert(new_level >= 0);
                 fixed = fixed_vertex;
                 this->level  = new_level;
                 this->sz_upb = new_sz_upb;
+                s_computational_cost = computational_cost;
                 add_to_fixed_orbit(fixed_vertex, -1, 0);
             }
 
@@ -1229,13 +1279,12 @@ namespace dejavu {
              * @return whether transversal was extended
              */
             bool extend_with_automorphism(schreier_workspace &w, generating_set &generators,
-                                          automorphism_workspace &automorphism) {
+                                          automorphism_workspace &automorphism, int gen_num = -1) {
                 if (finished) return false; // Already finished transversal? Nothing to do, then!
 
                 // load orbit of this transversal to our workspace, such that we have random access to points in O(1)
                 load_orbit_to_scratch(w);
                 bool changed = false; /*< we changed this transversal? */
-                int  gen_num = -1;    /*< the generator we added to extend this transversal, -1 means no generator */
 
                 // watch out, we may enlarge fixed_orbit in the loop below
                 for (int i = 0; i < static_cast<int>(fixed_orbit.size()); ++i) {
@@ -1266,6 +1315,8 @@ namespace dejavu {
                     }
                 }
 
+                if(s_computational_cost) *s_computational_cost += fixed_orbit.size();
+
                 // We reached upper bound for the size of this transversal? Then mark transversal as "finished"!
                 if (sz_upb == (int) fixed_orbit.size() && !finished) {
                     finished = true;
@@ -1286,7 +1337,7 @@ namespace dejavu {
              * @return whether \p automorphism is now the identity
              */
             bool fix_automorphism(schreier_workspace &w, generating_set &generators,
-                                  automorphism_workspace &automorphism) const {
+                                  automorphism_workspace &automorphism) {
                 int fixed_map = automorphism.p()[fixed]; // Where is fixed mapped to?
 
                 // as long as `fixed` is not yet fixed, we apply automorphisms from the transversal as prescribed by
@@ -1296,11 +1347,38 @@ namespace dejavu {
                     dej_assert(pos >= 0);
                     const int perm = fixed_orbit_to_perm[pos]; // generator to apply for `fixed_map`
                     const int pwr  = fixed_orbit_to_pwr[pos];  // power to use for `fixed_map`
-                    apply_perm(w, automorphism, generators, perm, pwr);
+                    apply_perm(w, automorphism, generators, perm, pwr, s_computational_cost);
                     fixed_map = automorphism.p()[fixed]; // Fixed now? Or we need to go again?
                 }
                 dej_assert(automorphism.p()[fixed] == fixed);
                 return automorphism.nsupp() == 0;
+            }
+
+            /**
+             * Compute an automorphism that maps \p v to \a fixed.
+             *
+             * @param w Schreier workspace to use
+             * @param generators The underlying generating set.
+             * @param automorphism Resulting automorphism.
+             * @param v  Vertex which should be mapped to \a fixed
+             * @return whether a fixing automorphism could be found
+             */
+            bool fixing_automorphism(schreier_workspace &w, generating_set &generators,
+                                  automorphism_workspace &automorphism, const int v) {
+                automorphism.reset();
+                if(find_point(v) == -1) return false;
+
+                // as long as v != fixed, apply elements
+                while (fixed != automorphism[v]) {
+                    const int pos = find_point(automorphism[v]); // Where are we storing the information for `fixed_map`?
+                    dej_assert(pos >= 0);
+                    const int perm = fixed_orbit_to_perm[pos]; // generator to apply for `fixed_map`
+                    const int pwr  = fixed_orbit_to_pwr[pos];  // power to use for `fixed_map`
+                    apply_perm(w, automorphism, generators, perm, pwr, s_computational_cost);
+                }
+
+                dej_assert(automorphism[v] == fixed);
+                return true;
             }
         };
 
@@ -1322,8 +1400,9 @@ namespace dejavu {
             bool init = false;
 
         public:
-            int s_consecutive_success = 0;  /**< track repeated sifts for probabilistic abort criterion */
-            int h_error_bound         = 10; /**< determines error probability                           */
+            int s_consecutive_success     = 0;  /**< track repeated sifts for probabilistic abort criterion */
+            int h_error_bound             = 10; /**< determines error probability                           */
+            uint64_t s_computational_cost = 0;
             big_number s_grp_sz; /**< size of the automorphism group computed */
 
             /**
@@ -1338,6 +1417,13 @@ namespace dejavu {
              */
             dej_nodiscard int s_densegen() const {
                 return generators.s_stored_dense;
+            }
+
+            /**
+             * @return Computational cost incurred by this Schreier structure.
+             */
+            dej_nodiscard uint64_t get_computational_cost() const {
+                return s_computational_cost;
             }
 
             /**
@@ -1362,7 +1448,7 @@ namespace dejavu {
 
                 for (int i = 0; i < stop && i < static_cast<int>(base.size()); ++i) {
                     transversals.emplace_back();
-                    transversals[i].initialize(base[i], i, base_sizes[i]);
+                    transversals[i].initialize(base[i], i, base_sizes[i], &s_computational_cost);
                 }
                 init = true;
             }
@@ -1383,13 +1469,13 @@ namespace dejavu {
 
                 finished_up_to = -1;
                 transversals.resize(new_size);
-
+                s_computational_cost += new_size;
 
                 for (int i = 0; i < keep_until; ++i) { transversals[i].set_size_upper_bound(INT32_MAX); }
                 for (int i = keep_until; i < new_size; ++i) {
                     transversals[i] = shared_transversal();
                     dej_assert(new_base[i] >= 0);
-                    transversals[i].initialize(new_base[i], i, INT32_MAX);
+                    transversals[i].initialize(new_base[i], i, INT32_MAX, &s_computational_cost);
                 }
 
                 std::vector<int> stabilized_generators_copy;
@@ -1458,7 +1544,7 @@ namespace dejavu {
                     //if(i < old_size) delete transversals[i];
                     transversals[i] = shared_transversal();
                     dej_assert(new_base[i] >= 0);
-                    transversals[i].initialize(new_base[i], i, new_base_sizes[i]);
+                    transversals[i].initialize(new_base[i], i, new_base_sizes[i], &s_computational_cost);
                 }
 
                 stabilized_generators.clear();
@@ -1584,6 +1670,11 @@ namespace dejavu {
 
                     // secondly, we fix the point of this transversal in automorphism
                     const bool identity = transversals[level].fix_automorphism(w, generators, automorphism);
+
+                    // track cost
+                    s_computational_cost += transversals[level].size();
+
+                    // early-out
                     if (identity) break; // if automorphism is the identity now, no need to sift further
                 }
 
@@ -1611,6 +1702,59 @@ namespace dejavu {
             }
 
             /**
+             * Extend orbits using generators already present in structure.
+             *
+             * @param w Auxiliary workspace used for procedures.
+             * @param automorphism Will be used to load generators. Will be manipulated by the method.
+             * @return Whether orbit was extended or not.
+             */
+            bool extend(schreier_workspace &w, automorphism_workspace &automorphism) {
+                bool changed = false;
+                markset level_finished(static_cast<int>(transversals.size()));
+                markset level_changed(static_cast<int>(transversals.size()));
+
+                // we perform the orbit algorithm on each level until fixpoint
+                bool changed_it = true;
+                while(changed_it) {
+                    level_changed.reset();
+                    changed_it = false;
+                    for (int gen = 0; gen < generators.size(); ++gen) {
+                        // we proceed generator-by-generator
+                        auto stored_gen = generators.get_generator(gen);
+                        automorphism.reset();
+                        stored_gen->load(w.loader, automorphism);
+                        for (int level = 0; level < static_cast<int>(transversals.size()); ++level) {
+                            // extend the transversal using the generator
+                            if(!level_finished.get(level)) {
+                                const bool this_changed =
+                                    transversals[level].extend_with_automorphism(w, generators, automorphism, gen);
+                                if(this_changed) level_changed.set(level);
+
+                                // track cost
+                                s_computational_cost += transversals[level].size();
+                            }
+
+                            // only check on next level, if generator is valid there
+                            const int fixed_point = transversals[level].get_fixed_point();
+                            if(automorphism[fixed_point] != fixed_point) break;
+                        }
+                    }
+
+                    // check whether things have changed
+                    for (int level = 0; level < static_cast<int>(transversals.size()); ++level) {
+                        if(!level_changed.get(level)) {
+                            level_finished.set(level);
+                        } else {
+                            changed    = true;
+                            changed_it = true;
+                        }
+                    }
+                }
+
+                return changed;
+            }
+
+            /**
              * Generate a (semi-)random element from the generators.
              *
              * @param w Auxiliary workspace used for procedures.
@@ -1631,8 +1775,10 @@ namespace dejavu {
                     auto next_gen = generators[next_gen_num];
                     dej_assert(next_gen != nullptr);
                     next_gen->load(w.loader, w.scratch_auto);
+                    s_computational_cost += w.scratch_auto.nsupp();
 
                     // multiply
+                    s_computational_cost += domain_size;
                     automorphism.apply(w.scratch_apply1, w.scratch_apply2, w.scratch_apply3, w.loader.p(), 1);
                     w.scratch_auto.reset();
                 }
@@ -1668,6 +1814,19 @@ namespace dejavu {
                 load_generator(automorphism, generator);
                 const bool added_generator = sift(w, automorphism, false, keep_at_end);
                 return added_generator;
+            }
+
+            /**
+             * Returns the fixing permutation of vertex v at base point base_pos. If it does not exist, returns false.
+             *
+             * @param base_pos position of base to look at
+             * @param v        vertex we want to fix
+             * @param automorphism where the result will be stored
+             * @return if fixing permutation could be found
+             */
+            bool get_transversal_element(schreier_workspace &w, const int base_pos, const int v,
+                                         automorphism_workspace& automorphism) {
+                return transversals[base_pos].fixing_automorphism(w, generators, automorphism, v);
             }
 
             /**
@@ -1807,6 +1966,13 @@ namespace dejavu {
             }
 
             /**
+             * Extend fixed orbits the automorphisms present in structure.
+             */
+            void extend() {
+                schreier.extend(ws_schreier, ws_auto);
+            }
+
+            /**
              * @return Size of base of this Schreier structure.
              */
             dej_nodiscard int base_size() const {
@@ -1819,6 +1985,13 @@ namespace dejavu {
              */
             dej_nodiscard int get_fixed_point(int pos) const {
                 return schreier.base_point(pos);
+            }
+
+            /**
+             * @return Computational cost incurred by this Schreier structure.
+             */
+            dej_nodiscard uint64_t get_computational_cost() const {
+                return schreier.get_computational_cost();
             }
 
             /**
@@ -1849,6 +2022,18 @@ namespace dejavu {
              */
             const std::vector<int>& get_fixed_orbit(const int base_pos) {
                 return schreier.get_fixed_orbit(base_pos);
+            }
+
+            /**
+             * Returns the fixing permutation of vertex v at base point base_pos. If it does not exist, returns false.
+             *
+             * @param base_pos position of base to look at
+             * @param v        vertex we want to fix
+             * @param automorphism where the result will be stored
+             * @return if fixing permutation could be found
+             */
+            bool get_transversal_element(const int base_pos, const int v, automorphism_workspace& automorphism) {
+                return schreier.get_transversal_element(ws_schreier, base_pos, v, automorphism);
             }
 
             /**
@@ -2094,6 +2279,13 @@ namespace dejavu {
             }
 
             /**
+             * @return Computational cost incurred by this Schreier structure.
+             */
+            dej_nodiscard uint64_t get_computational_cost() const {
+                return internal_schreier.get_computational_cost();
+            }
+
+            /**
              * Reset up this Schreier structure with a new base.
              *
              * @param new_base the new base
@@ -2258,9 +2450,9 @@ namespace dejavu {
             bool sift_random(schreier_workspace &w, automorphism_workspace& automorphism,
                              random_source& rng) {
                 if(compressor != nullptr) {
-                    return internal_schreier.sift_random(w, compressed_automorphism, rng);
+                    return internal_schreier.sift_random(w, compressed_automorphism, rng, false);
                 } else {
-                    return internal_schreier.sift_random(w, automorphism, rng);
+                    return internal_schreier.sift_random(w, automorphism, rng, false);
                 }
             }
 

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2026 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -31,9 +31,6 @@
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
-
-#include <assert.h>
-#include <string.h>
 
 #include "scip/heur_sync.h"
 #include "scip/scip.h"
@@ -75,8 +72,9 @@ SCIP_DECL_HEURFREE(heurFreeSync)
    SCIP_HEURDATA* heurdata;
 
    assert( heur != NULL );
-   assert( strcmp(SCIPheurGetName(heur), HEUR_NAME) == 0 );
    assert( scip != NULL );
+
+   SCIP_STRINGEQ( SCIPheurGetName(heur), HEUR_NAME, SCIP_INVALIDCALL );
 
    SCIPdebugMessage("free method of sync primal heuristic.\n");
 
@@ -99,8 +97,9 @@ SCIP_DECL_HEUREXITSOL(heurExitSync)
    int            i;
 
    assert( heur != NULL );
-   assert( strcmp(SCIPheurGetName(heur), HEUR_NAME) == 0 );
    assert( scip != NULL );
+
+   SCIP_STRINGEQ( SCIPheurGetName(heur), HEUR_NAME, SCIP_INVALIDCALL );
 
    SCIPdebugMessage("exit method of sync primal heuristic.\n");
 
@@ -128,10 +127,11 @@ SCIP_DECL_HEUREXEC(heurExecSync)
    int i;
 
    assert(heur != NULL);
-   assert(strcmp(SCIPheurGetName(heur), HEUR_NAME) == 0);
    assert(scip != NULL);
    assert(result != NULL);
    assert(SCIPheurGetFreq(heur) == 1);
+
+   SCIP_STRINGEQ( SCIPheurGetName(heur), HEUR_NAME, SCIP_INVALIDCALL );
 
    SCIPheurSetFreq(heur, -1);
 
@@ -164,7 +164,7 @@ SCIP_RETCODE SCIPincludeHeurSync(
    )
 {
    SCIP_HEURDATA* heurdata;
-   SCIP_HEUR*     heur;
+   SCIP_HEUR* heur;
 
    /* create heuristic data */
    SCIP_CALL( SCIPallocBlockMemory(scip, &heurdata) );
@@ -198,12 +198,14 @@ SCIP_RETCODE SCIPheurSyncPassSol(
    )
 {
    SCIP_HEURDATA* heurdata;
-   SCIP_Real      solobj;
-   int            i;
+   SCIP_Real solobj;
+   int i;
+
    assert(scip != NULL);
    assert(heur != NULL);
    assert(sol != NULL);
-   assert(strcmp(HEUR_NAME, SCIPheurGetName(heur)) == 0);
+
+   SCIP_STRINGEQ( SCIPheurGetName(heur), HEUR_NAME, SCIP_INVALIDCALL );
 
    /* get heuristic data */
    heurdata = SCIPheurGetData(heur);
@@ -212,13 +214,10 @@ SCIP_RETCODE SCIPheurSyncPassSol(
    SCIPsolSetHeur(sol, heur);
    solobj = SCIPgetSolTransObj(scip, sol);
 
-   /* check if we have an empty space in the solution array or
-    * if we need to discard the worst solution
-    */
+   /* check if we have an empty slot in the solution array or if we need to discard the worst solution */
    if( heurdata->nsols < heurdata->maxnsols )
    {
-      /* if the maximum number of solutions is not yet reached just
-       * insert the solution sorted by its objective value */
+      /* if the maximum number of solutions is not yet reached just insert the solution sorted by its objective value */
       i = heurdata->nsols++;
       while( i > 0 && solobj > SCIPgetSolTransObj(scip, heurdata->sols[i - 1]) )
       {
@@ -229,17 +228,12 @@ SCIP_RETCODE SCIPheurSyncPassSol(
    }
    else
    {
-      /* already have reached the maximum number of solutions so
-       * we need to check if the solution is better than a previous
-       * one and free the worst solution to make room for it if that
-       * is the case
-       */
+      /* already have reached the maximum number of solutions, so we need to check if the solution is better than a
+       * previous one and free the worst solution to make room for it if this is the case */
       for( i = 0; i < heurdata->nsols && solobj < SCIPgetSolTransObj(scip, heurdata->sols[i]); ++i )
       {
          if( i > 0 )
-         {
             heurdata->sols[i - 1] = heurdata->sols[i];
-         }
          else
          {
             SCIP_CALL( SCIPfreeSol(scip, &heurdata->sols[i]) );

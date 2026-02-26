@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2026 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -29,9 +29,6 @@
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
-
-#include <assert.h>
-#include <string.h>
 
 #include "scip/def.h"
 #include "scip/set.h"
@@ -232,7 +229,8 @@ SCIP_DECL_EVENTEXEC(eventExecBendersNodefocus)
 
    assert(scip != NULL);
    assert(eventhdlr != NULL);
-   assert(strcmp(SCIPeventhdlrGetName(eventhdlr), NODEFOCUS_EVENTHDLR_NAME) == 0);
+
+   SCIP_STRINGEQ( SCIPeventhdlrGetName(eventhdlr), NODEFOCUS_EVENTHDLR_NAME, SCIP_INVALIDCALL );
 
    eventhdlrdata = SCIPeventhdlrGetData(eventhdlr);
 
@@ -252,7 +250,8 @@ SCIP_DECL_EVENTINITSOL(eventInitsolBendersNodefocus)
 {
    assert(scip != NULL);
    assert(eventhdlr != NULL);
-   assert(strcmp(SCIPeventhdlrGetName(eventhdlr), NODEFOCUS_EVENTHDLR_NAME) == 0);
+
+   SCIP_STRINGEQ( SCIPeventhdlrGetName(eventhdlr), NODEFOCUS_EVENTHDLR_NAME, SCIP_INVALIDCALL );
 
    SCIP_CALL( initsolEventhandler(scip, eventhdlr, SCIP_EVENTTYPE_NODEFOCUSED) );
 
@@ -265,7 +264,8 @@ SCIP_DECL_EVENTEXITSOL(eventExitsolBendersNodefocus)
 {
    assert(scip != NULL);
    assert(eventhdlr != NULL);
-   assert(strcmp(SCIPeventhdlrGetName(eventhdlr), NODEFOCUS_EVENTHDLR_NAME) == 0);
+
+   SCIP_STRINGEQ( SCIPeventhdlrGetName(eventhdlr), NODEFOCUS_EVENTHDLR_NAME, SCIP_INVALIDCALL );
 
    SCIP_CALL( exitsolEventhandler(scip, eventhdlr, SCIP_EVENTTYPE_NODEFOCUSED) );
 
@@ -278,7 +278,8 @@ SCIP_DECL_EVENTEXIT(eventExitBendersNodefocus)
 {
    assert(scip != NULL);
    assert(eventhdlr != NULL);
-   assert(strcmp(SCIPeventhdlrGetName(eventhdlr), NODEFOCUS_EVENTHDLR_NAME) == 0);
+
+   SCIP_STRINGEQ( SCIPeventhdlrGetName(eventhdlr), NODEFOCUS_EVENTHDLR_NAME, SCIP_INVALIDCALL );
 
    SCIP_CALL( exitEventhandler(scip, eventhdlr) );
 
@@ -291,7 +292,8 @@ SCIP_DECL_EVENTFREE(eventFreeBendersNodefocus)
 {
    assert(scip != NULL);
    assert(eventhdlr != NULL);
-   assert(strcmp(SCIPeventhdlrGetName(eventhdlr), NODEFOCUS_EVENTHDLR_NAME) == 0);
+
+   SCIP_STRINGEQ( SCIPeventhdlrGetName(eventhdlr), NODEFOCUS_EVENTHDLR_NAME, SCIP_INVALIDCALL );
 
    SCIP_CALL( freeEventhandler(scip, eventhdlr) );
 
@@ -309,7 +311,8 @@ SCIP_DECL_EVENTEXEC(eventExecBendersMipnodefocus)
 
    assert(scip != NULL);
    assert(eventhdlr != NULL);
-   assert(strcmp(SCIPeventhdlrGetName(eventhdlr), MIPNODEFOCUS_EVENTHDLR_NAME) == 0);
+
+   SCIP_STRINGEQ( SCIPeventhdlrGetName(eventhdlr), MIPNODEFOCUS_EVENTHDLR_NAME, SCIP_INVALIDCALL );
 
    eventhdlrdata = SCIPeventhdlrGetData(eventhdlr);
 
@@ -333,7 +336,8 @@ SCIP_DECL_EVENTINITSOL(eventInitsolBendersMipnodefocus)
 {
    assert(scip != NULL);
    assert(eventhdlr != NULL);
-   assert(strcmp(SCIPeventhdlrGetName(eventhdlr), MIPNODEFOCUS_EVENTHDLR_NAME) == 0);
+
+   SCIP_STRINGEQ( SCIPeventhdlrGetName(eventhdlr), MIPNODEFOCUS_EVENTHDLR_NAME, SCIP_INVALIDCALL );
 
    SCIP_CALL( initsolEventhandler(scip, eventhdlr, SCIP_EVENTTYPE_NODEFOCUSED) );
 
@@ -346,7 +350,8 @@ SCIP_DECL_EVENTEXITSOL(eventExitsolBendersMipnodefocus)
 {
    assert(scip != NULL);
    assert(eventhdlr != NULL);
-   assert(strcmp(SCIPeventhdlrGetName(eventhdlr), MIPNODEFOCUS_EVENTHDLR_NAME) == 0);
+
+   SCIP_STRINGEQ( SCIPeventhdlrGetName(eventhdlr), MIPNODEFOCUS_EVENTHDLR_NAME, SCIP_INVALIDCALL );
 
    SCIP_CALL( exitsolEventhandler(scip, eventhdlr, SCIP_EVENTTYPE_NODEFOCUSED) );
 
@@ -359,7 +364,8 @@ SCIP_DECL_EVENTEXIT(eventExitBendersMipnodefocus)
 {
    assert(scip != NULL);
    assert(eventhdlr != NULL);
-   assert(strcmp(SCIPeventhdlrGetName(eventhdlr), MIPNODEFOCUS_EVENTHDLR_NAME) == 0);
+
+   SCIP_STRINGEQ( SCIPeventhdlrGetName(eventhdlr), MIPNODEFOCUS_EVENTHDLR_NAME, SCIP_INVALIDCALL );
 
    SCIP_CALL( exitEventhandler(scip, eventhdlr) );
 
@@ -372,7 +378,8 @@ SCIP_DECL_EVENTFREE(eventFreeBendersMipnodefocus)
 {
    assert(scip != NULL);
    assert(eventhdlr != NULL);
-   assert(strcmp(SCIPeventhdlrGetName(eventhdlr), MIPNODEFOCUS_EVENTHDLR_NAME) == 0);
+
+   SCIP_STRINGEQ( SCIPeventhdlrGetName(eventhdlr), MIPNODEFOCUS_EVENTHDLR_NAME, SCIP_INVALIDCALL );
 
    SCIP_CALL( freeEventhandler(scip, eventhdlr) );
 
@@ -390,7 +397,8 @@ SCIP_DECL_EVENTEXEC(eventExecBendersUpperbound)
 
    assert(scip != NULL);
    assert(eventhdlr != NULL);
-   assert(strcmp(SCIPeventhdlrGetName(eventhdlr), UPPERBOUND_EVENTHDLR_NAME) == 0);
+
+   SCIP_STRINGEQ( SCIPeventhdlrGetName(eventhdlr), UPPERBOUND_EVENTHDLR_NAME, SCIP_INVALIDCALL );
 
    eventhdlrdata = SCIPeventhdlrGetData(eventhdlr);
    assert(eventhdlrdata != NULL);
@@ -411,7 +419,8 @@ SCIP_DECL_EVENTINITSOL(eventInitsolBendersUpperbound)
 {
    assert(scip != NULL);
    assert(eventhdlr != NULL);
-   assert(strcmp(SCIPeventhdlrGetName(eventhdlr), UPPERBOUND_EVENTHDLR_NAME) == 0);
+
+   SCIP_STRINGEQ( SCIPeventhdlrGetName(eventhdlr), UPPERBOUND_EVENTHDLR_NAME, SCIP_INVALIDCALL );
 
    SCIP_CALL( initsolEventhandler(scip, eventhdlr, SCIP_EVENTTYPE_BESTSOLFOUND) );
 
@@ -424,7 +433,8 @@ SCIP_DECL_EVENTEXITSOL(eventExitsolBendersUpperbound)
 {
    assert(scip != NULL);
    assert(eventhdlr != NULL);
-   assert(strcmp(SCIPeventhdlrGetName(eventhdlr), UPPERBOUND_EVENTHDLR_NAME) == 0);
+
+   SCIP_STRINGEQ( SCIPeventhdlrGetName(eventhdlr), UPPERBOUND_EVENTHDLR_NAME, SCIP_INVALIDCALL );
 
    SCIP_CALL( exitsolEventhandler(scip, eventhdlr, SCIP_EVENTTYPE_BESTSOLFOUND) );
 
@@ -437,7 +447,8 @@ SCIP_DECL_EVENTEXIT(eventExitBendersUpperbound)
 {
    assert(scip != NULL);
    assert(eventhdlr != NULL);
-   assert(strcmp(SCIPeventhdlrGetName(eventhdlr), UPPERBOUND_EVENTHDLR_NAME) == 0);
+
+   SCIP_STRINGEQ( SCIPeventhdlrGetName(eventhdlr), UPPERBOUND_EVENTHDLR_NAME, SCIP_INVALIDCALL );
 
    SCIP_CALL( exitEventhandler(scip, eventhdlr) );
 
@@ -450,7 +461,8 @@ SCIP_DECL_EVENTFREE(eventFreeBendersUpperbound)
 {
    assert(scip != NULL);
    assert(eventhdlr != NULL);
-   assert(strcmp(SCIPeventhdlrGetName(eventhdlr), UPPERBOUND_EVENTHDLR_NAME) == 0);
+
+   SCIP_STRINGEQ( SCIPeventhdlrGetName(eventhdlr), UPPERBOUND_EVENTHDLR_NAME, SCIP_INVALIDCALL );
 
    SCIP_CALL( freeEventhandler(scip, eventhdlr) );
 
@@ -561,7 +573,8 @@ SCIP_DECL_EVENTEXEC(eventExecBendersNodesolved)
 
    assert(scip != NULL);
    assert(eventhdlr != NULL);
-   assert(strcmp(SCIPeventhdlrGetName(eventhdlr), NODESOLVED_EVENTHDLR_NAME) == 0);
+
+   SCIP_STRINGEQ( SCIPeventhdlrGetName(eventhdlr), NODESOLVED_EVENTHDLR_NAME, SCIP_INVALIDCALL );
 
    benders = (SCIP_BENDERS*)SCIPeventhdlrGetData(eventhdlr);   /*lint !e826*/
 
@@ -584,7 +597,8 @@ SCIP_DECL_EVENTINITSOL(eventInitsolBendersNodesolved)
 
    assert(scip != NULL);
    assert(eventhdlr != NULL);
-   assert(strcmp(SCIPeventhdlrGetName(eventhdlr), NODESOLVED_EVENTHDLR_NAME) == 0);
+
+   SCIP_STRINGEQ( SCIPeventhdlrGetName(eventhdlr), NODESOLVED_EVENTHDLR_NAME, SCIP_INVALIDCALL );
 
    /* getting the Benders' decomposition data structure */
    benders = (SCIP_BENDERS*)SCIPeventhdlrGetData(eventhdlr);   /*lint !e826*/
@@ -1481,8 +1495,7 @@ SCIP_RETCODE storeSubproblemMasterVar(
       int newsize;
 
       newsize = SCIPsetCalcMemGrowSize(set, benders->nsubmastervars[probnumber] + 1);
-      SCIP_ALLOC( BMSreallocBlockMemoryArray(SCIPblkmem(set->scip), &benders->submastervars[probnumber],
-            benders->submastervarssize[probnumber], newsize) );
+      SCIP_ALLOC( BMSreallocMemoryArray(&benders->submastervars[probnumber], newsize) ); /*lint !e866*/
 
       benders->submastervarssize[probnumber] = newsize;
    }
@@ -2087,7 +2100,7 @@ SCIP_RETCODE createSubproblems(
 
             if( objchanged )
             {
-               SCIPverbMessage(subproblem, SCIP_VERBLEVEL_HIGH, NULL, "Benders' decomposition: Objective coefficients of "
+               SCIPverbMessage(subproblem, SCIP_VERBLEVEL_FULL, NULL, "Benders' decomposition: Objective coefficients of "
                   "copy of master problem variables in a subproblem have been changed to zero.\n");
             }
          }
@@ -2673,7 +2686,7 @@ SCIP_RETCODE SCIPbendersInitpre(
 }
 
 
-/** informs the Benders ' decomposition that the presolving process has completed */
+/** informs the Benders' decomposition that the presolving process has completed */
 SCIP_RETCODE SCIPbendersExitpre(
    SCIP_BENDERS*         benders,            /**< Benders' decomposition */
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -2871,7 +2884,6 @@ SCIP_RETCODE SCIPbendersActivate(
          /* inserting the initial elements into the priority queue */
          SCIP_CALL( SCIPpqueueInsert(benders->subprobqueue, benders->solvestat[i]) );
       }
-
 
       if( SCIPsetFindEventhdlr(set, NODESOLVED_EVENTHDLR_NAME) == NULL )
       {
@@ -6204,7 +6216,7 @@ void SCIPbendersRemoveSubproblems(
 
 /** returns the main auxiliary variable that is used the subproblem objective function. */
 SCIP_VAR* SCIPbenderGetMasterAuxiliaryVar(
-   SCIP_BENDERS*         benders            /**< Benders' decomposition */
+   SCIP_BENDERS*         benders             /**< Benders' decomposition */
    )
 {
    assert(benders != NULL);

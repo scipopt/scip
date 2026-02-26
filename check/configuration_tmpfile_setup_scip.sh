@@ -4,7 +4,7 @@
 #*                  This file is part of the program and library             *
 #*         SCIP --- Solving Constraint Integer Programs                      *
 #*                                                                           *
-#*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      *
+#*  Copyright (c) 2002-2026 Zuse Institute Berlin (ZIB)                      *
 #*                                                                           *
 #*  Licensed under the Apache License, Version 2.0 (the "License");          *
 #*  you may not use this file except in compliance with the License.         *
@@ -59,8 +59,9 @@ WITHCERTIFICATE="${22}" # - true, if a certificate file should be created
 # new environment variables after running this script
 # -None
 
-#set solfile
+#set solfile and jsonfile
 SOLFILE="${CLIENTTMPDIR}/${USER}-tmpdir/${SOLBASENAME}.sol"
+JSONFILE="${CLIENTTMPDIR}/${USER}-tmpdir/${SOLBASENAME}.json"
 
 # reset TMPFILE
 echo > "${TMPFILE}"
@@ -125,7 +126,11 @@ fi
 echo "set limits time ${TIMELIMIT}"                              >> "${TMPFILE}"
 echo "set limits nodes ${NODELIMIT}"                             >> "${TMPFILE}"
 echo "set limits memory ${MEMLIMIT}"                             >> "${TMPFILE}"
-echo "set lp advanced threads ${THREADS}"                        >> "${TMPFILE}"
+if [[ "${OPTCOMMAND}" =~ ^concurrent ]] ; then
+    echo "set parallel maxnthreads ${THREADS}"                   >> "${TMPFILE}"
+else
+    echo "set lp advanced threads ${THREADS}"                    >> "${TMPFILE}"
+fi
 echo "set timing clocktype ${CLOCKTYPE}"                         >> "${TMPFILE}"
 echo "set display freq ${DISPFREQ}"                              >> "${TMPFILE}"
 if test "${WITHCERTIFICATE}" = true
@@ -167,6 +172,7 @@ then
     echo "display parameters"                                    >> "${TMPFILE}"
     echo "${OPTCOMMAND}"                                         >> "${TMPFILE}"
     echo "display statistics"                                    >> "${TMPFILE}"
+    echo "write statistics ${JSONFILE}"                          >> "${TMPFILE}"
     echo "checksol"                                              >> "${TMPFILE}"
 else
     # read the difflist file

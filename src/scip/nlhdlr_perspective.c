@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2026 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -27,8 +27,6 @@
  * @brief  perspective nonlinear handler
  * @author Ksenia Bestuzheva
  */
-
-#include <string.h>
 
 #include "scip/nlhdlr_perspective.h"
 #include "scip/cons_nonlinear.h"
@@ -1213,7 +1211,8 @@ SCIP_DECL_NLHDLRCOPYHDLR(nlhdlrCopyhdlrPerspective)
 { /*lint --e{715}*/
    assert(targetscip != NULL);
    assert(sourcenlhdlr != NULL);
-   assert(strcmp(SCIPnlhdlrGetName(sourcenlhdlr), NLHDLR_NAME) == 0);
+
+   SCIP_STRINGEQ( SCIPnlhdlrGetName(sourcenlhdlr), NLHDLR_NAME, SCIP_INVALIDCALL );
 
    SCIP_CALL( SCIPincludeNlhdlrPerspective(targetscip) );
 

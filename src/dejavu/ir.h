@@ -599,6 +599,14 @@ namespace dejavu {
                 return diff_diverge;
             }
 
+            /**
+             * Computational cost incurred by this controller.
+             *
+             * @return computational cost
+             */
+            dej_nodiscard uint64_t get_computational_cost() const {
+                return R->get_computational_cost();
+            }
 
             /**
              * Difference-checking. Records differences between this state and the given \p other_state. Before using
@@ -882,6 +890,7 @@ namespace dejavu {
              * @param state A reference to the limited_save in which the state will be stored.
              */
             void save_reduced_state(limited_save &state) {
+                R->add_computational_cost(4*c->domain_size + s_base_pos);
                 state.save(base_vertex, *c, T->get_hash(), T->get_position(),
                            s_base_pos);
             }
@@ -892,6 +901,7 @@ namespace dejavu {
              * @param state A reference to the limited_save from which the state will be loaded.
              */
             void load_reduced_state(limited_save &state) {
+                R->add_computational_cost(c->domain_size);
                 c->copy_any(state.get_coloring());
 
                 T->set_hash(state.get_invariant_hash());
@@ -992,6 +1002,7 @@ namespace dejavu {
                 ++s_base_pos;
                 s_splits = 0;
                 base_vertex.push_back(v);
+                R->add_computational_cost(1);
 
                 dej_assert(!s_cell_active);
 
@@ -1063,6 +1074,8 @@ namespace dejavu {
                 T->set_position(base.back().trace_pos);
                 T->set_hash(base.back().trace_hash);
 
+                R->add_computational_cost(1 + prev_color_list.cur_pos - base.back().touched_color_list_pt);
+
                 // unwind colors introduced on this level of the tree
                 --s_base_pos;
                 while (prev_color_list.cur_pos > base.back().touched_color_list_pt) {
@@ -1122,6 +1135,7 @@ namespace dejavu {
              * @return Whether \p automorphism is an automorphism of \p g.
              */
             bool certify(sgraph* g, groups::automorphism_workspace& automorphism) {
+                R->add_computational_cost(automorphism.nsupp());
                 if(automorphism.nsupp() == 0) return true;
                 if(automorphism.nsupp() > g->v_size / 4) {
                     return R->certify_automorphism(g, automorphism.p());

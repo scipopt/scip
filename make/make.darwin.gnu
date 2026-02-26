@@ -29,9 +29,9 @@ ifeq ($(LTO),true)
 
   CFLAGS	+=	$(LTOFLAG) -fno-fat-lto-objects
   CXXFLAGS	+=	$(LTOFLAG) -fno-fat-lto-objects
-  LDFLAGS	+=	$(LTOFLAG) -Wno-stringop-overflow -Wno-alloc-size-larger-than -Wno-odr
+  LDFLAGS	+=	$(LTOFLAG) -Wno-stringop-overflow -Wno-alloc-size-larger-than
 ifeq ($(SHARED),true)
-  LIBBUILDFLAGS +=	$(LTOFLAG) -Wno-stringop-overflow -Wno-alloc-size-larger-than -Wno-odr
+  LIBBUILDFLAGS +=	$(LTOFLAG) -Wno-stringop-overflow -Wno-alloc-size-larger-than
 endif
 endif
 

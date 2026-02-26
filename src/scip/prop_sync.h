@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2026 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -69,13 +69,13 @@ SCIP_RETCODE SCIPpropSyncAddBndchg(
    SCIP_BOUNDTYPE        bndtype             /**< type of bound */
    );
 
-/** gives the total number of tightened bounds found by the sync propagator */
+/** returns the total number of tightened bounds found by the sync propagator */
 SCIP_EXPORT
 SCIP_Longint SCIPpropSyncGetNTightenedBnds(
    SCIP_PROP*            prop                /**< sync propagator */
    );
 
-/** gives the total number of tightened bounds for integer variables found by the sync propagator */
+/** returns the total number of tightened bounds for integer variables found by the sync propagator */
 SCIP_EXPORT
 SCIP_Longint SCIPpropSyncGetNTightenedIntBnds(
    SCIP_PROP*            prop                /**< sync propagator */

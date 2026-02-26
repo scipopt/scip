@@ -7,6 +7,8 @@ Features
 --------
 
 - adds functionality to compute symmetries of entire symmetry detection graph rather than just the restriction to variable nodes
+- primal heuristic feasjump
+- simpler restart control based on linear extrapolation since improvement checkpoint in tree size estimation
 
 Interface changes
 -----------------
@@ -14,15 +16,43 @@ Interface changes
 ### Deleted and changed API methods
 
 - SCIPcreateSymgraph() receives an additional argument to specify an epsilon value that is used for epsilon-comparisons
+- SCIPincludeIISfinder() receives an additional argument to set whether it should be enabled
+- SCIPincludeIISfinderBasic() receives an additional argument to set whether it should be enabled
 
 ### New API functions
 
 - added SYMcomputeSymmetryGeneratorsNode() to compute generators of the automorphism group of an entire (node set) of a symmetry detection graph
+- added SCIPiisfinderGetEnable() to check whether an iis finder is enabled
+- added SCIPiisfinderSetEnable() to set whether an iis finder is enabled
+- added SCIPincludeHeurFeasjump() to include feasibility jump primal heuristic
+
+### New parameters
+
+- `iis/<iisfinder>/enable`: whether to enable the iis finder of name <iisfinder>, e.g., greedy
+- `heuristics/feasjump/weightupdatedecay`: decay factor for the weight update
+- `heuristics/feasjump/maxeffort`: maximum effort spent in feasibility jump
+- `heuristics/feasjump/verbosity`: verbosity level of the feasibility jump solver
+- `heuristics/feasjump/onlywithoutsol`: should feasibility jump be called only if no solution exists?
+- `heuristics/feasjump/beforepresol`: should the heuristic be called before presolving?
+- `heuristics/feasjump/useinitialsol`: should the feasibility jump use the best known solution as initialization?
+- `heuristics/feasjump/iterations`: number of iterations to check if the heuristic reduces the total number of violated constraints
+- `heuristics/feasjump/mindecrease`: minimum percentage decrease for the number of violated constraints
+- `heuristics/feasjump/maxsols`: maximum number of solutions to find
+- `heuristics/feasjump/samplesize`: number of candidates to sample in tournament selection
+- `heuristics/feasjump/randprobgood`: probability of random selection from good variables
+- `heuristics/feasjump/randprobviol`: probability of random selection from violated constraint
+- `heuristics/feasjump/callbackeffort`: effort between callbacks
+- `estimation/checkpoint/depthlim`: depth below which checkpoint is updated
+
+### Changed parameters
+
+- `estimation/method`: use default setting `p` to apply linear check(p)oint extrapolation in tree size estimation
 
 ### Data structures
 
 - struct SYM_Graph receives an additional field to specify an epsilon value that is used for epsilon-comparisons
 - new enum SYM_GROUPTYPE to encode which symmetry group of a symmetry detection graph is computed
+- struct SCIP_IISFINDER receives the additional field enable to set whether it should be enabled
 
 @page RN10 Release notes for SCIP 10
 
@@ -32,8 +62,12 @@ Interface changes
 Features
 --------
 
+- added command line option `-t` to specify the number of threads, which triggers concurrent solving via SCIPsolveConcurrent()
+
 Performance improvements
 ------------------------
+
+- Implemented interval function evaluation callback in CONOPT interface.
 
 Fixed bugs
 ----------
@@ -43,12 +77,26 @@ Interface changes
 
 ### New API functions
 
+- added SCIPcalcBestCut() to try multiple cut generation methods (FlowCover, KnapsackCover, CMIR) on an aggregation row and return the best cut by efficacy
+- added SCIPinitCutGenParams(), SCIPcreateCutGenResult(), and SCIPfreeCutGenResult() as helper functions for SCIPcalcBestCut()
+- added SCIPnlpiOracleEvalObjectiveInterval() and SCIPnlpiOracleEvalConstraintInterval()
+
 ### New parameters
+
+- `presolving/milp/enableGF2`: whether to enable GF2 presolver in PaPILO
+- `concurrent/symmetrybefore`: whether symmetry should be computed before concurrent solving
 
 ### Changed parameters
 
+### Data Structures
+
+- added struct \ref SCIP_CUTGENPARAMS for cut generation parameters
+- added struct \ref SCIP_CUTGENRESULT for cut generation result
+
 Build system
 ------------
+
+- added build flag CHECKNAME=auto to control name checks in plugin function calls
 
 ### Cmake
 
@@ -59,6 +107,55 @@ Testing
 
 Miscellaneous
 -------------
+
+@section RN1002 SCIP 10.0.2
+***************************
+
+Fixed bugs
+----------
+
+- propagate focus lower bound to child nodes to avoid outdated global lower bound
+- fixed a bug in sassy/dejavu by updating version
+- add missing library exports of SCIPchgVarLbGlobalExact(), SCIPchgVarUbGlobalExact(), SCIPinferVarLbConsExact(), and SCIPinferVarUbConsExact()
+- set small coefficients in SCIPvarGetActiveRepresentatives() to 0; in particular for (multi-)aggregations
+- add prefix TNY_ for tnycthread functions in order to avoid name clash with POSIX threads functions
+- provide memory allocation for implied integral binary and integer variables in dks heuristic to avoid data corruption
+- an error is produced if the emphasis settings in parameter files are wrong
+
+@section RN1001 SCIP 10.0.1
+***************************
+
+Fixed bugs
+----------
+
+- fixed that parameters passed on as variadic arguments to SCIPsolveNLP() and SCIPsolveNlpi() were ignored when compiling with MS compilers without -Zc:preprocessor
+- make more CONOPT output available when verbosity level is set to 2
+- turn off detection of definitional constraints in CONOPT for now, to work around a related issue in CONOPT 4.39.0
+- fixed call of SCIPcreateConsBasicSOCNonlinear() with coefs being NULL, and fixed check for offsets being finite
+- avoid crash when initial IIS solve fails while reporting errors explicitly
+- fixed that variable removal in IIS cleanup tried to delete variables that were marked as not deletable
+- fixed that some IIS info messages were not using a user's message handler
+- fixed use of interactive option (-i) of AMPL interface
+- fixed failure in nl writing on big endian machines
+- correct memory reallocation in storeSubproblemMasterVar() of benders.c to avoid errors when freeing memory
+- also set real solution in SCIPsolSetValExact() to maintain approximation
+- handle exact solutions in SCIPsolCheckOrig(), SCIPcheckSolOrig(), and SCIPrecomputeSolObj() to correctly check exact initial solutions in SCIPtransformProb()
+- fixed calculation of Euclidean norm in calcEfficacyDenseStorage() for use in exact solving
+- removed unnecessary explicit linking of GMP library for exact solving mode unittests
+- fixed bug with changing the type of the slack variable in indicator constraints while copying
+- signal extreme estimations in timeSeriesEstimate() and skip pruning estimations in eventExecEstim() to avoid unstable restarting
+- fixed parallelism computation of dynamic cut selector to use Euclidean norm instead of unsupported argument
+- fixed that non-efficacious cuts were not filtered out before checking dynamic parallelism in dynamic cut selector
+- fixes in nauty.h for 32bit systems
+- fixed SCIPgetDualSolVal() for a linear constraint with a single variable
+- adjust conflictAnalyzeLP() to inability of row aggregation to handle a change in the number of variables
+- propagate child lower bounds back to focus node to ensure consistent lower bound tracking
+
+Miscellaneous
+-------------
+
+- updated ampl/mp to version 4.0.4
+- switch from GetTempPath2A to GetTempPathA in nl writer for Windows for broader compatibility
 
 @section RN1000 SCIP 10.0.0
 ***************************
@@ -362,6 +459,8 @@ Miscellaneous:
 
 ### Data Structures
 
+\attention changed the numeric values in the \ref SCIP_STATUS enum
+
 - added struct \ref SCIP_RATIONAL for rational number arithmetic
 - added struct \ref SCIP_LPEXACT and many further data structures to support exact solving mode
 - added structs \ref SCIP_IISFINDER, \ref SCIP_IISFINDERDATA, \ref SCIP_IIS
@@ -452,7 +551,7 @@ Miscellaneous:
 - `reading/opbreader/maxintsize`: maximal intsize above which an OPB instance is rejected
 - `reading/nlreader/binary`, `reading/nlreader/comments`: adjust writing of `nl` files
 - `nlpi/conopt/priority`: priority of the CONOPT NLP solver
-- `randomization/randomseedshiftmultiplier`: multiplier for the shift set by ``randomization/randomseedshift`;
+- `randomization/randomseedshiftmultiplier`: multiplier for the shift set by `randomization/randomseedshift`;
   the shift is multiplied by (6*`randomseedshiftmultiplier`+1), with the default value for `randomseedshiftmultiplier` set to 10 now;
   this default value is expected to change with every major release; setting the parameter to 0 restores SCIP 9 behavior
 
@@ -519,6 +618,8 @@ Fixed bugs
 - aggregate integer variable to not in clique variable in cliquePresolve() of xor constraints to avoid infeasible solutions
 - fixed memory leak in dynamic partition search primal heuristic
 - fixed issue with file existence check in XML parser when SCIP was build with ZLIB support on Windows
+- fixed thread-safety issue when using CppAD and user-defined expression handler
+- fixed typo in `#pragma` directive of redistributed nauty.h
 
 Miscellaneous
 -------------
@@ -1966,7 +2067,7 @@ Constraint handlers for NLP:
 - removed SCIPincludeQuadconsUpgrade()
 - removed SCIPcreateConsQuadratic2(), SCIPcreateConsBasicQuadratic2()
 - deprecated SCIPcreateConsBasicQuadratic(), use SCIPcreateConsBasicQuadraticNonlinear() instead
-- deprecated SCIPcreateConsBasicQuadratic(), use SCIPcreateConsQuadraticNonlinear() instead
+- deprecated SCIPcreateConsQuadratic(), use SCIPcreateConsQuadraticNonlinear() instead
 - deprecated SCIPaddConstantQuadratic(), use SCIPgetLhsNonlinear() and SCIPgetRhsNonlinear() instead
 - deprecated SCIPaddLinearVarQuadratic(), use SCIPaddLinearVarNonlinear() instead
 - deprecated SCIPaddQuadVarQuadratic(), use SCIPaddLinearVarNonlinear() and SCIPaddExprNonlinear() instead

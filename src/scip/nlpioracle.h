@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2026 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -315,6 +315,31 @@ SCIP_RETCODE SCIPnlpiOracleEvalConstraintValues(
    SCIP_NLPIORACLE*      oracle,             /**< pointer to NLPIORACLE data structure */
    const SCIP_Real*      x,                  /**< point where to evaluate */
    SCIP_Real*            convals             /**< pointer to store constraint values */
+   );
+
+/** interval evaluate objective function for given variable bounds */
+SCIP_EXPORT
+SCIP_RETCODE SCIPnlpiOracleEvalObjectiveInterval(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_NLPIORACLE*      oracle,             /**< pointer to NLPIORACLE data structure */
+   SCIP_Real             infinity,           /**< value for infinity */
+   const SCIP_Real*      xmin,               /**< lower bound on variable interval */
+   const SCIP_Real*      xmax,               /**< upper bound on variable interval */
+   SCIP_Real*            objmin,             /**< buffer to store lower bound of objective */
+   SCIP_Real*            objmax              /**< buffer to store upper bound of objective */
+   );
+
+/** interval evaluate one constraint function for given variable bounds */
+SCIP_EXPORT
+SCIP_RETCODE SCIPnlpiOracleEvalConstraintInterval(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_NLPIORACLE*      oracle,             /**< pointer to NLPIORACLE data structure */
+   SCIP_Real             infinity,           /**< value for infinity */
+   int                   considx,            /**< index of constraint to evaluate */
+   const SCIP_Real*      xmin,               /**< lower bound on variable interval */
+   const SCIP_Real*      xmax,               /**< upper bound on variable interval */
+   SCIP_Real*            conmin,             /**< buffer to store lower bound of constraint */
+   SCIP_Real*            conmax              /**< buffer to store upper bound of constraint */
    );
 
 /** computes the objective gradient in a given point

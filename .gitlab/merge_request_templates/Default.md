@@ -10,6 +10,7 @@
 * [ ] Ensure that new code and features use randomization where necessary to account for performance variability.
 * [ ] The code is sufficiently documented.
 * [ ] The coding style is OK, see https://scipopt.org/doc/html/CODE.php.
+* [ ] SCIP OptSuite developers were made aware of the change **or** the change is not significant and not degrading performance significantly.
 
 ### Documentation and building
 
@@ -23,7 +24,7 @@
 * [ ] ctest passes without errors (type some of `jenkins ctest {soplex master,soplex bugfix,cplex,gurobi,mosek,xpress,highs}`).
 * [ ] The performance impact has been checked (type some of `jenkins performance {mip,minlp,pb} (quick|continue|)`), **or** the changed code will not be executed by default.
 * [ ] The new code is sufficiently covered by tests (perhaps, new coverage settings or new unit tests have been added).
-* Consider a debug run (type some of `jenkins debug {short,minlp,mip,pb}`).
+* [ ] Debug runs have been considered (type some of `jenkins debug {short,minlp,mip,pb}`).
 
 ### Does this merge request introduce an API change? :warning:
 

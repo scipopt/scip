@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2026 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -30,8 +30,6 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#include <assert.h>
-
 #include "scip/iisfinder.h"
 #include "scip/iisfinder_xyz.h"
 
@@ -39,13 +37,16 @@
 #define IISFINDER_NAME           "xyz"
 #define IISFINDER_DESC           "iis finder template"
 #define IISFINDER_PRIORITY       0
+#define IISFINDER_ENABLE         TRUE
 
 
 /*
  * Data structures
  */
 
-/* TODO: fill in the necessary IIS data */
+/* TODO: fill in the necessary IIS data
+ * when this plugin is written in C++, rename SCIP_IISfinderData to something unique (C++ One-Definition-Rule)
+ */
 
 /** IIS data */
 struct SCIP_IISfinderData
@@ -129,14 +130,14 @@ SCIP_RETCODE SCIPincludeIISfinderXyz(
     * new callbacks are added in future SCIP versions
     */
    SCIP_CALL( SCIPincludeIISfinder(scip, IISFINDER_NAME, IISFINDER_DESC, IISFINDER_PRIORITY,
-         iisfinderCopyXyz, iisfinderFreeXyz, iisfinderExecXyz,
+         IISFINDER_ENABLE, iisfinderCopyXyz, iisfinderFreeXyz, iisfinderExecXyz,
          iisdata) );
 #else
    /* use SCIPincludeIISfinderBasic() plus setter functions if you want to set callbacks one-by-one and your code should
     * compile independently of new callbacks being added in future SCIP versions
     */
    SCIP_CALL( SCIPincludeIISfinderBasic(scip, &iisfinder, IISFINDER_NAME, IISFINDER_DESC, IISFINDER_PRIORITY,
-         iisfinderExecXyz, iisfinderdata) );
+         IISFINDER_ENABLE, iisfinderExecXyz, iisfinderdata) );
 
    assert(iisfinder != NULL);
 

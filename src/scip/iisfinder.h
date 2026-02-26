@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2026 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -54,6 +54,7 @@ SCIP_RETCODE SCIPiisfinderCreate(
    const char*           name,               /**< name of IIS finder */
    const char*           desc,               /**< description of IIS finder */
    int                   priority,           /**< priority of the IIS finder in standard mode */
+   SCIP_Bool             enable,             /**< whether the IIS finder should be enabled */
    SCIP_DECL_IISFINDERCOPY ((*iisfindercopy)), /**< copy method of IIS finder or NULL if you don't want to copy your plugin into sub-SCIPs */
    SCIP_DECL_IISFINDERFREE ((*iisfinderfree)), /**< destructor of IIS finder */
    SCIP_DECL_IISFINDEREXEC ((*iisfinderexec)), /**< IIS finder execution method */

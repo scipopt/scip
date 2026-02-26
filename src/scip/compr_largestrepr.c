@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2026 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -45,7 +45,7 @@
 #include "scip/scip_param.h"
 #include "scip/scip_prob.h"
 #include "scip/scip_reopt.h"
-#include <string.h>
+
 
 #define COMPR_NAME             "largestrepr"
 #define COMPR_DESC             "heuristic searching for large common representatives"
@@ -652,7 +652,8 @@ SCIP_DECL_COMPRCOPY(comprCopyLargestrepr)
 {  /*lint --e{715}*/
    assert(scip != NULL);
    assert(compr != NULL);
-   assert(strcmp(SCIPcomprGetName(compr), COMPR_NAME) == 0);
+
+   SCIP_STRINGEQ( SCIPcomprGetName(compr), COMPR_NAME, SCIP_INVALIDCALL );
 
    /* call inclusion method of primal heuristic */
    SCIP_CALL( SCIPincludeComprLargestrepr(scip) );
