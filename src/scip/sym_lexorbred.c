@@ -22,7 +22,7 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   sym_linorbred.c
+/**@file   sym_lexorbred.c
  * @ingroup DEFPLUGINS_SYM
  * @brief  symmetry handler for lexicographic reduction and orbital reduction
  * @author Christopher Hojny

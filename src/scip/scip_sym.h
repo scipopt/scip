@@ -44,6 +44,11 @@
 extern "C" {
 #endif
 
+/**@addtogroup PublicSymhdlrMethods
+ *
+ * @{
+ */
+
 /** creates a symmetry handler and includes it in SCIP.
  *
  *  @note method has all symmetry handler callbacks as arguments and is thus changed every time a new
