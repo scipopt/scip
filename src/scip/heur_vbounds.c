@@ -762,7 +762,7 @@ SCIP_RETCODE setupAndSolveSubscip(
    SCIP_CALL( SCIPhashmapCreate(&varmap, SCIPblkmem(subscip), nvars) );
 
    SCIP_CALL( SCIPcopyConsCompression(scip, subscip, varmap, NULL, "_vbounds", NULL, NULL, 0, FALSE, FALSE, FALSE,
-         TRUE, NULL) );
+         FALSE, TRUE, NULL) );
 
    if( heurdata->copycuts )
    {

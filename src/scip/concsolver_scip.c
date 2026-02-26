@@ -277,7 +277,7 @@ SCIP_RETCODE initConcsolver(
    SCIPsetMessagehdlrQuiet(data->solverscip, SCIPmessagehdlrIsQuiet(SCIPgetMessagehdlr(scip)));
    SCIP_CALL( SCIPhashmapCreate(&varmapfw, SCIPblkmem(data->solverscip), data->nvars) );
    SCIP_CALL( SCIPcopyConsCompression(scip, data->solverscip, varmapfw, NULL, SCIPconcsolverGetName(concsolver),
-         NULL, NULL, 0, TRUE, FALSE, FALSE, FALSE, &valid) );
+         NULL, NULL, 0, TRUE, FALSE, TRUE, FALSE, FALSE, &valid) );
    assert(valid);
 
    /* allocate memory for the arrays to store the variable mapping */

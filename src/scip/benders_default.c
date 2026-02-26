@@ -266,8 +266,8 @@ SCIP_DECL_BENDERSCOPY(bendersCopyDefault)
             /* the original problem is copied so that the variable mappings are created correctly.
              * TODO: use a varmap to create the mappings for the copies
              */
-            SCIP_CALL( SCIPcopyOrig(bendersdata->subproblems[i], subproblems[i], NULL, NULL, "", TRUE, FALSE, FALSE,
-                  &valid) );
+            SCIP_CALL( SCIPcopyOrig(bendersdata->subproblems[i], subproblems[i], NULL, NULL, "", TRUE, TRUE, FALSE,
+                  FALSE, &valid) );
             assert(valid);
          }
       }

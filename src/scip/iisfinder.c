@@ -96,7 +96,8 @@ SCIP_RETCODE createSubscipIIS(
    SCIP_CALL( SCIPhashmapCreate(&(iis->conssmap), SCIPblkmem(set->scip), SCIPgetNOrigConss(set->scip)) );
 
    /* create problem in sub-SCIP */
-   SCIP_CALL( SCIPcopyOrig(set->scip, iis->subscip, iis->varsmap, iis->conssmap, "iis", TRUE, FALSE, FALSE, &success) );
+   SCIP_CALL( SCIPcopyOrig(set->scip, iis->subscip, iis->varsmap, iis->conssmap, "iis", TRUE, FALSE, FALSE, FALSE,
+         &success) );
 
    if( ! success )
       return SCIP_ERROR;

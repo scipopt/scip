@@ -2651,6 +2651,7 @@ SCIP_RETCODE doCopy(
                                               *   plugins will be copied and activated, and the modifiable flag of
                                               *   constraints will be respected. If FALSE, valid will be set to FALSE, when
                                               *   there are pricers present */
+   SCIP_Bool             copysymhdlrs,       /**< should symmetry handlers be copied to targetscip? */
    SCIP_Bool             threadsafe,         /**< FALSE, if data can be safely shared between the source and target
                                               *   SCIP, otherwise TRUE. This is usually set to FALSE */
    SCIP_Bool             passmessagehdlr,    /**< should the message handler be passed */
@@ -2688,7 +2689,7 @@ SCIP_RETCODE doCopy(
 
    /* copy all plugins */
    SCIP_CALL( SCIPcopyPlugins(sourcescip, targetscip, TRUE, enablepricing, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE,
-         TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, passmessagehdlr, &localvalid) );
+         TRUE, TRUE, TRUE, TRUE, copysymhdlrs, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, passmessagehdlr, &localvalid) );
 
    /* in case there are active pricers and pricing is disabled, targetscip will not be a valid copy of sourcescip */
    if( ! enablepricing && SCIPgetNActivePricers(sourcescip) > 0 )
@@ -2878,6 +2879,7 @@ SCIP_RETCODE SCIPcopy(
                                               *   plugins will be copied and activated, and the modifiable flag of
                                               *   constraints will be respected. If FALSE, valid will be set to FALSE, when
                                               *   there are pricers present */
+   SCIP_Bool             copysymhdlrs,       /**< should symmetry handlers be copied to targetscip? */
    SCIP_Bool             threadsafe,         /**< FALSE, if data can be safely shared between the source and target
                                               *   SCIP, otherwise TRUE. This is usually set to FALSE */
    SCIP_Bool             passmessagehdlr,    /**< should the message handler be passed */
@@ -2900,7 +2902,7 @@ SCIP_RETCODE SCIPcopy(
 
    /* copy source SCIP data into target SCIP data structure */
    SCIP_CALL( doCopy(sourcescip, targetscip, varmap, consmap, suffix, fixedvars, fixedvals, nfixedvars,
-         useconscompression, global, original, enablepricing, threadsafe, passmessagehdlr, valid) );
+         useconscompression, global, original, enablepricing, copysymhdlrs, threadsafe, passmessagehdlr, valid) );
 
    return SCIP_OKAY;
 }
@@ -2977,6 +2979,7 @@ SCIP_RETCODE SCIPcopyConsCompression(
                                               *   plugins will be copied and activated, and the modifiable flag of
                                               *   constraints will be respected. If FALSE, valid will be set to FALSE, when
                                               *   there are pricers present */
+   SCIP_Bool             copysymhdlrs,       /**< should symmetry handlers be copied to targetscip? */
    SCIP_Bool             threadsafe,         /**< FALSE, if data can be safely shared between the source and target
                                               *   SCIP, otherwise TRUE. This is usually set to FALSE */
    SCIP_Bool             passmessagehdlr,    /**< should the message handler be passed */
@@ -2996,7 +2999,7 @@ SCIP_RETCODE SCIPcopyConsCompression(
 
    /* copy the source problem data */
    SCIP_CALL( doCopy(sourcescip, targetscip, varmap, consmap, suffix, fixedvars, fixedvals, nfixedvars,
-         useconscompression, global, original, enablepricing, threadsafe, passmessagehdlr, valid) );
+         useconscompression, global, original, enablepricing, copysymhdlrs, threadsafe, passmessagehdlr, valid) );
 
    return SCIP_OKAY;
 }
@@ -3056,6 +3059,7 @@ SCIP_RETCODE SCIPcopyOrig(
                                               *   plugins will be copied and activated, and the modifiable flag of
                                               *   constraints will be respected. If FALSE, valid will be set to FALSE, when
                                               *   there are pricers present */
+   SCIP_Bool             copysymhdlrs,       /**< should symmetry handlers be copied to targetscip? */ 
    SCIP_Bool             threadsafe,         /**< FALSE, if data can be safely shared between the source and target
                                               *   SCIP, otherwise TRUE. This is usually set to FALSE */
    SCIP_Bool             passmessagehdlr,    /**< should the message handler be passed */
@@ -3078,7 +3082,7 @@ SCIP_RETCODE SCIPcopyOrig(
    SCIP_CALL( SCIPcheckStage(targetscip, "SCIPcopyOrig", TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE) );
 
    SCIP_CALL( doCopy(sourcescip, targetscip, varmap, consmap, suffix, fixedvars, fixedvals, nfixedvars,
-         useconscompression, global, original, enablepricing, threadsafe, passmessagehdlr, valid) );
+         useconscompression, global, original, enablepricing, copysymhdlrs, threadsafe, passmessagehdlr, valid) );
 
    return SCIP_OKAY;
 }
@@ -3148,6 +3152,7 @@ SCIP_RETCODE SCIPcopyOrigConsCompression(
                                               *   plugins will be copied and activated, and the modifiable flag of
                                               *   constraints will be respected. If FALSE, valid will be set to FALSE, when
                                               *   there are pricers present */
+   SCIP_Bool             copysymhdlrs,       /**< should symmetry handlers be copied to targetscip? */
    SCIP_Bool             threadsafe,         /**< FALSE, if data can be safely shared between the source and target
                                               *   SCIP, otherwise TRUE. This is usually set to FALSE */
    SCIP_Bool             passmessagehdlr,    /**< should the message handler be passed */
@@ -3168,7 +3173,7 @@ SCIP_RETCODE SCIPcopyOrigConsCompression(
 
    /* copy the source problem data */
    SCIP_CALL( doCopy(sourcescip, targetscip, varmap, consmap, suffix, fixedvars, fixedvals, nfixedvars,
-         useconscompression, global, original, enablepricing, threadsafe, passmessagehdlr, valid) );
+         useconscompression, global, original, enablepricing, copysymhdlrs, threadsafe, passmessagehdlr, valid) );
 
    SCIP_CALL( SCIPsyncstoreRelease(&targetscip->syncstore) );
    targetscip->syncstore = sourcescip->syncstore;

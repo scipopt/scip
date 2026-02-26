@@ -1297,7 +1297,7 @@ SCIP_RETCODE doSolveSubMIP(
 
    /* copy original problem to subproblem; do not copy pricers */
    SCIP_CALL( SCIPcopyConsCompression(scip, subscip, varmap, NULL, "undercoversub", NULL, NULL, 0, FALSE, FALSE, FALSE,
-         TRUE, NULL) );
+         FALSE, TRUE, NULL) );
 
    /* assert that cover variables are fixed in source and target SCIP */
    for( c = 0; c < ncovervars; c++)

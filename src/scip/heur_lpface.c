@@ -784,7 +784,8 @@ SCIP_RETCODE setupSubscipLpface(
    }
    else
    {
-      SCIP_CALL( SCIPcopyConsCompression(scip, subscip, varmapfw, NULL, "lpface", fixvars, fixvals, nfixvars, TRUE, FALSE, FALSE, TRUE, &success) );
+      SCIP_CALL( SCIPcopyConsCompression(scip, subscip, varmapfw, NULL, "lpface", fixvars, fixvals, nfixvars, TRUE,
+            FALSE, FALSE, FALSE, TRUE, &success) );
 
       if( heurdata->copycuts )
       {

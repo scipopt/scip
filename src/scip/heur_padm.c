@@ -751,13 +751,13 @@ SCIP_RETCODE reoptimize(
    {
       SCIP_CALL( SCIPhashmapCreate(&varmap, SCIPblkmem(scipcopy), SCIPgetNOrigVars(scip)) );
       SCIP_CALL( SCIPcopyOrigConsCompression(scip, scipcopy, varmap, NULL, "reopt_padm", linkvars, linkvals, nlinkvars,
-               FALSE, FALSE, TRUE, success) );
+            FALSE, FALSE, FALSE, TRUE, success) );
    }
    else
    {
       SCIP_CALL( SCIPhashmapCreate(&varmap, SCIPblkmem(scipcopy), SCIPgetNVars(scip)) );
       SCIP_CALL( SCIPcopyConsCompression(scip, scipcopy, varmap, NULL, "reopt_padm", linkvars, linkvals, nlinkvars,
-               TRUE, FALSE, FALSE, TRUE, success) );
+            TRUE, FALSE, FALSE, FALSE, TRUE, success) );
    }
    for( v = 0; v < nvars; v++ )
    {

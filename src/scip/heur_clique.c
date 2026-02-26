@@ -890,7 +890,7 @@ SCIP_DECL_HEUREXEC(heurExecClique)
       SCIP_CALL( SCIPhashmapCreate(&varmap, SCIPblkmem(subscip), nvars) );
 
       SCIP_CALL( SCIPcopyConsCompression(scip, subscip, varmap, NULL, "_clique", NULL, NULL, 0, FALSE, FALSE, FALSE,
-            TRUE, &valid) );
+            FALSE, TRUE, &valid) );
 
       if( heurdata->copycuts )
       {
