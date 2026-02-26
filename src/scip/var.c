@@ -33,6 +33,7 @@
  * @author Michael Winkler
  * @author Kati Wolter
  * @author Stefan Vigerske
+ * @author Christopher Hojny
  *
  * @todo Possibly implement the access of bounds of multi-aggregated variables by accessing the
  * corresponding linear constraint if it exists. This seems to require some work, since the linear

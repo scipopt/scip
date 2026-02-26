@@ -37,6 +37,7 @@
  * @author Michael Winkler
  * @author Kati Wolter
  * @author Mohammed Ghannam
+ * @author Christopher Hojny
  *
  * @todo check all SCIP_STAGE_* switches, and include the new stages TRANSFORMED and INITSOLVE
  */
