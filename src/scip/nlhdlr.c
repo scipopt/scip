@@ -804,6 +804,9 @@ SCIP_RETCODE SCIPnlhdlrCollectStatistics(
    SCIP_DATATREE* nlhdlrstree;
    int i;
 
+   if( nnlhdlrs == 0 )
+      return SCIP_OKAY;
+
    /* create a subtree for Nldhlr statistics */
    SCIP_CALL( SCIPcreateDatatreeInTree(scip, datatree, &nlhdlrstree, "plugins", nnlhdlrs) );
 
