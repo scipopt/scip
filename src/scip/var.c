@@ -16258,7 +16258,8 @@ SCIP_RETCODE SCIPvarAddVub(
  *  L2) If c < 0, we want c' * zub + d' = xlb and c' * zlb + d' = c * zlb + d, i.e., c' + d' = xlb, d' = d. This yields:
  *  c' = xlb - d and d' = d.
  *
- *  These arguments only work for binary variables.
+ *  These arguments only work for binary variables. The reverse case in which x is binary is handled by implications, so
+ *  there is no need to handle it here.
  */
 SCIP_RETCODE SCIPtightenVariableLowerAndUpperBounds(
    SCIP_SET*             set,                /**< global SCIP settings */
