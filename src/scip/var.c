@@ -16296,7 +16296,7 @@ SCIP_RETCODE SCIPtightenVariableLowerAndUpperBounds(
       if ( SCIPsetIsFeasEQ(set, xlb, xub) )
          continue;
 
-      if ( xvar->vubs == NULL )
+      if ( xvar->vubs != NULL )
          nvubs = SCIPvboundsGetNVbds(xvar->vubs);
 
       if ( nvubs > 0 )
