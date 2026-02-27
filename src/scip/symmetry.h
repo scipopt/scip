@@ -125,6 +125,7 @@ SCIP_RETCODE SCIPcomputeOrbitsFilterSym(
  *  Only permutations that are not inactive (as marked by @p inactiveperms) are used. Thus, one can use this array to
  *  filter out permutations.
  */
+SCIP_EXPORT
 SCIP_RETCODE SCIPcomputeOrbitsFilterSymNoComp(
    SCIP*                 scip,               /**< SCIP instance */
    int                   npermvars,          /**< length of a permutation array */
@@ -330,6 +331,7 @@ SCIP_Bool SCIPsymGT(
    );
 
 /** returns whether a (signed) permutation is a proper permutation */
+SCIP_EXPORT
 SCIP_Bool isProperPerm(
    SYM_SYMTYPE           symtype,            /**< symmetry type */
    int*                  perm,               /**< (signed) permutation */
@@ -337,6 +339,7 @@ SCIP_Bool isProperPerm(
    );
 
 /** returns whether a permutation is already contained in a list of permutations */
+SCIP_EXPORT
 SCIP_Bool isPermKnown(
    int*                  perm,               /**< permutation to be checked */
    int                   permlen,            /**< length of permutation */
