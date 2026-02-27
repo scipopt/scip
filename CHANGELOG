@@ -126,6 +126,41 @@ Interface changes
 - `estimation/method`: use default setting `p` to apply linear check(p)oint extrapolation in tree size estimation
 - replaced param `propagating/symmetry/nautymaxlevel` by `symmetries/nautymaxlevel`
 - removed param `misc/usesymmetry`
+- removed param `propagating/symmetry/maxgenerators`
+- removed param `propagating/symmetry/checksymmetries`
+- removed param `propagating/symmetry/displaynorbitvars`
+- removed param `propagating/symmetry/doubleequations`
+- removed param `propagating/symmetry/dispsyminfo`
+- removed param `propagating/symmetry/conssaddlp`
+- removed param `propagating/symmetry/addsymresacks`
+- removed param `propagating/symmetry/detectdoublelex`
+- removed param `propagating/symmetry/detectorbitopes`
+- removed param `propagating/symmetry/detectsubgroups`
+- removed param `propagating/symmetry/addweaksbcs`
+- removed param `propagating/symmetry/addconsstiming`
+- removed param `propagating/symmetry/ofsymcomptiming`
+- removed param `propagating/symmetry/performpresolving`
+- removed param `propagating/symmetry/recomputerestart`
+- removed param `propagating/symmetry/compresssymmetries`
+- removed param `propagating/symmetry/compressthreshold`
+- removed param `propagating/symmetry/usecolumnsparsity`
+- removed param `propagating/symmetry/maxnconsssubgroup`
+- removed param `propagating/symmetry/usedynamicprop`
+- removed param `propagating/symmetry/addstrongsbcs`
+- removed param `propagating/symmetry/ssttiebreakrule`
+- removed param `propagating/symmetry/sstleaderrule`
+- removed param `propagating/symmetry/sstleadervartype`
+- removed param `propagating/symmetry/addconflictcuts`
+- removed param `propagating/symmetry/sstaddcuts`
+- removed param `propagating/symmetry/sstmixedcomponents`
+- removed param `propagating/symmetry/symfixnonbinaryvars`
+- removed param `propagating/symmetry/enforcecomputesymmetry`
+- removed param `propagating/symmetry/preferlessrows`
+- removed param `propagating/symmetry/symtype`
+- removed param `propagating/symmetry/handlesignedorbitopes`
+- removed param `propagating/symmetry/usesimplesgncomp`
+- removed param `propagating/symmetry/symtiming`
+- removed param `propagating/symmetry/maxnnewivolus`
 
 ### Data structures
 
