@@ -16238,14 +16238,14 @@ SCIP_RETCODE SCIPvarAddVub(
  *  The goal is to tighten c (and possibly modify d) if z is a binary variable.
  *
  *  Let xlb and xub be lower and upper bounds for x, respectively. Let zlb = 0 and zub = 1 be the lower and upper bounds
- *  on z.. Let c' and d' the new values for c and d, respectively.
+ *  on z. Let c' and d' the new values for c and d, respectively.
  *
  *  For variable upper bounds, this works as follows:
  *
  *  U1) If c > 0, we want to choose c', d' such that c' * zub + d' = xub and c' * zlb + d' = c * zlb + d. This means
  *  that for zlb, we want to get the same bound as before. For zub, we want to get xub. Plugging in the values zlb = 0
- *  and zub = 1, we obtain c' + d' = xub and d' = d, i.e.
- *  c'= xub - d and d' = d.
+ *  and zub = 1, we obtain c' + d' = xub and d' = d, i.e.,
+ *  c' = xub - d and d' = d.
  *
  *  U2) If c < 0, we want c' * zlb + d' = xub and c' * zub + d' = c * zub + d, i.e., d' = xub and c' + d' = c + d. This yields:
  *  c' = c + d - xub and d' = xub.
