@@ -332,10 +332,6 @@
 #define SCIP_DEFAULT_MISC_ALLOWSTRONGDUALREDS TRUE /**< should strong dual reductions be allowed in propagation and presolving? */
 #define SCIP_DEFAULT_MISC_ALLOWWEAKDUALREDS   TRUE /**< should weak dual reductions be allowed in propagation and presolving? */
 #define SCIP_DEFAULT_MISC_REFERENCEVALUE   1e99 /**< objective value for reference purposes */
-#define SCIP_DEFAULT_MISC_USESYMMETRY         7 /**< bitset describing used symmetry handling technique (0: off; 1: polyhedral (orbitopes and symresacks, lexicographic and orbitopal reduction if dynamic)
-                                                 *   2: orbital reduction; 3: polyhedral methods and orbital reduction; 4: Schreier Sims cuts; 5: Schreier Sims cuts and polyhedral
-                                                 *   methods); 6: Schreier Sims cuts and orbital reduction; 7: Schreier Sims cuts, polyhedral methods, and orbital
-                                                 *   reduction, see type_symmetry.h */
 #define SCIP_DEFAULT_MISC_SCALEOBJ         TRUE /**< should the objective function be scaled? */
 #define SCIP_DEFAULT_MISC_SHOWDIVINGSTATS FALSE /**< should detailed statistics for diving heuristics be shown? */
 
@@ -779,25 +775,6 @@ SCIP_DECL_PARAMCHGD(paramChgdEnableReopt)
       return SCIP_PARAMETERWRONGVAL;
 
    return retcode;
-}
-
-/** information method for a parameter change of usesymmetry */
-static
-SCIP_DECL_PARAMCHGD(paramChgdUsesymmetry)
-{  /*lint --e{715}*/
-   assert( scip != NULL );
-   assert( param != NULL );
-
-   if ( SCIPgetStage(scip) >= SCIP_STAGE_INITPRESOLVE && SCIPgetStage(scip) <= SCIP_STAGE_SOLVED )
-   {
-      if ( SCIPparamGetInt(param) > 0 )
-      {
-         SCIPerrorMessage("Cannot turn on symmetry handling during (pre)solving or change method.\n");
-         return SCIP_PARAMETERWRONGVAL;
-      }
-   }
-
-   return SCIP_OKAY;
 }
 
 #ifdef SCIP_WITH_EXACTSOLVE
@@ -2248,21 +2225,6 @@ SCIP_RETCODE SCIPsetCreate(
          &(*set)->misc_debugsol, FALSE, SCIP_DEFAULT_MISC_DEBUGSOLUTION,
          NULL, NULL) );
 #endif
-
-   SCIP_CALL( SCIPsetAddIntParam(*set, messagehdlr, blkmem,
-         "misc/usesymmetry",
-         "bitset describing used symmetry handling technique: " \
-         "(0: off; " \
-         "1: constraint-based (orbitopes, symresacks); lexicographic and orbitopal reduction) if dynamic; " \
-         "2: orbital reduction; " \
-         "3: orbitopes and symresacks, and lexicographic/orbital reduction; " \
-         "4: Schreier Sims cuts; " \
-         "5: Schreier Sims cuts, orbitopes, symresacks, and/or lexicographic reduction; " \
-         "6: Schreier Sims cuts, orbital reduction; " \
-         "7: Schreier Sims cuts, orbitopes, symresacks, and/or lexicographic/orbital reduction;) " \
-         "See type_symmetry.h.",
-         &(*set)->misc_usesymmetry, FALSE, SCIP_DEFAULT_MISC_USESYMMETRY, 0, 7,
-         paramChgdUsesymmetry, NULL) );
 
    /* randomization parameters */
    SCIP_CALL( SCIPsetAddIntParam(*set, messagehdlr, blkmem,
