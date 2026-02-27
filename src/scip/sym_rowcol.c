@@ -70,8 +70,8 @@
 #define SYM_MAXPRESOLROUNDS          1       /**< maximum number of presolving rounds */
 
 /* default value of parameters */
-#define SYM_DEFAULT_DETECTDOUBLELEX TRUE     /**< Should we check whether the components can be handled by double lex matrices? */
-#define SYM_DEFAULT_HANDLESIGNEDORBITOPES TRUE /**< Shall signed orbitopes be handled? */
+#define SYM_DEFAULT_DETECTROWCOL TRUE        /**< Should we check whether the components can be simultaneously handled by row and column symmetries? */
+#define SYM_DEFAULT_HANDLEREFLECTIONS TRUE   /**< Shall reflection symmetries be handled? */
 #define SYM_DEFAULT_USEDYNAMICPROP TRUE      /**< Shall dynamic propagation be used for orbitopes? */
 #define DEFAULT_DISPLAYSYMINFO   FALSE       /**< Should the symmetry handler print information about the added
                                               *   symmetry handling methods? */
@@ -95,8 +95,9 @@ struct SCIP_SymhdlrData
 {
    SCIP_EVENTHDLR*       shadowtreeeventhdlr; /**< shadow tree event handler */
    SCIP_ORBITOPALREDDATA* orbitopalreddata;  /**< container for orbitopal reduction data */
-   SCIP_Bool             detectdoublelex;    /**< Should we check whether the components can be handled by double lex matrices? */
-   SCIP_Bool             handlesignedorbitopes;/**< Shall signed orbitopes be handled? */
+   SCIP_Bool             detectrowcol;       /**< Should we check whether the components can be simultaneously
+                                              *   handled by row and column symmetries? */
+   SCIP_Bool             handlereflections;  /**< Shall reflection symmetries be handled? */
    SCIP_Bool             usedynamicprop;     /**< Shall dynamic propagation be used for orbitopes? */
    SCIP_Bool             displaysyminfo;     /**< Shall information about the added SST cuts be displayed? */
 };
@@ -1752,7 +1753,7 @@ SCIP_RETCODE handleDoublelLexMatrix(
    int                   ncolblocks,         /**< number of column blocks */
    int**                 signedperms,        /**< array of proper signed permutations */
    int                   nsignedperms,       /**< number of proper signed permutations */
-   SCIP_Bool             handlesignedorbitopes,/**< Shall signed orbitopes be handled? */
+   SCIP_Bool             handlereflections,  /**< Shall reflection symmetries be handled? */
    SCIP_Bool             usedynamicprop,     /**< Shall dynamic orbitope propagation be used */
    SCIP_LEXREDDATA*      lexreddata,         /**< data needed for lexicographic reduction */
    SCIP_Bool*            lexredactive,       /**< pointer to store whether lexicographic reduction is active */
@@ -1839,7 +1840,7 @@ SCIP_RETCODE handleDoublelLexMatrix(
          canuseroworbitope = TRUE;
 
       nflipableidx = 0;
-      if( handlesignedorbitopes && canusecolorbitope )
+      if( handlereflections && canusecolorbitope )
       {
          /* check whether the signed permutations flip entries within a single column of the orbitope matrix */
          for( q = 0; q < nsignedperms && nflipableidx == 0; ++q )
@@ -1853,7 +1854,7 @@ SCIP_RETCODE handleDoublelLexMatrix(
             hascolflip = TRUE;
       }
 
-      if( handlesignedorbitopes && !hascolflip && canuseroworbitope )
+      if( handlereflections && !hascolflip && canuseroworbitope )
       {
          assert(nflipableidx == 0);
 
@@ -2064,7 +2065,7 @@ SCIP_RETCODE tryHandleSingleOrDoubleLexMatrices(
    int                   npermvars,          /**< number of variables */
    SCIP_Real*            permvardomaincenter,/**< array of centers of variable domains */
    SCIP_Bool             detectsinglelex,    /**< whether single lex matrices shall be detected */
-   SCIP_Bool             handlesignedorbitopes,/**< Shall signed orbitopes be handled? */
+   SCIP_Bool             handlereflections,  /**< Shall reflection symmetries be handled? */
    SCIP_Bool             usedynamicprop,     /**< Shall dynamic propagation be used for orbitopes? */
    int                   cidx,               /**< index of component */
    int*                  nchgbds,            /**< pointer to store number of bound changes (or NULL) */
@@ -2197,7 +2198,7 @@ SCIP_RETCODE tryHandleSingleOrDoubleLexMatrices(
 
          (void) SCIPsnprintf(partialname, SCIP_MAXSTRLEN, "orbitope_component_%d", cidx);
 
-         if( handlesignedorbitopes )
+         if( handlereflections )
          {
             int* flipablerows;
             int nflipablerows = 0;
@@ -2277,7 +2278,7 @@ SCIP_RETCODE tryHandleSingleOrDoubleLexMatrices(
 
          SCIP_CALL( handleDoublelLexMatrix(scip, symtype, perms, permvars, npermvars, permvardomaincenter, cidx,
                lexmatrix, nrows, ncols, lexrowsbegin, lexcolsbegin, nrowmatrices, ncolmatrices, selectedperms, nselectedperms,
-               handlesignedorbitopes, usedynamicprop, lexreddata, lexredactive, orbitopalreddata, orbitopeconss,
+               handlereflections, usedynamicprop, lexreddata, lexredactive, orbitopalreddata, orbitopeconss,
                norbitopeconss, maxnorbitopeconss, displaysyminfo, &locsuccess, nchgbds) );
       }
 
@@ -2348,7 +2349,7 @@ SCIP_DECL_SYMHDLRTRYADD(symhdlrTryaddRowCol)
    assert((*symcompdata)->lexreddata != NULL);
 
    SCIP_CALL( tryHandleSingleOrDoubleLexMatrices(scip, symtype, perms, nperms, permvars, npermvars, permvardomcenter,
-         !symhdlrdata->detectdoublelex, symhdlrdata->handlesignedorbitopes, symhdlrdata->usedynamicprop,
+         !symhdlrdata->detectrowcol, symhdlrdata->handlereflections, symhdlrdata->usedynamicprop,
          id, nchgbds, (*symcompdata)->lexreddata, &(*symcompdata)->lexredactive, symhdlrdata->orbitopalreddata,
          &(*symcompdata)->conss, &(*symcompdata)->nconss, &(*symcompdata)->maxnconss, symhdlrdata->displaysyminfo,
          success) );
@@ -2615,13 +2616,13 @@ SCIP_RETCODE SCIPincludeSymhdlrRowCol(
    assert(symhdlrdata->orbitopalreddata != NULL);
 
    /* add parameters */
-   SCIP_CALL( SCIPaddBoolParam(scip, "symmetries/" SYM_NAME "/detectdoublelex",
-         "Should we check whether the components can be handled by double lex matrices?",
-         &symhdlrdata->detectdoublelex, TRUE, SYM_DEFAULT_DETECTDOUBLELEX, NULL, NULL) );
+   SCIP_CALL( SCIPaddBoolParam(scip, "symmetries/" SYM_NAME "/detectrowcol",
+         "Should we check whether the components can be simultaneously handled by row and column symmetries?",
+         &symhdlrdata->detectrowcol, TRUE, SYM_DEFAULT_DETECTROWCOL, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddBoolParam(scip, "symmetries/" SYM_NAME "/handlesignedorbitopes",
-         "Shall signed orbitopes be handled?",
-         &symhdlrdata->handlesignedorbitopes, TRUE, SYM_DEFAULT_HANDLESIGNEDORBITOPES, NULL, NULL) );
+   SCIP_CALL( SCIPaddBoolParam(scip, "symmetries/" SYM_NAME "/handlereflections",
+         "Shall reflection symmetries be handled?",
+         &symhdlrdata->handlereflections, TRUE, SYM_DEFAULT_HANDLEREFLECTIONS, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip, "symmetries/" SYM_NAME "/usedynamicprop",
          "Shall dynamic orbitope propagation be used?",

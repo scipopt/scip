@@ -88,10 +88,10 @@ Interface changes
 - `symmetries/rowcol/sepafreq`: separation frequency of symmetry handler
 - `symmetries/rowcol/delayprop`: whether the propagation method shall be delayed
 - `symmetries/rowcol/delaysepa`: whether the separation method shall be delayed
-- `symmetries/rowcol/detectdoublelex`: whether it shall be detected whether simultaneous row and column symmetries exist
+- `symmetries/rowcol/detectrowcol`: whether it shall be detected whether simultaneous row and column symmetries exist
 - `symmetries/rowcol/displaysyminfo`: whether information about which symmetry handling methods are applied shall be displayed
 - `symmetries/rowcol/expbackoff`: base for exponential increase of frequency at which separator is called
-- `symmetries/rowcol/handlesignedorbitopes`: whether signed orbitopes shall be handled
+- `symmetries/rowcol/handlereflections`: whether reflection symmetries shall be handled
 - `symmetries/rowcol/maxbounddist`: maximal relative distance from current node's dual bound to primal bound compared to best node's dual bound for applying separator
 - `symmetries/rowcol/maxprerounds`: maximum number of presolving rounds
 - `symmetries/rowcol/presoltiming`: timing mask of the symmetry handler's presolving method
