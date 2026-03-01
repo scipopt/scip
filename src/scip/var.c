@@ -16297,8 +16297,7 @@ SCIP_RETCODE SCIPtightenVariableLowerAndUpperBounds(
       if ( SCIPsetIsFeasEQ(set, xlb, xub) )
          continue;
 
-      if ( xvar->vubs != NULL )
-         nvubs = SCIPvboundsGetNVbds(xvar->vubs);
+      nvubs = SCIPvboundsGetNVbds(xvar->vubs);
 
       if ( nvubs > 0 )
       {
@@ -16318,7 +16317,7 @@ SCIP_RETCODE SCIPtightenVariableLowerAndUpperBounds(
 
             if ( SCIPvarIsBinary(zvar) )
             {
-               /* skip fixed variables (should have dealt with otherwise) */
+               /* skip fixed variables */
                if ( SCIPvarGetLbGlobal(zvar) + 0.5 > SCIPvarGetUbGlobal(zvar) )
                   continue;
 
@@ -16369,8 +16368,7 @@ SCIP_RETCODE SCIPtightenVariableLowerAndUpperBounds(
          }
       }
 
-      if ( xvar->vlbs != NULL )
-         nvlbs = SCIPvboundsGetNVbds(xvar->vlbs);
+      nvlbs = SCIPvboundsGetNVbds(xvar->vlbs);
 
       if ( nvlbs > 0 )
       {
