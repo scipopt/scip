@@ -2855,7 +2855,7 @@ SCIP_RETCODE SCIPcollectPresolverStatistics(
    SCIP_DATATREE*        datatree            /**< data tree */
    )
 {
-   SCIP_DATATREE* plugins;
+   SCIP_DATATREE* plugins = NULL;
    SCIP_DATATREE* rootdata;
    int i;
 
@@ -2867,7 +2867,10 @@ SCIP_RETCODE SCIPcollectPresolverStatistics(
    /* Sort presolvers by name */
    SCIPsetSortPresolsName(scip->set);
 
-   SCIP_CALL( SCIPcreateDatatreeInTree( scip, datatree, &plugins, "plugins", scip->set->npresols + scip->set->nprops + scip->set->nconshdlrs) );
+   if( scip->set->npresols > 0 || scip->set->nprops > 0 || scip->set->nconshdlrs > 0 )
+   {
+      SCIP_CALL( SCIPcreateDatatreeInTree( scip, datatree, &plugins, "plugins", scip->set->npresols + scip->set->nprops + scip->set->nconshdlrs) );
+   }
 
    /* Collect presolver statistics */
    for( i = 0; i < scip->set->npresols; ++i )
@@ -3028,6 +3031,9 @@ SCIP_RETCODE SCIPcollectConstraintStatistics(
 
    SCIP_CALL( SCIPcheckStage(scip, "SCIPcollectConstraintStatistics", FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
 
+   if( scip->set->nconshdlrs == 0 )
+      return SCIP_OKAY;
+
    /* Create a subtree for constraints */
    SCIP_CALL( SCIPcreateDatatreeInTree(scip, datatree, &constraints, "plugins", scip->set->nconshdlrs) );
 
@@ -3133,6 +3139,9 @@ SCIP_RETCODE SCIPcollectConstraintTimingStatistics(
    assert(datatree != NULL);
 
    SCIP_CALL( SCIPcheckStage(scip, "SCIPcollectConstraintTimingStatistics", FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+
+   if( scip->set->nconshdlrs == 0 )
+      return SCIP_OKAY;
 
    /* Create a subtree for constraint timings */
    SCIP_CALL( SCIPcreateDatatreeInTree(scip, datatree, &constrainttimings, "plugins", scip->set->nconshdlrs) );
@@ -3242,6 +3251,9 @@ SCIP_RETCODE SCIPcollectPropagatorStatistics(
    assert(datatree != NULL);
 
    SCIP_CALL( SCIPcheckStage(scip, "SCIPcollectPropagatorStatistics", FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+
+   if( scip->set->nprops == 0 )
+      return SCIP_OKAY;
 
    /* Create a subtree for propagators */
    SCIP_CALL( SCIPcreateDatatreeInTree(scip, datatree, &propagators, "plugins", scip->set->nprops) );
@@ -3734,6 +3746,9 @@ SCIP_RETCODE SCIPcollectCutselectorStatistics(
 
    SCIP_CALL( SCIPcheckStage(scip, "SCIPcollectCutselectorStatistics", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
 
+   if( scip->set->ncutsels == 0 )
+      return SCIP_OKAY;
+
    /* Create a subtree for cutselectors */
    SCIP_CALL( SCIPcreateDatatreeInTree(scip, datatree, &cutselectors, "plugins", scip->set->ncutsels) );
 
@@ -3901,6 +3916,9 @@ SCIP_RETCODE SCIPcollectBranchruleStatistics(
    assert(datatree != NULL);
 
    SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPcollectBranchruleStatistics", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+
+   if( scip->set->nbranchrules == 0 )
+      return SCIP_OKAY;
 
    SCIP_CALL( SCIPcreateDatatreeInTree(scip, datatree, &branchruletree, "plugins", scip->set->nbranchrules) );
 
@@ -4219,6 +4237,9 @@ SCIP_RETCODE SCIPcollectCompressionStatistics(
 
    /* Check if tree reoptimization is enabled */
    if( !scip->set->reopt_enable )
+      return SCIP_OKAY;
+
+   if( scip->set->ncomprs == 0 )
       return SCIP_OKAY;
 
    /* Create a subtree for tree compressions */
@@ -5613,6 +5634,9 @@ SCIP_RETCODE SCIPcollectExpressionHandlerStatistics(
    assert(datatree != NULL);
 
    SCIP_CALL( SCIPcheckStage(scip, "SCIPcollectExpressionHandlerStatistics", FALSE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+
+   if( scip->set->nexprhdlrs == 0 )
+      return SCIP_OKAY;
 
    /* Create a subtree for expression handler statistics */
    SCIP_CALL( SCIPcreateDatatreeInTree(scip, datatree, &exprhdlrstree, "expression_handlers", scip->set->nexprhdlrs) );
