@@ -4107,7 +4107,7 @@
  * type_sym.h.
  *
  * Here is what you have to do (assuming your symmetry handler should be named "sst"):
- * -# Copy the template files src/scip/sym_xyz.c and src/scip/sym_xyz.h into files "sym_sst.c" and "sym_sst.h".
+ * -# Copy the template files `src/scip/sym_xyz.c` and `src/scip/sym_xyz.h` into files `sym_sst.c` and `sym_sst.h`.
  *    \n
  *    Make sure to adjust your build system such that these files are compiled and linked to your project. \n
  *    If you are adding a new default plugin, this means updating the `src/CMakeLists.txt` and `Makefile` files in the
@@ -4115,7 +4115,7 @@
  * -# Use `SCIPincludeSymhdlrSST()` in order to include the symmetry handler into your SCIP instance,
  *    e.g., in the main file of your project. \n
  *    If you are adding a new default plugin, this include function must be added to `src/scipdefplugins.c`.
- * -# Open the new files with a text editor and replace all occurrences of "xyz" by "sst".
+ * -# Open the new files with a text editor and replace all occurrences of `xyz` by `sst`.
  * -# Adjust the \ref SYM_PROPERTIES "properties of the symmetry handler".
  * -# Define the \ref SYM_DATA "symmetry data and the symmetry handler data". This is optional.
  * -# Implement the \ref SYM_INTERFACE "interface methods".
@@ -4163,7 +4163,7 @@
  * If you want to have a more flexible control of when to execute the separation algorithm, you have to assign
  * a separation frequency of 1 and implement a check at the beginning of your separation algorithm whether you really
  * want to execute the separator or not.
- * If you do not want to execute the method, set the result code to SCIP_DIDNOTRUN.
+ * If you do not want to execute the method, set the result code to `SCIP_DIDNOTRUN`.
  *
  * \par SYMHDLR_SEPAPRIORITY: the priority of the symmetry handler for separation. (optional: to be set only if the symmetry handler supports separation).
  * In each separation round during the price-and-cut loop of the subproblem processing or during the separation loop
@@ -4192,7 +4192,7 @@
  * \par SYM_MAXBOUNDDIST: the default maximal relative distance from the current node's dual bound to primal bound compared to best node's dual bound for applying separation.
  * At the current branch-and-bound node, the relative distance from its dual bound (local dual bound)
  * to the primal bound compared to the best node's dual bound (global dual bound) is considered. The separation method
- * of the separator will only be applied at the current node if this relative distance does not exceed SYM_MAXBOUNDDIST.
+ * of the separator will only be applied at the current node if this relative distance does not exceed `SYM_MAXBOUNDDIST`.
  * \n
  * For example, if the global dual bound is 50 and the primal bound is 60, SYM_MAXBOUNDDIST = 0.25 means that separation
  * is only applied if the current node's dual bound is in the first quarter of the interval [50,60], i.e., if it is less
@@ -4200,28 +4200,28 @@
  * \n
  * In particular, the values 0.0 and 1.0 mean that separation is applied at the current best node only or at all
  * nodes, respectively. Since separation seems to be most important to apply at nodes that define to the global
- * dual bound, 0.0 is probably a good choice for SYM_MAXBOUNDDIST.
- * Note that separators with a frequency of SYM_FREQ = 0 are only applied at the root node.
+ * dual bound, 0.0 is probably a good choice for `SYM_MAXBOUNDDIST`.
+ * Note that separators with a frequency of `SYM_FREQ = 0` are only applied at the root node.
  * Obviously, at the root node the local dual bound is equal to the global dual bound and thus, the separator is called
- * for any value of SYM_MAXBOUNDDIST.
+ * for any value of `SYM_MAXBOUNDDIST`.
  *
  * \par SYMHDLR_PROPFREQ: the default frequency for propagating domains.
- * This default frequency has the same meaning as the SYMHDLR_SEPAFREQ with respect to the domain propagation
+ * This default frequency has the same meaning as the `SYMHDLR_SEPAFREQ` with respect to the domain propagation
  * callback of the symmetry handler.
  * A propagation frequency of 0 means that propagation is only applied in preprocessing and at the root node.
  * A propagation frequency of -1 disables the propagation method of the symmetry handler.
  *
  * \par SYMHDLR_DELAYPROP: the default for whether the propagation method should be delayed, if other propagators found reductions.
- * This property is analogous to the DELAYSEPA flag, but deals with the propagation method of the symmetry handler.
+ * This property is analogous to the `DELAYSEPA` flag, but deals with the propagation method of the symmetry handler.
  *
  * \par SYMHDLR_PROPPRIORITY: the default priority for propagating domains.
- * This default priority has the same meaning as the SYMHDLR_SEPAPRIORITY with respect to the domain propagation
+ * This default priority has the same meaning as the `SYMHDLR_SEPAPRIORITY` with respect to the domain propagation
  * callback of the symmetry handler.
  *
  * \par SYMHDLR_PROP_TIMING: the propagation timing mask of the symmetry handler.
  * SCIP calls the domain propagation routines at different places in the node processing loop.
  * This property indicates at which places the propagation routine of the symmetry handler is called.
- * Possible values are defined in type_timing.h and can be concatenated, e.g., as in SCIP_PROPTIMING_ALWAYS.
+ * Possible values are defined in type_timing.h and can be concatenated, e.g., as in `SCIP_PROPTIMING_ALWAYS`.
  *
  * \par SYMHDLR_PRESOLTIMING: the timing of the symmetry handler's presolving method (FAST, MEDIUM, or EXHAUSTIVE).
  * Every presolving round starts with the FAST presolving methods. MEDIUM presolvers are only called, if FAST presolvers
@@ -4235,26 +4235,26 @@
  * \par SYMHDLR_MAXPREROUNDS: the default maximal number of presolving rounds the symmetry handler participates in.
  * The preprocessing is executed in rounds.
  * If enough changes have been applied to the model, an additional preprocessing round is performed.
- * The MAXPREROUNDS parameter of a symmetry handler denotes the maximal number of preprocessing rounds the symmetry
+ * The `MAXPREROUNDS` parameter of a symmetry handler denotes the maximal number of preprocessing rounds the symmetry
  * handler participates in.
  * A value of -1 means that there is no limit on the number of rounds.
  * A value of 0 means the preprocessing callback of the symmetry handler is disabled.
  *
  * \par SYMHDLR_PRESOLPRIORITY: the default priority for presolving.
- * This default priority has the same meaning as the SYMHDLR_SEPAPRIORITY with respect to the presolving
+ * This default priority has the same meaning as the `SYMHDLR_SEPAPRIORITY` with respect to the presolving
  * callback of the symmetry handler.
  *
  *
  *
  * @section SYM_DATA Symmetry Component Data and Symmetry Handler Data
  *
- * Below the header "Data structures" you can find two structs called "struct SCIP_SymCompData" and
- * "struct SCIP_SymhdlrData".
+ * Below the header "Data structures" you can find two structs called `struct SCIP_SymCompData` and
+ * `struct SCIP_SymhdlrData`.
  * The symmetry handler data must be implemented as member variables of your symmetry handler class.
- * \n
+ *
  * The symmetry component data are the information that is needed to define a single symmetry component that is handled
  * by the symmetry handler.
- * \n
+ *
  * The symmetry handler data are additional variables, that belong to the symmetry handler itself and which are
  * not specific to a single symmetry component.
  * For example, you can use these data to store parameters of the symmetry handler or statistical information.
@@ -4264,7 +4264,7 @@
  *
  * @section SYM_INTERFACE Interface Methods
  *
- * At the bottom of "sym_sst.c" you can find one interface method, that also appear in "sym_sst.h", which is.
+ * At the bottom of `sym_sst.c` you can find one interface method, that also appear in `sym_sst.h`, which is.
  * SCIPincludeSymhdlrSubtour().
  * This method is responsible for notifying SCIP of the presence of the symmetry handler by calling the method
  * SCIPincludeSymhdlr().
@@ -4272,7 +4272,7 @@
  * the symmetry handler available to the model, and looks like this:
  * \dontinclude src/scip/sym_sst.c
  *  -# If you are using symmetry handler data, you have to <b>allocate the memory for the data</b> at this point.
- *     You also have to initialize the fields in struct SCIP_SymhdlrData afterwards.
+ *     You also have to initialize the fields in `struct SCIP_SymhdlrData` afterwards.
  *
  *     \skip SCIP_RETCODE SCIPincludeSymhdlrSST(
  *     \until SCIPallocBlockMemory
@@ -4308,7 +4308,7 @@
  * some of these callbacks, e.g., to extend your symmetry handler by a
  * \ref SYMHDLRSEPALP "separation" or \ref SYMHDLRPRESOL "presolving" functionality.
  *
- * All callbacks should be passed to SCIP during the SCIPinclude\<PLUGINTYPE\>\<PLUGINNAME\> method
+ * All callbacks should be passed to SCIP during the `SCIPinclude\<PLUGINTYPE\>\<PLUGINNAME\>` method
  * (e.g., SCIPincludeSymhdlrSST() for the \ref sym_sst.h "SST symmetry handler").
  *
  * @section SYM_FUNDAMENTALCALLBACKS Fundamental Callback Methods
@@ -4324,7 +4324,7 @@
  *
  * @subsection SYMTRYADD
  *
- * The SYMTRYADD callback gets a symmetry type (permutation or signed permutation) as well as an array of
+ * The `SYMTRYADD` callback gets a symmetry type (permutation or signed permutation) as well as an array of
  * symmetries and has to check whether the symmetry handler can handle these symmetries.
  * To informs SCIP whether the symmetries can be handled, the symmetry handler needs to set a Boolean
  * success pointer to TRUE or FALSE.
@@ -4352,7 +4352,7 @@
  *
  * @subsection SYMHDLRCOPY
  *
- * The SYMHDLRCOPY callback is executed when the SCIP instance is copied, e.g. to solve a sub-SCIP. By defining this
+ * The `SYMHDLRCOPY` callback is executed when the SCIP instance is copied, e.g. to solve a sub-SCIP. By defining this
  * callback as <code>NULL</code> the user disables the inclusion of the specified symmetry handler into all copied SCIP
  * instances.
  *
@@ -4360,29 +4360,29 @@
  *
  * @subsection SYMHDLRINIT
  *
- * The SYMHDLRINIT callback is executed after the problem is transformed.
+ * The `SYMHDLRINIT` callback is executed after the problem is transformed.
  * The symmetry handler may, e.g., to initialize its statistical symmetry handler data.
  *
  * @subsection SYMHDLREXIT
  *
- * The SYMHDLREXIT callback is executed before the transformed problem is freed.
+ * The `SYMHDLREXIT` callback is executed before the transformed problem is freed.
  * In this method, the symmetry handler should free all resources that were allocated for the solving process.
  *
  * @subsection SYMHDLRINITSOL
  *
- * The SYMHDLRINITSOL callback is executed when the presolving is finished and the branch-and-bound process is about to
+ * The `SYMHDLRINITSOL` callback is executed when the presolving is finished and the branch-and-bound process is about to
  * begin.
  * The symmetry handler may use this call to initialize its branch-and-bound specific data.
  *
  * @subsection SYMHDLREXITSOL
  *
- * The SYMHDLREXITSOL callback is executed before the branch-and-bound process is freed.
+ * The `SYMHDLREXITSOL` callback is executed before the branch-and-bound process is freed.
  * The symmetry handler should use this call to clean up its branch-and-bound data, in particular to release
  * all LP rows that it has created or captured.
  *
  * @subsection SYMHDLRSEPALP
  *
- * The SYMHDLRSEPALP callback is executed during the price-and-cut loop of the subproblem processing.
+ * The `SYMHDLRSEPALP` callback is executed during the price-and-cut loop of the subproblem processing.
  * It should try to generate cutting planes for the symmetry components of this symmetry handler in order to separate
  * the current LP solution.
  * The method is called in the LP solution loop, which means that a valid LP solution exists.
@@ -4393,24 +4393,24 @@
  * SCIPcacheRowExtensions() before these additions and SCIPflushRowExtensions() after.
  * However, the callback may also produce domain reductions or add other constraints.
  *
- * The SYMHDLRSEPALP callback has the following options:
- *  - detecting that the node is infeasible in the variables' bounds and can be cut off (result SCIP_CUTOFF)
- *  - adding an additional constraint (result SCIP_CONSADDED)
- *  - reducing a variable's domain (result SCIP_REDUCEDDOM)
- *  - adding a cutting plane to the LP (result SCIP_SEPARATED)
+ * The `SYMHDLRSEPALP` callback has the following options:
+ *  - detecting that the node is infeasible in the variables' bounds and can be cut off (result `SCIP_CUTOFF`)
+ *  - adding an additional constraint (result `SCIP_CONSADDED`)
+ *  - reducing a variable's domain (result `SCIP_REDUCEDDOM`)
+ *  - adding a cutting plane to the LP (result `SCIP_SEPARATED`)
  *  - stating that the separator searched, but did not find domain reductions, cutting planes, or cut constraints
- *    (result SCIP_DIDNOTFIND)
- *  - stating that the separator was skipped (result SCIP_DIDNOTRUN)
- *  - stating that the separator was skipped, but should be called again (result SCIP_DELAYED)
- *  - stating that a new separation round should be started without calling the remaining separator methods (result SCIP_NEWROUND)
+ *    (result `SCIP_DIDNOTFIND`)
+ *  - stating that the separator was skipped (result `SCIP_DIDNOTRUN`)
+ *  - stating that the separator was skipped, but should be called again (result `SCIP_DELAYED`)
+ *  - stating that a new separation round should be started without calling the remaining separator methods (result `SCIP_NEWROUND`)
  *
  * Please see also the @ref SYM_ADDITIONALPROPERTIES section to learn about the properties
- * SYMHDLR_SEPAFREQ, SYMHDLR_SEPAPRIORITY, SYMHDLR_DELAYSEPA, and SYM_MAXBOUNDDIST which influence the behaviour of SCIP
- * calling SYMHDLRSEPALP.
+ * `SYMHDLR_SEPAFREQ`, `SYMHDLR_SEPAPRIORITY`, `SYMHDLR_DELAYSEPA`, and `SYM_MAXBOUNDDIST` which influence the behaviour of SCIP
+ * calling `SYMHDLRSEPALP`.
  *
  * @subsection SYMHDLRSEPASOL
  *
- * The SYMHDLRSEPASOL callback is executed during separation loop on arbitrary primal solutions.
+ * The `SYMHDLRSEPASOL` callback is executed during separation loop on arbitrary primal solutions.
  * It should try to generate cutting planes for the symmetry components of this symmetry handler in order to separate
  * the given primal solution.
  * The method is not called in the LP solution loop, which means that there is no valid LP solution.
@@ -4421,50 +4421,50 @@
  * SCIPcacheRowExtensions() before these additions and SCIPflushRowExtensions() after.
  * However, the callback may also produce domain reductions or add other constraints.
  *
- * The SYMHDLRSEPASOL callback has the following options:
- *  - detecting that the node is infeasible in the variables' bounds and can be cut off (result SCIP_CUTOFF)
- *  - adding an additional constraint (result SCIP_CONSADDED)
- *  - reducing a variable's domain (result SCIP_REDUCEDDOM)
- *  - adding a cutting plane to the LP (result SCIP_SEPARATED)
+ * The `SYMHDLRSEPASOL` callback has the following options:
+ *  - detecting that the node is infeasible in the variables' bounds and can be cut off (result `SCIP_CUTOFF`)
+ *  - adding an additional constraint (result `SCIP_CONSADDED`)
+ *  - reducing a variable's domain (result `SCIP_REDUCEDDOM`)
+ *  - adding a cutting plane to the LP (result `SCIP_SEPARATED`)
  *  - stating that the separator searched, but did not find domain reductions, cutting planes, or cut constraints
- *    (result SCIP_DIDNOTFIND)
- *  - stating that the separator was skipped (result SCIP_DIDNOTRUN)
- *  - stating that the separator was skipped, but should be called again (result SCIP_DELAYED)
- *  - stating that a new separation round should be started without calling the remaining separator methods (result SCIP_NEWROUND)
+ *    (result `SCIP_DIDNOTFIND`)
+ *  - stating that the separator was skipped (result `SCIP_DIDNOTRUN`)
+ *  - stating that the separator was skipped, but should be called again (result `SCIP_DELAYED`)
+ *  - stating that a new separation round should be started without calling the remaining separator methods (result `SCIP_NEWROUND`)
  *
  * Please see also the @ref SYM_ADDITIONALPROPERTIES section to learn about the properties
- * SYMHDLR_SEPAFREQ, SYMHDLR_SEPAPRIORITY, SYMHDLR_DELAYSEPA, and SYM_MAXBOUNDDIST which influence the behaviour of SCIP
- * calling SYMHDLRSEPASOL.
+ * `SYMHDLR_SEPAFREQ`, `SYMHDLR_SEPAPRIORITY`, `SYMHDLR_DELAYSEPA`, and `SYM_MAXBOUNDDIST` which influence the behaviour of SCIP
+ * calling `SYMHDLRSEPASOL`.
  *
  * @subsection SYMHDLRPROP
  *
- * The SYMHDLRPROP callback is called during the subproblem processing.
+ * The `SYMHDLRPROP` callback is called during the subproblem processing.
  * It should propagate the symmetry components, which means that it should infer reductions in the variables' local bounds
  * from the current local bounds.
  * This technique, which is the main workhorse of constraint programming, is called "node preprocessing" in the
  * Integer Programming community.
  *
- * The SYMHDLRPROP callback has the following options:
- *  - detecting that the node is infeasible in the variables' bounds and can be cut off (result SCIP_CUTOFF)
- *  - reducing a variable's domain (result SCIP_REDUCEDDOM)
+ * The `SYMHDLRPROP` callback has the following options:
+ *  - detecting that the node is infeasible in the variables' bounds and can be cut off (result `SCIP_CUTOFF`)
+ *  - reducing a variable's domain (result `SCIP_REDUCEDDOM`)
  *  - stating that the propagator searched, but did not find domain reductions, cutting planes, or cut constraints
- *    (result SCIP_DIDNOTFIND)
- *  - stating that the propagator was skipped (result SCIP_DIDNOTRUN)
- *  - stating that the propagator was skipped, but should be called again (result SCIP_DELAYED)
+ *    (result `SCIP_DIDNOTFIND`)
+ *  - stating that the propagator was skipped (result `SCIP_DIDNOTRUN`)
+ *  - stating that the propagator was skipped, but should be called again (result `SCIP_DELAYED`)
  *
  * Please see also the @ref SYM_ADDITIONALPROPERTIES section to learn about the properties
- * SYMHDLR_PROPFREQ, SYMHDLR_DELAYPROP, SYMHDLR_PROP_TIMING, and SYMHDLR_PROPPRIORITY, which influence the behaviour of
- * SCIP calling SYMHDLRPROP.
+ * `SYMHDLR_PROPFREQ`, `SYMHDLR_DELAYPROP`, `SYMHDLR_PROP_TIMING`, and `SYMHDLR_PROPPRIORITY`, which influence the behaviour of
+ * SCIP calling `SYMHDLRPROP`.
  *
  * @subsection SYMHDLRRESPROP
  *
- * If the symmetry handler should support \ref CONF "conflict analysis", it has to supply a SYMHDLRRESPROP method.
+ * If the symmetry handler should support \ref CONF "conflict analysis", it has to supply a `SYMHDLRRESPROP` method.
  * It also should call SCIPinferVarLbSym() or SCIPinferVarUbSym() in domain propagation instead of SCIPchgVarLb() or
  * SCIPchgVarUb() in order to deduce bound changes on variables.
  * In the SCIPinferVarLbSym() and SCIPinferVarUbSym() calls, the handler provides the symmetry component that deduced the
  * variable's bound change, and an integer value <code>inferinfo</code> that can be arbitrarily chosen.
  *
- * The propagation conflict resolving method SYMHDLRRESPROP must then be implemented to provide the "reasons" for the bound
+ * The propagation conflict resolving method `SYMHDLRRESPROP` must then be implemented to provide the "reasons" for the bound
  * changes, i.e., the bounds of variables at the time of the propagation, which forced the symmetry component to set the
  * conflict variable's bound to its current value. It can use the <code>inferinfo</code> tag to identify its own propagation rule
  * and thus identify the "reason" bounds. The bounds that form the reason of the assignment must then be provided by
@@ -4474,7 +4474,7 @@
  * need more information to efficiently infer the original propagation steps that lead to the conflict. This would,
  * however, require too much space. In the extreme, the original propagation steps have to be repeated.
  *
- * If conflict analysis should not be supported, the method has to set the result code to SCIP_DIDNOTFIND.  Although
+ * If conflict analysis should not be supported, the method has to set the result code to `SCIP_DIDNOTFIND`.  Although
  * this is a viable approach to circumvent the implementation of the usually rather complex conflict resolving method, it
  * will make the conflict analysis less effective. We suggest to first omit the conflict resolving method and check how
  * effective the \ref SYMHDLRPROP "propagation method" is. If it produces a lot of propagations for your application, you definitely should
@@ -4482,23 +4482,23 @@
  *
  * @subsection SYMHDLRPRESOL
  *
- * The SYMHDLRPRESOL callback is called during preprocessing.
+ * The `SYMHDLRPRESOL` callback is called during preprocessing.
  * It should try to tighten the domains of the variables, tighten the coefficients of the variales in a symmetry component
  * of the symmetry handler, delete redundant constraints, aggregate and fix variables if possible, or add new constraints.
  *
  * To inform SCIP that the presolving method found a reduction the result pointer has to be set in a proper way.
  * The following options are possible:
  *
- *  - SCIP_UNBOUNDED  : at least one variable is not bounded by any constraint in objective direction
- *  - SCIP_CUTOFF     : at least one constraint is infeasible in the variable's bounds
- *  - SCIP_SUCCESS    : the presolver found a reduction
- *  - SCIP_DIDNOTFIND : the presolver searched, but did not find a presolving change
- *  - SCIP_DIDNOTRUN  : the presolver was skipped
- *  - SCIP_DELAYED    : the presolver was skipped, but should be called again
+ *  - `SCIP_UNBOUNDED`  : at least one variable is not bounded by any constraint in objective direction
+ *  - `SCIP_CUTOFF`     : at least one constraint is infeasible in the variable's bounds
+ *  - `SCIP_SUCCESS`    : the presolver found a reduction
+ *  - `SCIP_DIDNOTFIND` : the presolver searched, but did not find a presolving change
+ *  - `SCIP_DIDNOTRUN`  : the presolver was skipped
+ *  - `SCIP_DELAYED`    : the presolver was skipped, but should be called again
  *
  * Please see also the @ref SYM_ADDITIONALPROPERTIES section to learn about the properties
- * SYMHDLR_PRESOLTIMING, SYMHDLR_PRESOLPRIORITY, and SYMHDLR_MAXPREROUNDS, which influence the behaviour of SCIP
- * calling SYMPRESOL.
+ * `SYMHDLR_PRESOLTIMING`, `SYMHDLR_PRESOLPRIORITY`, and `SYMHDLR_MAXPREROUNDS`, which influence the behaviour of SCIP
+ * calling `SYMPRESOL`.
  */
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -9319,8 +9319,8 @@
  *
  * To detect (signed) permutation symmetries, SCIP requests from each constraint present in the problem to be solved
  * a node and edge colored graph whose symmetries correspond to the symmetries of the corresponding constraint.
- * This information is provided by two callbacks, the SCIP_DECL_CONSGETPERMSYMGRAPH callback for permutation
- * symmetries and the SCIP_DECL_CONSGETSIGNEDPERMSYMGRAPH callback for signed permutation symmetries. If a
+ * This information is provided by two callbacks, the `SCIP_DECL_CONSGETPERMSYMGRAPH` callback for permutation
+ * symmetries and the `SCIP_DECL_CONSGETSIGNEDPERMSYMGRAPH` callback for signed permutation symmetries. If a
  * constraint handler does not implement one of these callbacks, SCIP will not detect symmetries of the corresponding
  * type.
  *
