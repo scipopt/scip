@@ -16274,7 +16274,8 @@ SCIP_RETCODE SCIPtightenVariableLowerAndUpperBounds(
    nvars = transprob->nvars;
    vars = transprob->vars;
 
-   for (v = 0; v < nvars; ++v)
+   /* can start after the binary variables, because they are handled through implications */
+   for (v = transprob->nbinvars; v < nvars; ++v)
    {
       SCIP_VAR* xvar;
       SCIP_VAR* zvar;
