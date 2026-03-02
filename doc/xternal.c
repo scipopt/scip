@@ -8407,6 +8407,7 @@
  *  \arg <code>SETCUTOFF</code> - if set to '1', an optimal solution value (from the <code>.solu</code>-file) is used as objective limit [default: 0]
  *  \arg <code>THREADS</code> - the number of threads used for solving LPs, if the linked LP solver supports multithreading [default: 1]
  *  \arg <code>VALGRIND</code> - run valgrind on the SCIP binary; errors and memory leaks found by valgrind are reported as fails [default: "false"]
+ *  \arg <code>KEEPSOL</code> - if set to 'false', the best found solution is no longer written out to a solution file [default: "true"]
  *
  *
  *  @section COMPARE Comparing test runs for different settings

@@ -19,7 +19,7 @@ Fixed bugs
 Miscellaneous
 -------------
 
-- check scripts now copy solution files to check/results/
+- check scripts can now copy solution files to check/results/, functional for CPLEX, GAMS, and SCIP for now; new option KEEPSOL to disable writing and keeping solution files
 
 @section RN1001 SCIP 10.0.1
 ***************************
