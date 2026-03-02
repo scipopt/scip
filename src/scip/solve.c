@@ -1871,7 +1871,7 @@ SCIP_RETCODE extractSDG(
    /* exit if no constraints or no variables are available */
    if( nconss == 0 || SCIPgetNVars(scip) == 0 )
    {
-      *success = TRUE;
+      *success = FALSE;
       return SCIP_OKAY;
    }
 
