@@ -16271,6 +16271,13 @@ SCIP_RETCODE SCIPtightenVariableLowerAndUpperBounds(
    int nvars;
    int v;
 
+   if ( ntightened != NULL )
+      *ntightened = 0;
+
+   /* we can only tighten variable bounds involving a binary variable */
+   if ( transprob->nbinvars == 0 )
+      return SCIP_OKAY;
+
    nvars = transprob->nvars;
    vars = transprob->vars;
 
