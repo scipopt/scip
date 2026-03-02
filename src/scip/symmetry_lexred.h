@@ -127,34 +127,6 @@ SCIP_RETCODE SCIPincludeLexicographicReduction(
    SCIP_EVENTHDLR*       shadowtreeeventhdlr /**< pointer to the shadow tree eventhdlr */
    );
 
-/** returns number of permutations stored in lexreddata */
-int SCIPlexreddataGetNPerms(
-   SCIP_LEXREDDATA*      lexreddata          /**< data for lexicographic reduction propagator */
-   );
-
-/** returns number of variables stored in lexreddata */
-int SCIPlexreddataGetNPermvars(
-   SCIP_LEXREDDATA*      lexreddata          /**< data for lexicographic reduction propagator */
-   );
-
-/** returns a permutation stored in lexreddata*/
-int* SCIPlexreddataGetPerm(
-   SCIP_LEXREDDATA*      lexreddata,         /**< data for lexicographic reduction propagator */
-   int                   permidx             /**< index of permutation */
-   );
-
-/** returns length of permutation stored in lexreddata */
-int SCIPlexreddataGetPermLen(
-   SCIP_LEXREDDATA*      lexreddata,         /**< data for lexicographic reduction propagator */
-   int                   permidx             /**< index of permutation */
-   );
-
-/** return variables affected by permutation */
-SCIP_VAR** SCIPlexreddataGetPermVars(
-   SCIP_LEXREDDATA*      lexreddata,         /**< data for lexicographic reduction propagator */
-   int                   permidx             /**< index of permutation */
-   );
-
 #ifdef __cplusplus
 }
 #endif

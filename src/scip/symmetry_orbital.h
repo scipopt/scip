@@ -125,40 +125,6 @@ SCIP_RETCODE SCIPincludeOrbitalReduction(
    SCIP_EVENTHDLR*       shadowtreeeventhdlr /**< pointer to the shadow tree eventhdlr */
    );
 
-/** returns number of permutations stored in orbitalreddata */
-int SCIPorbitalreddataGetNPerms(
-   SCIP_ORBITALREDDATA*  orbitalreddata,     /**< data for orbital reduction propagator */
-   int                   compidx             /**< index of symmetry component in orbitalreddata */
-   );
-
-/** returns number of variables stored in orbitalreddata */
-int SCIPorbitalreddataGetNPermvars(
-   SCIP_ORBITALREDDATA*  orbitalreddata,     /**< data for orbital reduction propagator */
-   int                   compidx             /**< index of symmetry component in orbitalreddata */
-   );
-
-/** returns a permutation stored in orbitalreddata*/
-int* SCIPorbitalreddataGetPerm(
-   SCIP_ORBITALREDDATA*  orbitalreddata,     /**< data for orbital reduction propagator */
-   int                   compidx,            /**< index of symmetry component in orbitalreddata */
-   int                   permidx             /**< index of permutation */
-   );
-
-/** returns length of permutation stored in orbitalreddata */
-int SCIPorbitalreddataGetPermLen(
-   SCIP_ORBITALREDDATA*  orbitalreddata,     /**< data for orbital reduction propagator */
-   int                   compidx,            /**< index of symmetry component in orbitalreddata */
-   int                   permidx             /**< index of permutation */
-   );
-
-/** return variables affected by permutation */
-SCIP_VAR** SCIPorbitalreddataGetPermVars(
-   SCIP_ORBITALREDDATA*  orbitalreddata,     /**< data for orbital reduction propagator */
-   int                   compidx,            /**< index of symmetry component in orbitalreddata */
-   int                   permidx             /**< index of permutation */
-   );
-
-
 #ifdef __cplusplus
 }
 #endif
