@@ -1094,6 +1094,7 @@ void SCIPsymhdlrSetProp(
    symhdlr->propfreq = propfreq;
    symhdlr->proppriority = proppriority;
    symhdlr->delayprop = delayprop;
+   symhdlr->proptiming = timingmask;
 }
 
 /** sets copy metod of symmetry handler */

@@ -73,9 +73,18 @@
                                               *   symmetry handling methods? */
 
 
-#define ISSSTBINACTIVE(x)          (((unsigned) x & SCIP_SSTTYPE_BINARY) != 0)
-#define ISSSTINTACTIVE(x)          (((unsigned) x & SCIP_SSTTYPE_INTEGER) != 0)
-#define ISSSTCONTACTIVE(x)         (((unsigned) x & SCIP_SSTTYPE_CONTINUOUS) != 0)
+/** variable types for leader in Schreier-Sims cuts */
+enum SST_Vartype
+{
+   SST_SSTTYPE_BINARY                 = 1,    /**< binary variables */
+   SST_SSTTYPE_INTEGER                = 2,    /**< integer variables */
+   SST_SSTTYPE_CONTINUOUS             = 4     /**< continuous variables */
+};
+typedef enum SST_Vartype SST_VARTYPE;
+
+#define ISSSTBINACTIVE(x)          (((unsigned) x & SST_SSTTYPE_BINARY) != 0)
+#define ISSSTINTACTIVE(x)          (((unsigned) x & SST_SSTTYPE_INTEGER) != 0)
+#define ISSSTCONTACTIVE(x)         (((unsigned) x & SST_SSTTYPE_CONTINUOUS) != 0)
 
 /** selection rules for leaders in SST cuts */
 enum SST_LeaderRule
@@ -94,15 +103,6 @@ enum SST_OrbitRule
    SST_ORBITRULE_MAXCONFSINORBIT     = 2     /**< orbit with maximum number of vars in conflict with leader */
 };
 typedef enum SST_OrbitRule SST_ORBITRULE;
-
-/** variable types for leader in Schreier-Sims cuts */
-enum SST_Vartype
-{
-   SST_SSTTYPE_BINARY                 = 1,    /**< binary variables */
-   SST_SSTTYPE_INTEGER                = 2,    /**< integer variables */
-   SST_SSTTYPE_CONTINUOUS             = 4     /**< continuous variables */
-};
-typedef enum SST_Vartype SST_VARTYPE;
 
 /** conflict data structure for SST cuts */
 struct SST_ConflictData
@@ -501,9 +501,7 @@ SCIP_RETCODE addSSTConssOrbitAndUpdateSST(
    SYM_SYMTYPE           symtype,            /**< type of symmetries */
    int                   id,                 /**< identifier of symmetry component for that SST conss are added */
    SST_CONFLICTDATA*     varconflicts,       /**< conflict graph or NULL if useconflictgraph == FALSE */
-   int                   nperms,             /**< number of permutations */
    SCIP_VAR**            permvars,           /**< permvars array */
-   int                   npermvars,          /**< number of variables in permvars */
    SCIP_Real*            permvardomaincenter,/**< domain center of permvars */
    int                   leaderrule,         /**< rule to select leader of SST conss */
    int                   orbitrule,          /**< rule to select orbit of SST conss */
@@ -1341,7 +1339,7 @@ SCIP_RETCODE tryAddSSTConss(
       int** newperms = NULL;
       int nnewperms = 0;
       int lennewperms = 0;
-      int permlen = 0;
+      int permlen;
 
       SCIP_CALL( tryGenerateInvolutions(scip, symtype, perms, nperms, npermvars, maxnnewperms,
             &newperms, &nnewperms, &lennewperms) );
@@ -1487,13 +1485,13 @@ SCIP_RETCODE tryAddSSTConss(
             /* stop if the first element of an orbits has the wrong vartype */
             if( SCIPgetSymInferredVarType(permvars[orbits[orbitbegins[p]]]) != selectedtype )
             {
-               success = FALSE;
+               *success = FALSE;
                break;
             }
          }
       }
 
-      if( !success )
+      if( !(*success) )
          break;
 
       /* update symmetry information of conflict graph */
@@ -1518,7 +1516,7 @@ SCIP_RETCODE tryAddSSTConss(
             leaderrule, orbitrule, selectedtype, &orbitidx, &orbitleaderidx, orbitvarinconflict, &norbitvarinconflict,
             success) );
 
-      if( !success )
+      if( !(*success) )
          break;
 
       assert(0 <= orbitidx && orbitidx < norbits);
@@ -1526,7 +1524,7 @@ SCIP_RETCODE tryAddSSTConss(
       SCIPdebugMsg(scip, "%d\t\t%d\t\t%d\n", orbitidx, orbitleaderidx, orbitbegins[orbitidx + 1] - orbitbegins[orbitidx]);
 
       /* add Schreier-Sims constraints for the selected orbit and update Schreier-Sims table */
-      SCIP_CALL( addSSTConssOrbitAndUpdateSST(scip, symtype, id, varconflicts, ntotalperms, permvars, npermvars,
+      SCIP_CALL( addSSTConssOrbitAndUpdateSST(scip, symtype, id, varconflicts, permvars,
             permvardomaincenter, leaderrule, orbitrule, addconflictcuts, sstconss, nsstconss, maxnsstconss,
             orbits, orbitbegins, orbitidx, orbitleaderidx, orbitvarinconflict, norbitvarinconflict, displaysyminfo,
             &nchanges) );
@@ -1617,7 +1615,7 @@ SCIP_DECL_SYMHDLRTRYADD(symhdlrTryAddSST)
          symhdlrdata->displaysyminfo, success) );
 
    /* in case of success, store information in symmetry component's data */
-   if( !(*success) )
+   if( !(*success) )            /*lint !e831*/
    {
       assert(sstconss == NULL);
       assert(nsstconss == 0);

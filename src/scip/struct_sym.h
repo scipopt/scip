@@ -113,7 +113,7 @@ struct SCIP_Symhdlr
    int                   npresolcalls;       /**< number of times the symmetry handler was called in presolving and tried to find reductions */
    SCIP_Real             maxbounddist;       /**< maximal relative distance from current node's dual bound to primal bound compared
                                               *   to best node's dual bound for applying separation */
-   int                   lastsepanode;       /**< last (total) node where this separator was called */
+   SCIP_Longint          lastsepanode;       /**< last (total) node where this separator was called */
    int                   expbackoff;         /**< base for exponential increase of frequency at which the separator is called */
    int                   nsepacallsatnode;   /**< number of times, this separator was called at the current node */
    int                   ncutsfoundatnode;   /**< number of cutting planes found at the current node */

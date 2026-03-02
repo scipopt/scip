@@ -1530,7 +1530,7 @@ SCIP_RETCODE handleDoubleLexOrbitope(
 
    assert(scip != NULL);
    assert(permvars != NULL);
-   assert(permvardomaincenter != NULL || nsignedconss == 0);
+   assert(permvardomaincenter != NULL || nsignedrows == 0);
    assert(varidxmatrix != NULL);
    assert(nrows > 0);
    assert(ncols > 0);

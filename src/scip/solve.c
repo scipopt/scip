@@ -2352,7 +2352,7 @@ SCIP_RETCODE SCIPtryAddSymmetryHandlingMethods(
 
       for( i = 0; i < nsymhdlrs && !success; ++i )
       {
-         SCIP_CALL( SCIPsymhdlrTryAdd(symhdlrs[i], scip->set, perms, nperms, syminfo->symtype, syminfo->permvars,
+         SCIP_CALL( SCIPsymhdlrTryAdd(symhdlrs[i], scip->set, perms, nperms, syminfo->symtype, syminfo->permvars, /*lint !e644 */
                syminfo->npermvars, vardomcenter, syminfo->permvarmap, graph, c, &symcompdata, &ntmpconss, &ntmpchgbds,
                &success) );
          *naddedconss += ntmpconss;
