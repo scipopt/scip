@@ -122,6 +122,7 @@ Fixed bugs
 - provide memory allocation for implied integral binary and integer variables in dks heuristic to avoid data corruption
 - an error is produced if the emphasis settings in parameter files are wrong
 - fixed failing assert when assembling data for writing of JSON statistics and no plugins were included for some plugin types
+- keep sanitizers enabled if only unsupported for some language in cmake
 
 @section RN1001 SCIP 10.0.1
 ***************************
