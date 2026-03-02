@@ -41,7 +41,7 @@ if(${SANITIZE} STREQUAL "address")
 endif ()
 
 function (add_sanitize_address TARGET)
-    sanitizer_add_flags(${TARGET} "AddressSanitizer" "ASan" "")
+    sanitizer_add_flags(${TARGET} "AddressSanitizer" "ASan")
 endfunction ()
 
 include(FindPackageHandleStandardArgs)
