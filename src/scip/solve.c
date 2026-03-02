@@ -1958,7 +1958,7 @@ SCIP_RETCODE determineSymmetry(
 
    /* avoid trivial cases */
    *npermvars = SCIPgetNVars(scip);
-   if( *npermvars <= 0 )
+   if( *npermvars <= 0 || SCIPgetNConss(scip) <= 0 )
       return SCIP_OKAY;
    SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, permvars, SCIPgetVars(scip), *npermvars) );
 
