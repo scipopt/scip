@@ -50,6 +50,7 @@ SOLUFILE="${19}"       # - solu file, only necessary if ${SETCUTOFF} is 1
 EMPHBENCHMARK="${20}"  # - use set emphasis benchmark
 CLOCKTYPE="${21}"      # - clocktype (1 = CPU, 2 = wallclock)
 WITHCERTIFICATE="${22}" # - true, if a certificate file should be created
+KEEPSOL="${23}"        # - true, if file with solution values should be written and kept
 
 #args=("$@")
 #for ((i=0; i < $#; i++)) {
@@ -174,18 +175,13 @@ then
     echo "display statistics"                                    >> "${TMPFILE}"
     echo "write statistics ${JSONFILE}"                          >> "${TMPFILE}"
     echo "checksol"                                              >> "${TMPFILE}"
+    if test "${KEEPSOL}" = 1 || test "${KEEPSOL}" = true
+    then
+        echo "write sol ${SOLFILE}"                              >> "${TMPFILE}"
+    fi
 else
     # read the difflist file
     cat "${INSTANCE}"                                            >> "${TMPFILE}"
 fi
 
-# currently, the solution checker only supports .mps-files.
-# compare instance name (without .gz) to instance name stripped by .mps.
-#if they are unequal, we have an mps-file
-TMPINSTANCE=$(basename "${INSTANCE}" .gz)
-TMPINSTANCEB=$(basename "${TMPINSTANCE}" .mps)
-if test "${TMPINSTANCEB}" != "${TMPINSTANCE}"
-then
-    echo "write sol ${SOLFILE}"                                  >> "${TMPFILE}"
-fi
 echo "quit"                                                      >> "${TMPFILE}"
