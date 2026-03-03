@@ -8313,7 +8313,9 @@
  *
  *  \arg <code>*.out</code> - output of <code>stdout</code>
  *  \arg <code>*.err</code> - output of <code>stderr</code>
+ *  \arg <code>*.json</code> - SCIP statistics in JSON format
  *  \arg <code>*.set</code> - copy of the used settings file
+ *  \arg <code>*.sol</code> - file with best found solution, if any
  *
  *  \arg <code>*.res</code> - ASCII table containing a summary of the computational results
  *  \arg <code>*.tex</code> - TeX table containing a summary of the computational results
@@ -8342,7 +8344,7 @@
  *  \code
  *  ./evalcheck.sh writesolufile=1 NEWSOLUFILE=<solu-file> <out-file>
  *  \endcode
- *  where <code><solu-file></code> denotes the filename of the new file where the solutions shall be
+ *  where <code><solu-file></code> denotes the name of the new file where the optimal values or primal bounds shall be written to
  *  (and <code><out-file></code> denotes the output (<code>.out</code>) files to evaluate).
  *
  *  Another feature can be enabled by calling:
@@ -8413,6 +8415,7 @@
  *  \arg <code>SETCUTOFF</code> - if set to '1', an optimal solution value (from the <code>.solu</code>-file) is used as objective limit [default: 0]
  *  \arg <code>THREADS</code> - the number of threads used for solving LPs, if the linked LP solver supports multithreading [default: 1]
  *  \arg <code>VALGRIND</code> - run valgrind on the SCIP binary; errors and memory leaks found by valgrind are reported as fails [default: "false"]
+ *  \arg <code>KEEPSOL</code> - if set to 'false', the best found solution is no longer written out to a solution file [default: "true"]
  *
  *
  *  @section COMPARE Comparing test runs for different settings
