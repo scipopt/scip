@@ -1469,6 +1469,7 @@ SCIP_RETCODE tryAddSSTConss(
 
    /* as long as the stabilizer is non-trivial, add Schreier-Sims constraints */
    norbitleadercomponent = 0;
+   *success = TRUE;
    while( ninactiveperms < ntotalperms )
    {
       int nchanges = 0;
