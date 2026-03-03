@@ -57,9 +57,10 @@ PYTHON="${27}"
 EMPHBENCHMARK="${28}"
 CLOCKTYPE="${29}"
 WITHCERTIFICATE="${30}"
+KEEPSOL="${31}"
 
 # check if all variables defined (by checking the last one)
-if test -z "${CLOCKTYPE}"
+if test -z "${KEEPSOL}"
 then
     echo Skipping test since not all variables are defined
     echo "TSTNAME       = ${TSTNAME}"
@@ -92,6 +93,7 @@ then
     echo "EMPHBENCHMARK = ${EMPHBENCHMARK}"
     echo "CLOCKTYPE     = ${CLOCKTYPE}"
     echo "WITHCERTIFICATE = ${WITHCERTIFICATE}"
+    echo "KEEPSOL       = ${KEEPSOL}"
     exit 1;
 fi
 
@@ -200,7 +202,8 @@ do
                 # this may modify the EXECNAME environment variable
                 . "./${CONFFILE}" "${INSTANCE}" "${SCIPPATH}" "${TMPFILE}" "${SETNAME}" "${SETFILE}" "${THREADS}" "${SETCUTOFF}" \
                     "${FEASTOL}" "${TIMELIMIT}" "${MEMLIMIT}" "${NODELIMIT}" "${LPS}" "${DISPFREQ}"  "${REOPT}" "${OPTCOMMAND}" \
-                    "${CLIENTTMPDIR}" "${FILENAME}" "${VISUALIZE}" "${SOLUFILE}" "${EMPHBENCHMARK}" "${CLOCKTYPE}" "${WITHCERTIFICATE}"
+                    "${CLIENTTMPDIR}" "${FILENAME}" "${VISUALIZE}" "${SOLUFILE}" "${EMPHBENCHMARK}" "${CLOCKTYPE}" "${WITHCERTIFICATE}" \
+                    "${KEEPSOL}"
 
                 # additional environment variables needed by run.sh
                 export SOLVERPATH="${SCIPPATH}"

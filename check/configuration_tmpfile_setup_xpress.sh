@@ -50,6 +50,7 @@ SOLUFILE="${19}"       # - solu file, only necessary if ${SETCUTOFF} is 1
 EMPHBENCHMARK="${20}"  # - use set emphasis benchmark
 CLOCKTYPE="${21}"      # - clocktype (1 = CPU, 2 = wallclock) - currently ignored by XPRESS
 WITHCERTIFICATE="${22}" # - true, if a certificate file should be created - currently ignored by XPRESS
+KEEPSOL="${23}"        # - true, if file with solution values should be written and kept
 
 # new environment variables after running this script
 # -None
@@ -88,7 +89,7 @@ then
 fi
 
 # The following variables are ignored:
-# "${DISPFREQ}", "${OPTCOMMAND}"
+# "${DISPFREQ}", "${OPTCOMMAND}", ${KEEPSOL}
 
 # reset TMPFILE
 echo ""                                                         > "${TMPFILE}"

@@ -142,6 +142,7 @@ SLURMACCOUNT    ?= default
 PYTHON          ?= none
 EMPHBENCHMARK   ?= true
 CLOCKTYPE       ?= 1
+KEEPSOL         ?= true
 
 # third party testing parameters
 BLIS            ?= blis
