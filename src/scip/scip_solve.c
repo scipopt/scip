@@ -1311,12 +1311,6 @@ SCIP_RETCODE presolve(
       }
    }
 
-   /* tighten variable lower/upper bounds at end of presolving */
-   if( !stopped && !(*unbounded) && !(*infeasible) && !(*vanished) )
-   {
-      SCIP_CALL( SCIPtightenVariableLowerAndUpperBounds(scip->set, scip->transprob, NULL) );
-   }
-
    /* first change status of scip, so that all plugins in their exitpre callbacks can ask SCIP for the correct status */
    if( *infeasible )
    {
@@ -1362,6 +1356,29 @@ SCIP_RETCODE presolve(
             scip->stat->status = SCIP_STATUS_OPTIMAL;
          else
             scip->stat->status = SCIP_STATUS_INFEASIBLE;
+      }
+   }
+   else if( !stopped && scip->stat->npresolchgbds > 0 )
+   {
+      assert( !(*vanished) );
+
+      /* Tighten coefficients of variable lower/upper bounds between continuous/integer variables and binary
+       * variables. They have likely been added by cons_varbound, which also tries to tighten the coefficients. However,
+       * strengthened bounds of variables are only taken into account in cons_varbound, not in the data structures
+       * attached to the variables. We therefore try to tighten them here. Moreover, when copying the problem, the
+       * already strengthened variables bounds are copied, which makes it less likely that a tightening is possible. To
+       * save time, we therefore only run for the original. */
+      if( scip->stat->subscipdepth == 0 )
+      {
+         int ntightened;
+
+         SCIP_CALL( SCIPtightenVariableLowerAndUpperBounds(scip->set, scip->transprob, &ntightened) );
+
+         if( ntightened > 0 )
+         {
+            SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "   (%.1fs) tightened %d variable bounds\n",
+               SCIPgetSolvingTime(scip), ntightened);
+         }
       }
    }
 
