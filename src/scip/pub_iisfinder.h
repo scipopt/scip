@@ -144,6 +144,7 @@ void SCIPiisAddNNodes(
    );
 
 /** get the randnumgen of the IIS */
+SCIP_EXPORT
 SCIP_RANDNUMGEN* SCIPiisGetRandnumgen(
    SCIP_IIS*             iis                 /**< pointer to the IIS */
    );
