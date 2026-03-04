@@ -91,6 +91,13 @@ void SCIPiisfinderInfoMessage(
    SCIP_Bool             printheaders        /**< whether the headers should be printed instead of the info */
    );
 
+/**@}
+ *
+ * @addtogroup PublicInfeasibilityAnalysisMethods
+ *
+ * @{
+ */
+
 /** gets time in seconds used in the IIS calculations */
 SCIP_EXPORT
 SCIP_Real SCIPiisGetTime(
@@ -137,6 +144,7 @@ void SCIPiisAddNNodes(
    );
 
 /** get the randnumgen of the IIS */
+SCIP_EXPORT
 SCIP_RANDNUMGEN* SCIPiisGetRandnumgen(
    SCIP_IIS*             iis                 /**< pointer to the IIS */
    );
@@ -146,6 +154,13 @@ SCIP_EXPORT
 SCIP* SCIPiisGetSubscip(
    SCIP_IIS*             iis                 /**< pointer to the IIS */
    );
+
+/**@}
+ *
+ * @addtogroup PublicIISfinderMethods
+ *
+ * @{
+ */
 
 /** compares two IIS finders w. r. to their priority */
 SCIP_EXPORT
