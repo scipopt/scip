@@ -92,13 +92,13 @@ Test(copy, MIP, .description="tests MIP copy")
    /* setup source scip */
    SCIP_CALL( SCIPincludeDefaultPlugins(sourcescip) );
    /* TODO: remove symmetry restriction */
-   SCIP_CALL( SCIPsetIntParam(sourcescip, "misc/usesymmetry", 0) );
+   SCIP_CALL( SCIPsetBoolParam(sourcescip, "symmetries/enabled", FALSE) );
    SCIP_CALL( SCIPreadProb(sourcescip, "../check/instances/MIP/misc03.mps", NULL) );
    sourceparams = SCIPgetParams(sourcescip);
    nsourceparams = SCIPgetNParams(sourcescip);
 
    /* copy target scip */
-   SCIP_CALL( SCIPcopy(sourcescip, targetscip, NULL, NULL, "", TRUE, TRUE, TRUE, TRUE, &valid) );
+   SCIP_CALL( SCIPcopy(sourcescip, targetscip, NULL, NULL, "", TRUE, TRUE, TRUE, TRUE, TRUE, &valid) );
    cr_assert(valid);
    targetparams = SCIPgetParams(targetscip);
    ntargetparams = SCIPgetNParams(targetscip);
