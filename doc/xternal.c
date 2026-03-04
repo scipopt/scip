@@ -9502,6 +9502,11 @@
  * @brief  functions for validating the correctness of a solving process
  */
 
+/**@defgroup PublicInfeasibilityAnalysisMethods Infeasibility Analysis
+ * @ingroup PUBLICCOREAPI
+ * @brief  functions for analyzing infeasibility of a model (IIS, MinUC), see also \ref MINUCIIS
+ */
+
 /**@defgroup PublicMemoryMethods Memory Management
  * @ingroup MiscellaneousMethods
  * @brief  functions and macros to use the \SCIP memory management
