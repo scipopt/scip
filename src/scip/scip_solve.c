@@ -551,20 +551,20 @@ SCIP_RETCODE exitPresolve(
 
    if( !solved )
    {
-      SCIP_VAR** vars;
-      int nvars;
+      SCIP_VAR** fixedvars;
+      int nfixedvars;
       int v;
 
       /* flatten all variables */
-      vars = SCIPgetFixedVars(scip);
-      nvars = SCIPgetNFixedVars(scip);
-      assert(nvars == 0 || vars != NULL);
+      fixedvars = SCIPgetFixedVars(scip);
+      nfixedvars = SCIPgetNFixedVars(scip);
+      assert(nfixedvars == 0 || fixedvars != NULL);
 
-      for( v = nvars - 1; v >= 0; --v )
+      for( v = nfixedvars - 1; v >= 0; --v )
       {
          SCIP_VAR* var;
 
-         var = vars[v]; /*lint !e613*/
+         var = fixedvars[v]; /*lint !e613*/
          assert(var != NULL);
 
          if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_MULTAGGR )
