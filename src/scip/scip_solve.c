@@ -1462,7 +1462,8 @@ SCIP_RETCODE presolve(
             /* continue presolving in case symmetry presolving methods found a reduction */
             if( !*unbounded && !*infeasible )
             {
-               if( npresolfixedvarsold < scip->stat->npresolfixedvars
+               if( nnewconss > 0 || nchgbds > 0
+                  ||npresolfixedvarsold < scip->stat->npresolfixedvars
                   || npresolaggrvarsold < scip->stat->npresolaggrvars
                   || npresolchgvartypesold < scip->stat->npresolchgvartypes
                   || npresolchgbdsold < scip->stat->npresolchgbds
