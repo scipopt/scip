@@ -7424,6 +7424,8 @@
  * SCIP> display/iis
  * SCIP> write/iis path_to_where_iis_should_be_printed
  * \endcode
+ * See \ref PublicInfeasibilityAnalysisMethods "here" for IIS API functions.
+ * An IIS is returned as a SCIP instance that contains only the constraints and variables of the original SCIP that are part of the IIS.
  *
  * Secondly there is the MinUC (minimize number of unsatisfied constraints) functionality in SCIP.
  * This produces a minimum set of constraints, such that if those constraints were relaxed, the original
@@ -7442,7 +7444,7 @@
  * \code
  * SCIP> display/solution
  * \endcode
- *
+ * See \ref PublicInfeasibilityAnalysisMethods "here" for MinUC API functions.
  */
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -9510,6 +9512,11 @@
 /**@defgroup PublicValidationMethods Validation
  * @ingroup PUBLICCOREAPI
  * @brief  functions for validating the correctness of a solving process
+ */
+
+/**@defgroup PublicInfeasibilityAnalysisMethods Infeasibility Analysis
+ * @ingroup PUBLICCOREAPI
+ * @brief  functions for analyzing infeasibility of a model (IIS, MinUC), see also \ref MINUCIIS
  */
 
 /**@defgroup PublicMemoryMethods Memory Management
