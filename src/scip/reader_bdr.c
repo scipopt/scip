@@ -56,7 +56,7 @@ enum BendersFile_Section
 {
    BENDERSFILE_SECTION_INIT = 0,
    BENDERSFILE_SECTION_MASTER = 1,
-   BENDERSFILE_SECTION_SUB = 2,
+   BENDERSFILE_SECTION_SUB = 2
 };
 typedef enum BendersFile_Section BENDERSFILE_SECTION;
 
@@ -70,9 +70,9 @@ SCIP_RETCODE readBendersInputFile(
 {
    SCIP_RETCODE retcode;
    SCIP_FILE* file;
-   char tmpfile[SCIP_MAXSTRLEN];
+   char tempfile[SCIP_MAXSTRLEN];
    char masterfile[SCIP_MAXSTRLEN];
-   char** subproblemfiles;
+   char** subproblemfiles = NULL;
    SCIP_Bool error;
    int nsubproblems = -1;
    int subprobcount = 0;
@@ -86,6 +86,8 @@ SCIP_RETCODE readBendersInputFile(
 
    assert(scip != NULL);
    assert(filename != NULL);
+
+   retcode = SCIP_OKAY;
 
    /* finding the path to the file to that it can be prepended to the master and subproblem file names */
    fromlastslash = (char*) strrchr(filename, '/');
@@ -161,13 +163,13 @@ SCIP_RETCODE readBendersInputFile(
             break;
          case BENDERSFILE_SECTION_MASTER:
             /* reading the master problem file name */
-            nread = sscanf(buffer, "%1023s\n", tmpfile);
+            nread = sscanf(buffer, "%1023s\n", tempfile);
             if( nread < 1 )
                error = TRUE;
 
-            SCIPdebugMsg(scip, "The instance file for the master problem is <%s>\n", tmpfile);
+            SCIPdebugMsg(scip, "The instance file for the master problem is <%s>\n", tempfile);
 
-            (void) SCIPsnprintf(masterfile, SCIP_MAXSTRLEN, "%s%s", parent, tmpfile);
+            (void) SCIPsnprintf(masterfile, SCIP_MAXSTRLEN, "%s%s", parent, tempfile);
 
             break;
          case BENDERSFILE_SECTION_SUB:
@@ -188,17 +190,18 @@ SCIP_RETCODE readBendersInputFile(
             }
 
             /* allocating the space for the file names */
+            assert(subproblemfiles != NULL);
             SCIP_CALL_TERMINATE( retcode, SCIPallocBufferArray(scip, &(subproblemfiles[subprobcount]), SCIP_MAXSTRLEN), TERMINATE );
 
             /* read subproblem file name */
             /* coverity[secure_coding] */
-            nread = sscanf(buffer, "%1023s\n", tmpfile);
+            nread = sscanf(buffer, "%1023s\n", tempfile);
             if( nread < 1 )
                error = TRUE;
 
-            SCIPdebugMsg(scip, "The instance file for the subproblem %d is <%s>\n", subprobcount, tmpfile);
+            SCIPdebugMsg(scip, "The instance file for the subproblem %d is <%s>\n", subprobcount, tempfile);
 
-            (void) SCIPsnprintf(subproblemfiles[subprobcount], SCIP_MAXSTRLEN, "%s%s", parent, tmpfile);
+            (void) SCIPsnprintf(subproblemfiles[subprobcount], SCIP_MAXSTRLEN, "%s%s", parent, tempfile);
 
             subprobcount++;
             break;
