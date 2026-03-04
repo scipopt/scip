@@ -245,7 +245,7 @@ SCIP_RETCODE createSubscip(
    SCIP_CALL( SCIPsetPresolving(*subscip, SCIP_PARAMSETTING_FAST, TRUE) );
 
    /* disable expensive techniques */
-   SCIP_CALL( SCIPsetIntParam(*subscip, "misc/usesymmetry", 0) );
+   SCIP_CALL( SCIPsetBoolParam(*subscip, "symmetries/enabled", FALSE) );
 
    /* do not abort subproblem on CTRL-C */
    SCIP_CALL( SCIPsetBoolParam(*subscip, "misc/catchctrlc", FALSE) );
@@ -1596,7 +1596,7 @@ SCIP_RETCODE reoptimize(
       SCIP_CALL( SCIPsetPresolving(subscip, SCIP_PARAMSETTING_FAST, TRUE) );
 
       /* disable expensive techniques */
-      SCIP_CALL( SCIPsetIntParam(subscip, "misc/usesymmetry", 0) );
+      SCIP_CALL( SCIPsetBoolParam(subscip, "symmetries/enabled", FALSE) );
 
       /* speed up sub-SCIP by not checking dual LP feasibility */
       SCIP_CALL( SCIPsetBoolParam(subscip, "lp/checkdualfeas", FALSE) );

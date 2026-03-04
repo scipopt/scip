@@ -398,6 +398,7 @@ SCIP_RETCODE checkParameters(
    int nheuristics;
    int h;
    int intvalue;
+   SCIP_Bool usesymmetry;
    SCIP_Bool valid;
 
    assert( scip != NULL );
@@ -437,17 +438,17 @@ SCIP_RETCODE checkParameters(
    }
 
    /* check if symmetry handling is turned off */
-   SCIP_CALL( SCIPgetIntParam(scip, "misc/usesymmetry", &intvalue) );
-   if ( intvalue != 0 )
+   SCIP_CALL( SCIPgetBoolParam(scip, "symmetries/enabled", &usesymmetry) );
+   if ( usesymmetry )
    {
       /* need to disable symmetry handling, since counting is not supported if symmetry handling is enabled */
-      SCIPwarningMessage(scip, "counting forces parameter <misc/usesymmetry> to 0.\n");
-      if( SCIPisParamFixed(scip, "misc/usesymmetry") )
+      SCIPwarningMessage(scip, "counting forces parameter <symmetries/enabled> to FALSE.\n");
+      if( SCIPisParamFixed(scip, "symmetries/enabled") )
       {
-         SCIP_CALL( SCIPunfixParam(scip, "misc/usesymmetry") );
+         SCIP_CALL( SCIPunfixParam(scip, "symmetries/enabled") );
       }
 
-      SCIP_CALL( SCIPsetIntParam(scip, "misc/usesymmetry", 0) );
+      SCIP_CALL( SCIPsetBoolParam(scip, "symmetries/enabled", FALSE) );
    }
 
    return SCIP_OKAY;
@@ -1854,35 +1855,28 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecCountPresolve)
    SCIP_Bool active;
    int usesymmetry;
 
-   SCIP_CALL( SCIPgetIntParam(scip, "misc/usesymmetry", &usesymmetry) );
+   SCIP_CALL( SCIPgetIntParam(scip, "symmetries/enabled", &usesymmetry) );
 
-   if ( usesymmetry != 0 )
+   if ( usesymmetry )
    {
       int symcomptiming = 2;
 
       /* get timing of symmetry computation */
-      if ( ((unsigned) usesymmetry & SYM_HANDLETYPE_SYMCONS) != 0 )
-      {
-         SCIP_CALL( SCIPgetIntParam(scip, "propagating/symmetry/addconsstiming", &symcomptiming) );
-      }
-      else if ( usesymmetry == 2 )
-      {
-         SCIP_CALL( SCIPgetIntParam(scip, "propagating/symmetry/ofsymcomptiming", &symcomptiming) );
-      }
+      SCIP_CALL( SCIPgetIntParam(scip, "symmetries/tryaddtiming", &symcomptiming) );
 
-      if ( symcomptiming < SYM_TIMING_AFTERPRESOL &&
+      if ( symcomptiming == SYM_TIMING_BEFOREPRESOL &&
            (SCIPgetStage(scip) >= SCIP_STAGE_PRESOLVING || SCIPgetStage(scip) == SCIP_STAGE_INITPRESOLVE) )
       {
          SCIPerrorMessage("Symmetry handling and solution counting are not compatible. " \
-            "You might want to disable symmetry by setting parameter <misc/usesymmetry> to 0.\n");
+            "You might want to disable symmetry by setting parameter <symmetries/enabled> to FALSE.\n");
 
          return SCIP_INVALIDCALL;
       }
 
       SCIPwarningMessage(scip, "Symmetry handling has been deactivated since it is not compatible with counting.\n");
-      SCIPwarningMessage(scip, "=> counting forces parameter <misc/usesymmetry> to 0.\n");
+      SCIPwarningMessage(scip, "=> counting forces parameter <symmetries/enabled> to FALSE.\n");
 
-      SCIP_CALL( SCIPsetIntParam(scip, "misc/usesymmetry", 0) );
+      SCIP_CALL( SCIPsetBoolParam(scip, "symmetries/enabled", FALSE) );
    }
 
    SCIP_CALL( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, NULL, FALSE) );
@@ -1954,7 +1948,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecCount)
    int displaysols;
    int displayfeasST;
    int nrestarts;
-   int usesymmetry;
+   SCIP_Bool usesymmetry;
 
    SCIP_CALL( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, NULL, FALSE) );
    SCIPdialogMessage(scip, NULL, "\n");
@@ -1974,35 +1968,28 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecCount)
       SCIP_CALL( SCIPsetIntParam(scip, "presolving/maxrestarts", 0) );
    }
 
-   SCIP_CALL( SCIPgetIntParam(scip, "misc/usesymmetry", &usesymmetry) );
+   SCIP_CALL( SCIPgetBoolParam(scip, "symmetries/enbaled", &usesymmetry) );
 
-   if ( usesymmetry != 0 )
+   if ( usesymmetry )
    {
       int symcomptiming = 2;
 
       /* get timing of symmetry computation */
-      if ( ((unsigned) usesymmetry & SYM_HANDLETYPE_SYMCONS) != 0 )
-      {
-         SCIP_CALL( SCIPgetIntParam(scip, "propagating/symmetry/addconsstiming", &symcomptiming) );
-      }
-      else if ( usesymmetry == 2 )
-      {
-         SCIP_CALL( SCIPgetIntParam(scip, "propagating/symmetry/ofsymcomptiming", &symcomptiming) );
-      }
+      SCIP_CALL( SCIPgetIntParam(scip, "symmetries/tryaddtiming", &symcomptiming) );
 
-      if ( symcomptiming < SYM_TIMING_AFTERPRESOL &&
+      if ( symcomptiming == SYM_TIMING_BEFOREPRESOL &&
            (SCIPgetStage(scip) >= SCIP_STAGE_PRESOLVING || SCIPgetStage(scip) == SCIP_STAGE_INITPRESOLVE) )
       {
          SCIPerrorMessage("Symmetry handling and solution counting are not compatible. " \
-            "You might want to disable symmetry by setting parameter <misc/usesymmetry> to 0.\n");
+            "You might want to disable symmetry by setting parameter <symmetries/enabled> to FALSE.\n");
 
          return SCIP_INVALIDCALL;
       }
 
       SCIPwarningMessage(scip, "Symmetry handling has been deactivated since it is not compatible with counting.\n");
-      SCIPwarningMessage(scip, "=> counting forces parameter <misc/usesymmetry> to 0.\n");
+      SCIPwarningMessage(scip, "=> counting forces parameter <symmetries/enabled> to FALSE.\n");
 
-      SCIP_CALL( SCIPsetIntParam(scip, "misc/usesymmetry", 0) );
+      SCIP_CALL( SCIPsetBoolParam(scip, "symmetries/enabled", FALSE) );
    }
 
    switch( SCIPgetStage(scip) )
