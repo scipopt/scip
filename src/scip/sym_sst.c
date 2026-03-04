@@ -71,6 +71,8 @@
                                               *   variables of different types? */
 #define DEFAULT_DISPLAYSYMINFO   FALSE       /**< Should the symmetry handler print information about the added
                                               *   symmetry handling methods? */
+#define DEFAULT_REQUIRECONTVARS   TRUE       /**< Should SST cuts only be added when continuous variables are affected
+                                              *   by symmetry component? */
 
 
 /** variable types for leader in Schreier-Sims cuts */
@@ -158,6 +160,8 @@ struct SCIP_SymhdlrData
    SCIP_Bool             mixedcomponents;    /**< Should SST constraints be added if a symmetry component contains
                                               *   variables of different types? */
    SCIP_Bool             displaysyminfo;     /**< Shall information about the added SST cuts be displayed? */
+   SCIP_Bool             requirecontvars;    /**< Should SST cuts only be added when continuous variables are affected
+                                              *   by symmetry component? */
 };
 
 /*
@@ -1262,6 +1266,8 @@ SCIP_RETCODE tryAddSSTConss(
    SCIP_Bool             addconflictcuts,    /**< Shall SST conss be added when a conflict-based rule is used? */
    SCIP_Bool             mixedcomponents,    /**< Shall SST conss be added if symmetry component contains
                                               *   different variable types? */
+   SCIP_Bool             requirecontvars,    /**< Should SST cuts only be added when continuous variables are affected
+                                              *   by symmetry component? */
    SCIP_Bool             displaysyminfo,     /**< Shall information about the added SST cuts be displayed? */
    SCIP_Bool*            success             /**< pointer to store whether SST constraints are created */
    )
@@ -1330,7 +1336,7 @@ SCIP_RETCODE tryAddSSTConss(
    }
 
    /* terminate if no variables of a possible leader type is affected */
-   if( nvarsselectedtype == 0 )
+   if( nvarsselectedtype == 0 || (requirecontvars && nmovedcontpermvars <= 0) )
       return SCIP_OKAY;
 
    ntotalperms = nperms;
@@ -1613,7 +1619,7 @@ SCIP_DECL_SYMHDLRTRYADD(symhdlrTryAddSST)
          &sstconss, &nsstconss, &maxnsstconss, nchgbds, (SST_LEADERRULE)symhdlrdata->leaderrule,
          (SST_ORBITRULE)symhdlrdata->orbitrule, (SST_VARTYPE)symhdlrdata->leadervartype, symhdlrdata->computenewperms,
          symhdlrdata->maxnnewperms, symhdlrdata->addconflictcuts, symhdlrdata->mixedcomponents,
-         symhdlrdata->displaysyminfo, success) );
+         symhdlrdata->requirecontvars, symhdlrdata->displaysyminfo, success) );
 
    /* in case of success, store information in symmetry component's data */
    if( !(*success) )            /*lint !e831*/
@@ -1789,6 +1795,10 @@ SCIP_RETCODE SCIPincludeSymhdlrSST(
    SCIP_CALL( SCIPaddBoolParam(scip, "symmetries/" SYM_NAME "/displaysyminfo",
          "Should the symmetry handler print information about the added symmetry handling methods?",
          &symhdlrdata->displaysyminfo, TRUE, DEFAULT_DISPLAYSYMINFO, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip, "symmetries/" SYM_NAME "/requirecontvars",
+         "Should SST cuts only be added when continuous variables are affected by symmetry component?",
+         &symhdlrdata->requirecontvars, TRUE, DEFAULT_REQUIRECONTVARS, NULL, NULL) );
 
    return SCIP_OKAY;
 }
