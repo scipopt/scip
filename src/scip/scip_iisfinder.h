@@ -103,11 +103,25 @@ SCIP_RETCODE SCIPsetIISfinderFree(
    SCIP_DECL_IISFINDERFREE ((*iisfinderfree)) /**< destructor of IIS finder */
    );
 
+/**@}
+ *
+ * @addtogroup PublicInfeasibilityAnalysisMethods
+ *
+ * @{
+ */
+
 /** the execution method that iterates over the IIS finder plugins */
 SCIP_EXPORT
 SCIP_RETCODE SCIPgenerateIIS(
    SCIP*                 scip                /**< SCIP data structure */
    );
+
+/**@}
+ *
+ * @addtogroup PublicIISfinderMethods
+ *
+ * @{
+ */
 
 /** returns the IIS finder of the given name, or NULL if not existing */
 SCIP_EXPORT
@@ -135,6 +149,13 @@ SCIP_RETCODE SCIPsetIISfinderPriority(
    SCIP_IISFINDER*       iisfinder,          /**< IIS finder */
    int                   priority            /**< new priority of the IIS finder */
    );
+
+/**@}
+ *
+ * @addtogroup PublicInfeasibilityAnalysisMethods
+ *
+ * @{
+ */
 
 /** Gets the IIS storage.
  *

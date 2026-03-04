@@ -141,9 +141,25 @@ SCIP_CONS* SCIPgetSlackConsSuperindicator(
    );
 
 
+/*
+ *  constraint-dependent dialog entries
+ */
+
+/** dialog execution method for the SCIPtransformMinUC() command */
+SCIP_EXPORT
+SCIP_DECL_DIALOGEXEC(SCIPdialogExecChangeMinUC);
+
+/** @} */
+
+/** @} */
 
 /*
  *  constraint-dependent SCIP methods
+ */
+
+/**@addtogroup PublicInfeasibilityAnalysisMethods
+ *
+ * @{
  */
 
 /** transforms the current problem into a MinUC problem (minimizing the number of unsatisfied constraints),
@@ -154,18 +170,6 @@ SCIP_RETCODE SCIPtransformMinUC(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Bool*            success             /**< pointer to store whether all constraints could be transformed */
    );
-
-
-
-/*
- *  constraint-dependent dialog entries
- */
-
-/** dialog execution method for the SCIPtransformMinUC() command */
-SCIP_EXPORT
-SCIP_DECL_DIALOGEXEC(SCIPdialogExecChangeMinUC);
-
-/** @} */
 
 /** @} */
 
