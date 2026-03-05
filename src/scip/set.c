@@ -1054,15 +1054,6 @@ SCIP_RETCODE SCIPsetCopyPlugins(
       }
    }
 
-   /* copy all symmetry handler plugins */
-   if( copysymhdlrs && sourceset->symhdlrs != NULL )
-   {
-      for( p = 0; p < sourceset->nsymhdlrs; ++p )
-      {
-         SCIP_CALL( SCIPsymhdlrCopyInclude(sourceset->symhdlrs[p], targetset) );
-      }
-   }
-
    /* copy all iis finder plugins */
    if( copyiisfinders && sourceset->iisfinders != NULL )
    {
@@ -1115,6 +1106,15 @@ SCIP_RETCODE SCIPsetCopyPlugins(
       for( p = 0; p < sourceset->nsepas; ++p )
       {
          SCIP_CALL( SCIPsepaCopyInclude(sourceset->sepas[p], targetset) );
+      }
+   }
+
+   /* copy all symmetry handler plugins */
+   if( copysymhdlrs && sourceset->symhdlrs != NULL )
+   {
+      for( p = 0; p < sourceset->nsymhdlrs; ++p )
+      {
+         SCIP_CALL( SCIPsymhdlrCopyInclude(sourceset->symhdlrs[p], targetset) );
       }
    }
 
