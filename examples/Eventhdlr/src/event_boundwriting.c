@@ -218,7 +218,7 @@ SCIP_RETCODE writeBoundsFocusNode(
       submipdb = SCIP_INVALID;
       valid = FALSE;
       cutoff = FALSE;
-      SCIP_CALL( SCIPcopy(scip, subscip, NULL, NULL, "__boundwriting", FALSE, FALSE, FALSE, TRUE, &valid) );
+      SCIP_CALL( SCIPcopy(scip, subscip, NULL, NULL, "__boundwriting", FALSE, FALSE, FALSE, FALSE, TRUE, &valid) );
 
       if( valid )
       {
