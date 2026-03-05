@@ -7734,14 +7734,20 @@
  * - the first stage variables are of binary type: \f$ X \subseteq \{0,1\}^n \f$.
  *
  * This framework can be used in four different
- * ways: inputting an instance in the SMPS file format, using the default Benders' decomposition implementation
+ * ways: inputting an instance in the SMPS or BDR file format, using the default Benders' decomposition implementation
  * (see src/scip/benders_default.c), implementing a custom Benders' decomposition plugin (see \ref BENDER), or by using
  * the Benders' decomposition mode of GCG.
  * An overview of how to use each of these functions will be provided in this section.
  *
- * @section BENDERSSMPS Inputting an instance in the SMPS file format.
+ * @section BENDERSSMPS Inputting an instance in the SMPS or BDR file format.
  *
- * As part of the Benders' decomposition framework development, a reader for instances in the SMPS file format has been
+ * The SMPS and BDR readers have been implemented to support the input of decomposable problems. The SMPS format is an
+ * established format used for stochastic programming instances. The BDR reader is simply a list of instance files
+ * defining the master and subproblems.
+ *
+ * @subsection BENDERSSMPSREADER The SMPS file format
+ *
+ * As part of the Benders' decomposition framework, a reader for instances in the SMPS file format has been
  * implemented (see src/scip/reader_smps.c). The details regarding the SMPS file format can be found at:
  *
  * Birge, J. R.; Dempster, M. A.; Gassmann, H. I.; Gunn, E.; King, A. J. & Wallace, S. W.
@@ -7757,6 +7763,19 @@
  * time files. By default, the STO reader will construct the deterministic equivalent of the stochastic program. A
  * parameter is provided "reading/sto/usebenders" that will inform the STO reader to apply Benders' decomposition to the
  * input stochastic program.
+ *
+ * @subsection The BDR file format
+ *
+ * The BDR file format is a simple format designed for inputting instances to which Benders' decomposition will be
+ * applied. Simply, the format is a list of instance files that correspond to the master problem and subproblem. One
+ * could think of these instance files as the mathematical programs resulting from the application of Benders'
+ * decomposition (without cuts and auxiliary variables).
+ *
+ * A BDR file will specify a set of instance files with an absolute or relative path. If the instance files are
+ * provided with a relative path, then the directory where the BDR file is located is used as the parent directory. The
+ * key requirement in the specification of the master and subproblem instances is that the master problem variables
+ * have the same name in the master and subproblem instance files. This requirement is because the Benders'
+ * decomposition implementation uses variable names to map between the master and subproblem variables.
  *
  * @section BENDERSDECSTRUCTURE Inputting a user-defined decomposition structure
  *
