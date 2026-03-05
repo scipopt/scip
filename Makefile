@@ -840,7 +840,7 @@ SCIPPLUGINLIBOBJ=	scip/benders_default.o \
 			scip/prop_rootredcost.o \
 			scip/prop_symmetry.o \
 			scip/prop_vbounds.o \
-			scip/reader_bdr.o \
+			scip/reader_bd.o \
 			scip/reader_bnd.o \
 			scip/reader_ccg.o \
 			scip/reader_cip.o \

@@ -513,11 +513,11 @@ set(instances_BendersDec
    )
 
 set(instances_BendersReader
-   "instances/Benders/benders-lp.bdr\;+2.56000000000000e+03"
-   "instances/Benders/benders-mps.bdr\;+2.56000000000000e+03"
-   "instances/Benders/benders-lp-mps.bdr\;+2.56000000000000e+03"
-   "instances/Benders/benders-mps-lp.bdr\;+2.56000000000000e+03"
-   "instances/Benders/multi-zone.bdr\;+1.03000000000000e+03"
+   "instances/Benders/benders-lp.bd\;+2.56000000000000e+03"
+   "instances/Benders/benders-mps.bd\;+2.56000000000000e+03"
+   "instances/Benders/benders-lp-mps.bd\;+2.56000000000000e+03"
+   "instances/Benders/benders-mps-lp.bd\;+2.56000000000000e+03"
+   "instances/Benders/multi-zone.bd\;+1.03000000000000e+03"
    )
 
 set(instances_Decomp

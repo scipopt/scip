@@ -22,7 +22,7 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   reader_bdr.c
+/**@file   reader_bd.c
  * @ingroup DEFPLUGINS_READER
  * @brief  Benders file reader - this is used to read multiple files that form the master and subproblems of a
  *         Benders' decomposition
@@ -35,7 +35,7 @@
 #include "blockmemshell/memory.h"
 #include "scip/benders_default.h"
 #include "scip/def.h"
-#include "scip/reader_bdr.h"
+#include "scip/reader_bd.h"
 #include "scip/pub_fileio.h"
 #include "scip/pub_message.h"
 #include "scip/pub_misc.h"
@@ -49,7 +49,7 @@
 
 #define READER_NAME             "bendersreader"
 #define READER_DESC             "file reader for multiple instance files for a Benders' decomposition"
-#define READER_EXTENSION        "bdr"
+#define READER_EXTENSION        "bd"
 
 /** enum for the file types that are read by the BENDERS reader */
 enum BendersFile_Section

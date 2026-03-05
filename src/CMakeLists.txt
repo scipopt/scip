@@ -220,7 +220,7 @@ set(scipsources
     scip/prop_vbounds.c
     scip/prop_symmetry.c
     scip/prop_sync.c
-    scip/reader_bdr.c
+    scip/reader_bd.c
     scip/reader_bnd.c
     scip/reader_ccg.c
     scip/reader_cip.c
@@ -827,7 +827,7 @@ set(scipheaders
     scip/rational.h
     scip/rationalgmp.h
     scip/rbtree.h
-    scip/reader_bdr.h
+    scip/reader_bd.h
     scip/reader_bnd.h
     scip/reader_ccg.h
     scip/reader_cip.h
