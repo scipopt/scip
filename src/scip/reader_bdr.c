@@ -330,9 +330,9 @@ SCIP_DECL_READERREAD(readerReadBenders)
 
    if( filename == NULL )
    {
-      SCIPwarningMessage(scip, "A file name must be specified for the Benders' instance reader.");
+      SCIPerrorMessage("A file name must be specified for the Benders' instance reader.");
 
-      return SCIP_OKAY;
+      return SCIP_READERROR;
    }
 
    SCIP_CALL( readBendersInputFile(scip, filename) );
