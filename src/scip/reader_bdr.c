@@ -95,7 +95,7 @@ SCIP_RETCODE readBendersInputFile(
    if( fromlastslash == NULL )
       parentlen = 0;
    else
-      parentlen = strlen(filename) - (strlen(fromlastslash) - 1);
+      parentlen = fromlastslash + 1 - filename;
 
    (void)SCIPstrncpy(parent, filename, (int)parentlen + 1);
 
@@ -169,7 +169,11 @@ SCIP_RETCODE readBendersInputFile(
 
             SCIPdebugMsg(scip, "The instance file for the master problem is <%s>\n", tempfile);
 
-            (void) SCIPsnprintf(masterfile, SCIP_MAXSTRLEN, "%s%s", parent, tempfile);
+            /* prepending the parent path only if the master problem file is a relative path */
+            if( tempfile[0] == '/' )
+               (void) SCIPsnprintf(masterfile, SCIP_MAXSTRLEN, "%s", tempfile);
+            else
+               (void) SCIPsnprintf(masterfile, SCIP_MAXSTRLEN, "%s%s", parent, tempfile);
 
             break;
          case BENDERSFILE_SECTION_SUB:
@@ -201,7 +205,11 @@ SCIP_RETCODE readBendersInputFile(
 
             SCIPdebugMsg(scip, "The instance file for the subproblem %d is <%s>\n", subprobcount, tempfile);
 
-            (void) SCIPsnprintf(subproblemfiles[subprobcount], SCIP_MAXSTRLEN, "%s%s", parent, tempfile);
+            /* prepending the parent path only if the subproblem file is a relative path */
+            if( tempfile[0] == '/' )
+               (void) SCIPsnprintf(subproblemfiles[subprobcount], SCIP_MAXSTRLEN, "%s", tempfile);
+            else
+               (void) SCIPsnprintf(subproblemfiles[subprobcount], SCIP_MAXSTRLEN, "%s%s", parent, tempfile);
 
             subprobcount++;
             break;
@@ -322,7 +330,7 @@ SCIP_DECL_READERREAD(readerReadBenders)
 
    if( filename == NULL )
    {
-      SCIPwarningMessage("A file name must be specified for the Benders' instance reader.");
+      SCIPwarningMessage(scip, "A file name must be specified for the Benders' instance reader.");
 
       return SCIP_OKAY;
    }
