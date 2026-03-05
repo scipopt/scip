@@ -20,7 +20,6 @@ Interface changes
 - SCIPincludeIISfinder() receives an additional argument to set whether it should be enabled
 - SCIPincludeIISfinderBasic() receives an additional argument to set whether it should be enabled
 - methods SCIPcopyPlugins(), SCIPcopy(), SCIPcopyConsCompression(), SCIPcopyOrig(), SCIPcopyOrigConsCompression() receive a new argument to control whether symmetry handler plugins are copied to a sub-SCIP
-- deleted method SCIPdetectSingleOrDoubleLexMatrices()
 - deleted propagtor symmetry including its SCIPincludePropSymmetry() and SCIPgetSymmetryNGenerators()
 - SCIPsetCopyPlugins() receives a new argument to control whether symmetry handler plugins are copied to a sub-SCIP
 - new argument infersymcomp for SCIPnodeAddBoundinfer(), SCIPnodeAddBoundinferExact(), SCIPdomchgAddBoundchg() to set inference information in conflict analysis that arise from symmetry handling
