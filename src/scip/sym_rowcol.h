@@ -51,6 +51,30 @@ SCIP_RETCODE SCIPincludeSymhdlrRowCol(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
+/** detects whether permutations define single or double lex matrices
+ *
+ *  A single lex matrix is a matrix whose columns can be partitioned into blocks such that the
+ *  columns within each block can be permuted arbitrarily. A double lex matrix is a single lex
+ *  matrix such that also blocks of rows have the aforementioned property.
+ */
+SCIP_EXPORT
+SCIP_RETCODE SCIPdetectSingleOrDoubleLexMatrices(
+   SCIP*                 scip,               /**< SCIP pointer */
+   SCIP_Bool             detectsinglelex,    /**< whether single lex matrices shall be detected */
+   int**                 perms,              /**< array of permutations */
+   int                   nperms,             /**< number of permutations in perms */
+   int                   permlen,            /**< number of variables in a permutation */
+   SCIP_Bool*            success,            /**< pointer to store whether structure could be detected */
+   SCIP_Bool*            isorbitope,         /**< pointer to store whether detected matrix is orbitopal */
+   int***                lexmatrix,          /**< pointer to store single or double lex matrix */
+   int*                  nrows,              /**< pointer to store number of rows of lexmatrix */
+   int*                  ncols,              /**< pointer to store number of columns of lexmatrix */
+   int**                 lexrowsbegin,       /**< pointer to store array indicating begin of new row-lexmatrix */
+   int**                 lexcolsbegin,       /**< pointer to store array indicating begin of new col-lexmatrix */
+   int*                  nrowmatrices,       /**< pointer to store number of single lex row matrices in rows */
+   int*                  ncolmatrices        /**< pointer to store number of single lex column matrices in rows */
+   );
+
 #ifdef __cplusplus
 }
 #endif

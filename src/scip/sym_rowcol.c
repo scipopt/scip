@@ -822,7 +822,6 @@ SCIP_RETCODE isDoublelLexSym(
  *  columns within each block can be permuted arbitrarily. A double lex matrix is a single lex
  *  matrix such that also blocks of rows have the aforementioned property.
  */
-static
 SCIP_RETCODE SCIPdetectSingleOrDoubleLexMatrices(
    SCIP*                 scip,               /**< SCIP pointer */
    SCIP_Bool             detectsinglelex,    /**< whether single lex matrices shall be detected */
@@ -2108,6 +2107,7 @@ SCIP_RETCODE tryHandleSingleOrDoubleLexMatrices(
    int*                  norbitopeconss,     /**< pointer to store number of conss in orbitopeconss */
    int*                  maxnorbitopeconss,  /**< pointer to store maximum number of conss orbitopeconss can hold */
    SCIP_Bool             displaysyminfo,     /**< Shall information about the added SST cuts be displayed? */
+   SCIP_Bool             allowbdchgs,        /**< whether bound changed permitted (needed for stage EXITPRESOLVE) */
    SCIP_Bool*            success             /**< pointer to store whether symmetries are handled */
    )
 {
