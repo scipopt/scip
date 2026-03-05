@@ -58,7 +58,6 @@
 #include "scip/pub_var.h"
 #include "scip/scip.h"
 #include "scip/scip_prob.h"
-#include "scip/scipdefplugins.h"
 
 #define BENDERS_NAME                "default"
 #define BENDERS_DESC                "default implementation of Benders' decomposition"
