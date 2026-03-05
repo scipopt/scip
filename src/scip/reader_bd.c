@@ -95,7 +95,7 @@ SCIP_RETCODE readBendersInputFile(
    if( fromlastslash == NULL )
       parentlen = 0;
    else
-      parentlen = fromlastslash + 1 - filename;
+      parentlen = strlen(filename) - (strlen(fromlastslash) - 1);
 
    (void)SCIPstrncpy(parent, filename, (int)parentlen + 1);
 
