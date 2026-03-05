@@ -161,13 +161,16 @@ SCIP_RETCODE createBendersSubproblems(
    /* creating the Benders' decomposition subproblems from the instance files */
    for( i = 0; i < nsubproblems; i++ )
    {
+      SCIP_Bool valid;
+
       SCIPinfoMessage(scip, NULL, "subproblem instance file <%s>\n", subprobfiles[i]);
 
       /* creating the SCIP instance for the subproblem */
       SCIP_CALL( SCIPcreate(&(*bendersdata)->subproblems[i]) );
 
-      /* include default SCIP plugins */
-      SCIP_CALL( SCIPincludeDefaultPlugins((*bendersdata)->subproblems[i]) );
+      /* copying the plugins from the master SCIP instance to the subproblem SCIP */
+      SCIP_CALL( SCIPcopyPlugins(scip, (*bendersdata)->subproblems[i], TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE,
+            TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, &valid) );
 
       /* reading the instance file. The file type is inferred from the file extension. */
       assert(subprobfiles[i] != NULL);
@@ -594,6 +597,13 @@ SCIP_RETCODE SCIPcreateBendersDefault(
    SCIP_CALL( disableRestarts(scip) );
 
    benders = SCIPfindBenders(scip, BENDERS_NAME);
+
+   if( benders == NULL )
+   {
+      SCIPerrorMessage("The default Benders' decomposition plugin must be included.");
+      return SCIP_ERROR;
+   }
+
    bendersdata = SCIPbendersGetData(benders);
 
    SCIP_CALL( createBendersData(scip, subproblems, &bendersdata, nsubproblems) );
@@ -633,6 +643,13 @@ SCIP_RETCODE SCIPcreateBendersDefaultFromFiles(
    SCIP_CALL( disableRestarts(scip) );
 
    benders = SCIPfindBenders(scip, BENDERS_NAME);
+
+   if( benders == NULL )
+   {
+      SCIPerrorMessage("The default Benders' decomposition plugin must be included.");
+      return SCIP_ERROR;
+   }
+
    bendersdata = SCIPbendersGetData(benders);
 
    SCIP_CALL( createBendersSubproblems(scip, &bendersdata, subprobfiles, nsubproblems) );
