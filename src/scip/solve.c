@@ -1858,6 +1858,8 @@ SCIP_RETCODE extractSDG(
    assert(graph != NULL);
    assert(success != NULL);
 
+   *success = FALSE;
+
    /* check whether all constraints can provide symmetry information */
    if( !conshdlrsCanProvideSymInformation(scip, symtype) )
       return SCIP_OKAY;
@@ -2047,7 +2049,7 @@ SCIP_RETCODE determineSymmetry(
    SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, ") (symcode time: %.2f)\n", symcodetime);
 
  FREEGRAPH:
-   if( !success )
+   if( !success && extractsuccess )
    {
       SCIP_CALL( SCIPfreeSymgraph(scip, graph) );
       *graph = NULL;
