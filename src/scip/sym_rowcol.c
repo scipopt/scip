@@ -2195,7 +2195,7 @@ SCIP_RETCODE tryHandleSingleOrDoubleLexMatrices(
 
          if( nselectedperms == nperms - 1 )
          {
-            selectedperms[0] = selectedperms[nonpermidx];
+            selectedperms[0] = perms[nonpermidx];
             nselectedperms = 1;
          }
          else
