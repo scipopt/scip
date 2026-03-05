@@ -205,6 +205,7 @@ SCIP_RETCODE SCIPsymhdlrTryAdd(
    int                   id,                 /**< identifier of component for which symmetry handling shall be added */
    SCIP_SYMCOMPDATA**    symcompdata,        /**< pointer to store data of symmetry component */
    int*                  naddedconss,        /**< pointer to store number of constraints added by symhdlr */
+   SCIP_Bool             allowbdchgs,        /**< whether bound changed permitted (needed for stage EXITPRESOLVE) */
    int*                  nchgbds,            /**< pointer to store number of changed variable bounds */
    SCIP_Bool*            success             /**< pointer to store whether symmetry handling method could be added */
    );

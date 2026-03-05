@@ -520,6 +520,7 @@ SCIP_RETCODE addSSTConssOrbitAndUpdateSST(
    SCIP_Shortbool*       orbitvarinconflict, /**< indicator whether orbitvar is in conflict with orbit leader */
    int                   norbitvarinconflict,/**< number of variables in conflict with orbit leader */
    SCIP_Bool             displaysyminfo,     /**< Shall information about the added SST cuts be displayed? */
+   SCIP_Bool             allowbdchgs,        /**< whether bound changed permitted (needed for stage EXITPRESOLVE) */
    int*                  nchgbds             /**< pointer to store number of bound changes (or NULL) */
    )
 { /*lint --e{613,641}*/
@@ -624,8 +625,8 @@ SCIP_RETCODE addSSTConssOrbitAndUpdateSST(
             assert(SCIPvarGetLbLocal(vars[1]) < 0.5);
             assert(varconflicts != NULL);
 
-            /* if variable is fixed */
-            if( SCIPvarGetUbLocal(vars[1]) > 0.5 )
+            /* if variable is fixed and bound changes are permitted */
+            if( allowbdchgs && SCIPvarGetUbLocal(vars[1]) > 0.5 )
             {
                SCIP_CALL( SCIPchgVarUb(scip, vars[1], 0.0) );
                ++(*nchgbds);
@@ -1269,6 +1270,7 @@ SCIP_RETCODE tryAddSSTConss(
    SCIP_Bool             requirecontvars,    /**< Should SST cuts only be added when continuous variables are affected
                                               *   by symmetry component? */
    SCIP_Bool             displaysyminfo,     /**< Shall information about the added SST cuts be displayed? */
+   SCIP_Bool             allowbdchgs,        /**< whether bound changed permitted (needed for stage EXITPRESOLVE) */
    SCIP_Bool*            success             /**< pointer to store whether SST constraints are created */
    )
 {
@@ -1534,7 +1536,7 @@ SCIP_RETCODE tryAddSSTConss(
       SCIP_CALL( addSSTConssOrbitAndUpdateSST(scip, symtype, id, varconflicts, permvars,
             permvardomaincenter, leaderrule, orbitrule, addconflictcuts, sstconss, nsstconss, maxnsstconss,
             orbits, orbitbegins, orbitidx, orbitleaderidx, orbitvarinconflict, norbitvarinconflict, displaysyminfo,
-            &nchanges) );
+            allowbdchgs, &nchanges) );
 
       ++norbitleadercomponent;
 
@@ -1619,7 +1621,7 @@ SCIP_DECL_SYMHDLRTRYADD(symhdlrTryAddSST)
          &sstconss, &nsstconss, &maxnsstconss, nchgbds, (SST_LEADERRULE)symhdlrdata->leaderrule,
          (SST_ORBITRULE)symhdlrdata->orbitrule, (SST_VARTYPE)symhdlrdata->leadervartype, symhdlrdata->computenewperms,
          symhdlrdata->maxnnewperms, symhdlrdata->addconflictcuts, symhdlrdata->mixedcomponents,
-         symhdlrdata->requirecontvars, symhdlrdata->displaysyminfo, success) );
+         symhdlrdata->requirecontvars, symhdlrdata->displaysyminfo, allowbdchgs, success) );
 
    /* in case of success, store information in symmetry component's data */
    if( !(*success) )            /*lint !e831*/

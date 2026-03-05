@@ -1325,6 +1325,7 @@ SCIP_RETCODE handleOrbitope(
    SCIP_Bool             usedynamicprop,     /**< Shall orbitopes be handled dynamically? */
    SCIP_Bool             displaysyminfo,     /**< Shall information about the added SST cuts be displayed? */
    SCIP_Bool*            success,            /**< pointer to store whether orbitope could be added successfully */
+   SCIP_Bool             allowbdchgs,        /**< whether bound changed permitted (needed for stage EXITPRESOLVE) */
    int*                  nchgbds             /**< pointer to store number of bound changes (or NULL) */
    )
 {
@@ -1418,9 +1419,24 @@ SCIP_RETCODE handleOrbitope(
 
             if( SCIPisLT(scip, SCIPvarGetLbLocal(var), bound) )
             {
-               /* improve lower bound */
-               SCIP_CALL( SCIPchgVarLb(scip, var, bound) );
-               ++(*nchgbds);
+               /* improve lower bound either by changing the bound or a linear constraint */
+               if( allowbdchgs )
+               {
+                  SCIP_CALL( SCIPchgVarLb(scip, var, bound) );
+                  ++(*nchgbds);
+               }
+               else
+               {
+                  SCIP_Real coef[1] = {1.0};
+
+                  (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_lb_%d", partialname, j);
+
+                  consvars[0] = var;
+                  SCIP_CALL( SCIPcreateConsLinear(scip, &cons, name, 1, consvars, coef, bound, SCIPinfinity(scip),
+                        TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+                  (*orbitopeconss)[(*norbitopeconss)++] = cons;
+                  SCIP_CALL( SCIPaddCons(scip, cons) );
+               }
             }
          }
       }
@@ -1511,6 +1527,7 @@ SCIP_RETCODE handleDoubleLexOrbitope(
    int*                  maxnorbitopeconss,  /**< pointer to store maximum number of conss orbitopeconss can hold */
    SCIP_Bool             displaysyminfo,     /**< Shall information about the added SST cuts be displayed? */
    SCIP_Bool*            success,            /**< pointer to store whether orbitope could be added successfully */
+   SCIP_Bool             allowbdchgs,        /**< whether bound changed permitted (needed for stage EXITPRESOLVE) */
    int*                  nchgbds             /**< pointer to store number of bound changes (or NULL) */
    )
 {
@@ -1661,8 +1678,22 @@ SCIP_RETCODE handleDoubleLexOrbitope(
             /* improve lower bound either by changing the bound or a linear constraint */
             if( SCIPisLT(scip, SCIPvarGetLbLocal(consvars[0]), bound) )
             {
-               SCIP_CALL( SCIPchgVarLb(scip, consvars[0], bound) );
-               ++(*nchgbds);
+               if( allowbdchgs )
+               {
+                  SCIP_CALL( SCIPchgVarLb(scip, consvars[0], bound) );
+                  ++(*nchgbds);
+               }
+               else
+               {
+                  SCIP_Real coef[1] = {1.0};
+
+                  (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_lb_col_%d_row_%d", partialname, j, i);
+
+                  SCIP_CALL( SCIPcreateConsLinear(scip, &cons, name, 1, consvars, coef, bound, SCIPinfinity(scip),
+                        TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+                  (*orbitopeconss)[(*norbitopeconss)++] = cons;
+                  SCIP_CALL( SCIPaddCons(scip, cons) );
+               }
             }
          }
       }
@@ -1763,6 +1794,7 @@ SCIP_RETCODE handleDoublelLexMatrix(
    int*                  maxnorbitopeconss,  /**< pointer to store maximum number of conss orbitopeconss can hold */
    SCIP_Bool             displaysyminfo,     /**< Shall information about the added SST cuts be displayed? */
    SCIP_Bool*            success,            /**< pointer to store whether orbitope could be added successfully */
+   SCIP_Bool             allowbdchgs,        /**< whether bound changed permitted (needed for stage EXITPRESOLVE) */
    int*                  nchgbds             /**< pointer to store number of bound changes (or NULL) */
    )
 {
@@ -1900,7 +1932,7 @@ SCIP_RETCODE handleDoublelLexMatrix(
 
          SCIP_CALL( handleDoubleLexOrbitope(scip, permvars, permvardomaincenter, orbitopematrix, nrows, ncols,
                partialname, nflipableidx, orbitopalreddata, orbitopeconss, norbitopeconss, maxnorbitopeconss,
-               displaysyminfo, &tmpsuccess, nchgbds) );
+               displaysyminfo, &tmpsuccess, allowbdchgs, nchgbds) );
          *success = *success || tmpsuccess;
       }
       else if( hasrowflip )
@@ -1932,7 +1964,7 @@ SCIP_RETCODE handleDoublelLexMatrix(
 
          SCIP_CALL( handleDoubleLexOrbitope(scip, permvars, permvardomaincenter, orbitopematrix, ncols, nrows,
                partialname, nflipableidx, orbitopalreddata, orbitopeconss, norbitopeconss, maxnorbitopeconss,
-               displaysyminfo, &tmpsuccess, nchgbds) );
+               displaysyminfo, &tmpsuccess, allowbdchgs, nchgbds) );
          *success = *success || tmpsuccess;
       }
    }
@@ -1966,7 +1998,7 @@ SCIP_RETCODE handleDoublelLexMatrix(
 
          SCIP_CALL( handleOrbitope(scip, symtype, perms, permvars, npermvars, permvardomaincenter, id, orbitopematrix,
                nrows, j, partialname, FALSE, TRUE, lexreddata, lexredactive, orbitopalreddata, orbitopeconss,
-               norbitopeconss, maxnorbitopeconss, usedynamicprop, displaysyminfo, &tmpsuccess, nchgbds) );
+               norbitopeconss, maxnorbitopeconss, usedynamicprop, displaysyminfo, &tmpsuccess, allowbdchgs, nchgbds) );
          *success = *success || tmpsuccess;
       }
 
@@ -1991,7 +2023,7 @@ SCIP_RETCODE handleDoublelLexMatrix(
 
          SCIP_CALL( handleOrbitope(scip, symtype, perms, permvars, npermvars, permvardomaincenter, id, orbitopematrix,
                ncols, i, partialname, FALSE, TRUE, lexreddata, lexredactive, orbitopalreddata, orbitopeconss,
-               norbitopeconss, maxnorbitopeconss, usedynamicprop, displaysyminfo, &tmpsuccess, nchgbds) );
+               norbitopeconss, maxnorbitopeconss, usedynamicprop, displaysyminfo, &tmpsuccess, allowbdchgs, nchgbds) );
          *success = *success || tmpsuccess;
       }
    }
@@ -2249,7 +2281,7 @@ SCIP_RETCODE tryHandleSingleOrDoubleLexMatrices(
                SCIP_CALL( handleOrbitope(scip, symtype, perms, permvars, npermvars, permvardomaincenter, cidx,
                      orbitopematrix, nrows, ncols, partialname, TRUE, TRUE, lexreddata, lexredactive, orbitopalreddata,
                      orbitopeconss, norbitopeconss, maxnorbitopeconss, usedynamicprop, displaysyminfo, &locsuccess,
-                     nchgbds) );
+                     allowbdchgs, nchgbds) );
 
                for( i = nrows - 1; i >= 0; --i )
                {
@@ -2265,7 +2297,8 @@ SCIP_RETCODE tryHandleSingleOrDoubleLexMatrices(
          {
             SCIP_CALL( handleOrbitope(scip, symtype, perms, permvars, npermvars, permvardomaincenter, cidx, lexmatrix,
                   nrows, ncols, partialname, FALSE, FALSE, lexreddata, lexredactive, orbitopalreddata, orbitopeconss,
-                  norbitopeconss, maxnorbitopeconss, usedynamicprop, displaysyminfo, &locsuccess, nchgbds) );
+                  norbitopeconss, maxnorbitopeconss, usedynamicprop, displaysyminfo, &locsuccess, allowbdchgs,
+                  nchgbds) );
          }
       }
       else
@@ -2279,7 +2312,7 @@ SCIP_RETCODE tryHandleSingleOrDoubleLexMatrices(
          SCIP_CALL( handleDoublelLexMatrix(scip, symtype, perms, permvars, npermvars, permvardomaincenter, cidx,
                lexmatrix, nrows, ncols, lexrowsbegin, lexcolsbegin, nrowmatrices, ncolmatrices, selectedperms, nselectedperms,
                handlereflections, usedynamicprop, lexreddata, lexredactive, orbitopalreddata, orbitopeconss,
-               norbitopeconss, maxnorbitopeconss, displaysyminfo, &locsuccess, nchgbds) );
+               norbitopeconss, maxnorbitopeconss, displaysyminfo, &locsuccess, allowbdchgs, nchgbds) );
       }
 
    FREEMEMORY:
@@ -2352,7 +2385,7 @@ SCIP_DECL_SYMHDLRTRYADD(symhdlrTryaddRowCol)
          !symhdlrdata->detectrowcol, symhdlrdata->handlereflections, symhdlrdata->usedynamicprop,
          id, nchgbds, (*symcompdata)->lexreddata, &(*symcompdata)->lexredactive, symhdlrdata->orbitopalreddata,
          &(*symcompdata)->conss, &(*symcompdata)->nconss, &(*symcompdata)->maxnconss, symhdlrdata->displaysyminfo,
-         success) );
+         allowbdchgs, success) );
 
    if( !(*success) )
    {

@@ -562,6 +562,15 @@ SCIP_RETCODE exitPresolve(
       int nvars;
       int v;
 
+      /* guarantee that symmetries are computed */
+      if( scip->set->sym_enabled && scip->syminfo->nperms == -1 )
+      {
+         int naddedconss = 0;
+         int nchgbds = 0;
+
+         SCIP_CALL( SCIPtryAddSymmetryHandlingMethods(scip, &naddedconss, FALSE, &nchgbds) );
+      }
+
       /* flatten all variables */
       vars = SCIPgetFixedVars(scip);
       nvars = SCIPgetNFixedVars(scip);
@@ -1434,7 +1443,7 @@ SCIP_RETCODE presolve(
             int npresolchgcoefsold;
             int npresolchgsidesold;
 
-            SCIP_CALL( SCIPtryAddSymmetryHandlingMethods(scip, &nnewconss, &nchgbds) );
+            SCIP_CALL( SCIPtryAddSymmetryHandlingMethods(scip, &nnewconss, TRUE, &nchgbds) );
 
             scip->stat->npresoladdconss += nnewconss;
             scip->stat->npresolchgbds += nchgbds;
@@ -2655,7 +2664,7 @@ SCIP_RETCODE SCIPpresolve(
          int nnewconss;
          int nchgbds;
 
-         SCIP_CALL( SCIPtryAddSymmetryHandlingMethods(scip, &nnewconss, &nchgbds) );
+         SCIP_CALL( SCIPtryAddSymmetryHandlingMethods(scip, &nnewconss, TRUE, &nchgbds) );
 
          scip->stat->npresoladdconss += nnewconss;
          scip->stat->npresolchgbds += nchgbds;

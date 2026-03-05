@@ -2230,6 +2230,7 @@ SCIP_RETCODE computeComponentsSym(
 SCIP_RETCODE SCIPtryAddSymmetryHandlingMethods(
    SCIP*                 scip,               /**< SCIP data structure */
    int*                  naddedconss,        /**< pointer to store number of constraints added by symmetry handlers */
+   SCIP_Bool             allowbdchgs,        /**< whether bound changed permitted (needed for stage EXITPRESOLVE) */
    int*                  nchgbds             /**< pointer to store number of changed variable bounds */
    )
 {
@@ -2353,8 +2354,8 @@ SCIP_RETCODE SCIPtryAddSymmetryHandlingMethods(
       for( i = 0; i < nsymhdlrs && !success; ++i )
       {
          SCIP_CALL( SCIPsymhdlrTryAdd(symhdlrs[i], scip->set, perms, nperms, syminfo->symtype, syminfo->permvars, /*lint !e644 */
-               syminfo->npermvars, vardomcenter, syminfo->permvarmap, graph, c, &symcompdata, &ntmpconss, &ntmpchgbds,
-               &success) );
+               syminfo->npermvars, vardomcenter, syminfo->permvarmap, graph, c, &symcompdata, &ntmpconss, allowbdchgs,
+               &ntmpchgbds, &success) );
          *naddedconss += ntmpconss;
          *nchgbds += ntmpchgbds;
          symhdlrs[i]->naddconss += ntmpconss;
