@@ -314,12 +314,18 @@ static
 SCIP_DECL_READERREAD(readerReadBenders)
 {  /*lint --e{715}*/
    assert(scip != NULL);
-   assert(filename != NULL);
    assert(result != NULL);
 
    SCIP_STRINGEQ( SCIPreaderGetName(reader), READER_NAME, SCIP_INVALIDCALL );
 
    *result = SCIP_DIDNOTRUN;
+
+   if( filename == NULL )
+   {
+      SCIPwarningMessage("A file name must be specified for the Benders' instance reader.");
+
+      return SCIP_OKAY;
+   }
 
    SCIP_CALL( readBendersInputFile(scip, filename) );
 
