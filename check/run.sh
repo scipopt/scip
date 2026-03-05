@@ -76,7 +76,7 @@ function cleanup {
     if [ -f "${SOLFILE}" ] ;
     then
         mv "${SOLFILE}" "${SOLVERPATH}/${OUTPUTDIR}/${BASENAME}.sol"
-        gzip "${SOLVERPATH}/${OUTPUTDIR}/${BASENAME}.sol"
+        gzip -f "${SOLVERPATH}/${OUTPUTDIR}/${BASENAME}.sol"
     fi
     rm -f "${TMPFILE}"
 }
