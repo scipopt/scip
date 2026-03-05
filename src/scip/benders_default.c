@@ -127,8 +127,8 @@ SCIP_RETCODE disableRestarts(
    SCIP_CALL( SCIPgetIntParam(scip, "presolving/maxrestarts", &maxrestarts) );
    if( SCIPisParamFixed(scip, "presolving/maxrestarts") && maxrestarts != 0)
    {
-      SCIPerrorMessage("The number of restarts is fixed to %d. The default Benders' decomposition requires the number"
-         " of restarts to be 0.", maxrestarts);
+      SCIPerrorMessage("The maximal number of restarts is fixed to %d. The default Benders' decomposition requires disabling"
+         " restarts.", maxrestarts);
       return SCIP_ERROR;
    }
    else
