@@ -2076,6 +2076,7 @@ SCIP_RETCODE computeComponentsSym(
    )
 {
    SCIP_DISJOINTSET* componentstovar = NULL;
+   int* permtocomponent;
    int* symtovarcomp;
    int s;
    int i;
@@ -2204,8 +2205,10 @@ SCIP_RETCODE computeComponentsSym(
 
    /* determine componentbegins and store components for each symmetry */
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, componentbegins, *ncomponents + 1) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &permtocomponent, nperms) );
 
    (*componentbegins)[0] = 0;
+   permtocomponent[(*components)[0]] = 0;
    idx = 0;
 
    for( s = 1; s < nperms; ++s )
@@ -2215,10 +2218,28 @@ SCIP_RETCODE computeComponentsSym(
 
       assert((*components)[s] >= 0);
       assert((*components)[s] < nperms);
+      permtocomponent[(*components)[s]] = idx;
    }
    assert(*ncomponents == idx + 1);
    (*componentbegins)[++idx] = nperms;
 
+   /* determine vartocomp */
+   for( i = 0; i < npermvars; ++i )
+   {
+      int permidx;
+      permidx = (*vartocomp)[i];
+      assert(-1 <= permidx && permidx < nperms);
+
+      if( permidx != -1 )
+      {
+         assert(0 <= permtocomponent[permidx]);
+         assert(permtocomponent[permidx] < *ncomponents);
+
+         (*vartocomp)[i] = permtocomponent[permidx];
+      }
+   }
+
+   SCIPfreeBufferArray(scip, &permtocomponent);
    SCIPfreeBufferArray(scip, &symtovarcomp);
    SCIPdisjointsetFree(&componentstovar, SCIPblkmem(scip));
 
