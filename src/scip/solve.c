@@ -1962,7 +1962,6 @@ SCIP_RETCODE determineSymmetry(
    *npermvars = SCIPgetNVars(scip);
    if( *npermvars <= 0 || SCIPgetNConss(scip) <= 0 )
       return SCIP_OKAY;
-   SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, permvars, SCIPgetVars(scip), *npermvars) );
 
    /* skip symmetry computation if all variables are required to be fixed */
    skipsymmetry = TRUE;
@@ -2027,10 +2026,12 @@ SCIP_RETCODE determineSymmetry(
       SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "   (%.1fs) no symmetry present (symcode time: %.2f)\n",
          SCIPgetSolvingTime(scip), symcodetime);
 
-      SCIPfreeBlockMemoryArray(scip, permvars, *npermvars);
-
       success = FALSE;
       goto FREEGRAPH;
+   }
+   else
+   {
+      SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, permvars, SCIPgetVars(scip), *npermvars) );
    }
 
    /* display statistics */
