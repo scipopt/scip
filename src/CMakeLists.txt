@@ -822,6 +822,7 @@ set(scipheaders
     scip/pub_reopt.h
     scip/pub_sepa.h
     scip/pub_sol.h
+    scip/pub_sym.h
     scip/pub_table.h
     scip/pub_tree.h
     scip/pub_var.h
