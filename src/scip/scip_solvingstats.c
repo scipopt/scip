@@ -2968,7 +2968,7 @@ SCIP_RETCODE SCIPcollectPresolverStatistics(
       SCIP_CALL( SCIPinsertDatatreeLong(scip, symhdlrdata, "calls", SCIPsymhdlrGetNPresolCalls(symhdlr)) );
       SCIP_CALL( SCIPinsertDatatreeInt(scip, symhdlrdata, "fixed_vars", SCIPsymhdlrGetNFixedVars(symhdlr)) );
       SCIP_CALL( SCIPinsertDatatreeInt(scip, symhdlrdata, "aggregated_vars", SCIPsymhdlrGetNAggrVars(symhdlr)) );
-      SCIP_CALL( SCIPinsertDatatreeLong(scip, symhdlrdata, "changed_var_types", SCIPsymhdlrGetNChgVarTypes(symhdlr)) );
+      SCIP_CALL( SCIPinsertDatatreeInt(scip, symhdlrdata, "changed_var_types", SCIPsymhdlrGetNChgVarTypes(symhdlr)) );
       SCIP_CALL( SCIPinsertDatatreeInt(scip, symhdlrdata, "changed_bounds", SCIPsymhdlrGetNChgBds(symhdlr)) );
       SCIP_CALL( SCIPinsertDatatreeInt(scip, symhdlrdata, "added_holes", SCIPsymhdlrGetNAddHoles(symhdlr)) );
       SCIP_CALL( SCIPinsertDatatreeInt(scip, symhdlrdata, "deleted_constraints", SCIPsymhdlrGetNDelConss(symhdlr)) );

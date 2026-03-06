@@ -55,7 +55,6 @@
 #include "scip/symmetry.h"
 #include "scip/symmetry_lexred.h"
 #include "scip/symmetry_orbitopal.h"
-#include "scip/type_implics.h"
 #include "scip/type_set.h"
 
 /* symmetry handler properties */

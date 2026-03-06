@@ -55,7 +55,6 @@
 #include "scip/symmetry.h"
 #include "scip/symmetry_orbital.h"
 #include "scip/symmetry_lexred.h"
-#include "scip/type_implics.h"
 #include "scip/type_set.h"
 
 /* symmetry handler properties */
@@ -645,7 +644,7 @@ SCIP_RETCODE tryPackingPartitioningOrbisackUpgrade(
          if( varid < npermvars )
          {
             SCIP_CALL( SCIPensureBlockMemoryArray(scip, &(permvarssetppcconss[varid]),
-                  &(maxnpermvarssetppcconss[varid]), npermvarssetppcconss[varid] + 1) );
+                  &(maxnpermvarssetppcconss[varid]), npermvarssetppcconss[varid] + 1) ); /*lint !e866*/
 
             assert(npermvarssetppcconss[varid] < maxnpermvarssetppcconss[varid]);
             permvarssetppcconss[varid][npermvarssetppcconss[varid]++] = cons;
