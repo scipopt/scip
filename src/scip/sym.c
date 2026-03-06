@@ -1529,7 +1529,7 @@ SCIP_Real SCIPsymhdlrGetPresolTime(
 }
 
 /** gets number of times the symmetry handler was called in presolving and tried to find reductions */
-int SCIPsymhdlrGetNPresolCalls(
+SCIP_Longint SCIPsymhdlrGetNPresolCalls(
    SCIP_SYMHDLR*         symhdlr             /**< symmetry handler */
    )
 {

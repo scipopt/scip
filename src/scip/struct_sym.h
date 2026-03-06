@@ -110,7 +110,7 @@ struct SCIP_Symhdlr
    int                   nupgdconss;         /**< total number of upgraded constraints by this presolver */
    int                   nchgcoefs;          /**< total number of changed coefficients by this presolver */
    int                   nchgsides;          /**< total number of changed left or right hand sides by this presolver */
-   int                   npresolcalls;       /**< number of times the symmetry handler was called in presolving and tried to find reductions */
+   SCIP_Longint          npresolcalls;       /**< number of times the symmetry handler was called in presolving and tried to find reductions */
    SCIP_Real             maxbounddist;       /**< maximal relative distance from current node's dual bound to primal bound compared
                                               *   to best node's dual bound for applying separation */
    SCIP_Longint          lastsepanode;       /**< last (total) node where this separator was called */

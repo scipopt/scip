@@ -2820,7 +2820,8 @@ void SCIPprintPresolverStatistics(
       if( SCIPsymhdlrDoesPresolve(symhdlr) )
       {
          SCIPmessageFPrintInfo(scip->messagehdlr, file, "  %-17.17s:", SCIPsymhdlrGetName(symhdlr));
-         SCIPmessageFPrintInfo(scip->messagehdlr, file, " %10.2f %10.2f %6d %10d %10d %10d %10d %10d %10d %10d %10d %10d\n",
+         SCIPmessageFPrintInfo(scip->messagehdlr, file,
+            " %10.2f %10.2f %6lld %10d %10d %10d %10d %10d %10d %10d %10d %10d\n",
             SCIPsymhdlrGetPresolTime(symhdlr),
             SCIPsymhdlrGetSetupTime(symhdlr),
             SCIPsymhdlrGetNPresolCalls(symhdlr),
@@ -2967,7 +2968,7 @@ SCIP_RETCODE SCIPcollectPresolverStatistics(
       SCIP_CALL( SCIPinsertDatatreeLong(scip, symhdlrdata, "calls", SCIPsymhdlrGetNPresolCalls(symhdlr)) );
       SCIP_CALL( SCIPinsertDatatreeInt(scip, symhdlrdata, "fixed_vars", SCIPsymhdlrGetNFixedVars(symhdlr)) );
       SCIP_CALL( SCIPinsertDatatreeInt(scip, symhdlrdata, "aggregated_vars", SCIPsymhdlrGetNAggrVars(symhdlr)) );
-      SCIP_CALL( SCIPinsertDatatreeInt(scip, symhdlrdata, "changed_var_types", SCIPsymhdlrGetNChgVarTypes(symhdlr)) );
+      SCIP_CALL( SCIPinsertDatatreeLong(scip, symhdlrdata, "changed_var_types", SCIPsymhdlrGetNChgVarTypes(symhdlr)) );
       SCIP_CALL( SCIPinsertDatatreeInt(scip, symhdlrdata, "changed_bounds", SCIPsymhdlrGetNChgBds(symhdlr)) );
       SCIP_CALL( SCIPinsertDatatreeInt(scip, symhdlrdata, "added_holes", SCIPsymhdlrGetNAddHoles(symhdlr)) );
       SCIP_CALL( SCIPinsertDatatreeInt(scip, symhdlrdata, "deleted_constraints", SCIPsymhdlrGetNDelConss(symhdlr)) );
