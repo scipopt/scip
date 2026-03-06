@@ -873,7 +873,7 @@ SCIP_RETCODE tryGenerateInvolutions(
 
    SCIP_CALL( SCIPallocBufferArray(scip, &tmpperm, npermvars) );
 
-   permlen = symtype == (int)SYM_SYMTYPE_PERM ? npermvars : 2 * npermvars;
+   permlen = symtype == (int)SYM_SYMTYPE_PERM ? npermvars : 2 * npermvars; /*lint !e641*/
 
    /* try to generate new involutions by combining two involutions p and q
     *
@@ -1319,19 +1319,19 @@ SCIP_RETCODE tryAddSSTConss(
 
    /* determine the leader's vartype */
    nvarsselectedtype = 0;
-   if( ISSSTBINACTIVE(leadervartype) && nmovedbinpermvars > nvarsselectedtype )
+   if( ISSSTBINACTIVE(leadervartype) && nmovedbinpermvars > nvarsselectedtype ) /*lint !e641*/
    {
       selectedtype = SCIP_VARTYPE_BINARY;
       nvarsselectedtype = nmovedbinpermvars;
    }
 
-   if( ISSSTINTACTIVE(leadervartype) && nmovedintpermvars > nvarsselectedtype )
+   if( ISSSTINTACTIVE(leadervartype) && nmovedintpermvars > nvarsselectedtype ) /*lint !e641*/
    {
       selectedtype = SCIP_VARTYPE_INTEGER;
       nvarsselectedtype = nmovedintpermvars;
    }
 
-   if( ISSSTCONTACTIVE(leadervartype) && nmovedcontpermvars > nvarsselectedtype )
+   if( ISSSTCONTACTIVE(leadervartype) && nmovedcontpermvars > nvarsselectedtype ) /*lint !e641*/
    {
       selectedtype = SCIP_VARTYPE_CONTINUOUS;
       nvarsselectedtype = nmovedcontpermvars;
@@ -1523,7 +1523,7 @@ SCIP_RETCODE tryAddSSTConss(
       /* select orbit and leader */
       SCIP_CALL( selectOrbitLeaderSSTConss(scip, varconflicts, permvars, npermvars, orbits, orbitbegins, norbits,
             leaderrule, orbitrule, selectedtype, &orbitidx, &orbitleaderidx, orbitvarinconflict, &norbitvarinconflict,
-            success) );
+            success) ); /*lint !e641*/
 
       if( !(*success) )
          break;
@@ -1536,7 +1536,7 @@ SCIP_RETCODE tryAddSSTConss(
       SCIP_CALL( addSSTConssOrbitAndUpdateSST(scip, symtype, id, varconflicts, permvars,
             permvardomaincenter, leaderrule, orbitrule, addconflictcuts, sstconss, nsstconss, maxnsstconss,
             orbits, orbitbegins, orbitidx, orbitleaderidx, orbitvarinconflict, norbitvarinconflict, displaysyminfo,
-            allowbdchgs, &nchanges) );
+            allowbdchgs, &nchanges) ); /*lint !e641*/
 
       ++norbitleadercomponent;
 
@@ -1583,7 +1583,7 @@ SCIP_RETCODE tryAddSSTConss(
    {
       SCIPfreeBlockMemoryArray(scip, &permstrans[i], ntotalperms);
    }
-   SCIPfreeBlockMemoryArray(scip, &permstrans, symtype == SYM_SYMTYPE_PERM ? npermvars : 2 * npermvars);
+   SCIPfreeBlockMemoryArray(scip, &permstrans, symtype == SYM_SYMTYPE_PERM ? npermvars : 2 * npermvars); /*lint !e647*/
 
    return SCIP_OKAY;
 }

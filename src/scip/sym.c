@@ -1470,7 +1470,7 @@ SCIP_RETCODE SCIPcreateSymmetryComponent(
    (*symcomp)->symcompdata = symcompdata;
 
    if( id > 0 )
-      len = 8 + (int) log10(id) + 1;
+      len = 8 + (int) log10(id) + 1; /*lint !e747*/
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(*symcomp)->name, len) );
    (void) snprintf((*symcomp)->name, SCIP_MAXSTRLEN, "symcomp%d", id);
 

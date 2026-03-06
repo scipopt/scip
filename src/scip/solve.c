@@ -550,10 +550,10 @@ SCIP_RETCODE propagationRound(
       {
          if( useprop )
             SCIPerrorMessage("Buffer not completely freed after executing propagator <%s>\n",
-               SCIPpropGetName(set->props[i]));
+               SCIPpropGetName(set->props[i])); /*lint !e687*/
          else
             SCIPerrorMessage("Buffer not completely freed after executing propagator of symmetry handler <%s>\n",
-               SCIPsymhdlrGetName(set->symhdlrs_prop[j]));
+               SCIPsymhdlrGetName(set->symhdlrs_prop[j])); /*lint !e687*/
          SCIPABORT();
       }
 #endif
@@ -2031,7 +2031,7 @@ SCIP_RETCODE determineSymmetry(
    }
    else
    {
-      SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, permvars, SCIPgetVars(scip), *npermvars) );
+      SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, permvars, SCIPgetVars(scip), *npermvars) ); /*lint !e666*/
    }
 
    /* display statistics */
@@ -2296,9 +2296,9 @@ SCIP_RETCODE SCIPtryAddSymmetryHandlingMethods(
 
    symhdlrs = SCIPgetSymhdlrs(scip);
    assert(symhdlrs != NULL);
-   syminfo->symtype = scip->set->sym_symtype;
+   syminfo->symtype = (SYM_SYMTYPE)scip->set->sym_symtype;
 
-   SCIP_CALL( determineSymmetry(scip, &graph, syminfo->symtype, scip->set->sym_fixedvartypes,
+   SCIP_CALL( determineSymmetry(scip, &graph, syminfo->symtype, (SYM_SPEC)scip->set->sym_fixedvartypes,
          &syminfo->perms, &syminfo->nperms, &syminfo->permssize, &syminfo->permvars, &syminfo->npermvars) );
 
    if( syminfo->nperms == 0 )

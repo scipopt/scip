@@ -2991,7 +2991,7 @@ SCIP_RETCODE SCIPsetCreate(
    SCIP_CALL( SCIPsetAddIntParam(*set, messagehdlr, blkmem,
          "symmetries/symtype",
          "type of symmetries to be considered (0: permutation symmetries, 1: signed permutation symmetries)",
-         &(*set)->sym_symtype, FALSE, SCIP_DEFAULT_SYM_SYMTYPE,
+         &(*set)->sym_symtype, FALSE, (int)SCIP_DEFAULT_SYM_SYMTYPE,
          0, 1, NULL, NULL) );
 
    SCIP_CALL( SCIPsetAddIntParam(*set, messagehdlr, blkmem,

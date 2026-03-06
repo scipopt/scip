@@ -277,7 +277,7 @@ SCIP_RETCODE tryGenerateInvolutions(
 
    SCIP_CALL( SCIPallocBufferArray(scip, &tmpperm, npermvars) );
 
-   permlen = symtype == (int)SYM_SYMTYPE_PERM ? npermvars : 2 * npermvars;
+   permlen = symtype == (int)SYM_SYMTYPE_PERM ? npermvars : 2 * npermvars; /*lint !e641*/
 
    /* try to generate new involutions by combining two involutions p and q
     *
@@ -645,7 +645,7 @@ SCIP_RETCODE tryPackingPartitioningOrbisackUpgrade(
          if( varid < npermvars )
          {
             SCIP_CALL( SCIPensureBlockMemoryArray(scip, &(permvarssetppcconss[varid]),
-                  &maxnpermvarssetppcconss[varid], npermvarssetppcconss[varid] + 1) );
+                  &(maxnpermvarssetppcconss[varid]), npermvarssetppcconss[varid] + 1) );
 
             assert(npermvarssetppcconss[varid] < maxnpermvarssetppcconss[varid]);
             permvarssetppcconss[varid][npermvarssetppcconss[varid]++] = cons;
@@ -965,7 +965,7 @@ SCIP_DECL_SYMHDLRTRYADD(symhdlrTryaddLexOrbRed)
    /* free new permutations */
    for( p = nnewperms - 1; p >= 0; --p )
    {
-      SCIPfreeBlockMemoryArray(scip, &newperms[p], symtype == SYM_SYMTYPE_PERM ? npermvars : 2 * npermvars);
+      SCIPfreeBlockMemoryArray(scip, &newperms[p], symtype == SYM_SYMTYPE_PERM ? npermvars : 2 * npermvars); /*lint !e647*/
    }
    SCIPfreeBlockMemoryArrayNull(scip, &newperms, maxnnewperms);
 

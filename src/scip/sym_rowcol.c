@@ -2217,7 +2217,7 @@ SCIP_RETCODE tryHandleSingleOrDoubleLexMatrices(
          locsuccess = FALSE;
 
          /* signed permutations can only handle the orbitope if all variables per row have the same domain center */
-         if( symtype != (int) SYM_SYMTYPE_PERM )
+         if( symtype != (int) SYM_SYMTYPE_PERM ) /*lint !e641*/
          {
             if( !isEquallyCenteredOrbitope(scip, permvardomaincenter, lexmatrix, 0, nrows, 0, ncols, TRUE) )
                goto FREEMEMORY;
