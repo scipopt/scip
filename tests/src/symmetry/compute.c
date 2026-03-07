@@ -31,7 +31,7 @@
 
 #include <scip/scip.h>
 #include <include/scip_test.h>
-#include <scip/scip_sym.c>
+#include <scip/scip_sym.h>
 #include <scip/symmetry.h>
 #include <scip/symmetry_graph.h>
 #include <symmetry/compute_symmetry.h>
