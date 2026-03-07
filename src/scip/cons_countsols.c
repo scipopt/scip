@@ -1968,7 +1968,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecCount)
       SCIP_CALL( SCIPsetIntParam(scip, "presolving/maxrestarts", 0) );
    }
 
-   SCIP_CALL( SCIPgetBoolParam(scip, "symmetries/enbaled", &usesymmetry) );
+   SCIP_CALL( SCIPgetBoolParam(scip, "symmetries/enabled", &usesymmetry) );
 
    if ( usesymmetry )
    {
