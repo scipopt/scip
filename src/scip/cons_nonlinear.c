@@ -5490,7 +5490,7 @@ SCIP_RETCODE presolveUpgrade(
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
 
-   /* try all upgrading methods in priority order in case the upgrading step is enable  */
+   /* try all upgrading methods in priority order in case the upgrading step is enabled */
    for( i = 0; i < conshdlrdata->nconsupgrades; ++i )
    {
       if( !conshdlrdata->consupgrades[i]->active )
