@@ -1073,6 +1073,7 @@ set(scipheaders
     scip/type_set.h
     scip/type_sol.h
     scip/type_stat.h
+    scip/type_sym.h
     scip/type_syncstore.h
     scip/type_table.h
     scip/type_timing.h
