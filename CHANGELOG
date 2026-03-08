@@ -123,6 +123,7 @@ Fixed bugs
 - an error is produced if the emphasis settings in parameter files are wrong
 - fixed failing assert when assembling data for writing of JSON statistics and no plugins were included for some plugin types
 - keep sanitizers enabled if only unsupported for some language in cmake
+- fixed that C++14 may not have been enforced when compiling with CppAD or Boost with makefiles
 
 Miscellaneous
 -------------
