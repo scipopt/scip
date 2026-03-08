@@ -579,7 +579,7 @@ Test(datatree, test_write)
    file = fopen("test_write.txt", "r");
    const char* expected = "{\"test_long\": 10, \"test_string\": \"test\", \"test_long_array\": [10, 20], \"test_subtree\": {\"sub_long\": 10, \"sub_string\": \"sub\", \"sub_long_array\": [10, 20]}}";
    char buffer[1024];
-   fgets(buffer, 1024, file);
+   (void)fgets(buffer, 1024, file);
    cr_assert_str_eq(buffer, expected, "File content is not as expected");
    fclose(file);
 
@@ -604,7 +604,7 @@ Test(datatree, test_write_json_bool)
    file = fopen("test_write_bool.txt", "r");
    const char* expected = "{\"test_bool\": true}";
    char buffer[1024];
-   fgets(buffer, 1024, file);
+   (void)fgets(buffer, 1024, file);
    cr_assert_str_eq(buffer, expected, "File content is not as expected");
    fclose(file);
 
