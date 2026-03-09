@@ -16323,55 +16323,56 @@ SCIP_RETCODE SCIPtightenVariableLowerAndUpperBounds(
             zvar = vubvars[b];
             assert( zvar != NULL );
 
-            if ( SCIPvarIsBinary(zvar) )
+            /* skip non-binary variables */
+            if ( ! SCIPvarIsBinary(zvar) )
+               continue;
+
+            /* skip fixed variables */
+            if ( SCIPvarGetLbGlobal(zvar) + 0.5 > SCIPvarGetUbGlobal(zvar) )
+               continue;
+
+            c = vubcoefs[b];
+            assert( ! SCIPsetIsFeasZero(set, c) );
+            d = vubconstants[b];
+            tightened = FALSE;
+
+            if ( c > 0.0 )
             {
-               /* skip fixed variables */
-               if ( SCIPvarGetLbGlobal(zvar) + 0.5 > SCIPvarGetUbGlobal(zvar) )
-                  continue;
-
-               c = vubcoefs[b];
-               assert( ! SCIPsetIsFeasZero(set, c) );
-               d = vubconstants[b];
-               tightened = FALSE;
-
-               if ( c > 0.0 )
+               if ( SCIPsetIsFeasLT(set, xub, c + d) )
                {
-                  if ( SCIPsetIsFeasLT(set, xub, c + d) )
+                  newcoef = xub - d;
+                  if ( SCIPsetIsFeasGT(set, newcoef, 0.0) )
                   {
-                     newcoef = xub - d;
-                     if ( SCIPsetIsFeasGT(set, newcoef, 0.0) )
-                     {
-                        vubcoefs[b] = newcoef;
-                        tightened = TRUE;
-                     }
+                     vubcoefs[b] = newcoef;
+                     tightened = TRUE;
                   }
                }
-               else
+            }
+            else
+            {
+               assert( c < 0.0 );
+               if ( SCIPsetIsFeasLT(set, xub, d) )
                {
-                  assert( c < 0.0 );
-                  if ( SCIPsetIsFeasLT(set, xub, d) )
+                  newcoef = c + d - xub;
+                  if ( SCIPsetIsFeasLT(set, newcoef, 0.0) )
                   {
-                     newcoef = c + d - xub;
-                     if ( SCIPsetIsFeasLT(set, newcoef, 0.0) )
-                     {
-                        vubcoefs[b] = newcoef;
-                        vubconstants[b] = xub;
-                        tightened = TRUE;
-                     }
+                     vubcoefs[b] = newcoef;
+                     vubconstants[b] = xub;
+                     tightened = TRUE;
                   }
                }
+            }
 
-               if ( tightened )
-               {
-                  SCIP_CALL( SCIPdebugCheckVbound(set, xvar, SCIP_BOUNDTYPE_UPPER, zvar, vubcoefs[b], vubconstants[b]) );
+            if ( tightened )
+            {
+               SCIP_CALL( SCIPdebugCheckVbound(set, xvar, SCIP_BOUNDTYPE_UPPER, zvar, vubcoefs[b], vubconstants[b]) );
 
-                  SCIPsetDebugMsg(set, "Tightened upper variable bound <%s>[%g,%g] <= %g <%s>[B] %+g to <%s> <= %g <%s>[B] %+g.\n",
-                     SCIPvarGetName(xvar), xlb, xub, c, SCIPvarGetName(zvar), d,
-                     SCIPvarGetName(xvar), vubcoefs[b], SCIPvarGetName(zvar), vubconstants[b]);
+               SCIPsetDebugMsg(set, "Tightened upper variable bound <%s>[%g,%g] <= %g <%s>[B] %+g to <%s> <= %g <%s>[B] %+g.\n",
+                  SCIPvarGetName(xvar), xlb, xub, c, SCIPvarGetName(zvar), d,
+                  SCIPvarGetName(xvar), vubcoefs[b], SCIPvarGetName(zvar), vubconstants[b]);
 
-                  if ( ntightened != NULL )
-                     ++(*ntightened);
-               }
+               if ( ntightened != NULL )
+                  ++(*ntightened);
             }
          }
       }
@@ -16394,55 +16395,56 @@ SCIP_RETCODE SCIPtightenVariableLowerAndUpperBounds(
             zvar = vlbvars[b];
             assert( zvar != NULL );
 
-            if ( SCIPvarIsBinary(zvar) )
+            /* skip non-binary variables */
+            if ( ! SCIPvarIsBinary(zvar) )
+               continue;
+
+            /* skip fixed variables */
+            if ( SCIPvarGetLbGlobal(zvar) + 0.5 > SCIPvarGetUbGlobal(zvar) )
+               continue;
+
+            c = vlbcoefs[b];
+            assert( ! SCIPsetIsFeasZero(set, c) );
+            d = vlbconstants[b];
+            tightened = FALSE;
+
+            if ( c > 0.0 )
             {
-               /* skip fixed variables */
-               if ( SCIPvarGetLbGlobal(zvar) + 0.5 > SCIPvarGetUbGlobal(zvar) )
-                  continue;
-
-               c = vlbcoefs[b];
-               assert( ! SCIPsetIsFeasZero(set, c) );
-               d = vlbconstants[b];
-               tightened = FALSE;
-
-               if ( c > 0.0 )
+               if ( SCIPsetIsFeasGT(set, xlb, d) )
                {
-                  if ( SCIPsetIsFeasGT(set, xlb, d) )
+                  newcoef = c + d - xlb;
+                  if ( SCIPsetIsFeasGT(set, newcoef, 0.0) )
                   {
-                     newcoef = c + d - xlb;
-                     if ( SCIPsetIsFeasGT(set, newcoef, 0.0) )
-                     {
-                        vlbcoefs[b] = newcoef;
-                        vlbconstants[b] = xlb;
-                        tightened = TRUE;
-                     }
+                     vlbcoefs[b] = newcoef;
+                     vlbconstants[b] = xlb;
+                     tightened = TRUE;
                   }
                }
-               else
+            }
+            else
+            {
+               assert( c < 0.0 );
+               if ( SCIPsetIsFeasGT(set, xlb, c + d) )
                {
-                  assert( c < 0.0 );
-                  if ( SCIPsetIsFeasGT(set, xlb, c + d) )
+                  newcoef = xlb - d;
+                  if ( SCIPsetIsFeasLT(set, newcoef, 0.0) )
                   {
-                     newcoef = xlb - d;
-                     if ( SCIPsetIsFeasLT(set, newcoef, 0.0) )
-                     {
-                        vlbcoefs[b] = newcoef;
-                        tightened = TRUE;
-                     }
+                     vlbcoefs[b] = newcoef;
+                     tightened = TRUE;
                   }
                }
+            }
 
-               if ( tightened )
-               {
-                  SCIP_CALL( SCIPdebugCheckVbound(set, xvar, SCIP_BOUNDTYPE_LOWER, zvar, vlbcoefs[b], vlbconstants[b]) );
+            if ( tightened )
+            {
+               SCIP_CALL( SCIPdebugCheckVbound(set, xvar, SCIP_BOUNDTYPE_LOWER, zvar, vlbcoefs[b], vlbconstants[b]) );
 
-                  SCIPsetDebugMsg(set, "Tightened lower variable bound <%s>[%g,%g] >= %g <%s>[B] %+g to <%s> >= %g <%s>[B] %+g.\n",
-                     SCIPvarGetName(xvar), xlb, xub, c, SCIPvarGetName(zvar), d,
-                     SCIPvarGetName(xvar), vlbcoefs[b], SCIPvarGetName(zvar), vlbconstants[b]);
+               SCIPsetDebugMsg(set, "Tightened lower variable bound <%s>[%g,%g] >= %g <%s>[B] %+g to <%s> >= %g <%s>[B] %+g.\n",
+                  SCIPvarGetName(xvar), xlb, xub, c, SCIPvarGetName(zvar), d,
+                  SCIPvarGetName(xvar), vlbcoefs[b], SCIPvarGetName(zvar), vlbconstants[b]);
 
-                  if ( ntightened != NULL )
-                     ++(*ntightened);
-               }
+               if ( ntightened != NULL )
+                  ++(*ntightened);
             }
          }
       }
