@@ -1338,6 +1338,13 @@ SCIP_RETCODE SCIPvarAddVub(
    int*                  nbdchgs             /**< pointer to store the number of performed bound changes, or NULL */
    );
 
+/** tries to tighten the coefficients of all variable lower/upper bounds for the given variables */
+SCIP_RETCODE SCIPtightenVariableLowerAndUpperBounds(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_PROB*            transprob,          /**< transformed problem */
+   int*                  ntightened          /**< pointer to store the number of tightened coeffients, or NULL */
+   );
+
 /** informs binary variable x about a globally valid implication:  x == 0 or x == 1  ==>  y <= b  or  y >= b;
  *  also adds the corresponding implication or variable bound to the implied variable;
  *  if the implication is conflicting, the variable is fixed to the opposite value;

@@ -28,6 +28,7 @@ Interface changes
 - added SCIPiisfinderGetEnable() to check whether an iis finder is enabled
 - added SCIPiisfinderSetEnable() to set whether an iis finder is enabled
 - added SCIPincludeHeurFeasjump() to include feasibility jump primal heuristic
+- added SCIPtightenVariableLowerAndUpperBounds() to tighten the variable bounds attached to a list of variables
 - added SCIPcreateBendersDefaultFromFiles() to add subproblems to the default Benders' decomposition plugin through
   instance files, instead of SCIP instances.
 
