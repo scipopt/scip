@@ -434,7 +434,12 @@ bool Model::readSol(const char* filename)
       }
 
       const char* valuep = strtok_r(NULL, " ", &nexttok);
-      assert( valuep != NULL );
+      if( valuep == NULL )
+      {
+         std::cerr << "unexpected end of line after variable name in line <" << buf << '>' << std::endl;
+         isSolFeas = false;
+         break;
+      }
 
       if( strcmp(varname, "no") == 0 && strcmp(valuep, "solution") == 0 )
       {

@@ -143,6 +143,7 @@ SLURMACCOUNT    ?= default
 PYTHON          ?= none
 EMPHBENCHMARK   ?= true
 CLOCKTYPE       ?= 1
+KEEPSOL         ?= true
 
 # third party testing parameters
 BLIS            ?= blis
@@ -310,16 +311,6 @@ FLAGS += -I$(SCIPDIR)/$(OBJDIR)/include
 -include $(SCIPREALPATH)/make/local/make.$(HOSTNAME).$(COMP)
 -include $(SCIPREALPATH)/make/local/make.$(HOSTNAME).$(COMP).$(OPT)
 -include $(SCIPREALPATH)/make/local/make.local
-
-#-----------------------------------------------------------------------------
-# define C++ standard
-#-----------------------------------------------------------------------------
-
-ifeq ($(PAPILO),true)
-CXXFLAGS += $(CXX14FLAG)
-else
-CXXFLAGS += $(CXX11FLAG)
-endif
 
 #-----------------------------------------------------------------------------
 # define path to find SCIP upon execution

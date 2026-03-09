@@ -9,6 +9,9 @@ Features
 - adds functionality to compute symmetries of entire symmetry detection graph rather than just the restriction to variable nodes
 - primal heuristic feasjump
 - simpler restart control based on linear extrapolation since improvement checkpoint in tree size estimation
+- adds reader for decomposed problems to apply Benders' decomposition. The reader, extension `bdr`, lists the instance
+  files for the master problem and subproblems. These instance files are then used to build up the Benders'
+  decomposition within SCIP.
 
 Interface changes
 -----------------
@@ -26,6 +29,8 @@ Interface changes
 - added SCIPiisfinderSetEnable() to set whether an iis finder is enabled
 - added SCIPincludeHeurFeasjump() to include feasibility jump primal heuristic
 - added SCIPtightenVariableLowerAndUpperBounds() to tighten the variable bounds attached to a list of variables
+- added SCIPcreateBendersDefaultFromFiles() to add subproblems to the default Benders' decomposition plugin through
+  instance files, instead of SCIP instances.
 
 ### New parameters
 
@@ -123,6 +128,13 @@ Fixed bugs
 - provide memory allocation for implied integral binary and integer variables in dks heuristic to avoid data corruption
 - an error is produced if the emphasis settings in parameter files are wrong
 - fixed failing assert when assembling data for writing of JSON statistics and no plugins were included for some plugin types
+- keep sanitizers enabled if only unsupported for some language in cmake
+- fixed that C++14 may not have been enforced when compiling with CppAD or Boost with makefiles
+
+Miscellaneous
+-------------
+
+- check scripts can now copy solution files to check/results/, functional for CPLEX, GAMS, and SCIP for now; new option KEEPSOL to disable writing and keeping solution files
 
 @section RN1001 SCIP 10.0.1
 ***************************

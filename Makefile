@@ -378,7 +378,6 @@ SYMSRC		=	$(addprefix $(SRCDIR)/,$(SYMOBJ:.o=.cpp))
 LINTSYMSRC	=       $(addprefix $(SRCDIR)/,$(SYMOBJ:.o=.cpp))
 FLAGS		+=	-I$(LIBDIR)/include/
 ALLSRC		+=	$(SYMSRC)
-CXXFLAGS	+=	$(CXX17FLAG)
 SOFTLINKS	+=	$(LIBDIR)/include/bliss
 ifeq ($(SHARED),true)
 SOFTLINKS	+=	$(LIBDIR)/shared/libbliss.$(OSTYPE).$(ARCH).$(COMP).$(SHAREDLIBEXT)
@@ -447,7 +446,6 @@ LPIINSTMSG	+=	"\n  -> \"nautyinc\" is the path to the Nauty directory, e.g., \"<
 LPIINSTMSG	+=	" -> \"libnauty.*.a\" is the path to the Nauty library, e.g., \"<Nauty-path>/nauty.a\"\n"
 endif
 ALLSRC		+=	$(SYMSRC)
-CXXFLAGS	+=	$(CXX17FLAG)
 endif
 
 SYMOPTIONS	+=	dejavu
@@ -623,6 +621,29 @@ SCIPLIBEXTLIBS	+=	$(LINKRPATH)$(realpath $(LIBDIR)/$(LIBTYPE))
 endif
 endif
 
+#-----------------------------------------------------------------------------
+# define C++ standard
+#-----------------------------------------------------------------------------
+
+# sassy requires C++17
+# PaPILO requires C++14
+# boost requires C++14
+# CppAD requires C++14
+# (SoPlex requires C++14 only if BOOST=true)
+# for anything else, we enable C++11
+ifeq ($(SYM),sbliss)
+  CXXFLAGS += $(CXX17FLAG)
+else ifeq ($(SYM),snauty)
+  CXXFLAGS += $(CXX17FLAG)
+else ifeq ($(PAPILO),true)
+  CXXFLAGS += $(CXX14FLAG)
+else ifeq ($(BOOST),true)
+  CXXFLAGS += $(CXX14FLAG)
+else ifeq ($(EXPRINT),cppad)
+  CXXFLAGS += $(CXX14FLAG)
+else
+  CXXFLAGS += $(CXX11FLAG)
+endif
 
 #-----------------------------------------------------------------------------
 # SCIP Library
@@ -819,6 +840,7 @@ SCIPPLUGINLIBOBJ=	scip/benders_default.o \
 			scip/prop_rootredcost.o \
 			scip/prop_symmetry.o \
 			scip/prop_vbounds.o \
+			scip/reader_bd.o \
 			scip/reader_bnd.o \
 			scip/reader_ccg.o \
 			scip/reader_cip.o \
@@ -1282,7 +1304,7 @@ test:
 		cd check; \
 		$(SHELL) ./check.sh $(TEST) $(EXECUTABLE) $(SETTINGS) $(BINID) $(OUTPUTDIR) $(TIME) $(NODES) $(MEM) $(THREADS) $(FEASTOL) $(DISPFREQ) \
 		$(CONTINUE) $(LOCK) $(VERSION) $(LPS) $(DEBUGTOOL) $(CLIENTTMPDIR) $(REOPT) $(OPTCOMMAND) $(SETCUTOFF) $(MAXJOBS) $(VISUALIZE) $(PERMUTE) \
-                $(SEEDS) $(GLBSEEDSHIFT) $(STARTPERM) $(PYTHON) $(EMPHBENCHMARK) $(CLOCKTYPE) $(WITHCERTIFICATE);
+		$(SEEDS) $(GLBSEEDSHIFT) $(STARTPERM) $(PYTHON) $(EMPHBENCHMARK) $(CLOCKTYPE) $(WITHCERTIFICATE) $(KEEPSOL);
 
 .PHONY: testcount
 testcount:
