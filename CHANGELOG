@@ -9,6 +9,9 @@ Features
 - adds functionality to compute symmetries of entire symmetry detection graph rather than just the restriction to variable nodes
 - primal heuristic feasjump
 - simpler restart control based on linear extrapolation since improvement checkpoint in tree size estimation
+- adds reader for decomposed problems to apply Benders' decomposition. The reader, extension `bdr`, lists the instance
+  files for the master problem and subproblems. These instance files are then used to build up the Benders'
+  decomposition within SCIP.
 
 Interface changes
 -----------------
@@ -25,6 +28,8 @@ Interface changes
 - added SCIPiisfinderGetEnable() to check whether an iis finder is enabled
 - added SCIPiisfinderSetEnable() to set whether an iis finder is enabled
 - added SCIPincludeHeurFeasjump() to include feasibility jump primal heuristic
+- added SCIPcreateBendersDefaultFromFiles() to add subproblems to the default Benders' decomposition plugin through
+  instance files, instead of SCIP instances.
 
 ### New parameters
 
