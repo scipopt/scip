@@ -37,7 +37,9 @@
  * number of subproblems, i.e. `SUBPROBLEMS 10`. The instance files for the subproblems follow the `SUBPROBLEMS`
  * keyword.
  *
- * An example of a benders file looks as follows.
+ * The files listed in the `.bd` can be provided as relative or absolute paths.
+ *
+ * An example of a benders file is
  *
  * @verbinclude multi-zone.bd
  */
