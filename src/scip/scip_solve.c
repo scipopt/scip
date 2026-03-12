@@ -549,41 +549,6 @@ SCIP_RETCODE exitPresolve(
    /* switch stage to EXITPRESOLVE */
    scip->set->stage = SCIP_STAGE_EXITPRESOLVE;
 
-   if( !solved )
-   {
-      SCIP_VAR** vars;
-      int nvars;
-      int v;
-
-      /* flatten all variables */
-      vars = SCIPgetFixedVars(scip);
-      nvars = SCIPgetNFixedVars(scip);
-      assert(nvars == 0 || vars != NULL);
-
-      for( v = nvars - 1; v >= 0; --v )
-      {
-         SCIP_VAR* var;
-#ifndef NDEBUG
-         SCIP_VAR** multvars;
-         int i;
-#endif
-         var = vars[v]; /*lint !e613*/
-         assert(var != NULL);
-
-         if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_MULTAGGR )
-         {
-            /* flattens aggregation graph of multi-aggregated variable in order to avoid exponential recursion later-on */
-            SCIP_CALL( SCIPvarFlattenAggregationGraph(var, scip->mem->probmem, scip->set, scip->eventqueue) );
-
-#ifndef NDEBUG
-            multvars = SCIPvarGetMultaggrVars(var);
-            for( i = SCIPvarGetMultaggrNVars(var) - 1; i >= 0; --i)
-               assert(SCIPvarGetStatus(multvars[i]) != SCIP_VARSTATUS_MULTAGGR);
-#endif
-         }
-      }
-   }
-
    /* exitPresolve() might be called during the reading process of a file reader;
     * hence the number of used buffers does not need to be zero, however, it should not
     * change by calling SCIPsetExitprePlugins() or SCIPprobExitPresolve()
@@ -1142,7 +1107,6 @@ SCIP_RETCODE presolve(
    int presolstart = 0;
    int propstart = 0;
    int consstart = 0;
-   int i;
 #ifndef NDEBUG
    size_t nusedbuffers;
    size_t nusedcleanbuffers;
@@ -1302,12 +1266,31 @@ SCIP_RETCODE presolve(
       stopped = SCIPsolveIsStopped(scip->set, scip->stat, FALSE);
    }
 
-   /* flatten aggregation graph in order to avoid complicated multi-aggregated variables */
-   for( i = 0; i < scip->transprob->nfixedvars; ++i )
+   /* Flatten aggregation graph in order to avoid complicated multi-aggregated variables (has to happen before checking
+    * the empty solution below, because there exist instances for which all variable are multi-aggregated, but in a very
+    * complicated manner). */
+   if( !(*infeasible) && !(*unbounded) )
    {
-      if( SCIPvarGetStatus(scip->transprob->fixedvars[i]) == SCIP_VARSTATUS_MULTAGGR )
+      SCIP_VAR* var;
+      int v;
+
+      for( v = scip->transprob->nfixedvars - 1; v >= 0; --v )
       {
-         SCIP_CALL( SCIPflattenVarAggregationGraph(scip, scip->transprob->fixedvars[i]) );
+         var = scip->transprob->fixedvars[v];
+         if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_MULTAGGR )
+         {
+            SCIP_CALL( SCIPvarFlattenAggregationGraph(var, scip->mem->probmem, scip->set, scip->eventqueue) );
+
+#ifndef NDEBUG
+            {
+               SCIP_VAR** multvars;
+               int i;
+               multvars = SCIPvarGetMultaggrVars(var);
+               for( i = SCIPvarGetMultaggrNVars(var) - 1; i >= 0; --i)
+                  assert(SCIPvarGetStatus(multvars[i]) != SCIP_VARSTATUS_MULTAGGR);
+            }
+#endif
+         }
       }
    }
 
