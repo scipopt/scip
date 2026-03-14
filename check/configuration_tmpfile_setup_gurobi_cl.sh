@@ -50,6 +50,7 @@ SOLUFILE="${19}"       # - solu file, only necessary if ${SETCUTOFF} is 1
 EMPHBENCHMARK="${20}"  # - use set emphasis benchmark
 CLOCKTYPE="${21}"      # - clocktype (1 = CPU, 2 = wallclock) - currently ignored by Gurobi
 WITHCERTIFICATE="${22}" # - true, if a certificate file should be created - currently ignored by Gurobi
+KEEPSOL="${23}"        # - true, if file with solution values should be written and kept
 
 # new environment variables after running this script
 # -None
@@ -66,6 +67,7 @@ then
     CLSETTINGSLIST="${CLSETTINGSLIST} FeasibilityTol=${FEASTOL} IntFeasTol=${FEASTOL}"
 fi
 CLSETTINGSLIST="${CLSETTINGSLIST} TimeLimit=${TIMELIMIT} NodeLimit=${NODELIMIT} DisplayInterval=${DISPFREQ} MIPGap=0.0 Threads=${THREADS} Crossover=0 Method=2"
+# TODO write solution to ${CLIENTTMPDIR}/${USER}-tmpdir/${SOLBASENAME}.sol if KEEPSOL=1
 
 # parse settings from settings file via awk
 if test "${SETNAME}" != "default"

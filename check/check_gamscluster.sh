@@ -46,12 +46,10 @@ NOWAITCLUSTER="${17}"
 EXCLUSIVE="${18}"
 # set this to 1 if you want the scripts to (try to) pass a best known primal bound (from .solu file) to the GAMS solver
 SETCUTOFF="${19}"
+KEEPSOL="${20}"
 
 # set this to 1 if you want the scripts to (try to) pass a best known solution (from .gdx file) to the GAMS solver
 PASSSTARTSOL=0
-
-# set this to 1 to keep solutions in .gdx files
-KEEPSOLS=0
 
 # set this to 1 to run the solver through Examiner2
 EXAMINER=0
@@ -144,8 +142,8 @@ then
     GAMSOPTS="${GAMSOPTS} integer4=2"
 fi
 
-# create directory for solutions, if KEEPSOLS is true
-if test "${KEEPSOLS}" = 1
+# create directory for solutions, if KEEPSOL is true
+if test "${KEEPSOL}" = true || test "${KEEPSOL}" = 1
 then
     mkdir -p "${SOLDIR}"
     GAMSOPTS="${GAMSOPTS} gdxcompress=1"
@@ -367,7 +365,7 @@ do
         MODTYPE=SOLVER
     fi
 
-    if test "${KEEPSOLS}" = 1
+    if test "${KEEPSOL}" = true || test "${KEEPSOL}" = 1
     then
         GDXFILE="gdx=${SOLDIR}/${GMSFILE/%.gms*/.gdx}"
     fi

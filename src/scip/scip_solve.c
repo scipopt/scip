@@ -558,10 +558,6 @@ SCIP_RETCODE exitPresolve(
 
    if( !solved )
    {
-      SCIP_VAR** vars;
-      int nvars;
-      int v;
-
       /* guarantee that symmetries are computed */
       if( scip->set->sym_enabled && scip->syminfo->nperms == -1 )
       {
@@ -569,34 +565,6 @@ SCIP_RETCODE exitPresolve(
          int nchgbds = 0;
 
          SCIP_CALL( SCIPtryAddSymmetryHandlingMethods(scip, &naddedconss, FALSE, &nchgbds) );
-      }
-
-      /* flatten all variables */
-      vars = SCIPgetFixedVars(scip);
-      nvars = SCIPgetNFixedVars(scip);
-      assert(nvars == 0 || vars != NULL);
-
-      for( v = nvars - 1; v >= 0; --v )
-      {
-         SCIP_VAR* var;
-#ifndef NDEBUG
-         SCIP_VAR** multvars;
-         int i;
-#endif
-         var = vars[v]; /*lint !e613*/
-         assert(var != NULL);
-
-         if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_MULTAGGR )
-         {
-            /* flattens aggregation graph of multi-aggregated variable in order to avoid exponential recursion later-on */
-            SCIP_CALL( SCIPvarFlattenAggregationGraph(var, scip->mem->probmem, scip->set, scip->eventqueue) );
-
-#ifndef NDEBUG
-            multvars = SCIPvarGetMultaggrVars(var);
-            for( i = SCIPvarGetMultaggrNVars(var) - 1; i >= 0; --i)
-               assert(SCIPvarGetStatus(multvars[i]) != SCIP_VARSTATUS_MULTAGGR);
-#endif
-         }
       }
    }
 
@@ -1488,12 +1456,31 @@ SCIP_RETCODE presolve(
       }
    }
 
-   /* flatten aggregation graph in order to avoid complicated multi-aggregated variables */
-   for( i = 0; i < scip->transprob->nfixedvars; ++i )
+   /* Flatten aggregation graph in order to avoid complicated multi-aggregated variables (has to happen before checking
+    * the empty solution below, because there exist instances for which all variable are multi-aggregated, but in a very
+    * complicated manner). */
+   if( !(*infeasible) && !(*unbounded) )
    {
-      if( SCIPvarGetStatus(scip->transprob->fixedvars[i]) == SCIP_VARSTATUS_MULTAGGR )
+      SCIP_VAR* var;
+      int v;
+
+      for( v = scip->transprob->nfixedvars - 1; v >= 0; --v )
       {
-         SCIP_CALL( SCIPflattenVarAggregationGraph(scip, scip->transprob->fixedvars[i]) );
+         var = scip->transprob->fixedvars[v];
+         if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_MULTAGGR )
+         {
+            SCIP_CALL( SCIPvarFlattenAggregationGraph(var, scip->mem->probmem, scip->set, scip->eventqueue) );
+
+#ifndef NDEBUG
+            {
+               SCIP_VAR** multvars;
+               int i;
+               multvars = SCIPvarGetMultaggrVars(var);
+               for( i = SCIPvarGetMultaggrNVars(var) - 1; i >= 0; --i)
+                  assert(SCIPvarGetStatus(multvars[i]) != SCIP_VARSTATUS_MULTAGGR);
+            }
+#endif
+         }
       }
    }
 
@@ -1542,6 +1529,29 @@ SCIP_RETCODE presolve(
             scip->stat->status = SCIP_STATUS_OPTIMAL;
          else
             scip->stat->status = SCIP_STATUS_INFEASIBLE;
+      }
+   }
+   else if( !stopped && scip->stat->npresolchgbds > 0 )
+   {
+      assert( !(*vanished) );
+
+      /* Tighten coefficients of variable lower/upper bounds between continuous/integer variables and binary
+       * variables. They have likely been added by cons_varbound, which also tries to tighten the coefficients. However,
+       * strengthened bounds of variables are only taken into account in cons_varbound, not in the data structures
+       * attached to the variables. We therefore try to tighten them here. Moreover, when copying the problem, the
+       * already strengthened variables bounds are copied, which makes it less likely that a tightening is possible. To
+       * save time, we therefore only run for the original. */
+      if( scip->stat->subscipdepth == 0 )
+      {
+         int ntightened;
+
+         SCIP_CALL( SCIPtightenVariableLowerAndUpperBounds(scip->set, scip->transprob, &ntightened) );
+
+         if( ntightened > 0 )
+         {
+            SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "   (%.1fs) tightened %d variable bounds\n",
+               SCIPgetSolvingTime(scip), ntightened);
+         }
       }
    }
 

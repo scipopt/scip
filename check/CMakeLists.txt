@@ -512,6 +512,14 @@ set(instances_BendersDec
    "instances/Benders/cap44.lp\;instances/Benders/cap44.dec\;+1.47532733250000e+06"
    )
 
+set(instances_BendersReader
+   "instances/Benders/benders-lp.bd\;+2.56000000000000e+03"
+   "instances/Benders/benders-mps.bd\;+2.56000000000000e+03"
+   "instances/Benders/benders-lp-mps.bd\;+2.56000000000000e+03"
+   "instances/Benders/benders-mps-lp.bd\;+2.56000000000000e+03"
+   "instances/Benders/multi-zone.bd\;+1.03000000000000e+03"
+   )
+
 set(instances_Decomp
    "instances/Decomp/exp-1-500-5-5.mps\;instances/Decomp/exp-1-500-5-5.dec\;65887"
   )
@@ -790,6 +798,7 @@ add_instancetests(instances_Stochastic settings_default "Stochastic")
 add_instancetests(instances_Benders settings_Benders "Benders")
 add_instancetests(instances_Or settings_Or "Or")
 add_instancetests(instances_BendersLB settings_BendersLB "BendersLB")
+add_instancetests(instances_BendersReader settings_default "BendersReader")
 add_decompinstancetests(instances_BendersQP settings_BendersQP "BendersQP")
 add_decompinstancetests(instances_BendersDec settings_BendersDec "BendersDec")
 add_decompinstancetests(instances_Decomp settings_Decomp "Decomp")

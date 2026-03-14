@@ -32,14 +32,7 @@ include(sanitize-helpers)
 sanitizer_check_compiler_flags("${FLAG_CANDIDATES}" "UndefinedBehaviorSanitizer" "UBSan")
 
 function (add_sanitize_undefined TARGET)
-    if(${TARGET} STREQUAL "libscip")
-        # make sure the C++ lib libscip is linked with -lubsan already
-        # this is necessary for C applications (e.g., applications/Coloring), where linking with
-        # -fsanitize=undefined does not link the C++-version of the ubsan library
-        sanitizer_add_flags(${TARGET} "UndefinedBehaviorSanitizer" "UBSan" "-lubsan")
-    else()
-        sanitizer_add_flags(${TARGET} "UndefinedBehaviorSanitizer" "UBSan" "")
-    endif()
+    sanitizer_add_flags(${TARGET} "UndefinedBehaviorSanitizer" "UBSan")
 endfunction ()
 
 include(FindPackageHandleStandardArgs)

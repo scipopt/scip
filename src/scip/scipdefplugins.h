@@ -206,6 +206,7 @@
 #include "scip/prop_redcost.h"
 #include "scip/prop_rootredcost.h"
 #include "scip/prop_vbounds.h"
+#include "scip/reader_bd.h"
 #include "scip/reader_bnd.h"
 #include "scip/reader_ccg.h"
 #include "scip/reader_cip.h"

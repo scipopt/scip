@@ -1,0 +1,6 @@
+MASTER
+multi-zone-master.lp
+SUBPROBLEMS 3
+multi-zone-sub1.lp
+multi-zone-sub2.lp
+multi-zone-sub3.lp

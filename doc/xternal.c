@@ -7841,6 +7841,8 @@
  * SCIP> display/iis
  * SCIP> write/iis path_to_where_iis_should_be_printed
  * \endcode
+ * See \ref PublicInfeasibilityAnalysisMethods "here" for IIS API functions.
+ * An IIS is returned as a SCIP instance that contains only the constraints and variables of the original SCIP that are part of the IIS.
  *
  * Secondly there is the MinUC (minimize number of unsatisfied constraints) functionality in SCIP.
  * This produces a minimum set of constraints, such that if those constraints were relaxed, the original
@@ -7859,7 +7861,7 @@
  * \code
  * SCIP> display/solution
  * \endcode
- *
+ * See \ref PublicInfeasibilityAnalysisMethods "here" for MinUC API functions.
  */
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -8141,14 +8143,20 @@
  * - the first stage variables are of binary type: \f$ X \subseteq \{0,1\}^n \f$.
  *
  * This framework can be used in four different
- * ways: inputting an instance in the SMPS file format, using the default Benders' decomposition implementation
+ * ways: inputting an instance in the SMPS or BDR file format, using the default Benders' decomposition implementation
  * (see src/scip/benders_default.c), implementing a custom Benders' decomposition plugin (see \ref BENDER), or by using
  * the Benders' decomposition mode of GCG.
  * An overview of how to use each of these functions will be provided in this section.
  *
- * @section BENDERSSMPS Inputting an instance in the SMPS file format.
+ * @section BENDERSSMPS Inputting an instance in the SMPS or BDR file format.
  *
- * As part of the Benders' decomposition framework development, a reader for instances in the SMPS file format has been
+ * The SMPS and BDR readers have been implemented to support the input of decomposable problems. The SMPS format is an
+ * established format used for stochastic programming instances. The BDR reader is simply a list of instance files
+ * defining the master and subproblems.
+ *
+ * @subsection BENDERSSMPSREADER The SMPS file format
+ *
+ * As part of the Benders' decomposition framework, a reader for instances in the SMPS file format has been
  * implemented (see src/scip/reader_smps.c). The details regarding the SMPS file format can be found at:
  *
  * Birge, J. R.; Dempster, M. A.; Gassmann, H. I.; Gunn, E.; King, A. J. & Wallace, S. W.
@@ -8164,6 +8172,19 @@
  * time files. By default, the STO reader will construct the deterministic equivalent of the stochastic program. A
  * parameter is provided "reading/sto/usebenders" that will inform the STO reader to apply Benders' decomposition to the
  * input stochastic program.
+ *
+ * @subsection The BDR file format
+ *
+ * The BDR file format is a simple format designed for inputting instances to which Benders' decomposition will be
+ * applied. Simply, the format is a list of instance files that correspond to the master problem and subproblem. One
+ * could think of these instance files as the mathematical programs resulting from the application of Benders'
+ * decomposition (without cuts and auxiliary variables).
+ *
+ * A BDR file will specify a set of instance files with an absolute or relative path. If the instance files are
+ * provided with a relative path, then the directory where the BDR file is located is used as the parent directory. The
+ * key requirement in the specification of the master and subproblem instances is that the master problem variables
+ * have the same name in the master and subproblem instance files. This requirement is because the Benders'
+ * decomposition implementation uses variable names to map between the master and subproblem variables.
  *
  * @section BENDERSDECSTRUCTURE Inputting a user-defined decomposition structure
  *
@@ -8722,7 +8743,9 @@
  *
  *  \arg <code>*.out</code> - output of <code>stdout</code>
  *  \arg <code>*.err</code> - output of <code>stderr</code>
+ *  \arg <code>*.json</code> - SCIP statistics in JSON format
  *  \arg <code>*.set</code> - copy of the used settings file
+ *  \arg <code>*.sol</code> - file with best found solution, if any
  *
  *  \arg <code>*.res</code> - ASCII table containing a summary of the computational results
  *  \arg <code>*.tex</code> - TeX table containing a summary of the computational results
@@ -8751,7 +8774,7 @@
  *  \code
  *  ./evalcheck.sh writesolufile=1 NEWSOLUFILE=<solu-file> <out-file>
  *  \endcode
- *  where <code><solu-file></code> denotes the filename of the new file where the solutions shall be
+ *  where <code><solu-file></code> denotes the name of the new file where the optimal values or primal bounds shall be written to
  *  (and <code><out-file></code> denotes the output (<code>.out</code>) files to evaluate).
  *
  *  Another feature can be enabled by calling:
@@ -8822,6 +8845,7 @@
  *  \arg <code>SETCUTOFF</code> - if set to '1', an optimal solution value (from the <code>.solu</code>-file) is used as objective limit [default: 0]
  *  \arg <code>THREADS</code> - the number of threads used for solving LPs, if the linked LP solver supports multithreading [default: 1]
  *  \arg <code>VALGRIND</code> - run valgrind on the SCIP binary; errors and memory leaks found by valgrind are reported as fails [default: "false"]
+ *  \arg <code>KEEPSOL</code> - if set to 'false', the best found solution is no longer written out to a solution file [default: "true"]
  *
  *
  *  @section COMPARE Comparing test runs for different settings
@@ -9864,6 +9888,11 @@
 /**@defgroup PublicValidationMethods Validation
  * @ingroup PUBLICCOREAPI
  * @brief  functions for validating the correctness of a solving process
+ */
+
+/**@defgroup PublicInfeasibilityAnalysisMethods Infeasibility Analysis
+ * @ingroup PUBLICCOREAPI
+ * @brief  functions for analyzing infeasibility of a model (IIS, MinUC), see also \ref MINUCIIS
  */
 
 /**@defgroup PublicMemoryMethods Memory Management

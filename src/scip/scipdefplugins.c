@@ -102,6 +102,7 @@ SCIP_RETCODE SCIPincludeDefaultPlugins(
    SCIP_CALL( SCIPincludeReaderTim(scip) );
    SCIP_CALL( SCIPincludeReaderCor(scip) );
    SCIP_CALL( SCIPincludeReaderRlp(scip) );
+   SCIP_CALL( SCIPincludeReaderBenders(scip) );
    SCIP_CALL( SCIPincludeReaderBnd(scip) );
    SCIP_CALL( SCIPincludeReaderDiff(scip) );
    SCIP_CALL( SCIPincludeReaderDec(scip) );
