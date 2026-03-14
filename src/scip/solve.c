@@ -2279,6 +2279,10 @@ SCIP_RETCODE SCIPtryAddSymmetryHandlingMethods(
    if( !scip->set->sym_enabled )
       return SCIP_OKAY;
 
+   /* do not run in exact mode */
+   if( scip->set->exact_enable )
+      return SCIP_OKAY;
+
    /* symmetry handling methods can only be applied if dual reductions are permitted */
    if( !SCIPallowStrongDualReds(scip) || !SCIPallowWeakDualReds(scip) )
       return SCIP_OKAY;
