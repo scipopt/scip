@@ -522,7 +522,6 @@ SCIP_RETCODE SCIPsymhdlrPresol(
 
    *result = SCIP_DIDNOTRUN;
 
-   /* @symtodo how to deal with exact SCIP? */
    if( symhdlr->sympresol == NULL || set->exact_enable )
       return SCIP_OKAY;
 
@@ -640,7 +639,6 @@ SCIP_RETCODE SCIPsymhdlrProp(
       return SCIP_OKAY;
    }
 
-   /* @symtodo how to handle exact SCIP */
    if( ((depth == 0 && symhdlr->propfreq == 0) || (symhdlr->propfreq > 0 && depth % symhdlr->propfreq == 0))
          && !set->exact_enable )
    {
@@ -732,7 +730,6 @@ SCIP_RETCODE SCIPsymhdlrSepaLP(
    assert(depth >= 0);
    assert(result != NULL);
 
-   /* @symtodo how to deal with exact SCIP? */
    if( symhdlr->symsepalp != NULL && SCIPsetIsLE(set, bounddist, symhdlr->maxbounddist) &&
        ( (depth == 0 && symhdlr->sepafreq != -1) ||
          (symhdlr->sepafreq > 0 && depth % symhdlr->sepafreq == 0 &&
@@ -912,7 +909,6 @@ SCIP_RETCODE SCIPsymhdlrSepaSol(
    assert(depth >= 0);
    assert(result != NULL);
 
-   /* @symtodo how to deal with exact SCIP? */
    if( symhdlr->symsepasol != NULL &&
       ( (depth == 0 && symhdlr->sepafreq != -1) ||
          (symhdlr->sepafreq > 0 && depth % symhdlr->sepafreq == 0 &&

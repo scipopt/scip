@@ -234,7 +234,6 @@ SCIP_RETCODE copyCuts(
    return SCIP_OKAY;
 }
 
-/* @symtodo check every call of this function: shall symmetry handlers be copied? */
 /** copies plugins from sourcescip to targetscip; in case that a constraint handler which does not need constraints
  *  cannot be copied, valid will return FALSE. All plugins can declare that, if their copy process failed, the
  *  copied SCIP instance might not represent the same problem semantics as the original.
