@@ -1230,8 +1230,8 @@ SCIP_RETCODE presolve(
    int propstart = 0;
    int consstart = 0;
    int symstart = 0;
-   int i;
 #ifndef NDEBUG
+   int i;
    size_t nusedbuffers;
    size_t nusedcleanbuffers;
 #endif
@@ -1474,7 +1474,6 @@ SCIP_RETCODE presolve(
 #ifndef NDEBUG
             {
                SCIP_VAR** multvars;
-               int i;
                multvars = SCIPvarGetMultaggrVars(var);
                for( i = SCIPvarGetMultaggrNVars(var) - 1; i >= 0; --i)
                   assert(SCIPvarGetStatus(multvars[i]) != SCIP_VARSTATUS_MULTAGGR);
