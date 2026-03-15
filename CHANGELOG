@@ -26,6 +26,7 @@ Interface changes
 - deleted propagtor symmetry including its SCIPincludePropSymmetry() and SCIPgetSymmetryNGenerators()
 - SCIPsetCopyPlugins() receives a new argument to control whether symmetry handler plugins are copied to a sub-SCIP
 - new argument infersymcomp for SCIPnodeAddBoundinfer(), SCIPnodeAddBoundinferExact(), SCIPdomchgAddBoundchg() to set inference information in conflict analysis that arise from symmetry handling
+- new argument nsymprop for SCIPnodeGetNDomchg() to report number of symmetry-based reductions in domain changes
 
 ### New API functions
 
