@@ -1396,6 +1396,7 @@ SCIP_RETCODE updatePropagation(
    int nvars;
    int nconsprops;
    int npropprops;
+   int nsymprops;
    int naddedbndchgs;
 
    assert(reopt != NULL);
@@ -1405,7 +1406,7 @@ SCIP_RETCODE updatePropagation(
    assert(reopt->reopttree->reoptnodes[id] != NULL );
 
    /* get the number of all stored constraint and propagator propagations */
-   SCIPnodeGetNDomchg(node, NULL, &nconsprops, &npropprops);
+   SCIPnodeGetNDomchg(node, NULL, &nconsprops, &npropprops, &nsymprops);
    nvars = reopt->reopttree->reoptnodes[id]->nvars;
 
    if( nconsprops > 0 || npropprops > 0 )
@@ -1686,11 +1687,12 @@ SCIP_RETCODE getLastSavedNode(
       int nbranchings = 0;
       int nconsprop = 0;
       int npropprops = 0;
+      int nsymprops = 0;
 
       if( set->reopt_saveprop )
-         SCIPnodeGetNDomchg((*parent), &nbranchings, &nconsprop, &npropprops);
+         SCIPnodeGetNDomchg((*parent), &nbranchings, &nconsprop, &npropprops, &nsymprops);
       else
-         SCIPnodeGetNDomchg((*parent), &nbranchings, NULL, NULL);
+         SCIPnodeGetNDomchg((*parent), &nbranchings, NULL, NULL, NULL);
 
       (*nbndchgs) = (*nbndchgs) + nbranchings + nconsprop + npropprops;
       (*parent) = SCIPnodeGetParent(*parent);

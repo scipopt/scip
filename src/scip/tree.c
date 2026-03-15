@@ -8633,17 +8633,19 @@ SCIP_DOMCHG* SCIPnodeGetDomchg(
    return node->domchg;
 }
 
-/** counts the number of bound changes due to branching, constraint propagation, and propagation */
+/** counts the number of bound changes due to branching, constraint propagation, propagation, and symmetry handling */
 void SCIPnodeGetNDomchg(
    SCIP_NODE*            node,               /**< node */
    int*                  nbranchings,        /**< pointer to store number of branchings (or NULL if not needed) */
    int*                  nconsprop,          /**< pointer to store number of constraint propagations (or NULL if not needed) */
-   int*                  nprop               /**< pointer to store number of propagations (or NULL if not needed) */
+   int*                  nprop,              /**< pointer to store number of propagations (or NULL if not needed) */
+   int*                  nsymprop            /**< pointer to store number of symmetry propagations (or NULL if not needed) */
    )
 {  /*lint --e{641}*/
    SCIP_Bool count_branchings;
    SCIP_Bool count_consprop;
    SCIP_Bool count_prop;
+   SCIP_Bool count_symprop;
    int i;
 
    assert(node != NULL);
@@ -8651,6 +8653,7 @@ void SCIPnodeGetNDomchg(
    count_branchings = (nbranchings != NULL);
    count_consprop = (nconsprop != NULL);
    count_prop = (nprop != NULL);
+   count_symprop = (nsymprop != NULL);
 
    /* set counter to zero */
    if( count_branchings )
@@ -8659,6 +8662,8 @@ void SCIPnodeGetNDomchg(
       *nconsprop = 0;  /* cppcheck-suppress nullPointer */
    if( count_prop )
       *nprop = 0;  /* cppcheck-suppress nullPointer */
+   if( count_symprop )
+      *nsymprop = 0;  /* cppcheck-suppress nullPointer */
 
    if( node->domchg == NULL )
       return;
@@ -8675,16 +8680,23 @@ void SCIPnodeGetNDomchg(
 
    for( ; i < (int) node->domchg->domchgbound.nboundchgs; ++i )
    {
-      assert(node->domchg->domchgbound.boundchgs[i].boundchgtype == SCIP_BOUNDCHGTYPE_CONSINFER || node->domchg->domchgbound.boundchgs[i].boundchgtype == SCIP_BOUNDCHGTYPE_PROPINFER);
+      assert(node->domchg->domchgbound.boundchgs[i].boundchgtype == SCIP_BOUNDCHGTYPE_CONSINFER
+         || node->domchg->domchgbound.boundchgs[i].boundchgtype == SCIP_BOUNDCHGTYPE_PROPINFER
+         ||  node->domchg->domchgbound.boundchgs[i].boundchgtype == SCIP_BOUNDCHGTYPE_SYMINFER);
       if( node->domchg->domchgbound.boundchgs[i].boundchgtype == SCIP_BOUNDCHGTYPE_CONSINFER )
       {
          if( count_consprop )
             ++(*nconsprop);
       }
-      else
+      else if( node->domchg->domchgbound.boundchgs[i].boundchgtype == SCIP_BOUNDCHGTYPE_PROPINFER )
       {
          if( count_prop )
             ++(*nprop);
+      }
+      else
+      {
+         if( count_symprop )
+            ++(*nsymprop);
       }
    }
 }
@@ -9009,7 +9021,7 @@ void SCIPnodeGetPropsBeforeDual(
    /* get index of first bound change, after the branching decisions, that is not from a known constraint or propagator (CONSINFER or PROPINFER without reason)
     * count the number of bound changes because of constraint propagation
     */
-   SCIPnodeGetNDomchg(node, &nbranchings, NULL, NULL);
+   SCIPnodeGetNDomchg(node, &nbranchings, NULL, NULL, NULL);
    for( i = nbranchings; i < nboundchgs; ++i )
    {
       /* as we start at nbranchings, there should be no BRANCHING boundchanges anymore */
