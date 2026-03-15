@@ -1907,7 +1907,7 @@ SCIP_RETCODE treeAddPendingBdchg(
 
 /** adds bound change with inference information to focus node, child of focus node, or probing node;
  *  if possible, adjusts bound to integral value;
- *  at most one of infercons and inferprop may be non-NULL
+ *  at most one of infercons, inferprop, and infersymcomp may be non-NULL
  */
 SCIP_RETCODE SCIPnodeAddBoundinfer(
    SCIP_NODE*            node,               /**< node to add bound change to */
@@ -2193,7 +2193,7 @@ SCIP_RETCODE SCIPnodeAddBoundinfer(
 
       /* remember the bound change as inference (lpsolval is not important: use 0.0) */
       SCIP_CALL( SCIPdomchgAddBoundchg(&node->domchg, blkmem, set, var, newbound, NULL, boundtype,
-            infercons != NULL ? SCIP_BOUNDCHGTYPE_CONSINFER : (inferprop != NULL ? SCIP_BOUNDCHGTYPE_PROPINFER : SCIP_BOUNDCHGTYPE_SYMINFER),
+            infercons != NULL ? SCIP_BOUNDCHGTYPE_CONSINFER : (infersymcomp != NULL ? SCIP_BOUNDCHGTYPE_SYMINFER : SCIP_BOUNDCHGTYPE_PROPINFER),
             0.0, infervar, infercons, inferprop, infersymcomp, inferinfo, inferboundtype) );
 
       if( SCIPnodeGetType(node) != SCIP_NODETYPE_PROBINGNODE )
