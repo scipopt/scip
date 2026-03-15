@@ -1408,6 +1408,7 @@ SCIP_RETCODE updatePropagation(
    /* get the number of all stored constraint and propagator propagations */
    SCIPnodeGetNDomchg(node, NULL, &nconsprops, &npropprops, &nsymprops);
    nvars = reopt->reopttree->reoptnodes[id]->nvars;
+   assert(nsymprops == 0);      /* symmetry handling is not compatible with reoptimization */
 
    if( nconsprops > 0 || npropprops > 0 )
    {
@@ -1693,6 +1694,7 @@ SCIP_RETCODE getLastSavedNode(
          SCIPnodeGetNDomchg((*parent), &nbranchings, &nconsprop, &npropprops, &nsymprops);
       else
          SCIPnodeGetNDomchg((*parent), &nbranchings, NULL, NULL, NULL);
+      assert(nsymprops == 0);   /* symmetry handling is not compatible with reoptimization */
 
       (*nbndchgs) = (*nbndchgs) + nbranchings + nconsprop + npropprops;
       (*parent) = SCIPnodeGetParent(*parent);
