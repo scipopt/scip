@@ -453,7 +453,7 @@ typedef enum SCIP_LinConstype SCIP_LINCONSTYPE;
  *  representation in the LP relaxation, if any such rows exist.
  *  As a convenience method, SCIPupdateSolLPConsViolation() can be used if the constraint
  *  is represented completely by a set of LP rows, meaning that the current constraint violation is equal to the maximum
- *  of the contraint violations of the corresponding LP rows.
+ *  of the constraint violations of the corresponding LP rows.
  *
  *  input:
  *  - scip            : SCIP main data structure
