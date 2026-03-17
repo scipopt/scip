@@ -113,6 +113,7 @@ SCIP_RETCODE SCIPcopyPlugins(
    SCIP_Bool             copyeventhdlrs,     /**< should the event handlers be copied */
    SCIP_Bool             copynodeselectors,  /**< should the node selectors be copied */
    SCIP_Bool             copybranchrules,    /**< should the branchrules be copied */
+   SCIP_Bool             copysymhdlrs,       /**< should the symmetry handlers be copied */
    SCIP_Bool             copyiisfinders,     /**< should the IIS finders be copied */
    SCIP_Bool             copydisplays,       /**< should the display columns be copied */
    SCIP_Bool             copydialogs,        /**< should the dialogs be copied */
@@ -1008,6 +1009,7 @@ SCIP_RETCODE SCIPcopy(
                                               *   plugins will be copied and activated, and the modifiable flag of
                                               *   constraints will be respected. If FALSE, valid will be set to FALSE, when
                                               *   there are pricers present */
+   SCIP_Bool             copysymhdlrs,       /**< should symmetry handlers be copied to targetscip? */
    SCIP_Bool             threadsafe,         /**< FALSE, if data can be safely shared between the source and target
                                                   SCIP, otherwise TRUE. This is usually set to FALSE */
    SCIP_Bool             passmessagehdlr,    /**< should the message handler be passed */
@@ -1087,6 +1089,7 @@ SCIP_RETCODE SCIPcopyConsCompression(
                                               *   plugins will be copied and activated, and the modifiable flag of
                                               *   constraints will be respected. If FALSE, valid will be set to FALSE, when
                                               *   there are pricers present */
+   SCIP_Bool             copysymhdlrs,       /**< should symmetry handlers be copied to targetscip? */
    SCIP_Bool             threadsafe,         /**< FALSE, if data can be safely shared between the source and target
                                                   SCIP, otherwise TRUE. This is usually set to FALSE */
    SCIP_Bool             passmessagehdlr,    /**< should the message handler be passed */
@@ -1148,6 +1151,7 @@ SCIP_RETCODE SCIPcopyOrig(
                                               *   plugins will be copied and activated, and the modifiable flag of
                                               *   constraints will be respected. If FALSE, valid will be set to FALSE, when
                                               *   there are pricers present */
+   SCIP_Bool             copysymhdlrs,       /**< should symmetry handlers be copied to targetscip? */
    SCIP_Bool             threadsafe,         /**< FALSE, if data can be safely shared between the source and target
                                                   SCIP, otherwise TRUE. This is usually set to FALSE */
    SCIP_Bool             passmessagehdlr,    /**< should the message handler be passed */
@@ -1220,6 +1224,7 @@ SCIP_RETCODE SCIPcopyOrigConsCompression(
                                               *   plugins will be copied and activated, and the modifiable flag of
                                               *   constraints will be respected. If FALSE, valid will be set to FALSE, when
                                               *   there are pricers present */
+   SCIP_Bool             copysymhdlrs,       /**< should symmetry handlers be copied to targetscip? */
    SCIP_Bool             threadsafe,         /**< FALSE, if data can be safely shared between the source and target
                                                   SCIP, otherwise TRUE. This is usually set to FALSE */
    SCIP_Bool             passmessagehdlr,    /**< should the message handler be passed */

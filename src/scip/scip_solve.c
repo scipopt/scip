@@ -36,6 +36,7 @@
  * @author Marc Pfetsch
  * @author Michael Winkler
  * @author Kati Wolter
+ * @author Christopher Hojny
  *
  * @todo check all SCIP_STAGE_* switches, and include the new stages TRANSFORMED and INITSOLVE
  */
@@ -84,6 +85,7 @@
 #include "scip/scip_certificate.h"
 #include "scip/scip_concurrent.h"
 #include "scip/scip_cons.h"
+#include "scip/scip_copy.h"
 #include "scip/scip_exact.h"
 #include "scip/scip_general.h"
 #include "scip/scip_lp.h"
@@ -96,6 +98,7 @@
 #include "scip/scip_sol.h"
 #include "scip/scip_solve.h"
 #include "scip/scip_solvingstats.h"
+#include "scip/scip_sym.h"
 #include "scip/scip_timing.h"
 #include "scip/scip_tree.h"
 #include "scip/scip_var.h"
@@ -112,7 +115,10 @@
 #include "scip/struct_scip.h"
 #include "scip/struct_set.h"
 #include "scip/struct_stat.h"
+#include "scip/struct_sym.h"
 #include "scip/struct_tree.h"
+#include "scip/sym.h"
+#include "scip/symmetry.h"
 #include "scip/syncstore.h"
 #include "scip/tree.h"
 #include "scip/var.h"
@@ -282,6 +288,7 @@ SCIP_RETCODE SCIPtransformProb(
    SCIP_CALL( SCIPrelaxationCreate(&scip->relaxation, scip->mem->probmem, scip->set, scip->stat, scip->primal, scip->tree) );
    SCIP_CALL( SCIPconflictCreate(&scip->conflict, scip->mem->probmem, scip->set) );
    SCIP_CALL( SCIPcliquetableCreate(&scip->cliquetable, scip->set, scip->mem->probmem) );
+   SCIP_CALL( SCIPsyminfoCreate(scip, &scip->syminfo) );
 
    /* copy problem in solve memory */
    SCIP_CALL( SCIPprobTransform(scip->origprob, scip->mem->probmem, scip->set, scip->stat, scip->primal, scip->tree,
@@ -549,6 +556,18 @@ SCIP_RETCODE exitPresolve(
    /* switch stage to EXITPRESOLVE */
    scip->set->stage = SCIP_STAGE_EXITPRESOLVE;
 
+   if( !solved )
+   {
+      /* guarantee that symmetries are computed */
+      if( scip->set->sym_enabled && scip->syminfo->nperms == -1 )
+      {
+         int naddedconss = 0;
+         int nchgbds = 0;
+
+         SCIP_CALL( SCIPtryAddSymmetryHandlingMethods(scip, &naddedconss, FALSE, &nchgbds) );
+      }
+   }
+
    /* exitPresolve() might be called during the reading process of a file reader;
     * hence the number of used buffers does not need to be zero, however, it should not
     * change by calling SCIPsetExitprePlugins() or SCIPprobExitPresolve()
@@ -613,21 +632,21 @@ SCIP_RETCODE exitPresolve(
 
 /** applies one round of presolving with the given presolving timing
  *
- *  This method will always be called with presoltiming fast first. It iterates over all presolvers, propagators, and
- *  constraint handlers and calls their presolving callbacks with timing fast.  If enough reductions are found, it
- *  returns and the next presolving round will be started (again with timing fast).  If the fast presolving does not
- *  find enough reductions, this methods calls itself recursively with presoltiming medium.  Again, it calls the
- *  presolving callbacks of all presolvers, propagators, and constraint handlers with timing medium.  If enough
- *  reductions are found, it returns and the next presolving round will be started (with timing fast).  Otherwise, it is
- *  called recursively with presoltiming exhaustive. In exhaustive presolving, presolvers, propagators, and constraint
- *  handlers are called w.r.t. their priority, but this time, we stop as soon as enough reductions were found and do not
- *  necessarily call all presolving methods. If we stop, we return and another presolving round is started with timing
- *  fast.
+ *  This method will always be called with presoltiming fast first. It iterates over all presolvers, propagators, as
+ *  well as constraint and symmetry handlers and calls their presolving callbacks with timing fast.  If enough
+ *  reductions are found, it returns and the next presolving round will be started (again with timing fast).  If the
+ *  fast presolving does not find enough reductions, this methods calls itself recursively with presoltiming medium.
+ *  Again, it calls the presolving callbacks of all presolvers, propagators, and constraint handlers with timing medium.
+ *  If enough reductions are found, it returns and the next presolving round will be started (with timing fast).
+ *  Otherwise, it is called recursively with presoltiming exhaustive. In exhaustive presolving, presolvers, propagators,
+ *  and constraint handlers are called w.r.t. their priority, but this time, we stop as soon as enough reductions were
+ *  found and do not necessarily call all presolving methods. If we stop, we return and another presolving round is
+ *  started with timing fast.
  *
  *  @todo check if we want to do the following (currently disabled):
  *  In order to avoid calling the same expensive presolving methods again and again (which is possibly ineffective
  *  for the current instance), we continue the loop for exhaustive presolving where we stopped it the last time.  The
- *  {presol/prop/cons}start pointers are used to this end: they provide the plugins to start the loop with in the
+ *  {presol/prop/cons/sym}start pointers are used to this end: they provide the plugins to start the loop with in the
  *  current presolving round (if we reach exhaustive presolving), and are updated in this case to the next ones to be
  *  called in the next round. In case we reach the end of the loop in exhaustive presolving, we call the method again
  *  with exhaustive timing, now starting with the first presolving steps in the loop until we reach the ones we started
@@ -649,23 +668,30 @@ SCIP_RETCODE presolveRound(
    int                   propend,            /**< last propagator to treat in exhaustive presolving */
    int*                  consstart,          /**< pointer to get the constraint handler to start exhaustive presolving with in
                                               *   the current round and store the one to start with in the next round */
-   int                   consend             /**< last constraint handler to treat in exhaustive presolving */
+   int                   consend,            /**< last constraint handler to treat in exhaustive presolving */
+   int*                  symstart,           /**< pointer to get the symmetry handler to start exhaustive presolving with in
+                                              *   the current round and store the one to start with in the next round */
+   int                   symend              /**< last symmetry handler to treat in exhaustive presolving */
    )
 {
    SCIP_RESULT result;
    SCIP_EVENT event;
    SCIP_Bool aborted;
    SCIP_Bool lastranpresol;
+   SCIP_Bool lastranprop;
 #ifdef SCIP_DISABLED_CODE
    int oldpresolstart = 0;
    int oldpropstart = 0;
    int oldconsstart = 0;
+   int oldsymstart = 0;
 #endif
    int priopresol;
    int prioprop;
+   int priosym;
    int i;
    int j;
    int k;
+   int l;
 #ifndef NDEBUG
    size_t nusedbuffers;
    size_t nusedcleanbuffers;
@@ -678,9 +704,11 @@ SCIP_RETCODE presolveRound(
    assert(presolstart != NULL);
    assert(propstart != NULL);
    assert(consstart != NULL);
+   assert(symstart != NULL);
 
-   assert((presolend == scip->set->npresols && propend == scip->set->nprops && consend == scip->set->nconshdlrs)
-      || (*presolstart == 0 && *propstart == 0 && *consstart == 0));
+   assert((presolend == scip->set->npresols && propend == scip->set->nprops && consend == scip->set->nconshdlrs
+         && symend == scip->set->nsymhdlrs)
+      || (*presolstart == 0 && *propstart == 0 && *consstart == 0 && *symstart == 0));
 
    *unbounded = FALSE;
    *infeasible = FALSE;
@@ -706,15 +734,17 @@ SCIP_RETCODE presolveRound(
       i = *presolstart;
       j = *propstart;
       k = *consstart;
+      l = *symstart;
 #ifdef SCIP_DISABLED_CODE
       oldpresolstart = i;
       oldpropstart = j;
       oldconsstart = k;
+      oldsymstart = l;
 #endif
-      if( i >= presolend && j >= propend && k >= consend )
+      if( i >= presolend && j >= propend && k >= consend && l >= symend )
          return SCIP_OKAY;
 
-      if( i == 0 && j == 0 && k == 0 )
+      if( i == 0 && j == 0 && k == 0 && l == 0 )
          ++(scip->stat->npresolroundsext);
    }
    else
@@ -723,10 +753,12 @@ SCIP_RETCODE presolveRound(
       assert(presolend == scip->set->npresols);
       assert(propend == scip->set->nprops);
       assert(consend == scip->set->nconshdlrs);
+      assert(symend == scip->set->nsymhdlrs);
 
       i = 0;
       j = 0;
       k = 0;
+      l = 0;
 
       if( *timing == SCIP_PRESOLTIMING_FAST )
          ++(scip->stat->npresolroundsfast);
@@ -739,7 +771,7 @@ SCIP_RETCODE presolveRound(
       scip->stat->npresolroundsext, *timing);
 
    /* call included presolvers with nonnegative priority */
-   while( !(*unbounded) && !(*infeasible) && !aborted && (i < presolend || j < propend) )
+   while( !(*unbounded) && !(*infeasible) && !aborted && (i < presolend || j < propend || l < symend) )
    {
       if( i < presolend )
          priopresol = SCIPpresolGetPriority(scip->set->presols[i]);
@@ -751,8 +783,13 @@ SCIP_RETCODE presolveRound(
       else
          prioprop = -1;
 
+      if( l < symend )
+         priosym = SCIPsymhdlrGetPresolPriority(scip->set->symhdlrs_presol[l]);
+      else
+         priosym = -1;
+
       /* call next propagator */
-      if( prioprop >= priopresol )
+      if( prioprop >= priopresol && prioprop >= priosym )
       {
          /* only presolving methods which have non-negative priority will be called before constraint handlers */
          if( prioprop < 0 )
@@ -768,10 +805,11 @@ SCIP_RETCODE presolveRound(
          assert(BMSgetNUsedBufferMemory(SCIPcleanbuffer(scip)) == nusedcleanbuffers);
 
          lastranpresol = FALSE;
+         lastranprop = TRUE;
          ++j;
       }
       /* call next presolver */
-      else
+      else if( priopresol >= prioprop && priopresol >= priosym )
       {
          /* only presolving methods which have non-negative priority will be called before constraint handlers */
          if( priopresol < 0 )
@@ -787,7 +825,29 @@ SCIP_RETCODE presolveRound(
          assert(BMSgetNUsedBufferMemory(SCIPcleanbuffer(scip)) == nusedcleanbuffers);
 
          lastranpresol = TRUE;
+         lastranprop = FALSE;
          ++i;
+      }
+      /* call next symmetry handler */
+      else
+      {
+         /* only presolving methods which have non-negative priority will be called before constraint handlers */
+         if( priosym < 0 )
+            break;
+
+         SCIPdebugMsg(scip, "executing presolving of symmetry handler <%s>\n",
+            SCIPsymhdlrGetName(scip->set->symhdlrs_presol[l]));
+         SCIP_CALL( SCIPsymhdlrPresol(scip->set->symhdlrs_presol[l], scip->set, *timing,
+               scip->stat->npresolrounds, &scip->stat->npresolfixedvars, &scip->stat->npresolaggrvars,
+               &scip->stat->npresolchgvartypes, &scip->stat->npresolchgbds, &scip->stat->npresoladdholes,
+               &scip->stat->npresoldelconss,&scip->stat->npresoladdconss, &scip->stat->npresolupgdconss,
+               &scip->stat->npresolchgcoefs, &scip->stat->npresolchgsides, &result) );
+         assert(BMSgetNUsedBufferMemory(SCIPbuffer(scip)) == nusedbuffers);
+         assert(BMSgetNUsedBufferMemory(SCIPcleanbuffer(scip)) == nusedcleanbuffers);
+
+         lastranpresol = FALSE;
+         lastranprop = FALSE;
+         ++l;
       }
 
       if( result == SCIP_CUTOFF )
@@ -797,9 +857,12 @@ SCIP_RETCODE presolveRound(
          if( lastranpresol )
             SCIPmessagePrintVerbInfo(scip->messagehdlr, scip->set->disp_verblevel, SCIP_VERBLEVEL_FULL,
                "presolver <%s> detected infeasibility\n", SCIPpresolGetName(scip->set->presols[i-1]));
-         else
+         else if( lastranprop )
             SCIPmessagePrintVerbInfo(scip->messagehdlr, scip->set->disp_verblevel, SCIP_VERBLEVEL_FULL,
                "propagator <%s> detected infeasibility\n", SCIPpropGetName(scip->set->props_presol[j-1]));
+         else
+            SCIPmessagePrintVerbInfo(scip->messagehdlr, scip->set->disp_verblevel, SCIP_VERBLEVEL_FULL,
+               "symmetry handler <%s> detected infeasibility\n", SCIPsymhdlrGetName(scip->set->symhdlrs_presol[l-1]));
       }
       else if( result == SCIP_UNBOUNDED )
       {
@@ -808,9 +871,13 @@ SCIP_RETCODE presolveRound(
          if( lastranpresol )
             SCIPmessagePrintVerbInfo(scip->messagehdlr, scip->set->disp_verblevel, SCIP_VERBLEVEL_FULL,
                "presolver <%s> detected unboundedness (or infeasibility)\n", SCIPpresolGetName(scip->set->presols[i-1]));
+         else if( lastranprop )
+            SCIPmessagePrintVerbInfo(scip->messagehdlr, scip->set->disp_verblevel, SCIP_VERBLEVEL_FULL,
+               "propagator <%s> detected unboundedness (or infeasibility)\n", SCIPpropGetName(scip->set->props_presol[j-1]));
          else
             SCIPmessagePrintVerbInfo(scip->messagehdlr, scip->set->disp_verblevel, SCIP_VERBLEVEL_FULL,
-               "propagator <%s> detected  unboundedness (or infeasibility)\n", SCIPpropGetName(scip->set->props_presol[j-1]));
+               "symmetry handler <%s> detected unboundedness (or infeasibility)\n",
+               SCIPsymhdlrGetName(scip->set->symhdlrs_presol[l-1]));
       }
 
       /* delete the variables from the problems that were marked to be deleted */
@@ -828,11 +895,19 @@ SCIP_RETCODE presolveRound(
          {
             *presolstart = i + 1;
             *propstart = j;
+            *symstart = l;
+         }
+         else if( lastranprop )
+         {
+            *presolstart = i;
+            *propstart = j + 1;
+            *symstart = l;
          }
          else
          {
             *presolstart = i;
-            *propstart = j + 1;
+            *propstart = j;
+            *symstart = l + 1;
          }
          aborted = TRUE;
 
@@ -889,9 +964,10 @@ SCIP_RETCODE presolveRound(
    }
 
    assert( scip->set->propspresolsorted );
+   assert(scip->set->symhdlrspresolsorted);
 
    /* call included presolvers with negative priority */
-   while( !(*unbounded) && !(*infeasible) && !aborted && (i < presolend || j < propend) )
+   while( !(*unbounded) && !(*infeasible) && !aborted && (i < presolend || j < propend || l < symend) )
    {
       if( i < scip->set->npresols )
          priopresol = SCIPpresolGetPriority(scip->set->presols[i]);
@@ -903,8 +979,13 @@ SCIP_RETCODE presolveRound(
       else
          prioprop = -INT_MAX;
 
+      if( l < scip->set->nsymhdlrs )
+         priosym = SCIPsymhdlrGetPresolPriority(scip->set->symhdlrs_presol[l]);
+      else
+         priosym = -INT_MAX;
+
       /* choose presolving */
-      if( prioprop >= priopresol )
+      if( prioprop >= priopresol && prioprop >= priosym )
       {
          assert(prioprop <= 0);
 
@@ -918,9 +999,10 @@ SCIP_RETCODE presolveRound(
          assert(BMSgetNUsedBufferMemory(SCIPcleanbuffer(scip)) == nusedcleanbuffers);
 
          lastranpresol = FALSE;
+         lastranprop = TRUE;
          ++j;
       }
-      else
+      else if( priopresol >= prioprop && priopresol >= priosym )
       {
          assert(priopresol < 0);
 
@@ -934,7 +1016,26 @@ SCIP_RETCODE presolveRound(
          assert(BMSgetNUsedBufferMemory(SCIPcleanbuffer(scip)) == nusedcleanbuffers);
 
          lastranpresol = TRUE;
+         lastranprop = FALSE;
          ++i;
+      }
+      else
+      {
+         assert(priosym < 0);
+
+         SCIPdebugMsg(scip, "executing presolver of symmetry handler <%s>\n",
+            SCIPsymhdlrGetName(scip->set->symhdlrs_presol[l]));
+         SCIP_CALL( SCIPsymhdlrPresol(scip->set->symhdlrs_presol[l], scip->set, *timing,
+               scip->stat->npresolrounds, &scip->stat->npresolfixedvars, &scip->stat->npresolaggrvars,
+               &scip->stat->npresolchgvartypes, &scip->stat->npresolchgbds, &scip->stat->npresoladdholes,
+               &scip->stat->npresoldelconss,&scip->stat->npresoladdconss, &scip->stat->npresolupgdconss,
+               &scip->stat->npresolchgcoefs, &scip->stat->npresolchgsides, &result) );
+         assert(BMSgetNUsedBufferMemory(SCIPbuffer(scip)) == nusedbuffers);
+         assert(BMSgetNUsedBufferMemory(SCIPcleanbuffer(scip)) == nusedcleanbuffers);
+
+         lastranpresol = FALSE;
+         lastranprop = FALSE;
+         ++l;
       }
 
       if( result == SCIP_CUTOFF )
@@ -944,9 +1045,13 @@ SCIP_RETCODE presolveRound(
          if( lastranpresol )
             SCIPmessagePrintVerbInfo(scip->messagehdlr, scip->set->disp_verblevel, SCIP_VERBLEVEL_FULL,
                "presolver <%s> detected infeasibility\n", SCIPpresolGetName(scip->set->presols[i-1]));
-         else
+         else if( lastranprop )
             SCIPmessagePrintVerbInfo(scip->messagehdlr, scip->set->disp_verblevel, SCIP_VERBLEVEL_FULL,
                "propagator <%s> detected infeasibility\n", SCIPpropGetName(scip->set->props_presol[j-1]));
+         else
+            SCIPmessagePrintVerbInfo(scip->messagehdlr, scip->set->disp_verblevel, SCIP_VERBLEVEL_FULL,
+               "symmetry handler <%s> detected infeasibility\n",
+               SCIPsymhdlrGetName(scip->set->symhdlrs_presol[l-1]));
       }
       else if( result == SCIP_UNBOUNDED )
       {
@@ -955,9 +1060,14 @@ SCIP_RETCODE presolveRound(
          if( lastranpresol )
             SCIPmessagePrintVerbInfo(scip->messagehdlr, scip->set->disp_verblevel, SCIP_VERBLEVEL_FULL,
                "presolver <%s> detected unboundedness (or infeasibility)\n", SCIPpresolGetName(scip->set->presols[i-1]));
+         else if( lastranprop )
+            SCIPmessagePrintVerbInfo(scip->messagehdlr, scip->set->disp_verblevel, SCIP_VERBLEVEL_FULL,
+               "propagator <%s> detected unboundedness (or infeasibility)\n", SCIPpropGetName(scip->set->props_presol[j-1]));
          else
             SCIPmessagePrintVerbInfo(scip->messagehdlr, scip->set->disp_verblevel, SCIP_VERBLEVEL_FULL,
-               "propagator <%s> detected  unboundedness (or infeasibility)\n", SCIPpropGetName(scip->set->props_presol[j-1]));
+               "symmetry handler <%s> detected unboundedness (or infeasibility)\n",
+               SCIPsymhdlrGetName(scip->set->symhdlrs_presol[l-1]));
+
       }
 
       /* delete the variables from the problems that were marked to be deleted */
@@ -975,11 +1085,19 @@ SCIP_RETCODE presolveRound(
          {
             *presolstart = i + 1;
             *propstart = j;
+            *symstart = l;
+         }
+         else if( lastranprop )
+         {
+            *presolstart = i;
+            *propstart = j + 1;
+            *symstart = l;
          }
          else
          {
             *presolstart = i;
-            *propstart = j + 1;
+            *propstart = j;
+            *symstart = l + 1;
          }
          *consstart = k;
 
@@ -1057,27 +1175,31 @@ SCIP_RETCODE presolveRound(
             *presolstart = 0;
             *propstart = 0;
             *consstart = 0;
+            *symstart = 0;
 
             SCIP_CALL( presolveRound(scip, timing, unbounded, infeasible, lastround, presolstart, presolend,
-                  propstart, propend, consstart, consend) );
+                  propstart, propend, consstart, consend, symstart, symend) );
          }
 #ifdef SCIP_DISABLED_CODE
          /* run remaining exhaustive presolvers (if we did not start from the beginning anyway) */
-         else if( (oldpresolstart > 0 || oldpropstart > 0 || oldconsstart > 0) && presolend == scip->set->npresols
-            && propend == scip->set->nprops && consend == scip->set->nconshdlrs )
+         else if( (oldpresolstart > 0 || oldpropstart > 0 || oldconsstart > 0 || oldsymstart > 0)
+            && presolend == scip->set->npresols && propend == scip->set->nprops && consend == scip->set->nconshdlrs
+            && symend == scip->set->nsymhdlrs )
          {
             int newpresolstart = 0;
             int newpropstart = 0;
             int newconsstart = 0;
+            int newsymstart = 0;
 
             SCIPdebugMsg(scip, "reached end of exhaustive presolving loop, starting from the beginning...\n");
 
             SCIP_CALL( presolveRound(scip, timing, unbounded, infeasible, lastround, &newpresolstart,
-                  oldpresolstart, &newpropstart, oldpropstart, &newconsstart, oldconsstart) );
+                  oldpresolstart, &newpropstart, oldpropstart, &newconsstart, oldconsstart, &newsymstart, oldsymstart) );
 
             *presolstart = newpresolstart;
             *propstart = newpropstart;
             *consstart = newconsstart;
+            *symstart = newsymstart;
          }
 #endif
       }
@@ -1107,7 +1229,9 @@ SCIP_RETCODE presolve(
    int presolstart = 0;
    int propstart = 0;
    int consstart = 0;
+   int symstart = 0;
 #ifndef NDEBUG
+   int i;
    size_t nusedbuffers;
    size_t nusedcleanbuffers;
 #endif
@@ -1222,6 +1346,9 @@ SCIP_RETCODE presolve(
       /* sort presolvers by priority */
       SCIPsetSortPresols(scip->set);
 
+      /* sort symmetry handlers by priority */
+      SCIPsetSortSymhdlrsPresol(scip->set);
+
       /* check if this will be the last presolving round (in that case, we want to run all presolvers) */
       lastround = (scip->set->presol_maxrounds == -1 ? FALSE : (scip->stat->npresolrounds + 1 >= scip->set->presol_maxrounds));
 
@@ -1231,7 +1358,8 @@ SCIP_RETCODE presolve(
       assert(!(*unbounded));
       assert(!(*infeasible));
       SCIP_CALL( presolveRound(scip, &presoltiming, unbounded, infeasible, lastround,
-            &presolstart, scip->set->npresols, &propstart, scip->set->nprops, &consstart, scip->set->nconshdlrs) );
+            &presolstart, scip->set->npresols, &propstart, scip->set->nprops, &consstart, scip->set->nconshdlrs,
+            &symstart, scip->set->nsymhdlrs) );
 
       /* check, if we should abort presolving due to not enough changes in the last round */
       finished = SCIPisPresolveFinished(scip) || presoltiming == SCIP_PRESOLTIMING_FINAL;
@@ -1264,6 +1392,68 @@ SCIP_RETCODE presolve(
 
       /* abort if time limit was reached or user interrupted */
       stopped = SCIPsolveIsStopped(scip->set, scip->stat, FALSE);
+
+      /* possibly add symmetry handling methods */
+      if( finished && !*unbounded && !*infeasible && !*vanished && !stopped )
+      {
+         if( scip->set->sym_tryaddtiming == SYM_TIMING_AFTERPRESOL )
+         {
+            int nnewconss = 0;
+            int nchgbds = 0;
+            int npresolfixedvarsold;
+            int npresolaggrvarsold;
+            int npresolchgvartypesold;
+            int npresolchgbdsold;
+            int npresoladdholesold;
+            int npresoldelconssold;
+            int npresoladdconssold;
+            int npresolupgdconssold;
+            int npresolchgcoefsold;
+            int npresolchgsidesold;
+
+            SCIP_CALL( SCIPtryAddSymmetryHandlingMethods(scip, &nnewconss, TRUE, &nchgbds) );
+
+            scip->stat->npresoladdconss += nnewconss;
+            scip->stat->npresolchgbds += nchgbds;
+
+            /* Call presolving methods of symmetry handlers, use timing SCIP_PRESOLTIMING_MAX to guarantee that they are
+             * presolved at least once. Also keep track of numbers of previous presolving reductions to see whether a
+             * new round of presolving shall be triggered. */
+            npresolfixedvarsold = scip->stat->npresolfixedvars;
+            npresolaggrvarsold = scip->stat->npresolaggrvars;
+            npresolchgvartypesold = scip->stat->npresolchgvartypes;
+            npresolchgbdsold = scip->stat->npresolchgbds;
+            npresoladdholesold = scip->stat->npresoladdholes;
+            npresoldelconssold = scip->stat->npresoldelconss;
+            npresoladdconssold = scip->stat->npresoladdconss;
+            npresolupgdconssold = scip->stat->npresolupgdconss;
+            npresolchgcoefsold = scip->stat->npresolchgcoefs;
+            npresolchgsidesold = scip->stat->npresolchgsides;
+
+            SCIP_CALL( SCIPpresolveSymmetryHandlingMethods(scip, SCIP_PRESOLTIMING_MAX, scip->stat->npresolrounds,
+                  &scip->stat->npresolfixedvars, &scip->stat->npresolaggrvars, &scip->stat->npresolchgvartypes,
+                  &scip->stat->npresolchgbds, &scip->stat->npresoladdholes, &scip->stat->npresoldelconss,
+                  &scip->stat->npresoladdconss, &scip->stat->npresolupgdconss, &scip->stat->npresolchgcoefs,
+                  &scip->stat->npresolchgsides, unbounded, infeasible) );
+
+            /* continue presolving in case symmetry presolving methods found a reduction */
+            if( !*unbounded && !*infeasible )
+            {
+               if( nnewconss > 0 || nchgbds > 0
+                  ||npresolfixedvarsold < scip->stat->npresolfixedvars
+                  || npresolaggrvarsold < scip->stat->npresolaggrvars
+                  || npresolchgvartypesold < scip->stat->npresolchgvartypes
+                  || npresolchgbdsold < scip->stat->npresolchgbds
+                  || npresoladdholesold < scip->stat->npresoladdholes
+                  || npresoldelconssold < scip->stat->npresoldelconss
+                  || npresoladdconssold < scip->stat->npresoladdconss
+                  || npresolupgdconssold < scip->stat->npresolupgdconss
+                  || npresolchgcoefsold < scip->stat->npresolchgcoefs
+                  || npresolchgsidesold < scip->stat->npresolchgsides )
+                  finished = FALSE;
+            }
+         }
+      }
    }
 
    /* Flatten aggregation graph in order to avoid complicated multi-aggregated variables (has to happen before checking
@@ -1284,7 +1474,6 @@ SCIP_RETCODE presolve(
 #ifndef NDEBUG
             {
                SCIP_VAR** multvars;
-               int i;
                multvars = SCIPvarGetMultaggrVars(var);
                for( i = SCIPvarGetMultaggrNVars(var) - 1; i >= 0; --i)
                   assert(SCIPvarGetStatus(multvars[i]) != SCIP_VARSTATUS_MULTAGGR);
@@ -2029,6 +2218,7 @@ SCIP_RETCODE freeTransform(
    }
 
    /* free transformed problem data structures */
+   SCIP_CALL( SCIPsyminfoFree(scip, &scip->syminfo) );
    SCIP_CALL( SCIPprobFree(&scip->transprob, scip->messagehdlr, scip->mem->probmem, scip->set, scip->stat, scip->eventqueue, scip->lp) );
    SCIP_CALL( SCIPcliquetableFree(&scip->cliquetable, scip->mem->probmem) );
    SCIP_CALL( SCIPconflictFree(&scip->conflict, scip->mem->probmem) );
@@ -2477,6 +2667,18 @@ SCIP_RETCODE SCIPpresolve(
 
    case SCIP_STAGE_TRANSFORMED:
    case SCIP_STAGE_PRESOLVING:
+      /* possibly add symmetry handling methods */
+      if( scip->set->sym_tryaddtiming == SYM_TIMING_BEFOREPRESOL )
+      {
+         int nnewconss;
+         int nchgbds;
+
+         SCIP_CALL( SCIPtryAddSymmetryHandlingMethods(scip, &nnewconss, TRUE, &nchgbds) );
+
+         scip->stat->npresoladdconss += nnewconss;
+         scip->stat->npresolchgbds += nchgbds;
+      }
+
       /* presolve problem */
       SCIP_CALL( presolve(scip, &unbounded, &infeasible, &vanished) );
       assert(scip->set->stage == SCIP_STAGE_PRESOLVED || scip->set->stage == SCIP_STAGE_PRESOLVING);

@@ -31,8 +31,9 @@
 
 #include <scip/scip.h>
 #include <include/scip_test.h>
-#include <scip/prop_symmetry.c>
+#include <scip/scip_sym.h>
 #include <scip/symmetry.h>
+#include <scip/symmetry_graph.h>
 #include <symmetry/compute_symmetry.h>
 #include <scip/scipdefplugins.h>
 
@@ -40,20 +41,6 @@
 static SCIP* scip;
 
 
-/** check whether two int arrays are equal */
-static
-void checkIntArraysEqual(
-   int*                  expected,           /**< array of expected values */
-   int*                  candidate,          /**< array of values to be checked */
-   int                   length,             /**< length of arrays */
-   const char*           name                /**< name to be printed */
-   )
-{
-   int i;
-
-   for( i = 0; i < length; ++i )
-      cr_expect(expected[i] == candidate[i], "%s[%d]: expected %d, but got %d\n", name, i, expected[i], candidate[i]);
-}
 
 /** sort orbits to compare */
 static
@@ -80,7 +67,7 @@ void setup(void)
    SCIP_CALL( SCIPincludeDefaultPlugins(scip) );
 
    /* turn on symmetry computation */
-   SCIP_CALL( SCIPsetIntParam(scip, "misc/usesymmetry", 1) );
+   SCIP_CALL( SCIPsetBoolParam(scip, "symmetries/enabled", TRUE) );
 
 #ifdef SCIP_DEBUG
    /* output external codes in order to see which external symmetry computation code is used */
@@ -103,6 +90,7 @@ void simpleExample1(
    SCIP_Bool             detectsignedperms   /**< whether signed permutations shall be detected */
    )
 {
+   SYM_SYMTYPE symtype;
    SCIP_VAR* var1;
    SCIP_VAR* var2;
    SCIP_VAR* var3;
@@ -163,21 +151,15 @@ void simpleExample1(
    /* turn off presolving in order to avoid having trivial problem afterwards */
    SCIP_CALL( SCIPsetIntParam(scip, "presolving/maxrounds", 0) );
 
-   /* turn on checking of symmetries */
-   SCIP_CALL( SCIPsetBoolParam(scip, "propagating/symmetry/checksymmetries", TRUE) );
-
-   /* turn off subgroup detection */
-   SCIP_CALL( SCIPsetBoolParam(scip, "propagating/symmetry/detectsubgroups", FALSE) );
-
    /* determine symmetry type */
    if ( detectsignedperms )
    {
-      SCIP_CALL( SCIPsetIntParam(scip, "propagating/symmetry/symtype", 1) );
+      SCIP_CALL( SCIPsetIntParam(scip, "symmetries/symtype", 1) );
       permlen = 8;
    }
    else
    {
-      SCIP_CALL( SCIPsetIntParam(scip, "propagating/symmetry/symtype", 0) );
+      SCIP_CALL( SCIPsetIntParam(scip, "symmetries/symtype", 0) );
       permlen = 4;
    }
 
@@ -185,8 +167,8 @@ void simpleExample1(
    SCIP_CALL( SCIPpresolve(scip) );
 
    /* get symmetry */
-   SCIP_CALL( SCIPgetSymmetry(scip,
-         &npermvars, &permvars, NULL, &nperms, &perms, NULL, NULL, NULL,
+   SCIP_CALL( SCIPgetSymmetry(scip, &symtype,
+         &npermvars, &permvars, NULL, &nperms, &perms, NULL,
          &components, &componentbegins, &vartocomponent, &ncomponents) );
 
    cr_assert( ncomponents == 1 );
@@ -247,6 +229,7 @@ void simpleExample2(
    SCIP_Bool             detectsignedperms   /**< whether signed permutations shall be detected */
    )
 {
+   SYM_SYMTYPE symtype;
    SCIP_VAR* var1;
    SCIP_VAR* var2;
    SCIP_VAR* var3;
@@ -322,23 +305,18 @@ void simpleExample2(
    SCIP_CALL( SCIPaddCons(scip, cons) );
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
 
-   /* turn on checking of symmetries */
-   SCIP_CALL( SCIPsetBoolParam(scip, "propagating/symmetry/checksymmetries", TRUE) );
-
    /* turn off presolving in order to avoid having trivial problem afterwards */
+   SCIP_CALL( SCIPsetBoolParam(scip, "symmetries/enabled", TRUE) );
    SCIP_CALL( SCIPsetIntParam(scip, "presolving/maxrounds", 0) );
-
-   /* turn off subgroup detection */
-   SCIP_CALL( SCIPsetBoolParam(scip, "propagating/symmetry/detectsubgroups", FALSE) );
 
    if ( detectsignedperms )
    {
-      SCIP_CALL( SCIPsetIntParam(scip, "propagating/symmetry/symtype", 1) );
+      SCIP_CALL( SCIPsetIntParam(scip, "symmetries/symtype", 1) );
       permlen = 8;
    }
    else
    {
-      SCIP_CALL( SCIPsetIntParam(scip, "propagating/symmetry/symtype", 0) );
+      SCIP_CALL( SCIPsetIntParam(scip, "symmetries/symtype", 0) );
       permlen = 4;
    }
 
@@ -346,9 +324,10 @@ void simpleExample2(
    SCIP_CALL( SCIPpresolve(scip) );
 
    /* get symmetry */
-   SCIP_CALL( SCIPgetSymmetry(scip,
-         &npermvars, &permvars, NULL, &nperms, &perms, NULL, NULL, NULL,
+   SCIP_CALL( SCIPgetSymmetry(scip, &symtype,
+         &npermvars, &permvars, NULL, &nperms, &perms, NULL,
          &components, &componentbegins, &vartocomponent, &ncomponents) );
+
    cr_assert( nperms == 1 );
    cr_assert( ncomponents == 1 );
    cr_assert( componentbegins[0] == 0 );
@@ -408,6 +387,7 @@ void simpleExample3(
    SCIP_Bool             detectsignedperms   /**< whether signed permutations shall be detected */
    )
 {
+   SYM_SYMTYPE symtype;
    SCIP_VAR* var1;
    SCIP_VAR* var2;
    SCIP_VAR* var3;
@@ -475,20 +455,14 @@ void simpleExample3(
    /* turn off presolving in order to avoid having trivial problem afterwards */
    SCIP_CALL( SCIPsetIntParam(scip, "presolving/maxrounds", 0) );
 
-   /* turn on checking of symmetries */
-   SCIP_CALL( SCIPsetBoolParam(scip, "propagating/symmetry/checksymmetries", TRUE) );
-
-   /* turn off subgroup detection */
-   SCIP_CALL( SCIPsetBoolParam(scip, "propagating/symmetry/detectsubgroups", FALSE) );
-
    if ( detectsignedperms )
    {
-      SCIP_CALL( SCIPsetIntParam(scip, "propagating/symmetry/symtype", 1) );
+      SCIP_CALL( SCIPsetIntParam(scip, "symmetries/symtype", 1) );
       permlen = 10;
    }
    else
    {
-      SCIP_CALL( SCIPsetIntParam(scip, "propagating/symmetry/symtype", 0) );
+      SCIP_CALL( SCIPsetIntParam(scip, "symmetries/symtype", 0) );
       permlen = 5;
    }
 
@@ -496,8 +470,8 @@ void simpleExample3(
    SCIP_CALL( SCIPpresolve(scip) );
 
    /* get symmetry */
-   SCIP_CALL( SCIPgetSymmetry(scip,
-         &npermvars, &permvars, NULL, &nperms, &perms, NULL, NULL, NULL,
+   SCIP_CALL( SCIPgetSymmetry(scip, &symtype,
+         &npermvars, &permvars, NULL, &nperms, &perms, NULL,
          &components, &componentbegins, &vartocomponent, &ncomponents) );
    cr_assert( nperms == 2 );
    cr_assert( ncomponents == 2 );
@@ -551,6 +525,7 @@ void exampleBounddisjunction(
    SCIP_Bool             detectsignedperms   /**< whether signed permutations shall be detected */
    )
 {
+   SYM_SYMTYPE symtype;
    SCIP_VAR* var1;
    SCIP_VAR* var2;
    SCIP_VAR* var3;
@@ -628,23 +603,17 @@ void exampleBounddisjunction(
    /* turn off presolving in order to avoid having trivial problem afterwards */
    SCIP_CALL( SCIPsetIntParam(scip, "presolving/maxrounds", 0) );
 
-   /* turn on checking of symmetries */
-   SCIP_CALL( SCIPsetBoolParam(scip, "propagating/symmetry/checksymmetries", TRUE) );
-
-   /* turn off subgroup detection */
-   SCIP_CALL( SCIPsetBoolParam(scip, "propagating/symmetry/detectsubgroups", FALSE) );
-
    /* general symmetry detection */
-   SCIP_CALL( SCIPsetIntParam(scip, "misc/usesymmetry", 7) );
+   SCIP_CALL( SCIPsetBoolParam(scip, "symmetries/enabled", TRUE) );
 
    if ( detectsignedperms )
    {
-      SCIP_CALL( SCIPsetIntParam(scip, "propagating/symmetry/symtype", 1) );
+      SCIP_CALL( SCIPsetIntParam(scip, "symmetries/symtype", 1) );
       permlen = 12;
    }
    else
    {
-      SCIP_CALL( SCIPsetIntParam(scip, "propagating/symmetry/symtype", 0) );
+      SCIP_CALL( SCIPsetIntParam(scip, "symmetries/symtype", 0) );
       permlen = 6;
    }
 
@@ -652,8 +621,8 @@ void exampleBounddisjunction(
    SCIP_CALL( SCIPpresolve(scip) );
 
    /* get symmetry */
-   SCIP_CALL( SCIPgetSymmetry(scip,
-         &npermvars, &permvars, NULL, &nperms, &perms, NULL, NULL, NULL,
+   SCIP_CALL( SCIPgetSymmetry(scip, &symtype,
+         &npermvars, &permvars, NULL, &nperms, &perms, NULL,
          &components, &componentbegins, &vartocomponent, &ncomponents) );
 
    if ( detectsignedperms )
@@ -721,6 +690,7 @@ void exampleCardinality(
    SCIP_Bool             detectsignedperms   /**< whether signed permutations shall be detected */
    )
 {
+   SYM_SYMTYPE symtype;
    SCIP_VAR* var1;
    SCIP_VAR* var2;
    SCIP_VAR* var3;
@@ -797,23 +767,17 @@ void exampleCardinality(
    /* turn off presolving in order to avoid having trivial problem afterwards */
    SCIP_CALL( SCIPsetIntParam(scip, "presolving/maxrounds", 0) );
 
-   /* turn on checking of symmetries */
-   SCIP_CALL( SCIPsetBoolParam(scip, "propagating/symmetry/checksymmetries", TRUE) );
-
-   /* turn off subgroup detection */
-   SCIP_CALL( SCIPsetBoolParam(scip, "propagating/symmetry/detectsubgroups", FALSE) );
-
    /* general symmetry detection */
-   SCIP_CALL( SCIPsetIntParam(scip, "misc/usesymmetry", 7) );
+   SCIP_CALL( SCIPsetBoolParam(scip, "symmetries/enabled", TRUE) );
 
    if ( detectsignedperms )
    {
-      SCIP_CALL( SCIPsetIntParam(scip, "propagating/symmetry/symtype", 1) );
+      SCIP_CALL( SCIPsetIntParam(scip, "symmetries/symtype", 1) );
       permlen = 16;
    }
    else
    {
-      SCIP_CALL( SCIPsetIntParam(scip, "propagating/symmetry/symtype", 0) );
+      SCIP_CALL( SCIPsetIntParam(scip, "symmetries/symtype", 0) );
       permlen = 8;
    }
 
@@ -821,8 +785,8 @@ void exampleCardinality(
    SCIP_CALL( SCIPpresolve(scip) );
 
    /* get symmetry */
-   SCIP_CALL( SCIPgetSymmetry(scip,
-         &npermvars, &permvars, NULL, &nperms, &perms, NULL, NULL, NULL,
+   SCIP_CALL( SCIPgetSymmetry(scip, &symtype,
+         &npermvars, &permvars, NULL, &nperms, &perms, NULL,
          &components, &componentbegins, &vartocomponent, &ncomponents) );
 
    if ( detectsignedperms )
@@ -893,6 +857,7 @@ void exampleIndicator(
    SCIP_Bool             detectsignedperms   /**< whether signed permutations shall be detected */
    )
 {
+   SYM_SYMTYPE symtype;
    SCIP_VAR* var1;
    SCIP_VAR* var2;
    SCIP_VAR* var3;
@@ -965,24 +930,18 @@ void exampleIndicator(
    /* turn off presolving in order to avoid having trivial problem afterwards */
    SCIP_CALL( SCIPsetIntParam(scip, "presolving/maxrounds", 0) );
 
-   /* turn on checking of symmetries */
-   SCIP_CALL( SCIPsetBoolParam(scip, "propagating/symmetry/checksymmetries", TRUE) );
-
-   /* turn off subgroup detection */
-   SCIP_CALL( SCIPsetBoolParam(scip, "propagating/symmetry/detectsubgroups", FALSE) );
-
    /* general symmetry detection */
-   SCIP_CALL( SCIPsetIntParam(scip, "misc/usesymmetry", 7) );
+   SCIP_CALL( SCIPsetBoolParam(scip, "symmetries/enabled", TRUE) );
 
    /* note that indicator constraints introduce a slack variable, i.e., we have 8 variables */
    if ( detectsignedperms )
    {
-      SCIP_CALL( SCIPsetIntParam(scip, "propagating/symmetry/symtype", 1) );
+      SCIP_CALL( SCIPsetIntParam(scip, "symmetries/symtype", 1) );
       permlen = 16;
    }
    else
    {
-      SCIP_CALL( SCIPsetIntParam(scip, "propagating/symmetry/symtype", 0) );
+      SCIP_CALL( SCIPsetIntParam(scip, "symmetries/symtype", 0) );
       permlen = 8;
    }
 
@@ -990,8 +949,8 @@ void exampleIndicator(
    SCIP_CALL( SCIPpresolve(scip) );
 
    /* get symmetry */
-   SCIP_CALL( SCIPgetSymmetry(scip,
-         &npermvars, &permvars, NULL, &nperms, &perms, NULL, NULL, NULL,
+   SCIP_CALL( SCIPgetSymmetry(scip, &symtype,
+         &npermvars, &permvars, NULL, &nperms, &perms, NULL,
          &components, &componentbegins, &vartocomponent, &ncomponents) );
 
    cr_assert( ncomponents == 1 );
@@ -1057,6 +1016,7 @@ void exampleSOS1(
    SCIP_Bool             detectsignedperms   /**< whether signed permutations shall be detected */
    )
 {
+   SYM_SYMTYPE symtype;
    SCIP_VAR* var1;
    SCIP_VAR* var2;
    SCIP_VAR* var3;
@@ -1123,24 +1083,18 @@ void exampleSOS1(
    /* turn off presolving in order to avoid having trivial problem afterwards */
    SCIP_CALL( SCIPsetIntParam(scip, "presolving/maxrounds", 0) );
 
-   /* turn on checking of symmetries */
-   SCIP_CALL( SCIPsetBoolParam(scip, "propagating/symmetry/checksymmetries", TRUE) );
-
-   /* turn off subgroup detection */
-   SCIP_CALL( SCIPsetBoolParam(scip, "propagating/symmetry/detectsubgroups", FALSE) );
-
    /* general symmetry detection */
-   SCIP_CALL( SCIPsetIntParam(scip, "misc/usesymmetry", 7) );
+   SCIP_CALL( SCIPsetBoolParam(scip, "symmetries/enabled", TRUE) );
 
    /* note that indicator constraints introduce a slack variable, i.e., we have 8 variables */
    if ( detectsignedperms )
    {
-      SCIP_CALL( SCIPsetIntParam(scip, "propagating/symmetry/symtype", 1) );
+      SCIP_CALL( SCIPsetIntParam(scip, "symmetries/symtype", 1) );
       permlen = 8;
    }
    else
    {
-      SCIP_CALL( SCIPsetIntParam(scip, "propagating/symmetry/symtype", 0) );
+      SCIP_CALL( SCIPsetIntParam(scip, "symmetries/symtype", 0) );
       permlen = 4;
    }
 
@@ -1148,8 +1102,8 @@ void exampleSOS1(
    SCIP_CALL( SCIPpresolve(scip) );
 
    /* get symmetry */
-   SCIP_CALL( SCIPgetSymmetry(scip,
-         &npermvars, &permvars, NULL, &nperms, &perms, NULL, NULL, NULL,
+   SCIP_CALL( SCIPgetSymmetry(scip, &symtype,
+         &npermvars, &permvars, NULL, &nperms, &perms, NULL,
          &components, &componentbegins, &vartocomponent, &ncomponents) );
 
    if( detectsignedperms )
@@ -1204,6 +1158,7 @@ void exampleSOS2(
    SCIP_Bool             detectsignedperms   /**< whether signed permutations shall be detected */
    )
 {
+   SYM_SYMTYPE symtype;
    SCIP_VAR* var1;
    SCIP_VAR* var2;
    SCIP_VAR* var3;
@@ -1281,24 +1236,18 @@ void exampleSOS2(
    /* turn off presolving in order to avoid having trivial problem afterwards */
    SCIP_CALL( SCIPsetIntParam(scip, "presolving/maxrounds", 0) );
 
-   /* turn on checking of symmetries */
-   SCIP_CALL( SCIPsetBoolParam(scip, "propagating/symmetry/checksymmetries", TRUE) );
-
-   /* turn off subgroup detection */
-   SCIP_CALL( SCIPsetBoolParam(scip, "propagating/symmetry/detectsubgroups", FALSE) );
-
    /* general symmetry detection */
-   SCIP_CALL( SCIPsetIntParam(scip, "misc/usesymmetry", 7) );
+   SCIP_CALL( SCIPsetBoolParam(scip, "symmetries/enabled", TRUE) );
 
    /* note that indicator constraints introduce a slack variable, i.e., we have 8 variables */
    if ( detectsignedperms )
    {
-      SCIP_CALL( SCIPsetIntParam(scip, "propagating/symmetry/symtype", 1) );
+      SCIP_CALL( SCIPsetIntParam(scip, "symmetries/symtype", 1) );
       permlen = 12;
    }
    else
    {
-      SCIP_CALL( SCIPsetIntParam(scip, "propagating/symmetry/symtype", 0) );
+      SCIP_CALL( SCIPsetIntParam(scip, "symmetries/symtype", 0) );
       permlen = 6;
    }
 
@@ -1306,8 +1255,8 @@ void exampleSOS2(
    SCIP_CALL( SCIPpresolve(scip) );
 
    /* get symmetry */
-   SCIP_CALL( SCIPgetSymmetry(scip,
-         &npermvars, &permvars, NULL, &nperms, &perms, NULL, NULL, NULL,
+   SCIP_CALL( SCIPgetSymmetry(scip, &symtype,
+         &npermvars, &permvars, NULL, &nperms, &perms, NULL,
          &components, &componentbegins, &vartocomponent, &ncomponents) );
 
    if( detectsignedperms )
@@ -1380,6 +1329,7 @@ void examplePB(
    SCIP_Bool             detectsignedperms   /**< whether signed permutations shall be detected */
    )
 {
+   SYM_SYMTYPE symtype;
    SCIP_VAR** terms[3];
    SCIP_VAR* term1[2];
    SCIP_VAR* term2[2];
@@ -1444,24 +1394,18 @@ void examplePB(
    /* turn off presolving in order to avoid having trivial problem afterwards */
    SCIP_CALL( SCIPsetIntParam(scip, "presolving/maxrounds", 0) );
 
-   /* turn on checking of symmetries */
-   SCIP_CALL( SCIPsetBoolParam(scip, "propagating/symmetry/checksymmetries", TRUE) );
-
-   /* turn off subgroup detection */
-   SCIP_CALL( SCIPsetBoolParam(scip, "propagating/symmetry/detectsubgroups", FALSE) );
-
    /* general symmetry detection */
-   SCIP_CALL( SCIPsetIntParam(scip, "misc/usesymmetry", 7) );
+   SCIP_CALL( SCIPsetBoolParam(scip, "symmetries/enabled", TRUE) );
 
    /* note that indicator constraints introduce a slack variable, i.e., we have 8 variables */
    if ( detectsignedperms )
    {
-      SCIP_CALL( SCIPsetIntParam(scip, "propagating/symmetry/symtype", 1) );
+      SCIP_CALL( SCIPsetIntParam(scip, "symmetries/symtype", 1) );
       permlen = 12;             /* 3 binary variables + 3 artificial variables for AND-resultants + reflection */
    }
    else
    {
-      SCIP_CALL( SCIPsetIntParam(scip, "propagating/symmetry/symtype", 0) );
+      SCIP_CALL( SCIPsetIntParam(scip, "symmetries/symtype", 0) );
       permlen = 6;              /* 3 binary variables + 3 artificial variables for AND-resultants */
    }
 
@@ -1469,8 +1413,8 @@ void examplePB(
    SCIP_CALL( SCIPpresolve(scip) );
 
    /* get symmetry */
-   SCIP_CALL( SCIPgetSymmetry(scip,
-         &npermvars, &permvars, NULL, &nperms, &perms, NULL, NULL, NULL,
+   SCIP_CALL( SCIPgetSymmetry(scip, &symtype,
+         &npermvars, &permvars, NULL, &nperms, &perms, NULL,
          &components, &componentbegins, &vartocomponent, &ncomponents) );
 
    cr_assert( nperms == 1 );
@@ -1516,6 +1460,7 @@ void exampleExpr1(
    SCIP_Bool             detectsignedperms   /**< whether signed permutations shall be detected */
    )
 {
+   SYM_SYMTYPE symtype;
    SCIP_VAR* var1;
    SCIP_VAR* var2;
    SCIP_VAR* var3;
@@ -1592,24 +1537,18 @@ void exampleExpr1(
    /* turn off presolving in order to avoid having trivial problem afterwards */
    SCIP_CALL( SCIPsetIntParam(scip, "presolving/maxrounds", 0) );
 
-   /* turn on checking of symmetries */
-   SCIP_CALL( SCIPsetBoolParam(scip, "propagating/symmetry/checksymmetries", TRUE) );
-
-   /* turn off subgroup detection */
-   SCIP_CALL( SCIPsetBoolParam(scip, "propagating/symmetry/detectsubgroups", FALSE) );
-
    /* general symmetry detection */
-   SCIP_CALL( SCIPsetIntParam(scip, "misc/usesymmetry", 7) );
+   SCIP_CALL( SCIPsetBoolParam(scip, "symmetries/enabled", TRUE) );
 
    /* note that indicator constraints introduce a slack variable, i.e., we have 8 variables */
    if ( detectsignedperms )
    {
-      SCIP_CALL( SCIPsetIntParam(scip, "propagating/symmetry/symtype", 1) );
+      SCIP_CALL( SCIPsetIntParam(scip, "symmetries/symtype", 1) );
       permlen = 6;
    }
    else
    {
-      SCIP_CALL( SCIPsetIntParam(scip, "propagating/symmetry/symtype", 0) );
+      SCIP_CALL( SCIPsetIntParam(scip, "symmetries/symtype", 0) );
       permlen = 3;
    }
 
@@ -1617,8 +1556,8 @@ void exampleExpr1(
    SCIP_CALL( SCIPpresolve(scip) );
 
    /* get symmetry */
-   SCIP_CALL( SCIPgetSymmetry(scip,
-         &npermvars, &permvars, NULL, &nperms, &perms, NULL, NULL, NULL,
+   SCIP_CALL( SCIPgetSymmetry(scip, &symtype,
+         &npermvars, &permvars, NULL, &nperms, &perms, NULL,
          &components, &componentbegins, &vartocomponent, &ncomponents) );
 
    cr_assert( nperms == 1 );
@@ -1669,6 +1608,7 @@ void exampleExpr2(
    SCIP_Bool             detectsignedperms   /**< whether signed permutations shall be detected */
    )
 {
+   SYM_SYMTYPE symtype;
    SCIP_VAR* var1;
    SCIP_VAR* var2;
    SCIP_VAR* var3;
@@ -1771,24 +1711,18 @@ void exampleExpr2(
    /* turn off presolving in order to avoid having trivial problem afterwards */
    SCIP_CALL( SCIPsetIntParam(scip, "presolving/maxrounds", 0) );
 
-   /* turn on checking of symmetries */
-   SCIP_CALL( SCIPsetBoolParam(scip, "propagating/symmetry/checksymmetries", TRUE) );
-
-   /* turn off subgroup detection */
-   SCIP_CALL( SCIPsetBoolParam(scip, "propagating/symmetry/detectsubgroups", FALSE) );
-
    /* general symmetry detection */
-   SCIP_CALL( SCIPsetIntParam(scip, "misc/usesymmetry", 7) );
+   SCIP_CALL( SCIPsetBoolParam(scip, "symmetries/enabled", TRUE) );
 
    /* note that indicator constraints introduce a slack variable, i.e., we have 8 variables */
    if ( detectsignedperms )
    {
-      SCIP_CALL( SCIPsetIntParam(scip, "propagating/symmetry/symtype", 1) );
+      SCIP_CALL( SCIPsetIntParam(scip, "symmetries/symtype", 1) );
       permlen = 10;
    }
    else
    {
-      SCIP_CALL( SCIPsetIntParam(scip, "propagating/symmetry/symtype", 0) );
+      SCIP_CALL( SCIPsetIntParam(scip, "symmetries/symtype", 0) );
       permlen = 5;
    }
 
@@ -1796,8 +1730,8 @@ void exampleExpr2(
    SCIP_CALL( SCIPpresolve(scip) );
 
    /* get symmetry */
-   SCIP_CALL( SCIPgetSymmetry(scip,
-         &npermvars, &permvars, NULL, &nperms, &perms, NULL, NULL, NULL,
+   SCIP_CALL( SCIPgetSymmetry(scip, &symtype,
+         &npermvars, &permvars, NULL, &nperms, &perms, NULL,
          &components, &componentbegins, &vartocomponent, &ncomponents) );
 
    cr_assert( nperms == 1 );
@@ -1859,6 +1793,7 @@ void exampleExpr3(
    SCIP_Bool             detectsignedperms   /**< whether signed permutations shall be detected */
    )
 {
+   SYM_SYMTYPE symtype;
    SCIP_VAR* var1;
    SCIP_VAR* var2;
    SCIP_VAR* var3;
@@ -1935,24 +1870,18 @@ void exampleExpr3(
    /* turn off presolving in order to avoid having trivial problem afterwards */
    SCIP_CALL( SCIPsetIntParam(scip, "presolving/maxrounds", 0) );
 
-   /* turn on checking of symmetries */
-   SCIP_CALL( SCIPsetBoolParam(scip, "propagating/symmetry/checksymmetries", TRUE) );
-
-   /* turn off subgroup detection */
-   SCIP_CALL( SCIPsetBoolParam(scip, "propagating/symmetry/detectsubgroups", FALSE) );
-
    /* general symmetry detection */
-   SCIP_CALL( SCIPsetIntParam(scip, "misc/usesymmetry", 7) );
+   SCIP_CALL( SCIPsetBoolParam(scip, "symmetries/enabled", TRUE) );
 
    /* note that indicator constraints introduce a slack variable, i.e., we have 8 variables */
    if ( detectsignedperms )
    {
-      SCIP_CALL( SCIPsetIntParam(scip, "propagating/symmetry/symtype", 1) );
+      SCIP_CALL( SCIPsetIntParam(scip, "symmetries/symtype", 1) );
       permlen = 8;
    }
    else
    {
-      SCIP_CALL( SCIPsetIntParam(scip, "propagating/symmetry/symtype", 0) );
+      SCIP_CALL( SCIPsetIntParam(scip, "symmetries/symtype", 0) );
       permlen = 4;
    }
 
@@ -1960,8 +1889,8 @@ void exampleExpr3(
    SCIP_CALL( SCIPpresolve(scip) );
 
    /* get symmetry */
-   SCIP_CALL( SCIPgetSymmetry(scip,
-         &npermvars, &permvars, NULL, &nperms, &perms, NULL, NULL, NULL,
+   SCIP_CALL( SCIPgetSymmetry(scip, &symtype,
+         &npermvars, &permvars, NULL, &nperms, &perms, NULL,
          &components, &componentbegins, &vartocomponent, &ncomponents) );
 
    if ( detectsignedperms )
@@ -2018,6 +1947,7 @@ void exampleExpr4(
    SCIP_Bool             detectsignedperms   /**< whether signed permutations shall be detected */
    )
 {
+   SYM_SYMTYPE symtype;
    SCIP_VAR* var1;
    SCIP_VAR* var2;
    SCIP_VAR* var3;
@@ -2104,24 +2034,18 @@ void exampleExpr4(
    /* turn off presolving in order to avoid having trivial problem afterwards */
    SCIP_CALL( SCIPsetIntParam(scip, "presolving/maxrounds", 0) );
 
-   /* turn on checking of symmetries */
-   SCIP_CALL( SCIPsetBoolParam(scip, "propagating/symmetry/checksymmetries", TRUE) );
-
-   /* turn off subgroup detection */
-   SCIP_CALL( SCIPsetBoolParam(scip, "propagating/symmetry/detectsubgroups", FALSE) );
-
    /* general symmetry detection */
-   SCIP_CALL( SCIPsetIntParam(scip, "misc/usesymmetry", 7) );
+   SCIP_CALL( SCIPsetBoolParam(scip, "symmetries/enabled", TRUE) );
 
    /* note that indicator constraints introduce a slack variable, i.e., we have 8 variables */
    if ( detectsignedperms )
    {
-      SCIP_CALL( SCIPsetIntParam(scip, "propagating/symmetry/symtype", 1) );
+      SCIP_CALL( SCIPsetIntParam(scip, "symmetries/symtype", 1) );
       permlen = 8;
    }
    else
    {
-      SCIP_CALL( SCIPsetIntParam(scip, "propagating/symmetry/symtype", 0) );
+      SCIP_CALL( SCIPsetIntParam(scip, "symmetries/symtype", 0) );
       permlen = 4;
    }
 
@@ -2129,8 +2053,8 @@ void exampleExpr4(
    SCIP_CALL( SCIPpresolve(scip) );
 
    /* get symmetry */
-   SCIP_CALL( SCIPgetSymmetry(scip,
-         &npermvars, &permvars, NULL, &nperms, &perms, NULL, NULL, NULL,
+   SCIP_CALL( SCIPgetSymmetry(scip, &symtype,
+         &npermvars, &permvars, NULL, &nperms, &perms, NULL,
          &components, &componentbegins, &vartocomponent, &ncomponents) );
 
    if ( detectsignedperms )
@@ -2188,6 +2112,7 @@ void exampleExpr5(
    SCIP_Bool             detectsignedperms   /**< whether signed permutations shall be detected */
    )
 {
+   SYM_SYMTYPE symtype;
    SCIP_VAR* var1;
    SCIP_VAR* var2;
    SCIP_VAR* var3;
@@ -2264,24 +2189,18 @@ void exampleExpr5(
    /* turn off presolving in order to avoid having trivial problem afterwards */
    SCIP_CALL( SCIPsetIntParam(scip, "presolving/maxrounds", 0) );
 
-   /* turn on checking of symmetries */
-   SCIP_CALL( SCIPsetBoolParam(scip, "propagating/symmetry/checksymmetries", TRUE) );
-
-   /* turn off subgroup detection */
-   SCIP_CALL( SCIPsetBoolParam(scip, "propagating/symmetry/detectsubgroups", FALSE) );
-
    /* general symmetry detection */
-   SCIP_CALL( SCIPsetIntParam(scip, "misc/usesymmetry", 7) );
+   SCIP_CALL( SCIPsetBoolParam(scip, "symmetries/enabled", TRUE) );
 
    /* note that indicator constraints introduce a slack variable, i.e., we have 8 variables */
    if ( detectsignedperms )
    {
-      SCIP_CALL( SCIPsetIntParam(scip, "propagating/symmetry/symtype", 1) );
+      SCIP_CALL( SCIPsetIntParam(scip, "symmetries/symtype", 1) );
       permlen = 8;
    }
    else
    {
-      SCIP_CALL( SCIPsetIntParam(scip, "propagating/symmetry/symtype", 0) );
+      SCIP_CALL( SCIPsetIntParam(scip, "symmetries/symtype", 0) );
       permlen = 4;
    }
 
@@ -2289,8 +2208,8 @@ void exampleExpr5(
    SCIP_CALL( SCIPpresolve(scip) );
 
    /* get symmetry */
-   SCIP_CALL( SCIPgetSymmetry(scip,
-         &npermvars, &permvars, NULL, &nperms, &perms, NULL, NULL, NULL,
+   SCIP_CALL( SCIPgetSymmetry(scip, &symtype,
+         &npermvars, &permvars, NULL, &nperms, &perms, NULL,
          &components, &componentbegins, &vartocomponent, &ncomponents) );
 
    cr_assert( ncomponents == 1 );
@@ -2339,6 +2258,7 @@ void exampleExpr6(
    SCIP_Bool             detectsignedperms   /**< whether signed permutations shall be detected */
    )
 {
+   SYM_SYMTYPE symtype;
    SCIP_VAR* var1;
    SCIP_VAR* var2;
    SCIP_VAR* var3;
@@ -2448,24 +2368,18 @@ void exampleExpr6(
    /* turn off presolving in order to avoid having trivial problem afterwards */
    SCIP_CALL( SCIPsetIntParam(scip, "presolving/maxrounds", 0) );
 
-   /* turn on checking of symmetries */
-   SCIP_CALL( SCIPsetBoolParam(scip, "propagating/symmetry/checksymmetries", TRUE) );
-
-   /* turn off subgroup detection */
-   SCIP_CALL( SCIPsetBoolParam(scip, "propagating/symmetry/detectsubgroups", FALSE) );
-
    /* general symmetry detection */
-   SCIP_CALL( SCIPsetIntParam(scip, "misc/usesymmetry", 7) );
+   SCIP_CALL( SCIPsetBoolParam(scip, "symmetries/enabled", TRUE) );
 
    /* note that indicator constraints introduce a slack variable, i.e., we have 8 variables */
    if ( detectsignedperms )
    {
-      SCIP_CALL( SCIPsetIntParam(scip, "propagating/symmetry/symtype", 1) );
+      SCIP_CALL( SCIPsetIntParam(scip, "symmetries/symtype", 1) );
       permlen = 10;
    }
    else
    {
-      SCIP_CALL( SCIPsetIntParam(scip, "propagating/symmetry/symtype", 0) );
+      SCIP_CALL( SCIPsetIntParam(scip, "symmetries/symtype", 0) );
       permlen = 5;
    }
 
@@ -2473,8 +2387,8 @@ void exampleExpr6(
    SCIP_CALL( SCIPpresolve(scip) );
 
    /* get symmetry */
-   SCIP_CALL( SCIPgetSymmetry(scip,
-         &npermvars, &permvars, NULL, &nperms, &perms, NULL, NULL, NULL,
+   SCIP_CALL( SCIPgetSymmetry(scip, &symtype,
+         &npermvars, &permvars, NULL, &nperms, &perms, NULL,
          &components, &componentbegins, &vartocomponent, &ncomponents) );
 
    cr_assert( ncomponents == 1 );
@@ -2712,235 +2626,7 @@ Test(test_compute_symmetry, expr12, .description = "compute signed permutation s
    exampleExpr6(TRUE);
 }
 
-/* TEST 31 (subgroups) */
-Test(test_compute_symmetry, subgroups1, .description = "detect symmetric subgroups for artificial propdata")
-{
-   SCIP_PROPDATA propdata;
-   SCIP_VAR* dummyvar;
-   SCIP_VAR* permvars[10];
-   unsigned componentblocked = FALSE;
-   int* graphcomponents;
-   int* graphcompbegins;
-   int* compcolorbegins;
-   int* usedperms;
-   int* perms[6];
-   SCIP_Shortbool permused[6] = {FALSE};
-   int permorder1[6] = {0,1,2,3,4,5};
-   int permorder2[6] = {2,3,4,5,0,1};
-   int permorder3[6] = {5,0,1,2,3,4};
-   int perm1[10] = {1,0,2,4,3,5,6,7,8,9};
-   int perm2[10] = {0,2,1,3,5,4,6,7,8,9};
-   int perm3[10] = {0,1,2,3,4,5,7,6,8,9};
-   int perm4[10] = {0,1,2,3,4,5,6,8,7,9};
-   int perm5[10] = {0,1,2,3,4,5,6,7,9,8};
-   int perm6[10] = {6,7,2,8,9,5,0,1,3,4};
-   int components[6] = {0,1,2,3,4,5};
-   int componentbegins[2] = {0,6};
-   int expectedcomps[10] = {0,1,2,3,4,5,6,7,8,9};
-   int expectedcompbegins[4] = {0,3,6,10};
-   int expectedcolbegins[3] = {0,2,3};
-   int expectedcomps1[10] = {0,1,2,3,4,5,6,7,8,9};
-   int expectedcompbegins1[4] = {0,3,6,10};
-   int expectedcolbegins1[3] = {0,2,3};
-   int expectedcomps2[10] = {0,6,2,1,7,3,8,4,5,9};
-   int expectedcompbegins2[5] = {0,2,5,7,10};
-   int expectedcolbegins2[2] = {0,4};
-   int ngraphcomponents;
-   int ncompcolors;
-   int nusedperms;
-   int i;
-
-   SCIP_CALL( SCIPcreateProbBasic(scip, "subgroup1"));
-
-   /* skip test if no symmetry can be computed */
-   if ( ! SYMcanComputeSymmetry() )
-      return;
-
-   SCIP_CALL( SCIPcreateVarBasic(scip, &dummyvar, "dummyvar", 0.0, 1.0, 1.0, SCIP_VARTYPE_BINARY) );
-   for (i = 0; i < 10; ++i)
-      permvars[i] = dummyvar;
-
-   perms[0] = perm1;
-   perms[1] = perm2;
-   perms[2] = perm3;
-   perms[3] = perm4;
-   perms[4] = perm5;
-   perms[5] = perm6;
-
-   propdata.npermvars = 10;
-   propdata.nperms = 6;
-   propdata.perms = perms;
-   propdata.ncomponents = 1;
-   propdata.components = components;
-   propdata.componentbegins = componentbegins;
-   propdata.componentblocked = &componentblocked;
-   propdata.computedsymmetry = TRUE;
-   propdata.permvars = permvars;
-
-   SCIP_CALL( SCIPallocBufferArray(scip, &usedperms, 6) );
-
-   /* check canonical order */
-   for (i = 0; i < 6; ++i)
-      permused[i] = FALSE;
-   SCIP_CALL( buildSubgroupGraph(scip, &propdata, permorder1, 6, 0, &graphcomponents, &graphcompbegins,
-         &compcolorbegins, &ngraphcomponents, &ncompcolors, &usedperms, &nusedperms, 6, permused) );
-
-   cr_assert( graphcomponents != NULL );
-   cr_assert( graphcompbegins != NULL );
-   cr_assert( compcolorbegins != NULL );
-   cr_assert( nusedperms == 5, "expected 5 used permutations, but got %d\n", nusedperms );
-   cr_assert( ngraphcomponents == 3, "expected 3 graph components, but got %d\n", ngraphcomponents );
-   cr_assert( ncompcolors == 2, "expected 2 component colors, but got %d\n", ncompcolors );
-
-   checkIntArraysEqual(expectedcomps, graphcomponents, 10, "components");
-   checkIntArraysEqual(expectedcompbegins, graphcompbegins, ngraphcomponents, "compbegins");
-   checkIntArraysEqual(expectedcolbegins, compcolorbegins, ncompcolors, "colorbegins");
-
-   SCIPfreeBlockMemoryArray(scip, &compcolorbegins, ncompcolors + 1);
-   SCIPfreeBlockMemoryArray(scip, &graphcompbegins, ngraphcomponents + 1);
-   SCIPfreeBlockMemoryArray(scip, &graphcomponents, 10);
-
-   /* check different order */
-   for (i = 0; i < 6; ++i)
-      permused[i] = FALSE;
-   SCIP_CALL( buildSubgroupGraph(scip, &propdata, permorder2, 6, 0, &graphcomponents, &graphcompbegins,
-         &compcolorbegins, &ngraphcomponents, &ncompcolors, &usedperms, &nusedperms, 6, permused) );
-
-   cr_assert( graphcomponents != NULL );
-   cr_assert( graphcompbegins != NULL );
-   cr_assert( compcolorbegins != NULL );
-   cr_assert( nusedperms == 5, "expected 5 used permutations, but got %d\n", nusedperms );
-   cr_assert( ngraphcomponents == 3, "expected 3 graph components, but got %d\n", ngraphcomponents );
-   cr_assert( ncompcolors == 2, "expected 2 component colors, but got %d\n", ncompcolors );
-
-   checkIntArraysEqual(expectedcomps1, graphcomponents, 10, "components");
-   checkIntArraysEqual(expectedcompbegins1, graphcompbegins, ngraphcomponents, "compbegins");
-   checkIntArraysEqual(expectedcolbegins1, compcolorbegins, ncompcolors, "colorbegins");
-
-   SCIPfreeBlockMemoryArray(scip, &compcolorbegins, ncompcolors + 1);
-   SCIPfreeBlockMemoryArray(scip, &graphcompbegins, ngraphcomponents + 1);
-   SCIPfreeBlockMemoryArray(scip, &graphcomponents, 10);
-
-   /* check order that leads to trivial subgroup */
-   for (i = 0; i < 6; ++i)
-      permused[i] = FALSE;
-   SCIP_CALL( buildSubgroupGraph(scip, &propdata, permorder3, 6, 0, &graphcomponents, &graphcompbegins,
-         &compcolorbegins, &ngraphcomponents, &ncompcolors, &usedperms, &nusedperms, 6, permused) );
-
-   cr_assert( graphcomponents != NULL );
-   cr_assert( graphcompbegins != NULL );
-   cr_assert( compcolorbegins != NULL );
-   cr_assert( nusedperms == 2, "expected 2 used permutations, but got %d\n", nusedperms );
-   cr_assert( ngraphcomponents == 4, "expected 4 graph components, but got %d\n", ngraphcomponents );
-   cr_assert( ncompcolors == 1, "expected 1 component colors, but got %d\n", ncompcolors );
-
-   checkIntArraysEqual(expectedcomps2, graphcomponents, 10, "components");
-   checkIntArraysEqual(expectedcompbegins2, graphcompbegins, ngraphcomponents, "compbegins");
-   checkIntArraysEqual(expectedcolbegins2, compcolorbegins, ncompcolors, "colorbegins");
-
-   SCIPfreeBlockMemoryArray(scip, &compcolorbegins, ncompcolors + 1);
-   SCIPfreeBlockMemoryArray(scip, &graphcompbegins, ngraphcomponents + 1);
-   SCIPfreeBlockMemoryArray(scip, &graphcomponents, 10);
-   SCIPfreeBufferArray(scip, &usedperms);
-   SCIP_CALL( SCIPreleaseVar(scip, &dummyvar) );
-}
-
-/* TEST 32 (subgroups) */
-Test(test_compute_symmetry, subgroups2, .description = "detect symmetric subgroups for artificial propdata and different order")
-{
-   SCIP_PROPDATA propdata;
-   SCIP_VAR* dummyvar;
-   SCIP_VAR* permvars[10];
-   unsigned componentblocked = FALSE;
-   int* permorder;
-   int* graphcomponents;
-   int* graphcompbegins;
-   int* compcolorbegins;
-   int* usedperms;
-   int* perms[6];
-   SCIP_Shortbool permused[6] = {FALSE};
-   int perm1[10] = {0,2,1,3,5,4,6,7,8,9};
-   int perm2[10] = {0,1,2,3,4,5,7,6,8,9};
-   int perm3[10] = {0,1,2,3,4,5,6,8,7,9};
-   int perm4[10] = {6,7,0,8,9,5,2,1,3,4};
-   int perm5[10] = {1,0,2,4,3,5,6,7,8,9};
-   int perm6[10] = {0,1,2,3,4,5,6,7,9,8};
-   int components[6] = {0,1,2,3,4,5};
-   int componentbegins[2] = {0,6};
-   int expectedpermorder[6] = {5,1,2,4,0,3};
-   int expectedcomps[10] = {0,1,2,3,4,5,6,7,8,9};
-   int expectedcompbegins[4] = {0,3,6,10};
-   int expectedcolbegins[3] = {0,2,3};
-   int ngraphcomponents;
-   int ncompcolors;
-   int ntwocycleperms;
-   int nusedperms;
-   int i;
-
-   SCIP_CALL( SCIPcreateProbBasic(scip, "subgroup2"));
-
-   /* skip test if no symmetry can be computed */
-   if ( ! SYMcanComputeSymmetry() )
-      return;
-
-   perms[0] = perm1;
-   perms[1] = perm2;
-   perms[2] = perm3;
-   perms[3] = perm4;
-   perms[4] = perm5;
-   perms[5] = perm6;
-
-   SCIP_CALL( SCIPcreateVarBasic(scip, &dummyvar, "dummyvar", 0.0, 1.0, 1.0, SCIP_VARTYPE_BINARY) );
-   for (i = 0; i < 10; ++i)
-      permvars[i] = dummyvar;
-
-   propdata.npermvars = 10;
-   propdata.nperms = 6;
-   propdata.perms = perms;
-   propdata.ncomponents = 1;
-   propdata.components = components;
-   propdata.componentbegins = componentbegins;
-   propdata.componentblocked = &componentblocked;
-   propdata.computedsymmetry = TRUE;
-   propdata.permvars = permvars;
-   propdata.preferlessrows = TRUE;
-
-   SCIP_CALL( SCIPallocBufferArray(scip, &usedperms, 6) );
-
-   /* check sorted order */
-   SCIP_CALL( SCIPallocBufferArray(scip, &permorder, 6) );
-
-   for (i = 0; i < 6; ++i)
-      permorder[i] = i;
-
-   SCIP_CALL( chooseOrderOfGenerators(scip, &propdata, 0, &permorder, &ntwocycleperms) );
-   cr_assert( ntwocycleperms == 5 );
-
-   checkIntArraysEqual(expectedpermorder, permorder, 6, "permorder");
-
-   SCIP_CALL( buildSubgroupGraph(scip, &propdata, permorder, ntwocycleperms, 0, &graphcomponents,
-         &graphcompbegins, &compcolorbegins, &ngraphcomponents, &ncompcolors, &usedperms, &nusedperms, 6, permused) );
-
-   cr_assert( graphcomponents != NULL );
-   cr_assert( graphcompbegins != NULL );
-   cr_assert( compcolorbegins != NULL );
-   cr_assert( nusedperms == 5, "expected 5 used permutations, but got %d\n", nusedperms );
-   cr_assert( ngraphcomponents == 3, "expected 3 graph components, but got %d\n", ngraphcomponents );
-   cr_assert( ncompcolors == 2, "expected 2 component colors, but got %d\n", ncompcolors );
-
-   checkIntArraysEqual(expectedcomps, graphcomponents, 10, "components");
-   checkIntArraysEqual(expectedcompbegins, graphcompbegins, ngraphcomponents, "compbegins");
-   checkIntArraysEqual(expectedcolbegins, compcolorbegins, ncompcolors, "colorbegins");
-
-   SCIPfreeBlockMemoryArray(scip, &compcolorbegins, ncompcolors + 1);
-   SCIPfreeBlockMemoryArray(scip, &graphcompbegins, ngraphcomponents + 1);
-   SCIPfreeBlockMemoryArray(scip, &graphcomponents, 10);
-   SCIPfreeBufferArray(scip, &permorder);
-   SCIPfreeBufferArray(scip, &usedperms);
-   SCIP_CALL( SCIPreleaseVar(scip, &dummyvar) );
-}
-
-/* TEST 33 (doublelex matrices) */
+/* TEST 31 (doublelex matrices) */
 Test(test_compute_symmetry, doublelex, .description = "detect action corresponding to double lex matrices")
 {
    int perm1[20] = {1,0,2,3,5,4,6,7,9,8,10,11,13,12,14,15,17,16,18,19};
@@ -2994,7 +2680,7 @@ Test(test_compute_symmetry, doublelex, .description = "detect action correspondi
    SCIPfreeBlockMemoryArray(scip, &lexmatrix, nrows);
 }
 
-/* TEST 34 symmetry computation of SDG for permutation symmetries */
+/* TEST 32 symmetry computation of SDG for permutation symmetries */
 Test(test_compute_symmetry, symsdgnodes, .description = "detect symmetries of full SDG")
 {
    SCIP_VAR* vars[4];
@@ -3063,7 +2749,7 @@ Test(test_compute_symmetry, symsdgnodes, .description = "detect symmetries of fu
    }
 }
 
-/* TEST 35 symmetry computation of SDG for reflection symmetries */
+/* TEST 33 symmetry computation of SDG for reflection symmetries */
 Test(test_compute_symmetry, symsdgnodes2, .description = "detect symmetries of full SDG")
 {
    SCIP_VAR* vars[2];

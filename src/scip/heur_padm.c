@@ -346,7 +346,7 @@ SCIP_RETCODE createSubscip(
    SCIP_CALL( SCIPsetPresolving(*subscip, SCIP_PARAMSETTING_FAST, TRUE) );
 
    /* disable expensive techniques */
-   SCIP_CALL( SCIPsetIntParam(*subscip, "misc/usesymmetry", 0) );
+   SCIP_CALL( SCIPsetBoolParam(*subscip, "symmetries/enabled", FALSE) );
 
    /* do not abort subproblem on CTRL-C */
    SCIP_CALL( SCIPsetBoolParam(*subscip, "misc/catchctrlc", FALSE) );
@@ -748,13 +748,13 @@ SCIP_RETCODE reoptimize(
    {
       SCIP_CALL( SCIPhashmapCreate(&varmap, SCIPblkmem(scipcopy), SCIPgetNOrigVars(scip)) );
       SCIP_CALL( SCIPcopyOrigConsCompression(scip, scipcopy, varmap, NULL, "reopt_padm", linkvars, linkvals, nlinkvars,
-               FALSE, FALSE, TRUE, success) );
+            FALSE, FALSE, FALSE, TRUE, success) );
    }
    else
    {
       SCIP_CALL( SCIPhashmapCreate(&varmap, SCIPblkmem(scipcopy), SCIPgetNVars(scip)) );
       SCIP_CALL( SCIPcopyConsCompression(scip, scipcopy, varmap, NULL, "reopt_padm", linkvars, linkvals, nlinkvars,
-               TRUE, FALSE, FALSE, TRUE, success) );
+            TRUE, FALSE, FALSE, FALSE, TRUE, success) );
    }
    for( v = 0; v < nvars; v++ )
    {
@@ -786,7 +786,7 @@ SCIP_RETCODE reoptimize(
    SCIP_CALL( SCIPsetLongintParam(scipcopy, "constraints/components/nodelimit", 0LL) );
 
    /* disable expensive techniques */
-   SCIP_CALL( SCIPsetIntParam(scipcopy, "misc/usesymmetry", 0) );
+   SCIP_CALL( SCIPsetBoolParam(scipcopy, "symmetries/enabled", FALSE) );
 
    /* speed up sub-SCIP by not checking dual LP feasibility */
    SCIP_CALL( SCIPsetBoolParam(scipcopy, "lp/checkdualfeas", FALSE) );

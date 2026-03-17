@@ -27,6 +27,7 @@
  * @brief  methods for global SCIP settings
  * @author Tobias Achterberg
  * @author Timo Berthold
+ * @author Christopher Hojny
  *
  * @todo Functions like SCIPsetFeastol() are misleading (it seems that the feasibility tolerance can be set).
  *       Rename all functions starting with SCIPsetXXX, e.g., SCIPsetGetFeastol() and SCIPsetSetFeastol().
@@ -62,6 +63,7 @@
 #include "scip/reader.h"
 #include "scip/relax.h"
 #include "scip/sepa.h"
+#include "scip/sym.h"
 #include "scip/cutsel.h"
 #include "scip/table.h"
 #include "scip/prop.h"
@@ -71,6 +73,7 @@
 #include "scip/iisfinder.h"
 #include "scip/pub_nlpi.h"
 #include "scip/struct_scip.h" /* for SCIPsetPrintDebugMessage() */
+#include "symmetry/compute_symmetry.h"
 
 /*
  * Default settings
@@ -329,10 +332,6 @@
 #define SCIP_DEFAULT_MISC_ALLOWSTRONGDUALREDS TRUE /**< should strong dual reductions be allowed in propagation and presolving? */
 #define SCIP_DEFAULT_MISC_ALLOWWEAKDUALREDS   TRUE /**< should weak dual reductions be allowed in propagation and presolving? */
 #define SCIP_DEFAULT_MISC_REFERENCEVALUE   1e99 /**< objective value for reference purposes */
-#define SCIP_DEFAULT_MISC_USESYMMETRY         7 /**< bitset describing used symmetry handling technique (0: off; 1: polyhedral (orbitopes and symresacks, lexicographic and orbitopal reduction if dynamic)
-                                                 *   2: orbital reduction; 3: polyhedral methods and orbital reduction; 4: Schreier Sims cuts; 5: Schreier Sims cuts and polyhedral
-                                                 *   methods); 6: Schreier Sims cuts and orbital reduction; 7: Schreier Sims cuts, polyhedral methods, and orbital
-                                                 *   reduction, see type_symmetry.h */
 #define SCIP_DEFAULT_MISC_SCALEOBJ         TRUE /**< should the objective function be scaled? */
 #define SCIP_DEFAULT_MISC_SHOWDIVINGSTATS FALSE /**< should detailed statistics for diving heuristics be shown? */
 
@@ -562,7 +561,17 @@ static const char SCIP_DEFAULT_CERTIFICATE_FILENAME[2] = {'-', '\0'}; /**< name 
 #define SCIP_DEFAULT_WRITE_GENNAMES_OFFSET    0 /**< when writing the problem with generic names, we start with index
                                                  *   0; using this parameter we can change the starting index to be
                                                  *   different */
-
+/* symmetry settings */
+#define SCIP_DEFAULT_SYM_ENABLED           TRUE /**< is symmetry handling enabled? */
+#define SCIP_DEFAULT_SYM_TRYADDTIMING SYM_TIMING_AFTERPRESOL /**< timing for trying to add symmetry handling methods (0: before presolinv; 1: after presolving) */
+#define SCIP_DEFAULT_SYM_MAXNGENERATORS    1500 /**< maximum number of symmetry group generators to be computed (-1: unbounded) */
+#define SCIP_DEFAULT_SYM_SYMTYPE SYM_SYMTYPE_PERM /**< type of symmetries to be considered (0: permutation symmetries, 1: signed permutation symmetries) */
+#define SCIP_DEFAULT_SYM_NAUTYMAXLEVEL    10000 /**< terminate symmetry detection using Nauty when depth level of Nauty's search tree exceeds this number
+                                                 *   (avoids call stack overflows in Nauty for deep graphs) */
+#define SCIP_DEFAULT_SYM_FIXEDVARTYPES        0 /**< bitset describing the variable types that shall be fixed by symmetries
+                                                 *   (0: none; 1: binary; 2; integer; 3: binary and integer; 4: continuous;
+                                                 *    5: binary and continuous; 6: integer and continuous; 7: all) */
+#define SCIP_DEFAULT_SYM_COMPRESSTHRESHOLD  0.5 /** compress symmetry information if percentage of moved vars is at most the threshold */
 
 /* Writing */
 
@@ -768,25 +777,6 @@ SCIP_DECL_PARAMCHGD(paramChgdEnableReopt)
    return retcode;
 }
 
-/** information method for a parameter change of usesymmetry */
-static
-SCIP_DECL_PARAMCHGD(paramChgdUsesymmetry)
-{  /*lint --e{715}*/
-   assert( scip != NULL );
-   assert( param != NULL );
-
-   if ( SCIPgetStage(scip) >= SCIP_STAGE_INITPRESOLVE && SCIPgetStage(scip) <= SCIP_STAGE_SOLVED )
-   {
-      if ( SCIPparamGetInt(param) > 0 )
-      {
-         SCIPerrorMessage("Cannot turn on symmetry handling during (pre)solving or change method.\n");
-         return SCIP_PARAMETERWRONGVAL;
-      }
-   }
-
-   return SCIP_OKAY;
-}
-
 #ifdef SCIP_WITH_EXACTSOLVE
 /** information method for a parameter change of exact solving mode */
 static
@@ -948,6 +938,7 @@ SCIP_RETCODE SCIPsetCopyPlugins(
    SCIP_Bool             copyeventhdlrs,     /**< should the event handlers be copied */
    SCIP_Bool             copynodeselectors,  /**< should the node selectors be copied */
    SCIP_Bool             copybranchrules,    /**< should the branchrules be copied */
+   SCIP_Bool             copysymhdlrs,       /**< should the symmetry handlers be copied */
    SCIP_Bool             copyiisfinders,     /**< should the IIS finders be copied */
    SCIP_Bool             copydisplays,       /**< should the display columns be copied */
    SCIP_Bool             copydialogs,        /**< should the dialogs be copied */
@@ -1115,6 +1106,15 @@ SCIP_RETCODE SCIPsetCopyPlugins(
       for( p = 0; p < sourceset->nsepas; ++p )
       {
          SCIP_CALL( SCIPsepaCopyInclude(sourceset->sepas[p], targetset) );
+      }
+   }
+
+   /* copy all symmetry handler plugins */
+   if( copysymhdlrs && sourceset->symhdlrs != NULL )
+   {
+      for( p = 0; p < sourceset->nsymhdlrs; ++p )
+      {
+         SCIP_CALL( SCIPsymhdlrCopyInclude(sourceset->symhdlrs[p], targetset) );
       }
    }
 
@@ -1289,6 +1289,17 @@ SCIP_RETCODE SCIPsetCreate(
    (*set)->branchrulessize = 0;
    (*set)->branchrulessorted = FALSE;
    (*set)->branchrulesnamesorted = FALSE;
+   (*set)->symhdlrs = NULL;
+   (*set)->nsymhdlrs = 0;
+   (*set)->symhdlrssize = 0;
+   (*set)->symhdlrs_sepa = NULL;
+   (*set)->symhdlrs_presol = NULL;
+   (*set)->symhdlrs_prop = NULL;
+   (*set)->symhdlrssorted = FALSE;
+   (*set)->symhdlrssepasorted = FALSE;
+   (*set)->symhdlrspropsorted = FALSE;
+   (*set)->symhdlrspresolsorted = FALSE;
+   (*set)->symhdlrsnamesorted = FALSE;
    (*set)->iisfinders = NULL;
    (*set)->niisfinders = 0;
    (*set)->iisfinderssize = 0;
@@ -2215,21 +2226,6 @@ SCIP_RETCODE SCIPsetCreate(
          NULL, NULL) );
 #endif
 
-   SCIP_CALL( SCIPsetAddIntParam(*set, messagehdlr, blkmem,
-         "misc/usesymmetry",
-         "bitset describing used symmetry handling technique: " \
-         "(0: off; " \
-         "1: constraint-based (orbitopes, symresacks); lexicographic and orbitopal reduction) if dynamic; " \
-         "2: orbital reduction; " \
-         "3: orbitopes and symresacks, and lexicographic/orbital reduction; " \
-         "4: Schreier Sims cuts; " \
-         "5: Schreier Sims cuts, orbitopes, symresacks, and/or lexicographic reduction; " \
-         "6: Schreier Sims cuts, orbital reduction; " \
-         "7: Schreier Sims cuts, orbitopes, symresacks, and/or lexicographic/orbital reduction;) " \
-         "See type_symmetry.h.",
-         &(*set)->misc_usesymmetry, FALSE, SCIP_DEFAULT_MISC_USESYMMETRY, 0, 7,
-         paramChgdUsesymmetry, NULL) );
-
    /* randomization parameters */
    SCIP_CALL( SCIPsetAddIntParam(*set, messagehdlr, blkmem,
          "randomization/randomseedshift",
@@ -2973,6 +2969,55 @@ SCIP_RETCODE SCIPsetCreate(
          &(*set)->read_dynamicrows, FALSE, SCIP_DEFAULT_READ_DYNAMICROWS,
          NULL, NULL) );
 
+   /* Symmetry parameters */
+   SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
+         "symmetries/enabled",
+         "Is symmetry handling enabled?",
+         &(*set)->sym_enabled, FALSE, SCIP_DEFAULT_SYM_ENABLED,
+         NULL, NULL) );
+
+   SCIP_CALL( SCIPsetAddIntParam(*set, messagehdlr, blkmem,
+         "symmetries/tryaddtiming",
+         "timing for trying to add symmetry handling methods (0: before presolving; 1: after presolving)",
+         &(*set)->sym_tryaddtiming, FALSE, SCIP_DEFAULT_SYM_TRYADDTIMING,
+         0, 1, NULL, NULL) );
+
+   SCIP_CALL( SCIPsetAddIntParam(*set, messagehdlr, blkmem,
+         "symmetries/maxngenerators",
+         "maximum number of symmetry group generators to be computed (-1: unbounded)",
+         &(*set)->sym_maxngenerators, FALSE, SCIP_DEFAULT_SYM_MAXNGENERATORS,
+         -1, INT_MAX, NULL, NULL) );
+
+   SCIP_CALL( SCIPsetAddIntParam(*set, messagehdlr, blkmem,
+         "symmetries/symtype",
+         "type of symmetries to be considered (0: permutation symmetries, 1: signed permutation symmetries)",
+         &(*set)->sym_symtype, FALSE, (int)SCIP_DEFAULT_SYM_SYMTYPE,
+         0, 1, NULL, NULL) );
+
+   SCIP_CALL( SCIPsetAddIntParam(*set, messagehdlr, blkmem,
+         "symmetries/fixedvartypes",
+         "bitset describing the variable types that shall be fixed by symmetry: " \
+         "(0: none; 1: binary; 2; integer; 3: binary and integer; 4: continuous; " \
+         "5: binary and continuous; 6: integer and continuous; 7: all)",
+         &(*set)->sym_fixedvartypes, TRUE, SCIP_DEFAULT_SYM_FIXEDVARTYPES,
+         0, 7, NULL, NULL) );
+
+   SCIP_CALL( SCIPsetAddRealParam(*set, messagehdlr, blkmem,
+         "symmetries/compressthreshold",
+         "compress symmetry information if percentage of moved vars is at most the threshold",
+         &(*set)->sym_compressthreshold, TRUE, SCIP_DEFAULT_SYM_COMPRESSTHRESHOLD,
+         0.0, 1.0, NULL, NULL) );
+
+   /* for symmetry detection tool Nauty, we add further parameters to terminate it early */
+   if ( strncmp(SYMsymmetryGetName(), "Nauty", 5) == 0 )
+   {
+      SCIP_CALL( SCIPaddIntParam(scip,
+            "symmetries/nautymaxlevel",
+            "terminate symmetry detection using Nauty when depth level of Nauty's search tree exceeds this number (-1: unlimited)",
+            NULL, TRUE, SCIP_DEFAULT_SYM_NAUTYMAXLEVEL, -1, INT_MAX, NULL, NULL) );
+   }
+
+
    /* Writing parameters */
    SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
          "write/allconss",
@@ -3124,6 +3169,16 @@ SCIP_RETCODE SCIPsetFree(
       SCIP_CALL( SCIPbranchruleFree(&(*set)->branchrules[i], *set) );
    }
    BMSfreeMemoryArrayNull(&(*set)->branchrules);
+
+   /* free symmetry handlers */
+   for( i = 0; i < (*set)->nsymhdlrs; ++i )
+   {
+      SCIP_CALL( SCIPsymhdlrFree(&(*set)->symhdlrs[i], *set) );
+   }
+   BMSfreeMemoryArrayNull(&(*set)->symhdlrs_prop);
+   BMSfreeMemoryArrayNull(&(*set)->symhdlrs_sepa);
+   BMSfreeMemoryArrayNull(&(*set)->symhdlrs);
+   BMSfreeMemoryArrayNull(&(*set)->symhdlrs_presol);
 
    /* free IIS */
    for( i = 0; i < (*set)->niisfinders; ++i)
@@ -5199,6 +5254,130 @@ void SCIPsetSortBranchrulesName(
    }
 }
 
+/** inserts symmetry handler in symmetry handler list */
+SCIP_RETCODE SCIPsetIncludeSymhdlr(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_SYMHDLR*         symhdlr             /**< symmetry handler */
+   )
+{
+   assert(set != NULL);
+   assert(symhdlr != NULL);
+
+   if( set->nsymhdlrs >= set->symhdlrssize )
+   {
+      set->symhdlrssize = SCIPsetCalcMemGrowSize(set, set->nsymhdlrs + 1);
+      SCIP_ALLOC( BMSreallocMemoryArray(&set->symhdlrs, set->symhdlrssize) );
+      SCIP_ALLOC( BMSreallocMemoryArray(&set->symhdlrs_sepa, set->symhdlrssize) );
+      SCIP_ALLOC( BMSreallocMemoryArray(&set->symhdlrs_presol, set->symhdlrssize) );
+      SCIP_ALLOC( BMSreallocMemoryArray(&set->symhdlrs_prop, set->symhdlrssize) );
+   }
+   assert(set->nsymhdlrs < set->symhdlrssize);
+
+   set->symhdlrs[set->nsymhdlrs] = symhdlr;
+   set->symhdlrs_sepa[set->nsymhdlrs] = symhdlr;
+   set->symhdlrs_presol[set->nsymhdlrs] = symhdlr;
+   set->symhdlrs_prop[set->nsymhdlrs] = symhdlr;
+   set->nsymhdlrs++;
+   set->symhdlrssorted = FALSE;
+   set->symhdlrssepasorted = FALSE;
+   set->symhdlrspresolsorted = FALSE;
+   set->symhdlrspropsorted = FALSE;
+
+   return SCIP_OKAY;
+}
+
+/** sorts symmetry handlers by try-add priorities */
+void SCIPsetSortSymhdlrs(
+   SCIP_SET*             set                 /**< global SCIP settings */
+   )
+{
+   assert(set != NULL);
+
+   if( !set->symhdlrssorted )
+   {
+      SCIPsortPtr((void**)set->symhdlrs, SCIPsymhdlrCompTryadd, set->nsymhdlrs);
+      set->symhdlrssorted = TRUE;
+   }
+}
+
+/** sorts symmetry handlers by propagation priorities */
+void SCIPsetSortSymhdlrsProp(
+   SCIP_SET*             set                 /**< global SCIP settings */
+   )
+{
+   assert(set != NULL);
+
+   if( !set->symhdlrspropsorted )
+   {
+      SCIPsortPtr((void**)set->symhdlrs_prop, SCIPsymhdlrCompProp, set->nsymhdlrs);
+      set->symhdlrspropsorted = TRUE;
+   }
+}
+
+/** sorts symmetry handlers by presolving priorities */
+void SCIPsetSortSymhdlrsPresol(
+   SCIP_SET*             set                 /**< global SCIP settings */
+   )
+{
+   assert(set != NULL);
+   assert(set->symhdlrs_presol != NULL || set->nsymhdlrs == 0);
+
+   if( !set->symhdlrspresolsorted )
+   {
+      SCIPsortPtr((void**)set->symhdlrs_presol, SCIPsymhdlrCompPresol, set->nsymhdlrs);
+      set->symhdlrspresolsorted = TRUE;
+   }
+ }
+
+/** sorts symmetry handlers by separation priorities */
+void SCIPsetSortSymhdlrsSepa(
+   SCIP_SET*             set                 /**< global SCIP settings */
+   )
+{
+   assert(set != NULL);
+
+   if( !set->symhdlrssepasorted )
+   {
+      SCIPsortPtr((void**)set->symhdlrs_sepa, SCIPsymhdlrCompSepa, set->nsymhdlrs);
+      set->symhdlrssepasorted = TRUE;
+   }
+}
+
+/** sorts symmetry handlers by name */
+void SCIPsetSortSymhdlrsName(
+   SCIP_SET*             set                 /**< global SCIP settings */
+   )
+{
+   assert(set != NULL);
+
+   if( !set->symhdlrsnamesorted )
+   {
+      SCIPsortPtr((void**)set->symhdlrs, SCIPsymhdlrCompName, set->nsymhdlrs);
+      set->symhdlrssorted = FALSE;
+      set->symhdlrsnamesorted = TRUE;
+   }
+}
+
+/** returns the symmetry handler of the given name, or NULL if not existing */
+SCIP_SYMHDLR* SCIPsetFindSymhdlr(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   const char*           name                /**< name of constraint handler */
+   )
+{
+   int i;
+
+   assert(set != NULL);
+   assert(name != NULL);
+
+   for( i = 0; i < set->nsymhdlrs; ++i )
+   {
+      if( strcmp(SCIPsymhdlrGetName(set->symhdlrs[i]), name) == 0 )
+         return set->symhdlrs[i];
+   }
+
+   return NULL;
+}
+
 /** inserts IIS finders in IIS finders list */
 SCIP_RETCODE SCIPsetIncludeIISfinder(
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -5663,6 +5842,12 @@ SCIP_RETCODE SCIPsetInitPlugins(
       SCIP_CALL( SCIPbranchruleInit(set->branchrules[i], set) );
    }
 
+   /* symmetry handlers */
+   for( i = 0; i < set->nsymhdlrs; ++i )
+   {
+      SCIP_CALL( SCIPsymhdlrInit(set->symhdlrs[i], set) );
+   }
+
    /* display columns */
    for( i = 0; i < set->ndisps; ++i )
    {
@@ -5782,6 +5967,12 @@ SCIP_RETCODE SCIPsetExitPlugins(
    for( i = 0; i < set->nbranchrules; ++i )
    {
       SCIP_CALL( SCIPbranchruleExit(set->branchrules[i], set) );
+   }
+
+   /* symmetry handlers */
+   for( i = 0; i < set->nsymhdlrs; ++i )
+   {
+      SCIP_CALL( SCIPsymhdlrExit(set->symhdlrs[i], set, blkmem) );
    }
 
    /* display columns */
@@ -5963,6 +6154,12 @@ SCIP_RETCODE SCIPsetInitsolPlugins(
       SCIP_CALL( SCIPnodeselInitsol(set->nodesels[i], set) );
    }
 
+   /* symmetry handlers */
+   for( i = 0; i < set->nsymhdlrs; ++i )
+   {
+      SCIP_CALL( SCIPsymhdlrInitsol(set->symhdlrs[i], set) );
+   }
+
    /* branching rules */
    for( i = 0; i < set->nbranchrules; ++i )
    {
@@ -6062,6 +6259,12 @@ SCIP_RETCODE SCIPsetExitsolPlugins(
    for( i = 0; i < set->nnodesels; ++i )
    {
       SCIP_CALL( SCIPnodeselExitsol(set->nodesels[i], set) );
+   }
+
+   /* symmetry handlers */
+   for( i = 0; i < set->nsymhdlrs; ++i )
+   {
+      SCIP_CALL( SCIPsymhdlrExitsol(set->symhdlrs[i], set, restart) );
    }
 
    /* branching rules */

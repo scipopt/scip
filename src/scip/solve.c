@@ -48,6 +48,7 @@
 #include "scip/lp.h"
 #include "scip/lpexact.h"
 #include "scip/lpexact_bounding.h"
+#include "scip/misc.h"
 #include "scip/nodesel.h"
 #include "scip/pricer.h"
 #include "scip/pricestore.h"
@@ -55,6 +56,7 @@
 #include "scip/prob.h"
 #include "scip/prop.h"
 #include "scip/pub_cons.h"
+#include "scip/pub_expr.h"
 #include "scip/pub_heur.h"
 #include "scip/pub_message.h"
 #include "scip/pub_misc.h"
@@ -62,18 +64,27 @@
 #include "scip/pub_prop.h"
 #include "scip/pub_relax.h"
 #include "scip/pub_sepa.h"
+#include "scip/pub_sym.h"
 #include "scip/pub_tree.h"
 #include "scip/pub_var.h"
 #include "scip/relax.h"
 #include "scip/reopt.h"
+#include "scip/scip_benders.h"
 #include "scip/scip_certificate.h"
 #include "scip/scip_concurrent.h"
+#include "scip/scip_cons.h"
 #include "scip/scip_exact.h"
+#include "scip/scip_expr.h"
 #include "scip/scip_lp.h"
 #include "scip/scip_mem.h"
+#include "scip/scip_message.h"
+#include "scip/scip_param.h"
+#include "scip/scip_pricer.h"
 #include "scip/scip_prob.h"
 #include "scip/scip_sol.h"
+#include "scip/scip_solve.h"
 #include "scip/scip_solvingstats.h"
+#include "scip/scip_sym.h"
 #include "scip/sepa.h"
 #include "scip/sepastore.h"
 #include "scip/sepastoreexact.h"
@@ -91,18 +102,30 @@
 #include "scip/struct_prob.h"
 #include "scip/struct_set.h"
 #include "scip/struct_stat.h"
+#include "scip/struct_sym.h"
 #include "scip/struct_tree.h"
 #include "scip/struct_var.h"
+#include "scip/sym.h"
+#include "scip/symmetry_graph.h"
 #include "scip/syncstore.h"
 #include "scip/tree.h"
 #include "scip/var.h"
 #include "scip/visual.h"
+#include "symmetry/compute_symmetry.h"
 
 
 #define MAXNLPERRORS  10                /**< maximal number of LP error loops in a single node */
 #define MAXNCLOCKSKIPS 64               /**< maximum number of SCIPsolveIsStopped() calls without checking the clock */
 #define NINITCALLS 1000L                /**< minimum number of calls to SCIPsolveIsStopped() prior to dynamic clock skips */
 #define SAFETYFACTOR 1e-2               /**< the probability that SCIP skips the clock call after the time limit has already been reached */
+#define MAXGENNUMERATOR INT_MAX         /**< determine maximal number of generators by dividing this number by the number of variables */
+#define SYMEDGELEVEL1   100000          /**< first level of staggered scheme for estimating number of edges in SDG */
+#define SYMEDGELEVEL2  1000000          /**< second level of staggered scheme for estimating number of edges in SDG */
+#define SYMEDGELEVEL3 16700000          /**< third level of staggered scheme for estimating number of edges in SDG */
+
+#define ISSYMBINFIXED(x)          (((unsigned) x & SYM_SPEC_BINARY) != 0)
+#define ISSYMINTFIXED(x)          (((unsigned) x & SYM_SPEC_INTEGER) != 0)
+#define ISSYMCONTFIXED(x)         (((unsigned) x & SYM_SPEC_REAL) != 0)
 
 /** returns whether the solving process will be / was stopped before proving optimality;
  *  if the solving process was stopped, stores the reason as status in stat
@@ -428,7 +451,11 @@ SCIP_RETCODE propagationRound(
 {  /*lint --e{715}*/
    SCIP_RESULT result;
    SCIP_Bool abortoncutoff;
+   SCIP_Bool useprop;
+   int propprio;
+   int symprio;
    int i;
+   int j;
 
    assert(set != NULL);
    assert(delayed != NULL);
@@ -442,35 +469,91 @@ SCIP_RETCODE propagationRound(
    /* sort propagators */
    SCIPsetSortProps(set);
 
+   /* sort symmetry handlers */
+   SCIPsetSortSymhdlrsProp(set);
+
    /* check if we want to abort on a cutoff; if we are not in the solving stage (e.g., in presolving), we want to abort
     * anyway
     */
    abortoncutoff = set->prop_abortoncutoff || (set->stage != SCIP_STAGE_SOLVING);
 
    /* call additional propagators with nonnegative priority */
-   for( i = 0; i < set->nprops && !(*postpone) && (!(*cutoff) || !abortoncutoff); ++i )
+   i = 0;
+   j = 0;
+   while( (i < set->nprops || j < set->nsymhdlrs) && !(*postpone) && (!(*cutoff) || !abortoncutoff) )
    {
 #ifndef NDEBUG
       size_t nusedbuffer = BMSgetNUsedBufferMemory(SCIPbuffer(set->scip));
 #endif
       /* timing needs to fit */
-      if( (SCIPpropGetTimingmask(set->props[i]) & timingmask) == 0 )
+      if( i < set->nprops && (SCIPpropGetTimingmask(set->props[i]) & timingmask) == 0 )
+      {
+         ++i;
          continue;
-
-      if( SCIPpropGetPriority(set->props[i]) < 0 )
+      }
+      if( j < set->nsymhdlrs && (SCIPsymhdlrPropGetTimingmask(set->symhdlrs_prop[j]) & timingmask) == 0 )
+      {
+         ++j;
          continue;
+      }
+      if( i < set->nprops )
+         propprio = SCIPpropGetPriority(set->props[i]);
+      else
+         propprio = -1;
 
-      if( onlydelayed && !SCIPpropWasDelayed(set->props[i]) )
-         continue;
+      if( j < set->nsymhdlrs )
+         symprio = SCIPsymhdlrPropGetPriority(set->symhdlrs_prop[j]);
+      else
+         symprio = -1;
 
-      SCIPsetDebugMsg(set, "calling propagator <%s>\n", SCIPpropGetName(set->props[i]));
+      if( propprio >= symprio )
+      {
+         /* no further propagators with nonnegative priority exist */
+         if( propprio < 0 )
+            break;
 
-      SCIP_CALL( SCIPpropExec(set->props[i], set, stat, depth, onlydelayed, tree->sbprobing, timingmask, &result) );
+         /* check whether only delayed propagators shall be run */
+         if( onlydelayed && !SCIPpropWasDelayed(set->props[i]) )
+         {
+            ++i;
+            continue;
+         }
+
+         SCIPsetDebugMsg(set, "calling propagator <%s>\n", SCIPpropGetName(set->props[i]));
+
+         SCIP_CALL( SCIPpropExec(set->props[i], set, stat, depth, onlydelayed, tree->sbprobing, timingmask, &result) );
+         useprop = TRUE;
+      }
+      else
+      {
+         /* no further propagators with nonnegative priority exist */
+         if( symprio < 0 )
+            break;
+
+         /* check whether only delayed propagators shall be run */
+         if( onlydelayed && !SCIPsymhdlrPropWasDelayed(set->symhdlrs_prop[j]) )
+         {
+            ++j;
+            continue;
+         }
+
+         SCIPsetDebugMsg(set, "calling propagator of symmetry handler <%s>\n",
+            SCIPsymhdlrGetName(set->symhdlrs_prop[j]));
+
+         SCIP_CALL( SCIPsymhdlrProp(set->symhdlrs_prop[j], set, stat, depth, onlydelayed,
+               tree->sbprobing, timingmask, &result) );
+         useprop = FALSE;
+      }
 
 #ifndef NDEBUG
       if( BMSgetNUsedBufferMemory(SCIPbuffer(set->scip)) > nusedbuffer )
       {
-         SCIPerrorMessage("Buffer not completely freed after executing propagator <%s>\n", SCIPpropGetName(set->props[i]));
+         if( useprop )
+            SCIPerrorMessage("Buffer not completely freed after executing propagator <%s>\n",
+               SCIPpropGetName(set->props[i])); /*lint !e687*/
+         else
+            SCIPerrorMessage("Buffer not completely freed after executing propagator of symmetry handler <%s>\n",
+               SCIPsymhdlrGetName(set->symhdlrs_prop[j])); /*lint !e687*/
          SCIPABORT();
       }
 #endif
@@ -487,7 +570,11 @@ SCIP_RETCODE propagationRound(
 
       if( result == SCIP_CUTOFF )
       {
-         SCIPsetDebugMsg(set, " -> propagator <%s> detected cutoff\n", SCIPpropGetName(set->props[i]));
+         if( useprop )
+            SCIPsetDebugMsg(set, " -> propagator <%s> detected cutoff\n", SCIPpropGetName(set->props[i]));
+         else
+            SCIPsetDebugMsg(set, " -> symmetry handler <%s> detected cutoff\n",
+               SCIPsymhdlrGetName(set->symhdlrs_prop[j]));
       }
 
       /* if we work off the delayed propagators, we stop immediately if a reduction was found */
@@ -496,6 +583,11 @@ SCIP_RETCODE propagationRound(
          *delayed = TRUE;
          return SCIP_OKAY;
       }
+
+      if( useprop )
+         ++i;
+      else
+         ++j;
    }
 
    /* propagate constraints */
@@ -537,21 +629,60 @@ SCIP_RETCODE propagationRound(
    }
 
    /* call additional propagators with negative priority */
-   for( i = 0; i < set->nprops && !(*postpone) && (!(*cutoff) || !abortoncutoff); ++i )
+   i = 0;
+   j = 0;
+   while( (i < set->nprops || j < set->nsymhdlrs) && !(*postpone) && (!(*cutoff) || !abortoncutoff) )
    {
       /* timing needs to fit */
-      if( (SCIPpropGetTimingmask(set->props[i]) & timingmask) == 0 )
+      if( i < set->nprops && (SCIPpropGetTimingmask(set->props[i]) & timingmask) == 0 )
+      {
+         ++i;
          continue;
-
-      if( SCIPpropGetPriority(set->props[i]) >= 0 )
+      }
+      if( j < set->nsymhdlrs && (SCIPsymhdlrPropGetTimingmask(set->symhdlrs_prop[j]) & timingmask) == 0 )
+      {
+         ++j;
          continue;
+      }
 
-      if( onlydelayed && !SCIPpropWasDelayed(set->props[i]) )
-         continue;
+      if( i < set->nprops )
+         propprio = SCIPpropGetPriority(set->props[i]);
+      else
+         propprio = -INT_MAX;
 
-      SCIPsetDebugMsg(set, "calling propagator <%s>\n", SCIPpropGetName(set->props[i]));
+      if( j < set->nsymhdlrs )
+         symprio = SCIPsymhdlrPropGetPriority(set->symhdlrs_prop[j]);
+      else
+         symprio = -INT_MAX;
 
-      SCIP_CALL( SCIPpropExec(set->props[i], set, stat, depth, onlydelayed, tree->sbprobing, timingmask, &result) );
+      if( propprio >= symprio )
+      {
+         if( onlydelayed && !SCIPpropWasDelayed(set->props[i]) )
+         {
+            ++i;
+            continue;
+         }
+
+         SCIPsetDebugMsg(set, " -> executing propagator <%s> with priority %d\n",
+            SCIPpropGetName(set->props[i]), propprio);
+         SCIP_CALL( SCIPpropExec(set->props[i], set, stat, depth, onlydelayed, tree->sbprobing, timingmask, &result) );
+         useprop = TRUE;
+      }
+      else
+      {
+         if( onlydelayed && !SCIPsymhdlrPropWasDelayed(set->symhdlrs_prop[j]) )
+         {
+            ++j;
+            continue;
+         }
+
+         SCIPsetDebugMsg(set, "calling propagator of symmetry handler <%s>\n",
+            SCIPsymhdlrGetName(set->symhdlrs_prop[j]));
+
+         SCIP_CALL( SCIPsymhdlrProp(set->symhdlrs_prop[j], set, stat, depth, onlydelayed,
+               tree->sbprobing, timingmask, &result) );
+         useprop = FALSE;
+      }
       *delayed = *delayed || (result == SCIP_DELAYED);
       *propagain = *propagain || (result == SCIP_REDUCEDDOM);
 
@@ -564,7 +695,11 @@ SCIP_RETCODE propagationRound(
 
       if( result == SCIP_CUTOFF )
       {
-         SCIPsetDebugMsg(set, " -> propagator <%s> detected cutoff\n", SCIPpropGetName(set->props[i]));
+         if( useprop )
+            SCIPsetDebugMsg(set, " -> propagator <%s> detected cutoff\n", SCIPpropGetName(set->props[i]));
+         else
+            SCIPsetDebugMsg(set, " -> propagator of symmetry handler <%s> detected cutoff\n",
+               SCIPsymhdlrGetName(set->symhdlrs_prop[j]));
       }
 
       /* if we work off the delayed propagators, we stop immediately if a reduction was found */
@@ -573,6 +708,11 @@ SCIP_RETCODE propagationRound(
          *delayed = TRUE;
          return SCIP_OKAY;
       }
+
+      if( useprop )
+         ++i;
+      else
+         ++j;
    }
 
    return SCIP_OKAY;
@@ -1490,9 +1630,842 @@ SCIP_RETCODE SCIPconstructCurrentLP(
    return SCIP_OKAY;
 }
 
+/** returns whether a constraint handler can provide required symmetry information */
+static
+SCIP_Bool conshdlrCanProvideSymInformation(
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   SYM_SYMTYPE           symtype             /**< type of symmetries for which information are needed */
+   )
+{
+   assert(conshdlr != NULL);
+
+   switch( symtype )
+   {
+   case SYM_SYMTYPE_PERM:
+      return SCIPconshdlrSupportsPermsymDetection(conshdlr);
+   default:
+      assert( symtype == SYM_SYMTYPE_SIGNPERM );
+      return SCIPconshdlrSupportsSignedPermsymDetection(conshdlr);
+   } /*lint !e788*/
+}
+
+/** returns whether all constraint handlers with constraints can provide symmetry information */
+static
+SCIP_Bool conshdlrsCanProvideSymInformation(
+   SCIP*                 scip,               /**< SCIP pointer */
+   SYM_SYMTYPE           symtype             /**< type of symmetries for which information are needed */
+   )
+{
+   SCIP_CONSHDLR** conshdlrs;
+   SCIP_CONSHDLR* conshdlr;
+   int nconshdlrs;
+   int c;
+
+   conshdlrs = SCIPgetConshdlrs(scip);
+   assert( conshdlrs != NULL );
+
+   nconshdlrs = SCIPgetNConshdlrs(scip);
+   for( c = 0; c < nconshdlrs; ++c )
+   {
+      conshdlr = conshdlrs[c];
+      assert( conshdlr != NULL );
+
+      if( !conshdlrCanProvideSymInformation(conshdlr, symtype) && SCIPconshdlrGetNConss(conshdlr) > 0 )
+      {
+         char name[SCIP_MAXSTRLEN];
+
+         if( symtype == SYM_SYMTYPE_PERM )
+            (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "CONSGETPERMSYMGRAPH");
+         else
+            (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "CONSGETSIGNEDPERMSYMGRAPH");
+
+         SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL,
+            "   Symmetry detection interrupted: constraints of type %s do not provide symmetry information.\n"
+            "   If symmetries shall be detected, implement the %s callback.\n",
+            SCIPconshdlrGetName(conshdlr), name);
+
+         return FALSE;
+      }
+   }
+
+   /* check whether all expressions provide sufficient symmetry information */
+   conshdlr = SCIPfindConshdlr(scip, "nonlinear");
+   if( conshdlr != NULL && SCIPconshdlrGetNConss(conshdlr) > 0 )
+   {
+      SCIP_EXPRHDLR* exprhdlr;
+
+      for( c = 0; c < SCIPgetNExprhdlrs(scip); ++c )
+      {
+         SCIP_Bool found = FALSE;
+         exprhdlr = SCIPgetExprhdlrs(scip)[c];
+
+         if( SCIPexprhdlrHasGetSymData(exprhdlr) )
+            continue;
+
+         /* check whether exprhdlr is known by SCIP (and handles symmetries correctly) */
+         if( strcmp(SCIPexprhdlrGetName(exprhdlr), "var") == 0
+            || strcmp(SCIPexprhdlrGetName(exprhdlr), "sum") == 0
+            || strcmp(SCIPexprhdlrGetName(exprhdlr), "product") == 0
+            || strcmp(SCIPexprhdlrGetName(exprhdlr), "val") == 0
+            || strcmp(SCIPexprhdlrGetName(exprhdlr), "pow") == 0
+            || strcmp(SCIPexprhdlrGetName(exprhdlr), "signpow") == 0
+            || strcmp(SCIPexprhdlrGetName(exprhdlr), "exp") == 0
+            || strcmp(SCIPexprhdlrGetName(exprhdlr), "log") == 0
+            || strcmp(SCIPexprhdlrGetName(exprhdlr), "abs") == 0
+            || strcmp(SCIPexprhdlrGetName(exprhdlr), "sin") == 0
+            || strcmp(SCIPexprhdlrGetName(exprhdlr), "cos") == 0
+            || strcmp(SCIPexprhdlrGetName(exprhdlr), "entropy") == 0
+            || strcmp(SCIPexprhdlrGetName(exprhdlr), "erf") == 0
+            || strcmp(SCIPexprhdlrGetName(exprhdlr), "varidx") == 0 )
+            found = TRUE;
+
+         /* there exists an unknown expression handler that does not provide symmetry information */
+         if( ! found )
+         {
+            SCIPwarningMessage(scip, "Expression handler %s does not implement the EXPRGETSYMDATA callback.\n"
+               "Computed symmetries might be incorrect if the expression uses different constants or assigns\n"
+               "different coefficients to its children.\n", SCIPexprhdlrGetName(SCIPgetExprhdlrs(scip)[c]));
+         }
+      }
+   }
+
+   return TRUE;
+}
+
+/** provides estimates for the number of nodes and edges in a symmetry detection graph */
+static
+SCIP_RETCODE estimateSymgraphSize(
+   SCIP*                 scip,               /**< SCIP pointer */
+   int*                  nopnodes,           /**< pointer to store estimate for number of operator nodes */
+   int*                  nvalnodes,          /**< pointer to store estimate for number of value nodes */
+   int*                  nconsnodes,         /**< pointer to store estimate for number of constraint nodes */
+   int*                  nedges              /**< pointer to store estimate for number of edges */
+   )
+{
+   SCIP_CONS** conss;
+   SCIP_Bool success;
+   int nvars;
+   int nconss;
+   int num;
+   int c;
+
+   assert(scip != NULL);
+   assert(nopnodes != NULL);
+   assert(nvalnodes != NULL);
+   assert(nconsnodes != NULL);
+   assert(nedges != NULL);
+
+   nvars = SCIPgetNVars(scip);
+   nconss = SCIPgetNConss(scip);
+   conss = SCIPgetConss(scip);
+   assert(conss != NULL || nconss == 0);
+
+   *nconsnodes = nconss;
+
+   /* get estimate from different types of constraints */
+   *nopnodes = 0;
+   *nvalnodes = 0;
+   for( c = 0; c < nconss; ++c )
+   {
+      if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(conss[c])), "bounddisjunction") == 0 )
+      {
+         SCIP_CALL( SCIPgetConsNVars(scip, conss[c], &num, &success) );
+
+         if( success )
+         {
+            *nopnodes += num;
+            *nvalnodes += num;
+         }
+      }
+      else if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(conss[c])), "indicator") == 0 )
+      {
+         *nopnodes += 3;
+         *nvalnodes += 1;
+      }
+      else if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(conss[c])), "nonlinear") == 0 )
+      {
+         SCIP_CALL( SCIPgetConsNVars(scip, conss[c], &num, &success) );
+
+         /* use binary trees as a proxy for an expression tree */
+         if( success )
+         {
+            int depth;
+            int numnodes;
+            int expval;
+
+            depth = (int) log2((double) num);
+            expval = (int) exp2((double) (depth + 1));
+            numnodes = MIN(expval, 100);
+
+            *nopnodes += numnodes;
+            *nvalnodes += MAX((int) 0.1 * numnodes, 1);
+         }
+      }
+      else if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(conss[c])), "SOS1") == 0 )
+      {
+         SCIP_CALL( SCIPgetConsNVars(scip, conss[c], &num, &success) );
+
+         if( success )
+            *nopnodes += num;
+      }
+      else if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(conss[c])), "SOS2") == 0 )
+      {
+         SCIP_CALL( SCIPgetConsNVars(scip, conss[c], &num, &success) );
+
+         if( success )
+            *nopnodes += num - 1;
+      }
+   }
+
+   /* use a staggered scheme for the number of edges since this can become large
+    *
+    * In most cases, edges represent variable coefficients from linear constraints.
+    * For this reason, use number of variables as proxy.
+    */
+   if( nvars <= SYMEDGELEVEL1 )
+      *nedges = 100 * nvars;
+   else if( nvars <= SYMEDGELEVEL2 )
+      *nedges = 32 * nvars;
+   else if( nvars <= SYMEDGELEVEL3 )
+      *nedges = 16 * nvars;
+   else
+      *nedges = INT_MAX / 10;
+
+   return SCIP_OKAY;
+}
+
+
+/** extracts symmetry detection graph from a CIP */
+static
+SCIP_RETCODE extractSDG(
+   SCIP*                 scip,               /**< SCIP instance */
+   SYM_GRAPH**           graph,              /**< pointer to symmetry detection graph */
+   SYM_SYMTYPE           symtype,            /**< type of symmetries to be computed */
+   SYM_SPEC              fixedvartypes,      /**< specification of variable types that shall be fixed by symmetry */
+   SCIP_Bool*            success             /**< pointer to store whether graph could be extracted successfully */
+   )
+{
+   SCIP_CONS** conss;
+   SCIP_Real eps;
+   int nopnodes;
+   int nvalnodes;
+   int nconsnodes;
+   int nedges;
+   int nconss;
+   int c;
+
+   assert(scip != NULL);
+   assert(graph != NULL);
+   assert(success != NULL);
+
+   *success = FALSE;
+
+   /* check whether all constraints can provide symmetry information */
+   if( !conshdlrsCanProvideSymInformation(scip, symtype) )
+      return SCIP_OKAY;
+
+   /* get symmetry detection graphs from constraints */
+   conss = SCIPgetConss(scip);
+   nconss = SCIPgetNConss(scip);
+
+   assert( conss != NULL || nconss == 0 );
+
+   /* exit if no constraints or no variables are available */
+   if( nconss == 0 || SCIPgetNVars(scip) == 0 )
+   {
+      *success = FALSE;
+      return SCIP_OKAY;
+   }
+
+   /* get an estimate for the number of nodes and edges */
+   SCIP_CALL( estimateSymgraphSize(scip, &nopnodes, &nvalnodes, &nconsnodes, &nedges) );
+
+   /* create graph */
+   SCIP_CALL( SCIPgetRealParam(scip, "numerics/epsilon", &eps) );
+   SCIP_CALL( SCIPcreateSymgraph(scip, symtype, graph, SCIPgetVars(scip), SCIPgetNVars(scip),
+         nopnodes, nvalnodes, nconsnodes, nedges, eps) );
+
+   *success = TRUE;
+   for( c = 0; c < nconss && *success; ++c )
+   {
+      if( symtype == SYM_SYMTYPE_PERM )
+      {
+         SCIP_CALL( SCIPgetConsPermsymGraph(scip, conss[c], *graph, success) );
+      }
+      else
+      {
+         assert(symtype == SYM_SYMTYPE_SIGNPERM);
+         SCIP_CALL( SCIPgetConsSignedPermsymGraph(scip, conss[c], *graph, success) );
+      }
+
+      /* terminate early if graph could not be returned */
+      if( ! *success )
+      {
+         SCIP_CALL( SCIPfreeSymgraph(scip, graph) );
+
+         return SCIP_OKAY;
+      }
+   }
+
+   SCIP_CALL( SCIPcomputeSymgraphColors(scip, *graph, fixedvartypes) );
+
+   return SCIP_OKAY;
+}
+
+/** determines symmetry */
+static
+SCIP_RETCODE determineSymmetry(
+   SCIP*                 scip,               /**< SCIP instance */
+   SYM_GRAPH**           graph,              /**< pointer to store symmetry detection graph */
+   SYM_SYMTYPE           symtype,            /**< type of symmetries to be computed */
+   SYM_SPEC              fixedvartypes,      /**< specification of variable types that shall be fixed by symmetry */
+   int***                perms,              /**< pointer to store (signed) permutations */
+   int*                  nperms,             /**< pointer to store number of permutations */
+   int*                  permssize,          /**< pointer to store size of perms array */
+   SCIP_VAR***           permvars,           /**< pointer to store variables on which permutations act */
+   int*                  npermvars           /**< pointer to store number of variables in permvars */
+   )
+{ /*lint --e{641}*/
+   SCIP_Bool extractsuccess = TRUE;
+   SCIP_Bool success = TRUE;
+   SCIP_Real log10groupsize;
+   SCIP_Real symcodetime = 0.0;
+   int maxgenerators;
+   SCIP_Bool skipsymmetry;
+
+   assert(scip != NULL);
+   assert(graph != NULL);
+   assert(perms != NULL);
+   assert(nperms != NULL);
+   assert(permssize != NULL);
+   assert(permvars != NULL);
+   assert(npermvars != NULL);
+
+   *perms = NULL;
+   *nperms = 0;
+   *graph = NULL;
+
+   /* do not compute symmetry if potentially conflicting methods are enabled */
+   if( SCIPisReoptEnabled(scip) || SCIPgetNActiveBenders(scip) > 0 || SCIPgetNActivePricers(scip) > 0 )
+      return SCIP_OKAY;
+
+   /* skip symmetry computation if no graph automorphism code was linked */
+   if( !SYMcanComputeSymmetry() )
+   {
+      SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL,
+         "   Deactivated symmetry handling methods, since SCIP was built without symmetry detector (SYM=none).\n");
+
+      return SCIP_OKAY;
+   }
+
+   /* avoid trivial cases */
+   *npermvars = SCIPgetNVars(scip);
+   if( *npermvars <= 0 || SCIPgetNConss(scip) <= 0 )
+      return SCIP_OKAY;
+
+   /* skip symmetry computation if all variables are required to be fixed */
+   skipsymmetry = TRUE;
+   if( (SCIPgetNBinVars(scip) > 0 && !ISSYMBINFIXED(fixedvartypes))
+      || (SCIPgetNIntVars(scip) > 0 && !ISSYMINTFIXED(fixedvartypes))
+      || (SCIPgetNContVars(scip) + SCIPgetNImplVars(scip) > 0 && !ISSYMCONTFIXED(fixedvartypes)) )
+      skipsymmetry = FALSE;
+
+   if( skipsymmetry )
+   {
+      SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL,
+         "   (%.1fs) symmetry computation skipped: all variables need to be fixed by symmetry.\n",
+         SCIPgetSolvingTime(scip));
+
+      return SCIP_OKAY;
+   }
+
+   /* output message */
+   SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL,
+      "   (%.1fs) symmetry computation started\n", SCIPgetSolvingTime(scip));
+
+   /* mark that we have tried to handle symmetries */
+   scip->syminfo->triedhandlesymmetry = TRUE;
+
+   /* determine maximal number of generators depending on the number of variables */
+   maxgenerators = scip->set->sym_maxngenerators;
+   maxgenerators = MIN(maxgenerators, MAXGENNUMERATOR / *npermvars);
+
+   /* get symmetry detection graph */
+   SCIP_CALL( extractSDG(scip, graph, symtype, fixedvartypes, &extractsuccess) );
+
+   /* return if not successful */
+   if( !extractsuccess )
+   {
+      SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "   (%.1fs) could not compute symmetry\n",
+         SCIPgetSolvingTime(scip));
+
+      success = FALSE;
+      goto FREEGRAPH;
+   }
+
+   /* terminate early in case all variables are different */
+   if( (symtype == SYM_SYMTYPE_PERM && SCIPgetSymgraphNVarcolors(*graph) == *npermvars)
+      || (symtype == SYM_SYMTYPE_SIGNPERM && SCIPgetSymgraphNVarcolors(*graph) == 2 * (*npermvars)) )
+   {
+      SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "   (%.1fs) no symmetry present (symcode time: %.2f)\n",
+         SCIPgetSolvingTime(scip), symcodetime);
+
+      success = FALSE;
+      goto FREEGRAPH;
+   }
+
+   /*
+    * actually compute symmetries
+    */
+   SCIP_CALL( SYMcomputeSymmetryGenerators(scip, maxgenerators, *graph, nperms, permssize,
+         perms, &log10groupsize, &symcodetime) );
+
+   /* return if no symmetries found */
+   if( *nperms == 0 )
+   {
+      SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "   (%.1fs) no symmetry present (symcode time: %.2f)\n",
+         SCIPgetSolvingTime(scip), symcodetime);
+
+      success = FALSE;
+      goto FREEGRAPH;
+   }
+   else
+   {
+      SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, permvars, SCIPgetVars(scip), *npermvars) ); /*lint !e666*/
+   }
+
+   /* display statistics */
+   SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL,
+      "   (%.1fs) symmetry computation finished: %d generators found (max: ",
+      SCIPgetSolvingTime(scip), *nperms);
+
+   /* display statistics: maximum number of generators */
+   if( maxgenerators == 0 )
+      SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "-");
+   else
+      SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "%d", maxgenerators);
+
+   /* display statistics: log10 group size, number of affected vars*/
+   SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, ", log10 of symmetry group size: %.2f", log10groupsize);
+   SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, ") (symcode time: %.2f)\n", symcodetime);
+
+ FREEGRAPH:
+   if( !success && extractsuccess )
+   {
+      SCIP_CALL( SCIPfreeSymgraph(scip, graph) );
+      *graph = NULL;
+   }
+
+   return SCIP_OKAY;
+}
+
+/** compute components of symmetry group */
+static
+SCIP_RETCODE computeComponentsSym(
+   SCIP*                 scip,               /**< SCIP instance */
+   SYM_SYMTYPE           symtype,            /**< type of symmetries in perms */
+   int**                 perms,              /**< generators of symmetry group (nperms * npermvars matrix) */
+   int                   nperms,             /**< number of (signed) permutations */
+   SCIP_VAR**            permvars ,          /**< variables on which permutation act */
+   int                   npermvars,          /**< number of variables the permutations act on */
+   int**                 components,         /**< array containing the indices of symmetries sorted by components */
+   int**                 componentbegins,    /**< array containing in i-th position the first position of
+                                              *   component i in components array */
+   int*                  ncomponents,        /**< pointer to store number of components of symmetry group */
+   int**                 vartocomp           /**< pointer to store array containing for each permvar the index
+                                              *   of the component it is contained in (-1 if not affected) */
+   )
+{
+   SCIP_DISJOINTSET* componentstovar = NULL;
+   int* permtocomponent;
+   int* symtovarcomp;
+   int s;
+   int i;
+   int idx;
+
+   assert(scip != NULL);
+   assert(permvars != NULL);
+   assert(npermvars > 0);
+   assert(perms != NULL);
+   assert(components != NULL);
+   assert(componentbegins != NULL);
+   assert(ncomponents != NULL);
+   assert(vartocomp != NULL);
+
+   if( nperms <= 0 )
+      return SCIP_OKAY;
+
+   SCIP_CALL( SCIPdisjointsetCreate(&componentstovar, SCIPblkmem(scip), npermvars) );
+   *ncomponents = npermvars;
+
+   /* init array that stores for each symmetry the representative of its affected variables */
+   SCIP_CALL( SCIPallocBufferArray(scip, &symtovarcomp, nperms) );
+   for( s = 0; s < nperms; ++s )
+      symtovarcomp[s] = -1;
+
+   /* init array that stores for each variable its component */
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, vartocomp, npermvars) );
+
+   /* find symmetry components */
+   for( i = 0; i < npermvars; ++i )
+   {
+      (*vartocomp)[i] = -1;
+
+      for( s = 0; s < nperms; ++s )
+      {
+         int img;
+
+         img = perms[s][i];
+
+         /* symmetry s affects i -> possibly merge var components */
+         if( img != i )
+         {
+            int component1;
+            int component2;
+            int representative;
+
+            if( img >= npermvars )
+            {
+               assert(symtype == SYM_SYMTYPE_SIGNPERM);
+               img -= npermvars;
+               assert(0 <= img && img < npermvars);
+            }
+
+            component1 = SCIPdisjointsetFind(componentstovar, i);
+            component2 = SCIPdisjointsetFind(componentstovar, img);
+            (*vartocomp)[i] = s;
+            (*vartocomp)[img] = s;
+
+            /* ensure component1 <= component2 */
+            if( component2 < component1 )
+            {
+               int swap;
+
+               swap = component1;
+               component1 = component2;
+               component2 = swap;
+            }
+
+            /* init symtovarcomp[s] to component of first moved variable or update the value */
+            if( symtovarcomp[s] == -1 )
+            {
+               symtovarcomp[s] = component1;
+               representative = component1;
+            }
+            else
+            {
+               symtovarcomp[s] = SCIPdisjointsetFind(componentstovar, symtovarcomp[s]);
+               representative = symtovarcomp[s];
+            }
+
+            /* merge both components if they differ */
+            if( component1 != component2 )
+            {
+               SCIPdisjointsetUnion(componentstovar, component1, component2, TRUE);
+               --(*ncomponents);
+            }
+
+            /* possibly merge new component and symvartocomp[s] and ensure the latter
+             * to have the smallest value */
+            if( representative != component1 && representative != component2 )
+            {
+               if( representative > component1 )
+               {
+                  SCIPdisjointsetUnion(componentstovar, component1, representative, TRUE);
+                  symtovarcomp[s] = component1;
+               }
+               else
+                  SCIPdisjointsetUnion(componentstovar, representative, component1, TRUE);
+               --(*ncomponents);
+            }
+            else if( representative > component1 )
+            {
+               assert(representative == component2);
+               symtovarcomp[s] = component1;
+            }
+         }
+      }
+
+      /* reduce the number of components by singletons */
+      if( (*vartocomp)[i] == -1 )
+         --(*ncomponents);
+   }
+   assert(*ncomponents > 0);
+
+   /* update symvartocomp array to final variable representatives */
+   for( s = 0; s < nperms; ++s )
+      symtovarcomp[s] = SCIPdisjointsetFind(componentstovar, symtovarcomp[s]);
+
+   /* init components array by trivial natural order of symmetries */
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, components, nperms) );
+   for( s = 0; s < nperms; ++s )
+      (*components)[s] = s;
+
+   /* get correct order of components array */
+   SCIPsortIntInt(symtovarcomp, *components, nperms);
+
+   /* determine componentbegins and store components for each symmetry */
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, componentbegins, *ncomponents + 1) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &permtocomponent, nperms) );
+
+   (*componentbegins)[0] = 0;
+   permtocomponent[(*components)[0]] = 0;
+   idx = 0;
+
+   for( s = 1; s < nperms; ++s )
+   {
+      if( symtovarcomp[s] > symtovarcomp[s - 1] )
+         (*componentbegins)[++idx] = s;
+
+      assert((*components)[s] >= 0);
+      assert((*components)[s] < nperms);
+      permtocomponent[(*components)[s]] = idx;
+   }
+   assert(*ncomponents == idx + 1);
+   (*componentbegins)[++idx] = nperms;
+
+   /* determine vartocomp */
+   for( i = 0; i < npermvars; ++i )
+   {
+      int permidx;
+      permidx = (*vartocomp)[i];
+      assert(-1 <= permidx && permidx < nperms);
+
+      if( permidx != -1 )
+      {
+         assert(0 <= permtocomponent[permidx]);
+         assert(permtocomponent[permidx] < *ncomponents);
+
+         (*vartocomp)[i] = permtocomponent[permidx];
+      }
+   }
+
+   SCIPfreeBufferArray(scip, &permtocomponent);
+   SCIPfreeBufferArray(scip, &symtovarcomp);
+   SCIPdisjointsetFree(&componentstovar, SCIPblkmem(scip));
+
+   return SCIP_OKAY;
+}
+
+/** tries to add symmetry handling methods to CIP
+ *
+ *  Compute symmetry and call each symmetry handler to check whether particular symmetry handling methods can be added.
+ */
+SCIP_RETCODE SCIPtryAddSymmetryHandlingMethods(
+   SCIP*                 scip,               /**< SCIP data structure */
+   int*                  naddedconss,        /**< pointer to store number of constraints added by symmetry handlers */
+   SCIP_Bool             allowbdchgs,        /**< whether bound changed permitted (needed for stage EXITPRESOLVE) */
+   int*                  nchgbds             /**< pointer to store number of changed variable bounds */
+   )
+{
+   SCIP_SYMINFO* syminfo;
+   SCIP_SYMHDLR** symhdlrs;
+   SYM_GRAPH* graph = NULL;
+   SCIP_Real* vardomcenter = NULL;
+   int** perms;
+   int nsymhdlrs;
+   int nperms;
+   int c;
+   int i;
+
+   assert(scip != NULL);
+   assert(naddedconss != NULL);
+   assert(nchgbds != NULL);
+
+   *naddedconss = 0;
+   *nchgbds = 0;
+
+   /* only run when symmetry handling is enabled */
+   if( !scip->set->sym_enabled )
+      return SCIP_OKAY;
+
+   /* do not run in exact mode */
+   if( scip->set->exact_enable )
+      return SCIP_OKAY;
+
+   /* symmetry handling methods can only be applied if dual reductions are permitted */
+   if( !SCIPallowStrongDualReds(scip) || !SCIPallowWeakDualReds(scip) )
+      return SCIP_OKAY;
+
+   /* do not add symmetry handling methods if they have already been added */
+   syminfo = scip->syminfo;
+   if( syminfo->triedhandlesymmetry )
+      return SCIP_OKAY;
+   syminfo->triedhandlesymmetry = TRUE;
+
+   /* get symmetry handlers */
+   nsymhdlrs = SCIPgetNSymhdlrs(scip);
+   if( nsymhdlrs == 0 )
+      return SCIP_OKAY;
+
+   symhdlrs = SCIPgetSymhdlrs(scip);
+   assert(symhdlrs != NULL);
+   syminfo->symtype = (SYM_SYMTYPE)scip->set->sym_symtype;
+
+   SCIP_CALL( determineSymmetry(scip, &graph, syminfo->symtype, (SYM_SPEC)scip->set->sym_fixedvartypes,
+         &syminfo->perms, &syminfo->nperms, &syminfo->permssize, &syminfo->permvars, &syminfo->npermvars) );
+
+   if( syminfo->nperms == 0 )
+   {
+      assert(graph == NULL);
+
+      syminfo->nsymcomps = 0;
+      return SCIP_OKAY;
+   }
+
+   /* possibly compress symmetry information */
+   SCIP_CALL( SCIPsyminfoCompressPermInfo(scip, syminfo, SCIPgetVars(scip), SCIPgetNVars(scip),
+         scip->set->sym_compressthreshold) );
+
+   /* compute independent components of symmetry group */
+   SCIP_CALL( computeComponentsSym(scip, syminfo->symtype, syminfo->perms, syminfo->nperms, syminfo->permvars,
+         syminfo->npermvars, &syminfo->components, &syminfo->componentbegins, &syminfo->ncomponents,
+         &syminfo->vartocomponent) );
+
+   /* create hashmap for storing the indices of variables */
+   SCIP_CALL( SCIPhashmapCreate(&syminfo->permvarmap, SCIPblkmem(scip), syminfo->nperms) );
+
+   /* insert variables into hashmap */
+   for( i = 0; i < syminfo->npermvars; ++i )
+   {
+      SCIP_CALL( SCIPhashmapInsertInt(syminfo->permvarmap, syminfo->permvars[i], i) );
+   }
+
+   /* allocate temporary memory for storing permutations of components */
+   if( syminfo->ncomponents == 1 )
+   {
+      perms = syminfo->perms;
+      nperms = syminfo->nperms;
+   }
+   else
+   {
+      SCIP_CALL( SCIPallocBufferArray(scip, &perms, syminfo->nperms) );
+      /* nperms will be initialized below */
+   }
+
+   /* compute domain center of variables */
+   if( syminfo->symtype == SYM_SYMTYPE_SIGNPERM )
+   {
+      SCIP_CALL( SCIPallocBufferArray(scip, &vardomcenter, syminfo->npermvars) );
+      for( i = 0; i < syminfo->npermvars; ++i )
+         vardomcenter[i] = 0.5 * (SCIPvarGetLbLocal(syminfo->permvars[i]) + SCIPvarGetUbLocal(syminfo->permvars[i]));
+   }
+
+   /* allocate memory for different symmetry components */
+   assert(scip->syminfo != NULL);
+   assert(scip->syminfo->symcomps == NULL);
+   assert(scip->syminfo->nsymcomps == -1);
+   assert(scip->syminfo->symcompssize == 0);
+
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &scip->syminfo->symcomps, syminfo->ncomponents) );
+   scip->syminfo->symcompssize = syminfo->ncomponents;
+   scip->syminfo->nsymcomps = 0;
+
+   /* for each component, check whether a symmetry handler applies */
+   for( c = 0; c < syminfo->ncomponents; ++c )
+   {
+      SCIP_Bool success = FALSE;
+      SCIP_SYMCOMPDATA* symcompdata;
+      int ntmpconss;
+      int ntmpchgbds;
+
+      /* possibly get symmetries of this component */
+      if( syminfo->ncomponents > 1 )
+      {
+         int s;
+
+         for( s = 0, i = syminfo->componentbegins[c]; i < syminfo->componentbegins[c + 1]; ++s, ++i )
+            perms[s] = syminfo->perms[syminfo->components[i]];
+         nperms = syminfo->componentbegins[c + 1] - syminfo->componentbegins[c];
+      }
+
+      for( i = 0; i < nsymhdlrs && !success; ++i )
+      {
+         SCIP_CALL( SCIPsymhdlrTryAdd(symhdlrs[i], scip->set, perms, nperms, syminfo->symtype, syminfo->permvars, /*lint !e644 */
+               syminfo->npermvars, vardomcenter, syminfo->permvarmap, graph, c, &symcompdata, &ntmpconss, allowbdchgs,
+               &ntmpchgbds, &success) );
+         *naddedconss += ntmpconss;
+         *nchgbds += ntmpchgbds;
+         symhdlrs[i]->naddconss += ntmpconss;
+         symhdlrs[i]->nchgbds += ntmpchgbds;
+
+         if( success )
+         {
+            SCIP_CALL( SCIPcreateSymmetryComponent(scip, &(scip->syminfo->symcomps[scip->syminfo->nsymcomps]),
+                  symhdlrs[i], symcompdata, c) );
+            SCIP_CALL( SCIPaddSymhdlrComponent(SCIPblkmem(scip), scip->set, symhdlrs[i], scip->syminfo->symcomps[scip->syminfo->nsymcomps]) );
+            ++(scip->syminfo->nsymcomps);
+         }
+      }
+   }
+
+   SCIPfreeBufferArrayNull(scip, &vardomcenter);
+   SCIP_CALL( SCIPfreeSymgraph(scip, &graph) );
+
+   if( syminfo->ncomponents > 1 )
+   {
+      SCIPfreeBufferArray(scip, &perms);
+   }
+
+   return SCIP_OKAY;
+}
+
+/** calls presolving methods of symmetry handlers */
+SCIP_RETCODE SCIPpresolveSymmetryHandlingMethods(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_PRESOLTIMING     timing,             /**< current presolving timing */
+   int                   nrounds,            /**< number of presolving rounds already done */
+   int*                  nfixedvars,         /**< pointer to store total number of variables fixed of all presolvers */
+   int*                  naggrvars,          /**< pointer to store total number of variables aggregated of all presolvers */
+   int*                  nchgvartypes,       /**< pointer to store total number of variable type changes of all presolvers */
+   int*                  nchgbds,            /**< pointer to store total number of variable bounds tightened of all presolvers */
+   int*                  naddholes,          /**< pointer to store total number of domain holes added of all presolvers */
+   int*                  ndelconss,          /**< pointer to store total number of deleted constraints of all presolvers */
+   int*                  naddconss,          /**< pointer to store total number of added constraints of all presolvers */
+   int*                  nupgdconss,         /**< pointer to store total number of upgraded constraints of all presolvers */
+   int*                  nchgcoefs,          /**< pointer to store total number of changed coefficients of all presolvers */
+   int*                  nchgsides,          /**< pointer to store total number of changed left/right hand sides of all presolvers */
+   SCIP_Bool*            unbounded,          /**< pointer to store whether problem is unbounded */
+   SCIP_Bool*            infeasible          /**< pointer to store whether problem is infeasible */
+   )
+{
+   SCIP_SYMHDLR** symhdlrs;
+   SCIP_RESULT result;
+   int nsymhdlrs;
+   int i;
+
+   assert(scip != NULL);
+
+   /* get symmetry handlers */
+   symhdlrs = SCIPgetSymhdlrs(scip);
+   nsymhdlrs = SCIPgetNSymhdlrs(scip);
+
+   /* call presolving methods of each symmetry handler */
+   for( i = 0; i < nsymhdlrs; ++i )
+   {
+      SCIP_CALL( SCIPsymhdlrPresol(symhdlrs[i], scip->set, timing, nrounds, nfixedvars, naggrvars, nchgvartypes,
+            nchgbds, naddholes, ndelconss, naddconss, nupgdconss, nchgcoefs, nchgsides, &result) );
+
+      if( result == SCIP_UNBOUNDED )
+      {
+         *unbounded = TRUE;
+         break;
+      }
+
+      if( result == SCIP_CUTOFF )
+      {
+         *infeasible = TRUE;
+         break;
+      }
+   }
+
+   return SCIP_OKAY;
+}
+
 /** updates the primal ray stored in primal data
- * clears previously stored primal ray, if existing and there was no LP error
- * stores current primal ray, if LP is unbounded and there has been no error
+ *
+ *  clears previously stored primal ray, if existing and there was no LP error
+ *  stores current primal ray, if LP is unbounded and there has been no error
  */
 static
 SCIP_RETCODE updatePrimalRay(
@@ -1746,8 +2719,12 @@ SCIP_RETCODE separationRoundLP(
 {
    SCIP_RESULT result;
    int i;
+   int j;
+   int sepaprio;
+   int symprio;
    SCIP_Bool consadded;
    SCIP_Bool root;
+   SCIP_Bool usesepa;
 
    assert(set != NULL);
    assert(lp != NULL);
@@ -1774,24 +2751,68 @@ SCIP_RETCODE separationRoundLP(
    /* sort separators by priority */
    SCIPsetSortSepas(set);
 
+   /* sort symmetry handlers by priority */
+   SCIPsetSortSymhdlrsSepa(set);
+
    /* call LP separators with nonnegative priority */
-   for( i = 0; i < set->nsepas && !(*cutoff) && !(*lperror) && !(*enoughcuts) && lp->flushed && lp->solved
-           && (SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OPTIMAL || SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_UNBOUNDEDRAY);
-        ++i )
+   i = 0;
+   j = 0;
+   while( (i < set->nsepas || j < set->nsymhdlrs)
+           && !(*cutoff) && !(*lperror) && !(*enoughcuts) && lp->flushed && lp->solved
+           && (SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OPTIMAL || SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_UNBOUNDEDRAY) )
    {
 #ifndef NDEBUG
       size_t nusedbuffer = BMSgetNUsedBufferMemory(SCIPbuffer(set->scip));
 #endif
+      if( i < set->nsepas )
+         sepaprio = SCIPsepaGetPriority(set->sepas[i]);
+      else
+         sepaprio = -1;
 
-      if( SCIPsepaGetPriority(set->sepas[i]) < 0 )
-         continue;
+      if( j < set->nsymhdlrs )
+         symprio = SCIPsymhdlrSepaGetPriority(set->symhdlrs_sepa[j]);
+      else
+         symprio = -1;
 
-      if( onlydelayed && !SCIPsepaWasLPDelayed(set->sepas[i]) )
-         continue;
+      if( sepaprio >= symprio )
+      {
+         /* terminate while-loop: no separator with nonnegative priority left */
+         if( sepaprio < 0 )
+            break;
 
-      SCIPsetDebugMsg(set, " -> executing separator <%s> with priority %d\n",
-         SCIPsepaGetName(set->sepas[i]), SCIPsepaGetPriority(set->sepas[i]));
-      SCIP_CALL( SCIPsepaExecLP(set->sepas[i], set, stat, sepastore, actdepth, bounddist, allowlocal, onlydelayed, &result) );
+         /* check whether only delayed separators shall be executed */
+         if( onlydelayed && !SCIPsepaWasLPDelayed(set->sepas[i]) )
+         {
+            ++i;
+            continue;
+         }
+
+         SCIPsetDebugMsg(set, " -> executing separator <%s> with priority %d\n",
+            SCIPsepaGetName(set->sepas[i]), sepaprio);
+         SCIP_CALL( SCIPsepaExecLP(set->sepas[i], set, stat, sepastore, actdepth, bounddist, allowlocal,
+               onlydelayed, &result) );
+         usesepa = TRUE;
+      }
+      else
+      {
+         /* terminate while-loop: no separator with nonnegative priority left */
+         if( symprio < 0 )
+            break;
+
+         /* check whether only delayed separators shall be executed */
+         if( onlydelayed && !SCIPsymhdlrSepaWasLPDelayed(set->symhdlrs_sepa[j]) )
+         {
+            ++j;
+            continue;
+         }
+
+         SCIPsetDebugMsg(set, " -> executing separator of symmetry handler <%s> with priority %d\n",
+            SCIPsymhdlrGetName(set->symhdlrs_sepa[j]), symprio);
+         SCIP_CALL( SCIPsymhdlrSepaLP(set->symhdlrs_sepa[j], set, stat, sepastore, actdepth, bounddist, allowlocal,
+               onlydelayed, &result) );
+         usesepa = FALSE;
+      }
+
 #ifndef NDEBUG
       if( BMSgetNUsedBufferMemory(SCIPbuffer(set->scip)) > nusedbuffer )
       {
@@ -1820,16 +2841,28 @@ SCIP_RETCODE separationRoundLP(
       }
       else
       {
-         SCIPsetDebugMsg(set, " -> separator <%s> detected cutoff\n", SCIPsepaGetName(set->sepas[i]));
+         if( usesepa )
+            SCIPsetDebugMsg(set, " -> separator <%s> detected cutoff\n", SCIPsepaGetName(set->sepas[i]));
+         else
+            SCIPsetDebugMsg(set, " -> symmetry handler <%s> detected cutoff\n", SCIPsymhdlrGetName(set->symhdlrs_sepa[j]));
       }
 
       /* if we work off the delayed separators, we stop immediately if a cut was found */
       if( onlydelayed && (result == SCIP_CONSADDED || result == SCIP_REDUCEDDOM || result == SCIP_SEPARATED || result == SCIP_NEWROUND) )
       {
-         SCIPsetDebugMsg(set, " -> delayed separator <%s> found a cut\n", SCIPsepaGetName(set->sepas[i]));
+         if( usesepa )
+            SCIPsetDebugMsg(set, " -> delayed separator <%s> found a cut\n", SCIPsepaGetName(set->sepas[i]));
+         else
+            SCIPsetDebugMsg(set, " -> delayed symmetry handler <%s> found a cut\n",
+               SCIPsymhdlrGetName(set->symhdlrs_sepa[j]));
          *delayed = TRUE;
          return SCIP_OKAY;
       }
+
+      if( usesepa )
+         ++i;
+      else
+         ++j;
    }
 
    /* try separating constraints of the constraint handlers */
@@ -1865,9 +2898,7 @@ SCIP_RETCODE separationRoundLP(
          SCIP_CALL( separationRoundResolveLP(blkmem, set, messagehdlr, stat, eventqueue, eventfilter, prob, primal, tree, lp, lperror, mustsepa, mustprice) );
       }
       else
-      {
          SCIPsetDebugMsg(set, " -> constraint handler <%s> detected cutoff in separation\n", SCIPconshdlrGetName(set->conshdlrs_sepa[i]));
-      }
 
       /* if we work off the delayed separators, we stop immediately if a cut was found */
       if( onlydelayed && (result == SCIP_CONSADDED || result == SCIP_REDUCEDDOM || result == SCIP_SEPARATED || result == SCIP_NEWROUND) )
@@ -1879,20 +2910,61 @@ SCIP_RETCODE separationRoundLP(
       }
    }
 
-   /* call LP separators with negative priority */
-   for( i = 0; i < set->nsepas && !(*cutoff) && !(*lperror) && !(*enoughcuts) && lp->flushed && lp->solved
-           && (SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OPTIMAL || SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_UNBOUNDEDRAY);
-        ++i )
+   /*
+    * call LP separators with negative priority
+    */
+
+   /* find separators with negative priority */
+   i = 0;
+   while( i < set->nsepas && SCIPsepaGetPriority(set->sepas[i]) >= 0 )
+      ++i;
+   j = 0;
+   while( j < set->nsymhdlrs && SCIPsymhdlrSepaGetPriority(set->symhdlrs_sepa[j]) >= 0 )
+      ++j;
+
+   /* execute separators with negative priority */
+   while( (i < set->nsepas || j < set->nsymhdlrs) && !(*cutoff) && !(*lperror)
+           && !(*enoughcuts) && lp->flushed && lp->solved
+           && (SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OPTIMAL || SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_UNBOUNDEDRAY) )
    {
-      if( SCIPsepaGetPriority(set->sepas[i]) >= 0 )
-         continue;
+      if( i < set->nsepas )
+         sepaprio = SCIPsepaGetPriority(set->sepas[i]);
+      else
+         sepaprio = -INT_MAX;
 
-      if( onlydelayed && !SCIPsepaWasLPDelayed(set->sepas[i]) )
-         continue;
+      if( j < set->nsymhdlrs )
+         symprio = SCIPsymhdlrSepaGetPriority(set->symhdlrs_sepa[j]);
+      else
+         symprio = -INT_MAX;
 
-      SCIPsetDebugMsg(set, " -> executing separator <%s> with priority %d\n",
-         SCIPsepaGetName(set->sepas[i]), SCIPsepaGetPriority(set->sepas[i]));
-      SCIP_CALL( SCIPsepaExecLP(set->sepas[i], set, stat, sepastore, actdepth, bounddist, allowlocal, onlydelayed, &result) );
+      if( sepaprio >= symprio )
+      {
+         if( onlydelayed && !SCIPsepaWasLPDelayed(set->sepas[i]) )
+         {
+            ++i;
+            continue;
+         }
+
+         SCIPsetDebugMsg(set, " -> executing separator <%s> with priority %d\n",
+            SCIPsepaGetName(set->sepas[i]), sepaprio);
+         SCIP_CALL( SCIPsepaExecLP(set->sepas[i], set, stat, sepastore, actdepth, bounddist, allowlocal,
+               onlydelayed, &result) );
+         usesepa = TRUE;
+      }
+      else
+      {
+         if( onlydelayed && !SCIPsymhdlrSepaWasLPDelayed(set->symhdlrs_sepa[j]) )
+         {
+            ++j;
+            continue;
+         }
+
+         SCIPsetDebugMsg(set, " -> executing separator of symmetry handler <%s> with priority %d\n",
+            SCIPsymhdlrGetName(set->symhdlrs_sepa[j]), symprio);
+         SCIP_CALL( SCIPsymhdlrSepaLP(set->symhdlrs_sepa[j], set, stat, sepastore, actdepth, bounddist, allowlocal,
+               onlydelayed, &result) );
+         usesepa = FALSE;
+      }
 
       *cutoff = *cutoff || (result == SCIP_CUTOFF);
       consadded = consadded || (result == SCIP_CONSADDED);
@@ -1915,16 +2987,27 @@ SCIP_RETCODE separationRoundLP(
       }
       else
       {
-         SCIPsetDebugMsg(set, " -> separator <%s> detected cutoff\n", SCIPsepaGetName(set->sepas[i]));
+         if( usesepa )
+            SCIPsetDebugMsg(set, " -> separator <%s> detected cutoff\n", SCIPsepaGetName(set->sepas[i]));
+         else
+            SCIPsetDebugMsg(set, " -> symmetry handler <%s> detected cutoff\n", SCIPsymhdlrGetName(set->symhdlrs_sepa[j]));
       }
 
       /* if we work off the delayed separators, we stop immediately if a cut was found */
       if( onlydelayed && (result == SCIP_CONSADDED || result == SCIP_REDUCEDDOM || result == SCIP_SEPARATED || result == SCIP_NEWROUND) )
       {
-         SCIPsetDebugMsg(set, " -> delayed separator <%s> found a cut\n", SCIPsepaGetName(set->sepas[i]));
+         if( usesepa )
+            SCIPsetDebugMsg(set, " -> delayed separator <%s> found a cut\n", SCIPsepaGetName(set->sepas[i]));
+         else
+            SCIPsetDebugMsg(set, " -> delayed symmetry handler <%s> found a cut\n", SCIPsymhdlrGetName(set->symhdlrs_sepa[j]));
          *delayed = TRUE;
          return SCIP_OKAY;
       }
+
+      if( usesepa )
+         ++i;
+      else
+         ++j;
    }
 
    /* process the constraints that were added during this separation round */
@@ -1962,9 +3045,7 @@ SCIP_RETCODE separationRoundLP(
             SCIP_CALL( separationRoundResolveLP(blkmem, set, messagehdlr, stat, eventqueue, eventfilter, prob, primal, tree, lp, lperror, mustsepa, mustprice) );
          }
          else
-         {
             SCIPsetDebugMsg(set, " -> constraint handler <%s> detected cutoff in separation\n", SCIPconshdlrGetName(set->conshdlrs_sepa[i]));
-         }
       }
    }
 
@@ -1991,7 +3072,11 @@ SCIP_RETCODE separationRoundSol(
    )
 {
    SCIP_RESULT result;
+   int sepaprio;
+   int symprio;
    int i;
+   int j;
+   SCIP_Bool usesepa;
    SCIP_Bool consadded;
    SCIP_Bool root;
 
@@ -2011,16 +3096,64 @@ SCIP_RETCODE separationRoundSol(
    /* sort separators by priority */
    SCIPsetSortSepas(set);
 
+   /* sort symmetry handlers by priority */
+   SCIPsetSortSymhdlrsSepa(set);
+
    /* call separators with nonnegative priority */
-   for( i = 0; i < set->nsepas && !(*cutoff) && !(*enoughcuts) && !SCIPsolveIsStopped(set, stat, FALSE); ++i )
+   i = 0;
+   j = 0;
+   while( (i < set->nsepas || j < set->nsymhdlrs) && !(*cutoff) && !(*enoughcuts)
+      && !SCIPsolveIsStopped(set, stat, FALSE) )
    {
-      if( SCIPsepaGetPriority(set->sepas[i]) < 0 )
-         continue;
+      if( i < set->nsepas )
+         sepaprio = SCIPsepaGetPriority(set->sepas[i]);
+      else
+         sepaprio = -1;
 
-      if( onlydelayed && !SCIPsepaWasSolDelayed(set->sepas[i]) )
-         continue;
+      if( j < set->nsymhdlrs )
+         symprio = SCIPsymhdlrSepaGetPriority(set->symhdlrs_sepa[j]);
+      else
+         symprio = -1;
 
-      SCIP_CALL( SCIPsepaExecSol(set->sepas[i], set, stat, sepastore, sol, actdepth, allowlocal, onlydelayed, &result) );
+      if( sepaprio >= symprio )
+      {
+         /* terminate while-loop: no separator with nonnegative priority left */
+         if( sepaprio < 0 )
+            break;
+
+         /* check whether only delayed separators shall be executed */
+         if( onlydelayed && !SCIPsepaWasLPDelayed(set->sepas[i]) )
+         {
+            ++i;
+            continue;
+         }
+
+         SCIPsetDebugMsg(set, " -> executing separator <%s> with priority %d\n",
+            SCIPsepaGetName(set->sepas[i]), sepaprio);
+         SCIP_CALL( SCIPsepaExecSol(set->sepas[i], set, stat, sepastore, sol, actdepth, allowlocal,
+               onlydelayed, &result) );
+         usesepa = TRUE;
+      }
+      else
+      {
+         /* terminate while-loop: no separator with nonnegative priority left */
+         if( symprio < 0 )
+            break;
+
+         /* check whether only delayed separators shall be executed */
+         if( onlydelayed && !SCIPsymhdlrSepaWasLPDelayed(set->symhdlrs_sepa[j]) )
+         {
+            ++j;
+            continue;
+         }
+
+         SCIPsetDebugMsg(set, " -> executing separator of symmetry handler <%s> with priority %d\n",
+            SCIPsymhdlrGetName(set->symhdlrs_sepa[j]), symprio);
+         SCIP_CALL( SCIPsymhdlrSepaSol(set->symhdlrs_sepa[j], set, stat, sepastore, sol, actdepth, allowlocal,
+               onlydelayed, &result) );
+         usesepa = FALSE;
+      }
+
       *cutoff = *cutoff || (result == SCIP_CUTOFF);
       consadded = consadded || (result == SCIP_CONSADDED);
       if( SCIPsetIsZero(set, SCIPsetGetSepaMaxcutsGenFactor(set, root) * SCIPsetGetSepaMaxcuts(set, root)) )
@@ -2030,13 +3163,16 @@ SCIP_RETCODE separationRoundSol(
       else
       {
          *enoughcuts = *enoughcuts || (SCIPsepastoreGetNCuts(sepastore) >= (SCIP_Longint)SCIPsetCeil(set,
-                  SCIPsetGetSepaMaxcutsGenFactor(set, root) * SCIPsetGetSepaMaxcuts(set, root)))
+               SCIPsetGetSepaMaxcutsGenFactor(set, root) * SCIPsetGetSepaMaxcuts(set, root)))
             || (result == SCIP_NEWROUND);
       }
       *delayed = *delayed || (result == SCIP_DELAYED);
       if( *cutoff )
       {
-         SCIPsetDebugMsg(set, " -> separator <%s> detected cutoff\n", SCIPsepaGetName(set->sepas[i]));
+         if( usesepa )
+            SCIPsetDebugMsg(set, " -> separator <%s> detected cutoff\n", SCIPsepaGetName(set->sepas[i]));
+         else
+            SCIPsetDebugMsg(set, " -> symmetry handler <%s> detected cutoff\n", SCIPsymhdlrGetName(set->symhdlrs_sepa[j]));
       }
 
       /* if we work off the delayed separators, we stop immediately if a cut was found */
@@ -2045,6 +3181,11 @@ SCIP_RETCODE separationRoundSol(
          *delayed = TRUE;
          return SCIP_OKAY;
       }
+
+      if( usesepa )
+         ++i;
+      else
+         ++j;
    }
 
    /* try separating constraints of the constraint handlers */
@@ -2082,16 +3223,61 @@ SCIP_RETCODE separationRoundSol(
       }
    }
 
+   /*
+    * call separators with negative priority
+    */
+
+   /* find separators with negative priority */
+   i = 0;
+   while( i < set->nsepas && SCIPsepaGetPriority(set->sepas[i]) >= 0 )
+      ++i;
+   j = 0;
+   while( j < set->nsymhdlrs && SCIPsymhdlrSepaGetPriority(set->symhdlrs_sepa[j]) >= 0 )
+      ++j;
+
    /* call separators with negative priority */
-   for( i = 0; i < set->nsepas && !(*cutoff) && !(*enoughcuts) && !SCIPsolveIsStopped(set, stat, FALSE); ++i )
+   while( (i < set->nsepas || j < set->nsymhdlrs) && !(*cutoff) && !(*enoughcuts)
+           && !SCIPsolveIsStopped(set, stat, FALSE) )
    {
-      if( SCIPsepaGetPriority(set->sepas[i]) >= 0 )
-         continue;
+      if( i < set->nsepas )
+         sepaprio = SCIPsepaGetPriority(set->sepas[i]);
+      else
+         sepaprio = -INT_MAX;
 
-      if( onlydelayed && !SCIPsepaWasSolDelayed(set->sepas[i]) )
-         continue;
+      if( j < set->nsymhdlrs )
+         symprio = SCIPsymhdlrSepaGetPriority(set->symhdlrs_sepa[j]);
+      else
+         symprio = -INT_MAX;
 
-      SCIP_CALL( SCIPsepaExecSol(set->sepas[i], set, stat, sepastore, sol, actdepth, allowlocal, onlydelayed, &result) );
+      if( sepaprio >= symprio )
+      {
+         if( onlydelayed && !SCIPsepaWasLPDelayed(set->sepas[i]) )
+         {
+            ++i;
+            continue;
+         }
+
+         SCIPsetDebugMsg(set, " -> executing separator <%s> with priority %d\n",
+            SCIPsepaGetName(set->sepas[i]), sepaprio);
+         SCIP_CALL( SCIPsepaExecSol(set->sepas[i], set, stat, sepastore, sol, actdepth, allowlocal,
+               onlydelayed, &result) );
+         usesepa = TRUE;
+      }
+      else
+      {
+         if( onlydelayed && !SCIPsymhdlrSepaWasLPDelayed(set->symhdlrs_sepa[j]) )
+         {
+            ++j;
+            continue;
+         }
+
+         SCIPsetDebugMsg(set, " -> executing separator of symmetry handler <%s> with priority %d\n",
+            SCIPsymhdlrGetName(set->symhdlrs_sepa[j]), symprio);
+         SCIP_CALL( SCIPsymhdlrSepaSol(set->symhdlrs_sepa[j], set, stat, sepastore, sol, actdepth, allowlocal,
+               onlydelayed, &result) );
+         usesepa = FALSE;
+      }
+
       *cutoff = *cutoff || (result == SCIP_CUTOFF);
       consadded = consadded || (result == SCIP_CONSADDED);
       if( SCIPsetIsZero(set, SCIPsetGetSepaMaxcutsGenFactor(set, root) * SCIPsetGetSepaMaxcuts(set, root)) )
@@ -2107,7 +3293,10 @@ SCIP_RETCODE separationRoundSol(
       *delayed = *delayed || (result == SCIP_DELAYED);
       if( *cutoff )
       {
-         SCIPsetDebugMsg(set, " -> separator <%s> detected cutoff\n", SCIPsepaGetName(set->sepas[i]));
+         if( usesepa )
+            SCIPsetDebugMsg(set, " -> separator <%s> detected cutoff\n", SCIPsepaGetName(set->sepas[i]));
+         else
+            SCIPsetDebugMsg(set, " -> symmetry handler <%s> detected cutoff\n", SCIPsymhdlrGetName(set->symhdlrs_sepa[j]));
       }
 
       /* if we work off the delayed separators, we stop immediately if a cut was found */
@@ -2116,6 +3305,11 @@ SCIP_RETCODE separationRoundSol(
          *delayed = TRUE;
          return SCIP_OKAY;
       }
+
+      if( usesepa )
+         ++i;
+      else
+         ++j;
    }
 
    /* process the constraints that were added during this separation round */

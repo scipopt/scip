@@ -45,7 +45,7 @@
  * version determines the variable order during the solving process via branching descisions.
  * We only implemented the static version, because constraints should define the model and should
  * not be changed during the solving process. Instead, a dynamic version of orbitopal fixing has
- * been implemented as a routine in prop_symmetry.c.
+ * been implemented as a routine in sym_rowcol.c.
  *
  * Polytopes associated with symmetry handling@n
  * Christopher Hojny and Marc E. Pfetsch,@n

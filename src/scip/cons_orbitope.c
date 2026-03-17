@@ -37,6 +37,8 @@
 #include "scip/cons_orbitope.h"
 #include "scip/cons_orbitope_full.h"
 #include "scip/cons_orbitope_pp.h"
+#include "scip/pub_message.h"
+#include "scip/scip_mem.h"
 #include "scip/symmetry.h"
 #include <symmetry/type_symmetry.h>
 

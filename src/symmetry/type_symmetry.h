@@ -33,26 +33,22 @@
 #ifndef __SCIP_TYPE_SYMMETRY_H_
 #define __SCIP_TYPE_SYMMETRY_H_
 
-#include "scip/scip.h"
-
 #ifdef __cplusplus
 extern "C" {
 #endif
 
 /** symmetry type specification */
-#define SYM_SPEC_INTEGER                UINT32_C(0x00000001)  /**< need symmetries for integer variables only */
-#define SYM_SPEC_BINARY                 UINT32_C(0x00000002)  /**< need symmetries for binary variables only */
+#define SYM_SPEC_INTEGER                UINT32_C(0x00000002)  /**< need symmetries for integer variables only */
+#define SYM_SPEC_BINARY                 UINT32_C(0x00000001)  /**< need symmetries for binary variables only */
 #define SYM_SPEC_REAL                   UINT32_C(0x00000004)  /**< need symmetries also for continuous variables */
 
 typedef uint32_t SYM_SPEC;              /**< types of variables handled by symmetry */
 
 /** symmetry timings */
 #define SYM_TIMING_BEFOREPRESOL    0         /**< compute and handle symmetries before presolving */
-#define SYM_TIMING_DURINGPRESOL    1         /**< compute and handle symmetries during presolving */
-#define SYM_TIMING_AFTERPRESOL     2         /**< compute and handle symmetries after presolving */
+#define SYM_TIMING_AFTERPRESOL     1         /**< compute and handle symmetries after presolving */
 
 #define SYM_COMPUTETIMING_BEFOREPRESOL    SYM_TIMING_BEFOREPRESOL  /**< compute symmetries before presolving */
-#define SYM_COMPUTETIMING_DURINGPRESOL    SYM_TIMING_DURINGPRESOL  /**< compute symmetries during presolving */
 #define SYM_COMPUTETIMING_AFTERPRESOL     SYM_TIMING_AFTERPRESOL   /**< compute symmetries after presolving */
 
 /** define symmetry types detectable by SCIP */

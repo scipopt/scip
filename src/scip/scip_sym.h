@@ -1,0 +1,286 @@
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+/*                                                                           */
+/*                  This file is part of the program and library             */
+/*         SCIP --- Solving Constraint Integer Programs                      */
+/*                                                                           */
+/*  Copyright (c) 2002-2026 Zuse Institute Berlin (ZIB)                      */
+/*                                                                           */
+/*  Licensed under the Apache License, Version 2.0 (the "License");          */
+/*  you may not use this file except in compliance with the License.         */
+/*  You may obtain a copy of the License at                                  */
+/*                                                                           */
+/*      http://www.apache.org/licenses/LICENSE-2.0                           */
+/*                                                                           */
+/*  Unless required by applicable law or agreed to in writing, software      */
+/*  distributed under the License is distributed on an "AS IS" BASIS,        */
+/*  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. */
+/*  See the License for the specific language governing permissions and      */
+/*  limitations under the License.                                           */
+/*                                                                           */
+/*  You should have received a copy of the Apache-2.0 license                */
+/*  along with SCIP; see the file LICENSE. If not visit scipopt.org.         */
+/*                                                                           */
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+
+/**@file   scip_sym.h
+ * @ingroup PUBLICCOREAPI
+ * @brief  public methods for symmetry handler plugins
+ * @author Christopher Hojny
+ */
+
+/*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
+
+#ifndef __SCIP_SCIP_SYM_H__
+#define __SCIP_SCIP_SYM_H__
+
+#include "scip/def.h"
+#include "scip/type_sym.h"
+#include "scip/type_result.h"
+#include "scip/type_retcode.h"
+#include "scip/type_scip.h"
+#include "scip/type_var.h"
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+/**@addtogroup PublicSymhdlrMethods
+ *
+ * @{
+ */
+
+/** creates a symmetry handler and includes it in SCIP.
+ *
+ *  @note method has all symmetry handler callbacks as arguments and is thus changed every time a new
+ *        callback is added in future releases; consider using SCIPincludeSymhdlrBasic() and setter functions
+ *        if you seek for a method which is less likely to change in future releases
+ */
+SCIP_EXPORT
+SCIP_RETCODE SCIPincludeSymhdlr(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const char*           name,               /**< name of symmetry handler */
+   const char*           desc,               /**< description of symmetry handler */
+   int                   priority,           /**< priority of the symmetry handler */
+   int                   proppriority,       /**< priority of the symmetry handler for propagation */
+   int                   sepapriority,       /**< priority of the symmetry handler for separation */
+   int                   presolpriority,     /**< priority of the symmetry handler for presolving */
+   int                   propfreq,           /**< frequency for calling propagator of symmetry handler */
+   int                   sepafreq,           /**< frequency for calling separator of symmetry handler */
+   SCIP_Bool             delayprop,          /**< should propagation be delayed, if other sym-propagators found reductions? */
+   SCIP_Bool             delaysepa,          /**< should separation be delayed, if other sym-separators found reductions? */
+   SCIP_Real             maxbounddist,       /**< maximal relative distance from current node's dual bound to primal bound compared
+                                              *   to best node's dual bound for applying separation */
+   int                   maxprerounds,       /**< maximal number of presolving rounds the symmetry handler participates in (-1: no limit) */
+   SCIP_PROPTIMING       proptiming,         /**< positions in the node solving loop where propagation method of symmetry handlers should be executed */
+   SCIP_PRESOLTIMING     presoltiming,       /**< timing mask of the symmetry handler's presolving method */
+   SCIP_DECL_SYMHDLRTRYADD((*symhdlrtryadd)),/**< addition method for symmetry method handler plugins */
+   SCIP_DECL_SYMHDLRCOPY ((*symcopy)),       /**< copy method of symmetry handler */
+   SCIP_DECL_SYMHDLRFREE ((*symfree)),       /**< destructor method of symmetry handler */
+   SCIP_DECL_SYMHDLRINIT ((*syminit)),       /**< initialization method of symmetry handler */
+   SCIP_DECL_SYMHDLREXIT ((*symexit)),       /**< deinitialization method of symmetry handler */
+   SCIP_DECL_SYMHDLRINITSOL((*syminitsol)),  /**< solving process initialization method of symmetry handler */
+   SCIP_DECL_SYMHDLREXITSOL((*symexitsol)),  /**< solving process deinitialization method of symmetry handler */
+   SCIP_DECL_SYMHDLRSEPALP((*symsepalp)),    /**< separator for LP solutions */
+   SCIP_DECL_SYMHDLRSEPASOL((*symsepasol)),  /**< separator for arbitrary primal solutions */
+   SCIP_DECL_SYMHDLRPROP ((*symprop)),       /**< propagation method of symmetry handler */
+   SCIP_DECL_SYMHDLRRESPROP((*symresprop)),  /**< propagation conflict resolving method */
+   SCIP_DECL_SYMHDLRPRESOL((*sympresol)),    /**< presolving method of symmetry handler */
+   SCIP_SYMHDLRDATA*     symhdlrdata         /**< symmetry handler data */
+   );
+
+/** creates a symmetry handler and includes it in SCIP. All non-fundamental (or optional) callbacks will be set to NULL.
+ *
+ *  Optional callbacks can be set via specific setter functions, see SCIPsetSymhdlrCopy(), SCIPsetSymhdlrFree(),
+ *  SCIPsetSymhdlrInit(), SCIPsetSymhdlrExit(), SCIPsetSymhdlrTrans(), SCIPsetSymhdlrInitsol(), SCIPsetSymhdlrExitsol(),
+ *  SCIPsetSymhdlrPresol(), SCIPsetSymhdlrResprop(), SCIPsetSymhdlrProp(), SCIPsetSymhdlrSepa().
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_INIT
+ *       - \ref SCIP_STAGE_PROBLEM
+ *
+ *  @note if you want to set all callbacks with a single method call, consider using SCIPincludeProp() instead
+ */
+SCIP_EXPORT
+SCIP_RETCODE SCIPincludeSymhdlrBasic(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SYMHDLR**        symhdlr,            /**< pointer to stoe symmetry handler */
+   const char*           name,               /**< name of symmetry handler */
+   const char*           desc,               /**< description of symmetry handler */
+   int                   priority,           /**< priority of the symmetry handler */
+   SCIP_DECL_SYMHDLRTRYADD((*symhdlrtryadd)),/**< addition method for symmetry method handler plugins */
+   SCIP_SYMHDLRDATA*     symhdlrdata         /**< symmetry handler data */
+   );
+
+/** sets copy method of symmetry handler */
+SCIP_EXPORT
+SCIP_RETCODE SCIPsetSymhdlrCopy(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SYMHDLR*         symhdlr,            /**< symmetry handler */
+   SCIP_DECL_SYMHDLRCOPY ((*symhdlrcopy))    /**< copy method of symmetry handler */
+   );
+
+/** sets destructor method of symmetry handler */
+SCIP_EXPORT
+SCIP_RETCODE SCIPsetSymhdlrFree(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SYMHDLR*         symhdlr,            /**< symmetry handler */
+   SCIP_DECL_SYMHDLRFREE ((*symhdlrfree))    /**< destructor method of symmetry handler */
+   );
+
+/** sets initialization method of symmetry handler */
+SCIP_EXPORT
+SCIP_RETCODE SCIPsetSymhdlrInit(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SYMHDLR*         symhdlr,            /**< symmetry handler */
+   SCIP_DECL_SYMHDLRINIT ((*symhdlrinit))    /**< initialize symmetry handler */
+   );
+
+/** sets deinitialization method of symmetry handler */
+SCIP_EXPORT
+SCIP_RETCODE SCIPsetSymhdlrExit(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SYMHDLR*         symhdlr,            /**< symmetry handler */
+   SCIP_DECL_SYMHDLRINIT ((*symhdlrexit))    /**< deinitialize symmetry handler */
+   );
+
+/** sets solving process initialization method of symmetry handler */
+SCIP_EXPORT
+SCIP_RETCODE SCIPsetSymhdlrInitsol(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SYMHDLR*         symhdlr,            /**< symmetry handler */
+   SCIP_DECL_SYMHDLRINITSOL((*syminitsol))   /**< solving process initialization method of symmetry handler */
+   );
+
+/** sets solving process deinitialization method of symmetry handler */
+SCIP_EXPORT
+SCIP_RETCODE SCIPsetSymhdlrExitsol(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SYMHDLR*         symhdlr,            /**< symmetry handler */
+   SCIP_DECL_SYMHDLREXITSOL((*symexitsol))   /**< solving process deinitialization method of symmetry handler */
+   );
+
+/** sets presolving method of symmetry handler */
+SCIP_EXPORT
+SCIP_RETCODE SCIPsetSymhdlrPresol(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SYMHDLR*         symhdlr,            /**< symmetry handler */
+   SCIP_DECL_SYMHDLRPRESOL((*symhdlrpresol)),/**< presolving method of symmetry handler */
+   int                   presolpriority,     /**< presolving priority of the symmetry handler */
+   int                   presolmaxrounds,    /**< maximal number of presolving rounds the symmetry handler participates in (-1: no limit) */
+   SCIP_PRESOLTIMING     presoltiming        /**< timing mask of the symmetry handler's presolving method */
+   );
+
+/** sets propagation conflict resolving method of symmetry handler */
+SCIP_RETCODE SCIPsetSymhdlrResprop(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SYMHDLR*         symhdlr,            /**< symmetry handler */
+   SCIP_DECL_SYMHDLRRESPROP((*symresprop))   /**< propagation conflict resolving method */
+   );
+
+/** sets propagation method of symmetry handler */
+SCIP_EXPORT
+SCIP_RETCODE SCIPsetSymhdlrProp(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SYMHDLR*         symhdlr,            /**< symmetry handler */
+   SCIP_DECL_SYMHDLRPROP ((*symhdlrprop)),   /**< propagate variable domains */
+   int                   propfreq,           /**< frequency for propagating domains; zero means only preprocessing propagation */
+   SCIP_Bool             delayprop,          /**< should propagation method be delayed, if other propagators found reductions? */
+   int                   proppriority,       /**< priority of the symmetry handler for propagation */
+   SCIP_PROPTIMING       proptiming          /**< positions in the node solving loop where propagation should be executed */
+   );
+
+/** sets all separation related callbacks/parameters of the symmetry handler */
+SCIP_EXPORT
+SCIP_RETCODE SCIPsetSymhdlrSepa(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SYMHDLR*         symhdlr,            /**< symmetry handler */
+   SCIP_DECL_SYMHDLRSEPALP((*symhdlrsepalp)), /**< separate cutting planes for LP solution */
+   SCIP_DECL_SYMHDLRSEPASOL((*symhdlrsepasol)), /**< separate cutting planes for arbitrary primal solution */
+   int                   sepafreq,           /**< frequency for separating cuts; zero means to separate only in the root node */
+   int                   sepapriority,       /**< priority of the constraint handler for separation */
+   SCIP_Bool             delaysepa           /**< should separation method be delayed, if other separators found cuts? */
+   );
+
+/** returns the symmetry handler of the given name, or NULL if not existing */
+SCIP_EXPORT
+SCIP_SYMHDLR* SCIPfindSymhdlr(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const char*           name                /**< name of symmetry handler */
+   );
+
+/** returns the array of currently available symmetry handlers */
+SCIP_EXPORT
+SCIP_SYMHDLR** SCIPgetSymhdlrs(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/** returns the number of currently available symmetry handlers */
+SCIP_EXPORT
+int SCIPgetNSymhdlrs(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/** returns the symmetry components */
+SCIP_EXPORT
+SCIP_SYMCOMP** SCIPgetSymcomps(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/** returns number of symmetry components */
+SCIP_EXPORT
+int SCIPgetNSymcomps(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/** returns the symmetry information data structure */
+SCIP_EXPORT
+SCIP_SYMINFO* SCIPgetSyminfo(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/** creates and captures symmetry information data structure */
+SCIP_EXPORT
+SCIP_RETCODE SCIPsyminfoCreate(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SYMINFO**        syminfo             /**< pointer to return the created syminfo */
+   );
+
+/** returns transposed permutations matrix, and generates it if it does not exist yet */
+SCIP_EXPORT
+SCIP_RETCODE SCIPsyminfoGetPermstrans(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SYMINFO*         syminfo,            /**< pointer to the syminfo */
+   int***                permstrans          /**< pointer to permstrans */
+   );
+
+/** releases symmetry information data structure */
+SCIP_EXPORT
+SCIP_RETCODE SCIPsyminfoFree(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SYMINFO**        syminfo             /**< pointer to the syminfo */
+   );
+
+/** return currently available symmetry group information */
+SCIP_EXPORT
+SCIP_RETCODE SCIPgetSymmetry(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SYM_SYMTYPE*          symtype,            /**< pointer to store type of available symmetries */
+   int*                  npermvars,          /**< pointer to store number of variables for permutations */
+   SCIP_VAR***           permvars,           /**< pointer to store variables on which permutations act */
+   SCIP_HASHMAP**        permvarmap,         /**< pointer to store hash map of permvars (or NULL) */
+   int*                  nperms,             /**< pointer to store number of permutations */
+   int***                perms,              /**< pointer to store permutation generators as (nperms x npermvars) matrix (or NULL)*/
+   int***                permstrans,         /**< pointer to store permutation generators as (npermvars x nperms) matrix (or NULL)*/
+   int**                 components,         /**< pointer to store components of symmetry group (or NULL) */
+   int**                 componentbegins,    /**< pointer to store begin positions of components in components array (or NULL) */
+   int**                 vartocomponent,     /**< pointer to store assignment from variable to its component (or NULL) */
+   int*                  ncomponents         /**< pointer to store number of components (or NULL) */
+   );
+
+/** @} */
+
+#ifdef __cplusplus
+}
+#endif
+
+#endif

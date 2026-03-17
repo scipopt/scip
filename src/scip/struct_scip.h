@@ -61,6 +61,7 @@
 #include "scip/type_dialog.h"
 #include "scip/type_reopt.h"
 #include "scip/type_concurrent.h"
+#include "scip/type_sym.h"
 #include "scip/type_syncstore.h"
 
 #ifdef __cplusplus
@@ -116,6 +117,9 @@ struct Scip
 
    /* IIS */
    SCIP_IIS*             iis;                /**< the data structure for storing IIS information */
+
+   /* SYMMETRY */
+   SCIP_SYMINFO*         syminfo;            /**< the data structure for storing symmetry information */
 };
 
 #ifdef __cplusplus

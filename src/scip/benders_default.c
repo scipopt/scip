@@ -169,7 +169,7 @@ SCIP_RETCODE createBendersSubproblems(
 
       /* copying the plugins from the master SCIP instance to the subproblem SCIP */
       SCIP_CALL( SCIPcopyPlugins(scip, (*bendersdata)->subproblems[i], TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE,
-            TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, &valid) );
+            TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, &valid) );
 
       /* reading the instance file. The file type is inferred from the file extension. */
       assert(subprobfiles[i] != NULL);
@@ -359,8 +359,8 @@ SCIP_DECL_BENDERSCOPY(bendersCopyDefault)
             /* the original problem is copied so that the variable mappings are created correctly.
              * TODO: use a varmap to create the mappings for the copies
              */
-            SCIP_CALL( SCIPcopyOrig(bendersdata->subproblems[i], subproblems[i], NULL, NULL, "", TRUE, FALSE, FALSE,
-                  &valid) );
+            SCIP_CALL( SCIPcopyOrig(bendersdata->subproblems[i], subproblems[i], NULL, NULL, "", TRUE, TRUE, FALSE,
+                  FALSE, &valid) );
             assert(valid);
          }
       }

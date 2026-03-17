@@ -74,7 +74,6 @@
 #include "scip/dialog_default.h"
 #include "scip/scip_expr.h"
 #include "scip/symmetry_graph.h"
-#include "scip/prop_symmetry.h"
 #include "symmetry/struct_symmetry.h"
 #include "scip/pub_misc_sort.h"
 #include "scip/scip_datatree.h"

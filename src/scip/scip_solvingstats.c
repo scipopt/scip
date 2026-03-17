@@ -37,6 +37,7 @@
  * @author Michael Winkler
  * @author Kati Wolter
  * @author Mohammed Ghannam
+ * @author Christopher Hojny
  *
  * @todo check all SCIP_STAGE_* switches, and include the new stages TRANSFORMED and INITSOLVE
  */
@@ -79,6 +80,7 @@
 #include "scip/pub_reopt.h"
 #include "scip/pub_sepa.h"
 #include "scip/pub_sol.h"
+#include "scip/pub_sym.h"
 #include "scip/pub_table.h"
 #include "scip/pub_var.h"
 #include "scip/reader.h"
@@ -2806,6 +2808,35 @@ void SCIPprintPresolverStatistics(
       }
    }
 
+   /* sort symmetry handlers w.r.t. their name */
+   SCIPsetSortSymhdlrsName(scip->set);
+
+   /* symmetry handler presolving methods statistics */
+   for( i = 0; i < scip->set->nsymhdlrs; ++i )
+   {
+      SCIP_SYMHDLR* symhdlr;
+
+      symhdlr = scip->set->symhdlrs[i];
+      if( SCIPsymhdlrDoesPresolve(symhdlr) )
+      {
+         SCIPmessageFPrintInfo(scip->messagehdlr, file, "  %-17.17s:", SCIPsymhdlrGetName(symhdlr));
+         SCIPmessageFPrintInfo(scip->messagehdlr, file,
+            " %10.2f %10.2f %6lld %10d %10d %10d %10d %10d %10d %10d %10d %10d\n",
+            SCIPsymhdlrGetPresolTime(symhdlr),
+            SCIPsymhdlrGetSetupTime(symhdlr),
+            SCIPsymhdlrGetNPresolCalls(symhdlr),
+            SCIPsymhdlrGetNFixedVars(symhdlr),
+            SCIPsymhdlrGetNAggrVars(symhdlr),
+            SCIPsymhdlrGetNChgVarTypes(symhdlr),
+            SCIPsymhdlrGetNChgBds(symhdlr),
+            SCIPsymhdlrGetNAddHoles(symhdlr),
+            SCIPsymhdlrGetNDelConss(symhdlr),
+            SCIPsymhdlrGetNAddConss(symhdlr),
+            SCIPsymhdlrGetNChgSides(symhdlr),
+            SCIPsymhdlrGetNChgCoefs(symhdlr));
+      }
+   }
+
    /* constraint handler presolving methods statistics */
    for( i = 0; i < scip->set->nconshdlrs; ++i )
    {
@@ -2921,6 +2952,32 @@ SCIP_RETCODE SCIPcollectPresolverStatistics(
       SCIP_CALL( SCIPinsertDatatreeInt(scip, propdata, "added_constraints", SCIPpropGetNAddConss(prop)) );
       SCIP_CALL( SCIPinsertDatatreeInt(scip, propdata, "changed_sides", SCIPpropGetNChgSides(prop)) );
       SCIP_CALL( SCIPinsertDatatreeInt(scip, propdata, "changed_coefficients", SCIPpropGetNChgCoefs(prop)) );
+   }
+
+   /* sort symmetry handlers w.r.t. their name */
+   SCIPsetSortSymhdlrsName(scip->set);
+
+   /* Collect symmetry handler statistics */
+   for( i = 0; i < scip->set->nsymhdlrs; ++i )
+   {
+      SCIP_SYMHDLR* symhdlr = scip->set->symhdlrs[i];
+      SCIP_DATATREE* symhdlrdata;
+
+      SCIP_CALL( SCIPcreateDatatreeInTree(scip, plugins, &symhdlrdata, SCIPsymhdlrGetName(symhdlr), 13) );
+
+      SCIP_CALL( SCIPinsertDatatreeString(scip, symhdlrdata, "description", SCIPsymhdlrGetDesc(symhdlr)) );
+      SCIP_CALL( SCIPinsertDatatreeReal(scip, symhdlrdata, "exec_time", SCIPsymhdlrGetPresolTime(symhdlr)) );
+      SCIP_CALL( SCIPinsertDatatreeReal(scip, symhdlrdata, "setup_time", SCIPsymhdlrGetSetupTime(symhdlr)) );
+      SCIP_CALL( SCIPinsertDatatreeLong(scip, symhdlrdata, "calls", SCIPsymhdlrGetNPresolCalls(symhdlr)) );
+      SCIP_CALL( SCIPinsertDatatreeInt(scip, symhdlrdata, "fixed_vars", SCIPsymhdlrGetNFixedVars(symhdlr)) );
+      SCIP_CALL( SCIPinsertDatatreeInt(scip, symhdlrdata, "aggregated_vars", SCIPsymhdlrGetNAggrVars(symhdlr)) );
+      SCIP_CALL( SCIPinsertDatatreeInt(scip, symhdlrdata, "changed_var_types", SCIPsymhdlrGetNChgVarTypes(symhdlr)) );
+      SCIP_CALL( SCIPinsertDatatreeInt(scip, symhdlrdata, "changed_bounds", SCIPsymhdlrGetNChgBds(symhdlr)) );
+      SCIP_CALL( SCIPinsertDatatreeInt(scip, symhdlrdata, "added_holes", SCIPsymhdlrGetNAddHoles(symhdlr)) );
+      SCIP_CALL( SCIPinsertDatatreeInt(scip, symhdlrdata, "deleted_constraints", SCIPsymhdlrGetNDelConss(symhdlr)) );
+      SCIP_CALL( SCIPinsertDatatreeInt(scip, symhdlrdata, "added_constraints", SCIPsymhdlrGetNAddConss(symhdlr)) );
+      SCIP_CALL( SCIPinsertDatatreeInt(scip, symhdlrdata, "changed_sides", SCIPsymhdlrGetNChgSides(symhdlr)) );
+      SCIP_CALL( SCIPinsertDatatreeInt(scip, symhdlrdata, "changed_coefficients", SCIPsymhdlrGetNChgCoefs(symhdlr)) );
    }
 
    /* Collect constraint handler presolving methods statistics */
@@ -3284,6 +3341,128 @@ SCIP_RETCODE SCIPcollectPropagatorStatistics(
       SCIP_CALL( SCIPinsertDatatreeReal(scip, propdata, "propagation_time", SCIPpropGetTime(prop)) );
       SCIP_CALL( SCIPinsertDatatreeReal(scip, propdata, "response_propagation_time", SCIPpropGetRespropTime(prop)) );
       SCIP_CALL( SCIPinsertDatatreeReal(scip, propdata, "strong_branch_propagation_time", SCIPpropGetStrongBranchPropTime(prop)) );
+   }
+
+   return SCIP_OKAY;
+}
+
+/** outputs symmetry handler statistics
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ */
+void SCIPprintSymhdlrStatistics(
+   SCIP*                 scip,               /**< SCIP data structure */
+   FILE*                 file                /**< output file */
+   )
+{
+   int i;
+
+   assert(scip != NULL);
+   assert(scip->set != NULL);
+
+   SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPprintSymhdlrStatistics", FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+
+   SCIPmessageFPrintInfo(scip->messagehdlr, file, "Symmetries         :  #Separate #Propagate   #ResProp    Cutoffs    DomReds       Cuts    Applied\n");
+
+   /* sort symmetry handlers w.r.t. their name */
+   SCIPsetSortSymhdlrsName(scip->set);
+
+   for( i = 0; i < scip->set->nsymhdlrs; ++i )
+   {
+      SCIP_SYMHDLR* symhdlr;
+      symhdlr = scip->set->symhdlrs[i];
+
+      SCIPmessageFPrintInfo(scip->messagehdlr, file, "  %-17.17s: %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT" %10" SCIP_LONGINT_FORMAT" %10" SCIP_LONGINT_FORMAT" %10" SCIP_LONGINT_FORMAT "\n",
+         SCIPsymhdlrGetName(symhdlr),
+         SCIPsymhdlrGetNSepaCalls(symhdlr),
+         SCIPsymhdlrGetNPropCalls(symhdlr),
+         SCIPsymhdlrGetNRespropCalls(symhdlr),
+         SCIPsymhdlrGetNCutoffs(symhdlr),
+         SCIPsymhdlrGetNDomredsFound(symhdlr),
+         SCIPsymhdlrGetNCutsFound(symhdlr),
+         SCIPsymhdlrGetNCutsAdded(symhdlr));
+   }
+
+   SCIPmessageFPrintInfo(scip->messagehdlr, file, "Symmetry Timings   :  TotalTime  SetupTime   Presolve   Separate  Propagate    ResProp    SB-Prop\n");
+
+   for( i = 0; i < scip->set->nsymhdlrs; ++i )
+   {
+      SCIP_SYMHDLR* symhdlr;
+      SCIP_Real totaltime;
+
+      symhdlr = scip->set->symhdlrs[i];
+      totaltime = SCIPsymhdlrGetPresolTime(symhdlr) + SCIPsymhdlrGetSepaTime(symhdlr) + SCIPsymhdlrGetPropTime(symhdlr)
+         + SCIPsymhdlrGetRespropTime(symhdlr) + SCIPsymhdlrGetStrongBranchPropTime(symhdlr)
+         + SCIPsymhdlrGetSetupTime(symhdlr);
+
+      SCIPmessageFPrintInfo(scip->messagehdlr, file, "  %-17.17s:", SCIPsymhdlrGetName(symhdlr));
+      SCIPmessageFPrintInfo(scip->messagehdlr, file, " %10.2f %10.2f %10.2f %10.2f %10.2f %10.2f %10.2f\n",
+         totaltime,
+         SCIPsymhdlrGetSetupTime(symhdlr),
+         SCIPsymhdlrGetPresolTime(symhdlr),
+         SCIPsymhdlrGetSepaTime(symhdlr),
+         SCIPsymhdlrGetPropTime(symhdlr),
+         SCIPsymhdlrGetRespropTime(symhdlr),
+         SCIPsymhdlrGetStrongBranchPropTime(symhdlr));
+   }
+
+}
+
+/** collects symmetry handler statistics in a SCIP_DATATREE object */
+SCIP_RETCODE SCIPcollectSymhdlrStatistics(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_DATATREE*        datatree            /**< data tree */
+   )
+{
+   SCIP_DATATREE* symhdlrs;
+   int i;
+
+   assert(scip != NULL);
+   assert(datatree != NULL);
+
+   SCIP_CALL( SCIPcheckStage(scip, "SCIPcollectSymhdlrStatistics", FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+
+   /* Create a subtree for propagators */
+   SCIP_CALL( SCIPcreateDatatreeInTree(scip, datatree, &symhdlrs, "plugins", scip->set->nsymhdlrs) );
+
+   /* Collect symmetry handler statistics */
+   SCIPsetSortSymhdlrsName(scip->set);
+
+   for( i = 0; i < scip->set->nsymhdlrs; ++i )
+   {
+      SCIP_SYMHDLR* symhdlr = scip->set->symhdlrs[i];
+      SCIP_DATATREE* symdata;
+      SCIP_Real totaltime;
+
+      SCIP_CALL( SCIPcreateDatatreeInTree( scip, symhdlrs, &symdata, SCIPsymhdlrGetName(symhdlr), 15) );
+
+      SCIP_CALL( SCIPinsertDatatreeString(scip, symdata, "description", SCIPsymhdlrGetDesc(symhdlr)) );
+      SCIP_CALL( SCIPinsertDatatreeLong(scip, symdata, "separation_calls", SCIPsymhdlrGetNSepaCalls(symhdlr)) );
+      SCIP_CALL( SCIPinsertDatatreeLong(scip, symdata, "propagation_calls", SCIPsymhdlrGetNPropCalls(symhdlr)) );
+      SCIP_CALL( SCIPinsertDatatreeLong(scip, symdata, "resprop_calls", SCIPsymhdlrGetNRespropCalls(symhdlr)) );
+      SCIP_CALL( SCIPinsertDatatreeLong(scip, symdata, "cutoffs", SCIPsymhdlrGetNCutoffs(symhdlr)) );
+      SCIP_CALL( SCIPinsertDatatreeLong(scip, symdata, "domreds_found", SCIPsymhdlrGetNDomredsFound(symhdlr)) );
+      SCIP_CALL( SCIPinsertDatatreeLong(scip, symdata, "cuts_found", SCIPsymhdlrGetNCutsFound(symhdlr)) );
+      SCIP_CALL( SCIPinsertDatatreeLong(scip, symdata, "cuts_added", SCIPsymhdlrGetNCutsAdded(symhdlr)) );
+
+      totaltime = SCIPsymhdlrGetPresolTime(symhdlr) + SCIPsymhdlrGetSepaTime(symhdlr) + SCIPsymhdlrGetPropTime(symhdlr)
+         + SCIPsymhdlrGetRespropTime(symhdlr) + SCIPsymhdlrGetStrongBranchPropTime(symhdlr)
+         + SCIPsymhdlrGetSetupTime(symhdlr);
+
+      SCIP_CALL( SCIPinsertDatatreeReal(scip, symdata, "total_time", totaltime) );
+      SCIP_CALL( SCIPinsertDatatreeReal(scip, symdata, "setup_time", SCIPsymhdlrGetSetupTime(symhdlr)) );
+      SCIP_CALL( SCIPinsertDatatreeReal(scip, symdata, "presolve_time", SCIPsymhdlrGetPresolTime(symhdlr)) );
+      SCIP_CALL( SCIPinsertDatatreeReal(scip, symdata, "separation_time", SCIPsymhdlrGetSepaTime(symhdlr)) );
+      SCIP_CALL( SCIPinsertDatatreeReal(scip, symdata, "propagation_time", SCIPsymhdlrGetPropTime(symhdlr)) );
+      SCIP_CALL( SCIPinsertDatatreeReal(scip, symdata, "response_propagation_time", SCIPsymhdlrGetRespropTime(symhdlr)) );
+      SCIP_CALL( SCIPinsertDatatreeReal(scip, symdata, "strong_branch_propagation_time", SCIPsymhdlrGetStrongBranchPropTime(symhdlr)) );
    }
 
    return SCIP_OKAY;

@@ -77,89 +77,94 @@
 #define TABLE_POSITION_PROP              7000                   /**< the position of the statistics table */
 #define TABLE_EARLIEST_STAGE_PROP        SCIP_STAGE_TRANSFORMED /**< output of the statistics table is only printed from this stage onwards */
 
+#define TABLE_NAME_SYM                   "symmetry"
+#define TABLE_DESC_SYM                   "symmetry statistics table"
+#define TABLE_POSITION_SYM               8000                   /**< the position of the statistics table */
+#define TABLE_EARLIEST_STAGE_SYM         SCIP_STAGE_TRANSFORMED /**< output of the statistics table is only printed from this stage onwards */
+
 #define TABLE_NAME_CONFLICT              "conflict"
 #define TABLE_DESC_CONFLICT              "conflict statistics table"
-#define TABLE_POSITION_CONFLICT          8000                   /**< the position of the statistics table */
+#define TABLE_POSITION_CONFLICT          9000                   /**< the position of the statistics table */
 #define TABLE_EARLIEST_STAGE_CONFLICT    SCIP_STAGE_TRANSFORMED /**< output of the statistics table is only printed from this stage onwards */
 
 #define TABLE_NAME_SEPA                  "separator"
 #define TABLE_DESC_SEPA                  "separator statistics table"
-#define TABLE_POSITION_SEPA              9000                   /**< the position of the statistics table */
+#define TABLE_POSITION_SEPA              10000                  /**< the position of the statistics table */
 #define TABLE_EARLIEST_STAGE_SEPA        SCIP_STAGE_SOLVING     /**< output of the statistics table is only printed from this stage onwards */
 
 #define TABLE_NAME_CUTSEL                "cutsel"
 #define TABLE_DESC_CUTSEL                "cutsel statistics table"
-#define TABLE_POSITION_CUTSEL            9500                  /**< the position of the statistics table */
+#define TABLE_POSITION_CUTSEL            10500                 /**< the position of the statistics table */
 #define TABLE_EARLIEST_STAGE_CUTSEL      SCIP_STAGE_SOLVING     /**< output of the statistics table is only printed from this stage onwards */
 
 #define TABLE_NAME_PRICER                "pricer"
 #define TABLE_DESC_PRICER                "pricer statistics table"
-#define TABLE_POSITION_PRICER            10000                  /**< the position of the statistics table */
+#define TABLE_POSITION_PRICER            11000                  /**< the position of the statistics table */
 #define TABLE_EARLIEST_STAGE_PRICER      SCIP_STAGE_SOLVING     /**< output of the statistics table is only printed from this stage onwards */
 
 #define TABLE_NAME_BRANCH                "branchrules"
 #define TABLE_DESC_BRANCH                "branching rules statistics table"
-#define TABLE_POSITION_BRANCH            11000                  /**< the position of the statistics table */
+#define TABLE_POSITION_BRANCH            12000                  /**< the position of the statistics table */
 #define TABLE_EARLIEST_STAGE_BRANCH      SCIP_STAGE_SOLVING     /**< output of the statistics table is only printed from this stage onwards */
 
 #define TABLE_NAME_HEUR                  "heuristics"
 #define TABLE_DESC_HEUR                  "heuristics statistics table"
-#define TABLE_POSITION_HEUR              12000                  /**< the position of the statistics table */
+#define TABLE_POSITION_HEUR              13000                  /**< the position of the statistics table */
 #define TABLE_EARLIEST_STAGE_HEUR        SCIP_STAGE_PRESOLVING  /**< output of the statistics table is only printed from this stage onwards */
 
 #define TABLE_NAME_COMPRESSION           "compression"
 #define TABLE_DESC_COMPRESSION           "compression statistics table"
-#define TABLE_POSITION_COMPRESSION       13000                  /**< the position of the statistics table */
+#define TABLE_POSITION_COMPRESSION       14000                  /**< the position of the statistics table */
 #define TABLE_EARLIEST_STAGE_COMPRESSION SCIP_STAGE_PRESOLVING  /**< output of the statistics table is only printed from this stage onwards */
 
 #define TABLE_NAME_BENDERS               "benders"
 #define TABLE_DESC_BENDERS               "benders' decomposition statistics table"
-#define TABLE_POSITION_BENDERS           14000                  /**< the position of the statistics table */
+#define TABLE_POSITION_BENDERS           15000                  /**< the position of the statistics table */
 #define TABLE_EARLIEST_STAGE_BENDERS     SCIP_STAGE_SOLVING     /**< output of the statistics table is only printed from this stage onwards */
 
 #define TABLE_NAME_EXPRHDLRS             "exprhdlr"
 #define TABLE_DESC_EXPRHDLRS             "expression handlers statistics table"
-#define TABLE_POSITION_EXPRHDLRS         14500                  /**< the position of the statistics table */
+#define TABLE_POSITION_EXPRHDLRS         15500                  /**< the position of the statistics table */
 #define TABLE_EARLIEST_STAGE_EXPRHDLRS   SCIP_STAGE_TRANSFORMED /**< output of the statistics table is only printed from this stage onwards */
 
 #define TABLE_NAME_LP                    "lp"
 #define TABLE_DESC_LP                    "lp statistics table"
-#define TABLE_POSITION_LP                15000                  /**< the position of the statistics table */
+#define TABLE_POSITION_LP                16000                  /**< the position of the statistics table */
 #define TABLE_EARLIEST_STAGE_LP          SCIP_STAGE_SOLVING     /**< output of the statistics table is only printed from this stage onwards */
 
 #define TABLE_NAME_NLP                   "nlp"
 #define TABLE_DESC_NLP                   "nlp statistics table"
-#define TABLE_POSITION_NLP               16000                  /**< the position of the statistics table */
+#define TABLE_POSITION_NLP               17000                  /**< the position of the statistics table */
 #define TABLE_EARLIEST_STAGE_NLP         SCIP_STAGE_SOLVING     /**< output of the statistics table is only printed from this stage onwards */
 
 #define TABLE_NAME_NLPIS                 "nlpi"
 #define TABLE_DESC_NLPIS                 "NLP solver interfaces statistics table"
-#define TABLE_POSITION_NLPIS             16500                  /**< the position of the statistics table */
+#define TABLE_POSITION_NLPIS             17500                  /**< the position of the statistics table */
 #define TABLE_EARLIEST_STAGE_NLPIS       SCIP_STAGE_TRANSFORMED /**< output of the statistics table is only printed from this stage onwards */
 
 #define TABLE_NAME_RELAX                 "relaxator"
 #define TABLE_DESC_RELAX                 "relaxator statistics table"
-#define TABLE_POSITION_RELAX             17000                  /**< the position of the statistics table */
+#define TABLE_POSITION_RELAX             18000                  /**< the position of the statistics table */
 #define TABLE_EARLIEST_STAGE_RELAX       SCIP_STAGE_SOLVING     /**< output of the statistics table is only printed from this stage onwards */
 
 #define TABLE_NAME_TREE                  "tree"
 #define TABLE_DESC_TREE                  "tree statistics table"
-#define TABLE_POSITION_TREE              18000                  /**< the position of the statistics table */
+#define TABLE_POSITION_TREE              19000                  /**< the position of the statistics table */
 #define TABLE_EARLIEST_STAGE_TREE        SCIP_STAGE_SOLVING     /**< output of the statistics table is only printed from this stage onwards */
 
 #define TABLE_NAME_ROOT                  "root"
 #define TABLE_DESC_ROOT                  "root statistics table"
-#define TABLE_POSITION_ROOT              19000                  /**< the position of the statistics table */
+#define TABLE_POSITION_ROOT              20000                  /**< the position of the statistics table */
 #define TABLE_EARLIEST_STAGE_ROOT        SCIP_STAGE_SOLVING     /**< output of the statistics table is only printed from this stage onwards */
 
 #define TABLE_NAME_SOL                   "solution"
 #define TABLE_DESC_SOL                   "solution statistics table"
-#define TABLE_POSITION_SOL               20000                  /**< the position of the statistics table */
+#define TABLE_POSITION_SOL               21000                  /**< the position of the statistics table */
 #define TABLE_EARLIEST_STAGE_SOL         SCIP_STAGE_PRESOLVING  /**< output of the statistics table is only printed from this stage onwards */
 
 #define TABLE_NAME_CONC                  "concurrentsolver"
 #define TABLE_DESC_CONC                  "concurrent solver statistics table"
-#define TABLE_POSITION_CONC              21000                  /**< the position of the statistics table */
+#define TABLE_POSITION_CONC              22000                 /**< the position of the statistics table */
 #define TABLE_EARLIEST_STAGE_CONC        SCIP_STAGE_TRANSFORMED /**< output of the statistics table is only printed from this stage onwards */
 
 /*
@@ -370,6 +375,30 @@ SCIP_DECL_TABLECOLLECT(tableCollectProp)
    assert(table != NULL);
 
    SCIP_CALL( SCIPcollectPropagatorStatistics(scip, datatree) );
+
+   return SCIP_OKAY;
+}
+
+/** output method of statistics table to output file stream 'file' */
+static
+SCIP_DECL_TABLEOUTPUT(tableOutputSym)
+{  /*lint --e{715}*/
+   assert(scip != NULL);
+   assert(table != NULL);
+
+   SCIPprintSymhdlrStatistics(scip, file);
+
+   return SCIP_OKAY;
+}
+
+/** collect method of statistics table to SCIP_DATATREE */
+static
+SCIP_DECL_TABLECOLLECT(tableCollectSym)
+{  /*lint --e{715}*/
+   assert(scip != NULL);
+   assert(table != NULL);
+
+   SCIP_CALL( SCIPcollectSymhdlrStatistics(scip, datatree) );
 
    return SCIP_OKAY;
 }
@@ -865,6 +894,11 @@ SCIP_RETCODE SCIPincludeTableDefault(
    SCIP_CALL( SCIPincludeTable(scip, TABLE_NAME_PROP, TABLE_DESC_PROP, TRUE,
          tableCopyDefault, NULL, NULL, NULL, NULL, NULL, tableOutputProp,tableCollectProp,
          NULL, TABLE_POSITION_PROP, TABLE_EARLIEST_STAGE_PROP) );
+
+   assert(SCIPfindTable(scip, TABLE_NAME_SYM) == NULL);
+   SCIP_CALL( SCIPincludeTable(scip, TABLE_NAME_SYM, TABLE_DESC_SYM, TRUE,
+         tableCopyDefault, NULL, NULL, NULL, NULL, NULL, tableOutputSym, tableCollectSym,
+         NULL, TABLE_POSITION_SYM, TABLE_EARLIEST_STAGE_SYM) );
 
    assert(SCIPfindTable(scip, TABLE_NAME_CONFLICT) == NULL);
    SCIP_CALL( SCIPincludeTable(scip, TABLE_NAME_CONFLICT, TABLE_DESC_CONFLICT, TRUE,

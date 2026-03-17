@@ -32,14 +32,19 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#include "scip/symmetry.h"
 #include "scip/scip.h"
+#include "scip/scip_sym.h"
+#include "scip/sym.h"
+#include "scip/symmetry.h"
+#include "scip/symmetry_graph.h"
 #include "scip/cons_setppc.h"
 #include "scip/cons_orbitope.h"
 #include "scip/misc.h"
-#include "symmetry/struct_symmetry.h"
-#include "symmetry/type_symmetry.h"
-
+#include "scip/struct_mem.h"
+#include "scip/struct_scip.h"
+#include "scip/struct_set.h"
+#include "scip/struct_sym.h"
+#include "symmetry/compute_symmetry.h"
 
 /** returns inferred type of variable used for symmetry handling */
 SCIP_VARTYPE SCIPgetSymInferredVarType(
@@ -318,6 +323,127 @@ SCIP_RETCODE SCIPcomputeOrbitsFilterSym(
       printf("\n");
    }
 #endif
+
+   /* free memory */
+   SCIPfreeBufferArray(scip, &varadded);
+
+   return SCIP_OKAY;
+}
+
+/** compute non-trivial orbits of symmetry group using filtered generators
+ *
+ *  The non-trivial orbits of the group action are stored in the array orbits of length npermvars. This array contains
+ *  the indices of variables from the permvars array such that variables that are contained in the same orbit appear
+ *  consecutively in the orbits array. The variables of the i-th orbit have indices
+ *  orbits[orbitbegins[i]], ... , orbits[orbitbegins[i + 1] - 1].
+ *  Note that the description of the orbits ends at orbitbegins[norbits] - 1.
+ *
+ *  Only permutations that are not inactive (as marked by @p inactiveperms) are used. Thus, one can use this array to
+ *  filter out permutations.
+ */
+SCIP_RETCODE SCIPcomputeOrbitsFilterSymNoComp(
+   SCIP*                 scip,               /**< SCIP instance */
+   int                   npermvars,          /**< length of a permutation array */
+   int**                 permstrans,         /**< transposed matrix containing in each column a
+                                              *   permutation of the symmetry group */
+   int                   nperms,             /**< number of permutations encoded in perms */
+   SCIP_Shortbool*       inactiveperms,      /**< array to store whether permutations are inactive */
+   SCIP_Shortbool*       isaffected,         /**< array encoding whether a variable is affected by a symmetry */
+   int*                  orbits,             /**< array of non-trivial orbits */
+   int*                  orbitbegins,        /**< array containing begin positions of new orbits in orbits array */
+   int*                  norbits,            /**< pointer to number of orbits currently stored in orbits */
+   int                   nmovedpermvars      /**< number of variables moved by any permutation in symmetry component */
+   )
+{
+   SCIP_Shortbool* varadded;
+   int nvaradded = 0;
+   int orbitidx = 0;
+   int i;
+
+   assert( scip != NULL );
+   assert( permstrans != NULL );
+   assert( nperms > 0 );
+   assert( npermvars > 0 );
+   assert( inactiveperms != NULL );
+   assert( isaffected != NULL );
+   assert( orbits != NULL );
+   assert( orbitbegins != NULL );
+   assert( norbits != NULL );
+   assert( nmovedpermvars > 0 );
+
+   /* init data structures */
+   SCIP_CALL( SCIPallocBufferArray(scip, &varadded, npermvars) );
+
+   /* initially, every variable is contained in no orbit */
+   for (i = 0; i < npermvars; ++i)
+      varadded[i] = FALSE;
+
+   /* find variable orbits */
+   *norbits = 0;
+   for (i = 0; i < npermvars; ++i)
+   {
+      int beginorbitidx;
+      int j;
+
+      /* skip unaffected variables */
+      if( !isaffected[i] )
+         continue;
+
+      /* skip variable already contained in an orbit of a previous variable */
+      if ( varadded[i] )
+         continue;
+
+      /* store first variable */
+      beginorbitidx = orbitidx;
+      orbits[orbitidx++] = i;
+      varadded[i] = TRUE;
+      ++nvaradded;
+
+      /* iterate over variables in curorbit and compute their images */
+      j = beginorbitidx;
+      while ( j < orbitidx )
+      {
+         int* pt;
+         int curelem;
+         int image;
+         int p;
+
+         curelem = orbits[j];
+
+         pt = permstrans[curelem];
+         for (p = 0; p < nperms; ++p)
+         {
+            if ( ! inactiveperms[p] )
+            {
+               image = pt[p];
+
+               /* found new element of the orbit of i */
+               if ( ! varadded[image] )
+               {
+                  orbits[orbitidx++] = image;
+                  assert( orbitidx <= npermvars );
+                  varadded[image] = TRUE;
+                  ++nvaradded;
+               }
+            }
+         }
+         ++j;
+      }
+
+      /* if the orbit is trivial, reset storage, otherwise store orbit */
+      if ( orbitidx <= beginorbitidx + 1 )
+         orbitidx = beginorbitidx;
+      else
+         orbitbegins[(*norbits)++] = beginorbitidx;
+
+      /* stop if all variables are covered */
+      if ( nvaradded >= nmovedpermvars )
+         break;
+   }
+
+   /* store end in "last" orbitbegins entry */
+   assert( *norbits < npermvars );
+   orbitbegins[*norbits] = orbitidx;
 
    /* free memory */
    SCIPfreeBufferArray(scip, &varadded);
@@ -1399,881 +1525,6 @@ SCIP_RETCODE SCIPisPackingPartitioningOrbitope(
    return SCIP_OKAY;
 }
 
-/** checks whether a (signed) permutation is an involution */
-static
-SCIP_RETCODE isPermInvolution(
-   int*                  perm,               /**< permutation */
-   int                   permlen,            /**< number of original (non-negated) variables in a permutation */
-   SCIP_Bool*            isinvolution,       /**< pointer to store whether perm is an involution */
-   int*                  ntwocycles          /**< pointer to store number of 2-cycles in an involution */
-   )
-{
-   int v;
-
-   assert( perm != NULL );
-   assert( permlen > 0 );
-   assert( isinvolution != NULL );
-   assert( ntwocycles != NULL );
-
-   *ntwocycles = 0;
-   *isinvolution = TRUE;
-   for (v = 0; v < permlen && *isinvolution; ++v)
-   {
-      /* do not handle variables twice */
-      if ( perm[v] <= v )
-         continue;
-
-      /* detect two cycles */
-      if ( perm[perm[v]] == v )
-         ++(*ntwocycles);
-      else
-         *isinvolution = FALSE;
-   }
-
-   return SCIP_OKAY;
-}
-
-/** checks whether selected permutations define orbitopal symmetries */
-static
-SCIP_RETCODE detectOrbitopalSymmetries(
-   SCIP*                 scip,               /**< SCIP pointer */
-   int**                 perms,              /**< array of permutations */
-   int*                  selectedperms,      /**< indices of permutations in perm that shall be considered */
-   int                   nselectedperms,     /**< number of permutations in selectedperms */
-   int                   permlen,            /**< number of variables in a permutation */
-   int                   nrows,              /**< number of rows of potential orbitopal symmetries */
-   SCIP_Bool*            success,            /**< pointer to store if orbitopal symmetries could be found */
-   int****               matrices,           /**< pointer to store matrices of orbitopal symmetries */
-   int**                 ncols,              /**< pointer to store number of columns of matrices in matrices */
-   int*                  nmatrices           /**< pointer to store the number of matrices in matrices */
-   )
-{  /*lint --e{771}*/
-   SCIP_DISJOINTSET* conncomps;
-   SCIP_DISJOINTSET* compcolors;
-   int* complastperm;
-   int* permstoconsider;
-   int* colorbegins;
-   int* compidx;
-   int* colidx;
-   int* varidx;
-   int* degrees;
-   int* perm;
-   int nposdegree = 0;
-   int npermstoconsider;
-   int colorrepresentative1 = -1;
-   int colorrepresentative2 = -1;
-   int elemtomove;
-   int ncurcols;
-   int curcomp1;
-   int curcomp2;
-   int curdeg1;
-   int curdeg2;
-   int curcolor1;
-   int curcolor2;
-   int ncolors;
-   int cnt;
-   int c;
-   int p;
-   int v;
-   int w;
-
-   assert( scip != NULL );
-   assert( perms != NULL );
-   assert( selectedperms != NULL );
-   assert( nselectedperms >= 0 );
-   assert( permlen > 0 );
-   assert( nrows > 0 || nselectedperms == 0 );
-   assert( success != NULL );
-   assert( matrices != NULL );
-   assert( ncols != NULL );
-   assert( nmatrices != NULL );
-
-   /* initialize data */
-   *success = TRUE;
-   *matrices = NULL;
-   *ncols = NULL;
-   *nmatrices = 0;
-
-   /* we have found the empty set of orbitopal symmetries */
-   if ( nselectedperms == 0 )
-      return SCIP_OKAY;
-
-   /* build a graph to encode potential orbitopal symmetries
-    *
-    * The 2-cycles of a permutation define a set of edges that need to be added simultaneously. We encode
-    * this as a disjoint set data structure to only encode the connected components of the graph. To ensure
-    * correctness, we keep track of the degrees of each node and extend a component by a permutation only if
-    * all nodes to be extended have the same degree. We also make sure that each connected component is a
-    * path. Although this might not detect all orbitopal symmetries, it seems to cover most of the cases when
-    * computing symmetries using bliss. We also keep track of which variables are affected by the same
-    * permutations by coloring the connected components.
-    */
-   SCIP_CALL( SCIPcreateDisjointset(scip, &conncomps, permlen) );
-   SCIP_CALL( SCIPcreateDisjointset(scip, &compcolors, permlen) );
-   SCIP_CALL( SCIPallocClearBufferArray(scip, &degrees, permlen) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &complastperm, permlen) );
-   for (v = 0; v < permlen; ++v)
-      complastperm[v] = -1;
-
-   /* try to add edges of permutations to graph */
-   for (p = 0; p < nselectedperms; ++p)
-   {
-      perm = perms[selectedperms[p]];
-      curdeg1 = -1;
-      curdeg2 = -1;
-
-      /* check whether all potential edges can be added */
-      for (v = 0; v < permlen; ++v)
-      {
-         /* treat each cycle exactly once */
-         if ( perm[v] <= v )
-            continue;
-         w = perm[v];
-
-         curcomp1 = SCIPdisjointsetFind(conncomps, v);
-         curcomp2 = SCIPdisjointsetFind(conncomps, w);
-
-         /* an edge is not allowed to connect nodes from the same connected component */
-         if ( curcomp1 == curcomp2 )
-            break;
-
-         /* permutation p is not allowed to add two edges to the same connected component */
-         if ( complastperm[curcomp1] == p || complastperm[curcomp2] == p )
-            break;
-
-         /* get colors of nodes */
-         curcolor1 = SCIPdisjointsetFind(compcolors, v);
-         curcolor2 = SCIPdisjointsetFind(compcolors, w);
-
-         /* an edge is not allowed to connect two nodes with the same color */
-         if ( curcolor1 == curcolor2 )
-            break;
-
-         if ( curdeg1 == -1 )
-         {
-            assert( curdeg2 == -1 );
-
-            curdeg1 = degrees[v];
-            curdeg2 = degrees[w];
-            colorrepresentative1 = curcolor1;
-            colorrepresentative2 = curcolor2;
-
-            /* stop, we will generate a vertex with degree 3 */
-            if ( curdeg1 == 2 || curdeg2 == 2 )
-               break;
-         }
-         else
-         {
-            /* check whether nodes have compatible degrees */
-            if ( ! ((curdeg1 == degrees[v] && curdeg2 == degrees[w])
-                  || (curdeg1 == degrees[w] && curdeg2 == degrees[v])) )
-               break;
-            assert( colorrepresentative1 >= 0 );
-            assert( colorrepresentative2 >= 0 || curdeg2 == -1 );
-
-            /* check whether all components have compatible colors */
-            if ( curdeg1 > 0 && curcolor1 != colorrepresentative1 && curcolor2 != colorrepresentative1 )
-               break;
-            if ( curdeg2 > 0 && curcolor1 != colorrepresentative2 && curcolor2 != colorrepresentative2 )
-               break;
-         }
-
-         /* store that permutation p extends the connected components */
-         complastperm[curcomp1] = p;
-         complastperm[curcomp2] = p;
-      }
-
-      /* terminate if not all edges can be added */
-      if ( v < permlen )
-      {
-         *success = FALSE;
-         goto FREEMEMORY;
-      }
-      assert( curdeg1 >= 0 && curdeg2 >= 0 );
-
-      /* add edges to graph */
-      for (v = 0; v < permlen; ++v)
-      {
-         /* treat each cycle exactly once */
-         if ( perm[v] <= v )
-            continue;
-         w = perm[v];
-
-#ifndef NDEBUG
-         curcomp1 = SCIPdisjointsetFind(conncomps, v);
-         curcomp2 = SCIPdisjointsetFind(conncomps, w);
-         assert( curcomp1 != curcomp2 );
-#endif
-
-         /* add edge */
-         SCIPdisjointsetUnion(conncomps, v, w, FALSE);
-         ++degrees[v];
-         ++degrees[w];
-
-         /* possibly update colors */
-         curcolor1 = SCIPdisjointsetFind(compcolors, v);
-         curcolor2 = SCIPdisjointsetFind(compcolors, w);
-
-         if ( curcolor1 != curcolor2 )
-         {
-            /* coverity[negative_returns] */
-            SCIPdisjointsetUnion(compcolors, colorrepresentative1, v, TRUE);
-            SCIPdisjointsetUnion(compcolors, colorrepresentative1, w, TRUE);
-         }
-      }
-   }
-
-   /* find non-trivial components */
-   for (v = 0; v < permlen; ++v)
-   {
-      if ( degrees[v] > 0 )
-         ++nposdegree;
-   }
-
-   SCIP_CALL( SCIPallocBufferArray(scip, &compidx, nposdegree) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &colidx, nposdegree) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &varidx, nposdegree) );
-
-   for (v = 0, w = 0; v < permlen; ++v)
-   {
-      if ( degrees[v] > 0 )
-      {
-         compidx[w] = SCIPdisjointsetFind(conncomps, v);
-         colidx[w] = SCIPdisjointsetFind(compcolors, v);
-#ifndef NDEBUG
-         if ( w > 0 && compidx[w] == compidx[w-1] )
-            assert( colidx[w] == colidx[w-1]);
-#endif
-         varidx[w++] = v;
-      }
-   }
-   assert( w == nposdegree );
-
-   /* sort variable indices: first by colors, then by components */
-   SCIP_CALL( SCIPallocBufferArray(scip, &colorbegins, permlen + 1) );
-
-   SCIPsortIntIntInt(colidx, compidx, varidx, nposdegree);
-   w = 0;
-   ncolors = 0;
-   colorbegins[0] = 0;
-   for (v = 1; v < nposdegree; ++v)
-   {
-      if ( colidx[v] != colidx[w] )
-      {
-         SCIPsortIntInt(&compidx[w], &varidx[w], v - w);
-         colorbegins[++ncolors] = v;
-         w = v;
-      }
-   }
-   SCIPsortIntInt(&compidx[w], &varidx[w], nposdegree - w);
-   colorbegins[++ncolors] = nposdegree;
-
-   /* try to find the correct order of variable indices per color class */
-   SCIP_CALL( SCIPallocBufferArray(scip, &permstoconsider, nselectedperms) );
-
-   SCIP_CALL( SCIPallocBlockMemoryArray(scip, matrices, ncolors) );
-   SCIP_CALL( SCIPallocBlockMemoryArray(scip, ncols, ncolors) );
-   *nmatrices = ncolors;
-
-   for (c = 0; c < ncolors; ++c)
-   {
-      /* find an element in the first connected component with degree 1 */
-      for (v = colorbegins[c]; compidx[v] == compidx[colorbegins[c]]; ++v)
-      {
-         assert( v < nposdegree ); /* there should be a node of degree 1 */
-
-         if ( degrees[varidx[v]] == 1 )
-            break;
-      }
-      assert( compidx[v] == compidx[colorbegins[c]] );
-      elemtomove = varidx[v];
-
-      /* find the permutations affecting the variables in the first connected component */
-      npermstoconsider = 0;
-      for (p = 0; p < nselectedperms; ++p)
-      {
-         perm = perms[selectedperms[p]];
-         for (v = colorbegins[c]; v < nposdegree && compidx[v] == compidx[colorbegins[c]]; ++v)
-         {
-            if ( perm[varidx[v]] != varidx[v] )
-            {
-               permstoconsider[npermstoconsider++] = selectedperms[p];
-               break;
-            }
-         }
-      }
-
-      /* allocate memory for matrix */
-      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(*matrices)[c], nrows) );
-      (*ncols)[c] = npermstoconsider + 1;
-      for (p = 0; p < nrows; ++p)
-      {
-         SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(*matrices)[c][p], (*ncols)[c]) );
-      }
-
-      /* find a permutation that moves the degree-1 element and iteratively extend this to a matrix */
-      assert( degrees[elemtomove] == 1 );
-
-      /* find the first and second column */
-      for (p = 0; p < npermstoconsider; ++p)
-      {
-         perm = perms[permstoconsider[p]];
-         if ( perm[elemtomove] != elemtomove )
-            break;
-      }
-      assert( p < npermstoconsider );
-
-      /* elements moved by perm that have degree 1 are in the first column */
-      for (v = 0, cnt = 0; v < permlen; ++v)
-      {
-         if ( perm[v] > v ) /*lint !e771*/
-         {
-            if ( degrees[v] == 1 )
-            {
-               (*matrices)[c][cnt][0] = v;
-               (*matrices)[c][cnt++][1] = perm[v];
-            }
-            else
-            {
-               (*matrices)[c][cnt][0] = perm[v];
-               (*matrices)[c][cnt++][1] = v;
-            }
-         }
-      }
-
-      /* if the selected permutation do not form orbitopal symmetries */
-      if ( cnt < nrows )
-      {
-         *success = FALSE;
-         for (p = nrows - 1; p >= 0; --p)
-         {
-            SCIPfreeBufferArray(scip, &(*matrices)[c][p]);
-         }
-         SCIPfreeBlockMemoryArray(scip, &(*matrices)[c], nrows);
-         SCIPfreeBlockMemoryArray(scip, matrices, ncolors);
-         SCIPfreeBlockMemoryArray(scip, ncols, ncolors);
-         *matrices = NULL;
-         *ncols = NULL;
-         goto FREEMOREMEMORY;
-      }
-      assert( cnt == nrows );
-
-      /* remove p from the list of permutations to be considered */
-      permstoconsider[p] = permstoconsider[--npermstoconsider];
-
-      ncurcols = 1;
-      while ( npermstoconsider > 0 )
-      {
-         elemtomove = (*matrices)[c][0][ncurcols];
-
-         /* find permutation moving the elemtomove */
-         for (p = 0; p < npermstoconsider; ++p)
-         {
-            perm = perms[permstoconsider[p]];
-            if ( perm[elemtomove] != elemtomove )
-               break;
-         }
-         assert( p < npermstoconsider );
-
-         /* extend matrix */
-         for (v = 0; v < nrows; ++v)
-         {
-            assert( perm[(*matrices)[c][v][ncurcols]] != (*matrices)[c][v][ncurcols] );
-            (*matrices)[c][v][ncurcols + 1] = perm[(*matrices)[c][v][ncurcols]];
-         }
-         ++ncurcols;
-         permstoconsider[p] = permstoconsider[--npermstoconsider];
-      }
-   }
-
- FREEMOREMEMORY:
-   SCIPfreeBufferArray(scip, &permstoconsider);
-   SCIPfreeBufferArray(scip, &colorbegins);
-   SCIPfreeBufferArray(scip, &varidx);
-   SCIPfreeBufferArray(scip, &colidx);
-   SCIPfreeBufferArray(scip, &compidx);
-
- FREEMEMORY:
-   SCIPfreeBufferArray(scip, &complastperm);
-   SCIPfreeBufferArray(scip, &degrees);
-   SCIPfreeDisjointset(scip, &compcolors);
-   SCIPfreeDisjointset(scip, &conncomps);
-
-   return SCIP_OKAY;
-}
-
-/** checks whether two families of orbitopal symmetries define a double lex matrix, and in case of success, generates matrix
- *
- *  The columns of matrix1 will serve as the columns of the matrix to be generated, the columns of matrix2 will
- *  serve as rows.
- */
-static
-SCIP_RETCODE isDoublelLexSym(
-   SCIP*                 scip,               /**< SCIP pointer */
-   int                   nsymvars,           /**< number of variables on which symmetries act */
-   int***                matrices1,          /**< first list of matrices associated with orbitopal symmetries */
-   int                   nrows1,             /**< number of rows of first family of matrices */
-   int*                  ncols1,             /**< for each matrix in the first family, its number of columns */
-   int                   nmatrices1,         /**< number of matrices in the first family */
-   int***                matrices2,          /**< second list of matrices associated with orbitopal symmetries */
-   int                   nrows2,             /**< number of rows of second family of matrices */
-   int*                  ncols2,             /**< for each matrix in the second family, its number of columns */
-   int                   nmatrices2,         /**< number of matrices in the second family */
-   int***                doublelexmatrix,    /**< pointer to store combined matrix */
-   int*                  nrows,              /**< pointer to store number of rows in combined matrix */
-   int*                  ncols,              /**< pointer to store number of columns in combined matrix */
-   int**                 rowsbegin,          /**< pointer to store the begin positions of a new lex subset of rows */
-   int**                 colsbegin,          /**< pointer to store the begin positions of a new lex subset of columns */
-   SCIP_Bool*            success             /**< pointer to store whether combined matrix could be generated */
-   )
-{
-   int* idxtomatrix1;
-   int* idxtomatrix2;
-   int* idxtorow1;
-   int* idxtorow2;
-   int* idxtocol1;
-   int* idxtocol2;
-   int* sortvals;
-   int elem;
-   int mat;
-   int col;
-   int col2;
-   int mat2;
-   int cnt;
-   int c;
-   int d;
-   int i;
-   int j;
-
-   assert( scip != NULL );
-   assert( nsymvars >= 0 );
-   assert( matrices1 != NULL );
-   assert( nrows1 > 0 );
-   assert( ncols1 != NULL );
-   assert( nmatrices1 > 0 );
-   assert( matrices2 != NULL );
-   assert( nrows2 > 0 || nmatrices2 == 0 );
-   assert( ncols2 != NULL );
-   assert( nmatrices2 >= 0 );
-   assert( doublelexmatrix != NULL );
-   assert( nrows != NULL );
-   assert( ncols != NULL );
-   assert( rowsbegin != NULL );
-   assert( colsbegin != NULL );
-   assert( success != NULL );
-
-   /* initialize data */
-   *nrows = nrows1;
-   *ncols = nrows2;
-   *success = TRUE;
-
-   /* check whether expecteded sizes of matrix match */
-   for (j = 0, cnt = 0; j < nmatrices1; ++j)
-      cnt += ncols1[j];
-   if ( cnt != *ncols )
-   {
-      *success = FALSE;
-      return SCIP_OKAY;
-   }
-
-   for (i = 0, cnt = 0; i < nmatrices2; ++i)
-      cnt += ncols2[i];
-   if ( cnt != *nrows )
-   {
-      *success = FALSE;
-      return SCIP_OKAY;
-   }
-
-   /* collect information about entries in matrices */
-   SCIP_CALL( SCIPallocBufferArray(scip, &idxtomatrix1, nsymvars) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &idxtomatrix2, nsymvars) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &idxtorow1, nsymvars) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &idxtorow2, nsymvars) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &idxtocol1, nsymvars) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &idxtocol2, nsymvars) );
-
-   /* use separate loops for efficiency reasons */
-   for (i = 0; i < nsymvars; ++i)
-      idxtomatrix1[i] = -1;
-   for (i = 0; i < nsymvars; ++i)
-      idxtomatrix2[i] = -1;
-   for (i = 0; i < nsymvars; ++i)
-      idxtorow1[i] = -1;
-   for (i = 0; i < nsymvars; ++i)
-      idxtorow2[i] = -1;
-   for (i = 0; i < nsymvars; ++i)
-      idxtocol1[i] = -1;
-   for (i = 0; i < nsymvars; ++i)
-      idxtocol2[i] = -1;
-
-   for (c = 0; c < nmatrices1; ++c)
-   {
-      for (i = 0; i < nrows1; ++i)
-      {
-         for (j = 0; j < ncols1[c]; ++j)
-         {
-            idxtomatrix1[matrices1[c][i][j]] = c;
-            idxtorow1[matrices1[c][i][j]] = i;
-            idxtocol1[matrices1[c][i][j]] = j;
-         }
-      }
-   }
-   for (c = 0; c < nmatrices2; ++c)
-   {
-      for (i = 0; i < nrows2; ++i)
-      {
-         for (j = 0; j < ncols2[c]; ++j)
-         {
-            idxtomatrix2[matrices2[c][i][j]] = c;
-            idxtorow2[matrices2[c][i][j]] = i;
-            idxtocol2[matrices2[c][i][j]] = j;
-         }
-      }
-   }
-
-   /* check whether the variables of the two orbitopes coincide */
-   for (i = 0; i < nsymvars; ++i)
-   {
-      if ( (idxtomatrix1[i] == -1) != (idxtomatrix2[i] == -1) )
-      {
-         *success = FALSE;
-         goto FREEINITMEMORY;
-      }
-   }
-
-   /* Find a big matrix such that the columns of this matrix correspond to the columns of matrices in matrices1
-    * and the rows of this matrix correspond to the columns of matrices in matrices2. In total, this leads to
-    * a matrix of block shape
-    *
-    *                     A | B | ... | C
-    *                     D | E | ... | F
-    *                     . | . |     | .
-    *                     G | H | ... | I
-    *
-    * We start by filling the first column of the big matrix by the first column in matrices1. Sort the column
-    * according to the matrices in matrices2.
-    */
-   SCIP_CALL( SCIPallocBufferArray(scip, &sortvals, MAX(*nrows, *ncols)) );
-   SCIP_CALL( SCIPallocBlockMemoryArray(scip, doublelexmatrix, *nrows) );
-   for (i = 0; i < *nrows; ++i)
-   {
-      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(*doublelexmatrix)[i], *ncols) );
-      (*doublelexmatrix)[i][0] = matrices1[0][i][0];
-      sortvals[i] = idxtomatrix2[matrices1[0][i][0]];
-   }
-   SCIPsortIntPtr(sortvals, (void*) (*doublelexmatrix), *nrows);
-
-   /* check that the first column can be covered by rows of matrices2 */
-   cnt = 0;
-   for (i = 0; i < nmatrices2; ++i)
-   {
-      int end;
-
-      end = cnt + ncols2[i] - 1;
-      for (j = cnt; j < end; ++j)
-      {
-         assert( idxtomatrix2[(*doublelexmatrix)[j][0]] == idxtomatrix2[(*doublelexmatrix)[j + 1][0]] );
-         if( idxtorow2[(*doublelexmatrix)[j][0]] != idxtorow2[(*doublelexmatrix)[j + 1][0]] )
-         {
-            *success = FALSE;
-            goto FREEMEMORY;
-         }
-      }
-   }
-
-   /* fill first row of big matrix */
-   mat = idxtomatrix2[(*doublelexmatrix)[0][0]];
-   col = idxtocol2[(*doublelexmatrix)[0][0]];
-   cnt = 0;
-   for (j = 0; j < *ncols; ++j)
-   {
-      /* skip the entry that is already contained in the first column */
-      if ( matrices2[mat][j][col] == (*doublelexmatrix)[0][0] )
-         continue;
-
-      sortvals[cnt++] = idxtomatrix1[matrices2[mat][j][col]];
-      (*doublelexmatrix)[0][cnt] = matrices2[mat][j][col];
-   }
-   assert( cnt == nrows2 - 1);
-   SCIPsortIntInt(sortvals, &((*doublelexmatrix)[0][1]), cnt);
-
-   /* fill the remaining entries of the big matrix */
-   for (i = 1; i < *nrows; ++i)
-   {
-      for (j = 1; j < *ncols; ++j)
-      {
-         /* get the matrices and column/row of the entry */
-         mat = idxtomatrix1[(*doublelexmatrix)[0][j]];
-         mat2 = idxtomatrix2[(*doublelexmatrix)[i][0]];
-         col = idxtocol1[(*doublelexmatrix)[0][j]];
-         col2 = idxtocol2[(*doublelexmatrix)[i][0]];
-
-         /* find the unique element in the col column of matrix mat and the row column of matrix mat2 */
-         /* @todo improve this by first sorting the columns */
-         cnt = 0;
-         elem = -1;
-         for (c = 0; c < *nrows; ++c)
-         {
-            for (d = 0; d < *ncols; ++d)
-            {
-               if ( matrices1[mat][c][col] == matrices2[mat2][d][col2] )
-               {
-                  ++cnt;
-                  elem = matrices1[mat][c][col];
-                  break;
-               }
-            }
-         }
-
-         /* stop: the columns do not overlap properly */
-         if ( cnt != 1 )
-         {
-            *success = FALSE;
-            goto FREEMEMORY;
-         }
-         (*doublelexmatrix)[i][j] = elem;
-      }
-   }
-
-   /* store begin positions of row and column blocks */
-   if ( *success )
-   {
-      assert( nmatrices2 > 0 );
-      SCIP_CALL( SCIPallocBlockMemoryArray(scip, rowsbegin, nmatrices2 + 1) );
-      SCIP_CALL( SCIPallocBlockMemoryArray(scip, colsbegin, nmatrices1 + 1) );
-      (*rowsbegin)[0] = 0;
-      (*colsbegin)[0] = 0;
-      for (j = 0; j < nmatrices2; ++j)
-         (*rowsbegin)[j + 1] = (*rowsbegin)[j] + ncols2[j];
-      for (j = 0; j < nmatrices1; ++j)
-         (*colsbegin)[j + 1] = (*colsbegin)[j] + ncols1[j];
-   }
-
-   /* check whether the rows of doublelexmatrix are covered by rows of matrices1 */
-   for (i = 0; i < *nrows; ++i)
-   {
-      for (c = 0; c < nmatrices1; ++c)
-      {
-         for (j = (*colsbegin)[c]; j < (*colsbegin)[c + 1] - 1; ++j)
-         {
-            assert( idxtomatrix1[(*doublelexmatrix)[i][j]] == idxtomatrix1[(*doublelexmatrix)[i][j + 1]] );
-            if( idxtorow1[(*doublelexmatrix)[i][j]] != idxtorow1[(*doublelexmatrix)[i][j + 1]] )
-            {
-               *success = FALSE;
-               goto FREEMEMORY;
-            }
-         }
-      }
-   }
-
-   /* check whether the columns of doublelexmatrix are covered by rows of matrices1 */
-   for (i = 0; i < *ncols; ++i)
-   {
-      for (c = 0; c < nmatrices2; ++c)
-      {
-         for (j = (*rowsbegin)[c]; j < (*rowsbegin)[c + 1] - 1; ++j)
-         {
-            assert( idxtomatrix2[(*doublelexmatrix)[j][i]] == idxtomatrix2[(*doublelexmatrix)[j + 1][i]] );
-            if( idxtorow2[(*doublelexmatrix)[j][i]] != idxtorow2[(*doublelexmatrix)[j + 1][i]] )
-            {
-               *success = FALSE;
-               goto FREEMEMORY;
-            }
-         }
-      }
-   }
-
- FREEMEMORY:
-   SCIPfreeBufferArray(scip, &sortvals);
-
-   if ( !(*success) )
-   {
-      for (i = *nrows - 1; i >= 0; --i)
-      {
-         SCIPfreeBlockMemoryArray(scip, &(*doublelexmatrix)[i], *ncols);
-      }
-      SCIPfreeBlockMemoryArray(scip, doublelexmatrix, *nrows);
-      *doublelexmatrix = NULL;
-      *rowsbegin = NULL;
-      *colsbegin = NULL;
-   }
-
- FREEINITMEMORY:
-   SCIPfreeBufferArray(scip, &idxtocol2);
-   SCIPfreeBufferArray(scip, &idxtocol1);
-   SCIPfreeBufferArray(scip, &idxtorow2);
-   SCIPfreeBufferArray(scip, &idxtorow1);
-   SCIPfreeBufferArray(scip, &idxtomatrix2);
-   SCIPfreeBufferArray(scip, &idxtomatrix1);
-
-   return SCIP_OKAY;
-}
-
-/** detects whether permutations define single or double lex matrices
- *
- *  A single lex matrix is a matrix whose columns can be partitioned into blocks such that the
- *  columns within each block can be permuted arbitrarily. A double lex matrix is a single lex
- *  matrix such that also blocks of rows have the aforementioned property.
- */
-SCIP_RETCODE SCIPdetectSingleOrDoubleLexMatrices(
-   SCIP*                 scip,               /**< SCIP pointer */
-   SCIP_Bool             detectsinglelex,    /**< whether single lex matrices shall be detected */
-   int**                 perms,              /**< array of permutations */
-   int                   nperms,             /**< number of permutations in perms */
-   int                   permlen,            /**< number of variables in a permutation */
-   SCIP_Bool*            success,            /**< pointer to store whether structure could be detected */
-   SCIP_Bool*            isorbitope,         /**< pointer to store whether detected matrix is orbitopal */
-   int***                lexmatrix,          /**< pointer to store single or double lex matrix */
-   int*                  nrows,              /**< pointer to store number of rows of lexmatrix */
-   int*                  ncols,              /**< pointer to store number of columns of lexmatrix */
-   int**                 lexrowsbegin,       /**< pointer to store array indicating begin of new row-lexmatrix */
-   int**                 lexcolsbegin,       /**< pointer to store array indicating begin of new col-lexmatrix */
-   int*                  nrowmatrices,       /**< pointer to store number of single lex row matrices in rows */
-   int*                  ncolmatrices        /**< pointer to store number of single lex column matrices in rows */
-   )
-{
-   int*** matricestype1 = NULL;
-   int*** matricestype2 = NULL;
-   int* ncolstype1 = NULL;
-   int* ncolstype2 = NULL;
-   int nmatricestype1 = 0;
-   int nmatricestype2 = 0;
-   int* permstype1;
-   int* permstype2;
-   int npermstype1 = 0;
-   int npermstype2 = 0;
-   int ncycs1 = -1;
-   int ncycs2 = -1;
-   int tmpncycs;
-   int p;
-   int i;
-   SCIP_Bool isinvolution;
-
-   assert( scip != NULL );
-   assert( perms != NULL );
-   assert( nperms > 0 );
-   assert( permlen > 0 );
-   assert( success != NULL );
-   assert( lexmatrix != NULL );
-   assert( nrows != NULL );
-   assert( ncols != NULL );
-   assert( lexrowsbegin != NULL );
-   assert( lexcolsbegin != NULL );
-   assert( nrowmatrices != NULL );
-   assert( ncolmatrices != NULL );
-
-   *success = TRUE;
-   *isorbitope = FALSE;
-   *nrowmatrices = 0;
-   *ncolmatrices = 0;
-
-   /* arrays to store the different types of involutions */
-   SCIP_CALL( SCIPallocBufferArray(scip, &permstype1, nperms)  );
-   SCIP_CALL( SCIPallocBufferArray(scip, &permstype2, nperms)  );
-
-   /* check whether we can expect lexicographically sorted rows and columns */
-   for (p = 0; p < nperms; ++p)
-   {
-      SCIP_CALL( isPermInvolution(perms[p], permlen, &isinvolution, &tmpncycs) );
-
-      /* terminate if not all permutations are involutions */
-      if ( ! isinvolution )
-      {
-         *success = FALSE;
-         goto FREEMEMORY;
-      }
-
-      /* store number of cycles or terminate if too many different types of involutions */
-      if ( ncycs1 == -1 || ncycs1 == tmpncycs )
-      {
-         ncycs1 = tmpncycs;
-         permstype1[npermstype1++] = p;
-      }
-      else if ( ncycs2 == -1 || ncycs2 == tmpncycs )
-      {
-         ncycs2 = tmpncycs;
-         permstype2[npermstype2++] = p;
-      }
-      else
-      {
-         *success = FALSE;
-         goto FREEMEMORY;
-      }
-   }
-
-   /* for each type, check whether permutations define (disjoint) orbitopal symmetries */
-   SCIP_CALL( detectOrbitopalSymmetries(scip, perms, permstype1, npermstype1, permlen, ncycs1, success,
-         &matricestype1, &ncolstype1, &nmatricestype1) );
-   if ( ! *success )
-      goto FREEMEMORY;
-
-   SCIP_CALL( detectOrbitopalSymmetries(scip, perms, permstype2, npermstype2, permlen, ncycs2, success,
-         &matricestype2, &ncolstype2, &nmatricestype2) );
-   if ( ! *success )
-      goto FREEMEMORY;
-
-   /* check whether a double lex matrix is defined */
-   *success = FALSE;
-   if ( !detectsinglelex && ncycs2 != -1 )
-   {
-      assert( ncycs1 > 0 );
-
-      SCIP_CALL( isDoublelLexSym(scip, permlen, matricestype1, ncycs1, ncolstype1, nmatricestype1,
-            matricestype2, ncycs2, ncolstype2, nmatricestype2,
-            lexmatrix, nrows, ncols, lexrowsbegin, lexcolsbegin, success) );
-
-      if ( *success )
-      {
-         *nrowmatrices = nmatricestype2;
-         *ncolmatrices = nmatricestype1;
-      }
-   }
-
-   /* if no double lex matrix is detected, possibly return orbitope */
-   if ( !(*success) && ncycs2 == -1 && nmatricestype1 == 1 )
-   {
-      SCIP_CALL( SCIPallocBlockMemoryArray(scip, lexmatrix, ncycs1) );
-      for (i = 0; i < ncycs1; ++i)
-      {
-         SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(*lexmatrix)[i], ncolstype1[0]) );
-         for (p = 0; p < ncolstype1[0]; ++p)
-            (*lexmatrix)[i][p] = matricestype1[0][i][p];
-      }
-      *nrows = ncycs1;
-      *ncols = ncolstype1[0];
-      *success = TRUE;
-      *isorbitope = TRUE;
-   }
-
- FREEMEMORY:
-   for (p = nmatricestype2 - 1; p >= 0; --p)
-   {
-      for (i = ncycs2 - 1; i >= 0; --i)
-      {
-         SCIPfreeBlockMemoryArray(scip, &matricestype2[p][i], ncolstype2[p]);
-      }
-      SCIPfreeBlockMemoryArray(scip, &matricestype2[p], ncycs2);
-   }
-   SCIPfreeBlockMemoryArrayNull(scip, &matricestype2, nmatricestype2);
-   SCIPfreeBlockMemoryArrayNull(scip, &ncolstype2, nmatricestype2);
-   for (p = nmatricestype1 - 1; p >= 0; --p)
-   {
-      for (i = ncycs1 - 1; i >= 0; --i)
-      {
-         SCIPfreeBlockMemoryArray(scip, &matricestype1[p][i], ncolstype1[p]);
-      }
-      SCIPfreeBlockMemoryArray(scip, &matricestype1[p], ncycs1);
-   }
-   SCIPfreeBlockMemoryArrayNull(scip, &matricestype1, nmatricestype1);
-   SCIPfreeBlockMemoryArrayNull(scip, &ncolstype1, nmatricestype1);
-
-   SCIPfreeBufferArray(scip, &permstype2);
-   SCIPfreeBufferArray(scip, &permstype1);
-
-   return SCIP_OKAY;
-}
-
-
 /** helper function to test if val1 = val2 while permitting infinity-values */
 SCIP_Bool SCIPsymEQ(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -2457,4 +1708,60 @@ SCIP_Bool SCIPsymGT(
    assert( !minf2 );
 
    return SCIPisGT(scip, val1, val2);
+}
+
+/** returns whether a (signed) permutation is a proper permutation */
+SCIP_Bool isProperPerm(
+   SYM_SYMTYPE           symtype,            /**< symmetry type */
+   int*                  perm,               /**< (signed) permutation */
+   int                   nvars               /**< number of variables the permutation acts on */
+   )
+{
+   int i;
+
+   assert(perm != NULL);
+   assert(nvars > 0);
+
+   if( symtype == SYM_SYMTYPE_PERM )
+      return TRUE;
+
+   for( i = 0; i < nvars; ++i )
+   {
+      if( perm[i] >= nvars )
+         return FALSE;
+   }
+
+   return TRUE;
+}
+
+/** returns whether a permutation is already contained in a list of permutations */
+SCIP_Bool isPermKnown(
+   int*                  perm,               /**< permutation to be checked */
+   int                   permlen,            /**< length of permutation */
+   int**                 knownperms,         /**< list of known permutations (possibly longer than nknownperms) */
+   int                   nknownperms         /**< number of known permutations to be checked */
+   )
+{
+   int p;
+   int i;
+
+   assert(perm != NULL);
+   assert(permlen >= 0);
+   assert(knownperms != NULL);
+   assert(nknownperms >= 0);
+
+   for( p = 0; p < nknownperms; ++p )
+   {
+      for( i = 0; i < permlen; ++i )
+      {
+         /* knownperms[p] and perm differ */
+         if( perm[i] != knownperms[p][i] )
+            break;
+      }
+      /* loop did not terminate early, knownperms[p] and perm coincide */
+      if( i == permlen )
+         return TRUE;
+   }
+
+   return FALSE;
 }

@@ -39,6 +39,7 @@
 #include "scip/pub_misc.h"
 #include "scip/type_retcode.h"
 #include "scip/type_scip.h"
+#include "scip/type_sym.h"
 #include "scip/type_var.h"
 #include "symmetry/type_symmetry.h"
 
@@ -79,7 +80,6 @@ SCIP_RETCODE SCIPcomputeOrbitsSym(
    int*                  norbits             /**< pointer to number of orbits currently stored in orbits */
    );
 
-
 /** compute non-trivial orbits of symmetry group using filtered generators
  *
  *  The non-trivial orbits of the group action are stored in the array orbits of length npermvars. This array contains
@@ -112,6 +112,32 @@ SCIP_RETCODE SCIPcomputeOrbitsFilterSym(
    int                   ncomponents,        /**< number of components of symmetry group */
    int                   nmovedpermvars      /**< number of variables moved by any permutation in a symmetry component
                                               *   that is handled by orbital fixing */
+   );
+
+/** compute non-trivial orbits of symmetry group using filtered generators
+ *
+ *  The non-trivial orbits of the group action are stored in the array orbits of length npermvars. This array contains
+ *  the indices of variables from the permvars array such that variables that are contained in the same orbit appear
+ *  consecutively in the orbits array. The variables of the i-th orbit have indices
+ *  orbits[orbitbegins[i]], ... , orbits[orbitbegins[i + 1] - 1].
+ *  Note that the description of the orbits ends at orbitbegins[norbits] - 1.
+ *
+ *  Only permutations that are not inactive (as marked by @p inactiveperms) are used. Thus, one can use this array to
+ *  filter out permutations.
+ */
+SCIP_EXPORT
+SCIP_RETCODE SCIPcomputeOrbitsFilterSymNoComp(
+   SCIP*                 scip,               /**< SCIP instance */
+   int                   npermvars,          /**< length of a permutation array */
+   int**                 permstrans,         /**< transposed matrix containing in each column a
+                                              *   permutation of the symmetry group */
+   int                   nperms,             /**< number of permutations encoded in perms */
+   SCIP_Shortbool*       inactiveperms,      /**< array to store whether permutations are inactive */
+   SCIP_Shortbool*       isaffected,         /**< array encoding whether a variable is affected by a symmetry */
+   int*                  orbits,             /**< array of non-trivial orbits */
+   int*                  orbitbegins,        /**< array containing begin positions of new orbits in orbits array */
+   int*                  norbits,            /**< pointer to number of orbits currently stored in orbits */
+   int                   nmovedpermvars      /**< number of variables moved by any permutation in symmetry component */
    );
 
 /** compute non-trivial orbits of symmetry group
@@ -265,30 +291,6 @@ SCIP_RETCODE SCIPisPackingPartitioningOrbitope(
    SCIP_ORBITOPETYPE*    type                /**< pointer to store type of orbitope constraint after strengthening */
    );
 
-/** detects whether permutations define single or double lex matrices
- *
- *  A single lex matrix is a matrix whose columns can be partitioned into blocks such that the
- *  columns within each block can be permuted arbitrarily. A double lex matrix is a single lex
- *  matrix such that also blocks of rows have the aforementioned property.
- */
-SCIP_EXPORT
-SCIP_RETCODE SCIPdetectSingleOrDoubleLexMatrices(
-   SCIP*                 scip,               /**< SCIP pointer */
-   SCIP_Bool             detectsinglelex,    /**< whether single lex matrices shall be detected */
-   int**                 perms,              /**< array of permutations */
-   int                   nperms,             /**< number of permutations in perms */
-   int                   permlen,            /**< number of variables in a permutation */
-   SCIP_Bool*            success,            /**< pointer to store whether structure could be detected */
-   SCIP_Bool*            isorbitope,         /**< pointer to store whether detected matrix is orbitopal */
-   int***                lexmatrix,          /**< pointer to store single or double lex matrix */
-   int*                  nrows,              /**< pointer to store number of rows of lexmatrix */
-   int*                  ncols,              /**< pointer to store number of columns of lexmatrix */
-   int**                 lexrowsbegin,       /**< pointer to store array indicating begin of new row-lexmatrix */
-   int**                 lexcolsbegin,       /**< pointer to store array indicating begin of new col-lexmatrix */
-   int*                  nrowmatrices,       /**< pointer to store number of single lex row matrices in rows */
-   int*                  ncolmatrices        /**< pointer to store number of single lex column matrices in rows */
-   );
-
 /** helper function to test if val1 = val2 while permitting infinity-values */
 SCIP_Bool SCIPsymEQ(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -326,6 +328,23 @@ SCIP_Bool SCIPsymGT(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Real             val1,               /**< left-hand side value */
    SCIP_Real             val2                /**< right-hand side value */
+   );
+
+/** returns whether a (signed) permutation is a proper permutation */
+SCIP_EXPORT
+SCIP_Bool isProperPerm(
+   SYM_SYMTYPE           symtype,            /**< symmetry type */
+   int*                  perm,               /**< (signed) permutation */
+   int                   nvars               /**< number of variables the permutation acts on */
+   );
+
+/** returns whether a permutation is already contained in a list of permutations */
+SCIP_EXPORT
+SCIP_Bool isPermKnown(
+   int*                  perm,               /**< permutation to be checked */
+   int                   permlen,            /**< length of permutation */
+   int**                 knownperms,         /**< list of known permutations (possibly longer than nknownperms) */
+   int                   nknownperms         /**< number of known permutations to be checked */
    );
 
 /** @} */

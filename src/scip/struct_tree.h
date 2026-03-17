@@ -41,6 +41,7 @@
 #include "scip/type_lp.h"
 #include "scip/type_nodesel.h"
 #include "scip/type_prop.h"
+#include "scip/type_sym.h"
 #include "scip/type_tree.h"
 #include "scip/type_var.h"
 
@@ -178,6 +179,7 @@ struct SCIP_PendingBdchg
    SCIP_BOUNDTYPE        boundtype;          /**< type of bound: lower or upper bound */
    SCIP_CONS*            infercons;          /**< constraint that deduced the bound change, or NULL */
    SCIP_PROP*            inferprop;          /**< propagator that deduced the bound change, or NULL */
+   SCIP_SYMCOMP*         infersymcomp;       /**< symmetry component that deduced the bound change, or NULL */
    int                   inferinfo;          /**< user information for inference to help resolving the conflict */
    SCIP_Bool             probingchange;      /**< is the bound change a temporary setting due to probing? */
 };

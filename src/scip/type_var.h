@@ -130,7 +130,8 @@ enum SCIP_BoundchgType
 {
    SCIP_BOUNDCHGTYPE_BRANCHING = 0,     /**< bound change was due to a branching decision */
    SCIP_BOUNDCHGTYPE_CONSINFER = 1,     /**< bound change was due to an inference of a constraint (domain propagation) */
-   SCIP_BOUNDCHGTYPE_PROPINFER = 2      /**< bound change was due to an inference of a domain propagator */
+   SCIP_BOUNDCHGTYPE_PROPINFER = 2,     /**< bound change was due to an inference of a domain propagator */
+   SCIP_BOUNDCHGTYPE_SYMINFER = 3       /**< bound change was due to an inference of a symmetry handler's propagator */
 };
 typedef enum SCIP_BoundchgType SCIP_BOUNDCHGTYPE;
 

@@ -209,13 +209,14 @@ void SCIPnodeSetReoptID(
    unsigned int          id                  /**< unique id */
    );
 
-/** counts the number of bound changes due to branching, constraint propagation, and propagation */
+/** counts the number of bound changes due to branching, constraint propagation, propagation, and symmetry propagation */
 SCIP_EXPORT
 void SCIPnodeGetNDomchg(
    SCIP_NODE*            node,               /**< node */
    int*                  nbranchings,        /**< pointer to store number of branchings (or NULL if not needed) */
    int*                  nconsprop,          /**< pointer to store number of constraint propagations (or NULL if not needed) */
-   int*                  nprop               /**< pointer to store number of propagations (or NULL if not needed) */
+   int*                  nprop,              /**< pointer to store number of propagations (or NULL if not needed) */
+   int*                  nsymprop            /**< pointer to store number of symmetry propagations (or NULL if not needed) */
    );
 
 /** gets the domain change information of the node, i.e., the information about the differences in the

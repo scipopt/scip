@@ -838,7 +838,6 @@ SCIPPLUGINLIBOBJ=	scip/benders_default.o \
 			scip/prop_pseudoobj.o \
 			scip/prop_redcost.o \
 			scip/prop_rootredcost.o \
-			scip/prop_symmetry.o \
 			scip/prop_vbounds.o \
 			scip/reader_bd.o \
 			scip/reader_bnd.o \
@@ -1042,6 +1041,7 @@ SCIPLIBOBJ	=	scip/boundstore.o \
 			scip/scip_sol.o \
 			scip/scip_solve.o \
 			scip/scip_solvingstats.o \
+			scip/scip_sym.o \
 			scip/scip_table.o \
 			scip/scip_timing.o \
 			scip/scip_tree.o \
@@ -1060,6 +1060,10 @@ SCIPLIBOBJ	=	scip/boundstore.o \
 			scip/sol.o \
 			scip/solve.o \
 			scip/stat.o \
+			scip/sym.o \
+			scip/sym_lexorbred.o \
+			scip/sym_rowcol.o \
+			scip/sym_sst.o \
 			scip/symmetry.o \
 			scip/symmetry_graph.o \
 			scip/symmetry_orbitopal.o \

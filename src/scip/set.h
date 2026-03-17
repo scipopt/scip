@@ -27,6 +27,7 @@
  * @brief  internal methods for global SCIP settings
  * @author Tobias Achterberg
  * @author Timo Berthold
+ * @author Christopher Hojny
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -56,6 +57,7 @@
 #include "scip/type_reader.h"
 #include "scip/type_relax.h"
 #include "scip/type_sepa.h"
+#include "scip/type_sym.h"
 #include "scip/type_table.h"
 #include "scip/type_prop.h"
 #include "scip/type_benders.h"
@@ -90,6 +92,7 @@ SCIP_RETCODE SCIPsetCopyPlugins(
    SCIP_Bool             copyeventhdlrs,     /**< should the event handlers be copied */
    SCIP_Bool             copynodeselectors,  /**< should the node selectors be copied */
    SCIP_Bool             copybranchrules,    /**< should the branchrules be copied */
+   SCIP_Bool             copysymhdlrs,       /**< should the symmetry handlers be copied */
    SCIP_Bool             copyiisfinders,     /**< should the IIS finders be copied */
    SCIP_Bool             copydisplays,       /**< should the display columns be copied */
    SCIP_Bool             copydialogs,        /**< should the dialogs be copied */
@@ -847,6 +850,43 @@ void SCIPsetSortBranchrules(
 /** sorts branching rules by name */
 void SCIPsetSortBranchrulesName(
    SCIP_SET*             set                 /**< global SCIP settings */
+   );
+
+/** inserts symmetry handler in symmetry handler list */
+SCIP_RETCODE SCIPsetIncludeSymhdlr(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_SYMHDLR*         symhdlr             /**< symmetry handler */
+   );
+
+/** sorts symmetry handlers by priorities */
+void SCIPsetSortSymhdlrs(
+   SCIP_SET*             set                 /**< global SCIP settings */
+   );
+
+/** sorts symmetry handlers by propagation priorities */
+void SCIPsetSortSymhdlrsProp(
+   SCIP_SET*             set                 /**< global SCIP settings */
+   );
+
+/** sorts symmetry handlers by presolving priorities */
+void SCIPsetSortSymhdlrsPresol(
+   SCIP_SET*             set                 /**< global SCIP settings */
+   );
+
+/** sorts symmetry handlers by separation priorities */
+void SCIPsetSortSymhdlrsSepa(
+   SCIP_SET*             set                 /**< global SCIP settings */
+   );
+
+/** sorts symmetry handlers by name */
+void SCIPsetSortSymhdlrsName(
+   SCIP_SET*             set                 /**< global SCIP settings */
+   );
+
+/** returns the symmetry handler of the given name, or NULL if not existing */
+SCIP_SYMHDLR* SCIPsetFindSymhdlr(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   const char*           name                /**< name of constraint handler */
    );
 
 /** inserts IIS finders in IIS finder list */

@@ -46,7 +46,7 @@ void setup(void)
    SCIP_CALL( SCIPsetIntParam(scip, "presolving/maxrestarts", 0) );
    SCIP_CALL( SCIPsetIntParam(scip, "branching/mostinf/priority", 100000) );
    SCIP_CALL( SCIPsetBoolParam(scip, "misc/scaleobj", FALSE) );
-   SCIP_CALL( SCIPsetIntParam(scip, "misc/usesymmetry", 0) );
+   SCIP_CALL( SCIPsetBoolParam(scip, "symmetries/enabled", FALSE) );
    SCIP_CALL( SCIPsetHeuristics(scip, SCIP_PARAMSETTING_OFF, TRUE) );
    SCIP_CALL( SCIPsetSeparating(scip, SCIP_PARAMSETTING_OFF, TRUE) );
    SCIP_CALL( SCIPsetIntParam(scip, "constraints/and/sepafreq", 1) );

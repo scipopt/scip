@@ -6,12 +6,13 @@
 Features
 --------
 
-- adds functionality to compute symmetries of entire symmetry detection graph rather than just the restriction to variable nodes
+- added functionality to compute symmetries of entire symmetry detection graph rather than just the restriction to variable nodes
 - primal heuristic feasjump
 - simpler restart control based on linear extrapolation since improvement checkpoint in tree size estimation
 - adds reader for decomposed problems to apply Benders' decomposition. The reader, extension `bdr`, lists the instance
   files for the master problem and subproblems. These instance files are then used to build up the Benders'
   decomposition within SCIP.
+- added new plugin type symmetry handler to allow users to add their own symmetry handling methods to SCIP
 
 Interface changes
 -----------------
@@ -21,6 +22,11 @@ Interface changes
 - SCIPcreateSymgraph() receives an additional argument to specify an epsilon value that is used for epsilon-comparisons
 - SCIPincludeIISfinder() receives an additional argument to set whether it should be enabled
 - SCIPincludeIISfinderBasic() receives an additional argument to set whether it should be enabled
+- methods SCIPcopyPlugins(), SCIPcopy(), SCIPcopyConsCompression(), SCIPcopyOrig(), SCIPcopyOrigConsCompression() receive a new argument to control whether symmetry handler plugins are copied to a sub-SCIP
+- deleted propagtor symmetry including its SCIPincludePropSymmetry() and SCIPgetSymmetryNGenerators()
+- SCIPsetCopyPlugins() receives a new argument to control whether symmetry handler plugins are copied to a sub-SCIP
+- new argument infersymcomp for SCIPnodeAddBoundinfer(), SCIPnodeAddBoundinferExact(), SCIPdomchgAddBoundchg() to set inference information in conflict analysis that arise from symmetry handling
+- new argument nsymprop for SCIPnodeGetNDomchg() to report number of symmetry-based reductions in domain changes
 
 ### New API functions
 
@@ -31,6 +37,16 @@ Interface changes
 - added SCIPtightenVariableLowerAndUpperBounds() to tighten the variable bounds attached to a list of variables
 - added SCIPcreateBendersDefaultFromFiles() to add subproblems to the default Benders' decomposition plugin through
   instance files, instead of SCIP instances.
+- new methods to include symmetry handlers and set their callbacks: SCIPincludeSymhdlr(), SCIPincludeSymhdlrBasic(), SCIPsetSymhdlrCopy(), SCIPsetSymhdlrFree(), SCIPsetSymhdlrInit(), SCIPsetSymhdlrExit(), SCIPsetSymhdlrInitsol(), SCIPsetSymhdlrExitsol(), SCIPsetSymhdlrPresol(), SCIPsetSymhdlrResprop(), SCIPsetSymhdlrProp(), SCIPsetSymhdlrSepa(), SCIPfindSymhdlr(), SCIPgetSymhdlrs(), SCIPgetNSymhdlrs(), SCIPgetSymcomps(), SCIPgetNSymcomps(), SCIPsyminfoCreate(), SCIPsyminfoFree()
+- new methods to retrieve data from symmetry handlers and symmetry components: SCIPsymcompGetData(), SCIPsymcompGetHdlr(), SCIPsymcompGetName(), SCIPsymhdlrGetName(), SCIPsymhdlrGetData(), SCIPsymhdlrGetPriority(), SCIPsymhdlrGetPresolPriority(), SCIPsymhdlrGetDesc(), SCIPsymhdlrDoesPresolve(), SCIPsymhdlrGetSetupTime(), SCIPsymhdlrGetPresolTime(), SCIPsymhdlrGetNPresolCalls(), SCIPsymhdlrGetNFixedVars(), SCIPsymhdlrGetNAggrVars(), SCIPsymhdlrGetNChgVarTypes(), SCIPsymhdlrGetNChgBds(), SCIPsymhdlrGetNAddHoles(), SCIPsymhdlrGetNDelConss(), SCIPsymhdlrGetNAddConss(), SCIPsymhdlrGetNChgCoefs(), SCIPsymhdlrGetSepaPriority(), SCIPsymhdlrGetPropPriority(), SCIPsymhdlrGetNChgSides(), SCIPsymhdlrGetNPropCalls(), SCIPsymhdlrGetNRespropCalls(), SCIPsymhdlrGetNCutoffs(), SCIPsymhdlrGetNDomredsFound(), SCIPsymhdlrPropGetTimingmask(), SCIPsymhdlrPropGetPriority(), SCIPsymhdlrPropWasDelayed(), SCIPsymhdlrSepaGetPriority(), SCIPsymhdlrSepaWasLPDelayed(), SCIPsymhdlrGetNSepaCalls(), SCIPsymhdlrGetNCutsFound(), SCIPsymhdlrGetNCutsAdded(), SCIPsymhdlrGetSepaTime(), SCIPsymhdlrGetPropTime(), SCIPsymhdlrGetStrongBranchPropTime(), SCIPsymhdlrGetRespropTime(), SCIP_DECL_SORTPTRCOMP(SCIPsymhdlrCompTryadd), SCIP_DECL_SORTPTRCOMP(SCIPsymhdlrCompSepa), SCIP_DECL_SORTPTRCOMP(SCIPsymhdlrCompProp), SCIP_DECL_SORTPTRCOMP(SCIPsymhdlrCompPresol), SCIP_DECL_SORTPTRCOMP(SCIPsymhdlrCompName), SCIPgetSyminfo()), SCIPsyminfoGetPermstrans()
+- new methods SCIPbdchginfoGetInferSymcomp(), SCIPinferVarFixSym(), SCIPinferVarLbSym(), SCIPinferVarUbSym(), SCIPinferBinvarSym() to get and set inference information in conflict analysis that arise from symmetry handling
+- new methods SCIPprintSymhdlrStatistics(), SCIPcollectSymhdlrStatistics() to retrieve statistics of the different symmetyr handlers
+- new methods SCIPincludeSymhdlrLexOrbRed(), SCIPincludeSymhdlrRowCol(), SCIPincludeSymhdlrSST() to include SCIP's default symmetry handlers and SCIPincludeSymhdlrXyz() for the template symmetry handler
+- new method SCIPcomputeOrbitsFilterSymNoComp() to compute orbits of a symmetry group when no component information is provided
+- new methods isProperPerm(), isPermKnown() to determine information about permutations
+- new methods SCIPsetIncludeSymhdlr(), SCIPsetSortSymhdlrs(), SCIPsetSortSymhdlrsProp(), SCIPsetSortSymhdlrsPresol(), SCIPsetSortSymhdlrsSepa(), SCIPsetSortSymhdlrsName(), SCIPsetFindSymhdlr() to sort symmetry handlers
+- new methods SCIPtryAddSymmetryHandlingMethods(), SCIPpresolveSymmetryHandlingMethods() to call try-add and presolve routines of symmetry handlers
+- new methods SCIPsymhdlrCreate(), SCIPsymhdlrCopyInclude(), SCIPsymhdlrFree(), SCIPsymhdlrExit(), SCIPsymhdlrInit(), SCIPsymhdlrInitsol(), SCIPsymhdlrExitsol(), SCIPsymhdlrPresol(), SCIPsymhdlrProp(), SCIPsymhdlrResolvePropagation(), SCIPsymhdlrSepaLP(), SCIPsymhdlrSepaSol(), SCIPsymhdlrTryAdd(), SCIPsymhdlrSetSepa(), SCIPsymhdlrSetProp(), SCIPsymhdlrSetCopy(), SCIPsymhdlrSetFree(), SCIPsymhdlrSetInit(), SCIPsymhdlrSetExit(), SCIPsymhdlrSetInitsol(), SCIPsymhdlrSetExitsol(), SCIPsymhdlrSetPresol(), SCIPsymhdlrSetResprop(), SCIPaddSymhdlrComponent(), SCIPcreateSymmetryComponent(), SCIPsyminfoCompressPermInfo(), SCIPdisplaySymmetryGenerators() to execute callback methods of symmetry handlers
 
 ### New parameters
 
@@ -49,16 +65,124 @@ Interface changes
 - `heuristics/feasjump/randprobviol`: probability of random selection from violated constraint
 - `heuristics/feasjump/callbackeffort`: effort between callbacks
 - `estimation/checkpoint/depthlim`: depth below which checkpoint is updated
+- `symmetries/enabled`: whether symmetry handling in enabled
+- `symmetries/tryaddtiming`: whether symmetries are computed before or at the end of presolving
+- `symmetries/maxngenerators`: maximum number of generators of the symmetry group that is computed
+- `symmetries/symtype`: whether permutation or signed permutation symmetries are computed
+- `symmetries/fixedvartypes`: bitset encoding the variable types that are required to be fixed by the symmetries
+- `symmetries/compressthreshold`: when less than this number of variables are affected by symmetries, they are removed from the representation of symmetries
+- `symmetries/lexorbred/propfreq`: propagation frequency of symmetry handler
+- `symmetries/lexorbred/sepafreq`: separation frequency of symmetry handler
+- `symmetries/lexorbred/checkppupgrade`: whether it is checked if permutations can be handled by packing/partitioning symresacks
+- `symmetries/lexorbred/computenewperms`: whether additional permutations within the symmetry component shall be computed
+- `symmetries/lexorbred/delayprop`: whether the propagation method shall be delayed
+- `symmetries/lexorbred/delaysepa`: whether the separation method shall be delayed
+- `symmetries/lexorbred/displaysyminfo`: whether information about which symmetry handling methods are applied shall be displayed
+- `symmetries/lexorbred/expbackoff`: base for exponential increase of frequency at which separator is called
+- `symmetries/lexorbred/maxbounddist`: maximal relative distance from current node's dual bound to primal bound compared to best node's dual bound for applying separator
+- `symmetries/lexorbred/maxnnewperms`: maximum number of additional permutations to be computed
+- `symmetries/lexorbred/maxprerounds`: maximum number of presolving rounds
+- `symmetries/lexorbred/presoltiming`: timing mask of the symmetry handler's presolving method
+- `symmetries/lexorbred/proppriority`: priority of the symmetry handler's propagation method
+- `symmetries/lexorbred/proptiming`: timing mask of the symmetry handler's propagation method
+- `symmetries/lexorbred/sepapriority`: priority of the symmetry handler's separation method
+- `symmetries/lexorbred/tryaddpriority`: priority of the symmetry handler's try-add method
+- `symmetries/lexorbred/uselexicographicreduction`: whether lexicographic reduction shall be used to handle symmetries
+- `symmetries/lexorbred/useorbitalreduction`: whether orbital reduction shall be used to handle symmetries
+- `symmetries/rowcol/propfreq`: propagation frequency of symmetry handler
+- `symmetries/rowcol/sepafreq`: separation frequency of symmetry handler
+- `symmetries/rowcol/delayprop`: whether the propagation method shall be delayed
+- `symmetries/rowcol/delaysepa`: whether the separation method shall be delayed
+- `symmetries/rowcol/detectrowcol`: whether it shall be detected whether simultaneous row and column symmetries exist
+- `symmetries/rowcol/displaysyminfo`: whether information about which symmetry handling methods are applied shall be displayed
+- `symmetries/rowcol/expbackoff`: base for exponential increase of frequency at which separator is called
+- `symmetries/rowcol/handlereflections`: whether reflection symmetries shall be handled
+- `symmetries/rowcol/maxbounddist`: maximal relative distance from current node's dual bound to primal bound compared to best node's dual bound for applying separator
+- `symmetries/rowcol/maxprerounds`: maximum number of presolving rounds
+- `symmetries/rowcol/presoltiming`: timing mask of the symmetry handler's presolving method
+- `symmetries/rowcol/proppriority`: priority of the symmetry handler's propagation method
+- `symmetries/rowcol/proptiming`: timing mask of the symmetry handler's propagation method
+- `symmetries/rowcol/sepapriority`: priority of the symmetry handler's separation method
+- `symmetries/rowcol/tryaddpriority`: priority of the symmetry handler's try-add method
+- `symmetries/rowcol/usedynamicprop`: whether dynamic symmetry handling shall be applied
+- `symmetries/sst/propfreq`: propagation frequency of symmetry handler
+- `symmetries/sst/sepafreq`: separation frequency of symmetry handler
+- `symmetries/sst/addconflictcuts`: whether conflict cuts shall be added as constraints
+- `symmetries/sst/computenewperms`: whether additional permutations within the symmetry component shall be computed
+- `symmetries/sst/delayprop`: whether the propagation method shall be delayed
+- `symmetries/sst/delaysepa`: whether the separation method shall be delayed
+- `symmetries/sst/displaysyminfo`: whether information about which symmetry handling methods are applied shall be displayed
+- `symmetries/sst/expbackoff`: base for exponential increase of frequency at which separator is called
+- `symmetries/sst/leaderrule`: rule for determining the leader of SST cuts
+- `symmetries/sst/leadervartype`: bitset encoding the permitted variable types of a leader
+- `symmetries/sst/maxbounddist`: maximal relative distance from current node's dual bound to primal bound compared to best node's dual bound for applying separator
+- `symmetries/sst/maxnnewperms`: maximum number of additional permutations to be computed
+- `symmetries/sst/maxprerounds`: maximum number of presolving rounds
+- `symmetries/sst/mixedcomponents`: whether SST cuts shall be added if the symmetry component contains variables of a different type
+- `symmetries/sst/orbitrule`: rule for determining the orbit for which SST cuts are added
+- `symmetries/sst/presoltiming`: timing mask of the symmetry handler's presolving method
+- `symmetries/sst/proppriority`: priority of the symmetry handler's propagation method
+- `symmetries/sst/proptiming`: timing mask of the symmetry handler's propagation method
+- `symmetries/sst/requirecontvars`: whether SST cuts shall only be added if symmetry component has continuous variables
+- `symmetries/sst/sepapriority`: priority of the symmetry handler's separation method
+- `symmetries/sst/tryaddpriority`: priority of the symmetry handler's try-add method
 
 ### Changed parameters
 
 - `estimation/method`: use default setting `p` to apply linear check(p)oint extrapolation in tree size estimation
+- replaced param `propagating/symmetry/nautymaxlevel` by `symmetries/nautymaxlevel`
+- removed param `misc/usesymmetry`
+- removed param `propagating/symmetry/maxgenerators`
+- removed param `propagating/symmetry/checksymmetries`
+- removed param `propagating/symmetry/displaynorbitvars`
+- removed param `propagating/symmetry/doubleequations`
+- removed param `propagating/symmetry/dispsyminfo`
+- removed param `propagating/symmetry/conssaddlp`
+- removed param `propagating/symmetry/addsymresacks`
+- removed param `propagating/symmetry/detectdoublelex`
+- removed param `propagating/symmetry/detectorbitopes`
+- removed param `propagating/symmetry/detectsubgroups`
+- removed param `propagating/symmetry/addweaksbcs`
+- removed param `propagating/symmetry/addconsstiming`
+- removed param `propagating/symmetry/ofsymcomptiming`
+- removed param `propagating/symmetry/performpresolving`
+- removed param `propagating/symmetry/recomputerestart`
+- removed param `propagating/symmetry/compresssymmetries`
+- removed param `propagating/symmetry/compressthreshold`
+- removed param `propagating/symmetry/usecolumnsparsity`
+- removed param `propagating/symmetry/maxnconsssubgroup`
+- removed param `propagating/symmetry/usedynamicprop`
+- removed param `propagating/symmetry/addstrongsbcs`
+- removed param `propagating/symmetry/ssttiebreakrule`
+- removed param `propagating/symmetry/sstleaderrule`
+- removed param `propagating/symmetry/sstleadervartype`
+- removed param `propagating/symmetry/addconflictcuts`
+- removed param `propagating/symmetry/sstaddcuts`
+- removed param `propagating/symmetry/sstmixedcomponents`
+- removed param `propagating/symmetry/symfixnonbinaryvars`
+- removed param `propagating/symmetry/enforcecomputesymmetry`
+- removed param `propagating/symmetry/preferlessrows`
+- removed param `propagating/symmetry/symtype`
+- removed param `propagating/symmetry/handlesignedorbitopes`
+- removed param `propagating/symmetry/usesimplesgncomp`
+- removed param `propagating/symmetry/symtiming`
+- removed param `propagating/symmetry/maxnnewivolus`
 
 ### Data structures
 
 - struct SYM_Graph receives an additional field to specify an epsilon value that is used for epsilon-comparisons
 - new enum SYM_GROUPTYPE to encode which symmetry group of a symmetry detection graph is computed
 - struct SCIP_IISFINDER receives the additional field enable to set whether it should be enabled
+- new struct SCIP_SYMINFO to store symmetry information
+- new struct SCIP_SYMCOMP to store information about a symmetry component
+- new struct SCIP_SYMHDLR to store information about a symmetry handler
+- struct SCIP received new field syminfo to store symmetry information
+- struct SCIP_PENDINGBDCHG received new field infersymcomp to store symmetry component that caused a bound change
+- struct SCIP_INFERENCEDATA received new field symcomp to store symmetry component that caused a bound change
+- struct SCIP_SET received new fields for storing information about symmetry handlers: symhdlrs, symhdlrs_presol, symhdlrs_sepa, symhdlrs_prop, nsymhdlrs, symhdlrssize, symhdlrssorted, symhdlrsnamesorted, symhdlrspresolsorted, symhdlrssepasorted, symhdlrspropsorted, sym_enabled, sym_tryaddtiming, sym_maxngenerators, sym_symtype, sym_fixedvartypes, sym_compressthreshold
+- enum SCIP_BOUNDCHGTYPE got extended by new type SCIP_BOUNDCHGTYPE_SYMINFER
+- exchanged definition of SYM_SPEC_BINARY and SYM_SPEC_INTEGER
+- removed SYM_TIMING_DURINGPRESOL and SYM_COMPUTETIMING_DURINGPRESOL, and replaced definition of SYM_TIMING_AFTERPRESOL
 
 @page RN10 Release notes for SCIP 10
 

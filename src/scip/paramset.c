@@ -3889,7 +3889,7 @@ SCIP_RETCODE SCIPparamsetSetEmphasis(
       SCIP_CALL( paramSetInt(paramset, set, messagehdlr, "constraints/agelimit", 1, quiet) );
 
       /* turn off symmetry handling */
-      SCIP_CALL( paramSetInt(paramset, set, messagehdlr, "misc/usesymmetry", 0, quiet) );
+      SCIP_CALL( paramSetBool(paramset, set, messagehdlr, "symmetries/enabled", FALSE, quiet) );
 
       /* turn off components presolver since we are currently not able to handle that in case of counting */
 #ifndef NDEBUG

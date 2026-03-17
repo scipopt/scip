@@ -62,7 +62,6 @@
 #include "scip/scip_solvingstats.h"
 #include "scip/scip_timing.h"
 #include "scip/syncstore.h"
-#include "scip/prop_symmetry.h"
 
 /* event handler for synchronization */
 #define EVENTHDLR_NAME         "sync"
@@ -290,19 +289,14 @@ SCIP_RETCODE initConcsolver(
    nmainvars = SCIPgetNVars(scip);
    mainvars = SCIPgetVars(scip);
 
-   /* create the concurrent solver's SCIP instance and set up the problem */
+   /* create the concurrent solver's SCIP instance, set up the problem, and copy symmetry handlers
+    * if symmetry wasn't computed before and user wants symmetry */
    SCIP_CALL( SCIPcreate(&data->solverscip) );
    SCIPsetMessagehdlrQuiet(data->solverscip, SCIPmessagehdlrIsQuiet(SCIPgetMessagehdlr(scip)));
    SCIP_CALL( SCIPhashmapCreate(&varmapfw, SCIPblkmem(data->solverscip), nmainvars + SCIPgetNFixedVars(scip)) );
    SCIP_CALL( SCIPcopyConsCompression(scip, data->solverscip, varmapfw, NULL, SCIPconcsolverGetName(concsolver),
-         NULL, NULL, 0, TRUE, FALSE, FALSE, FALSE, &valid) );
+         NULL, NULL, 0, TRUE, FALSE, !symmetrybefore, FALSE, FALSE, &valid) );
    assert(valid);
-
-   /* include symmetry propagator if symmetry wasn't computed before and user wants symmetry */
-   if( !symmetrybefore )
-   {
-      SCIP_CALL( SCIPincludePropSymmetry(data->solverscip) );
-   }
 
    /* Note that because some aggregations or fixed variables cannot be resolved by some constraint handlers (in
     * particular cons_sos1, cons_sos2, cons_and), the copied problem may contain more variables than the original

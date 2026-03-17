@@ -42,6 +42,7 @@
 #define __SCIP_EVENT_SHADOWTREE_H__
 
 #include "scip/def.h"
+#include "scip/type_lp.h"
 #include "scip/type_scip.h"
 #include "scip/type_event.h"
 #include "scip/type_tree.h"

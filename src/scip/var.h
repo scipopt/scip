@@ -57,6 +57,7 @@
 #include "scip/type_set.h"
 #include "scip/type_sol.h"
 #include "scip/type_stat.h"
+#include "scip/type_sym.h"
 #include "scip/type_tree.h"
 #include "scip/type_var.h"
 #include "scip/intervalarith.h"
@@ -176,6 +177,7 @@ SCIP_RETCODE SCIPdomchgAddBoundchg(
    SCIP_VAR*             infervar,           /**< variable that was changed (parent of var, or var itself) */
    SCIP_CONS*            infercons,          /**< constraint that deduced the bound change, or NULL */
    SCIP_PROP*            inferprop,          /**< propagator that deduced the bound change, or NULL */
+   SCIP_SYMCOMP*         infersymcomp,       /**< symmetry component that deduced the bound change, or NULL */
    int                   inferinfo,          /**< user information for inference to help resolving the conflict */
    SCIP_BOUNDTYPE        inferboundtype      /**< type of bound for inference var: lower or upper bound */
    );

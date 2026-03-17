@@ -63,6 +63,7 @@
 #include "scip/type_benders.h"
 #include "scip/type_iisfinder.h"
 #include "scip/type_expr.h"
+#include "scip/type_sym.h"
 #include "scip/type_message.h"
 #include "scip/debug.h"
 
@@ -97,6 +98,10 @@ struct SCIP_Set
    SCIP_NODESEL**        nodesels;           /**< node selectors */
    SCIP_NODESEL*         nodesel;            /**< currently used node selector, or NULL if invalid */
    SCIP_BRANCHRULE**     branchrules;        /**< branching rules */
+   SCIP_SYMHDLR**        symhdlrs;           /**< symmetry handlers (sorted by tryadd priority) */
+   SCIP_SYMHDLR**        symhdlrs_presol;    /**< symmetry handlers (sorted by presolving priority) */
+   SCIP_SYMHDLR**        symhdlrs_sepa;      /**< symmetry handlers (sorted by separation priority) */
+   SCIP_SYMHDLR**        symhdlrs_prop;      /**< symmetry handlers (sorted by propagation priority) */
    SCIP_IISFINDER**      iisfinders;         /**< irreducible infeasible subsystem (IIS) rules */
    SCIP_DISP**           disps;              /**< display columns */
    SCIP_TABLE**          tables;             /**< statistics tables */
@@ -144,6 +149,8 @@ struct SCIP_Set
    int                   nodeselssize;       /**< size of nodesels array */
    int                   nbranchrules;       /**< number of branching rules */
    int                   branchrulessize;    /**< size of branchrules array */
+   int                   nsymhdlrs;          /**< number of symmetry handlers */
+   int                   symhdlrssize;       /**< size of symhdlrs array */
    int                   niisfinders;        /**< number of IIS rules */
    int                   iisfinderssize;     /**< size of IIS finders array */
    int                   ndisps;             /**< number of display columns */
@@ -187,6 +194,11 @@ struct SCIP_Set
    SCIP_Bool             comprsnamesorted;   /**< are the compressions sorted by name? */
    SCIP_Bool             branchrulessorted;  /**< are the branching rules sorted by priority? */
    SCIP_Bool             branchrulesnamesorted;/**< are the branching rules sorted by name? */
+   SCIP_Bool             symhdlrssorted;     /**< are the symmetry handlers sorted by try-add priority? */
+   SCIP_Bool             symhdlrsnamesorted; /**< are the symmetry handlers sorted by name? */
+   SCIP_Bool             symhdlrspresolsorted;/**< are the symmetry handlers sorted by presolving priority? */
+   SCIP_Bool             symhdlrssepasorted; /**< are the symmetry handlers sorted by separation priority? */
+   SCIP_Bool             symhdlrspropsorted; /**< are the symmetry handlers sorted by propagation priority? */
    SCIP_Bool             iisfinderssorted;   /**< are the IIS rules sorted by priority */
    SCIP_Bool             tablessorted;       /**< are the tables sorted by position? */
    SCIP_Bool             exprhdlrssorted;    /**< are the expression handlers sorted by name? */
@@ -666,6 +678,16 @@ struct SCIP_Set
    SCIP_Bool             read_dynamicconss;  /**< should model constraints be subject to aging? */
    SCIP_Bool             read_dynamiccols;   /**< should columns be added and removed dynamically to the LP? */
    SCIP_Bool             read_dynamicrows;   /**< should rows be added and removed dynamically to the LP? */
+
+   /* symmetry settings */
+   SCIP_Bool             sym_enabled;        /**< is symmetry handling enabled? */
+   int                   sym_tryaddtiming;   /**< timing for trying to add symmetry handling methods (0: before presolinv; 1: after presolving) */
+   int                   sym_maxngenerators; /**< maximum number of symmetry group generators to be computed (-1: unbounded) */
+   int                   sym_symtype;        /**< type of symmetries to be considered */
+   int                   sym_fixedvartypes;  /**< bitset describing the variable types that shall be fixed by symmetries
+                                              *   (0: none; 1: binary; 2; integer; 3: binary and integer; 4: continuous;
+                                              *    5: binary and continuous; 6: integer and continuous; 7: all) */
+   SCIP_Real             sym_compressthreshold;/**< compress symmetry information if percentage of moved vars is at most the threshold */
 
    /* Writing */
    SCIP_Bool             write_allconss;     /**< should all constraints be written (including the redundant constraints)? */

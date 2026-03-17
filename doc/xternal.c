@@ -374,6 +374,7 @@
  * - @subpage CUTSEL  "Cut selectors"
  * - @subpage NODESEL "Node selectors"
  * - @subpage HEUR    "Primal heuristics"
+ * - @subpage SYMHDLRS "Symmetry handlers"
  * - @subpage IISFINDER "IIS finders"
  * - @subpage DIVINGHEUR "Diving heuristics"
  * - @subpage RELAX   "Relaxation handlers"
@@ -4090,6 +4091,414 @@
  *
  * The HEUREXITSOL callback is executed before the branch-and-bound process is freed. The primal heuristic should use this
  * call to clean up its branch-and-bound data, which was allocated in HEURINITSOL.
+ */
+
+/*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
+
+/**@page SYMHDLRS How to add symmetry handlers
+ *
+ * A symmetry handler defines the semantics and the algorithms to handle symmetries of a certain class. A single
+ * symmetry handler is responsible for all symmetry components belonging to its symmetry class. A symmetry component
+ * consists of the symmetries of an independent factor of a symmetry group, see \ref SYMDETECT.
+ *
+ * We now explain how users can add their own symmetry handlers.
+ * For an example, look into the SST symmetry handler (src/scip/sym_sst.c).
+ * Additional documentation for the callback methods of a symmetry handler can be found in the file
+ * type_sym.h.
+ *
+ * Here is what you have to do (assuming your symmetry handler should be named "sst"):
+ * -# Copy the template files `src/scip/sym_xyz.c` and `src/scip/sym_xyz.h` into files `sym_sst.c` and `sym_sst.h`.
+ *    \n
+ *    Make sure to adjust your build system such that these files are compiled and linked to your project. \n
+ *    If you are adding a new default plugin, this means updating the `src/CMakeLists.txt` and `Makefile` files in the
+ *    SCIP distribution.
+ * -# Use `SCIPincludeSymhdlrSST()` in order to include the symmetry handler into your SCIP instance,
+ *    e.g., in the main file of your project. \n
+ *    If you are adding a new default plugin, this include function must be added to `src/scipdefplugins.c`.
+ * -# Open the new files with a text editor and replace all occurrences of `xyz` by `sst`.
+ * -# Adjust the \ref SYM_PROPERTIES "properties of the symmetry handler".
+ * -# Define the \ref SYM_DATA "symmetry data and the symmetry handler data". This is optional.
+ * -# Implement the \ref SYM_INTERFACE "interface methods".
+ * -# Implement the \ref SYM_FUNDAMENTALCALLBACKS "fundamental callback methods".
+ * -# Implement the \ref SYM_ADDITIONALCALLBACKS "additional callback methods". This is optional.
+ *
+ *
+ * @section SYM_PROPERTIES Properties of a Symmetry Handler
+ *
+ * At the top of the new file "sym_sst.c" you can find the symmetry handler properties.
+ * These are given as compiler defines. Some of them are optional, as, e.g., separation-related properties,
+ * which only have to be defined if the symmetry handler supports the related callbacks.
+ *
+ * @subsection SYM_FUNDAMENTALPROPERTIES Fundamental Symmetry Handler properties
+ *
+ * \par SYMHDLR_NAME: the name of the symmetry handler.
+ * This name is used in the interactive shell to address the symmetry handler.
+ * Additionally, if you are searching for a symmetry handler with SCIPfindSymhdlr(), this name is looked up.
+ * Names have to be unique: no two symmetry handlers may have the same name.
+ *
+ * \par SYMHDLR_DESC: the description of the symmetry handler.
+ * This string is printed as a description of the symmetry handler in the interactive shell of SCIP.
+ *
+ * \par SYMHDLR_PRIORITY: the priority of the symmtry handler.
+ * This priority determines the order in which the symmetry handlers are provided the symmetries of a symmetry
+ * component.
+ * The first symmetry handler that can handle the symmetries of a component will get this component assigned.
+ * That is, the higher the priority the more likely it is that this symmetry handler handles a symmetry component.
+ *
+ * @subsection SYM_ADDITIONALPROPERTIES Optional Symmetry Handler properties
+ *
+ * The following properties are optional and only need to be defined if the symmetry handlers support
+ * separation, presolving, and/or propagation.
+ *
+ * \par SYMHDLR_SEPAFREQ: the default frequency for separating cuts.
+ * The separation frequency defines the depth levels at which the symmetry handler's separation methods \ref SYMHDLRSEPALP
+ * and \ref SYMHDLRSEPASOL are called.
+ * For example, a separation frequency of 7 means, that the separation callback is executed for subproblems that are
+ * in depth 0, 7, 14, ... of the branching tree.
+ * A separation frequency of 0 means, that the separation method is only called at the root node.
+ * A separation frequency of -1 disables the separation method of the symmetry handler.
+ * \n
+ * The separation frequency can be adjusted by the user.
+ * This property of the symmetry handler only defines the default value of the frequency.
+ * If you want to have a more flexible control of when to execute the separation algorithm, you have to assign
+ * a separation frequency of 1 and implement a check at the beginning of your separation algorithm whether you really
+ * want to execute the separator or not.
+ * If you do not want to execute the method, set the result code to `SCIP_DIDNOTRUN`.
+ *
+ * \par SYMHDLR_SEPAPRIORITY: the priority of the symmetry handler for separation. (optional: to be set only if the symmetry handler supports separation).
+ * In each separation round during the price-and-cut loop of the subproblem processing or during the separation loop
+ * of the primal solution separation, the separators and separation methods of the constraint and symmetry handlers are
+ * called in a predefined order, which is given by the priorities of the separators and the separation priorities of the
+ * constraint and symmetry handlers.
+ * First, the separators and separation methods of symmetry handlers with non-negative priority are called in the order
+ * of decreasing priority.
+ * Next, the separation methods of the different constraint handlers are called in the order of decreasing separation
+ * priority.
+ * Finally, the separators and separation methods of symmetry handlers with negative priority are called in the order
+ * of decreasing priority.
+ * \n
+ * The separation priority of the symmetry handler should be set according to the complexity of the cut separation
+ * algorithm and the impact of the resulting cuts:
+ * Symmetry handlers that provide fast algorithms that usually have a high impact (i.e., cut off a large portion of
+ * the LP relaxation) should have a high priority.
+ * See \ref SYMHDLRSEPALP and \ref SYMHDLRSEPASOL for further details of the separation callbacks.
+ *
+ * \par SYMHDLR_DELAYSEPA: the default for whether the separation method should be delayed, if other separators found cuts.
+ * If the symmetry handler's separation method is marked to be delayed, it is only executed after no other separator
+ * or constraint/symmetry handler found a cut during the price-and-cut loop.
+ * If the separation method of the symmetry handler is very expensive, you may want to mark it to be delayed until all
+ * cheap separation methods have been executed.
+ *
+ * \par SYM_MAXBOUNDDIST: the default maximal relative distance from the current node's dual bound to primal bound compared to best node's dual bound for applying separation.
+ * At the current branch-and-bound node, the relative distance from its dual bound (local dual bound)
+ * to the primal bound compared to the best node's dual bound (global dual bound) is considered. The separation method
+ * of the separator will only be applied at the current node if this relative distance does not exceed `SYM_MAXBOUNDDIST`.
+ * \n
+ * For example, if the global dual bound is 50 and the primal bound is 60, SYM_MAXBOUNDDIST = 0.25 means that separation
+ * is only applied if the current node's dual bound is in the first quarter of the interval [50,60], i.e., if it is less
+ * than or equal to 52.5.
+ * \n
+ * In particular, the values 0.0 and 1.0 mean that separation is applied at the current best node only or at all
+ * nodes, respectively. Since separation seems to be most important to apply at nodes that define to the global
+ * dual bound, 0.0 is probably a good choice for `SYM_MAXBOUNDDIST`.
+ * Note that separators with a frequency of `SYM_FREQ = 0` are only applied at the root node.
+ * Obviously, at the root node the local dual bound is equal to the global dual bound and thus, the separator is called
+ * for any value of `SYM_MAXBOUNDDIST`.
+ *
+ * \par SYMHDLR_PROPFREQ: the default frequency for propagating domains.
+ * This default frequency has the same meaning as the `SYMHDLR_SEPAFREQ` with respect to the domain propagation
+ * callback of the symmetry handler.
+ * A propagation frequency of 0 means that propagation is only applied in preprocessing and at the root node.
+ * A propagation frequency of -1 disables the propagation method of the symmetry handler.
+ *
+ * \par SYMHDLR_DELAYPROP: the default for whether the propagation method should be delayed, if other propagators found reductions.
+ * This property is analogous to the `DELAYSEPA` flag, but deals with the propagation method of the symmetry handler.
+ *
+ * \par SYMHDLR_PROPPRIORITY: the default priority for propagating domains.
+ * This default priority has the same meaning as the `SYMHDLR_SEPAPRIORITY` with respect to the domain propagation
+ * callback of the symmetry handler.
+ *
+ * \par SYMHDLR_PROP_TIMING: the propagation timing mask of the symmetry handler.
+ * SCIP calls the domain propagation routines at different places in the node processing loop.
+ * This property indicates at which places the propagation routine of the symmetry handler is called.
+ * Possible values are defined in type_timing.h and can be concatenated, e.g., as in `SCIP_PROPTIMING_ALWAYS`.
+ *
+ * \par SYMHDLR_PRESOLTIMING: the timing of the symmetry handler's presolving method (FAST, MEDIUM, or EXHAUSTIVE).
+ * Every presolving round starts with the FAST presolving methods. MEDIUM presolvers are only called, if FAST presolvers
+ * did not find enough reductions in this round so far, and EXHAUSTIVE presolving steps are only performed if all
+ * presolvers called before in this round were unsuccessful.
+ * Presolving methods should be assigned a timing based on how expensive they are, e.g., presolvers that provide fast
+ * algorithms that usually have a high impact (i.e., remove lots of variables or tighten bounds of many variables) should
+ * have a timing FAST. If a presolving method implements different algorithms of different complexity, it may also get
+ * multiple timings and check the timing internally in the \ref SYMHDLRPRESOL callback to decide which algorithms to run.
+ *
+ * \par SYMHDLR_MAXPREROUNDS: the default maximal number of presolving rounds the symmetry handler participates in.
+ * The preprocessing is executed in rounds.
+ * If enough changes have been applied to the model, an additional preprocessing round is performed.
+ * The `MAXPREROUNDS` parameter of a symmetry handler denotes the maximal number of preprocessing rounds the symmetry
+ * handler participates in.
+ * A value of -1 means that there is no limit on the number of rounds.
+ * A value of 0 means the preprocessing callback of the symmetry handler is disabled.
+ *
+ * \par SYMHDLR_PRESOLPRIORITY: the default priority for presolving.
+ * This default priority has the same meaning as the `SYMHDLR_SEPAPRIORITY` with respect to the presolving
+ * callback of the symmetry handler.
+ *
+ *
+ *
+ * @section SYM_DATA Symmetry Component Data and Symmetry Handler Data
+ *
+ * Below the header "Data structures" you can find two structs called `struct SCIP_SymCompData` and
+ * `struct SCIP_SymhdlrData`.
+ * The symmetry handler data must be implemented as member variables of your symmetry handler class.
+ *
+ * The symmetry component data are the information that is needed to define a single symmetry component that is handled
+ * by the symmetry handler.
+ *
+ * The symmetry handler data are additional variables, that belong to the symmetry handler itself and which are
+ * not specific to a single symmetry component.
+ * For example, you can use these data to store parameters of the symmetry handler or statistical information.
+ * The symmetry handler data are optional.
+ * You can leave the struct empty.
+ *
+ *
+ * @section SYM_INTERFACE Interface Methods
+ *
+ * At the bottom of `sym_sst.c` you can find one interface method, that also appear in `sym_sst.h`, which is.
+ * SCIPincludeSymhdlrSubtour().
+ * This method is responsible for notifying SCIP of the presence of the symmetry handler by calling the method
+ * SCIPincludeSymhdlr().
+ * It is called by users, if they want to include the symmetry handler, i.e., if they want to make
+ * the symmetry handler available to the model, and looks like this:
+ * \dontinclude src/scip/sym_sst.c
+ *  -# If you are using symmetry handler data, you have to <b>allocate the memory for the data</b> at this point.
+ *     You also have to initialize the fields in `struct SCIP_SymhdlrData` afterwards.
+ *
+ *     \skip SCIP_RETCODE SCIPincludeSymhdlrSST(
+ *     \until SCIPallocBlockMemory
+ *
+ *  -# Now, <b>SCIP gets notified</b> of the presence of the symmetry handler together with its \ref SYM_FUNDAMENTALCALLBACKS "basic callbacks".
+ *
+ *     \skip SCIPincludeSymhdlrBasic(
+ *     \until symhdlrTryAddSST
+ *
+ *  -# All \ref SYM_ADDITIONALCALLBACKS "additional callbacks" are added via their setter functions.
+ *
+ *     \skip SCIPsetSymhdlrCopy(
+ *     \until SCIP_PRESOLTIMING_FAST
+ *
+ *  -# You may also add <b>user parameters</b> for your symmetry handler.
+ *
+ *
+ * @section SYM_CALLBACKS Callback methods of Symmetry handlers
+ *
+ * Besides the various functions which you will implement inside your symmetry handler there exists a number
+ * of <b> callback methods </b> associated with your symmetry handler. Callback methods can be regarded as
+ * tasks which your symmetry handler is able to provide to the solver. They are grouped into two
+ * categories:
+ *
+ * \ref SYM_FUNDAMENTALCALLBACKS "Fundamental Callback methods" are mandatory to implement
+ * such that your code will work. For example, every symmetry handler has to provide the
+ * functionality to state whether it can handle the symmetries of a symmetry component.
+ * Hence, the \ref SYMTRYADD "SYMTRYADD" callback is a fundamental (or \a basic) callbacks of a symmetry handler.
+ *
+ * Callbacks which are not necessarily implemented are grouped together as
+ * \ref SYM_ADDITIONALCALLBACKS "additional callbacks". Such callbacks can be used to allocate and free memory
+ * at different stages of the solving process. Although not mandatory, it might be useful to implement
+ * some of these callbacks, e.g., to extend your symmetry handler by a
+ * \ref SYMHDLRSEPALP "separation" or \ref SYMHDLRPRESOL "presolving" functionality.
+ *
+ * All callbacks should be passed to SCIP during the `SCIPinclude\<PLUGINTYPE\>\<PLUGINNAME\>` method
+ * (e.g., SCIPincludeSymhdlrSST() for the \ref sym_sst.h "SST symmetry handler").
+ *
+ * @section SYM_FUNDAMENTALCALLBACKS Fundamental Callback Methods
+ *
+ * The fundamental callback methods of the plugins are the ones that have to be implemented in order to obtain an
+ * operational algorithm. They are passed together with the symmetry handler itself to SCIP using
+ * SCIPincludeSymhdlr() or SCIPincludeSymhdlrBasic(), see \ref SYM_INTERFACE.
+ *
+ * Symmetry handler plugins have only one callbacks, \ref SYMTRYADD, which must be implemented.
+ *
+ * Additional documentation for the callback methods, in particular to their input parameters, can be found
+ * in type_sym.h.
+ *
+ * @subsection SYMTRYADD
+ *
+ * The `SYMTRYADD` callback gets a symmetry type (permutation or signed permutation) as well as an array of
+ * symmetries and has to check whether the symmetry handler can handle these symmetries.
+ * To informs SCIP whether the symmetries can be handled, the symmetry handler needs to set a Boolean
+ * success pointer to TRUE or FALSE.
+ *
+ * For example, the \ref sym_sst.h "SST symmetry handler" loops over all provided symmetries and checks
+ * whether the type of affected variables is compatible with the variable types provided by parameter
+ * <code>symmetries/sst/leadervartype</code>. If there is an affected variable of the correct type,
+ * the symmetry handling will handle this symmetry component and informs SCIP by setting the success
+ * pointer to TRUE.
+ *
+ *
+ * @section SYM_ADDITIONALCALLBACKS Additional Callback Methods
+ *
+ * The additional callback methods do not need to be implemented in every case, but provide useful functionality
+ * for many applications. They can be added to your symmetry handler via setter functions, see
+ * \ref SYM_INTERFACE "here".
+ *
+ * @subsection SYMHLDRFREE
+ *
+ * If you are using symmetry handler data, you have to implement this method in order to free the
+ * symmetry handler data.
+ *
+ * If you have allocated memory for fields in your symmetry handler data, remember to free this memory
+ * before freeing the symmetry handler data itself.
+ *
+ * @subsection SYMHDLRCOPY
+ *
+ * The `SYMHDLRCOPY` callback is executed when the SCIP instance is copied, e.g. to solve a sub-SCIP. By defining this
+ * callback as <code>NULL</code> the user disables the inclusion of the specified symmetry handler into all copied SCIP
+ * instances.
+ *
+ * A usual implementation just calls the interface method which includes the symmetry handler to the model.
+ *
+ * @subsection SYMHDLRINIT
+ *
+ * The `SYMHDLRINIT` callback is executed after the problem is transformed.
+ * The symmetry handler may, e.g., to initialize its statistical symmetry handler data.
+ *
+ * @subsection SYMHDLREXIT
+ *
+ * The `SYMHDLREXIT` callback is executed before the transformed problem is freed.
+ * In this method, the symmetry handler should free all resources that were allocated for the solving process.
+ *
+ * @subsection SYMHDLRINITSOL
+ *
+ * The `SYMHDLRINITSOL` callback is executed when the presolving is finished and the branch-and-bound process is about to
+ * begin.
+ * The symmetry handler may use this call to initialize its branch-and-bound specific data.
+ *
+ * @subsection SYMHDLREXITSOL
+ *
+ * The `SYMHDLREXITSOL` callback is executed before the branch-and-bound process is freed.
+ * The symmetry handler should use this call to clean up its branch-and-bound data, in particular to release
+ * all LP rows that it has created or captured.
+ *
+ * @subsection SYMHDLRSEPALP
+ *
+ * The `SYMHDLRSEPALP` callback is executed during the price-and-cut loop of the subproblem processing.
+ * It should try to generate cutting planes for the symmetry components of this symmetry handler in order to separate
+ * the current LP solution.
+ * The method is called in the LP solution loop, which means that a valid LP solution exists.
+ *
+ * Usually, a separation callback searches and produces cuts, that are added with a call to SCIPaddRow().
+ * If the cut should be remembered in the global cut pool, it may also call SCIPaddPoolCut().
+ * If the cut is constructed via multiple calls to SCIPaddVarToRow(), then performance can be improved by calling
+ * SCIPcacheRowExtensions() before these additions and SCIPflushRowExtensions() after.
+ * However, the callback may also produce domain reductions or add other constraints.
+ *
+ * The `SYMHDLRSEPALP` callback has the following options:
+ *  - detecting that the node is infeasible in the variables' bounds and can be cut off (result `SCIP_CUTOFF`)
+ *  - adding an additional constraint (result `SCIP_CONSADDED`)
+ *  - reducing a variable's domain (result `SCIP_REDUCEDDOM`)
+ *  - adding a cutting plane to the LP (result `SCIP_SEPARATED`)
+ *  - stating that the separator searched, but did not find domain reductions, cutting planes, or cut constraints
+ *    (result `SCIP_DIDNOTFIND`)
+ *  - stating that the separator was skipped (result `SCIP_DIDNOTRUN`)
+ *  - stating that the separator was skipped, but should be called again (result `SCIP_DELAYED`)
+ *  - stating that a new separation round should be started without calling the remaining separator methods (result `SCIP_NEWROUND`)
+ *
+ * Please see also the @ref SYM_ADDITIONALPROPERTIES section to learn about the properties
+ * `SYMHDLR_SEPAFREQ`, `SYMHDLR_SEPAPRIORITY`, `SYMHDLR_DELAYSEPA`, and `SYM_MAXBOUNDDIST` which influence the behaviour of SCIP
+ * calling `SYMHDLRSEPALP`.
+ *
+ * @subsection SYMHDLRSEPASOL
+ *
+ * The `SYMHDLRSEPASOL` callback is executed during separation loop on arbitrary primal solutions.
+ * It should try to generate cutting planes for the symmetry components of this symmetry handler in order to separate
+ * the given primal solution.
+ * The method is not called in the LP solution loop, which means that there is no valid LP solution.
+ *
+ * Usually, a separation callback searches and produces cuts, that are added with a call to SCIPaddRow().
+ * If the cut should be remembered in the global cut pool, it may also call SCIPaddPoolCut().
+ * If the cut is constructed via multiple calls to SCIPaddVarToRow(), then performance can be improved by calling
+ * SCIPcacheRowExtensions() before these additions and SCIPflushRowExtensions() after.
+ * However, the callback may also produce domain reductions or add other constraints.
+ *
+ * The `SYMHDLRSEPASOL` callback has the following options:
+ *  - detecting that the node is infeasible in the variables' bounds and can be cut off (result `SCIP_CUTOFF`)
+ *  - adding an additional constraint (result `SCIP_CONSADDED`)
+ *  - reducing a variable's domain (result `SCIP_REDUCEDDOM`)
+ *  - adding a cutting plane to the LP (result `SCIP_SEPARATED`)
+ *  - stating that the separator searched, but did not find domain reductions, cutting planes, or cut constraints
+ *    (result `SCIP_DIDNOTFIND`)
+ *  - stating that the separator was skipped (result `SCIP_DIDNOTRUN`)
+ *  - stating that the separator was skipped, but should be called again (result `SCIP_DELAYED`)
+ *  - stating that a new separation round should be started without calling the remaining separator methods (result `SCIP_NEWROUND`)
+ *
+ * Please see also the @ref SYM_ADDITIONALPROPERTIES section to learn about the properties
+ * `SYMHDLR_SEPAFREQ`, `SYMHDLR_SEPAPRIORITY`, `SYMHDLR_DELAYSEPA`, and `SYM_MAXBOUNDDIST` which influence the behaviour of SCIP
+ * calling `SYMHDLRSEPASOL`.
+ *
+ * @subsection SYMHDLRPROP
+ *
+ * The `SYMHDLRPROP` callback is called during the subproblem processing.
+ * It should propagate the symmetry components, which means that it should infer reductions in the variables' local bounds
+ * from the current local bounds.
+ * This technique, which is the main workhorse of constraint programming, is called "node preprocessing" in the
+ * Integer Programming community.
+ *
+ * The `SYMHDLRPROP` callback has the following options:
+ *  - detecting that the node is infeasible in the variables' bounds and can be cut off (result `SCIP_CUTOFF`)
+ *  - reducing a variable's domain (result `SCIP_REDUCEDDOM`)
+ *  - stating that the propagator searched, but did not find domain reductions, cutting planes, or cut constraints
+ *    (result `SCIP_DIDNOTFIND`)
+ *  - stating that the propagator was skipped (result `SCIP_DIDNOTRUN`)
+ *  - stating that the propagator was skipped, but should be called again (result `SCIP_DELAYED`)
+ *
+ * Please see also the @ref SYM_ADDITIONALPROPERTIES section to learn about the properties
+ * `SYMHDLR_PROPFREQ`, `SYMHDLR_DELAYPROP`, `SYMHDLR_PROP_TIMING`, and `SYMHDLR_PROPPRIORITY`, which influence the behaviour of
+ * SCIP calling `SYMHDLRPROP`.
+ *
+ * @subsection SYMHDLRRESPROP
+ *
+ * If the symmetry handler should support \ref CONF "conflict analysis", it has to supply a `SYMHDLRRESPROP` method.
+ * It also should call SCIPinferVarLbSym() or SCIPinferVarUbSym() in domain propagation instead of SCIPchgVarLb() or
+ * SCIPchgVarUb() in order to deduce bound changes on variables.
+ * In the SCIPinferVarLbSym() and SCIPinferVarUbSym() calls, the handler provides the symmetry component that deduced the
+ * variable's bound change, and an integer value <code>inferinfo</code> that can be arbitrarily chosen.
+ *
+ * The propagation conflict resolving method `SYMHDLRRESPROP` must then be implemented to provide the "reasons" for the bound
+ * changes, i.e., the bounds of variables at the time of the propagation, which forced the symmetry component to set the
+ * conflict variable's bound to its current value. It can use the <code>inferinfo</code> tag to identify its own propagation rule
+ * and thus identify the "reason" bounds. The bounds that form the reason of the assignment must then be provided by
+ * calls to SCIPaddConflictLb() and SCIPaddConflictUb() in the propagation conflict resolving method.
+ *
+ * <b>Note:</b> The fact that <code>inferinfo</code> is an integer, as opposed to an arbitrary data object, is a compromise between space and speed. Sometimes a propagator would
+ * need more information to efficiently infer the original propagation steps that lead to the conflict. This would,
+ * however, require too much space. In the extreme, the original propagation steps have to be repeated.
+ *
+ * If conflict analysis should not be supported, the method has to set the result code to `SCIP_DIDNOTFIND`.  Although
+ * this is a viable approach to circumvent the implementation of the usually rather complex conflict resolving method, it
+ * will make the conflict analysis less effective. We suggest to first omit the conflict resolving method and check how
+ * effective the \ref SYMHDLRPROP "propagation method" is. If it produces a lot of propagations for your application, you definitely should
+ * consider implementing the conflict resolving method.
+ *
+ * @subsection SYMHDLRPRESOL
+ *
+ * The `SYMHDLRPRESOL` callback is called during preprocessing.
+ * It should try to tighten the domains of the variables, tighten the coefficients of the variales in a symmetry component
+ * of the symmetry handler, delete redundant constraints, aggregate and fix variables if possible, or add new constraints.
+ *
+ * To inform SCIP that the presolving method found a reduction the result pointer has to be set in a proper way.
+ * The following options are possible:
+ *
+ *  - `SCIP_UNBOUNDED`  : at least one variable is not bounded by any constraint in objective direction
+ *  - `SCIP_CUTOFF`     : at least one constraint is infeasible in the variable's bounds
+ *  - `SCIP_SUCCESS`    : the presolver found a reduction
+ *  - `SCIP_DIDNOTFIND` : the presolver searched, but did not find a presolving change
+ *  - `SCIP_DIDNOTRUN`  : the presolver was skipped
+ *  - `SCIP_DELAYED`    : the presolver was skipped, but should be called again
+ *
+ * Please see also the @ref SYM_ADDITIONALPROPERTIES section to learn about the properties
+ * `SYMHDLR_PRESOLTIMING`, `SYMHDLR_PRESOLPRIORITY`, and `SYMHDLR_MAXPREROUNDS`, which influence the behaviour of SCIP
+ * calling `SYMPRESOL`.
  */
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -8794,7 +9203,7 @@
  * \mathrm{sgn}(\gamma^{-1}(n))x_{|\gamma^{-1}(n)|})\f$,
  * where \f$\mathrm{sgn}(\cdot)\f$ is the sign function. The remaining properties of a symmetry are the same.
  * It is possible to switch between these two types of symmetries via the
- * parameter <code>propagating/symmetry/symtype</code>.
+ * parameter <code>symmetries/symtype</code>.
  * Moreover, to detect more general signed permutations, one can shift variables with a
  * bounded domain to be centered at the origin. This way, also variables with, e.g., domains \f$[1,2]\f$
  * and \f$[0,1]\f$ can be symmetric. In SCIP, we implement this shift only within symmetry detection
@@ -8806,8 +9215,9 @@
  * color-preserving automorphisms correspond to symmetries of the integer program. The symmetries of
  * the graph, and thus of the integer program, are then computed by an external graph automorphism
  * library that needs to be linked to SCIP. Currently, SCIP can use three such libraries: The graph
- * automorphism libraries bliss, nauty/traces, and dejavu. They are the basic workhorses to detect symmetries. Moreover, one can use
- * sassy, a graph symmetry preprocessor which passes the preprocessed graphs to bliss or nauty/traces; sassy is automatically included in dejavu.
+ * automorphism libraries bliss, nauty/traces, and dejavu. They are the basic workhorses to detect symmetries.
+ * Moreover, one can use sassy, a graph symmetry preprocessor which passes the preprocessed graphs to bliss or
+ * nauty/traces; sassy is automatically included in dejavu.
  * The current default is to use nauty in combination with sassy for symmetry detection.
  * To use other symmetry packages, options <code>SYM</code> and <code>-DSYM</code> in the Makefile and CMake
  * system, respectively, need to be set.
@@ -8834,86 +9244,67 @@
  *
  * @section SYMMETHODS Symmetry handling methods
  *
- * Most symmetry handling methods available in SCIP have only been implemented for ordinary permutation symmetries,
- * and not for signed permutation symmetries. In the following, we silently assume that the described methods
- * deal with ordinary permutation symmetries if not mentioned differently.
- * To handle symmetries, SCIP uses three different classes of methods, which we detail below.
+ * In SCIP, symmetries are handled via so-called symmetry handler plugins. Each symmetry handler has a priority.
+ * After symmetries have been computed, SCIP iterates through all symmetry handlers in non-increasing order of their
+ * priority and provides them the generators of the independent factors \f$\Gamma_i\f$. Based on the generators,
+ * the symmetry handlers need to check whether they can handle the symmetries of \f$\Gamma_i\f$. The first symmetry
+ * handler that can handle \f$\Gamma_i\f$ then gets assigned this factor and will handle its symmetries throughout
+ * the solving process, see \ref SYMHDLRS for details.
  *
- * @subsection SYMCONSS Static symmetry handling constraints for binary variable domains
+ * In the following, we briefly explain the three symmetry handlers that are available in SCIP by default.
+ * To explain these symmetry handlers, we provide a brief introduction into static and dynamic symmetry
+ * handling first.
  *
- * SCIP contains three constraint handlers for handling symmetries of binary variables: the symresack,
- * orbisack, and orbitope constraint handler. Given a symmetry \f$\gamma\f$,
- * the symresack constraint handler enforces that a solution vector \f$x\f$ is not lexicographically
- * smaller than its image \f$\gamma(x)\f$. This constraint is enforced by a propagation algorithm
- * and separating inequalities. Moreover, given the disjoint cycle decomposition of \f$\gamma\f$,
- * SCIP checks, for each cycle of \f$\gamma\f$, whether all variables in the cycle are contained
- * in set packing or partitioning constraints. If this is the case, specialized inequalities can
- * be separated.
+ * @subsection SYMCONCEPTS Static vs dynamic symmetry handling
  *
- * In case the permutation \f$\gamma\f$ is an involution, i.e., \f$\gamma(\gamma(x)) = x\f$,
- * specialized separation and propagation algorithms can be used, which are implemented in the
- * orbisack constraint handler. For orbisack constraints, also facet-defining inequalities of the
- * convex hull of all binary points \f$x\f$ being not lexicographically smaller than \f$\gamma(x)\f$
- * can be separated. Since the coefficients in these inequalities grow exponentially large which might
- * cause numerical instabilities, the separation of these inequalities is disabled by default, but can be
- * enabled via the parameter <code>constraints/orbisack/orbiSeparation</code>. Furthermore, to avoid
- * numerical instabilities, the parameter <code>constraints/orbisack/coeffbound</code> controls the
- * maximum absolute value of a coefficient in separated facet-defining inequalities.
+ * An established method for handling symmetries is to enforce that a solution vector \f$x\f$ is lexicographically
+ * maximal among all symmetric solutions \f$\gamma(x)\f$, where \f$\gamma \in \Gamma\f$. When \f$\Gamma\f$ is
+ * a product group, it is sufficient to ensure that \f$x\f$ is lexicographically maximal among the solutions
+ * \f$\gamma(x)\f$ when \f$\gamma \in \Gamma_i\f$ for all \f$i \in \{1,\dots,k\}\f$. Note, however, that there
+ * are many possibilities for defining a lexicographic order.
  *
- * Finally, the orbitope constraint handler is able to handle symmetries of special symmetric groups \f$\Gamma\f$.
- * For orbitopes to be applicable, the affected variables need to be arranged in a matrix \f$X\f$ such that
- * the symmetries in \f$\Gamma\f$ permute the columns of \f$X\f$. Symmetries are then handled by orbitope
- * constraints by enforcing to only compute solution matrices \f$X\f$ whose columns are sorted lexicographically
- * non-increasingly. To this end, a propagation algorithm is used and inequalities are separated. In case
- * the variables of each row of the matrix \f$X\f$ are contained in a set packing or partitioning constraint,
- * specialized propagation and separation routines are used.
- *
- * @subsection SYMPROP Dynamic symmetry handling by propagation
- *
- * Static symmetry handling enforces a lexicographic ordering on the variable solution vectors.
- * The pro of that approach, is that throughout the solving process, the same lexicographic ordering constraint
- * is used. This means that already during presolving certain symmetry reductions can be made.
+ * In static symmetry handling, the lexicographic order is determined before the solving process starts.
+ * Usually, one takes the natural indexing of variables and says that vector \f$x\f$ is not lexicographically smaller
+ * than vector \f$y\f$ when either \f$x = y\f$ or, at the first position \f$j\f$ at which \f$x\f$ and \f$y\f$ differ,
+ * one has \f$x_j > y_j\f$. The pro of that approach, is that throughout the solving process, the same lexicographic
+ * ordering constraint is used. This means that already during presolving certain symmetry reductions can be made.
  * The con of this approach is that an ordering of the variables for lexicographic comparisons have to be made
  * before solving. Consequently, if reductions of certain variable domains are found, but these variables are compared
  * late by the lexicographic comparison order, the effect for symmetry handling is very slim.
  *
- * Dynamic symmetry handling addresses this issue by propagating symmetry handling constraints, where the variable
- * comparison ordering are determined while solving, attempting to make strong symmetry handling reductions early on.
- * Dynamic symmetry handling removes feasible solutions of the problem, while it is guaranteed that at least one
- * symmetric solution remains feasible.
+ * In dynamic symmetry handling, the lexicographic order is determined during the solving process and can differ at
+ * the nodes of the branch-and-bound tree. A common choice is to determine the lexicographic order at node \f$N\f$
+ * based on the branching decisions that were made to create \f$N\f$. One then re-indexes the variable vector
+ * such that the variable indices respect the order of branching decisions. Variables that have not been used
+ * for branching to create \f$N\f$ are not taken into account in the lexicographic order.
  *
- * Whether dynamic or static symmetry handling methods are used, is determined by the boolean parameter
- * <code>propagating/symmetry/usedynamicprop</code>.
- * SCIP features three dynamic symmetry handling methods.
- * SCIP only provides propagation methods for handling these symmetries,
- * and the methods work on variables with arbitrary (so also non-binary) variable domains.
+ * @subsection SYMROWCOL Matrix symmetries
  *
- * -# Orbitopal reduction is the dynamic counterpart of orbitopal fixing. This method can be used if the variables
- *    can be arranged without duplicates in a matrix, and symmetries permute the columns of this matrix. This method
- *    propagates the variable domains such that solutions in matrix-form have lexicographically decreasing columns,
- *    with respect to the dynamically chosen row and column order.
- *    Orbitopal reduction respects the parameter <code>propagating/symmetry/detectorbitopes</code>.
- * -# Lexicographic reduction is the dynamic counterpart of symresack and orbisack propagation.
- *    Lexicographic reduction respects the parameter <code>propagating/symmetry/addsymresacks</code>.
- *    At the moment, the implementation of this method is the only one that allows to also handle signed permutation
- *    symmetries.
- * -# Orbital reduction is a generalization of orbital fixing that also works for non-binary variable domains.
- *    Orbital reduction respects the 2-bit of the bitset <code>misc/usesymmetry</code>.
- *    See \ref SYMMETHODSELECT "method selection". Since there is no static counterpart, this method ignores
- *    <code>propagating/symmetry/usedynamicprop</code>.
+ * We distinguish three types of matrix symmetries. Suppose the variables on which the symmetries of an independent
+ * factor act can be arranged without duplicates such that the symmetries act on this matrix by
  *
- * In all cases, the dynamic variable ordering is derived from the branching decisions.
- * In particular, at different branch-and-bound tree nodes, a different variable ordering can be active.
- * Since the symmetries are handled for independent factors of the symmetry group, a different variable ordering method
- * can be used for handling symmetries in different factors. In SCIP, the same method is used for orbital reduction and
- * for lexicographic reduction, which means that these two methods are compatible and can be used simultaneously in the
- * same factor. Orbitopal reduction uses a different method.
+ * - permuting the order of the columns (column symmetries),
+ * - permuting the order of the rows (row symmetries), or
+ * - permuting the order of both columns and rows.
  *
- * As SCIP might restart the branch-and-bound process, which removes information regarding the branching decisions,
- * we need to make sure that correct reductions are found after a restart.
- * If a restart occurs, static symmetry handling methods are preserved. Since dynamic symmetry handling methods
- * depend on the branch-and-bound tree structure, and because the prior branch-and-bound tree is removed,
- * the dynamic symmetry handling methods are disabled after a restart.
+ * The rowcol symmetry handler handles these symmetries by enforcing that the rows and/or columns are sorted
+ * lexicographically. Via the parameter <code>symmetries/rowcol/usedynamicprop</code> one can determine whether the
+ * lexicographic order is determined statically or dynamically. If all variables in the matrix are binary and static
+ * symmetry handling is used, the lexicographic order is enforced by the so-called orbitope constraint handler,
+ * which provides separation and propagation routines to enforce the lexicographic order. Moreover, for row symmetries,
+ * when the variables of each column are contained in a set packing or partitioning constraint, specialized propagation
+ * and separation routines are used (and analogously for column symmetries).
+ *
+ * When dynamic symmetry handling is used, the lexicographic order is enforced by a propagation algorithm, so-called
+ * orbitopal reduction.
+ *
+ * @subsection SYMLEXORBRED Lexicographic and orbital reduction
+ *
+ * In general, the lexorbred symmetry handler uses two propagation algorithms for symmetry handling.
+ * The lexicographic reduction method propagates, for each generator \f$\gamma\f$ of the symmetry factor, the condition
+ * that a solution \f$x\f$ is not lexicographically smaller than \f$\gamma(x)\f$. The orbital reduction method uses
+ * symmetry orbits of variables to find symmetry redcutions beyond reductions based on single generators.
+ * Both methods make use of dynamic lexicographic order.
  *
  * @subsection SYMSST SST cuts
  *
@@ -8926,77 +9317,34 @@
  * \f$x_{\ell_r} \geq x_j\f$ for all \f$j \in \{\gamma(i) : i \in \{1,\dots,n\}\}\f$.
  * The latter set is called the orbit of leader \f$\ell_r\f$.
  *
- * SST cuts admit many degrees of freedom. In particular, they are not limited to binary variables
- * but can be used for arbitrary variable types. A user can gain control over the selection process of
- * SST cuts via several parameters. For instance,
+ * SST cuts are added by the sst symmetry handler and admit many degrees of freedom. In particular, they are not limited
+ * to binary variables but can be used for arbitrary variable types. A user can gain control over the selection process
+ * of SST cuts via several parameters. For instance,
  *
- * - <code>sstleadervartype</code> is a bitset encoding the variable types of leaders: the 1-bit models binary,
- *   the 2-bit integer, the 4-bit implied integral of any type, and the 8-bit continuous variables. That is, a value
- *   of 9 models that the leader can be a binary or continuous variable.
- * - <code>sstleaderrule</code> ranges from 0 to 2 and models whether a leader is the first variable in
- *   its orbit, the last variable in its orbit, or a variable with most conflicts with other variables in
- *   the orbit, respectively.
- * - <code>ssttiebreakrule</code> ranges from 0 to 2 and models whether an orbit of minimum size, maximum
+ * - <code>symmetries/sst/leadervartype</code> is a bitset encoding the variable types of leaders: the 1-bit models
+ *   binary, the 2-bit integer, and the 4-bit  continuous variables. That is, a value of 5 models that the leader can
+ *   be a binary or continuous variable.
+ * - <code>symmetries/sst/leaderrule</code> ranges from 0 to 2 and models whether a leader is the first variable in
+ *   its orbit, the last variable in its orbit, or a variable with most conflicts with other variables in the orbit,
+ *   respectively.
+ * - <code>symmetries/sst/orbitrule</code> ranges from 0 to 2 and models whether an orbit of minimum size, maximum
  *   size or with most variables being in conflict to the leader is selected, respectively.
- * - <code>sstmixedcomponents</code> whether SST cuts are also applied if a symmetries do not only affect
+ * - <code>symmetries/sst/mixedcomponents</code> whether SST cuts are also applied if a symmetries do not only affect
  *   variables of a single type.
- * - <code>sstaddcuts</code> whether SST cuts are added to the problem. If no cuts are added, only
- *   binary variables might be fixed to 0 if they are in conflict with the leader.
- *
- * @subsection SYMMETHODSELECT Selecting symmetry handling methods
- *
- * The symmetry handling methods explained above can be enabled and disabled via the parameter
- * <code>misc/usesymmetry</code>, which encodes the enabled methods via a bitset that ranges between 0
- * and 7: the 1-bit encodes symmetry handling constraints, the 2-bit encodes orbital reduction, and the
- * 4-bit encodes SST cuts. For example, <code>misc/usesymmetry = 3</code> enables symmetry handling
- * constraints and orbital reduction, whereas <code>misc/usesymmetry = 0</code> disables symmetry handling.
- * In the following, we explain how the combination of different symmetry handling methods works.
- *
- * The default strategy of SCIP is to handle symmetries via the bitset value 7, i.e., symmetry handling
- * constraints, orbital reduction, and SST cuts are enabled. To make sure that the different methods are
- * compatible, the following steps are carried out:
- *
- * -# SCIP determines independent subgroups \f$\Gamma_1,\dots,\Gamma_k\f$ as described in \ref SYMPROCESS.
- *    Then, for each subgroup \f$\Gamma_i\f$, different symmetry handling methods can be applied.
- * -# For each subgroup \f$\Gamma_i\f$, a heuristic is called that checks whether orbitopes are applicable
- *    to handle the entire subgroup. If yes, this subgroup is handled by orbitopes and no other
- *    symmetry handling methods.
- * -# Otherwise, if parameter <code>propagating/symmetry/detectsubgroups</code> is <code>TRUE</code>
- *    and <code>propagating/symmetry/usedynamicprop</code> is <code>FALSE</code>, a
- *    heuristic is called to detect whether "hidden" orbitopes are present. That is, whether some but not
- *    all symmetries of \f$\Gamma_i\f$ can be handled by orbitopes. If sufficiently many symmetries can
- *    be handled by orbitopes, orbitopes are applied and, if parameter <code>propagating/symmetry/addweaksbcs</code>
- *    is TRUE, some compatible SST cuts are added, too. Besides this, no further symmetry handling methods
- *    are applied for \f$\Gamma_i\f$.
- * -# Otherwise, orbital reduction is used. If <code>propagating/symmetry/usedynamicprop</code> and
- *    <code>propagating/symmetry/addsymresacks</code> are <code>TRUE</code>, then also the dynamic lexicographic
- *    reduction method is used.
- * -# Otherwise, if the majority of variables affected by \f$\Gamma_i\f$ are non-binary, SST cuts are applied
- *    to handle \f$\Gamma_i\f$. No further symmetry handling methods are applied for \f$\Gamma_i\f$.
- *
- * @note If orbital reduction is enabled, a factor \f$\Gamma_i\f$ can always be handled by this method.
- *       As such, by default, no SST cuts will be added.
- *
- * @note Depending on the setting of <code>misc/usesymmetry</code>, it might be possible that a symmetry component is
- *       not handled. For instance, if only orbitopal reduction is used
- *       (i.e., <code>propagating/symmetry/detectorbitopes</code> is set to 1),
- *       and if a symmetry component is no orbitope, no symmetry is handled for that component at all.
- *
  *
  * @subsection SYMTIMING Controlling the timing of symmetry computation
  *
  * Since presolving might both remove and introduce formulation symmetries, the timing of computing symmetries
- * can be changed via the parameter <code>propagating/symmetry/symtiming</code>.
- * The parameter takes value 0, 1, or 2, corresponding to computing symmetries before presolving,
- * during presolving, or at the end of presolving, respectively.
+ * can be changed via the parameter <code>symmetries/tryaddtiming</code>. The parameter takes value 0 or 1,
+ * corresponding to computing symmetries before or after presolving, respectively.
  * Based on the computed symmetries, SCIP enables some symmetry handling methods as explained above.
  *
  * @subsection SYMDETECTCUSTOM Symmetry detection for customized constraints
  *
  * To detect (signed) permutation symmetries, SCIP requests from each constraint present in the problem to be solved
  * a node and edge colored graph whose symmetries correspond to the symmetries of the corresponding constraint.
- * This information is provided by two callbacks, the SCIP_DECL_CONSGETPERMSYMGRAPH callback for permutation
- * symmetries and the SCIP_DECL_CONSGETSIGNEDPERMSYMGRAPH callback for signed permutation symmetries. If a
+ * This information is provided by two callbacks, the `SCIP_DECL_CONSGETPERMSYMGRAPH` callback for permutation
+ * symmetries and the `SCIP_DECL_CONSGETSIGNEDPERMSYMGRAPH` callback for signed permutation symmetries. If a
  * constraint handler does not implement one of these callbacks, SCIP will not detect symmetries of the corresponding
  * type.
  *
@@ -9133,6 +9481,7 @@
  * }
  * \endcode
  */
+
 
 /**@page LICENSE License
  *

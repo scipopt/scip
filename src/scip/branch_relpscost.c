@@ -60,9 +60,9 @@
 #include "scip/scip_randnumgen.h"
 #include "scip/scip_sol.h"
 #include "scip/scip_solvingstats.h"
+#include "scip/scip_sym.h"
 #include "scip/scip_tree.h"
 #include "scip/scip_var.h"
-#include "scip/prop_symmetry.h"
 #include "scip/symmetry.h"
 
 
@@ -219,6 +219,7 @@ SCIP_RETCODE initOrbits(
    SCIP_BRANCHRULEDATA*  branchruledata      /**< branching rule data */
    )
 {
+   SYM_SYMTYPE symtype;
    int** permstrans = NULL;
    int* components = NULL;
    int* componentbegins = NULL;
@@ -239,8 +240,9 @@ SCIP_RETCODE initOrbits(
    assert( branchruledata->orbitrep == NULL );
 
    /* obtain symmetry including permutations */
-   SCIP_CALL( SCIPgetSymmetry(scip, &branchruledata->npermvars, &branchruledata->permvars, &branchruledata->permvarmap,
-         &nperms, NULL, &permstrans, NULL, NULL, &components, &componentbegins, &vartocomponent, &ncomponents) );
+   SCIP_CALL( SCIPgetSymmetry(scip, &symtype, &branchruledata->npermvars, &branchruledata->permvars,
+         &branchruledata->permvarmap, &nperms, NULL, &permstrans, &components, &componentbegins, &vartocomponent,
+         &ncomponents) );
 
    /* turn off symmetry handling if there is no symmetry or the number of variables is not equal */
    if( nperms <= 0 || branchruledata->npermvars != SCIPgetNVars(scip) )
@@ -2470,6 +2472,7 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpRelpscost)
    /* init orbits if necessary */
    if( runfiltering )
    {
+      printf("I am here\n");
       SCIP_CALL( initOrbits(scip, branchruledata) );
    }
 

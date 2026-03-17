@@ -238,7 +238,7 @@ void nautyterminationhook(
          "symmetry computation terminated early because Nauty level limit %d is exceeded\n",
          nautydata_.maxlevel);
       SCIPverbMessage(nautydata_.scip, SCIP_VERBLEVEL_MINIMAL, NULL,
-         "for running full symmetry detection, increase value of parameter propagating/symmetry/nautymaxlevel\n");
+         "for running full symmetry detection, increase value of parameter symmetries/nautymaxlevel\n");
       nauty_kill_request = 1;
    }
 }
@@ -341,7 +341,7 @@ SCIP_RETCODE computeAutomorphisms(
 
 #ifdef NAUTY
    nautydata_.scip = scip;
-   SCIP_CALL( SCIPgetIntParam(scip, "propagating/symmetry/nautymaxlevel", &nautydata_.maxlevel) );
+   SCIP_CALL( SCIPgetIntParam(scip, "symmetries/nautymaxlevel", &nautydata_.maxlevel) );
 #endif
 
    oldtime = SCIPgetSolvingTime(scip);

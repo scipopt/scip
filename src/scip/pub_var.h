@@ -45,6 +45,7 @@
 #include "scip/type_result.h"
 #include "scip/type_retcode.h"
 #include "scip/type_scip.h"
+#include "scip/type_sym.h"
 #include "scip/type_var.h"
 #include "scip/intervalarith.h"
 
@@ -1552,6 +1553,14 @@ SCIP_PROP* SCIPbdchginfoGetInferProp(
    SCIP_BDCHGINFO*       bdchginfo           /**< bound change information */
    );
 
+/** returns inference symmetry component of given bound change information,
+ *  or NULL if symmetry was not responsible
+ */
+SCIP_EXPORT
+SCIP_SYMCOMP* SCIPbdchginfoGetInferSymcomp(
+   SCIP_BDCHGINFO*       bdchginfo           /**< bound change information */
+   );
+
 /** returns inference user information of given bound change information */
 SCIP_EXPORT
 int SCIPbdchginfoGetInferInfo(
@@ -1699,6 +1708,7 @@ SCIP_HOLELIST* SCIPholelistGetNext(
 #define SCIPbdchginfoGetInferVar(bdchginfo)       (bdchginfo)->inferencedata.var
 #define SCIPbdchginfoGetInferCons(bdchginfo)      (bdchginfo)->inferencedata.reason.cons
 #define SCIPbdchginfoGetInferProp(bdchginfo)      (bdchginfo)->inferencedata.reason.prop
+#define SCIPbdchginfoGetInferSymcomp(bdchginfo)   (bdchginfo)->inferencedata.reason.symcomp
 #define SCIPbdchginfoGetInferInfo(bdchginfo)      (bdchginfo)->inferencedata.info
 #define SCIPbdchginfoGetInferBoundtype(bdchginfo) (SCIP_BOUNDTYPE)((bdchginfo)->inferboundtype)
 #define SCIPbdchginfoIsRedundant(bdchginfo)       (bdchginfo)->redundant
