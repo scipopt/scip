@@ -217,6 +217,8 @@ void SCIPsymhdlrSetSepa(
    SCIP_DECL_SYMHDLRSEPASOL((*symsepasol)),  /**< separate cutting planes for arbitrary primal solution */
    int                   sepafreq,           /**< frequency for separating cuts; zero means to separate only in the root node */
    int                   sepapriority,       /**< priority of the symmetry handler for separation */
+   SCIP_Real             maxbounddist,       /**< maximal relative distance from current node's dual bound to primal bound compared
+                                              *   to best node's dual bound for applying separation */
    SCIP_Bool             delaysepa           /**< should separation method be delayed, if other separators found cuts? */
    );
 

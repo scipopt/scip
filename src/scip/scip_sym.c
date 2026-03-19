@@ -158,6 +158,8 @@ SCIP_RETCODE SCIPsetSymhdlrSepa(
    SCIP_DECL_SYMHDLRSEPASOL((*symsepasol)),  /**< separate cutting planes for arbitrary primal solution */
    int                   sepafreq,           /**< frequency for separating cuts; zero means to separate only in the root node */
    int                   sepapriority,       /**< priority of the symmetry handler for separation */
+   SCIP_Real             maxbounddist,       /**< maximal relative distance from current node's dual bound to primal bound compared
+                                              *   to best node's dual bound for applying separation */
    SCIP_Bool             delaysepa           /**< should separation method be delayed, if other separators found cuts? */
    )
 {
@@ -171,7 +173,7 @@ SCIP_RETCODE SCIPsetSymhdlrSepa(
    SCIP_CALL( SCIPcheckStage(scip, "SCIPsetSymhdlrSepa", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
    oldsepapriority = SCIPsymhdlrGetSepaPriority(symhdlr);
-   SCIPsymhdlrSetSepa(symhdlr, symsepalp, symsepasol, sepafreq, sepapriority, delaysepa);
+   SCIPsymhdlrSetSepa(symhdlr, symsepalp, symsepasol, sepafreq, sepapriority, maxbounddist, delaysepa);
 
    if( oldsepapriority != sepapriority )
       scip->set->symhdlrssepasorted = FALSE;

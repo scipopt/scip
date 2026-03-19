@@ -302,7 +302,7 @@ SCIP_RETCODE SCIPincludeSymhdlrXyz(
          SYM_PROPPRIORITY, SYM_PROP_TIMING) );
    SCIP_CALL( SCIPsetSymhdlrResprop(scip, symhdlr, symRespropXyz) );
    SCIP_CALL( SCIPsetSymhdlrSepa(scip, symhdlr, symSepalpXyz, symSepasolXyz, SYM_SEPAFREQ,
-         SYM_SEPAPRIORITY, SYM_DELAYSEPA) );
+         SYM_SEPAPRIORITY, SYM_MAXBOUNDDIST, SYM_DELAYSEPA) );
 
 #endif
 
