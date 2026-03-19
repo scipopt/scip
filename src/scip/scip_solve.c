@@ -3213,8 +3213,8 @@ SCIP_RETCODE SCIPsolveConcurrent(
          usesymmetry = -1;
       else
       {
-         usesymmetry = scip->set->misc_usesymmetry;
-         scip->set->misc_usesymmetry = 0;
+         usesymmetry = (int)scip->set->sym_enabled;
+         scip->set->sym_enabled = FALSE;
       }
 
       /* check whether concurrent solve is configured to presolve the problem before setting up the concurrent solvers */
@@ -3239,7 +3239,7 @@ SCIP_RETCODE SCIPsolveConcurrent(
 
       /* restore symmetry setting for concurrent solvers */
       if( usesymmetry >= 0 )
-         scip->set->misc_usesymmetry = usesymmetry;
+         scip->set->sym_enabled = (SCIP_Bool)usesymmetry;
 
       /* if presolving has run into a limit, we stop here */
       if( scip->set->stage < SCIP_STAGE_PRESOLVED )
