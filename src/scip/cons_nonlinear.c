@@ -11583,13 +11583,20 @@ SCIP_DECL_CONSCHECK(consCheckNonlinear)
    /* check nonlinear constraints for feasibility */
    for( c = 0; c < nconss; ++c )
    {
+      SCIP_Real absviol;
+      SCIP_Real relviol;
+
       assert(conss != NULL && conss[c] != NULL);
       SCIP_CALL( computeViolation(scip, conss[c], sol, soltag) );
 
-      if( isConsViolated(scip, conss[c]) )
+      absviol = getConsAbsViolation(conss[c]);
+      SCIP_CALL( getConsRelViolation(scip, conss[c], &relviol, sol, soltag) );
+      SCIPupdateSolConsViolation(scip, sol, absviol, relviol);
+
+      if( absviol > SCIPfeastol(scip) )
       {
          *result = SCIP_INFEASIBLE;
-         maxviol = MAX(maxviol, getConsAbsViolation(conss[c]));
+         maxviol = MAX(maxviol, absviol);
 
          consdata = SCIPconsGetData(conss[c]);
          assert(consdata != NULL);
