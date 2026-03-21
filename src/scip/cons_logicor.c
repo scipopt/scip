@@ -99,6 +99,7 @@
 #define DEFAULT_PRESOLUSEHASHING   TRUE /**< should hash table be used for detecting redundant constraints in advance */
 #define DEFAULT_DUALPRESOLVING     TRUE /**< should dual presolving steps be performed? */
 #define DEFAULT_NEGATEDCLIQUE      TRUE /**< should negated clique information be used in presolving */
+#define DEFAULT_COPYTYPEDCONS     FALSE /**< should logicor constraints be copied as logicor instead of linear? */
 #define DEFAULT_IMPLICATIONS       TRUE /**< should we try to shrink the variables and derive global boundchanges by
                                          *   using cliques and implications */
 
@@ -131,6 +132,7 @@ struct SCIP_ConshdlrData
                                               *   by using clique and implications */
    SCIP_Bool             usestrengthening;   /**< should pairwise constraint comparison try to strengthen constraints by
                                               *   removing superflous non-zeros? */
+   SCIP_Bool             copytypedcons;      /**< should logicor constraints be copied as logicor instead of linear? */
    int                   nlastcliquesneg;    /**< number of cliques after last negated clique presolving round */
    int                   nlastimplsneg;      /**< number of implications after last negated clique presolving round */
    int                   nlastcliquesshorten;/**< number of cliques after last shortening of constraints */
@@ -5027,47 +5029,68 @@ SCIP_DECL_CONSPRINT(consPrintLogicor)
 static
 SCIP_DECL_CONSCOPY(consCopyLogicor)
 {  /*lint --e{715}*/
+   SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_VAR** sourcevars;
-   SCIP_VAR** targetvars;
    const char* consname;
    int nvars;
-   int v;
 
    assert(scip != NULL);
    assert(sourcescip != NULL);
    assert(sourcecons != NULL);
    assert(valid != NULL);
 
-   (*valid) = TRUE;
+   conshdlrdata = SCIPconshdlrGetData(sourceconshdlr);
+   assert(conshdlrdata != NULL);
 
    /* get variables of the source constraint */
    sourcevars = SCIPgetVarsLogicor(sourcescip, sourcecons);
    nvars = SCIPgetNVarsLogicor(sourcescip, sourcecons);
-   assert(nvars >= 0);
 
-   /* allocate target variable array */
-   SCIP_CALL( SCIPallocBufferArray(scip, &targetvars, nvars) );
-
-   /* map source variables to target variables */
-   for( v = 0; v < nvars && *valid; ++v )
+   if( conshdlrdata->copytypedcons )
    {
-      SCIP_CALL( SCIPgetVarCopy(sourcescip, scip, sourcevars[v], &targetvars[v], varmap, consmap, global, valid) );
-      assert(!(*valid) || targetvars[v] != NULL);
-   }
+      SCIP_VAR** targetvars;
+      int v;
 
-   /* only create the target constraint if all variables were successfully copied */
-   if( *valid )
+      (*valid) = TRUE;
+      assert(nvars >= 0);
+
+      /* allocate target variable array */
+      SCIP_CALL( SCIPallocBufferArray(scip, &targetvars, nvars) );
+
+      /* map source variables to target variables */
+      for( v = 0; v < nvars && *valid; ++v )
+      {
+         SCIP_CALL( SCIPgetVarCopy(sourcescip, scip, sourcevars[v], &targetvars[v], varmap, consmap, global, valid) );
+         assert(!(*valid) || targetvars[v] != NULL);
+      }
+
+      /* only create the target constraint if all variables were successfully copied */
+      if( *valid )
+      {
+         if( name != NULL )
+            consname = name;
+         else
+            consname = SCIPconsGetName(sourcecons);
+
+         SCIP_CALL( SCIPcreateConsLogicor(scip, cons, consname, nvars, targetvars,
+               initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode) );
+      }
+
+      SCIPfreeBufferArray(scip, &targetvars);
+   }
+   else
    {
       if( name != NULL )
          consname = name;
       else
          consname = SCIPconsGetName(sourcecons);
 
-      SCIP_CALL( SCIPcreateConsLogicor(scip, cons, consname, nvars, targetvars,
-            initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode) );
+      /* copy the logic using the linear constraint copy method */
+      SCIP_CALL( SCIPcopyConsLinear(scip, cons, sourcescip, consname, nvars, sourcevars, NULL,
+            1.0, SCIPinfinity(scip), varmap, consmap,
+            initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode, global, valid) );
+      assert(cons != NULL);
    }
-
-   SCIPfreeBufferArray(scip, &targetvars);
 
    return SCIP_OKAY;
 }
@@ -5449,6 +5472,10 @@ SCIP_RETCODE SCIPincludeConshdlrLogicor(
          "constraints/logicor/strengthen",
          "should pairwise constraint comparison try to strengthen constraints by removing superflous non-zeros?",
          &conshdlrdata->usestrengthening, TRUE, DEFAULT_STRENGTHEN, NULL, NULL) );
+   SCIP_CALL( SCIPaddBoolParam(scip,
+         "constraints/" CONSHDLR_NAME "/copytypedcons",
+         "should logicor constraints be copied as logicor instead of as linear constraints?",
+         &conshdlrdata->copytypedcons, TRUE, DEFAULT_COPYTYPEDCONS, NULL, NULL) );
 
    return SCIP_OKAY;
 }

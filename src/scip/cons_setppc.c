@@ -116,6 +116,7 @@
 #define DEFAULT_ADDVARIABLESASCLIQUES FALSE/**< should we try to generate extra clique constraint out of all binary
                                             *   variables to hopefully fasten the detection of redundant clique
                                             *   constraints */
+#define DEFAULT_COPYTYPEDCONS     FALSE /**< should setppc constraints be copied as setppc instead of linear? */
 #define DEFAULT_CLIQUESHRINKING    TRUE /**< should we try to shrink the number of variables in a clique constraints, by
                                          *   replacing more than one variable by only one
                                          */
@@ -153,6 +154,7 @@ struct SCIP_ConshdlrData
    SCIP_RANDNUMGEN*      randnumgen;         /**< random number generator */
    SCIP_Bool             presolpairwise;     /**< should pairwise constraint comparison be performed in presolving? */
    SCIP_Bool             presolusehashing;   /**< should hash table be used for detecting redundant constraints in advance */
+   SCIP_Bool             copytypedcons;      /**< should setppc constraints be copied as setppc instead of linear? */
    SCIP_Bool             dualpresolving;     /**< should dual presolving steps be performed? */
    int*                  probtoidxmap;       /**< cleared memory array with default values -1; used for clique partitions */
    int                   probtoidxmapsize;   /**< size of probtoidxmap */
@@ -8891,11 +8893,10 @@ SCIP_DECL_CONSPRINT(consPrintSetppc)
 static
 SCIP_DECL_CONSCOPY(consCopySetppc)
 {  /*lint --e{715}*/
+   SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_VAR** sourcevars;
-   SCIP_VAR** targetvars;
    const char* consname;
    int nvars;
-   int v;
    SCIP_SETPPCTYPE type;
 
    assert(scip != NULL);
@@ -8903,56 +8904,101 @@ SCIP_DECL_CONSCOPY(consCopySetppc)
    assert(sourcecons != NULL);
    assert(valid != NULL);
 
-   (*valid) = TRUE;
+   conshdlrdata = SCIPconshdlrGetData(sourceconshdlr);
+   assert(conshdlrdata != NULL);
 
    /* get variables of the source constraint */
    sourcevars = SCIPgetVarsSetppc(sourcescip, sourcecons);
    nvars = SCIPgetNVarsSetppc(sourcescip, sourcecons);
-   assert(nvars >= 0);
 
    /* get setppc type */
    type = SCIPgetTypeSetppc(sourcescip, sourcecons);
 
-   /* allocate target variable array */
-   SCIP_CALL( SCIPallocBufferArray(scip, &targetvars, nvars) );
-
-   /* map source variables to target variables */
-   for( v = 0; v < nvars && *valid; ++v )
+   if( conshdlrdata->copytypedcons )
    {
-      SCIP_CALL( SCIPgetVarCopy(sourcescip, scip, sourcevars[v], &targetvars[v], varmap, consmap, global, valid) );
-      assert(!(*valid) || targetvars[v] != NULL);
+      SCIP_VAR** targetvars;
+      int v;
+
+      (*valid) = TRUE;
+      assert(nvars >= 0);
+
+      /* allocate target variable array */
+      SCIP_CALL( SCIPallocBufferArray(scip, &targetvars, nvars) );
+
+      /* map source variables to target variables */
+      for( v = 0; v < nvars && *valid; ++v )
+      {
+         SCIP_CALL( SCIPgetVarCopy(sourcescip, scip, sourcevars[v], &targetvars[v], varmap, consmap, global, valid) );
+         assert(!(*valid) || targetvars[v] != NULL);
+      }
+
+      /* only create the target constraint if all variables were successfully copied */
+      if( *valid )
+      {
+         if( name != NULL )
+            consname = name;
+         else
+            consname = SCIPconsGetName(sourcecons);
+
+         switch( type )
+         {
+         case SCIP_SETPPCTYPE_PARTITIONING:
+            SCIP_CALL( SCIPcreateConsSetpart(scip, cons, consname, nvars, targetvars,
+                  initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode) );
+            break;
+         case SCIP_SETPPCTYPE_PACKING:
+            SCIP_CALL( SCIPcreateConsSetpack(scip, cons, consname, nvars, targetvars,
+                  initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode) );
+            break;
+         case SCIP_SETPPCTYPE_COVERING:
+            SCIP_CALL( SCIPcreateConsSetcover(scip, cons, consname, nvars, targetvars,
+                  initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode) );
+            break;
+         default:
+            SCIPfreeBufferArray(scip, &targetvars);
+            SCIPerrorMessage("unknown setppc type\n");
+            return SCIP_INVALIDDATA;
+         }
+      }
+
+      SCIPfreeBufferArray(scip, &targetvars);
    }
-
-   /* only create the target constraint if all variables were successfully copied */
-   if( *valid )
+   else
    {
+      SCIP_Real lhs;
+      SCIP_Real rhs;
+
+      lhs = -SCIPinfinity(scip);
+      rhs = SCIPinfinity(scip);
+
+      switch( type )
+      {
+      case SCIP_SETPPCTYPE_PARTITIONING:
+         lhs = 1.0;
+         rhs = 1.0;
+         break;
+      case SCIP_SETPPCTYPE_PACKING:
+         rhs = 1.0;
+         break;
+      case SCIP_SETPPCTYPE_COVERING:
+         lhs = 1.0;
+         break;
+      default:
+         SCIPerrorMessage("unknown setppc type\n");
+         return SCIP_INVALIDDATA;
+      }
+
       if( name != NULL )
          consname = name;
       else
          consname = SCIPconsGetName(sourcecons);
 
-      switch( type )
-      {
-      case SCIP_SETPPCTYPE_PARTITIONING:
-         SCIP_CALL( SCIPcreateConsSetpart(scip, cons, consname, nvars, targetvars,
-               initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode) );
-         break;
-      case SCIP_SETPPCTYPE_PACKING:
-         SCIP_CALL( SCIPcreateConsSetpack(scip, cons, consname, nvars, targetvars,
-               initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode) );
-         break;
-      case SCIP_SETPPCTYPE_COVERING:
-         SCIP_CALL( SCIPcreateConsSetcover(scip, cons, consname, nvars, targetvars,
-               initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode) );
-         break;
-      default:
-         SCIPfreeBufferArray(scip, &targetvars);
-         SCIPerrorMessage("unknown setppc type\n");
-         return SCIP_INVALIDDATA;
-      }
+      /* copy the logic using the linear constraint copy method */
+      SCIP_CALL( SCIPcopyConsLinear(scip, cons, sourcescip, consname, nvars, sourcevars, NULL,
+            lhs, rhs, varmap, consmap,
+            initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode, global, valid) );
+      assert(cons != NULL);
    }
-
-   SCIPfreeBufferArray(scip, &targetvars);
 
    return SCIP_OKAY;
 }
@@ -9432,6 +9478,10 @@ SCIP_RETCODE SCIPincludeConshdlrSetppc(
          "constraints/" CONSHDLR_NAME "/cliqueshrinking",
          "should we try to shrink the number of variables in a clique constraints, by replacing more than one variable by only one",
          &conshdlrdata->cliqueshrinking, TRUE, DEFAULT_CLIQUESHRINKING, NULL, NULL) );
+   SCIP_CALL( SCIPaddBoolParam(scip,
+         "constraints/" CONSHDLR_NAME "/copytypedcons",
+         "should setppc constraints be copied as setppc instead of as linear constraints?",
+         &conshdlrdata->copytypedcons, TRUE, DEFAULT_COPYTYPEDCONS, NULL, NULL) );
 
    return SCIP_OKAY;
 }
