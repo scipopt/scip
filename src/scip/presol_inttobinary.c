@@ -109,6 +109,10 @@ SCIP_DECL_PRESOLEXEC(presolExecInttobinary)
 
       assert(SCIPvarGetType(vars[v]) == SCIP_VARTYPE_INTEGER && !SCIPvarIsImpliedIntegral(vars[v]));
 
+      /* if variable cannot be aggregated, we cannot perform the conversion */
+      if( SCIPdoNotAggrVar(scip, vars[v]) )
+         continue;
+
       /* get variable's bounds */
       lb = SCIPvarGetLbGlobal(vars[v]);
       ub = SCIPvarGetUbGlobal(vars[v]);
