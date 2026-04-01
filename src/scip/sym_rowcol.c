@@ -533,6 +533,7 @@ SCIP_RETCODE isDoublelLexSym(
    SCIP_Bool*            success             /**< pointer to store whether combined matrix could be generated */
    )
 {
+   SCIP_Bool rowsbeginallocated = FALSE;
    int* idxtomatrix1;
    int* idxtomatrix2;
    int* idxtorow1;
@@ -753,6 +754,7 @@ SCIP_RETCODE isDoublelLexSym(
          (*rowsbegin)[j + 1] = (*rowsbegin)[j] + ncols2[j];
       for (j = 0; j < nmatrices1; ++j)
          (*colsbegin)[j + 1] = (*colsbegin)[j] + ncols1[j];
+      rowsbeginallocated = TRUE;
    }
 
    /* check whether the rows of doublelexmatrix are covered by rows of matrices1 */
@@ -800,6 +802,12 @@ SCIP_RETCODE isDoublelLexSym(
       }
       SCIPfreeBlockMemoryArray(scip, doublelexmatrix, *nrows);
       *doublelexmatrix = NULL;
+
+      if( rowsbeginallocated )
+      {
+         SCIPfreeBlockMemoryArray(scip, rowsbegin, nmatrices2 + 1);
+         SCIPfreeBlockMemoryArray(scip, colsbegin, nmatrices1 + 1);
+      }
       *rowsbegin = NULL;
       *colsbegin = NULL;
    }

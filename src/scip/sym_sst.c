@@ -1475,6 +1475,27 @@ SCIP_RETCODE tryAddSSTConss(
          ++ninactiveperms;
    }
 
+   if( ninactiveperms == ntotalperms )
+   {
+      int len;
+
+      SCIPfreeBufferArray(scip, &orbitbegins);
+      SCIPfreeBufferArray(scip, &orbits);
+      SCIPfreeBufferArray(scip, &inactiveperms);
+      SCIPfreeBufferArray(scip, &isaffected);
+      SCIPfreeBufferArray(scip, &isproperperm);
+
+      len = symtype == SYM_SYMTYPE_PERM ? npermvars : 2 * npermvars;
+
+      for( i = 0; i < len; ++i )
+      {
+         SCIPfreeBlockMemoryArray(scip, &permstrans[i], ntotalperms);
+      }
+      SCIPfreeBlockMemoryArray(scip, &permstrans, len);
+
+      return SCIP_OKAY;
+   }
+
    /* as long as the stabilizer is non-trivial, add Schreier-Sims constraints */
    norbitleadercomponent = 0;
    *success = TRUE;
