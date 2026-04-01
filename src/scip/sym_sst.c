@@ -1724,6 +1724,9 @@ SCIP_DECL_SYMHDLRPRESOL(symhdlrPresolSST)
 
       for( c = 0; c < symdata->nsstconss; ++c )
       {
+         if( !SCIPconsIsActive(symdata->sstconss[c]) )
+            continue;
+
          SCIP_CALL( SCIPpresolCons(scip, symdata->sstconss[c], nrounds, presoltiming, nnewfixedvars, nnewaggrvars,
                nnewchgvartypes, nnewchgbds, nnewholes, nnewdelconss, nnewaddconss, nnewupgdconss, nnewchgcoefs,
                nnewchgsides, nfixedvars, naggrvars, nchgvartypes, nchgbds, naddholes, ndelconss, naddconss,

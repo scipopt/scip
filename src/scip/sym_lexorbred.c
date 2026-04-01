@@ -1165,6 +1165,9 @@ SCIP_DECL_SYMHDLRPRESOL(symhdlrPresolLexOrbRed)
 
       for( c = 0; c < symdata->nconss; ++c )
       {
+         if( !SCIPconsIsActive(symdata->conss[c]) )
+            continue;
+
          SCIP_CALL( SCIPpresolCons(scip, symdata->conss[c], nrounds, presoltiming, nnewfixedvars, nnewaggrvars,
                nnewchgvartypes, nnewchgbds, nnewholes, nnewdelconss, nnewaddconss, nnewupgdconss, nnewchgcoefs,
                nnewchgsides, nfixedvars, naggrvars, nchgvartypes, nchgbds, naddholes, ndelconss, naddconss,
