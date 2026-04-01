@@ -526,8 +526,13 @@ SCIP_RETCODE addOrbRed(
       nproperperms = nperms;
    }
 
-   SCIP_CALL( SCIPorbitalReductionAddComponent(scip, orbitalreddata, permvars, npermvars,
-         properperms, nproperperms, success) );
+   if( nproperperms > 0 )
+   {
+      SCIP_CALL( SCIPorbitalReductionAddComponent(scip, orbitalreddata, permvars, npermvars,
+            properperms, nproperperms, success) );
+   }
+   else
+      *success = FALSE;
 
    if( freeproperperms )
    {
