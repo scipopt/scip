@@ -257,6 +257,7 @@ Fixed bugs
 - fixed that C++14 may not have been enforced when compiling with CppAD or Boost with makefiles
 - avoid flattening multi-aggregations twice
 - fixed that violations of nonlinear constraints were not registered with solutions, and so were not included in the overview printed by the checksol command of the SCIP shell
+- fixed bug in presol_inttobinary if the variables are not allowed to be aggregated
 
 Miscellaneous
 -------------
