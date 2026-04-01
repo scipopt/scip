@@ -3429,7 +3429,10 @@ SCIP_RETCODE SCIPcollectSymhdlrStatistics(
 
    SCIP_CALL( SCIPcheckStage(scip, "SCIPcollectSymhdlrStatistics", FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
 
-   /* Create a subtree for propagators */
+   if( scip->set->nsymhdlrs == 0 )
+      return SCIP_OKAY;
+
+   /* Create a subtree for symmetry handlers */
    SCIP_CALL( SCIPcreateDatatreeInTree(scip, datatree, &symhdlrs, "plugins", scip->set->nsymhdlrs) );
 
    /* Collect symmetry handler statistics */
