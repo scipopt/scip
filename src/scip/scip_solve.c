@@ -260,6 +260,12 @@ SCIP_RETCODE SCIPtransformProb(
       return SCIP_PLUGINNOTFOUND;
    }
 
+   /* check consistency of numeric parameters before transforming;
+    * on failure, stay in PROBLEM stage so the user can correct the settings
+    */
+   if( !SCIPsetCheckNumericTolerances(scip->set) )
+      return SCIP_PARAMETERWRONGVAL;
+
    /* remember number of constraints */
    SCIPprobMarkNConss(scip->origprob);
 

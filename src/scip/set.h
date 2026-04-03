@@ -398,6 +398,13 @@ SCIP_RETCODE SCIPsetSetParam(
    const char*           value               /**< new value of the parameter as string */
    );
 
+/** checks consistency of numeric parameter values:
+ *  epsilon <= min(sumepsilon, dualfeastol) and sumepsilon <= feastol
+ */
+SCIP_Bool SCIPsetCheckNumericTolerances(
+   SCIP_SET*             set                 /**< global SCIP settings */
+   );
+
 /** reads parameters from a file */
 SCIP_RETCODE SCIPsetReadParams(
    SCIP_SET*             set,                /**< global SCIP settings */

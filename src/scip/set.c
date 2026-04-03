@@ -628,12 +628,81 @@ int calcGrowSize(
    return size;
 }
 
+/** checks consistency of numeric parameter values:
+ *  epsilon <= min(sumepsilon, dualfeastol) and sumepsilon <= feastol
+ */
+SCIP_Bool SCIPsetCheckNumericTolerances(
+   SCIP_SET*             set                 /**< global SCIP settings */
+   )
+{
+   SCIP_Real epsilon;
+   SCIP_Real sumepsilon;
+   SCIP_Real feastol;
+   SCIP_Real dualfeastol;
+
+   assert(set != NULL);
+
+   epsilon = SCIPsetEpsilon(set);
+   sumepsilon = SCIPsetSumepsilon(set);
+   feastol = SCIPsetFeastol(set);
+   dualfeastol = SCIPsetDualfeastol(set);
+
+   /* epsilon must not exceed sumepsilon */
+   if( epsilon > sumepsilon )
+   {
+      SCIPerrorMessage("Invalid parameter values: numerics/epsilon (%.15g) must not exceed numerics/sumepsilon (%.15g).\n",
+         epsilon, sumepsilon);
+      return FALSE;
+   }
+
+   /* sumepsilon must not exceed feastol */
+   if( sumepsilon > feastol )
+   {
+      SCIPerrorMessage("Invalid parameter values: numerics/sumepsilon (%.15g) must not exceed numerics/feastol (%.15g).\n",
+         sumepsilon, feastol);
+      return FALSE;
+   }
+
+   /* epsilon must not exceed dualfeastol */
+   if( epsilon > dualfeastol )
+   {
+      SCIPerrorMessage("Invalid parameter values: numerics/epsilon (%.15g) must not exceed numerics/dualfeastol (%.15g).\n",
+         epsilon, dualfeastol);
+      return FALSE;
+   }
+
+   return TRUE;
+}
+
+/** parameter change callback for epsilon: in TRANSFORMING or later, reject if inconsistent */
+static
+SCIP_DECL_PARAMCHGD(paramChgdEpsilon)
+{  /*lint --e{715}*/
+   if( SCIPgetStage(scip) >= SCIP_STAGE_TRANSFORMING && !SCIPsetCheckNumericTolerances(scip->set) )
+      return SCIP_PARAMETERWRONGVAL;
+
+   return SCIP_OKAY;
+}
+
+/** parameter change callback for sumepsilon: in TRANSFORMING or later, reject if inconsistent */
+static
+SCIP_DECL_PARAMCHGD(paramChgdSumEpsilon)
+{  /*lint --e{715}*/
+   if( SCIPgetStage(scip) >= SCIP_STAGE_TRANSFORMING && !SCIPsetCheckNumericTolerances(scip->set) )
+      return SCIP_PARAMETERWRONGVAL;
+
+   return SCIP_OKAY;
+}
 
 /** information method for a parameter change of feastol */
 static
 SCIP_DECL_PARAMCHGD(paramChgdFeastol)
 {  /*lint --e{715}*/
    SCIP_Real newfeastol;
+
+   /* in TRANSFORMING or later, reject if inconsistent */
+   if( SCIPgetStage(scip) >= SCIP_STAGE_TRANSFORMING && !SCIPsetCheckNumericTolerances(scip->set) )
+      return SCIP_PARAMETERWRONGVAL;
 
    newfeastol = SCIPparamGetReal(param);
 
@@ -667,6 +736,10 @@ static
 SCIP_DECL_PARAMCHGD(paramChgdDualfeastol)
 {  /*lint --e{715}*/
    SCIP_Real newdualfeastol;
+
+   /* in TRANSFORMING or later, reject if inconsistent */
+   if( SCIPgetStage(scip) >= SCIP_STAGE_TRANSFORMING && !SCIPsetCheckNumericTolerances(scip->set) )
+      return SCIP_PARAMETERWRONGVAL;
 
    newdualfeastol = SCIPparamGetReal(param);
 
@@ -2280,12 +2353,12 @@ SCIP_RETCODE SCIPsetCreate(
          "numerics/epsilon",
          "absolute values smaller than this are considered zero",
          &(*set)->num_epsilon, FALSE, SCIP_DEFAULT_EPSILON, SCIP_MINEPSILON, SCIP_MAXEPSILON,
-         NULL, NULL) );
+         paramChgdEpsilon, NULL) );
    SCIP_CALL( SCIPsetAddRealParam(*set, messagehdlr, blkmem,
          "numerics/sumepsilon",
          "absolute values of sums smaller than this are considered zero",
          &(*set)->num_sumepsilon, FALSE, SCIP_DEFAULT_SUMEPSILON, SCIP_MINEPSILON*1e+03, SCIP_MAXEPSILON,
-         NULL, NULL) );
+         paramChgdSumEpsilon, NULL) );
    SCIP_CALL( SCIPsetAddRealParam(*set, messagehdlr, blkmem,
          "numerics/feastol",
          "feasibility tolerance for constraints",
@@ -3676,19 +3749,12 @@ SCIP_RETCODE SCIPsetChgRealParam(
    SCIP_Real             value               /**< new value of the parameter */
    )
 {
-   SCIP_RETCODE retcode;
-
    assert(set != NULL);
    assert(param != NULL);
 
-   retcode = SCIPparamSetReal(param, set, messagehdlr, value, FALSE, TRUE);
+   SCIP_CALL( SCIPparamSetReal(param, set, messagehdlr, value, FALSE, TRUE) );
 
-   if( retcode != SCIP_PARAMETERWRONGVAL )
-   {
-      SCIP_CALL( retcode );
-   }
-
-   return retcode;
+   return SCIP_OKAY;
 }
 
 /** changes the value of an existing SCIP_Real parameter */
