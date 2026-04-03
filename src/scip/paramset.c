@@ -4858,10 +4858,8 @@ SCIP_RETCODE SCIPparamSetReal(
             else
                param->data.realparam.curvalue = oldvalue;
          }
-         else
-         {
-            SCIP_CALL( retcode );
-         }
+
+         SCIP_CALL( retcode );
       }
    }
 

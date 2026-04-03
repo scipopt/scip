@@ -129,6 +129,7 @@ Interface changes
 
 ### Changed parameters
 
+- numeric tolerance parameters (epsilon, sumepsilon, feastol, dualfeastol) are now checked for consistency, altogether before solving and individually when changed during solving, rejecting invalid combinations with an error
 - `estimation/method`: use default setting `p` to apply linear check(p)oint extrapolation in tree size estimation
 - replaced param `propagating/symmetry/nautymaxlevel` by `symmetries/nautymaxlevel`
 - removed param `misc/usesymmetry`
