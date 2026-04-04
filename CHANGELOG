@@ -7,6 +7,7 @@ Fixed bugs
 ----------
 
 - disregard deletable flag in IIS generation to reenable removal of unused variables
+- fixed that doc target in cmake builds was not available when using -DBUILD_TESTING=OFF
 
 @section RN1002 SCIP 10.0.2
 ***************************

@@ -1022,7 +1022,6 @@ if(BUILD_TESTING)
     #
     add_custom_target(unittests)
     add_subdirectory(tests EXCLUDE_FROM_ALL)
-    add_subdirectory(doc EXCLUDE_FROM_ALL)
 
     #
     # add examples
@@ -1040,6 +1039,8 @@ if(BUILD_TESTING)
 
     add_custom_target(all_executables DEPENDS scip unittests examples applications)
 endif()
+
+add_subdirectory(doc EXCLUDE_FROM_ALL)
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${OLD_CMAKE_RUNTIME_OUTPUT_DIRECTORY})
 
