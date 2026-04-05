@@ -534,7 +534,7 @@ SCIP_RETCODE initPresolve(
 static
 SCIP_RETCODE exitPresolve(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_Bool             solved,             /**< is problem already solved? */
+   SCIP_Bool             solved,             /**< Is the solving process terminating? */
    SCIP_Bool*            infeasible          /**< pointer to store if the clique clean up detects an infeasibility */
    )
 {
@@ -3568,7 +3568,7 @@ SCIP_RETCODE SCIPfreeSolve(
       assert(scip->stat->status != SCIP_STATUS_OPTIMAL);
 
       /* exit presolving */
-      SCIP_CALL( exitPresolve(scip, FALSE, &infeasible) );
+      SCIP_CALL( exitPresolve(scip, TRUE, &infeasible) );
       assert(scip->set->stage == SCIP_STAGE_PRESOLVED);
    }
 
@@ -3636,7 +3636,7 @@ SCIP_RETCODE SCIPfreeReoptSolve(
       assert(scip->stat->status != SCIP_STATUS_OPTIMAL);
 
       /* exit presolving */
-      SCIP_CALL( exitPresolve(scip, FALSE, &infeasible) );
+      SCIP_CALL( exitPresolve(scip, TRUE, &infeasible) );
       assert(scip->set->stage == SCIP_STAGE_PRESOLVED);
 
       return SCIP_OKAY;
@@ -3705,7 +3705,7 @@ SCIP_RETCODE SCIPfreeTransform(
       assert(scip->stat->status != SCIP_STATUS_OPTIMAL);
 
       /* exit presolving */
-      SCIP_CALL( exitPresolve(scip, FALSE, &infeasible) );
+      SCIP_CALL( exitPresolve(scip, TRUE, &infeasible) );
       assert(scip->set->stage == SCIP_STAGE_PRESOLVED);
    }
 
