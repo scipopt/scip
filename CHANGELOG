@@ -216,6 +216,7 @@ Interface changes
 
 - `presolving/milp/enableGF2`: whether to enable GF2 presolver in PaPILO
 - `concurrent/symmetrybefore`: whether symmetry should be computed before concurrent solving
+- `constraints/<handler>/copytypedcons` for knapsack, logicor, setppc, and varbound constraint handlers to copy constraints with their native type instead of as linear constraints (default: FALSE)
 
 ### Changed parameters
 
