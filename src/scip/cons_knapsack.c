@@ -13266,7 +13266,7 @@ SCIP_DECL_CONSCOPY(consCopyKnapsack)
       SCIP_VAR** targetvars;
       int v;
 
-      (*valid) = TRUE;
+      *valid = TRUE;
       assert(nvars >= 0);
 
       /* allocate target variable array */

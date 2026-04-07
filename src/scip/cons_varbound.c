@@ -5495,7 +5495,7 @@ SCIP_DECL_CONSCOPY(consCopyVarbound)
       SCIP_VAR* targetvar;
       SCIP_VAR* targetvbdvar = NULL;
 
-      (*valid) = TRUE;
+      *valid = TRUE;
 
       /* get source variables */
       sourcevar = SCIPgetVarVarbound(sourcescip, sourcecons);
