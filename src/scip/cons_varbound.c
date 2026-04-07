@@ -5528,11 +5528,8 @@ SCIP_DECL_CONSCOPY(consCopyVarbound)
    }
    else
    {
-      SCIP_VAR** vars;
-      SCIP_Real* coefs;
-
-      SCIP_CALL( SCIPallocBufferArray(scip, &vars, 2) );
-      SCIP_CALL( SCIPallocBufferArray(scip, &coefs, 2) );
+      SCIP_VAR* vars[2];
+      SCIP_Real coefs[2];
 
       vars[0] = SCIPgetVarVarbound(sourcescip, sourcecons);
       vars[1] = SCIPgetVbdvarVarbound(sourcescip, sourcecons);
@@ -5550,8 +5547,6 @@ SCIP_DECL_CONSCOPY(consCopyVarbound)
             SCIPgetLhsVarbound(sourcescip, sourcecons), SCIPgetRhsVarbound(sourcescip, sourcecons), varmap, consmap,
             initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode, global, valid) );
 
-      SCIPfreeBufferArray(scip, &coefs);
-      SCIPfreeBufferArray(scip, &vars);
    }
 
    return SCIP_OKAY;
