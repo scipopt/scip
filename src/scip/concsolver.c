@@ -486,6 +486,12 @@ SCIP_RETCODE SCIPconcsolverSync(
    SCIP_CALL( SCIPsyncstoreFinishSync(syncstore, &syncdata) );
    ++concsolver->nsyncs;
 
+   /* if this solver has a terminal status, immediately signal all solvers to stop so they
+    * see it at the next SCIPsolveIsStopped() check (every node) rather than waiting for
+    * their next sync point; this must happen after FinishSync to not break the sync protocol */
+   if( concsolver->stopped )
+      SCIPsyncstoreSetSolveIsStopped(syncstore, TRUE);
+
    concsolver->syncdelay += concsolver->timesincelastsync;
 
    syncdata = SCIPsyncstoreGetNextSyncdata(syncstore, concsolver->syncdata, concsolver->syncfreq, concsolver->nsyncs, &concsolver->syncdelay);
