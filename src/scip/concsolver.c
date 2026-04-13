@@ -486,10 +486,13 @@ SCIP_RETCODE SCIPconcsolverSync(
    SCIP_CALL( SCIPsyncstoreFinishSync(syncstore, &syncdata) );
    ++concsolver->nsyncs;
 
-   /* if this solver has a terminal status, immediately signal all solvers to stop so they
-    * see it at the next SCIPsolveIsStopped() check (every node) rather than waiting for
-    * their next sync point; this must happen after FinishSync to not break the sync protocol */
-   if( concsolver->stopped )
+   /* in opportunistic mode, if this solver has a terminal status, immediately signal all
+    * solvers to stop so they see it at the next SCIPsolveIsStopped() check (every node)
+    * rather than waiting for their next sync point; this must happen after FinishSync to
+    * not break the sync protocol.
+    * In deterministic mode we must not do this since the other solvers would see the flag
+    * at a nondeterministic node (depending on thread scheduling), breaking reproducibility. */
+   if( concsolver->stopped && SCIPsyncstoreGetMode(syncstore) == SCIP_PARA_OPPORTUNISTIC )
       SCIPsyncstoreSetSolveIsStopped(syncstore, TRUE);
 
    concsolver->syncdelay += concsolver->timesincelastsync;
