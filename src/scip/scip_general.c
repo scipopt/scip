@@ -75,6 +75,7 @@
 #include "scip/struct_stat.h"
 #include "scip/syncstore.h"
 #include "scip/lapack_calls.h"
+#include "symmetry/compute_symmetry.h"
 #include "tpi/tpi.h"
 
 #include <string.h>
@@ -349,6 +350,15 @@ SCIP_RETCODE doScipCreate(
       SCIPtpiGetLibraryName(name, (int)sizeof(name));
       SCIPtpiGetLibraryDesc(desc, (int)sizeof(desc));
       SCIP_CALL( SCIPsetIncludeExternalCode((*scip)->set, name, desc) );
+   }
+
+   if( SYMcanComputeSymmetry() )
+   {
+      SCIP_CALL( SCIPsetIncludeExternalCode((*scip)->set, SYMsymmetryGetName(), SYMsymmetryGetDesc()) );
+      if ( SYMsymmetryGetAddName() != NULL )
+      {
+         SCIP_CALL( SCIPsetIncludeExternalCode((*scip)->set, SYMsymmetryGetAddName(), SYMsymmetryGetAddDesc()) );
+      }
    }
 
    return SCIP_OKAY;
