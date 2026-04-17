@@ -30,6 +30,7 @@
  */
 
 #include "scip/iisfinder_greedy.h"
+#include "scip/struct_iisfinder.h"
 
 #define IISFINDER_NAME           "greedy"
 #define IISFINDER_DESC           "greedy deletion or addition constraint deletion"
@@ -1122,14 +1123,19 @@ SCIP_RETCODE SCIPiisGreedyMakeIrreducible(
    )
 {
    SCIP* scip = SCIPiisGetSubscip(iis);
+   SCIP_CONS** conss;
+   SCIP_CONS* imagecons;
+   SCIP_HASHMAP* invconssmap = NULL;
    SCIP_Real timelim;
    SCIP_Longint nodelim;
+   SCIP_Bool isstandalone;
    SCIP_Bool removebounds;
    SCIP_Bool silent;
    SCIP_Bool alldeletionssolved = TRUE;
    int nvars;
    int nconss;
    int maxbatchsize;
+   int c;
 
    assert( scip != NULL );
 
@@ -1143,16 +1149,48 @@ SCIP_RETCODE SCIPiisGreedyMakeIrreducible(
    nconss = SCIPgetNOrigConss(scip);
    maxbatchsize = MAX(nvars, nconss);
 
+   /* if this function is called by a user outside of iisfinder.c::SCIPiisGenerate(), build inverse constraints hashmap */
+   isstandalone = !SCIPhashmapIsEmpty(iis->conssmap);
+   if( isstandalone )
+   {
+      conss = SCIPgetOrigConss(scip);
+      SCIP_CALL( SCIPhashmapCreate(&invconssmap, SCIPblkmem(scip), nconss) );
+      for( c = 0; c < nconss; ++c )
+      {
+         imagecons = SCIPhashmapGetImage(iis->conssmap, conss[c]);
+         assert(imagecons != NULL);
+         SCIP_CALL( SCIPhashmapInsert(invconssmap, imagecons, conss[c]) );
+      }
+      SCIP_CALL( SCIPhashmapRemoveAll(iis->conssmap) );
+   }
+
+   /* get relevant parameters */
    SCIP_CALL( SCIPgetRealParam(scip, "iis/time", &timelim) );
    SCIP_CALL( SCIPgetLongintParam(scip, "iis/nodes", &nodelim) );
    SCIP_CALL( SCIPgetBoolParam(scip, "iis/removebounds", &removebounds) );
    SCIP_CALL( SCIPgetBoolParam(scip, "iis/silent", &silent) );
 
+   /* make irreducible by running the deletion filter with singleton batches */
    SCIP_CALL( deletionFilterBatch(iis, timelim, nodelim, removebounds, silent,
          DEFAULT_TIMELIMPERITER, DEFAULT_NODELIMPERITER, TRUE, 1, maxbatchsize,
          DEFAULT_BATCHINGFACTOR, DEFAULT_BATCHINGOFFSET, DEFAULT_BATCHUPDATEINTERVAL, &alldeletionssolved) );
    if( alldeletionssolved && SCIPiisGetTime(iis) < timelim && ( nodelim == -1 || SCIPiisGetNNodes(iis) < nodelim ) )
       SCIPiisSetSubscipIrreducible(iis, TRUE);
+
+   /* recreate main constraints hashmap */
+   if( isstandalone )
+   {
+      assert(invconssmap != NULL);
+      nconss = SCIPgetNOrigConss(scip);
+      conss = SCIPgetOrigConss(scip);
+      for( c = 0; c < nconss; ++c )
+      {
+         imagecons = SCIPhashmapGetImage(invconssmap, conss[c]);
+         assert(imagecons != NULL);
+         SCIP_CALL( SCIPhashmapInsert(iis->conssmap, imagecons, conss[c]) );
+      }
+      SCIPhashmapFree(&invconssmap);
+   }
 
    return SCIP_OKAY;
 }

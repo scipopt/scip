@@ -37,6 +37,8 @@
 #include "scip/def.h"
 #include "scip/type_misc.h"
 #include "scip/type_iisfinder.h"
+#include "scip/type_cons.h"
+#include "scip/type_var.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -166,6 +168,22 @@ SCIP_RANDNUMGEN* SCIPiisGetRandnumgen(
 SCIP_EXPORT
 SCIP* SCIPiisGetSubscip(
    SCIP_IIS*             iis                 /**< pointer to the IIS */
+   );
+
+/** get the constraint in the IIS subscip corresponding to the given main constraint,
+or NULL if it was removed */
+SCIP_EXPORT
+SCIP_CONS* SCIPiisGetSubscipCons(
+   SCIP_IIS*             iis,                /**< pointer to the IIS */
+   SCIP_CONS*            cons                /**< constraint from the original model */
+   );
+
+/** get the variable in the IIS subscip corresponding to the given main variable,
+or NULL if it became redundant */
+SCIP_EXPORT
+SCIP_VAR* SCIPiisGetSubscipVar(
+   SCIP_IIS*             iis,                /**< pointer to the IIS */
+   SCIP_VAR*             var                 /**< variable from the original model */
    );
 
 /**@}
