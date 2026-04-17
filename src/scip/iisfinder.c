@@ -326,8 +326,12 @@ SCIP_RETCODE SCIPiisGenerate(
    )
 {
    SCIP_CONS** conss;
+   SCIP_CONS* imagecons;
    SCIP_VAR** vars;
+   SCIP_VAR* imagevar;
    SCIP_IIS* iis;
+   SCIP_HASHMAP* invconssmap;
+   SCIP_HASHMAP* invvarsmap;
    SCIP_RESULT result = SCIP_DIDNOTFIND;
    SCIP_RETCODE retcode;
    SCIP_Real timelim;
@@ -456,6 +460,19 @@ SCIP_RETCODE SCIPiisGenerate(
       return SCIP_OKAY;
    }
 
+   /* build inverse constraints hashmap */
+   conss = SCIPgetOrigConss(set->scip);
+   nconss = SCIPgetNOrigConss(iis->subscip);
+   assert(nconss == SCIPgetNOrigConss(set->scip));
+   SCIP_CALL( SCIPhashmapCreate(&invconssmap, SCIPblkmem(set->scip), nconss) );
+   for( i = 0; i < nconss; ++i )
+   {
+      imagecons = SCIPhashmapGetImage(iis->conssmap, conss[i]);
+      assert(imagecons != NULL);
+      SCIP_CALL( SCIPhashmapInsert(invconssmap, imagecons, conss[i]) );
+   }
+   SCIP_CALL( SCIPhashmapRemoveAll(iis->conssmap) );
+
    /* Check for trivial infeasibility reasons */
    SCIP_CALL( checkTrivialInfeas(iis->subscip, &trivial) );
    if( trivial )
@@ -537,6 +554,19 @@ SCIP_RETCODE SCIPiisGenerate(
    {
       SCIP_Bool deleted;
 
+      /* build inverse variables hashmap */
+      vars = SCIPgetOrigVars(set->scip);
+      nvars = SCIPgetNOrigVars(iis->subscip);
+      assert(nvars == SCIPgetNOrigVars(set->scip));
+      SCIP_CALL( SCIPhashmapCreate(&invvarsmap, SCIPblkmem(set->scip), nvars) );
+      for( i = 0; i < nvars; ++i )
+      {
+         imagevar = SCIPhashmapGetImage(iis->varsmap, vars[i]);
+         assert(imagevar != NULL);
+         SCIP_CALL( SCIPhashmapInsert(invvarsmap, imagevar, vars[i]) );
+      }
+      SCIP_CALL( SCIPhashmapRemoveAll(iis->varsmap) );
+
       nvars = SCIPgetNOrigVars(iis->subscip);
       vars = SCIPgetOrigVars(iis->subscip);
       for( i = nvars - 1; i >= 0; i-- )
@@ -547,7 +577,29 @@ SCIP_RETCODE SCIPiisGenerate(
             assert( deleted );
          }
       }
+
+      /* recreate main variables hashmap */
+      nvars = SCIPgetNOrigVars(iis->subscip);
+      vars = SCIPgetOrigVars(iis->subscip);
+      for( i = 0; i < nvars; ++i )
+      {
+         imagevar = SCIPhashmapGetImage(invvarsmap, vars[i]);
+         assert(imagevar != NULL);
+         SCIP_CALL( SCIPhashmapInsert(iis->varsmap, imagevar, vars[i]) );
+      }
+      SCIPhashmapFree(&invvarsmap);
    }
+
+   /* recreate main constraints hashmap */
+   nconss = SCIPgetNOrigConss(iis->subscip);
+   conss = SCIPgetOrigConss(iis->subscip);
+   for( i = 0; i < nconss; ++i )
+   {
+      imagecons = SCIPhashmapGetImage(invconssmap, conss[i]);
+      assert(imagecons != NULL);
+      SCIP_CALL( SCIPhashmapInsert(iis->conssmap, imagecons, conss[i]) );
+   }
+   SCIPhashmapFree(&invconssmap);
 
    SCIP_CALL( SCIPgetBoolParam(set->scip, "iis/silent", &silent) );
    if( !silent )
@@ -961,6 +1013,28 @@ SCIP* SCIPiisGetSubscip(
 {
    assert( iis != NULL );
    return iis->subscip;
+}
+
+/** get the constraint in the IIS subscip corresponding to the given main constraint,
+or NULL if it was removed */
+SCIP_CONS* SCIPiisGetSubscipCons(
+   SCIP_IIS*             iis,                /**< pointer to the IIS */
+   SCIP_CONS*            cons                /**< constraint from the original model */
+   )
+{
+   assert( iis != NULL );
+   return SCIPhashmapGetImage(iis->conssmap, cons);
+}
+
+/** get the variable in the IIS subscip corresponding to an original variable,
+or NULL if it does not exist */
+SCIP_VAR* SCIPiisGetSubscipVar(
+   SCIP_IIS*             iis,                /**< pointer to the IIS */
+   SCIP_VAR*             var                 /**< variable from the original model */
+   )
+{
+   assert( iis != NULL );
+   return SCIPhashmapGetImage(iis->varsmap, var);
 }
 
 /** compares two IIS finders w. r. to their priority */
