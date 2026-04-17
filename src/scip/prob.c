@@ -1189,7 +1189,6 @@ SCIP_RETCODE SCIPprobDelVar(
    *deleted = FALSE;
 
    /* don't remove variables that are not in the problem */
-   /**@todo what about negated variables? should the negation variable be removed instead? */
    if( SCIPvarGetProbindex(var) == -1 )
       return SCIP_OKAY;
 
@@ -1198,8 +1197,6 @@ SCIP_RETCODE SCIPprobDelVar(
     */
    if( SCIPvarIsTransformedOrigvar(var) )
       return SCIP_OKAY;
-
-   assert(SCIPvarGetNegatedVar(var) == NULL);
 
    SCIPsetDebugMsg(set, "deleting variable <%s> from problem (%d variables: %d binary, %d integer, %d continuous; %d implied)\n",
                    SCIPvarGetName(var), prob->nvars, prob->nbinvars + prob->nbinimplvars, prob->nintvars + prob->nintimplvars,
