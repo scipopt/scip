@@ -59,6 +59,8 @@ Miscellaneous
 Fixed bugs
 ----------
 
+- disregard deletable flag in IIS generation to reenable removal of unused variables
+
 @section RN1002 SCIP 10.0.2
 ***************************
 
