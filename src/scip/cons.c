@@ -8378,6 +8378,7 @@ void SCIPprintLinConsStats(
 #undef SCIPconsIsDynamic
 #undef SCIPconsIsRemovable
 #undef SCIPconsIsStickingAtNode
+#undef SCIPconsIsRelaxConvex
 #undef SCIPconsIsInProb
 #undef SCIPconsIsOriginal
 #undef SCIPconsIsTransformed
