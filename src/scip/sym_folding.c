@@ -145,26 +145,13 @@ SCIP_Bool isConsConvex(
    conshdlr = SCIPconsGetHdlr(cons);
    assert(conshdlr != NULL);
 
-   if( strcmp(SCIPconshdlrGetName(conshdlr), "linear") == 0
-      || strcmp(SCIPconshdlrGetName(conshdlr), "and") == 0
-      || strcmp(SCIPconshdlrGetName(conshdlr), "cumulative") == 0
-      || strcmp(SCIPconshdlrGetName(conshdlr), "indicator") == 0
-      || strcmp(SCIPconshdlrGetName(conshdlr), "knapsack") == 0
-      || strcmp(SCIPconshdlrGetName(conshdlr), "linking") == 0
-      || strcmp(SCIPconshdlrGetName(conshdlr), "logicor") == 0
-      || strcmp(SCIPconshdlrGetName(conshdlr), "or") == 0
-      || strcmp(SCIPconshdlrGetName(conshdlr), "pseudoboolean") == 0
-      || strcmp(SCIPconshdlrGetName(conshdlr), "setppc") == 0
-      || strcmp(SCIPconshdlrGetName(conshdlr), "varbound") == 0
-      || strcmp(SCIPconshdlrGetName(conshdlr), "xor") == 0 )
-      return TRUE;
-
+   /* treat nonlinear constraints differently, because their convexity might not be known at creation */
    if( strcmp(SCIPconshdlrGetName(conshdlr), "nonlinear") == 0
       && (SCIPgetCurvatureNonlinear(cons) == SCIP_EXPRCURV_CONVEX
          || SCIPgetCurvatureNonlinear(cons) == SCIP_EXPRCURV_LINEAR ) )
       return TRUE;
 
-   return FALSE;
+   return SCIPconsIsRelaxConvex(cons);
 }
 
 /** returns whether two arrays of variables have at least one variable in common */
@@ -486,7 +473,7 @@ SCIP_DECL_SYMHDLRPRESOL(symPresolFolding)
  * constraint specific interface methods
  */
 
-/** creates the handler for xyz symmetry handler and includes it in SCIP */
+/** creates the handler for folding symmetry handler and includes it in SCIP */
 SCIP_RETCODE SCIPincludeSymhdlrFolding(
    SCIP*                 scip                /**< SCIP data structure */
    )
