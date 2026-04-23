@@ -1061,6 +1061,7 @@ SCIPLIBOBJ	=	scip/boundstore.o \
 			scip/solve.o \
 			scip/stat.o \
 			scip/sym.o \
+			scip/sym_folding.o \
 			scip/sym_lexorbred.o \
 			scip/sym_rowcol.o \
 			scip/sym_sst.o \
