@@ -41,12 +41,13 @@ Interface changes
 - new methods to retrieve data from symmetry handlers and symmetry components: SCIPsymcompGetData(), SCIPsymcompGetHdlr(), SCIPsymcompGetName(), SCIPsymhdlrGetName(), SCIPsymhdlrGetData(), SCIPsymhdlrGetPriority(), SCIPsymhdlrGetPresolPriority(), SCIPsymhdlrGetDesc(), SCIPsymhdlrDoesPresolve(), SCIPsymhdlrGetSetupTime(), SCIPsymhdlrGetPresolTime(), SCIPsymhdlrGetNPresolCalls(), SCIPsymhdlrGetNFixedVars(), SCIPsymhdlrGetNAggrVars(), SCIPsymhdlrGetNChgVarTypes(), SCIPsymhdlrGetNChgBds(), SCIPsymhdlrGetNAddHoles(), SCIPsymhdlrGetNDelConss(), SCIPsymhdlrGetNAddConss(), SCIPsymhdlrGetNChgCoefs(), SCIPsymhdlrGetSepaPriority(), SCIPsymhdlrGetPropPriority(), SCIPsymhdlrGetNChgSides(), SCIPsymhdlrGetNPropCalls(), SCIPsymhdlrGetNRespropCalls(), SCIPsymhdlrGetNCutoffs(), SCIPsymhdlrGetNDomredsFound(), SCIPsymhdlrPropGetTimingmask(), SCIPsymhdlrPropGetPriority(), SCIPsymhdlrPropWasDelayed(), SCIPsymhdlrSepaGetPriority(), SCIPsymhdlrSepaWasLPDelayed(), SCIPsymhdlrGetNSepaCalls(), SCIPsymhdlrGetNCutsFound(), SCIPsymhdlrGetNCutsAdded(), SCIPsymhdlrGetSepaTime(), SCIPsymhdlrGetPropTime(), SCIPsymhdlrGetStrongBranchPropTime(), SCIPsymhdlrGetRespropTime(), SCIP_DECL_SORTPTRCOMP(SCIPsymhdlrCompTryadd), SCIP_DECL_SORTPTRCOMP(SCIPsymhdlrCompSepa), SCIP_DECL_SORTPTRCOMP(SCIPsymhdlrCompProp), SCIP_DECL_SORTPTRCOMP(SCIPsymhdlrCompPresol), SCIP_DECL_SORTPTRCOMP(SCIPsymhdlrCompName), SCIPgetSyminfo()), SCIPsyminfoGetPermstrans()
 - new methods SCIPbdchginfoGetInferSymcomp(), SCIPinferVarFixSym(), SCIPinferVarLbSym(), SCIPinferVarUbSym(), SCIPinferBinvarSym() to get and set inference information in conflict analysis that arise from symmetry handling
 - new methods SCIPprintSymhdlrStatistics(), SCIPcollectSymhdlrStatistics() to retrieve statistics of the different symmetyr handlers
-- new methods SCIPincludeSymhdlrLexOrbRed(), SCIPincludeSymhdlrRowCol(), SCIPincludeSymhdlrSST() to include SCIP's default symmetry handlers and SCIPincludeSymhdlrXyz() for the template symmetry handler
+- new methods SCIPincludeSymhdlrLexOrbRed(), SCIPincludeSymhdlrRowCol(), SCIPincludeSymhdlrSST(), SCIPincludeSymhdlrFolding() to include SCIP's default symmetry handlers and SCIPincludeSymhdlrXyz() for the template symmetry handler
 - new method SCIPcomputeOrbitsFilterSymNoComp() to compute orbits of a symmetry group when no component information is provided
 - new methods isProperPerm(), isPermKnown() to determine information about permutations
 - new methods SCIPsetIncludeSymhdlr(), SCIPsetSortSymhdlrs(), SCIPsetSortSymhdlrsProp(), SCIPsetSortSymhdlrsPresol(), SCIPsetSortSymhdlrsSepa(), SCIPsetSortSymhdlrsName(), SCIPsetFindSymhdlr() to sort symmetry handlers
 - new methods SCIPtryAddSymmetryHandlingMethods(), SCIPpresolveSymmetryHandlingMethods() to call try-add and presolve routines of symmetry handlers
 - new methods SCIPsymhdlrCreate(), SCIPsymhdlrCopyInclude(), SCIPsymhdlrFree(), SCIPsymhdlrExit(), SCIPsymhdlrInit(), SCIPsymhdlrInitsol(), SCIPsymhdlrExitsol(), SCIPsymhdlrPresol(), SCIPsymhdlrProp(), SCIPsymhdlrResolvePropagation(), SCIPsymhdlrSepaLP(), SCIPsymhdlrSepaSol(), SCIPsymhdlrTryAdd(), SCIPsymhdlrSetSepa(), SCIPsymhdlrSetProp(), SCIPsymhdlrSetCopy(), SCIPsymhdlrSetFree(), SCIPsymhdlrSetInit(), SCIPsymhdlrSetExit(), SCIPsymhdlrSetInitsol(), SCIPsymhdlrSetExitsol(), SCIPsymhdlrSetPresol(), SCIPsymhdlrSetResprop(), SCIPaddSymhdlrComponent(), SCIPcreateSymmetryComponent(), SCIPsyminfoCompressPermInfo(), SCIPdisplaySymmetryGenerators() to execute callback methods of symmetry handlers
+- new methods SCIPsetConsIsRelaxConvex() and SCIPconsIsRelaxConvex() to set and query the isrelaxconvex flag of a constraint, respectively
 
 ### New parameters
 
@@ -184,6 +185,7 @@ Interface changes
 - enum SCIP_BOUNDCHGTYPE got extended by new type SCIP_BOUNDCHGTYPE_SYMINFER
 - exchanged definition of SYM_SPEC_BINARY and SYM_SPEC_INTEGER
 - removed SYM_TIMING_DURINGPRESOL and SYM_COMPUTETIMING_DURINGPRESOL, and replaced definition of SYM_TIMING_AFTERPRESOL
+- struct SCIP_CONS has an addition field isrelaxconvex to store whether the constraint is convex when variables are relaxed to be continuous
 
 @page RN10 Release notes for SCIP 10
 

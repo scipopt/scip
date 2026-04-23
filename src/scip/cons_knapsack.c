@@ -13781,6 +13781,7 @@ SCIP_RETCODE SCIPcreateConsKnapsack(
    /* create constraint */
    SCIP_CALL( SCIPcreateCons(scip, cons, name, conshdlr, consdata, initial, separate, enforce, check, propagate,
          local, modifiable, dynamic, removable, stickingatnode) );
+   SCIP_CALL( SCIPsetConsIsRelaxConvex(scip, *cons, TRUE) );
 
    /* catch events for variables */
    if( SCIPisTransformed(scip) )

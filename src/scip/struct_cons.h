@@ -107,6 +107,7 @@ struct SCIP_Cons
    unsigned int          updateactfocus:1;   /**< TRUE iff delayed constraint activation happened at focus node */
    unsigned int          updatemarkpropagate:1;/**< TRUE iff constraint has to be marked to be propagated in update phase */
    unsigned int          updateunmarkpropagate:1;/**< TRUE iff constraint has to be unmarked to be propagated in update phase */
+   unsigned int          isrelaxconvex:1;    /**< TRUE iff the constraint is convex when variables are relaxed to be continuous */
 #ifndef NDEBUG
    SCIP*                 scip;               /**< SCIP data structure */
 #endif

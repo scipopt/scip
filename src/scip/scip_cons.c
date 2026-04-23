@@ -1509,6 +1509,35 @@ SCIP_RETCODE SCIPsetConsStickingAtNode(
    return SCIP_OKAY;
 }
 
+/** sets the isrelaxconvex flag of the given constraint
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_PROBLEM
+ *       - \ref SCIP_STAGE_TRANSFORMING
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_EXITSOLVE
+ */
+SCIP_RETCODE SCIPsetConsIsRelaxConvex(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< constraint */
+   SCIP_Bool             isrelaxconvex       /**< new value */
+   )
+{
+   SCIP_CALL( SCIPcheckStage(scip, "SCIPsetConsIsRelaxConvex", FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, FALSE, FALSE) );
+
+   SCIPconsSetIsRelaxConvex(cons, isrelaxconvex);
+
+   return SCIP_OKAY;
+}
+
 /** updates the flags of the first constraint according to the ones of the second constraint
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
