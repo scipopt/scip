@@ -30,15 +30,15 @@
  * Because the message functions are implemented as defines with more than one
  * function call, they shouldn't be used as a single statement like in:
  *   if( error )
- *      SCIPerrorMessage("an error occured");
+ *      SCIPerrorMessage("an error occurred");
  * because this would produce the following macro extension:
  *   if( error )
  *      printf(("[%s:%d] ERROR: ", __FILE__, __LINE__);
- *   printf(("an error occured");
+ *   printf(("an error occurred");
  * Instead, they should be protected with brackets:
  *   if( error )
  *   {
- *      SCIPerrorMessage("an error occured");
+ *      SCIPerrorMessage("an error occurred");
  *   }
  */
 

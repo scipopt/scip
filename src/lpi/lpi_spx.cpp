@@ -2652,7 +2652,7 @@ SCIP_RETCODE lpiStrongbranch(
          spx->restorePreStrongbranchingBasis();
          fromparentbasis = false;
 #else
-         /* if cycling or singular basis occured and we started not from the pre-strong-branching basis, then we restore the
+         /* if cycling or singular basis occurred and we started not from the pre-strong-branching basis, then we restore the
           * pre-strong-branching basis and try again with reduced iteration limit */
 #if SOPLEX_APIVERSION >= 3
          repeatstrongbranching = ((status == SPxSolver::ABORT_CYCLING || status == SPxSolver::OPTIMAL_UNSCALED_VIOLATIONS
@@ -2751,7 +2751,7 @@ SCIP_RETCODE lpiStrongbranch(
             spx->restorePreStrongbranchingBasis();
             fromparentbasis = false;
 #else
-            /* if cycling or singular basis occured and we started not from the pre-strong-branching basis, then we restore the
+            /* if cycling or singular basis occurred and we started not from the pre-strong-branching basis, then we restore the
              * pre-strong-branching basis and try again with reduced iteration limit */
 #if SOPLEX_APIVERSION >= 3
             repeatstrongbranching = ((status == SPxSolver::ABORT_CYCLING || status == SPxSolver::OPTIMAL_UNSCALED_VIOLATIONS
