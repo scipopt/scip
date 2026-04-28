@@ -1493,7 +1493,7 @@ Fixed bugs
 - read objective offset from ZIMPL files
 - Make sure that objective limit is disabled if not all variables are in the LP. If we would run into
   an objective limit in this case, the results of the LP solver are unclear.
-- fixed bug in reopt.c, which occured for bounds outside of current valid bounds
+- fixed bug in reopt.c, which occurred for bounds outside of current valid bounds
 - fixed problem with recomputing symmetries after a restart
 - fixed bug in SCIPcalcMIR() with wrong order of arguments for removeZerosQuad()
 - fixed segmentation fault in update of cut statistic
@@ -2643,7 +2643,7 @@ Features
 
 - Using the parameter "propagating/symmetry/recomputerestart" one can now decide to recompute symmetries after a
   restart or not. Previously one could just turn off symmetry computation after a restart. If orbital fixing
-  has found a reduction before the restart occured, symmetries have to be updated to ensure correctness.
+  has found a reduction before the restart occurred, symmetries have to be updated to ensure correctness.
   To this end, the user can decide via "propagating/symmetry/disableofrestart" whether orbital fixing is disabled or
    whether symmetries are recomputed.
 
@@ -2724,7 +2724,7 @@ Features
 - Expressions of form abs(x)^p * x in a nonlinear constraint are now sometimes recognized and handled by abspower constraints.
 
 - If polyhedral symmetry handling methods are used (cons_orbisack, cons_orbitope, cons_symresack), it is now possible to
-  recompute symmetries if a restart occured.
+  recompute symmetries if a restart occurred.
 
 - upgrade some more quadratic constraints to second-order cone constraints, that is,
   handle linear binary variables as if squared in simple upgrade and
@@ -3257,7 +3257,7 @@ Fixed bugs
 - fixed two issues related to (near-)redundant logicor constraints in presolving
 - fixed counting of aggregations in XOR constraint handler
 - fixed handling of unbounded solutions
-- fixed update of LP size information when an LP error occured during probing
+- fixed update of LP size information when an LP error occurred during probing
 - handle special case of variable bound constraints during aggregating variables
 - tighten sides of linear constraints before trying to upgrade them to more specialized constraints (knapsack, logic-or etc.) when calling SCIPupgradeConsLinear()
 - fixed an issue in repair heuristic in the case of loose (noncolumn) variables
@@ -6391,7 +6391,7 @@ Interface changes
   `constraints/setppc/cliqueshrinking`, first for enabling/disabling the clique lifting algorithm in cons_setppc.c,
   second parameter is for trying to create extra clique constraints in lifting algorithm, third parameter is for trying
   to decrease the number of variable in a clique constraint in the lifting algorithm
-- `limits/totalnodes` that allows to stop at the correct node if a restart occured; therefore the new
+- `limits/totalnodes` that allows to stop at the correct node if a restart occurred; therefore the new
   `SCIP_STATUS_TOTALNODELIMIT` is added
 - `lp/{rootiterlim,iterlim}` to set a limit on the LP iterations spend in the initial root LP and each
   LP resolve, respectively
@@ -7121,7 +7121,7 @@ Fixed bugs
   - fixed bug in debug.c: removed tree nodes had not been checked if they were pruned due to an incumbent solution found by a diving heuristic
 
 - Bounds:
-  - fixed bug which occured when changing a bound in the solving stage when this variables got upgraded from continuous to
+  - fixed bug which occurred when changing a bound in the solving stage when this variables got upgraded from continuous to
     a integer type, where the bounds of this variable were still not integral; due to that SCIPchgVarType() has changed (see above)
   - fixed bug in handling of lazy bounds that resulted in putting the bounds explicitly into the LP
 
@@ -7158,7 +7158,7 @@ Fixed bugs
   - fixed memory leak in coloring part of maximum clique algorithm (tclique_coloring.c) in a better way
 
 - Numerics:
-  - fixed bug which occured when the dual farkas multipliers were not available in the lpi because the LP could only be
+  - fixed bug which occurred when the dual farkas multipliers were not available in the lpi because the LP could only be
     solved with the primal simplex due to numerical problems
   - fixed bug in ZI round heuristic that led to infeasible shiftings for numerically slightly infeasible rows with close-to-zero coefficients
   - fixed numerical issue in octane heuristic: close-to-zero values for ray direction could have led to bad computations
@@ -7220,9 +7220,9 @@ Fixed bugs:
 - fixed bug in conflict.c, infeasibility analysis with big values led to wrong result
 
 - Heuristics:
-  - fixed bug in DINS heuristic that occured when the incumbent solution value is outside the variable's current domain
+  - fixed bug in DINS heuristic that occurred when the incumbent solution value is outside the variable's current domain
   - fixed behavior of LNS heuristics when the subproblem aborts: continue in optimized mode, stop in debug mode
-  - fixed segmentation fault in heur_subnlp.c which occured if resolving the NLP with a tighter feasibility tolerance
+  - fixed segmentation fault in heur_subnlp.c which occurred if resolving the NLP with a tighter feasibility tolerance
     failed with a solver error
   - fixed bug in heur_subnlp.c where constraints forbidding variable fixations where added if a cutoff was used in the subproblem
   - fixed bug in heur_subnlp.c where wrong constraints forbidding variable fixations where added in case of general integers
@@ -7363,7 +7363,7 @@ Features
   at the moment, it contains information about the relaxation solution stored in the variables: objective value and
   validness
 - SCIP may now be manually restarted
-- SCIPsolveKnapsackExactly() got a new 12. parameter `SCIP_Bool* success` which stores if an error occured during
+- SCIPsolveKnapsackExactly() got a new 12. parameter `SCIP_Bool* success` which stores if an error occurred during
   solving(normally a memory problem)
 - SCIP can now handle problems with continuous variables w.r.t. to counting (the projection to the integral variables
   are counted)
@@ -8179,7 +8179,7 @@ Fixed bugs
 - increased the numerical stability of coefficient tightening for Big M formulations
 - fixed bug with incorrect pseudo activities when objective of a variable switches sign in linear constraint handler
 - fixed bug with empty constraints in several writing routines
-- fixed `GGT-Kaibel-Bug` in var.c, prop_pseudoobj.c and cons_varbound.c that occured while computing new values using
+- fixed `GGT-Kaibel-Bug` in var.c, prop_pseudoobj.c and cons_varbound.c that occurred while computing new values using
   infinity values
 
 - Bounds:

@@ -2167,7 +2167,7 @@ SCIP_DECL_HEUREXEC(heurExecNlpdiving)
             assert(backtrackvar != NULL);
 
             /* if the variable is already fixed or if the solution value is outside the domain, numerical troubles may have
-             * occured or variable was fixed by propagation while backtracking => Abort diving!
+             * occurred or variable was fixed by propagation while backtracking => Abort diving!
              */
             if( SCIPvarGetLbLocal(backtrackvar) >= SCIPvarGetUbLocal(backtrackvar) - 0.5 )
             {
@@ -2215,7 +2215,7 @@ SCIP_DECL_HEUREXEC(heurExecNlpdiving)
             assert(var != NULL);
 
             /* if the variable is already fixed or if the solution value is outside the domain, numerical troubles may have
-             * occured or variable was fixed by propagation while backtracking => Abort diving!
+             * occurred or variable was fixed by propagation while backtracking => Abort diving!
              */
             if( SCIPvarGetLbLocal(var) >= SCIPvarGetUbLocal(var) - 0.5 )
             {

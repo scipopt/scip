@@ -2000,7 +2000,7 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
 
          ++ncutoffs;
 
-         /* only continue heuristic if number of cutoffs occured so far is reasonably small */
+         /* only continue heuristic if number of cutoffs occurred so far is reasonably small */
          if( heurdata->cutoffbreaker >= 0 && ncutoffs >= ((heurdata->maxcutoffquot * SCIPgetProbingDepth(scip)) + heurdata->cutoffbreaker) )
             break;
 

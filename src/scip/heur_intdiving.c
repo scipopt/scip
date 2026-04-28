@@ -527,7 +527,7 @@ SCIP_DECL_HEUREXEC(heurExecIntdiving) /*lint --e{715}*/
       do
       {
          /* if the variable is already fixed or if the solution value is outside the domain, numerical troubles may have
-          * occured or variable was fixed by propagation while backtracking => Abort diving!
+          * occurred or variable was fixed by propagation while backtracking => Abort diving!
           */
          if( SCIPvarGetLbLocal(var) >= SCIPvarGetUbLocal(var) - 0.5 )
          {

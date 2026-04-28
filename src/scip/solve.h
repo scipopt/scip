@@ -192,7 +192,7 @@ SCIP_RETCODE SCIPpriceLoop(
                                               *   a finite limit means that the LP might not be solved to optimality! */
    int*                  npricedcolvars,     /**< pointer to store number of column variables after problem vars were priced */
    SCIP_Bool*            mustsepa,           /**< pointer to store TRUE if a separation round should follow */
-   SCIP_Bool*            lperror,            /**< pointer to store whether an unresolved error in LP solving occured */
+   SCIP_Bool*            lperror,            /**< pointer to store whether an unresolved error in LP solving occurred */
    SCIP_Bool*            aborted             /**< pointer to store whether the pricing was aborted and the lower bound must
                                               *   not be used */
    );

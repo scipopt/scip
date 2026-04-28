@@ -152,7 +152,7 @@ void parseError(
    SCIP*                 scip,               /**< SCIP data structure */
    int                   lineno,             /**< current line number of input file */
    const char*           msg,                /**< error message to display */
-   const char*           erritem,            /**< token where the error occured, or NULL */
+   const char*           erritem,            /**< token where the error occurred, or NULL */
    STATE*                state               /**< pointer to current reading state */
    )
 {

@@ -191,7 +191,7 @@ SCIP_RETCODE checkAltLPInfeasible(
    SCIP_LPI*             lp,                 /**< LP */
    SCIP_Bool             primal,             /**< whether we are using the primal or dual simplex */
    SCIP_Bool*            infeasible,         /**< output: whether the LP is infeasible */
-   SCIP_Bool*            error               /**< output: whether an error occured */
+   SCIP_Bool*            error               /**< output: whether an error occurred */
    )
 {
    SCIP_RETCODE retcode;
