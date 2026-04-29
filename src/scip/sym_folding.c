@@ -92,6 +92,10 @@ SCIP_RETCODE collectSymvars(
    *success = FALSE;
    *naffectedvars = 0;
 
+   /* terminate early if there are not enough continuous variables */
+   if( SCIPgetNContVars(scip) <= 1 )
+      return SCIP_OKAY;
+
    /* check whether all affected variables are continuous and count them */
    for( v = 0; v < npermvars; ++v )
    {
