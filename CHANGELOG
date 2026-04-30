@@ -14,6 +14,11 @@ Features
   decomposition within SCIP.
 - added new plugin type symmetry handler to allow users to add their own symmetry handling methods to SCIP
 
+Performance improvements
+------------------------
+
+- in opportunistic concurrent solving, signal early termination as soon as one solver reaches a terminal status, so the others stop at their next per-node check rather than running until their next sync point
+
 Interface changes
 -----------------
 
