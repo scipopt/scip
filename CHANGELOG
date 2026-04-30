@@ -13,6 +13,8 @@ Features
   files for the master problem and subproblems. These instance files are then used to build up the Benders'
   decomposition within SCIP.
 - added new plugin type symmetry handler to allow users to add their own symmetry handling methods to SCIP
+- separated batch size handling for addition filter, constraint deletion filter, and bound deletion filter in greedy IIS finder
+- added detection and deletion of disconnected components to greedy IIS finder
 
 Interface changes
 -----------------
@@ -51,6 +53,8 @@ Interface changes
 ### New parameters
 
 - `iis/<iisfinder>/enable`: whether to enable the iis finder of name <iisfinder>, e.g., greedy
+- `iis/greedy/detectcomponents`: should the deletion filter detect and delete disconnected components
+- `iis/greedy/componentminsize`: number of constraints a component must have at least to be detected
 - `heuristics/feasjump/weightupdatedecay`: decay factor for the weight update
 - `heuristics/feasjump/maxeffort`: maximum effort spent in feasibility jump
 - `heuristics/feasjump/verbosity`: verbosity level of the feasibility jump solver
