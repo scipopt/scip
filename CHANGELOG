@@ -16,6 +16,11 @@ Features
 - separated batch size handling for addition filter, constraint deletion filter, and bound deletion filter in greedy IIS finder
 - added detection and deletion of disconnected components to greedy IIS finder
 
+Performance improvements
+------------------------
+
+- in opportunistic concurrent solving, signal early termination as soon as one solver reaches a terminal status, so the others stop at their next per-node check rather than running until their next sync point
+
 Interface changes
 -----------------
 
