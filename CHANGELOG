@@ -12,6 +12,7 @@ Performance improvements
 ------------------------
 
 - Implemented interval function evaluation callback in CONOPT interface.
+- reduced complexity of SCIPundoBdchgsProof() during conflict analysis accelerating execution for many variables
 
 Fixed bugs
 ----------
