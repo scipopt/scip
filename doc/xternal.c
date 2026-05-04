@@ -8919,7 +8919,7 @@
  *       processed nodes or in the total number of simplex iterations.
  *  \arg <code>equal</code> - Solvers with instances whose number of processed nodes and total number of
  *       simplex iterations is equal to the reference solver (including a 10% tolerance) and where no timeout
- *       occured.
+ *       occurred.
  *  \arg <code>all optimal</code> - Solvers with instances that could be solved to optimality by
  *       <em>all</em> solvers; in particular, no timeout occurred.
  *

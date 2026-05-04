@@ -1074,7 +1074,7 @@ SCIP_RETCODE SCIPgetActiveVars(
  *
  *  @pre This method can only be called if @p scip is in stage \ref SCIP_STAGE_SOLVING
  *
- *  @note The return value of this method should be used carefully if the dual feasibility check was explictely disabled.
+ *  @note The return value of this method should be used carefully if the dual feasibility check was explicitly disabled.
  */
 SCIP_EXPORT
 SCIP_Real SCIPgetVarRedcost(
@@ -1090,7 +1090,7 @@ SCIP_Real SCIPgetVarRedcost(
  *
  *  @pre This method can only be called if @p scip is in stage \ref SCIP_STAGE_SOLVING
  *
- *  @note The return value of this method should be used carefully if the dual feasibility check was explictely disabled.
+ *  @note The return value of this method should be used carefully if the dual feasibility check was explicitly disabled.
  */
 SCIP_EXPORT
 SCIP_Real SCIPgetVarImplRedcost(
