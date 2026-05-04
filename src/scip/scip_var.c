@@ -1117,7 +1117,7 @@ SCIP_RETCODE SCIPparseVarsPolynomial(
       SCIPPARSEPOLYNOMIAL_STATE_VARS,        /* we parse monomial variables */
       SCIPPARSEPOLYNOMIAL_STATE_EXPONENT,    /* we parse the exponent of a variable */
       SCIPPARSEPOLYNOMIAL_STATE_END,         /* we are at the end the polynomial */
-      SCIPPARSEPOLYNOMIAL_STATE_ERROR        /* a parsing error occured */
+      SCIPPARSEPOLYNOMIAL_STATE_ERROR        /* a parsing error occurred */
    } SCIPPARSEPOLYNOMIAL_STATES;
 
    SCIPPARSEPOLYNOMIAL_STATES state;
@@ -1468,7 +1468,7 @@ SCIP_RETCODE SCIPparseVarsPolynomialExact(
       SCIPPARSEPOLYNOMIAL_STATE_VARS,        /* we parse monomial variables */
       SCIPPARSEPOLYNOMIAL_STATE_EXPONENT,    /* we parse the exponent of a variable */
       SCIPPARSEPOLYNOMIAL_STATE_END,         /* we are at the end the polynomial */
-      SCIPPARSEPOLYNOMIAL_STATE_ERROR        /* a parsing error occured */
+      SCIPPARSEPOLYNOMIAL_STATE_ERROR        /* a parsing error occurred */
    } SCIPPARSEPOLYNOMIAL_STATES;
 
    SCIPPARSEPOLYNOMIAL_STATES state;
@@ -2603,7 +2603,7 @@ SCIP_RETCODE SCIPgetActiveVars(
  *
  *  @pre This method can only be called if @p scip is in stage \ref SCIP_STAGE_SOLVING
  *
- *  @note The return value of this method should be used carefully if the dual feasibility check was explictely disabled.
+ *  @note The return value of this method should be used carefully if the dual feasibility check was explicitly disabled.
  */
 SCIP_Real SCIPgetVarRedcost(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -2648,7 +2648,7 @@ SCIP_Real SCIPgetVarRedcost(
  *
  *  @pre This method can only be called if @p scip is in stage \ref SCIP_STAGE_SOLVING
  *
- *  @note The return value of this method should be used carefully if the dual feasibility check was explictely disabled.
+ *  @note The return value of this method should be used carefully if the dual feasibility check was explicitly disabled.
  */
 SCIP_Real SCIPgetVarImplRedcost(
    SCIP*                 scip,               /**< SCIP data structure */

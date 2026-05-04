@@ -1139,7 +1139,7 @@ typedef struct
    int                   nsingleafterfilter; /**< number of times a single candidate remained after filtering */
    int                   noldcandidate;      /**< number of times the old candidate from last call with nonviolating
                                               *   reductions was branched on */
-   int                   nlperrorcalls;      /**< number of times an LP error occured and LAB branched without completely
+   int                   nlperrorcalls;      /**< number of times an LP error occurred and LAB branched without completely
                                               *   evaluating all candidates */
    int                   nlimitcalls;        /**< number of times a time limit was reached and LAB branched without
                                               *   completely evaluating all candidates */

@@ -634,7 +634,7 @@ TCLIQUE_Bool tcliqueLoadFile(
    }
 
    /* set data structures for tclique,
-    * if an error occured, close the file before returning */
+    * if an error occurred, close the file before returning */
    /* coverity[tainted_data] */
    if( BMSallocMemoryArray(&(*tcliquegraph)->weights, (*tcliquegraph)->nnodes) == NULL )
    {

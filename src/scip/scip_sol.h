@@ -1385,7 +1385,7 @@ SCIP_RETCODE SCIPreadSolFile(
    SCIP_SOL*             sol,                /**< solution pointer */
    SCIP_Bool             xml,                /**< true, iff the given solution in written in XML */
    SCIP_Bool*            partial,            /**< pointer to store if the solution is partial */
-   SCIP_Bool*            error               /**< pointer store if an error occured */
+   SCIP_Bool*            error               /**< pointer store if an error occurred */
    );
 
 /** adds feasible primal solution to solution storage by copying it
