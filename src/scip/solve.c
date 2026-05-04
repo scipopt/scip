@@ -1583,7 +1583,7 @@ SCIP_RETCODE solveNodeInitialLP(
    SCIP_Bool             newinitconss,       /**< do we have to add new initial constraints? */
    SCIP_Bool             forcedlpsolve,      /**< would SCIP abort if the LP is not solved? */
    SCIP_Bool*            cutoff,             /**< pointer to store whether the node can be cut off */
-   SCIP_Bool*            lperror             /**< pointer to store whether an unresolved error in LP solving occured */
+   SCIP_Bool*            lperror             /**< pointer to store whether an unresolved error in LP solving occurred */
    )
 {
    /* initializing variables for compiler warnings, which are not correct */
@@ -1690,7 +1690,7 @@ SCIP_RETCODE separationRoundResolveLP(
    SCIP_PRIMAL*          primal,             /**< primal data */
    SCIP_TREE*            tree,               /**< branch and bound tree */
    SCIP_LP*              lp,                 /**< LP data */
-   SCIP_Bool*            lperror,            /**< pointer to store whether an unresolved error in LP solving occured */
+   SCIP_Bool*            lperror,            /**< pointer to store whether an unresolved error in LP solving occurred */
    SCIP_Bool*            mustsepa,           /**< pointer to store TRUE if additional separation rounds should be performed */
    SCIP_Bool*            mustprice           /**< pointer to store TRUE if additional pricing rounds should be performed */
    )
@@ -1739,7 +1739,7 @@ SCIP_RETCODE separationRoundLP(
    SCIP_Bool*            delayed,            /**< pointer to store whether a separator was delayed */
    SCIP_Bool*            enoughcuts,         /**< pointer to store whether enough cuts have been found this round */
    SCIP_Bool*            cutoff,             /**< pointer to store whether the node can be cut off */
-   SCIP_Bool*            lperror,            /**< pointer to store whether an unresolved error in LP solving occured */
+   SCIP_Bool*            lperror,            /**< pointer to store whether an unresolved error in LP solving occurred */
    SCIP_Bool*            mustsepa,           /**< pointer to store TRUE if additional separation rounds should be performed */
    SCIP_Bool*            mustprice           /**< pointer to store TRUE if additional pricing rounds should be performed */
    )
@@ -2232,7 +2232,7 @@ SCIP_RETCODE SCIPpriceLoop(
                                               *   a finite limit means that the LP might not be solved to optimality! */
    int*                  npricedcolvars,     /**< pointer to store number of column variables after problem vars were priced */
    SCIP_Bool*            mustsepa,           /**< pointer to store TRUE if a separation round should follow */
-   SCIP_Bool*            lperror,            /**< pointer to store whether an unresolved error in LP solving occured */
+   SCIP_Bool*            lperror,            /**< pointer to store whether an unresolved error in LP solving occurred */
    SCIP_Bool*            aborted             /**< pointer to store whether the pricing was aborted and the lower bound must
                                               *   not be used */
    )
@@ -2510,7 +2510,7 @@ SCIP_RETCODE priceAndCutLoop(
    SCIP_Bool*            propagateagain,     /**< pointer to store whether we want to propagate again */
    SCIP_Bool*            cutoff,             /**< pointer to store whether the node can be cut off */
    SCIP_Bool*            unbounded,          /**< pointer to store whether an unbounded ray was found in the LP */
-   SCIP_Bool*            lperror,            /**< pointer to store whether an unresolved error in LP solving occured */
+   SCIP_Bool*            lperror,            /**< pointer to store whether an unresolved error in LP solving occurred */
    SCIP_Bool*            pricingaborted      /**< pointer to store whether the pricing was aborted and the lower bound must
                                               *   not be used */
    )
@@ -3228,7 +3228,7 @@ SCIP_RETCODE solveNodeLP(
    SCIP_Bool*            solverelaxagain,    /**< pointer to store TRUE, if the external relaxators should be called again */
    SCIP_Bool*            cutoff,             /**< pointer to store TRUE, if the node can be cut off */
    SCIP_Bool*            unbounded,          /**< pointer to store TRUE, if an unbounded ray was found in the LP */
-   SCIP_Bool*            lperror,            /**< pointer to store TRUE, if an unresolved error in LP solving occured */
+   SCIP_Bool*            lperror,            /**< pointer to store TRUE, if an unresolved error in LP solving occurred */
    SCIP_Bool*            pricingaborted      /**< pointer to store TRUE, if the pricing was aborted and the lower bound
                                               *   must not be used */
    )
@@ -3991,7 +3991,7 @@ SCIP_RETCODE propAndSolve(
    SCIP_Bool*            postpone,           /**< pointer to store whether the node should be postponed */
    SCIP_Bool*            unbounded,          /**< pointer to store whether the focus node is unbounded */
    SCIP_Bool*            stopped,            /**< pointer to store whether solving was interrupted */
-   SCIP_Bool*            lperror,            /**< pointer to store TRUE, if an unresolved error in LP solving occured */
+   SCIP_Bool*            lperror,            /**< pointer to store TRUE, if an unresolved error in LP solving occurred */
    SCIP_Bool*            pricingaborted,     /**< pointer to store TRUE, if the pricing was aborted and the lower bound must not be used */
    SCIP_Bool*            forcedenforcement   /**< pointer to store whether the enforcement of pseudo solution should be forced */
    )
@@ -4208,7 +4208,7 @@ SCIP_RETCODE propAndSolve(
       /* check, if the path was cutoff */
       *cutoff = *cutoff || (tree->cutoffdepth <= actdepth);
 
-      /* if an error occured during LP solving, switch to pseudo solution */
+      /* if an error occurred during LP solving, switch to pseudo solution */
       if( *lperror )
       {
          if( forcedlpsolve )

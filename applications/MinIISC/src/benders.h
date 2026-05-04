@@ -46,7 +46,7 @@ enum BENDERS_Status
    BENDERS_STATUS_SUCCESS          =  2,     /**< the solution is optimal, no further Benders cut has to be generated */
    BENDERS_STATUS_TIMELIMIT        =  3,     /**< the time limit has been reached */
    BENDERS_STATUS_USERINTERRUPT    =  4,     /**< the user has interrupted the solution of the subproblem */
-   BENDERS_STATUS_ERROR            =  5      /**< an error occured during the solution of the subproblem */
+   BENDERS_STATUS_ERROR            =  5      /**< an error occurred during the solution of the subproblem */
 };
 typedef enum BENDERS_Status BENDERS_STATUS;
 

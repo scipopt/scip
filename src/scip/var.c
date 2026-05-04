@@ -2931,7 +2931,7 @@ SCIP_RETCODE parseBounds(
    SCIP_Real*            ub,                 /**< pointer to store the upper bound */
    SCIP_RATIONAL*        lbexact,            /**< pointer to store the exact lower bound */
    SCIP_RATIONAL*        ubexact,            /**< pointer to store the exact upper bound */
-   char**                endptr              /**< pointer to store the final string position if successfully parsed (or NULL if an error occured) */
+   char**                endptr              /**< pointer to store the final string position if successfully parsed (or NULL if an error occurred) */
    )
 {
    char token[SCIP_MAXSTRLEN];
