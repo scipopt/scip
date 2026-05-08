@@ -144,9 +144,19 @@ do
             fi
 
             FILE="${i}.out"
+            PERFF="${i}.perf"
             if test -e "${FILE}"
             then
-                cat "${FILE}" >> "${OUTFILE}"
+                # if a .perf file exists, inject perf counters before =ready=
+                if test -e "${PERFF}"
+                then
+                    PERFDATA=$(awk -F, 'NF>1 && !/^#/ && $1 !~ /<not/ {printf " %s=%s", $3, $1}' "${PERFF}")
+                    awk -v perfline="@06${PERFDATA}" \
+                        '/^=ready=/ { print perfline } { print }' \
+                        "${FILE}" >> "${OUTFILE}"
+                else
+                    cat "${FILE}" >> "${OUTFILE}"
+                fi
                 if test "${REMOVE}" = "1"
                 then
                     rm -f "${FILE}"
@@ -154,6 +164,11 @@ do
             else
                 echo "@01 ${FILE} ==MISSING=="  >> "${OUTFILE}"
                 echo                            >> "${OUTFILE}"
+            fi
+
+            if test -e "${PERFF}" && test "${REMOVE}" = "1"
+            then
+                rm -f "${PERFF}"
             fi
 
             FILE="${i}.err"

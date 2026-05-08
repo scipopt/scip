@@ -260,6 +260,14 @@ Fixed bugs
 - disregard deletable flag in IIS generation to reenable removal of unused variables
 - fixed that doc target in cmake builds was not available when using -DBUILD_TESTING=OFF
 
+Miscellaneous
+-------------
+
+- added DEBUGTOOL=perf option for check scripts to run run SCIP through perf:
+  perf statistics are collected in a .perf file and are then copied into the .out file (new section @06)
+- check scripts now write available memory (kB) and the current cumulative CPU ticks (from /proc/stat)
+  before and after the solve to the .out file (new sections @07 and @08)
+
 @section RN1002 SCIP 10.0.2
 ***************************
 

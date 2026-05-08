@@ -8846,6 +8846,7 @@
  *  \arg <code>THREADS</code> - the number of threads used for solving LPs, if the linked LP solver supports multithreading [default: 1]
  *  \arg <code>VALGRIND</code> - run valgrind on the SCIP binary; errors and memory leaks found by valgrind are reported as fails [default: "false"]
  *  \arg <code>KEEPSOL</code> - if set to 'false', the best found solution is no longer written out to a solution file [default: "true"]
+ *  \arg <code>DEBUGTOOL</code> - runs SCIP through an additional tool, possible values: valgrind, rr, gdb, perf, "" [default: ""]
  *
  *
  *  @section COMPARE Comparing test runs for different settings
