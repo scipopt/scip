@@ -351,6 +351,9 @@ BEGIN {
    certified_ori = 0;
    certified_fail = 0;
    vipr_ori = 0;
+   instructions = -1;
+   cycles = -1;
+   clock = -1;
 }
 
 /@03/ {
@@ -358,6 +361,16 @@ BEGIN {
 }
 /@04/ {
    endtime = $2;
+}
+/@06/ {
+   printperf = 1;
+   for( i = 2; i <= NF; i++ )
+   {
+      split($i, kv, "=");
+      if( kv[1] == "instructions:u" ) instructions = kv[2];
+      else if( kv[1] == "cpu-cycles:u" ) cycles = kv[2];
+      else if( kv[1] == "task-clock:u" ) clock = kv[2];
+   }
 }
 
 /^SCIP version/ {
@@ -893,15 +906,15 @@ BEGIN {
       # append rest of header
       if( reoptimization == 0 )
       {
-         tablehead1 = tablehead1"+------+--- Original --+-- Presolved --+----------------+----------------+------+---------+--------+-------+";
-         tablehead2 = tablehead2"| Type | Conss |  Vars | Conss |  Vars |   Dual Bound   |  Primal Bound  | Gap%% |  Iters  |  Nodes |  Time |";
-         tablehead3 = tablehead3"+------+-------+-------+-------+-------+----------------+----------------+------+---------+--------+-------+";
+         tablehead1 = tablehead1"+------+--- Original --+-- Presolved --+----------------+----------------+------+---------+--------+--------+";
+         tablehead2 = tablehead2"| Type | Conss |  Vars | Conss |  Vars |   Dual Bound   |  Primal Bound  | Gap%% |  Iters  |  Nodes |   Time |";
+         tablehead3 = tablehead3"+------+-------+-------+-------+-------+----------------+----------------+------+---------+--------+--------+";
       }
       else
       {
-         tablehead1 = tablehead1"+------+--- Original --+-- Presolved --+-----------+----------------+----------------+---------+--------+-------+";
-         tablehead2 = tablehead2"| Type | Conss |  Vars | Conss |  Vars | Reopt Its | last Dual Bnd  | last Primal Bnd|  Iters  |  Nodes |  Time |";
-         tablehead3 = tablehead3"+------+-------+-------+-------+-------+-----------+----------------+----------------+---------+--------+-------+";
+         tablehead1 = tablehead1"+------+--- Original --+-- Presolved --+-----------+----------------+----------------+---------+--------+--------+";
+         tablehead2 = tablehead2"| Type | Conss |  Vars | Conss |  Vars | Reopt Its | last Dual Bnd  | last Primal Bnd|  Iters  |  Nodes |   Time |";
+         tablehead3 = tablehead3"+------+-------+-------+-------+-------+-----------+----------------+----------------+---------+--------+--------+";
       }
 
       if( analyseconf == 1 )
@@ -913,14 +926,25 @@ BEGIN {
 
       if( printsoltimes == 1 )
       {
-         tablehead1 = tablehead1"----------+---------+";
-         tablehead2 = tablehead2" To First | To Best |";
-         tablehead3 = tablehead3"----------+---------+";
+         tablehead1 = tablehead1"---------+---------+";
+         tablehead2 = tablehead2"To First | To Best |";
+         tablehead3 = tablehead3"---------+---------+";
       }
 
-      tablehead1 = tablehead1"--------\n";
-      tablehead2 = tablehead2"        \n";
-      tablehead3 = tablehead3"--------\n";
+      if( printperf )
+      {
+         tablehead1 = tablehead1"--------------+--------------+--------------+";
+         tablehead2 = tablehead2" Instructions |    Cycles    |    Clock     |";
+         tablehead3 = tablehead3"--------------+--------------+--------------+";
+      }
+
+      tablehead1 = tablehead1"--------+";
+      tablehead2 = tablehead2"        |";
+      tablehead3 = tablehead3"--------+";
+
+      tablehead1 = tablehead1"\n";
+      tablehead2 = tablehead2"\n";
+      tablehead3 = tablehead3"\n";
 
       printf(tablehead1);
       printf(tablehead2);
@@ -1336,22 +1360,25 @@ BEGIN {
          # note: probtype has length 5, but field width is 6
          if( reoptimization == 0 )
          {
-            printf("%-*s  %-5s %7d %7d %7d %7d %16.9g %16.9g %6s %9d %8d %7.1f ",
+            printf("%-*s  %-5s %7d %7d %7d %7d %16.9g %16.9g %6s %9d %8d %8.3f ",
                    namelength, shortprob, probtype, origcons, origvars, cons, vars, db, pb, gapstr, simpiters, bbnodes, tottime);
          }
          else
          {
-            printf("%-*s  %-5s %7d %7d %7d %7d %11d %16.9g %16.9g %9d %8d %7.1f ",
+            printf("%-*s  %-5s %7d %7d %7d %7d %11d %16.9g %16.9g %9d %8d %8.3f ",
                    namelength, shortprob, probtype, origcons, origvars, cons, vars, niter, db, pb, simpiters, bbnodes, tottime);
 	 }
 
 	 if( analyseconf == 1 )
          {
-            printf("%7d %7d %7d %7d %7d %7.1f ", conf_infLP, conf_bndEx, conf_strbr, conf_prop, conf_pseud, conftime);
+            printf("%7d %7d %7d %7d %7d %7.3f ", conf_infLP, conf_bndEx, conf_strbr, conf_prop, conf_pseud, conftime);
          }
 
 	 if( printsoltimes )
-            printf(" %9.1f %9.1f ", timetofirst, timetobest);
+            printf("%9.3f %9.3f ", timetofirst, timetobest);
+
+	 if( printperf )
+            printf("%14d %14d %14.3f ", instructions, cycles, clock);
 
          printf("%s\n", status);
       }
@@ -1478,22 +1505,22 @@ END {
    printf(tablefooter2);
    printf(tablefooter3);
 
-   printf("%5d %5d %7d %5d %9d %9.1f %9.1f %9.1f ",
+   printf("%5d %5d %7d %5d %9d %9.3f %9.3f %9.3f ",
           nprobs, pass, nlimits, fail, sbab / 1000, nodegeom, stottime, timegeom);
 
    if( analyseconf == 1 )
-     printf("%9d %9.1f %9.1f %9.1f", sumconfs, confgeom, conftottime, conftimegeom);
+     printf("%9d %9.3f %9.3f %9.3f", sumconfs, confgeom, conftottime, conftimegeom);
 
    if( printsoltimes )
-      printf("%9.1f %9.1f %9.1f %9.1f", stimetofirst, timetofirstgeom, stimetobest, timetobestgeoconftimem);
+      printf("%9.3f %9.3f %9.3f %9.3f", stimetofirst, timetofirstgeom, stimetobest, timetobestgeoconftimem);
 
    printf("\n");
-   printf(" shifted geom. [%5d/%5.1f]        %9.1f           %9.1f ",
+   printf(" shifted geom. [%5d/%5.1f]        %9.3f           %9.3f ",
           nodegeomshift, timegeomshift, shiftednodegeom, shiftedtimegeom);
    if( analyseconf )
-      printf("          %9.1f           %9.1f ", shiftedconfgeom, shiftedconftimegeom);
+      printf("          %9.3f           %9.3f ", shiftedconfgeom, shiftedconftimegeom);
    if( printsoltimes )
-      printf("          %9.1f           %9.1f ", shiftedtimetofirstgeom, shiftedtimetobestgeom);
+      printf("          %9.3f           %9.3f ", shiftedtimetofirstgeom, shiftedtimetobestgeom);
    printf("\n");
    printf(tablefooter3);
 
