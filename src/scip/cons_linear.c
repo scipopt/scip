@@ -5796,8 +5796,10 @@ SCIP_RETCODE rangedRowPropagation(
 
       consdata->rangedrowpropagated = 1;
    }
+
    fixedact = 0;
    nfixedconsvars = 0;
+
    /* calculate fixed activity and number of fixed variables */
    for( v = consdata->nvars - 1; v >= 0; --v )
    {
@@ -16162,6 +16164,7 @@ SCIP_DECL_CONSPROP(consPropLinear)
       rangedrowfreq = propfreq * conshdlrdata->rangedrowfreq;
       rangedrowpropagation = rangedrowpropagation && (conshdlrdata->rangedrowfreq >= 0)
          && ((rangedrowfreq == 0 && depth == 0) || (rangedrowfreq >= 1 && (depth % rangedrowfreq == 0)));
+      rangedrowpropagation = rangedrowpropagation && (SCIPgetStage(scip) != SCIP_STAGE_PRESOLVING);  /* ranged rows are also presolved */
    }
 
    cutoff = FALSE;
@@ -16172,6 +16175,7 @@ SCIP_DECL_CONSPROP(consPropLinear)
       SCIP_CALL( SCIPunmarkConsPropagate(scip, conss[i]) );
       SCIP_CALL( propagateCons(scip, conss[i], tightenbounds, rangedrowpropagation,
             conshdlrdata->maxeasyactivitydelta, conshdlrdata->sortvars, &cutoff, &nchgbds, &naddconss) );
+      assert(naddconss == 0 || (SCIPgetStage(scip) != SCIP_STAGE_PRESOLVING));
    }
 
    /* adjust result code */
@@ -16179,8 +16183,6 @@ SCIP_DECL_CONSPROP(consPropLinear)
       *result = SCIP_CUTOFF;
    else if( nchgbds > 0 )
       *result = SCIP_REDUCEDDOM;
-   else if ( naddconss > 0 )
-      *result = SCIP_CONSADDED;
    else
       *result = SCIP_DIDNOTFIND;
 
