@@ -1067,17 +1067,26 @@ END {
          {
             besttime = min(besttime, time[s,pidx]);
             bestnodes = min(bestnodes, nodes[s,pidx]);
-            besttimetofirst = min(besttimetofirst, timetofirst[s,pidx]);
-            besttimetobest = min(besttimetobest, timetobest[s,pidx]);
+            if( printsoltimes )
+            {
+               besttimetofirst = min(besttimetofirst, timetofirst[s,pidx]);
+               besttimetobest = min(besttimetobest, timetobest[s,pidx]);
+            }
             worsttime = max(worsttime, time[s,pidx]);
             worstnodes = max(worstnodes, nodes[s,pidx]);
             worstiters = max(worstiters, iters[s,pidx]);
-            worsttimetofirst = max(worsttimetofirst, timetofirst[s, pidx]);
-            worsttimetobest = max(worsttimetobest, timetobest[s, pidx]);
-            minconfs = min(minconfs, confs[s, pidx]);
-            maxconfs = max(maxconfs, confs[s, pidx]);
-            minconftime = min(minconftime, conftime[s, pidx]);
-            maxconftime = max(maxconftime, conftime[s, pidx]);
+            if( printsoltimes )
+            {
+               worsttimetofirst = max(worsttimetofirst, timetofirst[s, pidx]);
+               worsttimetobest = max(worsttimetobest, timetobest[s, pidx]);
+            }
+            if( printconfs )
+            {
+               minconfs = min(minconfs, confs[s, pidx]);
+               maxconfs = max(maxconfs, confs[s, pidx]);
+               minconftime = min(minconftime, conftime[s, pidx]);
+               maxconftime = max(maxconftime, conftime[s, pidx]);
+            }
          }
       }
       worsttime = max(worsttime, mintime);
@@ -1121,10 +1130,16 @@ END {
             nodecomp = nodes[s,pidx];
             timecomp = time[s,pidx];
             timeoutcomp = hitlimit[s,pidx];
-            timetofirstcomp = max(mintime, timetofirst[s,pidx]);
-            timetobestcomp = max(mintime, timetobest[s,pidx]);
-            confsoffirst = confs[s,pidx];
-            conftimeoffirst = conftime[s,pidx];
+            if( printsoltimes )
+            {
+               timetofirstcomp = max(mintime, timetofirst[s,pidx]);
+               timetobestcomp = max(mintime, timetobest[s,pidx]);
+            }
+            if( printconfs )
+            {
+               confsoffirst = confs[s,pidx];
+               conftimeoffirst = conftime[s,pidx];
+            }
          }
          iseqpath = (iters[s,pidx] == itercomp && nodes[s,pidx] == nodecomp);
          hastimeout = timeoutcomp || hitlimit[s,pidx];
@@ -1429,8 +1444,11 @@ END {
          refhitlimit = hitlimit[printorder[0],probidx[p,printorder[0]]];
          refnodes = nodes[printorder[0],probidx[p,printorder[0]]];
          refobj = primalbound[printorder[0],probidx[p,printorder[0]]];
-         reftimetofirst = timetofirst[printorder[0],probidx[p,printorder[0]]];
-         reftimetobest = timetobest[printorder[0],probidx[p,printorder[0]]];
+         if( printsoltimes )
+         {
+            reftimetofirst = timetofirst[printorder[0],probidx[p,printorder[0]]];
+            reftimetobest = timetobest[printorder[0],probidx[p,printorder[0]]];
+         }
          hasbetter = 0;
          hasbetterobj = 0;
          for( s = 0; s < nsolver; ++s )
@@ -1448,20 +1466,35 @@ END {
                   instrtotal[s,cat] += instructions[s,pidx];
                   instrgeom[s,cat] = instrgeom[s,cat]^((nip-1)/nip) * instructions[s,pidx]^(1.0/nip);
                }
-               timetofirsttotal[s,cat] += timetofirst[s,pidx];
-               timetobesttotal[s, cat] += timetobest[s, pidx];
+               if( printsoltimes )
+               {
+                  timetofirsttotal[s,cat] += timetofirst[s,pidx];
+                  timetobesttotal[s, cat] += timetobest[s, pidx];
+               }
                nodetotal[s,cat] += nodes[s,pidx];
                timegeom[s,cat] = timegeom[s,cat]^((nep-1)/nep) * time[s,pidx]^(1.0/nep);
-               timetofirstgeom[s,cat] = timetofirstgeom[s,cat]^((nep-1)/nep) * max(timetofirst[s,pidx], mintime)^(1.0/nep);
-               timetobestgeom[s,cat] = timetobestgeom[s,cat]^((nep-1)/nep) * max(timetobest[s,pidx])^(1.0/nep);
-               confsgeom[s,cat] = confsgeom[s,cat]^((nep-1)/nep) * max(confs[s,pidx], 1.0)^(1.0/nep);
-               conftimegeom[s,cat] = conftimegeom[s,cat]^((nep-1)/nep) * max(conftime[s,pidx],1.0)^(1.0/nep);
+               if( printsoltimes )
+               {
+                  timetofirstgeom[s,cat] = timetofirstgeom[s,cat]^((nep-1)/nep) * max(timetofirst[s,pidx], mintime)^(1.0/nep);
+                  timetobestgeom[s,cat] = timetobestgeom[s,cat]^((nep-1)/nep) * max(timetobest[s,pidx])^(1.0/nep);
+               }
+               if( printconfs )
+               {
+                  confsgeom[s,cat] = confsgeom[s,cat]^((nep-1)/nep) * max(confs[s,pidx], 1.0)^(1.0/nep);
+                  conftimegeom[s,cat] = conftimegeom[s,cat]^((nep-1)/nep) * max(conftime[s,pidx],1.0)^(1.0/nep);
+               }
                nodegeom[s,cat] = nodegeom[s,cat]^((nep-1)/nep) * nodes[s,pidx]^(1.0/nep);
                timeshiftedgeom[s,cat] = timeshiftedgeom[s,cat]^((nep-1)/nep) * (time[s,pidx]+timegeomshift)^(1.0/nep);
-               timetofirstshiftedgeom[s,cat] = timetofirstshiftedgeom[s,cat]^((nep-1)/nep) * max(timetofirst[s,pidx]+timegeomshift, 1.0)^(1.0/nep);
-               timetobestshiftedgeom[s,cat] = timetobestshiftedgeom[s,cat]^((nep-1)/nep) * max(timetobest[s,pidx]+timegeomshift, 1.0)^(1.0/nep);
-               confsshiftedgeomean[s,cat] = confsshiftedgeomean[s,cat]^((nep-1)/nep) * max(confs[s,pidx]+nodegeomshift, 1.0)^(1.0/nep);
-               conftimeshiftedgeomean[s,cat] = conftimeshiftedgeomean[s,cat]^((nep-1)/nep) * max(conftime[s,pidx]+timegeomshift,1.0)^(1.0/nep);
+               if( printsoltimes )
+               {
+                  timetofirstshiftedgeom[s,cat] = timetofirstshiftedgeom[s,cat]^((nep-1)/nep) * max(timetofirst[s,pidx]+timegeomshift, 1.0)^(1.0/nep);
+                  timetobestshiftedgeom[s,cat] = timetobestshiftedgeom[s,cat]^((nep-1)/nep) * max(timetobest[s,pidx]+timegeomshift, 1.0)^(1.0/nep);
+               }
+               if( printconfs )
+               {
+                  confsshiftedgeomean[s,cat] = confsshiftedgeomean[s,cat]^((nep-1)/nep) * max(confs[s,pidx]+nodegeomshift, 1.0)^(1.0/nep);
+                  conftimeshiftedgeomean[s,cat] = conftimeshiftedgeomean[s,cat]^((nep-1)/nep) * max(conftime[s,pidx]+timegeomshift,1.0)^(1.0/nep);
+               }
                nodeshiftedgeom[s,cat] = nodeshiftedgeom[s,cat]^((nep-1)/nep) * (nodes[s,pidx]+nodegeomshift)^(1.0/nep);
                reftimetotal[s,cat] += reftime;
                reftimetofirsttotal[s,cat] += reftimetofirst;
@@ -1586,7 +1619,6 @@ END {
 	    printf(" %9d %8d" , timetofirsttotal[s,0], timetobesttotal[s,0]);
 	 if( o == 0 && printconfs )
 	    printf(" %8d %7d" , 0, 0);
-	 #printf(" %9d %8d" , timetofirsttotal[s,0], timetobesttotal[s,0]);
       }
       else
       {
