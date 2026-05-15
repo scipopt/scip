@@ -976,7 +976,7 @@ SCIP_RETCODE tryExtractDistconsMind(
    }
    (*distconss)[*ndistconss]->distvar = boundingvar;
    (*distconss)[*ndistconss]->issquared = SCIPisEQ(scip, boundingpow, 2.0) ? TRUE : FALSE;
-   (*distconss)[*ndistconss]->scalar = boundingcoef;
+   (*distconss)[*ndistconss]->scalar = isleq ? boundingcoef : -boundingcoef;
    (*distconss)[*ndistconss]->distval = isleq ? constant : -constant;
    (*distconss)[*ndistconss]->hasvardist = boundingvar != NULL;
    (*distconss)[*ndistconss]->lastpropnode = NULL;
