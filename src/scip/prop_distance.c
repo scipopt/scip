@@ -901,6 +901,10 @@ SCIP_RETCODE tryExtractDistconsMind(
    if( nprodexprs <= 0 )
       goto FREEMEMORY;
 
+   /* if the number of power and product expressions do not match, we cannot detect a distance constraint */
+   if( nprodexprs != npowexprs )
+      goto FREEMEMORY;
+
    /* if it is a distance constraint, then it is trivially satisfied */
    if( boundingvar == NULL && SCIPisZero(scip, constant) )
       goto FREEMEMORY;
