@@ -1198,7 +1198,7 @@ SCIP_RETCODE improveUb(
 }
 
 /** returns the minimum value of expression \f$a \cdot x\f$ or \f$a \cdot x^2\f$ for value of \f$x\f$ in an interval,
- *  where \f$x\f$ corresponds to a distance variable, i.e., it is non-negative in expressions \f$a \cdot x\f$ */
+ *  where \f$x\f$ corresponds to a distance variable */
 static
 SCIP_Real getMinimumScalarVariableProduct(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -1212,8 +1212,6 @@ SCIP_Real getMinimumScalarVariableProduct(
 
    if( !issquared )
    {
-      assert(SCIPisGE(scip, lb, 0.0));
-
       if( SCIPisNegative(scip, scalar) )
          return scalar * ub;
       return scalar * lb;
@@ -1527,6 +1525,10 @@ SCIP_RETCODE propagateMinfdConsSimple(
    if( minfdcons->hasvardist )
       sqdistbound += getMinimumScalarVariableProduct(scip, SCIPvarGetLbLocal(minfdcons->distvar),
          SCIPvarGetUbLocal(minfdcons->distvar), minfdcons->scalar, FALSE);
+
+   /* do nothing if the bound is negative (this can happen for variable distances if no solution has been found yet) */
+   if( SCIPisLE(scip, sqdistbound, 0.0) )
+      return SCIP_OKAY;
 
    /* compute total sum of squared distances */
    for( i = 0; i < nvars; ++i )
@@ -2003,13 +2005,22 @@ SCIP_RETCODE propagateMinpdCons(
       sqrad1 += getMinimumScalarVariableProduct(scip, SCIPvarGetLbLocal(minpdcons->distvars[0]),
          SCIPvarGetUbLocal(minpdcons->distvars[0]), minpdcons->scalars[0], minpdcons->issquared[0]);
    }
+
+   /* do nothing if the bound is negative (this can happen for variable distances if no solution has been found yet) */
+   if( SCIPisLE(scip, sqrad1, 0.0) )
+      goto FREEBOXES;
    assert(sqrad1 >= 0);
+
    sqrad2 = minpdcons->constants[1];
    if( minpdcons->distvars[1] != NULL )
    {
       sqrad2 += getMinimumScalarVariableProduct(scip, SCIPvarGetLbLocal(minpdcons->distvars[1]),
          SCIPvarGetUbLocal(minpdcons->distvars[1]), minpdcons->scalars[1], minpdcons->issquared[1]);
    }
+
+   /* do nothing if the bound is negative (this can happen for variable distances if no solution has been found yet) */
+   if( SCIPisLE(scip, sqrad2, 0.0) )
+      goto FREEBOXES;
    assert(sqrad2 >= 0);
 
    /* propagate all facets of the box domain of the common variables */
@@ -2143,8 +2154,8 @@ SCIP_RETCODE propagateMinfpdCons(
    }
 
    /* this can happen if the distance variable is unbounded (e.g., no solution found yet) */
-   if( SCIPisNegative(scip, sqrad1) )
-      return SCIP_OKAY;
+   if( SCIPisLE(scip, sqrad1, 0.0) )
+      goto FREEBOXES;
 
    sqrad2 = minfpdcons->constants[1];
    if( minfpdcons->distvars[1] != NULL )
@@ -2154,8 +2165,8 @@ SCIP_RETCODE propagateMinfpdCons(
    }
 
    /* this can happen if the distance variable is unbounded (e.g., no solution found yet) */
-   if( SCIPisNegative(scip, sqrad2) )
-      return SCIP_OKAY;
+   if( SCIPisLE(scip, sqrad2, 0.0) )
+      goto FREEBOXES;
 
    /* propagate all facets of the box domain of the common variables */
    for( d = 0; d < minfpdcons->dimension; ++d )
