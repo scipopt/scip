@@ -897,6 +897,10 @@ SCIP_RETCODE tryExtractDistconsMind(
    if( c < nsummands )
       goto FREEMEMORY;
 
+   /* if there a no product variables, we cannot detect a distance constraint */
+   if( nprodexprs <= 0 )
+      goto FREEMEMORY;
+
    /* if it is a distance constraint, then it is trivially satisfied */
    if( boundingvar == NULL && SCIPisZero(scip, constant) )
       goto FREEMEMORY;
