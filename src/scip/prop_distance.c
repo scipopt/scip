@@ -44,8 +44,7 @@
 #define PROP_DELAY                FALSE /**< should propagation method be delayed, if other propagators found reductions? */
 #define PROP_TIMING             SCIP_PROPTIMING_BEFORELP/**< propagation timing mask */
 
-#define DEFAULT_PROPAGATEPAIRS     TRUE /**< whether pairs of distance constraints are propagated */
-#define DEFAULT_PROPAGATEHEUR     FALSE /**< whether a heuristic is used to propagate distance constraints */
+#define DEFAULT_MAXNDCONSSFORPAIRS   20 /**< maximum number of distance constraints for which propagation of pairs is applied */
 #define DEFAULT_MULTBISECTION       0.1 /**< multiplier used in bisection to split interval [l,u] at point l + multiplier*(u - l) */
 #define DEFAULT_GAPBISECTION      0.001 /**< gap between lower and upper bound at which bisection is stopped */
 #define DEFAULT_MAXNITERBISECTION     3 /**< maximum number of iterations used in bisection (0: unbounded) */
@@ -178,7 +177,8 @@ struct SCIP_PropData
    SCIP_Bool             detectedconss;      /**< whether constraints have already been tried to be detected */
 
    /* information about pairs of such constraints (minpd and minfpd) */
-   SCIP_Bool             propagatepairs;     /**< whether pairs of distance constraints shall be propagated */
+   int                   maxndconssforpairs; /**< maximum number of distance constraints for which propagation of
+                                              *   pairs is applied */
    DISTCONS_MINPAIR**    minpdconss;         /**< minpd constraints */
    int                   nminpdconss;        /**< number of minpd constraints */
    int                   lenminpdconss;      /**< length of minpdconss */
@@ -2987,11 +2987,15 @@ SCIP_DECL_PROPEXEC(propExecDistance)
 
    if( !propdata->detectedconss )
    {
+      int maxndconss;
+
+      maxndconss = propdata->maxndconssforpairs;
+
       /* detect distance constraints */
       SCIP_CALL( getMinDistanceConss(scip, probdata, &propdata->mindconss, &propdata->nmindconss,
             &propdata->lenmindconss, &propdata->minfdconss, &propdata->nminfdconss, &propdata->lenminfdconss) );
 
-      if( propdata->propagatepairs )
+      if( maxndconss > 0 && maxndconss >= propdata->nmindconss + propdata->nminfdconss )
       {
          SCIP_CALL( detectMinpdConss(scip, propdata->mindconss, propdata->nmindconss,
                &propdata->minpdconss, &propdata->nminpdconss, &propdata->lenminpdconss) );
@@ -2999,7 +3003,6 @@ SCIP_DECL_PROPEXEC(propExecDistance)
          SCIP_CALL( detectMinfdpConss(scip, propdata->minfdconss, propdata->nminfdconss,
                &propdata->minfpdconss, &propdata->nminfpdconss, &propdata->lenminfpdconss) );
       }
-
       propdata->detectedconss = TRUE;
 
       SCIP_CALL( catchVarEvents(scip, propdata->eventhdlr,
@@ -3067,9 +3070,9 @@ SCIP_RETCODE SCIPincludePropDistance(
    SCIP_CALL( SCIPsetPropExit(scip, prop, propExitDistance) );
    SCIP_CALL( SCIPsetPropFree(scip, prop, propFreeDistance) );
 
-   SCIP_CALL( SCIPaddBoolParam(scip, "propagating/" PROP_NAME "/propagatepairs",
-         "whether pairs of distance constraints shall be propagated",
-         &propdata->propagatepairs, TRUE, DEFAULT_PROPAGATEPAIRS, NULL, NULL) );
+   SCIP_CALL( SCIPaddIntParam(scip, "propagating/" PROP_NAME "/maxndconssforpairs",
+         "maximum number of distance constraints for which propagation of pairs is applied",
+         &propdata->maxndconssforpairs, TRUE, DEFAULT_MAXNDCONSSFORPAIRS, 0, INT_MAX, NULL, NULL) );
 
    SCIP_CALL( SCIPaddRealParam(scip, "propagating/" PROP_NAME "/multbisection",
          "multiplier used in bisection to split interval [l,u] at point l + multiplier*(u - l)",
