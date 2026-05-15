@@ -2935,6 +2935,20 @@ SCIP_DECL_PROPEXIT(propExitDistance)
 
    SCIP_CALL( clearPropData(scip, propdata) );
 
+   return SCIP_OKAY;
+}
+
+/** destructor of propagator to free user data (called when SCIP is exiting) */
+static
+SCIP_DECL_PROPFREE(propFreeDistance)
+{  /*lint --e{715}*/
+   SCIP_PROPDATA* propdata;
+
+   propdata = SCIPpropGetData(prop);
+   assert(propdata != NULL);
+
+   SCIP_CALL( clearPropData(scip, propdata) );
+
    SCIPfreeBlockMemory(scip, &propdata);
 
    return SCIP_OKAY;
@@ -3040,6 +3054,7 @@ SCIP_RETCODE SCIPincludePropDistance(
 
    /* set optional callbacks via setter functions */
    SCIP_CALL( SCIPsetPropExit(scip, prop, propExitDistance) );
+   SCIP_CALL( SCIPsetPropFree(scip, prop, propFreeDistance) );
 
    SCIP_CALL( SCIPaddBoolParam(scip, "propagating/" PROP_NAME "/propagatepairs",
          "whether pairs of distance constraints shall be propagated",
