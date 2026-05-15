@@ -131,7 +131,7 @@ echo                                        >> "${OUTFILE}"
 echo "hard time limit: ${HARDTIMELIMIT}"    >> "${OUTFILE}"
 echo "hard mem limit: ${HARDMEMLIMIT}"      >> "${OUTFILE}"
 echo                                        >> "${OUTFILE}"
-echo "SLURM jobID: ${SLURM}_JOB_ID"         >> "${OUTFILE}"
+echo "SLURM jobID: ${SLURM_JOB_ID}"         >> "${OUTFILE}"
 echo                                        >> "${OUTFILE}"
 echo "@01 ${FILENAME} ==========="          >> "${OUTFILE}"
 echo "@01 ${FILENAME} ==========="          >> "${ERRFILE}"
@@ -148,19 +148,20 @@ case "${FILENAME}" in *.zpl ) ulimit -S -s unlimited ;; esac
 #if we use a debugger command, we need to replace the errfile place holder by the actual err-file for logging
 #and if we run on the cluster we want to use srun with CPU binding which is defined by the check_cluster script
 EXECNAME="${EXECNAME/ERRFILE_PLACEHOLDER/${ERRFILE}}"
+EXECNAME="${EXECNAME/RRTRACEFOLDER_PLACEHOLDER/${ERRFILE}}"
 EXECNAME="${EXECNAME/PERFFILE_PLACEHOLDER/${PERFFILE}}"
 # determine available perf events on this node
 if echo "${EXECNAME}" | grep -q 'PERFEVENTS_PLACEHOLDER'
 then
     PERF_EVENTS=""
-    for event in cpu-cycles:u cpu-cycles:k instructions:u instructions:k cache-references:u cache-misses:u branch-instructions:u branch-misses:u L1-dcache-loads:u L1-dcache-load-misses:u L1-icache-load-misses:u dTLB-loads:u dTLB-load-misses:u iTLB-load-misses:u task-clock:u task-clock:k minor-faults:u minor-faults:k major-faults:u major-faults:k context-switches cpu-migrations msr/tsc/ msr/aperf/ msr/mperf/; do
+    for event in cpu-cycles:u cpu-cycles:k instructions:u instructions:k cache-references:u cache-misses:u branch-instructions:u branch-misses:u L1-dcache-loads:u L1-dcache-load-misses:u L1-icache-load-misses:u dTLB-loads:u dTLB-load-misses:u iTLB-load-misses:u minor-faults:u minor-faults:k major-faults:u major-faults:k context-switches cpu-migrations cycle_activity.cycles_mem_any cycle_activity.stalls_mem_any cycle_activity.stalls_total task-clock; do
         if perf stat -e "${event}" true 2>/dev/null; then
             PERF_EVENTS="${PERF_EVENTS:+${PERF_EVENTS},}${event}"
         fi
     done
     EXECNAME="${EXECNAME/PERFEVENTS_PLACEHOLDER/${PERF_EVENTS}}"
 fi
-EXECNAME="${SRUN}${EXECNAME/RRTRACEFOLDER_PLACEHOLDER/${ERRFILE}}"
+EXECNAME="${SRUN:+${SRUN} }${EXECNAME}"
 echo "${EXECNAME}"            >> "${ERRFILE}"
 # system state before solve: available memory (kB), cumulative CPU ticks (idle total)
 if test -r /proc/meminfo && test -r /proc/stat
@@ -179,6 +180,8 @@ if test -r /proc/meminfo && test -r /proc/stat
 then
     echo "@08 $(awk '/MemAvailable/ {print $2}' /proc/meminfo) $(awk '/^cpu / {printf "%d %d\n", $5, $2+$3+$4+$5+$6+$7+$8+$9}' /proc/stat)" >> "${OUTFILE}"
 fi
+# target frequency for time normalization
+echo "@09 ${TARGETFREQ:-0}"         >> "${OUTFILE}"
 if test "${retcode}" != 0
 then
     echo "${EXECNAME} returned with error code ${retcode}." >>"${ERRFILE}"
