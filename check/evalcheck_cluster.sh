@@ -147,12 +147,18 @@ do
             PERFF="${i}.perf"
             if test -e "${FILE}"
             then
-                # if a .perf file exists, inject perf counters before =ready=
+                # if a .perf file exists, inject perf counters and mean frequency before =ready=
                 if test -e "${PERFF}"
                 then
                     PERFDATA=$(awk -F, 'NF>1 && !/^#/ && $1 !~ /<not/ {printf " %s=%s", $3, $1}' "${PERFF}")
-                    awk -v perfline="@06${PERFDATA}" \
-                        '/^=ready=/ { print perfline } { print }' \
+                    MEANFREQ=$(awk -F, '
+                        $3 == "cpu-cycles:u" { cu = $1 }
+                        $3 == "cpu-cycles:k" { ck = $1 }
+                        $3 == "task-clock"   { tc = $1 }
+                        END { if( tc > 0 ) printf "%.0f", (cu + ck) / tc; else print 0 }
+                    ' "${PERFF}")
+                    awk -v perfline="@06${PERFDATA}" -v freqline="@10 meanfreq=${MEANFREQ}" \
+                        '/^=ready=/ { print perfline; print freqline } { print }' \
                         "${FILE}" >> "${OUTFILE}"
                 else
                     cat "${FILE}" >> "${OUTFILE}"
