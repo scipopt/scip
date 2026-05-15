@@ -145,12 +145,103 @@ fi
 #                                              TIMELIMLIST, HARDTIMELIMLIST
 . ./configuration_set.sh "${BINNAME}" "${TSTNAME}" "${SETNAMES}" "${TIMELIMIT}" "${TIMEFORMAT}" "${MEMLIMIT}" "${MEMFORMAT}" "${DEBUGTOOL}" "${SETCUTOFF}"
 
+# ensure THREADS_SAFE is always available (used by AUTO mode and srun steps)
+THREADS_SAFE=$(( THREADS > 0 ? THREADS : 1 ))
+
+# query node topology to compute resource requests per instance
+SINFO_CMD="sinfo --noheader -N -p ${CLUSTERQUEUE} -O"
+if test -n "${CONSTRAINT}"
+then
+    SINFO_FILTER="grep ${CONSTRAINT}"
+else
+    SINFO_FILTER="cat"
+fi
+NODE_SOCKETS=$(${SINFO_CMD} sockets,features | ${SINFO_FILTER} | awk '{print $1}' | sort -n | head -1 | tr -d ' ')
+NODE_CORES=$(${SINFO_CMD} cores,features | ${SINFO_FILTER} | awk '{print $1}' | sort -n | head -1 | tr -d ' ')
+
+if test "${NODE_SOCKETS:-0}" -gt 0 && test "${NODE_CORES:-0}" -gt 0
+then
+    NODE_CPUS=$(( NODE_CORES * NODE_SOCKETS ))
+else
+    NODE_CPUS=1
+    echo "Warning: could not determine node topology for partition ${CLUSTERQUEUE}; assuming ${NODE_CPUS} core"
+fi
+
+# compute AUTO instances-per-node
+if test "${AUTO_PPN_PENDING}" -eq 1
+then
+    NODE_MEM_MB=$(${SINFO_CMD} memory,features | ${SINFO_FILTER} | awk '{print $1}' | sort -n | head -1 | tr -d ' ')
+    if test "${NODE_MEM_MB:-0}" -le 0
+    then
+        echo "Warning: could not determine node memory; falling back to AUTO_PPN=1"
+    else
+        PPN_CPU=$(( NODE_CPUS / THREADS_SAFE ))
+        PPN_MEM=$(( NODE_MEM_MB / HARDMEMLIMIT ))
+        AUTO_PPN=$(( PPN_CPU < PPN_MEM ? PPN_CPU : PPN_MEM ))
+        if test "${AUTO_PPN}" -lt 1
+        then
+            AUTO_PPN=1
+        fi
+    fi
+    # apply user-specified upper bound
+    if test "${PPN}" -gt 0 && test "${AUTO_PPN}" -gt "${PPN}"
+    then
+        AUTO_PPN="${PPN}"
+    fi
+fi
+
+# compute NODE_FLAGS once (CLUSTERNODES/EXCLUDENODES don't change per instance)
+if test "${CLUSTERNODES}" = "all" && test "${EXCLUDENODES}" = "none"
+then
+    NODE_FLAGS=""
+elif test "${CLUSTERNODES}" != "all" && test "${EXCLUDENODES}" = "none"
+then
+    NODE_FLAGS="-w ${CLUSTERNODES}"
+elif test "${CLUSTERNODES}" = "all" && test "${EXCLUDENODES}" != "none"
+then
+    NODE_FLAGS="-x ${EXCLUDENODES}"
+else
+    NODE_FLAGS="-w ${CLUSTERNODES} -x ${EXCLUDENODES}"
+fi
+
 # at the first time, some files need to be initialized. set to "" after the innermost loop
 # finished the first time
 INIT="true"
 
 # counter to define file names for a test set uniquely
 COUNT=0
+
+# auto mode: compute srun prefix for within-job steps
+if test "${AUTO_PPN_PENDING}" -eq 1
+then
+    AUTO_SRUN="srun --exact -n 1 -c ${THREADS_SAFE} --mem=${HARDMEMLIMIT} --propagate=STACK ${SRUN_FLAGS}"
+fi
+
+# auto mode batch accumulator
+AUTO_BATCH_COUNT=0          # number of instances accumulated so far
+AUTO_BATCH_TIME=""          # max HARDTIMELIMIT for the group
+AUTO_BATCH_JOBNAME=""       # JOBNAME of first instance in group (for sbatch --job-name)
+AUTO_BATCH_ARGS=()          # positional arguments for run_group.sh (14 per instance)
+AUTO_BATCH_NAMES=""         # space-separated instance names for echo
+
+# flush the current auto mode batch as a single exclusive sbatch job
+flush_auto_batch() {
+    if test "${AUTO_BATCH_COUNT}" -eq 0
+    then
+        return
+    fi
+    GROUP_MEM=$(( AUTO_BATCH_COUNT * HARDMEMLIMIT ))
+    echo sbatch --job-name="${AUTO_BATCH_JOBNAME}" --constraint="${CONSTRAINT}" --mem="${GROUP_MEM}" -n "${AUTO_BATCH_COUNT}" -c "${THREADS_SAFE}" -p "${CLUSTERQUEUE}" -A "${SLURMACCOUNT}" ${NICE} --time="${AUTO_BATCH_TIME}" --cpu-freq=medium-medium:Performance --exclusive ${NODE_FLAGS} --output=/dev/null run_group.sh
+    echo "instances:${AUTO_BATCH_NAMES}"
+    sbatch --job-name="${AUTO_BATCH_JOBNAME}" --constraint="${CONSTRAINT}" --mem="${GROUP_MEM}" -n "${AUTO_BATCH_COUNT}" -c "${THREADS_SAFE}" -p "${CLUSTERQUEUE}" -A "${SLURMACCOUNT}" ${NICE} --time="${AUTO_BATCH_TIME}" --cpu-freq=medium-medium:Performance --exclusive ${NODE_FLAGS} --output=/dev/null run_group.sh "${AUTO_SRUN}" "${AUTO_BATCH_COUNT}" "${THREADS_SAFE}" "${AUTO_BATCH_ARGS[@]}"
+    # reset accumulator
+    AUTO_BATCH_COUNT=0
+    AUTO_BATCH_JOBNAME=""
+    AUTO_BATCH_TIME=""
+    AUTO_BATCH_ARGS=()
+    AUTO_BATCH_NAMES=""
+}
+
 # loop over permutations
 # loop over testset
 for idx in "${!INSTANCELIST[@]}"
@@ -237,6 +328,7 @@ do
 
                 JOBNAME="$(capitalize ${SOLVER})${SHORTPROBNAME}"
                 # additional environment variables needed by run.sh
+                export TARGETFREQ
                 export SOLVERPATH="${SCIPPATH}"
                 # this looks wrong but is totally correct
                 export BASENAME="${FILENAME}"
@@ -273,30 +365,52 @@ do
                 then
                     if test "${CLUSTERQUEUE}" != "moskito" && test "${CLUSTERQUEUE}" != "prio"
                     then
-                        # the space at the end is necessary
-                        export SRUN="srun --propagate=STACK --cpu_bind=cores ${SRUN_FLAGS} "
+                        export SRUN="srun --propagate=STACK --cpu_bind=verbose,cores ${SRUN_FLAGS}"
                     fi
 
                     if test "${WRITESETTINGS}" = "true"
                     then
-                        sbatch --job-name=write-settings --mem=${HARDMEMLIMIT} -p "${CLUSTERQUEUE}" -A "${SLURMACCOUNT}" ${NICE} --time="${HARDTIMELIMIT}" --cpu-freq=highm1 ${EXCLUSIVE} --output=/dev/null write-settings.sh
+                        sbatch --job-name=write-settings -c "${THREADS_SAFE}" --mem="${HARDMEMLIMIT}" -p "${CLUSTERQUEUE}" -A "${SLURMACCOUNT}" ${NICE} --time="${HARDTIMELIMIT}" --cpu-freq=medium-medium:Performance ${EXCLUSIVE} --output=/dev/null write-settings.sh
                     fi
 
-                    if test "${CLUSTERNODES}" = "all" && test "${EXCLUDENODES}" = "none"
+                    if test "${AUTO_PPN_PENDING}" -eq 1
                     then
-                        echo sbatch --job-name="${JOBNAME}" --constraint="${CONSTRAINT}" --mem="${HARDMEMLIMIT}" -p "${CLUSTERQUEUE}" -A "${SLURMACCOUNT}" ${NICE} --time="${HARDTIMELIMIT}" --cpu-freq=highm1 ${EXCLUSIVE} --output=/dev/null run.sh
-                        sbatch --job-name="${JOBNAME}" --constraint="${CONSTRAINT}" --mem="${HARDMEMLIMIT}" -p "${CLUSTERQUEUE}" -A "${SLURMACCOUNT}" ${NICE} --time="${HARDTIMELIMIT}" --cpu-freq=highm1 ${EXCLUSIVE} --output=/dev/null run.sh
-                    elif test "${CLUSTERNODES}" != "all" && test "${EXCLUDENODES}" = "none"
-                    then
-                        echo sbatch --job-name="${JOBNAME}" --constraint="${CONSTRAINT}" --mem="${HARDMEMLIMIT}" -p "${CLUSTERQUEUE}" -A "${SLURMACCOUNT}" ${NICE} --time="${HARDTIMELIMIT}" --cpu-freq=highm1 ${EXCLUSIVE} -w "${CLUSTERNODES}" --output=/dev/null run.sh
-                        sbatch --job-name="${JOBNAME}" --constraint="${CONSTRAINT}" --mem="${HARDMEMLIMIT}" -p "${CLUSTERQUEUE}" -A "${SLURMACCOUNT}" ${NICE} --time="${HARDTIMELIMIT}" --cpu-freq=highm1 ${EXCLUSIVE} -w "${CLUSTERNODES}" --output=/dev/null run.sh
-                    elif test "${CLUSTERNODES}" = "all" && test "${EXCLUDENODES}" != "none"
-                    then
-                        echo sbatch --job-name="${JOBNAME}" --constraint="${CONSTRAINT}" --mem="${HARDMEMLIMIT}" -p "${CLUSTERQUEUE}" -A "${SLURMACCOUNT}" ${NICE} --time="${HARDTIMELIMIT}" --cpu-freq=highm1 ${EXCLUSIVE} -x "${EXCLUDENODES}" --output=/dev/null run.sh
-                        sbatch --job-name="${JOBNAME}" --constraint="${CONSTRAINT}" --mem="${HARDMEMLIMIT}" -p "${CLUSTERQUEUE}" -A "${SLURMACCOUNT}" ${NICE} --time="${HARDTIMELIMIT}" --cpu-freq=highm1 ${EXCLUSIVE} -x "${EXCLUDENODES}" --output=/dev/null run.sh
+                        # auto mode: accumulate instance arguments into current batch
+                        AUTO_BATCH_ARGS+=("${SOLVERPATH}" "${BASENAME}" "${FILENAME}" "${CLIENTTMPDIR}" "${OUTPUTDIR}" \
+                            "${HARDTIMELIMIT}" "${HARDMEMLIMIT}" "${CHECKERPATH}" "${SETFILE}" "${TIMELIMIT}" \
+                            "${EXECNAME}" "${VIPRCHECKNAME}" "${VIPRCOMPNAME}" "${VIPRCOMPRESSNAME}")
+                        AUTO_BATCH_COUNT=$(( AUTO_BATCH_COUNT + 1 ))
+                        AUTO_BATCH_NAMES="${AUTO_BATCH_NAMES} ${SHORTPROBNAME}"
+                        if test -z "${AUTO_BATCH_JOBNAME}"
+                        then
+                            AUTO_BATCH_JOBNAME="${JOBNAME}"
+                        fi
+                        if [[ -z "${AUTO_BATCH_TIME}" || "${HARDTIMELIMIT}" > "${AUTO_BATCH_TIME}" ]]
+                        then
+                            AUTO_BATCH_TIME="${HARDTIMELIMIT}"
+                        fi
+                        # flush when batch is full
+                        if test "${AUTO_BATCH_COUNT}" -ge "${AUTO_PPN}"
+                        then
+                            flush_auto_batch
+                        fi
                     else
-                        echo sbatch --job-name="${JOBNAME}" --constraint="${CONSTRAINT}" --mem="${HARDMEMLIMIT}" -p "${CLUSTERQUEUE}" -A "${SLURMACCOUNT}" ${NICE} --time="${HARDTIMELIMIT}" --cpu-freq=highm1 ${EXCLUSIVE} -w "${CLUSTERNODES}" -x "${EXCLUDENODES}" --output=/dev/null run.sh
-                        sbatch --job-name="${JOBNAME}" --constraint="${CONSTRAINT}" --mem="${HARDMEMLIMIT}" -p "${CLUSTERQUEUE}" -A "${SLURMACCOUNT}" ${NICE} --time="${HARDTIMELIMIT}" --cpu-freq=highm1 ${EXCLUSIVE} -w "${CLUSTERNODES}" -x "${EXCLUDENODES}" --output=/dev/null run.sh
+                        if test "${CLUSTERNODES}" = "all" && test "${EXCLUDENODES}" = "none"
+                        then
+                            echo sbatch --job-name="${JOBNAME}" --constraint="${CONSTRAINT}" -c "${THREADS_SAFE}" --mem="${HARDMEMLIMIT}" -p "${CLUSTERQUEUE}" -A "${SLURMACCOUNT}" ${NICE} --time="${HARDTIMELIMIT}" --cpu-freq=medium-medium:Performance ${EXCLUSIVE} --output=/dev/null run.sh
+                            sbatch --job-name="${JOBNAME}" --constraint="${CONSTRAINT}" -c "${THREADS_SAFE}" --mem="${HARDMEMLIMIT}" -p "${CLUSTERQUEUE}" -A "${SLURMACCOUNT}" ${NICE} --time="${HARDTIMELIMIT}" --cpu-freq=medium-medium:Performance ${EXCLUSIVE} --output=/dev/null run.sh
+                        elif test "${CLUSTERNODES}" != "all" && test "${EXCLUDENODES}" = "none"
+                        then
+                            echo sbatch --job-name="${JOBNAME}" --constraint="${CONSTRAINT}" -c "${THREADS_SAFE}" --mem="${HARDMEMLIMIT}" -p "${CLUSTERQUEUE}" -A "${SLURMACCOUNT}" ${NICE} --time="${HARDTIMELIMIT}" --cpu-freq=medium-medium:Performance ${EXCLUSIVE} -w "${CLUSTERNODES}" --output=/dev/null run.sh
+                            sbatch --job-name="${JOBNAME}" --constraint="${CONSTRAINT}" -c "${THREADS_SAFE}" --mem="${HARDMEMLIMIT}" -p "${CLUSTERQUEUE}" -A "${SLURMACCOUNT}" ${NICE} --time="${HARDTIMELIMIT}" --cpu-freq=medium-medium:Performance ${EXCLUSIVE} -w "${CLUSTERNODES}" --output=/dev/null run.sh
+                        elif test "${CLUSTERNODES}" = "all" && test "${EXCLUDENODES}" != "none"
+                        then
+                            echo sbatch --job-name="${JOBNAME}" --constraint="${CONSTRAINT}" -c "${THREADS_SAFE}" --mem="${HARDMEMLIMIT}" -p "${CLUSTERQUEUE}" -A "${SLURMACCOUNT}" ${NICE} --time="${HARDTIMELIMIT}" --cpu-freq=medium-medium:Performance ${EXCLUSIVE} -x "${EXCLUDENODES}" --output=/dev/null run.sh
+                            sbatch --job-name="${JOBNAME}" --constraint="${CONSTRAINT}" -c "${THREADS_SAFE}" --mem="${HARDMEMLIMIT}" -p "${CLUSTERQUEUE}" -A "${SLURMACCOUNT}" ${NICE} --time="${HARDTIMELIMIT}" --cpu-freq=medium-medium:Performance ${EXCLUSIVE} -x "${EXCLUDENODES}" --output=/dev/null run.sh
+                        else
+                            echo sbatch --job-name="${JOBNAME}" --constraint="${CONSTRAINT}" -c "${THREADS_SAFE}" --mem="${HARDMEMLIMIT}" -p "${CLUSTERQUEUE}" -A "${SLURMACCOUNT}" ${NICE} --time="${HARDTIMELIMIT}" --cpu-freq=medium-medium:Performance ${EXCLUSIVE} -w "${CLUSTERNODES}" -x "${EXCLUDENODES}" --output=/dev/null run.sh
+                            sbatch --job-name="${JOBNAME}" --constraint="${CONSTRAINT}" -c "${THREADS_SAFE}" --mem="${HARDMEMLIMIT}" -p "${CLUSTERQUEUE}" -A "${SLURMACCOUNT}" ${NICE} --time="${HARDTIMELIMIT}" --cpu-freq=medium-medium:Performance ${EXCLUSIVE} -w "${CLUSTERNODES}" -x "${EXCLUDENODES}" --output=/dev/null run.sh
+                        fi
                     fi
                 else
                     if test "${WRITESETTINGS}" = "true"
@@ -324,3 +438,9 @@ do
     # after the first termination of the set loop, no file needs to be initialized anymore
     INIT="false"
 done # end for TSTNAME
+
+# flush any remaining instances in auto mode
+if test "${AUTO_PPN_PENDING}" -eq 1 && test "${AUTO_BATCH_COUNT}" -gt 0
+then
+    flush_auto_batch
+fi
