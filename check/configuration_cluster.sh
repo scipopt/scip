@@ -96,8 +96,7 @@ then
     TARGETFREQ=1980945
     # exclude broken nodes
     test "${EXCLUDENODES}" = "none" && EXCLUDENODES=""
-    # TODO: add 145 after cluster migration
-    EXCLUDENODES="htc-cmp[101-102,104]${EXCLUDENODES:+,${EXCLUDENODES}}"
+    EXCLUDENODES="htc-cmp145${EXCLUDENODES:+,${EXCLUDENODES}}"
 elif test "${CLUSTERQUEUE}" = "R650"
 then
     CONSTRAINT="Gold6342"
