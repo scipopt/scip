@@ -222,6 +222,8 @@ Interface changes
 - added SCIPinitCutGenParams(), SCIPcreateCutGenResult(), and SCIPfreeCutGenResult() as helper functions for SCIPcalcBestCut()
 - added SCIPnlpiOracleEvalObjectiveInterval() and SCIPnlpiOracleEvalConstraintInterval()
 - added SCIPiisGetSubscipCons() and SCIPiisGetSubscipVar() to get the variables and constraints of the IIS subscip corresponding to the main problem
+- added SCIPgetSolvingPhase() along with enum SCIP_SOLVINGPHASE to query the current solving phase tracked by the solvingphase event handler, phase evaluation requires `solvingphases/enabled = TRUE` or `solvingphases/testmode = TRUE`
+- added SCIPgetSolvingPhaseFlags() along with typedef SCIP_SOLVINGPHASEFLAG for flags SCIP_SOLVINGPHASEFLAG_NONE/RANK1/ESTIMATE/OPTIMAL/LOG to query which reached transition criteria have been detected by the solvingphase event handler, flag evaluation requires `solvingphases/enabled = TRUE` or `solvingphases/testmode = TRUE`
 
 ### New parameters
 
