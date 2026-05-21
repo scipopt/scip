@@ -16127,7 +16127,7 @@ SCIP_DECL_CONSPROP(consPropLinear)
    SCIP_Bool rangedrowpropagation = FALSE;
    SCIP_Bool tightenbounds;
    SCIP_Bool cutoff;
-   int naddconss = 0;
+   int naddedconss = 0;
    int nchgbds = 0;
    int i;
 
@@ -16174,8 +16174,8 @@ SCIP_DECL_CONSPROP(consPropLinear)
    {
       SCIP_CALL( SCIPunmarkConsPropagate(scip, conss[i]) );
       SCIP_CALL( propagateCons(scip, conss[i], tightenbounds, rangedrowpropagation,
-            conshdlrdata->maxeasyactivitydelta, conshdlrdata->sortvars, &cutoff, &nchgbds, &naddconss) );
-      assert(naddconss == 0 || (SCIPgetStage(scip) != SCIP_STAGE_PRESOLVING));
+            conshdlrdata->maxeasyactivitydelta, conshdlrdata->sortvars, &cutoff, &nchgbds, &naddedconss) );
+      assert(naddedconss == 0 || (SCIPgetStage(scip) != SCIP_STAGE_PRESOLVING));
    }
 
    /* adjust result code */
@@ -16183,6 +16183,8 @@ SCIP_DECL_CONSPROP(consPropLinear)
       *result = SCIP_CUTOFF;
    else if( nchgbds > 0 )
       *result = SCIP_REDUCEDDOM;
+   else if( naddedconss > 0 )
+      *result = SCIP_CONSADDED;
    else
       *result = SCIP_DIDNOTFIND;
 
