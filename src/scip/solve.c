@@ -529,7 +529,7 @@ SCIP_RETCODE propagationRound(
       }
 
       /* if we work off the delayed propagators, we stop immediately if a reduction was found */
-      if( onlydelayed && result == SCIP_REDUCEDDOM )
+      if( onlydelayed && (result == SCIP_REDUCEDDOM || result == SCIP_CONSADDED) )
       {
          *delayed = TRUE;
          return SCIP_OKAY;
