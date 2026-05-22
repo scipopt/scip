@@ -3977,6 +3977,7 @@ SCIP_RETCODE SCIPconshdlrPropagate(
          {
             SCIP_CONS** conss;
             SCIP_Longint oldndomchgs;
+            SCIP_Longint oldnactiveconss;
             SCIP_Longint oldnprobdomchgs;
             SCIP_Longint lastpropdomchgcount;
             int lastnusefulpropconss;
@@ -3994,6 +3995,7 @@ SCIP_RETCODE SCIPconshdlrPropagate(
 
             oldndomchgs = stat->nboundchgs + stat->nholechgs;
             oldnprobdomchgs = stat->nprobboundchgs + stat->nprobholechgs;
+            oldnactiveconss = stat->nactiveconss;
 
             /* check, if we want to use eager evaluation */
             if( (conshdlr->eagerfreq == 0 && conshdlr->npropcalls == 0)
@@ -4035,6 +4037,7 @@ SCIP_RETCODE SCIPconshdlrPropagate(
             {
                conshdlr->lastpropdomchgcount = lastpropdomchgcount;
                conshdlr->lastnusefulpropconss = MIN(conshdlr->nusefulpropconss, lastnusefulpropconss);
+               conshdlr->nconssfound += MAX(stat->nactiveconss - oldnactiveconss, 0); /*lint !e776*/
                conshdlr->npropcalls++;
             }
             else
@@ -4052,6 +4055,7 @@ SCIP_RETCODE SCIPconshdlrPropagate(
 
             /* check result code of callback method */
             if( *result != SCIP_CUTOFF
+               && *result != SCIP_CONSADDED
                && *result != SCIP_REDUCEDDOM
                && *result != SCIP_DIDNOTFIND
                && *result != SCIP_DIDNOTRUN
