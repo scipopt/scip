@@ -94,9 +94,9 @@ then
     CONSTRAINT="Gold6338"
     CLUSTERQUEUE="big"
     TARGETFREQ=1980945
-    # exclude broken nodes
+    # exclude nodes with broken frequency scaling
     test "${EXCLUDENODES}" = "none" && EXCLUDENODES=""
-    EXCLUDENODES="htc-cmp145${EXCLUDENODES:+,${EXCLUDENODES}}"
+    EXCLUDENODES="htc-cmp126,htc-cmp[145-148]${EXCLUDENODES:+,${EXCLUDENODES}}"
 elif test "${CLUSTERQUEUE}" = "R650"
 then
     CONSTRAINT="Gold6342"
