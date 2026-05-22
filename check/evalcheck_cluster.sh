@@ -151,15 +151,33 @@ do
                 if test -e "${PERFF}"
                 then
                     PERFDATA=$(awk -F, 'NF>1 && !/^#/ && $1 !~ /<not/ {printf " %s=%s", $3, $1}' "${PERFF}")
-                    MEANFREQ=$(awk -F, '
+                    read MEANFREQ NMSFREQ <<< $(awk -F, '
                         $3 == "cpu-cycles:u" { cu = $1 }
                         $3 == "cpu-cycles:k" { ck = $1 }
                         $3 == "task-clock"   { tc = $1 }
-                        END { if( tc > 0 ) printf "%.0f", (cu + ck) / tc; else print 0 }
+                        $3 == "cycle_activity.stalls_mem_any" { sm = $1 }
+                        END {
+                            mf = (tc > 0) ? (cu + ck) / tc : 0;
+                            nmsc = cu + ck - sm; if (nmsc <= 0) nmsc = 1;
+                            nmsf = (tc > 0) ? nmsc / tc : 0;
+                            printf "%.0f %.0f", mf, nmsf;
+                        }
                     ' "${PERFF}")
-                    awk -v perfline="@06${PERFDATA}" -v freqline="@10 meanfreq=${MEANFREQ}" \
-                        '/^=ready=/ { print perfline; print freqline } { print }' \
-                        "${FILE}" >> "${OUTFILE}"
+                    awk -v perfline="@06${PERFDATA}" \
+                        -v meanfreq="${MEANFREQ}" -v nmsfreq="${NMSFREQ}" \
+                        '
+                        /@05/                      { timelimit = $2 }
+                        /@09/                      { targetfreq = $2 }
+                        /^  solving          :/    { tottime = $3 }
+                        /^=ready=/ {
+                            normtime = (nmsfreq > 0 && targetfreq > 0) ? tottime * (nmsfreq / targetfreq) : tottime;
+                            if( timelimit > 0 && (tottime >= timelimit || normtime >= timelimit) )
+                                normtime = timelimit;
+                            print perfline;
+                            printf "@10 meanfreq=%d nmsfreq=%d normtime=%.3f\n", meanfreq, nmsfreq, normtime;
+                        }
+                        { print }
+                        ' "${FILE}" >> "${OUTFILE}"
                 else
                     cat "${FILE}" >> "${OUTFILE}"
                 fi
