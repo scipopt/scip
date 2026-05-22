@@ -653,7 +653,7 @@ BEGIN {
       printsoltimes = 0;
       validline = 1;
    }
-   if( $18 in statuses && $13+0 > 1000000 ) # SCIP with perf counters (5 columns: instr, cycles, clock, meanfreq, normtime)
+   if( $18 in statuses ) # SCIP with perf counters (5 columns: instr, cycles, clock, nmsfreq, normtime)
    {
       type[nsolver,nprobs[nsolver]] = $2;
       conss[nsolver,nprobs[nsolver]] = $5;
@@ -665,14 +665,14 @@ BEGIN {
       nodes[nsolver,nprobs[nsolver]] = max($11,1);
       time[nsolver,nprobs[nsolver]] = fracceil(max($12,mintime),0.001);
       instructions[nsolver,nprobs[nsolver]] = $13;
-      meanfreq[nsolver,nprobs[nsolver]] = $16;
+      nmsfreq[nsolver,nprobs[nsolver]] = $16;
       normtime[nsolver,nprobs[nsolver]] = fracceil(max($17,mintime),0.001);
       printinstructions = 1;
       status[nsolver,nprobs[nsolver]] = $18;
       printsoltimes = 0;
       validline = 1;
    }
-   if( $18 in statuses && $13+0 <= 1000000 ) # SCIP with solution times and perf counters (3 perf columns)
+   if( $19 in statuses ) # SCIP with conflict analysis
    {
       type[nsolver,nprobs[nsolver]] = $2;
       conss[nsolver,nprobs[nsolver]] = $5;
@@ -683,11 +683,10 @@ BEGIN {
       iters[nsolver,nprobs[nsolver]] = $10;
       nodes[nsolver,nprobs[nsolver]] = max($11,1);
       time[nsolver,nprobs[nsolver]] = fracceil(max($12,mintime),0.001);
-      timetofirst[nsolver,nprobs[nsolver]] = fracceil(max($13,mintime),0.001);
-      timetobest[nsolver, nprobs[nsolver]] = fracceil(max($14, mintime), 0.001);
-      instructions[nsolver,nprobs[nsolver]] = $15;
-      printinstructions = 1;
-      status[nsolver,nprobs[nsolver]] = $18;
+      confs[nsolver,nprobs[nsolver]] = $13+$14+$15+$16+$17;
+      conftime[nsolver,nprobs[nsolver]] = max($18, 0.1);
+      status[nsolver,nprobs[nsolver]] = $19;
+      printconfs = 1;
       validline = 1;
    }
    if( $20 in statuses ) # SCIP with solution times and perf counters (5 perf columns)
@@ -704,28 +703,10 @@ BEGIN {
       timetofirst[nsolver,nprobs[nsolver]] = fracceil(max($13,mintime),0.001);
       timetobest[nsolver, nprobs[nsolver]] = fracceil(max($14, mintime), 0.001);
       instructions[nsolver,nprobs[nsolver]] = $15;
-      meanfreq[nsolver,nprobs[nsolver]] = $18;
+      nmsfreq[nsolver,nprobs[nsolver]] = $18;
       normtime[nsolver,nprobs[nsolver]] = fracceil(max($19,mintime),0.001);
       printinstructions = 1;
       status[nsolver,nprobs[nsolver]] = $20;
-      validline = 1;
-   }
-   if( $19 in statuses ) # SCIP with conflict analysis
-   {
-      # collect data (line with problem type, original and presolved problem size and simplex iterations)
-      type[nsolver,nprobs[nsolver]] = $2;
-      conss[nsolver,nprobs[nsolver]] = $5;
-      vars[nsolver,nprobs[nsolver]] = $6;
-      dualbound[nsolver,nprobs[nsolver]] = max(min($7, +infinity), -infinity);
-      primalbound[nsolver,nprobs[nsolver]] = max(min($8, +infinity), -infinity);
-      gap[nsolver,nprobs[nsolver]] = $9;
-      iters[nsolver,nprobs[nsolver]] = $10;
-      nodes[nsolver,nprobs[nsolver]] = max($11,1);
-      time[nsolver,nprobs[nsolver]] = fracceil(max($12,mintime),0.001);
-      confs[nsolver,nprobs[nsolver]] = $13+$14+$15+$16+$17;
-      conftime[nsolver,nprobs[nsolver]] = max($18, 0.1);
-      status[nsolver,nprobs[nsolver]] = $19;
-      printconfs = 1;
       validline = 1;
    }
    if( $22 in statuses ) # SCIP with conflict analysis and perf counters (3 perf columns)
@@ -761,7 +742,7 @@ BEGIN {
       confs[nsolver,nprobs[nsolver]] = $13+$14+$15+$16+$17;
       conftime[nsolver,nprobs[nsolver]] = max($18, 0.1);
       instructions[nsolver,nprobs[nsolver]] = $19;
-      meanfreq[nsolver,nprobs[nsolver]] = $22;
+      nmsfreq[nsolver,nprobs[nsolver]] = $22;
       normtime[nsolver,nprobs[nsolver]] = fracceil(max($23,mintime),0.001);
       printinstructions = 1;
       status[nsolver,nprobs[nsolver]] = $24;
@@ -980,7 +961,7 @@ END {
       if( s == 0 || short )
       {
          printf("F|   Nodes |     Time |");
-         if( printinstructions ) printf(" Instructions | MeanFreq | NrmTime|");
+         if( printinstructions ) printf(" Instructions |  NMSFreq | NrmTime|");
       }
       else
       {
@@ -1309,8 +1290,8 @@ END {
                   line = sprintf("%s %14d", line, instructions[s,pidx]);
                else
                   line = sprintf("%s              -", line);
-               if( meanfreq[s,pidx]+0 > 0 )
-                  line = sprintf("%s %10.0f", line, meanfreq[s,pidx]);
+               if( nmsfreq[s,pidx]+0 > 0 )
+                  line = sprintf("%s %10.0f", line, nmsfreq[s,pidx]);
                else
                   line = sprintf("%s          -", line);
                if( normtime[s,pidx]+0 > 0 )
