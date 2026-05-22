@@ -8,6 +8,7 @@ Fixed bugs
 
 - disregard deletable flag in IIS generation to reenable removal of unused variables
 - fixed that doc target in cmake builds was not available when using -DBUILD_TESTING=OFF
+- fixed statistic on added linear constraints in propagation
 
 Miscellaneous
 -------------
@@ -16,6 +17,7 @@ Miscellaneous
   perf statistics are collected in a .perf file and are then copied into the .out file (new section @06)
 - check scripts now write available memory (kB) and the current cumulative CPU ticks (from /proc/stat)
   before and after the solve to the .out file (new sections @07 and @08)
+- allow to return SCIP_CONSADDED when propagating constraints
 
 @section RN1002 SCIP 10.0.2
 ***************************
