@@ -5797,8 +5797,10 @@ SCIP_RETCODE rangedRowPropagation(
 
       consdata->rangedrowpropagated = 1;
    }
+
    fixedact = 0;
    nfixedconsvars = 0;
+
    /* calculate fixed activity and number of fixed variables */
    for( v = consdata->nvars - 1; v >= 0; --v )
    {
@@ -7634,7 +7636,8 @@ SCIP_RETCODE propagateCons(
    SCIP_Real             maxeasyactivitydelta,/**< maximum activity delta to run easy propagation on linear constraint */
    SCIP_Bool             sortvars,           /**< should variable sorting for faster propagation be used? */
    SCIP_Bool*            cutoff,             /**< pointer to store whether the node can be cut off */
-   int*                  nchgbds             /**< pointer to count the total number of tightened bounds */
+   int*                  nchgbds,            /**< pointer to count the number of bound changes */
+   int*                  naddconss           /**< pointer to count number of added constraints */
    )
 {
    SCIP_CONSDATA* consdata;
@@ -7700,14 +7703,11 @@ SCIP_RETCODE propagateCons(
       /* propagate ranged rows */
       if( rangedrowpropagation && tightenbounds && !(*cutoff) )
       {
-         int nfixedvars;
-         int naddconss;
+         int nfixedvars = 0;
+
          SCIPdebug( int oldnchgbds = *nchgbds; )
 
-         nfixedvars = 0;
-         naddconss = 0;
-
-         SCIP_CALL( rangedRowPropagation(scip, cons, cutoff, &nfixedvars, nchgbds, &naddconss) );
+         SCIP_CALL( rangedRowPropagation(scip, cons, cutoff, &nfixedvars, nchgbds, naddconss) );
 
          if( *cutoff )
          {
@@ -7719,7 +7719,7 @@ SCIP_RETCODE propagateCons(
          }
 
          if( nfixedvars > 0 )
-            *nchgbds += 2*nfixedvars;
+            *nchgbds += 2 * nfixedvars;
       } /*lint !e438*/
 
       /* check constraint for infeasibility and redundancy */
@@ -16139,8 +16139,8 @@ SCIP_DECL_CONSPROP(consPropLinear)
    SCIP_Bool rangedrowpropagation = FALSE;
    SCIP_Bool tightenbounds;
    SCIP_Bool cutoff;
-
-   int nchgbds;
+   int naddedconss = 0;
+   int nchgbds = 0;
    int i;
 
    assert(scip != NULL);
@@ -16177,17 +16177,18 @@ SCIP_DECL_CONSPROP(consPropLinear)
       rangedrowfreq = propfreq * conshdlrdata->rangedrowfreq;
       rangedrowpropagation = rangedrowpropagation && (conshdlrdata->rangedrowfreq >= 0)
          && ((rangedrowfreq == 0 && depth == 0) || (rangedrowfreq >= 1 && (depth % rangedrowfreq == 0)));
+      rangedrowpropagation = rangedrowpropagation && (SCIPgetStage(scip) != SCIP_STAGE_PRESOLVING);  /* ranged rows are also presolved */
    }
 
    cutoff = FALSE;
-   nchgbds = 0;
 
    /* process constraints marked for propagation */
    for( i = 0; i < nmarkedconss && !cutoff; i++ )
    {
       SCIP_CALL( SCIPunmarkConsPropagate(scip, conss[i]) );
       SCIP_CALL( propagateCons(scip, conss[i], tightenbounds, rangedrowpropagation,
-            conshdlrdata->maxeasyactivitydelta, conshdlrdata->sortvars, &cutoff, &nchgbds) );
+            conshdlrdata->maxeasyactivitydelta, conshdlrdata->sortvars, &cutoff, &nchgbds, &naddedconss) );
+      assert(naddedconss == 0 || (SCIPgetStage(scip) != SCIP_STAGE_PRESOLVING));
    }
 
    /* adjust result code */
@@ -16195,6 +16196,8 @@ SCIP_DECL_CONSPROP(consPropLinear)
       *result = SCIP_CUTOFF;
    else if( nchgbds > 0 )
       *result = SCIP_REDUCEDDOM;
+   else if( naddedconss > 0 )
+      *result = SCIP_CONSADDED;
    else
       *result = SCIP_DIDNOTFIND;
 

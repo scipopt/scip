@@ -496,6 +496,7 @@ typedef enum SCIP_LinConstype SCIP_LINCONSTYPE;
  *
  *  possible return values for *result:
  *  - SCIP_CUTOFF     : the node is infeasible in the variable's bounds and can be cut off
+ *  - SCIP_CONSADDED  : an additional constraint was generated
  *  - SCIP_REDUCEDDOM : at least one domain reduction was found
  *  - SCIP_DIDNOTFIND : the propagator searched but did not find any domain reductions
  *  - SCIP_DIDNOTRUN  : the propagator was skipped
