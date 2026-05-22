@@ -65,6 +65,7 @@ Fixed bugs
 
 - disregard deletable flag in IIS generation to reenable removal of unused variables
 - fixed that doc target in cmake builds was not available when using -DBUILD_TESTING=OFF
+- fixed statistic on added linear constraints in propagation
 - keep variable for impossible substitution in presolRoundCardinality() to avoid duplication error
 
 Miscellaneous
@@ -74,6 +75,7 @@ Miscellaneous
 - PPN used as instance limit per node in auto exclusive mode
 - added DEBUGTOOL=perf option for check scripts to collect perf statistics (new sections @06, @09, @10), including computation and comparison of frequency-normalized time while switching to --cpu-freq=medium-medium:Performance for stable frequency scaling
 - check scripts now write available memory (kB) and the current cumulative CPU ticks (from /proc/stat) before and after the solve to the .out file (new sections @07 and @08)
+- allow to return SCIP_CONSADDED when propagating constraints
 
 @section RN1002 SCIP 10.0.2
 ***************************
