@@ -231,9 +231,9 @@ flush_auto_batch() {
         return
     fi
     GROUP_MEM=$(( AUTO_BATCH_COUNT * HARDMEMLIMIT ))
-    echo sbatch --job-name="${AUTO_BATCH_JOBNAME}" --constraint="${CONSTRAINT}" --mem="${GROUP_MEM}" -n "${AUTO_BATCH_COUNT}" -c "${THREADS_SAFE}" -p "${CLUSTERQUEUE}" -A "${SLURMACCOUNT}" ${NICE} --time="${AUTO_BATCH_TIME}" --cpu-freq=medium-medium:Performance --exclusive ${NODE_FLAGS} --output=/dev/null run_group.sh
+    echo sbatch --job-name="${AUTO_BATCH_JOBNAME}" --constraint="${CONSTRAINT}" --mem="${GROUP_MEM}" -n "${AUTO_BATCH_COUNT}" -c "${THREADS_SAFE}" --distribution=cyclic:cyclic -p "${CLUSTERQUEUE}" -A "${SLURMACCOUNT}" ${NICE} --time="${AUTO_BATCH_TIME}" --cpu-freq=medium-medium:Performance --exclusive ${NODE_FLAGS} --output=/dev/null run_group.sh
     echo "instances:${AUTO_BATCH_NAMES}"
-    sbatch --job-name="${AUTO_BATCH_JOBNAME}" --constraint="${CONSTRAINT}" --mem="${GROUP_MEM}" -n "${AUTO_BATCH_COUNT}" -c "${THREADS_SAFE}" -p "${CLUSTERQUEUE}" -A "${SLURMACCOUNT}" ${NICE} --time="${AUTO_BATCH_TIME}" --cpu-freq=medium-medium:Performance --exclusive ${NODE_FLAGS} --output=/dev/null run_group.sh "${AUTO_SRUN}" "${AUTO_BATCH_COUNT}" "${THREADS_SAFE}" "${AUTO_BATCH_ARGS[@]}"
+    sbatch --job-name="${AUTO_BATCH_JOBNAME}" --constraint="${CONSTRAINT}" --mem="${GROUP_MEM}" -n "${AUTO_BATCH_COUNT}" -c "${THREADS_SAFE}" --distribution=cyclic:cyclic -p "${CLUSTERQUEUE}" -A "${SLURMACCOUNT}" ${NICE} --time="${AUTO_BATCH_TIME}" --cpu-freq=medium-medium:Performance --exclusive ${NODE_FLAGS} --output=/dev/null run_group.sh "${AUTO_SRUN}" "${AUTO_BATCH_COUNT}" "${AUTO_BATCH_ARGS[@]}"
     # reset accumulator
     AUTO_BATCH_COUNT=0
     AUTO_BATCH_JOBNAME=""
@@ -370,7 +370,7 @@ do
 
                     if test "${WRITESETTINGS}" = "true"
                     then
-                        sbatch --job-name=write-settings -c "${THREADS_SAFE}" --mem="${HARDMEMLIMIT}" -p "${CLUSTERQUEUE}" -A "${SLURMACCOUNT}" ${NICE} --time="${HARDTIMELIMIT}" --cpu-freq=medium-medium:Performance ${EXCLUSIVE} --output=/dev/null write-settings.sh
+                        sbatch --job-name=write-settings -n 1 -c "${THREADS_SAFE}" --mem="${HARDMEMLIMIT}" -p "${CLUSTERQUEUE}" -A "${SLURMACCOUNT}" ${NICE} --time="${HARDTIMELIMIT}" --cpu-freq=medium-medium:Performance ${EXCLUSIVE} --output=/dev/null write-settings.sh
                     fi
 
                     if test "${AUTO_PPN_PENDING}" -eq 1
@@ -397,19 +397,19 @@ do
                     else
                         if test "${CLUSTERNODES}" = "all" && test "${EXCLUDENODES}" = "none"
                         then
-                            echo sbatch --job-name="${JOBNAME}" --constraint="${CONSTRAINT}" -c "${THREADS_SAFE}" --mem="${HARDMEMLIMIT}" -p "${CLUSTERQUEUE}" -A "${SLURMACCOUNT}" ${NICE} --time="${HARDTIMELIMIT}" --cpu-freq=medium-medium:Performance ${EXCLUSIVE} --output=/dev/null run.sh
-                            sbatch --job-name="${JOBNAME}" --constraint="${CONSTRAINT}" -c "${THREADS_SAFE}" --mem="${HARDMEMLIMIT}" -p "${CLUSTERQUEUE}" -A "${SLURMACCOUNT}" ${NICE} --time="${HARDTIMELIMIT}" --cpu-freq=medium-medium:Performance ${EXCLUSIVE} --output=/dev/null run.sh
+                            echo sbatch --job-name="${JOBNAME}" --constraint="${CONSTRAINT}" -n 1 -c "${THREADS_SAFE}" --mem="${HARDMEMLIMIT}" -p "${CLUSTERQUEUE}" -A "${SLURMACCOUNT}" ${NICE} --time="${HARDTIMELIMIT}" --cpu-freq=medium-medium:Performance ${EXCLUSIVE} --output=/dev/null run.sh
+                            sbatch --job-name="${JOBNAME}" --constraint="${CONSTRAINT}" -n 1 -c "${THREADS_SAFE}" --mem="${HARDMEMLIMIT}" -p "${CLUSTERQUEUE}" -A "${SLURMACCOUNT}" ${NICE} --time="${HARDTIMELIMIT}" --cpu-freq=medium-medium:Performance ${EXCLUSIVE} --output=/dev/null run.sh
                         elif test "${CLUSTERNODES}" != "all" && test "${EXCLUDENODES}" = "none"
                         then
-                            echo sbatch --job-name="${JOBNAME}" --constraint="${CONSTRAINT}" -c "${THREADS_SAFE}" --mem="${HARDMEMLIMIT}" -p "${CLUSTERQUEUE}" -A "${SLURMACCOUNT}" ${NICE} --time="${HARDTIMELIMIT}" --cpu-freq=medium-medium:Performance ${EXCLUSIVE} -w "${CLUSTERNODES}" --output=/dev/null run.sh
-                            sbatch --job-name="${JOBNAME}" --constraint="${CONSTRAINT}" -c "${THREADS_SAFE}" --mem="${HARDMEMLIMIT}" -p "${CLUSTERQUEUE}" -A "${SLURMACCOUNT}" ${NICE} --time="${HARDTIMELIMIT}" --cpu-freq=medium-medium:Performance ${EXCLUSIVE} -w "${CLUSTERNODES}" --output=/dev/null run.sh
+                            echo sbatch --job-name="${JOBNAME}" --constraint="${CONSTRAINT}" -n 1 -c "${THREADS_SAFE}" --mem="${HARDMEMLIMIT}" -p "${CLUSTERQUEUE}" -A "${SLURMACCOUNT}" ${NICE} --time="${HARDTIMELIMIT}" --cpu-freq=medium-medium:Performance ${EXCLUSIVE} -w "${CLUSTERNODES}" --output=/dev/null run.sh
+                            sbatch --job-name="${JOBNAME}" --constraint="${CONSTRAINT}" -n 1 -c "${THREADS_SAFE}" --mem="${HARDMEMLIMIT}" -p "${CLUSTERQUEUE}" -A "${SLURMACCOUNT}" ${NICE} --time="${HARDTIMELIMIT}" --cpu-freq=medium-medium:Performance ${EXCLUSIVE} -w "${CLUSTERNODES}" --output=/dev/null run.sh
                         elif test "${CLUSTERNODES}" = "all" && test "${EXCLUDENODES}" != "none"
                         then
-                            echo sbatch --job-name="${JOBNAME}" --constraint="${CONSTRAINT}" -c "${THREADS_SAFE}" --mem="${HARDMEMLIMIT}" -p "${CLUSTERQUEUE}" -A "${SLURMACCOUNT}" ${NICE} --time="${HARDTIMELIMIT}" --cpu-freq=medium-medium:Performance ${EXCLUSIVE} -x "${EXCLUDENODES}" --output=/dev/null run.sh
-                            sbatch --job-name="${JOBNAME}" --constraint="${CONSTRAINT}" -c "${THREADS_SAFE}" --mem="${HARDMEMLIMIT}" -p "${CLUSTERQUEUE}" -A "${SLURMACCOUNT}" ${NICE} --time="${HARDTIMELIMIT}" --cpu-freq=medium-medium:Performance ${EXCLUSIVE} -x "${EXCLUDENODES}" --output=/dev/null run.sh
+                            echo sbatch --job-name="${JOBNAME}" --constraint="${CONSTRAINT}" -n 1 -c "${THREADS_SAFE}" --mem="${HARDMEMLIMIT}" -p "${CLUSTERQUEUE}" -A "${SLURMACCOUNT}" ${NICE} --time="${HARDTIMELIMIT}" --cpu-freq=medium-medium:Performance ${EXCLUSIVE} -x "${EXCLUDENODES}" --output=/dev/null run.sh
+                            sbatch --job-name="${JOBNAME}" --constraint="${CONSTRAINT}" -n 1 -c "${THREADS_SAFE}" --mem="${HARDMEMLIMIT}" -p "${CLUSTERQUEUE}" -A "${SLURMACCOUNT}" ${NICE} --time="${HARDTIMELIMIT}" --cpu-freq=medium-medium:Performance ${EXCLUSIVE} -x "${EXCLUDENODES}" --output=/dev/null run.sh
                         else
-                            echo sbatch --job-name="${JOBNAME}" --constraint="${CONSTRAINT}" -c "${THREADS_SAFE}" --mem="${HARDMEMLIMIT}" -p "${CLUSTERQUEUE}" -A "${SLURMACCOUNT}" ${NICE} --time="${HARDTIMELIMIT}" --cpu-freq=medium-medium:Performance ${EXCLUSIVE} -w "${CLUSTERNODES}" -x "${EXCLUDENODES}" --output=/dev/null run.sh
-                            sbatch --job-name="${JOBNAME}" --constraint="${CONSTRAINT}" -c "${THREADS_SAFE}" --mem="${HARDMEMLIMIT}" -p "${CLUSTERQUEUE}" -A "${SLURMACCOUNT}" ${NICE} --time="${HARDTIMELIMIT}" --cpu-freq=medium-medium:Performance ${EXCLUSIVE} -w "${CLUSTERNODES}" -x "${EXCLUDENODES}" --output=/dev/null run.sh
+                            echo sbatch --job-name="${JOBNAME}" --constraint="${CONSTRAINT}" -n 1 -c "${THREADS_SAFE}" --mem="${HARDMEMLIMIT}" -p "${CLUSTERQUEUE}" -A "${SLURMACCOUNT}" ${NICE} --time="${HARDTIMELIMIT}" --cpu-freq=medium-medium:Performance ${EXCLUSIVE} -w "${CLUSTERNODES}" -x "${EXCLUDENODES}" --output=/dev/null run.sh
+                            sbatch --job-name="${JOBNAME}" --constraint="${CONSTRAINT}" -n 1 -c "${THREADS_SAFE}" --mem="${HARDMEMLIMIT}" -p "${CLUSTERQUEUE}" -A "${SLURMACCOUNT}" ${NICE} --time="${HARDTIMELIMIT}" --cpu-freq=medium-medium:Performance ${EXCLUSIVE} -w "${CLUSTERNODES}" -x "${EXCLUDENODES}" --output=/dev/null run.sh
                         fi
                     fi
                 else

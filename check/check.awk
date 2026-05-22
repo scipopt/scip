@@ -359,6 +359,7 @@ BEGIN {
    clock = -1;
    targetfreq = 0;
    meanfreq = 0;
+   nmsfreq = 0;
    normtime = 0;
 }
 
@@ -386,6 +387,8 @@ BEGIN {
    {
       split($i, kv, "=");
       if( kv[1] == "meanfreq" ) meanfreq = kv[2];
+      else if( kv[1] == "nmsfreq" ) nmsfreq = kv[2];
+      else if( kv[1] == "normtime" ) normtime = kv[2];
    }
 }
 
@@ -950,7 +953,7 @@ BEGIN {
       if( printperf )
       {
          tablehead1 = tablehead1"--------------+--------------+--------------+----------+--------+";
-         tablehead2 = tablehead2" Instructions |    Cycles    |    Clock     | MeanFreq |NrmTime |";
+         tablehead2 = tablehead2" Instructions |    Cycles    |    Clock     |  NMSFreq |NrmTime |";
          tablehead3 = tablehead3"--------------+--------------+--------------+----------+--------+";
       }
 
@@ -1103,22 +1106,6 @@ BEGIN {
 
       if( usetimestamps != 0 )
          tottime = endtime - starttime;
-
-      # frequency normalization
-      if( meanfreq > 0 && targetfreq > 0 )
-         normtime = tottime * (meanfreq / targetfreq);
-      else
-         normtime = tottime;
-
-      if( timeout )
-      {
-         normtime = timelimit;
-      }
-      else if( normtime >= timelimit && timelimit > 0.0 )
-      {
-         timeout = 1;
-         normtime = timelimit;
-      }
 
       if( meanfreq > 0 && targetfreq > 0 )
       {
@@ -1421,7 +1408,7 @@ BEGIN {
             printf("%9.3f %9.3f ", timetofirst, timetobest);
 
 	 if( printperf )
-            printf("%14d %14d %14.3f %10.0f %8.3f ", instructions, cycles, clock, meanfreq, normtime);
+            printf("%14d %14d %14.3f %10.0f %8.3f ", instructions, cycles, clock, nmsfreq, normtime);
 
          printf("%s\n", status);
       }
