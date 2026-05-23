@@ -25,7 +25,7 @@
 
 # launches multiple solver instances in parallel on one exclusive node.
 # used by check_cluster.sh when EXCLUSIVE=auto to pack instances onto one node.
-# core assignment is handled by Slurm via --distribution=cyclic:cyclic on sbatch.
+# core assignment by task rank via single srun -n N with --distribution=cyclic:cyclic.
 #
 # usage: run_group.sh SRUN_PREFIX NUM_INSTANCES [FIELDS...]
 #
@@ -36,18 +36,23 @@
 SRUN_PREFIX="$1"
 NUM_INSTANCES="$2"
 shift 2
-
+# encode per-instance parameters as indexed environment variables
 for ((i = 0; i < NUM_INSTANCES; i++))
 do
-    # delay launches so that srun steps bind stable cores
-    sleep 0.0078125
-    (
-    export SOLVERPATH="$1" BASENAME="$2" FILENAME="$3" CLIENTTMPDIR="$4" OUTPUTDIR="$5" \
-        HARDTIMELIMIT="$6" HARDMEMLIMIT="$7" CHECKERPATH="$8" SETFILE="$9" TIMELIMIT="${10}" \
-        EXECNAME="${11}" VIPRCHECKNAME="${12}" VIPRCOMPNAME="${13}" VIPRCOMPRESSNAME="${14}"
-    export SRUN="${SRUN_PREFIX} --cpu_bind=verbose,cores"
-    ./run.sh
-    ) &
+    printf -v "INST_${i}" 'export SOLVERPATH=%q BASENAME=%q FILENAME=%q CLIENTTMPDIR=%q OUTPUTDIR=%q HARDTIMELIMIT=%q HARDMEMLIMIT=%q CHECKERPATH=%q SETFILE=%q TIMELIMIT=%q EXECNAME=%q VIPRCHECKNAME=%q VIPRCOMPNAME=%q VIPRCOMPRESSNAME=%q' \
+        "$1" "$2" "$3" "$4" "$5" "$6" "$7" "$8" "$9" "${10}" "${11}" "${12}" "${13}" "${14}"
+    export "INST_${i}"
     shift 14
+done
+
+# hold cores until all steps submitted
+TICK=0.03125
+HOLD=$(awk "BEGIN {printf \"%.5f\", ${NUM_INSTANCES} * ${TICK}}")
+
+# delay launches so that srun steps bind stable cores
+for ((i = 0; i < NUM_INSTANCES; i++))
+do
+    sleep ${TICK}
+    (n=INST_${i}; eval "${!n}"; EXECNAME="bash -c 'sleep ${HOLD}; ${EXECNAME}'"; export SRUN="${SRUN_PREFIX}"; ./run.sh) &
 done
 wait

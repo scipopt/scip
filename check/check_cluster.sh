@@ -214,7 +214,7 @@ COUNT=0
 # auto mode: compute srun prefix for within-job steps
 if test "${AUTO_PPN_PENDING}" -eq 1
 then
-    AUTO_SRUN="srun --exact -n 1 -c ${THREADS_SAFE} --mem=${HARDMEMLIMIT} --propagate=STACK ${SRUN_FLAGS}"
+    AUTO_SRUN="srun --exact -n 1 -c ${THREADS_SAFE} --mem=${HARDMEMLIMIT} --cpu_bind=verbose,cores --propagate=STACK ${SRUN_FLAGS}"
 fi
 
 # auto mode batch accumulator
@@ -363,11 +363,6 @@ do
                 # check queue type
                 if test  "${QUEUETYPE}" = "srun"
                 then
-                    if test "${CLUSTERQUEUE}" != "moskito" && test "${CLUSTERQUEUE}" != "prio"
-                    then
-                        export SRUN="srun --propagate=STACK --cpu_bind=verbose,cores ${SRUN_FLAGS}"
-                    fi
-
                     if test "${WRITESETTINGS}" = "true"
                     then
                         sbatch --job-name=write-settings -n 1 -c "${THREADS_SAFE}" --mem="${HARDMEMLIMIT}" -p "${CLUSTERQUEUE}" -A "${SLURMACCOUNT}" ${NICE} --time="${HARDTIMELIMIT}" --cpu-freq=medium-medium:Performance ${EXCLUSIVE} --output=/dev/null write-settings.sh
@@ -395,6 +390,7 @@ do
                             flush_auto_batch
                         fi
                     else
+                        export SRUN="srun --exact -n 1 -c ${THREADS_SAFE} --mem=${HARDMEMLIMIT} --propagate=STACK --cpu_bind=verbose,cores ${SRUN_FLAGS}"
                         if test "${CLUSTERNODES}" = "all" && test "${EXCLUDENODES}" = "none"
                         then
                             echo sbatch --job-name="${JOBNAME}" --constraint="${CONSTRAINT}" -n 1 -c "${THREADS_SAFE}" --mem="${HARDMEMLIMIT}" -p "${CLUSTERQUEUE}" -A "${SLURMACCOUNT}" ${NICE} --time="${HARDTIMELIMIT}" --cpu-freq=medium-medium:Performance ${EXCLUSIVE} --output=/dev/null run.sh
