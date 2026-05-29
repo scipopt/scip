@@ -23,50 +23,22 @@
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 
-# launches multiple solver instances in parallel on one exclusive node.
-# used by check_cluster.sh when EXCLUSIVE=auto to pack instances onto one node.
-# setup runs first unbound, then solve steps are staggered for stable core binding.
-#
-# usage: run_group.sh SRUN_PREFIX NUM_INSTANCES [FIELDS...]
-#
-# FIELDS contains NUM_INSTANCES groups of 14 positional arguments each:
-#   SOLVERPATH BASENAME FILENAME CLIENTTMPDIR OUTPUTDIR HARDTIMELIMIT HARDMEMLIMIT
-#   CHECKERPATH SETFILE TIMELIMIT EXECNAME VIPRCHECKNAME VIPRCOMPNAME VIPRCOMPRESSNAME
+# replace placeholders and probe perf events in EXECNAME
+# expects: EXECNAME, ERRFILE, PERFFILE
+# sets: EXECNAME (with placeholders resolved)
 
-SRUN_PREFIX="$1"
-NUM_INSTANCES="$2"
-shift 2
+EXECNAME="${EXECNAME/ERRFILE_PLACEHOLDER/${ERRFILE}}"
+EXECNAME="${EXECNAME/RRTRACEFOLDER_PLACEHOLDER/${ERRFILE}}"
+EXECNAME="${EXECNAME/PERFFILE_PLACEHOLDER/${PERFFILE}}"
 
-# encode per-instance parameters with prepared EXECNAME
-for ((i = 0; i < NUM_INSTANCES; i++))
-do
-    EXECNAME="${11}"
-    TMPPATH="$4/${USER}-tmpdir"
-    ERRFILE="${TMPPATH}/$2.err"
-    PERFFILE="${TMPPATH}/$2.perf"
-    . ./prepare_execname.sh
-
-    printf -v "INST_${i}" 'export SOLVERPATH=%q BASENAME=%q FILENAME=%q CLIENTTMPDIR=%q OUTPUTDIR=%q HARDTIMELIMIT=%q HARDMEMLIMIT=%q CHECKERPATH=%q SETFILE=%q TIMELIMIT=%q EXECNAME=%q VIPRCHECKNAME=%q VIPRCOMPNAME=%q VIPRCOMPRESSNAME=%q' \
-        "$1" "$2" "$3" "$4" "$5" "$6" "$7" "$8" "$9" "${10}" "${EXECNAME}" "${12}" "${13}" "${14}"
-    export "INST_${i}"
-    shift 14
-done
-
-# phase 1: setup solver environments
-for ((i = 0; i < NUM_INSTANCES; i++))
-do
-    (n=INST_${i}; eval "${!n}"; ./run.sh setup) &
-done
-wait
-
-# hold cores until all steps submitted
-TICK=0.03125
-HOLD=$(awk "BEGIN {printf \"%.5f\", ${NUM_INSTANCES} * ${TICK}}")
-
-# phase 2: solve and cleanup
-for ((i = 0; i < NUM_INSTANCES; i++))
-do
-    sleep ${TICK}
-    (n=INST_${i}; eval "${!n}"; EXECNAME="bash -c 'sleep ${HOLD}; ${EXECNAME}'"; export SRUN="${SRUN_PREFIX}"; ./run.sh solve) &
-done
-wait
+# determine available perf events on this node
+if echo "${EXECNAME}" | grep -q 'PERFEVENTS_PLACEHOLDER'
+then
+    PERF_EVENTS=""
+    for event in cpu-cycles:u cpu-cycles:k instructions:u instructions:k cache-references:u cache-misses:u branch-instructions:u branch-misses:u L1-dcache-loads:u L1-dcache-load-misses:u L1-icache-load-misses:u dTLB-loads:u dTLB-load-misses:u iTLB-load-misses:u minor-faults:u minor-faults:k major-faults:u major-faults:k context-switches cpu-migrations cycle_activity.cycles_mem_any cycle_activity.stalls_mem_any cycle_activity.stalls_total task-clock; do
+        if perf stat -e "${event}" true 2>/dev/null; then
+            PERF_EVENTS="${PERF_EVENTS:+${PERF_EVENTS},}${event}"
+        fi
+    done
+    EXECNAME="${EXECNAME/PERFEVENTS_PLACEHOLDER/${PERF_EVENTS}}"
+fi

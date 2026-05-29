@@ -26,6 +26,12 @@
 # The script executing EXECNAME on one instance and producing the logfiles.
 # Can be executed either locally or on a cluster node.
 # Is to be invoked inside a 'check(_cluster)*.sh' script.
+#
+# When called with a phase argument (setup/solve), only that phase runs.
+# Without argument (or "all"), all phases run in sequence (backward compatible).
+
+# phase argument: setup, solve, or all (default)
+PHASE="${1:-all}"
 
 # absolut tolerance for checking linear constraints and objective value
 LINTOL=1e-04
@@ -33,13 +39,6 @@ LINTOL=1e-04
 INTTOL=1e-04
 
 TMPPATH="${CLIENTTMPDIR}/${USER}-tmpdir"
-
-# check if tmp-path exists
-if test ! -d "${TMPPATH}"
-then
-    echo "Creating directory ${TMPPATH} for temporary outfile."
-    mkdir "${TMPPATH}"
-fi
 
 OUTFILE="${TMPPATH}/${BASENAME}.out"
 ERRFILE="${TMPPATH}/${BASENAME}.err"
@@ -49,46 +48,60 @@ JSONFILE="${TMPPATH}/${BASENAME}.json"
 PERFFILE="${TMPPATH}/${BASENAME}.perf"
 TMPFILE="${SOLVERPATH}/${OUTPUTDIR}/${BASENAME}.tmp"
 
-uname -a                            > "${OUTFILE}"
-uname -a                            > "${ERRFILE}"
-
 # function to copy back the results and delete temporary files
 function cleanup {
-    mv "${OUTFILE}" "${SOLVERPATH}/${OUTPUTDIR}/${BASENAME}.out"
-    mv "${ERRFILE}" "${SOLVERPATH}/${OUTPUTDIR}/${BASENAME}.err"
-    if [ -d "${ERRFILE}.rr" ]
+    if [[ "${PHASE}" == "all" || "${PHASE}" == "solve" ]]
     then
-        mv -f "${ERRFILE}.rr" "${SOLVERPATH}/${OUTPUTDIR}/${BASENAME}.rr"
+        mv "${OUTFILE}" "${SOLVERPATH}/${OUTPUTDIR}/${BASENAME}.out"
+        mv "${ERRFILE}" "${SOLVERPATH}/${OUTPUTDIR}/${BASENAME}.err"
+        if [ -d "${ERRFILE}.rr" ]
+        then
+            mv -f "${ERRFILE}.rr" "${SOLVERPATH}/${OUTPUTDIR}/${BASENAME}.rr"
+        fi
+        # move a possible data file
+        if [ -f "${DATFILE}" ] ;
+        then
+            mv "${DATFILE}" "${SOLVERPATH}/${OUTPUTDIR}/${BASENAME}.dat"
+        fi
+        # move JSON statistics file
+        if [ -f "${JSONFILE}" ] ;
+        then
+            ( echo -n "\"${FILENAME}\" : " ;
+              cat "${JSONFILE}"
+            ) > "${SOLVERPATH}/${OUTPUTDIR}/${BASENAME}.json"
+            rm "${JSONFILE}"
+        fi
+        # move a solution file
+        if [ -f "${SOLFILE}" ] ;
+        then
+            mv "${SOLFILE}" "${SOLVERPATH}/${OUTPUTDIR}/${BASENAME}.sol"
+            gzip -f "${SOLVERPATH}/${OUTPUTDIR}/${BASENAME}.sol"
+        fi
+        # move perf stat output file
+        if [ -f "${PERFFILE}" ] ;
+        then
+            mv "${PERFFILE}" "${SOLVERPATH}/${OUTPUTDIR}/${BASENAME}.perf"
+        fi
+        rm -f "${TMPFILE}"
     fi
-    # move a possible data file
-    if [ -f "${DATFILE}" ] ;
-    then
-        mv "${DATFILE}" "${SOLVERPATH}/${OUTPUTDIR}/${BASENAME}.dat"
-    fi
-    # move JSON statistics file
-    if [ -f "${JSONFILE}" ] ;
-    then
-        ( echo -n "\"${FILENAME}\" : " ;
-          cat "${JSONFILE}"
-        ) > "${SOLVERPATH}/${OUTPUTDIR}/${BASENAME}.json"
-        rm "${JSONFILE}"
-    fi
-    # move a solution file
-    if [ -f "${SOLFILE}" ] ;
-    then
-        mv "${SOLFILE}" "${SOLVERPATH}/${OUTPUTDIR}/${BASENAME}.sol"
-        gzip -f "${SOLVERPATH}/${OUTPUTDIR}/${BASENAME}.sol"
-    fi
-    # move perf stat output file
-    if [ -f "${PERFFILE}" ] ;
-    then
-        mv "${PERFFILE}" "${SOLVERPATH}/${OUTPUTDIR}/${BASENAME}.perf"
-    fi
-    rm -f "${TMPFILE}"
 }
 
 # ensure TMPFILE is deleted and results are copied when exiting (normally or due to abort/interrupt)
 trap cleanup EXIT
+
+# ===== SETUP PHASE =====
+if [[ "${PHASE}" == "all" || "${PHASE}" == "setup" ]]
+then
+
+# check if tmp-path exists
+if test ! -d "${TMPPATH}"
+then
+    echo "Creating directory ${TMPPATH} for temporary outfile."
+    mkdir "${TMPPATH}"
+fi
+
+uname -a                            > "${OUTFILE}"
+uname -a                            > "${ERRFILE}"
 
 # check if the scripts runs a *.zib.de Linux host
 if $(hostname -f | grep -q zib.de) && [ $(uname) == Linux ]
@@ -142,39 +155,39 @@ echo "-----------------------------"        >> "${OUTFILE}"
 date +"@03 %s"                              >> "${OUTFILE}"
 echo "@05 ${TIMELIMIT}"                     >> "${OUTFILE}"
 
-# zimpl may ran into a stack limit when model equations have too many terms, so we remove that limit
-case "${FILENAME}" in *.zpl ) ulimit -S -s unlimited ;; esac
-
-#if we use a debugger command, we need to replace the errfile place holder by the actual err-file for logging
-#and if we run on the cluster we want to use srun with CPU binding which is defined by the check_cluster script
-EXECNAME="${EXECNAME/ERRFILE_PLACEHOLDER/${ERRFILE}}"
-EXECNAME="${EXECNAME/RRTRACEFOLDER_PLACEHOLDER/${ERRFILE}}"
-EXECNAME="${EXECNAME/PERFFILE_PLACEHOLDER/${PERFFILE}}"
-# determine available perf events on this node
-if echo "${EXECNAME}" | grep -q 'PERFEVENTS_PLACEHOLDER'
-then
-    PERF_EVENTS=""
-    for event in cpu-cycles:u cpu-cycles:k instructions:u instructions:k cache-references:u cache-misses:u branch-instructions:u branch-misses:u L1-dcache-loads:u L1-dcache-load-misses:u L1-icache-load-misses:u dTLB-loads:u dTLB-load-misses:u iTLB-load-misses:u minor-faults:u minor-faults:k major-faults:u major-faults:k context-switches cpu-migrations cycle_activity.cycles_mem_any cycle_activity.stalls_mem_any cycle_activity.stalls_total task-clock; do
-        if perf stat -e "${event}" true 2>/dev/null; then
-            PERF_EVENTS="${PERF_EVENTS:+${PERF_EVENTS},}${event}"
-        fi
-    done
-    EXECNAME="${EXECNAME/PERFEVENTS_PLACEHOLDER/${PERF_EVENTS}}"
-fi
-EXECNAME="${SRUN:+${SRUN} }${EXECNAME}"
-echo "${EXECNAME}"            >> "${ERRFILE}"
 # system state before solve: available memory (kB), cumulative CPU ticks (idle total)
 if test -r /proc/meminfo && test -r /proc/stat
 then
     echo "@07 $(awk '/MemAvailable/ {print $2}' /proc/meminfo) $(awk '/^cpu / {printf "%d %d\n", $5, $2+$3+$4+$5+$6+$7+$8+$9}' /proc/stat)" >> "${OUTFILE}"
 fi
+
+fi # end SETUP PHASE
+
+# setup executable name (done by caller in non-all mode)
+if [[ "${PHASE}" == "all" ]]
+then
+. ./prepare_execname.sh
+fi
+
+# ===== SOLVE PHASE =====
+if [[ "${PHASE}" == "all" || "${PHASE}" == "solve" ]]
+then
+
+# avoid any unnecessary work before eval: varying delay shuffles core assignment
+EXECNAME="${SRUN:+${SRUN} }${EXECNAME}"
+
+# zimpl may ran into a stack limit when model equations have too many terms, so we remove that limit
+case "${FILENAME}" in *.zpl ) ulimit -S -s unlimited ;; esac
+
 if test -e "${TMPFILE}"
 then
-    eval "${EXECNAME}"            < "${TMPFILE}" 2>>"${ERRFILE}"  | tee -a "${OUTFILE}"
+    eval "${EXECNAME}"            < "${TMPFILE}" 2>> "${ERRFILE}" | tee -a "${OUTFILE}"
 else
-    eval "${EXECNAME}"                           2>>"${ERRFILE}"  | tee -a "${OUTFILE}"
+    eval "${EXECNAME}"                           2>> "${ERRFILE}" | tee -a "${OUTFILE}"
 fi
 retcode=${PIPESTATUS[0]}
+echo "${EXECNAME}"                                >> "${ERRFILE}"
+date                                              >> "${ERRFILE}"
 # system state after solve: same format as @07
 if test -r /proc/meminfo && test -r /proc/stat
 then
@@ -189,7 +202,6 @@ fi
 
 echo -----------------------------  >> $OUTFILE
 date                                >> $OUTFILE
-date                                >> $ERRFILE
 echo -----------------------------  >> $OUTFILE
 
 # build/check/compress vipr file if it exists
@@ -297,6 +309,7 @@ date +"@04 %s"                        >> "${OUTFILE}"
 echo "-----------------------------"  >> "${OUTFILE}"
 date                                  >> "${OUTFILE}"
 echo "-----------------------------"  >> "${OUTFILE}"
-date                                  >> "${ERRFILE}"
 echo                                  >> "${OUTFILE}"
 echo "=ready="                        >> "${OUTFILE}"
+
+fi # end SOLVE PHASE
