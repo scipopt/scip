@@ -204,17 +204,13 @@ else
     NODE_FLAGS="-w ${CLUSTERNODES} -x ${EXCLUDENODES}"
 fi
 
-# at the first time, some files need to be initialized. set to "" after the innermost loop
-# finished the first time
-INIT="true"
-
-# counter to define file names for a test set uniquely
-COUNT=0
+# write settings before first instance
+WRITESETTINGS="true"
 
 # auto mode: compute srun prefix for within-job steps
 if test "${AUTO_PPN_PENDING}" -eq 1
 then
-    AUTO_SRUN="srun --exact -n 1 -c ${THREADS_SAFE} --mem=${HARDMEMLIMIT} --propagate=STACK ${SRUN_FLAGS}"
+    AUTO_SRUN="srun --exact -n 1 -c ${THREADS_SAFE} --mem=${HARDMEMLIMIT} --cpu_bind=verbose,cores --propagate=STACK ${SRUN_FLAGS}"
 fi
 
 # auto mode batch accumulator
@@ -242,26 +238,31 @@ flush_auto_batch() {
     AUTO_BATCH_NAMES=""
 }
 
-# loop over permutations
-# loop over testset
-for idx in "${!INSTANCELIST[@]}"
+# loop over seeds
+for ((s = 0; ${s} <= ${SEEDS}; s++))
 do
-    # retrieve instance and timelimits from arrays set in the configuration_set.sh script
-    INSTANCE=${INSTANCELIST[${idx}]}
-    TIMELIMIT=${TIMELIMLIST[${idx}]}
-    HARDTIMELIMIT=${HARDTIMELIMLIST[${idx}]}
-    # increase the index for the instance tried to solve, even if the filename does not exist
-    COUNT=$((COUNT + 1))
+    # at the first time, some files need to be initialized. set to "" after the first instance
+    INIT="true"
 
-    # we need the DONE keyword for the check.sh script to automatically run evalcheck, here it is not needed
-    if test "${INSTANCE}" = "DONE"
-    then
-        continue
-    fi
+    # counter to define file names for a test set uniquely
+    COUNT=0
 
-    # run different random seeds
-    for ((s = 0; ${s} <= ${SEEDS}; s++))
+    # loop over testset
+    for idx in "${!INSTANCELIST[@]}"
     do
+        # retrieve instance and timelimits from arrays set in the configuration_set.sh script
+        INSTANCE=${INSTANCELIST[${idx}]}
+        TIMELIMIT=${TIMELIMLIST[${idx}]}
+        HARDTIMELIMIT=${HARDTIMELIMLIST[${idx}]}
+        # increase the index for the instance tried to solve, even if the filename does not exist
+        COUNT=$((COUNT + 1))
+
+        # we need the DONE keyword for the check.sh script to automatically run evalcheck, here it is not needed
+        if test "${INSTANCE}" = "DONE"
+        then
+            continue
+        fi
+
         # permute transformed problem
         for ((p = 0; ${p} <= ${PERMUTE}; p++))
         do
@@ -350,29 +351,26 @@ do
                     SLURMACCOUNT="${ACCOUNT}"
                 fi
 
-                WRITESETTINGS="false"
-                if test "${INIT}" = "true"
+                if test "${WRITESETTINGS}" = "true"
                 then
                     if test "${SOLVER}" = "scip"
                     then
-                        WRITESETTINGS="true"
                         echo -e "#!/usr/bin/env bash \n ${EXECNAME} -s ${SETTINGS} -c 'set save ${CHECKSETFILE} quit'" > write-settings.sh
+                        if test "${QUEUETYPE}" = "srun"
+                        then
+                            sbatch --job-name=write-settings -n 1 -c "${THREADS_SAFE}" --mem="${HARDMEMLIMIT}" -p "${CLUSTERQUEUE}" -A "${SLURMACCOUNT}" ${NICE} --time="${HARDTIMELIMIT}" --cpu-freq=medium-medium:Performance ${EXCLUSIVE} --output=/dev/null write-settings.sh
+                        else
+                            qsub -l walltime="${HARDTIMELIMIT}" -l nodes=1:ppn=$PPN -N write-settings \
+                                -V -q "${CLUSTERQUEUE}" -o /dev/null -e /dev/null write-settings.sh
+                        fi
+                        rm write-settings.sh
+                        WRITESETTINGS="false"
                     fi
                 fi
 
                 # check queue type
                 if test  "${QUEUETYPE}" = "srun"
                 then
-                    if test "${CLUSTERQUEUE}" != "moskito" && test "${CLUSTERQUEUE}" != "prio"
-                    then
-                        export SRUN="srun --propagate=STACK --cpu_bind=verbose,cores ${SRUN_FLAGS}"
-                    fi
-
-                    if test "${WRITESETTINGS}" = "true"
-                    then
-                        sbatch --job-name=write-settings -n 1 -c "${THREADS_SAFE}" --mem="${HARDMEMLIMIT}" -p "${CLUSTERQUEUE}" -A "${SLURMACCOUNT}" ${NICE} --time="${HARDTIMELIMIT}" --cpu-freq=medium-medium:Performance ${EXCLUSIVE} --output=/dev/null write-settings.sh
-                    fi
-
                     if test "${AUTO_PPN_PENDING}" -eq 1
                     then
                         # auto mode: accumulate instance arguments into current batch
@@ -395,6 +393,7 @@ do
                             flush_auto_batch
                         fi
                     else
+                        export SRUN="srun --exact -n 1 -c ${THREADS_SAFE} --mem=${HARDMEMLIMIT} --propagate=STACK --cpu_bind=verbose,cores ${SRUN_FLAGS}"
                         if test "${CLUSTERNODES}" = "all" && test "${EXCLUDENODES}" = "none"
                         then
                             echo sbatch --job-name="${JOBNAME}" --constraint="${CONSTRAINT}" -n 1 -c "${THREADS_SAFE}" --mem="${HARDMEMLIMIT}" -p "${CLUSTERQUEUE}" -A "${SLURMACCOUNT}" ${NICE} --time="${HARDTIMELIMIT}" --cpu-freq=medium-medium:Performance ${EXCLUSIVE} --output=/dev/null run.sh
@@ -413,34 +412,22 @@ do
                         fi
                     fi
                 else
-                    if test "${WRITESETTINGS}" = "true"
-                    then
-                        qsub -l walltime="${HARDTIMELIMIT}" -l nodes=1:ppn=$PPN -N write-settings \
-                            -V -q "${CLUSTERQUEUE}" -o /dev/null -e /dev/null write-settings.sh
-                        rm write-settings.sh
-                    fi
-
                     # -V to copy all environment variables
                     qsub -l walltime="${HARDTIMELIMIT}" -l nodes=1:ppn="${PPN}" -N "${JOBNAME}" \
                         -V -q "${CLUSTERQUEUE}" -o /dev/null -e /dev/null run.sh
 
                 fi
 
-                if test "$WRITESETTINGS" = "true"
-                then
-                    rm write-settings.sh
-                fi
-
             done # end for SETNAME
         done # end for PERMUTE
-    done #end for SEEDS
 
-    # after the first termination of the set loop, no file needs to be initialized anymore
-    INIT="false"
-done # end for TSTNAME
+        # after the first instance, no file needs to be initialized anymore
+        INIT=""
+    done # end for testset
 
-# flush any remaining instances in auto mode
-if test "${AUTO_PPN_PENDING}" -eq 1 && test "${AUTO_BATCH_COUNT}" -gt 0
-then
-    flush_auto_batch
-fi
+    # flush any remaining instances in auto mode at end of each seed
+    if test "${AUTO_PPN_PENDING}" -eq 1 && test "${AUTO_BATCH_COUNT}" -gt 0
+    then
+        flush_auto_batch
+    fi
+done # end for seeds
