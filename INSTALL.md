@@ -629,6 +629,26 @@ If your platform or compiler is not supported by SCIP you might try and copy one
 makefiles in the `make` directory and modify it. If you succeed, we are always
 interested in including more Makefiles into the system.
 
+Installing SCIP using dependency management tools
+=================================================
+
+If you are using a dependency management tool, you can also install SCIP using the respective package manager,
+instead of compiling it from source code.
+
+Conan
+-----
+
+You can download and install SCIP using the [Conan](https://conan.io/) dependency manager:
+
+```
+conan install -r conancenter --requires="scip/[*]" --build=missing
+```
+
+The SCIP package in Conan Center is maintained by
+[ConanCenterIndex](https://github.com/conan-io/conan-center-index) community.
+If the version is out of date or the package does not work,
+please create an issue or pull request on the [Conan Center Index repository](https://github.com/conan-io/conan-center-index).
+
 Examples
 --------
 
