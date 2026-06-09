@@ -413,7 +413,7 @@ SCIP_RETCODE setupPresolve(
    dualfix->set_fix_to_infinity_allowed(false);
    presolve.addPresolveMethod( uptr( dualfix ) );
 #else
-   presolve.addPresolveMethod( uptr( new DualFix<SCIP_Real>() ) );
+   presolve.addPresolveMethod( uptr( new DualFix<T>() ) );
 #endif
    presolve.addPresolveMethod( uptr( new FixContinuous<T>() ) );
    presolve.addPresolveMethod( uptr( new SimplifyInequalities<T>() ) );
