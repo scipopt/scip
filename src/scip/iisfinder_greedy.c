@@ -786,13 +786,14 @@ SCIP_RETCODE additionFilterBatch(
 
       /* Solve the reduced problem */
       retcode = additionSubproblem(iis, timelim, timelimperiter, nodelim, nodelimperiter, &feasible, &stopiter);
-      if( !silent )
-         SCIPiisfinderInfoMessage(iis, FALSE);
       if( !feasible || stopiter || timelim - SCIPiisGetTime(iis) <= 0 || ( nodelim != -1 && SCIPiisGetNNodes(iis) >= nodelim ) )
       {
          SCIP_CALL( SCIPfreeTransform(scip) );
          break;
       }
+
+      if( !silent )
+         SCIPiisfinderInfoMessage(iis, FALSE);
 
       if( dynamicreordering && retcode == SCIP_OKAY )
       {
@@ -827,12 +828,7 @@ SCIP_RETCODE additionFilterBatch(
                   }
                }
             }
-            if( k > 0 )
-            {
-               SCIPdebugMsg(scip, "Added %d constraints by reordering dynamically.\n", k);
-               if( ! silent )
-                  SCIPiisfinderInfoMessage(iis, FALSE);
-            }
+            SCIPdebugMsg(scip, "Added %d constraints by reordering dynamically.\n", k);
             SCIP_CALL( SCIPfreeSol(scip, &copysol) );
          }
       }
@@ -848,22 +844,40 @@ SCIP_RETCODE additionFilterBatch(
       SCIP_CALL( updateBatchsize(scip, initbatchsize, maxbatchsize, iteration, FALSE, batchingfactor, batchingoffset, batchupdateinterval, &batchsize) );
    }
 
-   /* Release any cons not in the IS */
-   for( i = 0; i < nconss; ++i )
+   /* If problem is feasible due to limit or interrupt, add the deleted constraints of the full infeasible problem */
+   if( feasible )
    {
-      if( !inIS[order[i]] )
+      assert(stopiter || SCIPiisGetTime(iis) >= timelim || (nodelim != -1 && SCIPiisGetNNodes(iis) >= nodelim));
+      SCIPdebugMsg(scip, "Hit limit or interrupt. Restore full infeasible problem.\n");
+      for( i = 0; i < nconss; ++i )
       {
-         SCIP_CALL( SCIPreleaseCons(scip, &conss[order[i]]) );
+         if( !inIS[order[i]] )
+         {
+            SCIP_CALL( SCIPaddCons(scip, conss[order[i]]) );
+            SCIP_CALL( SCIPreleaseCons(scip, &conss[order[i]]) );
+            inIS[order[i]] = TRUE;
+         }
+      }
+   }
+   else
+   {
+      /* Release any cons not in the IS */
+      for( i = 0; i < nconss; ++i )
+      {
+         if( !inIS[order[i]] )
+         {
+            SCIP_CALL( SCIPreleaseCons(scip, &conss[order[i]]) );
+         }
       }
    }
 
    SCIPfreeBlockMemoryArray(scip, &order, nconss);
    SCIPfreeBlockMemoryArray(scip, &inIS, nconss);
    SCIPfreeBlockMemoryArray(scip, &conss, nconss);
-   if( feasible )
-      SCIPiisSetSubscipInfeasible(iis, FALSE);
-   else
-      SCIPiisSetSubscipInfeasible(iis, TRUE);
+   SCIPiisSetSubscipInfeasible(iis, TRUE);
+
+   if( !silent )
+      SCIPiisfinderInfoMessage(iis, FALSE);
 
    return SCIP_OKAY;
 }

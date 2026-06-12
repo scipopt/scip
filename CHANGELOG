@@ -67,6 +67,7 @@ Fixed bugs
 - fixed that doc target in cmake builds was not available when using -DBUILD_TESTING=OFF
 - fixed statistic on added linear constraints in propagation
 - keep variable for impossible substitution in presolRoundCardinality() to avoid duplication error
+- restore infeasible original problem in IIS addition filter if interrupt or limit is hit
 
 Miscellaneous
 -------------
