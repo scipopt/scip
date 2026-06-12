@@ -1,0 +1,6 @@
+# Racing configuration 9: early feasibility jump.
+# Runs the feasibility jump heuristic before presolving to find feasible
+# solutions in the first seconds.
+
+heuristics/feasjump/beforepresol = TRUE
+

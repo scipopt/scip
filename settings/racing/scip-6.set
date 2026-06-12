@@ -1,0 +1,23 @@
+# Racing configuration 6: constraint programming style search with rapid restarts.
+# Builds on configuration 5 and adds a SAT-style geometric restart schedule and
+# the LP-free feasibility jump heuristic before presolving. The LP is never
+# solved, so this solver cannot stall on instances with hard root LPs.
+
+conflict/minmaxvars = 10
+conflict/fuiplevels = 1
+conflict/reconvlevels = 0
+conflict/conflictweight = 1
+constraints/disableenfops = TRUE
+history/valuebased = TRUE
+lp/solvefreq = -1
+nodeselection/childsel = d
+numerics/boundstreps = 1e-06
+nodeselection/dfs/stdpriority = 536870911
+
+# --- SAT-style geometric restart schedule (restarts are this config's engine) ---
+conflict/restartnum = 100
+conflict/restartfac = 1.5
+presolving/maxrestarts = 100
+
+# --- LP-free feasibility hunting from second zero ---
+heuristics/feasjump/beforepresol = TRUE

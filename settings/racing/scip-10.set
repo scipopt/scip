@@ -1,0 +1,53 @@
+# Racing configuration 10: intensified separation and reliability branching.
+# Strengthens separators and presolvers that are active by default (more rounds,
+# more cuts, deeper probing, larger strong branching budgets) to drive the dual
+# bound; most valuable when bound communication (concurrent/commvarbnds) is
+# enabled, so that the tightened bounds reach the other solvers.
+
+branching/relpscost/sbiterquot = 1.0
+branching/relpscost/maxreliable = 10
+
+# --- more frequent root restarts (active machinery, lower trigger thresholds) ---
+presolving/restartfac = 0.0125
+presolving/restartminred = 0.06
+
+# --- more separation rounds/cuts for the default-active separators ---
+separating/maxroundsrootsubrun = 5
+separating/maxaddrounds = 5
+separating/maxcutsroot = 5000
+separating/gomory/maxroundsroot = 15
+separating/gomory/maxsepacutsroot = 400
+separating/aggregation/maxfailsroot = 200
+separating/aggregation/maxsepacutsroot = 1000
+separating/zerohalf/maxroundsroot = 30
+separating/zerohalf/maxsepacutsroot = 200
+separating/rlt/freq = 20
+separating/rlt/maxroundsroot = 15
+separating/disjunctive/freq = 20
+separating/disjunctive/maxroundsroot = 150
+separating/clique/freq = 20
+separating/mcf/freq = 20
+separating/mcf/maxtestdelta = -1
+separating/mcf/trynegscaling = TRUE
+separating/mcf/maxsepacutsroot = 400
+
+# --- in-tree separation for constraint handlers already separating at the root ---
+constraints/linear/sepafreq = 10
+constraints/linear/maxsepacutsroot = 500
+constraints/linear/separateall = TRUE
+constraints/knapsack/sepafreq = 10
+constraints/knapsack/maxsepacutsroot = 500
+constraints/logicor/sepafreq = 10
+constraints/or/sepafreq = 10
+constraints/setppc/sepafreq = 10
+constraints/setppc/cliquelifting = TRUE
+constraints/SOS2/sepafreq = 10
+constraints/varbound/sepafreq = 10
+constraints/xor/sepafreq = 10
+
+# --- deeper probing (active by default, raised abort thresholds) ---
+propagating/probing/maxuseless = 1500
+propagating/probing/maxtotaluseless = 75
+
+# --- accept less orthogonal cuts into the LP at the root ---
+cutselection/hybrid/minorthoroot = 0.1

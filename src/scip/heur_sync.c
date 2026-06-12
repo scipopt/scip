@@ -33,7 +33,9 @@
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 #include "scip/heur_sync.h"
+#include "scip/concsolver.h"
 #include "scip/scip.h"
+#include "scip/syncstore.h"
 
 
 #define HEUR_NAME             "sync"
@@ -58,6 +60,11 @@ struct SCIP_HeurData
    SCIP_SOL**            sols;               /**< storing solutions passed to heuristic sorted by objective value */
    int                   nsols;              /**< number of soluions stored */
    int                   maxnsols;           /**< maximum number of solutions that can be stored */
+   SCIP_CONCSOLVER*      concsolver;         /**< the concurrent solver this SCIP belongs to, or NULL if the
+                                              *   solution-pool drain is disabled */
+   SCIP_VAR**            poolvars;           /**< variables of this SCIP in the communication variable order */
+   int                   npoolvars;          /**< number of variables in the above array */
+   int                   nextpoolsol;        /**< index of the next solution to be drained from the solution pool */
 };
 
 
@@ -123,6 +130,7 @@ static
 SCIP_DECL_HEUREXEC(heurExecSync)
 {  /*lint --e{715}*/
    SCIP_HEURDATA* heurdata;
+   SCIP_SOL* newsol;
    SCIP_Bool stored;
    int i;
 
@@ -133,15 +141,20 @@ SCIP_DECL_HEUREXEC(heurExecSync)
 
    SCIP_STRINGEQ( SCIPheurGetName(heur), HEUR_NAME, SCIP_INVALIDCALL );
 
-   SCIPheurSetFreq(heur, -1);
-
    /* get heuristic data */
    heurdata = SCIPheurGetData(heur);
    assert(heurdata != NULL);
-   assert(heurdata->nsols > 0);
+   assert(heurdata->nsols > 0 || heurdata->concsolver != NULL);
+
+   /* if no solutions are exchanged through the solution pool between synchronization points,
+    * the heuristic only runs when solutions were passed to it and goes back to sleep
+    * afterwards; otherwise it stays enabled to drain new pooled solutions at every node
+    */
+   if( heurdata->concsolver == NULL )
+      SCIPheurSetFreq(heur, -1);
 
    SCIPdebugMessage("exec method of sync primal heuristic.\n");
-   *result = SCIP_DIDNOTFIND;
+   *result = heurdata->nsols > 0 ? SCIP_DIDNOTFIND : SCIP_DIDNOTRUN;
    for( i = 0; i < heurdata->nsols; ++i )
    {
       SCIP_CALL( SCIPtrySolFree(scip, &heurdata->sols[i], FALSE, FALSE, FALSE, FALSE, FALSE, &stored) );
@@ -150,6 +163,47 @@ SCIP_DECL_HEUREXEC(heurExecSync)
    }
 
    heurdata->nsols = 0;
+
+   /* drain new solutions from the solution pool; entries are published by the other concurrent
+    * solvers immediately when they find a new globally best solution, so installing them here
+    * gives every solver the incumbent itself instead of only its objective value as cutoff
+    */
+   if( heurdata->concsolver != NULL )
+   {
+      SCIP_SYNCSTORE* syncstore;
+      int npoolsols;
+      int ownerid;
+
+      syncstore = SCIPgetSyncstore(scip);
+      assert(syncstore != NULL);
+
+      npoolsols = SCIPsyncstoreGetNPoolSols(syncstore);
+      ownerid = SCIPconcsolverGetIdx(heurdata->concsolver);
+
+      while( heurdata->nextpoolsol < npoolsols )
+      {
+         SCIP_Real* solvals;
+         int nsolvals;
+         int source;
+
+         SCIPsyncstoreGetPoolSol(syncstore, heurdata->nextpoolsol, &solvals, &nsolvals, &source);
+         ++heurdata->nextpoolsol;
+
+         /* skip solutions this solver published itself */
+         if( source == ownerid )
+            continue;
+
+         if( *result == SCIP_DIDNOTRUN )
+            *result = SCIP_DIDNOTFIND;
+
+         SCIP_CALL( SCIPcreateOrigSol(scip, &newsol, heur) );
+         SCIP_CALL( SCIPsetSolVals(scip, newsol, MIN(nsolvals, heurdata->npoolvars), heurdata->poolvars, solvals) );
+         SCIP_CALL( SCIPtrySolFree(scip, &newsol, FALSE, FALSE, TRUE, TRUE, TRUE, &stored) );
+
+         if( stored )
+            *result = SCIP_FOUNDSOL;
+      }
+   }
 
    return SCIP_OKAY;
 }
@@ -171,6 +225,10 @@ SCIP_RETCODE SCIPincludeHeurSync(
    SCIP_CALL( SCIPgetIntParam(scip, "concurrent/sync/maxnsols", &heurdata->maxnsols) );
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &heurdata->sols, heurdata->maxnsols) );
    heurdata->nsols = 0;
+   heurdata->concsolver = NULL;
+   heurdata->poolvars = NULL;
+   heurdata->npoolvars = 0;
+   heurdata->nextpoolsol = 0;
 
    /* include primal heuristic */
    SCIP_CALL( SCIPincludeHeurBasic(scip, &heur,
@@ -189,6 +247,36 @@ SCIP_RETCODE SCIPincludeHeurSync(
    return SCIP_OKAY;
 }
 
+
+/** enables the drain of the solution pool in which other concurrent solvers publish their new
+ *  incumbents immediately; the heuristic then runs at every node and tries all new pooled
+ *  solutions instead of receiving solutions only at the synchronization points
+ */
+void SCIPheurSyncEnableSolPool(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_HEUR*            heur,               /**< sync heuristic */
+   SCIP_CONCSOLVER*      concsolver,         /**< the concurrent solver this SCIP instance belongs to */
+   SCIP_VAR**            vars,               /**< variables of this SCIP in the communication variable order */
+   int                   nvars               /**< number of variables */
+   )
+{
+   SCIP_HEURDATA* heurdata;
+
+   assert(scip != NULL);
+   assert(heur != NULL);
+   assert(concsolver != NULL);
+   assert(vars != NULL);
+   assert(strcmp(SCIPheurGetName(heur), HEUR_NAME) == 0);
+
+   heurdata = SCIPheurGetData(heur);
+   assert(heurdata != NULL);
+
+   heurdata->concsolver = concsolver;
+   heurdata->poolvars = vars;
+   heurdata->npoolvars = nvars;
+   heurdata->nextpoolsol = 0;
+   SCIPheurSetFreq(heur, 1);
+}
 
 /** pass solution to sync heuristic */
 SCIP_RETCODE SCIPheurSyncPassSol(

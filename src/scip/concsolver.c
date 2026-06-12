@@ -233,6 +233,7 @@ SCIP_RETCODE SCIPconcsolverCreateInstance(
 
    /* initialize synchronization fields */
    (*concsolver)->nsyncs = 0;
+   (*concsolver)->nsyncsread = 0;
    (*concsolver)->syncdelay = 0.0;
    (*concsolver)->timesincelastsync = 0.0;
 
@@ -419,10 +420,13 @@ SCIP_RETCODE SCIPconcsolverSync(
    {
       SCIP_CALL( SCIPconcsolverStop(concsolver) );
    }
-   else if( SCIPsyncdataGetNSynced(syncdata) == SCIPsyncstoreGetNSolvers(syncstore) - 1 )
+   else if( !SCIPsyncstoreSolPoolEnabled(syncstore) &&
+      SCIPsyncdataGetNSynced(syncdata) == SCIPsyncstoreGetNSolvers(syncstore) - 1 )
    {
       /* if this is the last concurrent solver that is synchronizing for this synchronization data
-       * it will adjust the synchronization frequency using the progress on the gap
+       * it will adjust the synchronization frequency using the progress on the gap;
+       * in solution-pool mode the frequency stays fixed, since writers are not throttled by
+       * readers and the previous synchronization data may not have been written by all solvers
        */
       SCIP_Bool lbok;
       SCIP_Bool ubok;
@@ -497,20 +501,60 @@ SCIP_RETCODE SCIPconcsolverSync(
 
    concsolver->syncdelay += concsolver->timesincelastsync;
 
-   syncdata = SCIPsyncstoreGetNextSyncdata(syncstore, concsolver->syncdata, concsolver->syncfreq, concsolver->nsyncs, &concsolver->syncdelay);
-
-   while( syncdata != NULL )
+   /* in solution-pool mode solutions are exchanged immediately through the pool and the cutoff
+    * bound through the immediate communication; synchronization data is read non-blocking and
+    * carries only the global bound changes: only synchronizations that have already been written
+    * by all solvers are consumed, overwritten ones are skipped as lost, and the solver never
+    * waits in the barrier of SCIPsyncstoreEnsureAllSynced for slower solvers
+    */
+   if( SCIPsyncstoreSolPoolEnabled(syncstore) )
    {
-      SCIP_CALL( SCIPsyncstoreEnsureAllSynced(syncstore, syncdata) );
-      concsolver->syncdata = syncdata;
-      SCIP_CALL( concsolvertype->concsolversyncread(concsolver, syncstore, syncdata, &nsols, &ntighterbnds, &ntighterintbnds) );
-      concsolver->ntighterbnds += ntighterbnds;
-      concsolver->ntighterintbnds += ntighterintbnds;
-      concsolver->nsolsrecvd += nsols;
-      SCIPdebugMessage("syncfreq before reading the next syncdata is %g\n", concsolver->syncfreq);
-      concsolver->syncfreq = SCIPsyncdataGetSyncFreq(concsolver->syncdata);
-      SCIPdebugMessage("syncfreq after reading the next syncdata is %g\n", concsolver->syncfreq);
+      while( concsolver->nsyncsread < concsolver->nsyncs )
+      {
+         SCIP_RETCODE retcode;
+         SCIP_Bool lost;
+
+         SCIP_CALL( SCIPsyncstoreTryLockCompleteSyncdata(syncstore, concsolver->nsyncsread, &syncdata, &lost) );
+
+         if( syncdata == NULL )
+         {
+            if( !lost )
+               break;
+
+            /* the slot was recycled by faster solvers; the bound changes of this
+             * synchronization are lost, which is acceptable in opportunistic mode
+             */
+            ++concsolver->nsyncsread;
+            continue;
+         }
+
+         retcode = concsolvertype->concsolversyncread(concsolver, syncstore, syncdata, &nsols, &ntighterbnds, &ntighterintbnds);
+         SCIP_CALL( SCIPsyncstoreUnlockSyncdata(syncstore, syncdata) );
+         SCIP_CALL( retcode );
+
+         concsolver->ntighterbnds += ntighterbnds;
+         concsolver->ntighterintbnds += ntighterintbnds;
+         concsolver->nsolsrecvd += nsols;
+         ++concsolver->nsyncsread;
+      }
+   }
+   else
+   {
       syncdata = SCIPsyncstoreGetNextSyncdata(syncstore, concsolver->syncdata, concsolver->syncfreq, concsolver->nsyncs, &concsolver->syncdelay);
+
+      while( syncdata != NULL )
+      {
+         SCIP_CALL( SCIPsyncstoreEnsureAllSynced(syncstore, syncdata) );
+         concsolver->syncdata = syncdata;
+         SCIP_CALL( concsolvertype->concsolversyncread(concsolver, syncstore, syncdata, &nsols, &ntighterbnds, &ntighterintbnds) );
+         concsolver->ntighterbnds += ntighterbnds;
+         concsolver->ntighterintbnds += ntighterintbnds;
+         concsolver->nsolsrecvd += nsols;
+         SCIPdebugMessage("syncfreq before reading the next syncdata is %g\n", concsolver->syncfreq);
+         concsolver->syncfreq = SCIPsyncdataGetSyncFreq(concsolver->syncdata);
+         SCIPdebugMessage("syncfreq after reading the next syncdata is %g\n", concsolver->syncfreq);
+         syncdata = SCIPsyncstoreGetNextSyncdata(syncstore, concsolver->syncdata, concsolver->syncfreq, concsolver->nsyncs, &concsolver->syncdelay);
+      }
    }
 
    SCIP_CALL( SCIPstopClock(set->scip, concsolver->totalsynctime) );

@@ -69,6 +69,8 @@ struct SCIP_ConcSolver
    SCIP_CONCSOLVERDATA*                data;                      /**< user data of concurrent solver */
    SCIP_SYNCDATA*                      syncdata;                  /**< most recent synchronization data that has been read */
    SCIP_Longint                        nsyncs;                    /**< total number of synchronizations */
+   SCIP_Longint                        nsyncsread;                /**< number of the next synchronization to be read in the non-blocking
+                                                                   *   read mode used when the solution pool is enabled */
    SCIP_Real                           timesincelastsync;         /**< time since the last synchronization */
    SCIP_Real                           syncdelay;                 /**< current delay of synchronization data */
    SCIP_Real                           syncfreq;                  /**< current synchronization frequency of the concurrent solver */

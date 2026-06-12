@@ -1,0 +1,17 @@
+# Racing configuration 5: constraint programming style search.
+# The delta of `set emphasis cpsolver`: no LP relaxation solves, aggressive
+# conflict analysis, and depth-first search.
+
+conflict/minmaxvars = 10
+conflict/fuiplevels = 1
+conflict/reconvlevels = 0
+conflict/restartnum = 250
+conflict/restartfac = 2
+conflict/conflictweight = 1
+constraints/disableenfops = TRUE
+history/valuebased = TRUE
+lp/solvefreq = -1
+nodeselection/childsel = d
+numerics/boundstreps = 1e-06
+presolving/maxrestarts = 10
+nodeselection/dfs/stdpriority = 536870911
