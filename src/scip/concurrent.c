@@ -564,6 +564,30 @@ SCIP_RETCODE SCIPconcurrentSolve(
    if( idx < 0 || idx >= nconcsolvers )
       idx = 0;
 
+   /* transfer the solutions of all concurrent solvers; the best solution is not necessarily
+    * owned by the winner, e.g. when the winner proved optimality of a bound that was communicated
+    * by another solver but never received the corresponding solution itself
+    */
+   for( i = 0; i < nconcsolvers; ++i )
+   {
+      if( i != idx )
+      {
+         SCIP_STAGE stage;
+
+         stage = scip->set->stage;
+         SCIP_CALL( SCIPconcsolverGetSolvingData(concsolvers[i], scip) );
+
+         /* copying the solving statistics may bump the main SCIP into the solved stage, in which
+          * the solutions of the solvers that are copied afterwards could no longer be created;
+          * roll the stage back so that the winner's copy below determines the final stage
+          */
+         scip->set->stage = stage;
+      }
+   }
+
+   /* transfer the solutions of the winner last so that the solving statistics and status
+    * in the main SCIP are the ones copied from the winner
+    */
    SCIP_CALL( SCIPconcsolverGetSolvingData(concsolvers[idx], scip) );
 
    for( i = nconcsolvers - 1; i >= 0; i-- )

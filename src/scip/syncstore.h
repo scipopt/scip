@@ -84,6 +84,80 @@ void SCIPsyncstoreSetSolveIsStopped(
    SCIP_Bool             stopped             /**< flag if the solve is stopped */
    );
 
+/** updates the minimization-normalized objective value of the best solution found by any
+ *  concurrent solver; used for printing new incumbents and as the improvement filter of the
+ *  solution pool. If the solution pool is enabled and solution values are passed, the
+ *  improving solution is published in the pool so that the other concurrent solvers can
+ *  install it as an incumbent at their next drain.
+ */
+SCIP_EXPORT
+void SCIPsyncstoreUpdateBestMinObj(
+   SCIP_SYNCSTORE*       syncstore,          /**< the synchronization store */
+   SCIP_Real             minobj,             /**< objective value in minimization-normalized original objective space */
+   const char*           solvername,         /**< name of the concurrent solver that found the solution */
+   int                   ownerid,            /**< index of the concurrent solver that found the solution */
+   SCIP_Real*            solvals,            /**< solution values in the communication variable order, or NULL to
+                                              *   only communicate the objective value */
+   int                   nsolvals            /**< number of solution values */
+   );
+
+/** returns whether the solution pool for immediate solution sharing is enabled */
+SCIP_EXPORT
+SCIP_Bool SCIPsyncstoreSolPoolEnabled(
+   SCIP_SYNCSTORE*       syncstore           /**< the synchronization store */
+   );
+
+/** gets the current number of solutions in the solution pool; reads the counter without
+ *  locking, so it may lag behind concurrent pushes, which is fine for its use as a
+ *  cheap size hint that is polled at every node
+ */
+SCIP_EXPORT
+int SCIPsyncstoreGetNPoolSols(
+   SCIP_SYNCSTORE*       syncstore           /**< the synchronization store */
+   );
+
+/** gets the solution with the given index from the solution pool; entries are immutable
+ *  once published, so the returned values can be read without holding any lock
+ */
+SCIP_EXPORT
+void SCIPsyncstoreGetPoolSol(
+   SCIP_SYNCSTORE*       syncstore,          /**< the synchronization store */
+   int                   idx,                /**< index of the pooled solution, must be smaller than the size hint */
+   SCIP_Real**           solvals,            /**< pointer to return the solution values in communication variable order */
+   int*                  nsolvals,           /**< pointer to return the number of solution values */
+   int*                  ownerid             /**< pointer to return the index of the contributing concurrent solver */
+   );
+
+/** Tries to acquire the synchronization data with the given number for non-blocking reading.
+ *  On success the synchronization data is returned in locked state and must be released with
+ *  SCIPsyncstoreUnlockSyncdata after reading. If the data is not ready, NULL is returned and
+ *  lost indicates why: if the slot was overwritten by a newer synchronization the data is
+ *  lost and the reader should skip this number, otherwise the synchronization has not been
+ *  written by all solvers yet and the reader should retry later. Never blocks the caller.
+ */
+SCIP_EXPORT
+SCIP_RETCODE SCIPsyncstoreTryLockCompleteSyncdata(
+   SCIP_SYNCSTORE*       syncstore,          /**< the synchronization store */
+   SCIP_Longint          syncnum,            /**< the number of the synchronization to read */
+   SCIP_SYNCDATA**       syncdata,           /**< pointer to return the locked synchronization data, or NULL */
+   SCIP_Bool*            lost                /**< pointer to return whether the data was overwritten and is lost */
+   );
+
+/** releases the lock of a synchronization data acquired with SCIPsyncstoreTryLockCompleteSyncdata */
+SCIP_EXPORT
+SCIP_RETCODE SCIPsyncstoreUnlockSyncdata(
+   SCIP_SYNCSTORE*       syncstore,          /**< the synchronization store */
+   SCIP_SYNCDATA*        syncdata            /**< the synchronization data to unlock */
+   );
+
+/** gets the minimization-normalized objective value of the best solution found by any
+ *  concurrent solver, or SCIP_REAL_MAX if no solution was registered yet
+ */
+SCIP_EXPORT
+SCIP_Real SCIPsyncstoreGetBestMinObj(
+   SCIP_SYNCSTORE*       syncstore           /**< the synchronization store */
+   );
+
 /** gets the upperbound from the last synchronization */
 SCIP_EXPORT
 SCIP_Real SCIPsyncstoreGetLastUpperbound(

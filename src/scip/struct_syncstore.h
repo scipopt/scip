@@ -61,6 +61,22 @@ struct SCIP_SyncStore
    SCIP_Real             limit_absgap;       /**< absolute gap limit in main SCIP */
    SCIP_Bool             stopped;            /**< flag to indicate if the solving is stopped */
    SCIP_LOCK*            lock;               /**< lock to protect the syncstore data structure from data races */
+   SCIP_Real             bestminobj;         /**< minimization-normalized original objective value of the best solution found
+                                              *   by any concurrent solver; communicated immediately between the solvers
+                                              *   in opportunistic mode, outside of the regular synchronization points */
+   SCIP_Bool             printincumbents;    /**< should a line be printed for every new globally best solution found
+                                              *   by a concurrent solver? */
+   SCIP_Bool             usesolpool;         /**< should new globally best solutions be shared immediately through
+                                              *   the solution pool instead of only at synchronization points?
+                                              *   (only used in opportunistic mode) */
+   SCIP_Real**           poolsols;           /**< solution value arrays of the pooled solutions; entries are
+                                              *   append-only and immutable once published */
+   SCIP_Real*            poolobjs;           /**< minimization-normalized original objective values of the pooled solutions */
+   int*                  poolsource;         /**< index of the concurrent solver that contributed each pooled solution */
+   int*                  poolnvals;          /**< number of values stored for each pooled solution */
+   int                   npoolsols;          /**< current number of solutions in the pool; incremented only after the
+                                              *   entry is fully written, so it doubles as a lock-free size hint */
+   int                   poolsolssize;       /**< allocated capacity of the pool arrays */
 
    int                   nsyncdata;          /**< the size of the synchronization data array */
    SCIP_Real             minsyncdelay;       /**< the minimum delay before a synchronization data may be read */

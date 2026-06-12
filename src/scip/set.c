@@ -486,16 +486,23 @@
                                                  *   during a restart (0.0: all cuts are converted) */
 
 /* Parallel */
-#define SCIP_DEFAULT_PARALLEL_MODE               1     /**< the mode for the parallel implementation. Either 0: opportunistic or
+#define SCIP_DEFAULT_PARALLEL_MODE               0     /**< the mode for the parallel implementation. Either 0: opportunistic or
                                                         *   1: deterministic */
 #define SCIP_DEFAULT_PARALLEL_MINNTHREADS        1     /**< the minimum number of threads used in parallel code */
-#define SCIP_DEFAULT_PARALLEL_MAXNTHREADS        8     /**< the maximum number of threads used in parallel code */
+#define SCIP_DEFAULT_PARALLEL_MAXNTHREADS       10     /**< the maximum number of threads used in parallel code */
 
 /* Concurrent solvers */
 #define SCIP_DEFAULT_CONCURRENT_CHANGESEEDS     TRUE /**< should the concurrent solvers use different random seeds? */
-#define SCIP_DEFAULT_CONCURRENT_CHANGECHILDSEL  TRUE /**< should the concurrent solvers use different child selection rules? */
-#define SCIP_DEFAULT_CONCURRENT_COMMVARBNDS     TRUE /**< should the concurrent solvers communicate variable bounds? */
-#define SCIP_DEFAULT_CONCURRENT_PRESOLVEBEFORE  TRUE /**< should the problem be presolved before it is copied to the concurrent solvers? */
+#define SCIP_DEFAULT_CONCURRENT_CHANGECHILDSEL  FALSE /**< should the concurrent solvers use different child selection rules? */
+#define SCIP_DEFAULT_CONCURRENT_COMMVARBNDS     FALSE /**< should the concurrent solvers communicate variable bounds? */
+#define SCIP_DEFAULT_CONCURRENT_SOLPOOL         TRUE /**< should new incumbents be shared between the concurrent solvers
+                                                      *   immediately through a solution pool instead of only at the
+                                                      *   synchronization points? this also stops the solvers from
+                                                      *   blocking on the synchronization barrier
+                                                      *   (only used in opportunistic mode) */
+#define SCIP_DEFAULT_CONCURRENT_PRINTINCUMBENTS FALSE /**< should a line be printed for every new globally best solution
+                                                       *   found by a concurrent solver? */
+#define SCIP_DEFAULT_CONCURRENT_PRESOLVEBEFORE  FALSE /**< should the problem be presolved before it is copied to the concurrent solvers? */
 #define SCIP_DEFAULT_CONCURRENT_SYMMETRYBEFORE  TRUE /**< should symmetry be computed before concurrent solving? */
 #define SCIP_DEFAULT_CONCURRENT_INITSEED     5131912 /**< the seed used to initialize the random seeds for the concurrent solvers */
 #define SCIP_DEFAULT_CONCURRENT_FREQINIT        10.0 /**< initial frequency of synchronization with other threads
@@ -2820,6 +2827,16 @@ SCIP_RETCODE SCIPsetCreate(
          "concurrent/commvarbnds",
          "should the concurrent solvers communicate global variable bound changes?",
          &(*set)->concurrent_commvarbnds, FALSE, SCIP_DEFAULT_CONCURRENT_COMMVARBNDS,
+         NULL, NULL) );
+   SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
+         "concurrent/solpool",
+         "should new incumbents be shared between the concurrent solvers immediately through a solution pool instead of only at the synchronization points? this also stops the solvers from blocking on the synchronization barrier (only used in opportunistic mode)",
+         &(*set)->concurrent_solpool, FALSE, SCIP_DEFAULT_CONCURRENT_SOLPOOL,
+         NULL, NULL) );
+   SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
+         "concurrent/printincumbents",
+         "should a line be printed for every new globally best solution found by a concurrent solver?",
+         &(*set)->concurrent_printincumbents, FALSE, SCIP_DEFAULT_CONCURRENT_PRINTINCUMBENTS,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
          "concurrent/presolvebefore",

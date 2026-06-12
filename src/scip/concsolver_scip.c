@@ -39,6 +39,7 @@
 #include "scip/concsolver.h"
 #include "scip/concsolver_scip.h"
 #include "scip/concurrent.h"
+#include "scip/heur_sync.h"
 #include "scip/pub_disp.h"
 #include "scip/pub_event.h"
 #include "scip/pub_heur.h"
@@ -75,6 +76,16 @@
 struct SCIP_EventhdlrData
 {
    int             filterpos;
+   int             filterpossol;
+   SCIP_CONCSOLVER* concsolver;        /**< the concurrent solver this event handler belongs to */
+};
+
+/** data for a concurrent solver */
+struct SCIP_ConcSolverData
+{
+   SCIP*                 solverscip;         /**< the concurrent solvers private SCIP data structure */
+   SCIP_VAR**            vars;               /**< array of variables in the order of the main SCIP's variable array */
+   int                   nvars;              /**< number of variables in the above arrays */
 };
 
 /*
@@ -126,6 +137,24 @@ SCIP_DECL_EVENTINIT(eventInitSync)
       SCIP_CALL( SCIPcatchEvent(scip, SCIP_EVENTTYPE_SYNC, eventhdlr, NULL, &eventhdlrdata->filterpos) );
    }
 
+   /* in opportunistic mode new incumbent solutions are published in the solution pool
+    * immediately instead of waiting for the next synchronization point; the event is also
+    * caught when incumbents should be printed, which is supported in both parallel modes
+    */
+   if( eventhdlrdata->filterpossol < 0 && SCIPsyncstoreIsInitialized(syncstore) )
+   {
+      SCIP_Bool solpool;
+      SCIP_Bool printincumbents;
+
+      SCIP_CALL( SCIPgetBoolParam(scip, "concurrent/solpool", &solpool) );
+      SCIP_CALL( SCIPgetBoolParam(scip, "concurrent/printincumbents", &printincumbents) );
+
+      if( (SCIPsyncstoreGetMode(syncstore) == SCIP_PARA_OPPORTUNISTIC && solpool) || printincumbents )
+      {
+         SCIP_CALL( SCIPcatchEvent(scip, SCIP_EVENTTYPE_BESTSOLFOUND, eventhdlr, NULL, &eventhdlrdata->filterpossol) );
+      }
+   }
+
    return SCIP_OKAY;
 }
 
@@ -150,6 +179,12 @@ SCIP_DECL_EVENTEXIT(eventExitSync)
       eventhdlrdata->filterpos = -1;
    }
 
+   if( eventhdlrdata->filterpossol >= 0 )
+   {
+      SCIP_CALL( SCIPdropEvent(scip, SCIP_EVENTTYPE_BESTSOLFOUND, eventhdlr, NULL, eventhdlrdata->filterpossol) );
+      eventhdlrdata->filterpossol = -1;
+   }
+
    return SCIP_OKAY;
 }
 
@@ -163,6 +198,59 @@ SCIP_DECL_EVENTEXEC(eventExecSync)
 
    SCIP_STRINGEQ( SCIPeventhdlrGetName(eventhdlr), EVENTHDLR_NAME, SCIP_INVALIDCALL );
 
+   /* communicate the objective value of new incumbent solutions to the other concurrent
+    * solvers immediately; if the solution pool is enabled the solution values are published
+    * there as well, otherwise they are exchanged at the synchronization points
+    */
+   if( SCIPeventGetType(event) == SCIP_EVENTTYPE_BESTSOLFOUND )
+   {
+      SCIP_EVENTHDLRDATA* eventhdlrdata;
+      SCIP_SYNCSTORE* syncstore;
+      SCIP_SOL* sol;
+      SCIP_Real minobj;
+      SCIP_Real* solvals = NULL;
+      int nsolvals = 0;
+
+      eventhdlrdata = (SCIP_EVENTHDLRDATA*)SCIPeventhdlrGetData(eventhdlr);
+      syncstore = SCIPgetSyncstore(scip);
+      assert(syncstore != NULL);
+
+      sol = SCIPeventGetSol(event);
+      minobj = SCIPgetSolOrigObj(scip, sol);
+      if( SCIPgetObjsense(scip) == SCIP_OBJSENSE_MAXIMIZE )
+         minobj = -minobj;
+
+      /* extract the solution values only if this incumbent improves on the current global best;
+       * the global best objective only decreases, so a solution filtered out here can never be
+       * the one that wins the locked comparison inside SCIPsyncstoreUpdateBestMinObj
+       */
+      if( SCIPsyncstoreSolPoolEnabled(syncstore) )
+      {
+         SCIP_Real bestminobj;
+
+         bestminobj = SCIPsyncstoreGetBestMinObj(syncstore);
+
+         if( minobj < bestminobj )
+         {
+            SCIP_CONCSOLVERDATA* data;
+
+            data = SCIPconcsolverGetData(eventhdlrdata->concsolver);
+            assert(data != NULL);
+
+            SCIP_CALL( SCIPallocBufferArray(scip, &solvals, data->nvars) );
+            SCIP_CALL( SCIPgetSolVals(scip, sol, data->nvars, data->vars, solvals) );
+            nsolvals = data->nvars;
+         }
+      }
+
+      SCIPsyncstoreUpdateBestMinObj(syncstore, minobj, SCIPconcsolverGetName(eventhdlrdata->concsolver),
+         SCIPconcsolverGetIdx(eventhdlrdata->concsolver), solvals, nsolvals);
+
+      SCIPfreeBufferArrayNull(scip, &solvals);
+
+      return SCIP_OKAY;
+   }
+
    SCIP_CALL( SCIPsynchronize(scip) );
 
    return SCIP_OKAY;
@@ -172,7 +260,8 @@ SCIP_DECL_EVENTEXEC(eventExecSync)
 /** includes event handler for synchronization found */
 static
 SCIP_RETCODE includeEventHdlrSync(
-   SCIP*                 scip                /**< SCIP data structure */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONCSOLVER*      concsolver          /**< the concurrent solver this event handler belongs to */
    )
 {
    SCIP_EVENTHDLR*     eventhdlr;
@@ -180,6 +269,8 @@ SCIP_RETCODE includeEventHdlrSync(
 
    SCIP_CALL( SCIPallocBlockMemory(scip, &eventhdlrdata) );
    eventhdlrdata->filterpos = -1;
+   eventhdlrdata->filterpossol = -1;
+   eventhdlrdata->concsolver = concsolver;
 
    /* create event handler for events on watched variables */
    SCIP_CALL( SCIPincludeEventhdlrBasic(scip, &eventhdlr, EVENTHDLR_NAME, EVENTHDLR_DESC, eventExecSync, eventhdlrdata) );
@@ -197,14 +288,6 @@ struct SCIP_ConcSolverTypeData
 {
    SCIP_Bool             loademphasis;       /**< should emphasis settings be loaded when creating an instance of this concurrent solver */
    SCIP_PARAMEMPHASIS    emphasis;           /**< parameter emphasis that will be loaded if loademphasis is true */
-};
-
-/** data for a concurrent solver */
-struct SCIP_ConcSolverData
-{
-   SCIP*                 solverscip;         /**< the concurrent solvers private SCIP data structure */
-   SCIP_VAR**            vars;               /**< array of variables in the order of the main SCIP's variable array */
-   int                   nvars;              /**< number of variables in the above arrays */
 };
 
 /** Disable dual reductions that might cut off optimal solutions. Although they keep at least
@@ -261,6 +344,8 @@ SCIP_RETCODE initConcsolver(
    SCIP_VAR** mainallvars;
    SCIP_Bool symmetrybefore;
    SCIP_Bool valid;
+   SCIP_Bool usesolpool;
+   int paramode;
    int nmainvars;
    int nmainfixedvars;
    int* varperm;
@@ -386,6 +471,22 @@ SCIP_RETCODE initConcsolver(
 
    /* create the concurrent data structure for the concurrent solver's SCIP */
    SCIP_CALL( SCIPcreateConcurrent(data->solverscip, concsolver, varperm, data->nvars) );
+
+   /* enable the solution-pool drain in the sync heuristic, so that solutions published by the
+    * other concurrent solvers are tried at every node instead of only at synchronization points
+    */
+   SCIP_CALL( SCIPgetBoolParam(scip, "concurrent/solpool", &usesolpool) );
+   SCIP_CALL( SCIPgetIntParam(scip, "parallel/mode", &paramode) );
+
+   if( usesolpool && paramode == (int) SCIP_PARA_OPPORTUNISTIC )
+   {
+      SCIP_HEUR* heursync;
+
+      heursync = SCIPfindHeur(data->solverscip, "sync");
+      assert(heursync != NULL);
+
+      SCIPheurSyncEnableSolPool(data->solverscip, heursync, concsolver, data->vars, data->nvars);
+   }
    SCIPfreeBufferArray(data->solverscip, &mainallvars);
    SCIPfreeBufferArray(data->solverscip, &varperm);
 
@@ -475,7 +576,7 @@ SCIP_DECL_CONCSOLVERCREATEINST(concsolverScipCreateInstance)
    }
 
    /* include eventhandler for synchronization */
-   SCIP_CALL( includeEventHdlrSync(data->solverscip) );
+   SCIP_CALL( includeEventHdlrSync(data->solverscip, concsolver) );
 
    /* disable output for subscip */
    SCIP_CALL( SCIPsetIntParam(data->solverscip, "display/verblevel", 0) );
@@ -533,23 +634,32 @@ SCIP_DECL_CONCSOLVERTYPEFREEDATA(concsolverTypeScipFreeData)
    BMSfreeMemory(data);
 }
 
-/** initializes the random and permutation seeds and enables permutation of constraints and variables */
+/** initializes the random and permutation seeds of the concurrent solver
+ *
+ *  Uses the mild FiberSCIP-style racing scheme (seed shift idx+1, permutation seed idx)
+ *  instead of large random seeds: solver 0 keeps an unpermuted problem, the others get
+ *  small distinct permutation seeds, and the permutevars/permuteconss defaults are left
+ *  untouched. Large random seeds combined with forced variable permutation measurably
+ *  slowed every solver relative to a sequential SCIP with the same settings.
+ */
 static
 SCIP_DECL_CONCSOLVERINITSEEDS(concsolverScipInitSeeds)
-{
+{  /*lint --e{715}*/
    SCIP_CONCSOLVERDATA* data;
+   int idx;
 
    assert(concsolver != NULL);
 
    data = SCIPconcsolverGetData(concsolver);
    assert(data != NULL);
 
-   SCIPinfoMessage(data->solverscip, NULL, "initializing seeds to %d in concurrent solver '%s'\n", (int) seed, SCIPconcsolverGetName(concsolver));
+   idx = SCIPconcsolverGetIdx(concsolver);
 
-   SCIP_CALL( SCIPsetIntParam(data->solverscip, "randomization/randomseedshift", (int) seed) );
-   SCIP_CALL( SCIPsetIntParam(data->solverscip, "randomization/permutationseed", (int) seed) );
-   SCIP_CALL( SCIPsetBoolParam(data->solverscip, "randomization/permutevars", TRUE) );
-   SCIP_CALL( SCIPsetBoolParam(data->solverscip, "randomization/permuteconss", TRUE) );
+   SCIPinfoMessage(data->solverscip, NULL, "initializing seeds to shift %d, permutation %d in concurrent solver '%s'\n",
+      idx + 1, idx, SCIPconcsolverGetName(concsolver));
+
+   SCIP_CALL( SCIPsetIntParam(data->solverscip, "randomization/randomseedshift", idx + 1) );
+   SCIP_CALL( SCIPsetIntParam(data->solverscip, "randomization/permutationseed", idx) );
 
    return SCIP_OKAY;
 }
@@ -792,8 +902,18 @@ SCIP_DECL_CONCSOLVERSYNCREAD(concsolverScipSyncRead)
 
    concsolverid = SCIPconcsolverGetIdx(concsolver);
 
-   /* get solutions from synchronization data */
-   SCIPsyncdataGetSolutions(syncdata, &solvals, &concsolverids, &nsols);
+   /* get solutions from synchronization data; when the solution pool is enabled the solutions
+    * are exchanged through the pool already, so the synchronization data only carries bounds
+    */
+   if( SCIPsyncstoreSolPoolEnabled(syncstore) )
+   {
+      solvals = NULL;
+      concsolverids = NULL;
+      nsols = 0;
+   }
+   else
+      SCIPsyncdataGetSolutions(syncdata, &solvals, &concsolverids, &nsols);
+
    for( i = 0; i < nsols; ++i )
    {
       SCIP_SOL* newsol;
@@ -841,14 +961,14 @@ SCIP_DECL_CONCSOLVERSYNCREAD(concsolverScipSyncRead)
 
       /* cannot change bounds of multi-aggregated variables so do not pass this bound-change to the propagator */
       if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_MULTAGGR )
-         return SCIP_OKAY;
+         continue;
 
       /* if bound is not better then do not pass this bound and do not waste memory for storing this boundchange */
       if( boundtype == SCIP_BOUNDTYPE_LOWER && SCIPisGE(data->solverscip, SCIPvarGetLbGlobal(var), newbound) )
-         return SCIP_OKAY;
+         continue;
 
       if( boundtype == SCIP_BOUNDTYPE_UPPER && SCIPisLE(data->solverscip, SCIPvarGetUbGlobal(var), newbound) )
-         return SCIP_OKAY;
+         continue;
 
       /* bound is better so incremented counters for statistics and pass it to the sync propagator */
       ++(*ntighterbnds);

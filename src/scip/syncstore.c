@@ -79,6 +79,15 @@ SCIP_RETCODE SCIPsyncstoreCreate(
    (*syncstore)->syncdata = NULL;
    (*syncstore)->stopped = FALSE;
    (*syncstore)->nuses = 1;
+   (*syncstore)->bestminobj = SCIP_REAL_MAX;
+   (*syncstore)->printincumbents = FALSE;
+   (*syncstore)->usesolpool = FALSE;
+   (*syncstore)->poolsols = NULL;
+   (*syncstore)->poolobjs = NULL;
+   (*syncstore)->poolsource = NULL;
+   (*syncstore)->poolnvals = NULL;
+   (*syncstore)->npoolsols = 0;
+   (*syncstore)->poolsolssize = 0;
 
    SCIP_CALL( SCIPtpiInitLock(&(*syncstore)->lock) );
 
@@ -181,9 +190,18 @@ SCIP_RETCODE SCIPsyncstoreInit(
 
    syncstore->initialized = TRUE;
    syncstore->stopped = FALSE;
+   syncstore->bestminobj = SCIP_REAL_MAX;
+   SCIP_CALL( SCIPgetBoolParam(scip, "concurrent/printincumbents", &syncstore->printincumbents) );
 
    SCIP_CALL( SCIPgetIntParam(scip, "parallel/mode", &paramode) );
    syncstore->mode = (SCIP_PARALLELMODE) paramode;
+
+   /* the solution pool bypasses the synchronization-point barrier and is therefore only
+    * available in opportunistic mode; deterministic mode keeps the regular protocol
+    */
+   SCIP_CALL( SCIPgetBoolParam(scip, "concurrent/solpool", &syncstore->usesolpool) );
+   syncstore->usesolpool = syncstore->usesolpool && syncstore->mode == SCIP_PARA_OPPORTUNISTIC;
+   syncstore->npoolsols = 0;
 
    SCIP_CALL( SCIPtpiInit(syncstore->nsolvers, INT_MAX, FALSE) );
    SCIP_CALL( SCIPautoselectDisps(scip) );
@@ -230,6 +248,21 @@ SCIP_RETCODE SCIPsyncstoreExit(
    }
 
    SCIPfreeBlockMemoryArray(syncstore->mainscip, &syncstore->syncdata, syncstore->nsyncdata);
+
+   /* the solution pool is allocated with standard memory because it is filled from the
+    * solver threads, where the main SCIP's block memory must not be used
+    */
+   for( i = 0; i < syncstore->npoolsols; ++i )
+   {
+      BMSfreeMemoryArray(&syncstore->poolsols[i]);
+   }
+   BMSfreeMemoryArrayNull(&syncstore->poolsols);
+   BMSfreeMemoryArrayNull(&syncstore->poolobjs);
+   BMSfreeMemoryArrayNull(&syncstore->poolsource);
+   BMSfreeMemoryArrayNull(&syncstore->poolnvals);
+   syncstore->npoolsols = 0;
+   syncstore->poolsolssize = 0;
+   syncstore->usesolpool = FALSE;
 
    syncstore->initialized = FALSE;
    syncstore->stopped = FALSE;
@@ -278,6 +311,149 @@ void SCIPsyncstoreSetSolveIsStopped(
          SCIP_CALL_ABORT( SCIPtpiBroadcastCondition(syncstore->syncdata[i].allsynced) );
       }
    }
+}
+
+/** updates the minimization-normalized objective value of the best solution found by any
+ *  concurrent solver; used for printing new incumbents and as the improvement filter of the
+ *  solution pool. If the solution pool is enabled and solution values are passed, the
+ *  improving solution is published in the pool so that the other concurrent solvers can
+ *  install it as an incumbent at their next drain.
+ */
+void SCIPsyncstoreUpdateBestMinObj(
+   SCIP_SYNCSTORE*       syncstore,          /**< the synchronization store */
+   SCIP_Real             minobj,             /**< objective value in minimization-normalized original objective space */
+   const char*           solvername,         /**< name of the concurrent solver that found the solution */
+   int                   ownerid,            /**< index of the concurrent solver that found the solution */
+   SCIP_Real*            solvals,            /**< solution values in the communication variable order, or NULL to
+                                              *   only communicate the objective value */
+   int                   nsolvals            /**< number of solution values */
+   )
+{
+   assert(syncstore != NULL);
+   assert(syncstore->initialized);
+
+   SCIP_CALL_ABORT( SCIPtpiAcquireLock(syncstore->lock) );
+
+   if( minobj < syncstore->bestminobj )
+   {
+      syncstore->bestminobj = minobj;
+
+      if( syncstore->usesolpool && solvals != NULL )
+      {
+         if( syncstore->npoolsols == syncstore->poolsolssize )
+         {
+            int newsize;
+
+            newsize = MAX(64, 2 * syncstore->poolsolssize);
+            SCIP_ALLOC_ABORT( BMSreallocMemoryArray(&syncstore->poolsols, newsize) );
+            SCIP_ALLOC_ABORT( BMSreallocMemoryArray(&syncstore->poolobjs, newsize) );
+            SCIP_ALLOC_ABORT( BMSreallocMemoryArray(&syncstore->poolsource, newsize) );
+            SCIP_ALLOC_ABORT( BMSreallocMemoryArray(&syncstore->poolnvals, newsize) );
+            syncstore->poolsolssize = newsize;
+         }
+
+         SCIP_ALLOC_ABORT( BMSduplicateMemoryArray(&syncstore->poolsols[syncstore->npoolsols], solvals, nsolvals) );
+         syncstore->poolobjs[syncstore->npoolsols] = minobj;
+         syncstore->poolsource[syncstore->npoolsols] = ownerid;
+         syncstore->poolnvals[syncstore->npoolsols] = nsolvals;
+
+         /* the counter is incremented only after the entry is fully written, so the
+          * lock-free size hint read by the sync heuristics never exposes a partial entry
+          */
+         ++syncstore->npoolsols;
+      }
+
+      /* print the new incumbent while holding the lock so that the printed objective
+       * values are monotone and the lines of different solvers do not interleave
+       */
+      if( syncstore->printincumbents )
+      {
+         SCIP_Real origobj;
+
+         /* the communicated objective lives in the space of the main SCIP's transformed
+          * problem, of which the concurrent solvers are copies; that space may be scaled
+          * and shifted relative to the user's original problem (e.g. objective scaling by
+          * a gcd during the transformation), so map the value back before printing
+          */
+         origobj = SCIPretransformObj(syncstore->mainscip, minobj);
+         SCIPverbMessage(syncstore->mainscip, SCIP_VERBLEVEL_NORMAL, NULL, "%.2f I.SOL %.9g  (%s)\n",
+            SCIPgetSolvingTime(syncstore->mainscip), origobj, solvername);
+      }
+   }
+
+   SCIP_CALL_ABORT( SCIPtpiReleaseLock(syncstore->lock) );
+}
+
+/** returns whether the solution pool for immediate solution sharing is enabled */
+SCIP_Bool SCIPsyncstoreSolPoolEnabled(
+   SCIP_SYNCSTORE*       syncstore           /**< the synchronization store */
+   )
+{
+   assert(syncstore != NULL);
+
+   return syncstore->usesolpool;
+}
+
+/** gets the current number of solutions in the solution pool; reads the counter without
+ *  locking, so it may lag behind concurrent pushes, which is fine for its use as a
+ *  cheap size hint that is polled at every node
+ */
+int SCIPsyncstoreGetNPoolSols(
+   SCIP_SYNCSTORE*       syncstore           /**< the synchronization store */
+   )
+{
+   assert(syncstore != NULL);
+   assert(syncstore->initialized);
+
+   return syncstore->npoolsols;
+}
+
+/** gets the solution with the given index from the solution pool; entries are immutable
+ *  once published, so the returned values can be read without holding any lock
+ */
+void SCIPsyncstoreGetPoolSol(
+   SCIP_SYNCSTORE*       syncstore,          /**< the synchronization store */
+   int                   idx,                /**< index of the pooled solution, must be smaller than the size hint */
+   SCIP_Real**           solvals,            /**< pointer to return the solution values in communication variable order */
+   int*                  nsolvals,           /**< pointer to return the number of solution values */
+   int*                  ownerid             /**< pointer to return the index of the contributing concurrent solver */
+   )
+{
+   assert(syncstore != NULL);
+   assert(syncstore->initialized);
+   assert(solvals != NULL);
+   assert(nsolvals != NULL);
+   assert(ownerid != NULL);
+
+   SCIP_CALL_ABORT( SCIPtpiAcquireLock(syncstore->lock) );
+
+   assert(idx >= 0 && idx < syncstore->npoolsols);
+   *solvals = syncstore->poolsols[idx];
+   *nsolvals = syncstore->poolnvals[idx];
+   *ownerid = syncstore->poolsource[idx];
+
+   SCIP_CALL_ABORT( SCIPtpiReleaseLock(syncstore->lock) );
+}
+
+/** gets the minimization-normalized objective value of the best solution found by any
+ *  concurrent solver, or SCIP_REAL_MAX if no solution was registered yet
+ */
+SCIP_Real SCIPsyncstoreGetBestMinObj(
+   SCIP_SYNCSTORE*       syncstore           /**< the synchronization store */
+   )
+{
+   SCIP_Real minobj;
+
+   assert(syncstore != NULL);
+   assert(syncstore->initialized);
+
+   SCIP_CALL_ABORT( SCIPtpiAcquireLock(syncstore->lock) );
+
+   minobj = syncstore->bestminobj;
+
+   SCIP_CALL_ABORT( SCIPtpiReleaseLock(syncstore->lock) );
+
+   return minobj;
 }
 
 /** gets the upperbound from the last synchronization */
@@ -443,6 +619,65 @@ SCIP_RETCODE SCIPsyncstoreEnsureAllSynced(
    return SCIP_OKAY;
 }
 
+/** Tries to acquire the synchronization data with the given number for non-blocking reading.
+ *  On success the synchronization data is returned in locked state and must be released with
+ *  SCIPsyncstoreUnlockSyncdata after reading. If the data is not ready, NULL is returned and
+ *  lost indicates why: if the slot was overwritten by a newer synchronization the data is
+ *  lost and the reader should skip this number, otherwise the synchronization has not been
+ *  written by all solvers yet and the reader should retry later. Never blocks the caller.
+ */
+SCIP_RETCODE SCIPsyncstoreTryLockCompleteSyncdata(
+   SCIP_SYNCSTORE*       syncstore,          /**< the synchronization store */
+   SCIP_Longint          syncnum,            /**< the number of the synchronization to read */
+   SCIP_SYNCDATA**       syncdata,           /**< pointer to return the locked synchronization data, or NULL */
+   SCIP_Bool*            lost                /**< pointer to return whether the data was overwritten and is lost */
+   )
+{
+   SCIP_SYNCDATA* data;
+
+   assert(syncstore != NULL);
+   assert(syncstore->initialized);
+   assert(syncdata != NULL);
+   assert(lost != NULL);
+
+   data = &syncstore->syncdata[syncnum % syncstore->nsyncdata];
+
+   SCIP_CALL( SCIPtpiAcquireLock(data->lock) );
+
+   if( data->syncnum == syncnum && data->syncedcount == syncstore->nsolvers )
+   {
+      *syncdata = data;
+      *lost = FALSE;
+      return SCIP_OKAY;
+   }
+
+   /* a different synchronization number means the slot was recycled and the data of this
+    * synchronization can never be read anymore; the same number with an incomplete synced
+    * count means some solvers have not written it yet and the reader should retry later
+    */
+   *lost = data->syncnum != syncnum;
+   *syncdata = NULL;
+
+   SCIP_CALL( SCIPtpiReleaseLock(data->lock) );
+
+   return SCIP_OKAY;
+}
+
+/** releases the lock of a synchronization data acquired with SCIPsyncstoreTryLockCompleteSyncdata */
+SCIP_RETCODE SCIPsyncstoreUnlockSyncdata(
+   SCIP_SYNCSTORE*       syncstore,          /**< the synchronization store */
+   SCIP_SYNCDATA*        syncdata            /**< the synchronization data to unlock */
+   )
+{
+   assert(syncstore != NULL);
+   assert(syncstore->initialized);
+   assert(syncdata != NULL);
+
+   SCIP_CALL( SCIPtpiReleaseLock(syncdata->lock) );
+
+   return SCIP_OKAY;
+}
+
 /** Start synchronization for the given concurrent solver.
  *  Needs to be followed by a call to SCIPsyncstoreFinishSync if
  *  the syncdata that is returned is not NULL
@@ -474,6 +709,17 @@ SCIP_RETCODE SCIPsyncstoreStartSync(
 
    if( (*syncdata)->syncnum != syncnum )
    {
+      /* in solution-pool mode writers are not throttled by readers, so a fast solver can wrap
+       * around the syncdata ring while others lag; never recycle the slot recorded as the last
+       * synchronization, because it backs the winner and status determination at the end
+       */
+      if( syncstore->usesolpool && *syncdata == syncstore->lastsync )
+      {
+         SCIP_CALL( SCIPtpiReleaseLock((*syncdata)->lock) );
+         *syncdata = NULL;
+         return SCIP_OKAY;
+      }
+
       SCIPboundstoreClear((*syncdata)->boundstore);
       (*syncdata)->nsols = 0;
       (*syncdata)->memtotal = SCIPgetMemTotal(syncstore->mainscip);
