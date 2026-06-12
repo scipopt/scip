@@ -483,11 +483,13 @@ SCIP_RETCODE setupAndSolveSubscip(
       SCIP_CALL( SCIPsetBoolParam(subscip, "lp/checkdualfeas", FALSE) );
    }
 
-   /* if there is already a solution, add an objective cutoff */
-   if( SCIPgetNSols(scip) > 0 )
+   /* if there is already a solution with a known finite objective, add an objective cutoff;
+    * note that solutions received from other solvers in concurrent mode are stored in the
+    * original solution space, where the upper bound can remain infinite
+    */
+   if( SCIPgetNSols(scip) > 0 && !SCIPisInfinity(scip, SCIPgetUpperbound(scip)) )
    {
       SCIP_Real upperbound;
-      assert( !SCIPisInfinity(scip,SCIPgetUpperbound(scip)) );
 
       upperbound = SCIPgetUpperbound(scip) - SCIPsumepsilon(scip);
 

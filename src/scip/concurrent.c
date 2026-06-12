@@ -839,10 +839,20 @@ SCIP_RETCODE SCIPcopyConcurrentSolvingStats(
    target->stat->previousdualrefgap = source->stat->previousdualrefgap;
    target->stat->previousprimalrefgap = source->stat->previousprimalrefgap;
    target->stat->previntegralevaltime = source->stat->previntegralevaltime;
-   target->stat->lastlowerbound = source->stat->lastdualbound;
-   target->stat->lastupperbound = source->stat->lastprimalbound;
-   target->stat->lastdualbound = SCIPprobExternObjval(target->transprob, target->origprob, target->set, target->stat->lastlowerbound);
-   target->stat->lastprimalbound = SCIPprobExternObjval(target->transprob, target->origprob, target->set, target->stat->lastupperbound);
+   /* the dual and primal bound bookkeeping is only adopted if the source solver ever updated it;
+    * copying the SCIP_UNKNOWN markers of a solver that found neither bound would corrupt later
+    * primal-dual integral updates in the target
+    */
+   if( source->stat->lastdualbound != SCIP_UNKNOWN ) /*lint !e777*/
+   {
+      target->stat->lastlowerbound = source->stat->lastdualbound;
+      target->stat->lastdualbound = SCIPprobExternObjval(target->transprob, target->origprob, target->set, target->stat->lastlowerbound);
+   }
+   if( source->stat->lastprimalbound != SCIP_UNKNOWN ) /*lint !e777*/
+   {
+      target->stat->lastupperbound = source->stat->lastprimalbound;
+      target->stat->lastprimalbound = SCIPprobExternObjval(target->transprob, target->origprob, target->set, target->stat->lastupperbound);
+   }
    target->stat->rootlpbestestimate = source->stat->rootlpbestestimate;
    target->stat->referencebound = source->stat->referencebound;
 
