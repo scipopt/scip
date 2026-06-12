@@ -1409,10 +1409,7 @@ SCIP_RETCODE additionFilterBatch(
                   }
                }
             }
-            if( k > 0 )
-            {
-               SCIPdebugMsg(scip, "Added %d constraints by reordering dynamically.\n", k);
-            }
+            SCIPdebugMsg(scip, "Added %d constraints by reordering dynamically.\n", k);
             SCIP_CALL( SCIPfreeSol(scip, &copysol) );
          }
       }
@@ -1430,22 +1427,40 @@ SCIP_RETCODE additionFilterBatch(
       assert( SCIPgetStage(scip) == SCIP_STAGE_PROBLEM );
    }
 
-   SCIPiisSetSubscipInfeasible(iis, !feasible);
-   if( !silent )
-      SCIPiisfinderInfoMessage(iis, FALSE);
-
-   /* Release any cons not in the IS */
-   for( i = 0; i < nconss; ++i )
+   /* If problem is feasible due to limit or interrupt, add the deleted constraints of the full infeasible problem */
+   if( feasible )
    {
-      if( !inIS[order[i]] )
+      assert(stopiter || SCIPiisGetTime(iis) >= timelim || (nodelim != -1 && SCIPiisGetNNodes(iis) >= nodelim));
+      SCIPdebugMsg(scip, "Hit limit or interrupt. Restore full infeasible problem.\n");
+      for( i = 0; i < nconss; ++i )
       {
-         SCIP_CALL( SCIPreleaseCons(scip, &conss[order[i]]) );
+         if( !inIS[order[i]] )
+         {
+            SCIP_CALL( SCIPaddCons(scip, conss[order[i]]) );
+            SCIP_CALL( SCIPreleaseCons(scip, &conss[order[i]]) );
+            inIS[order[i]] = TRUE;
+         }
+      }
+   }
+   else
+   {
+      /* Release any cons not in the IS */
+      for( i = 0; i < nconss; ++i )
+      {
+         if( !inIS[order[i]] )
+         {
+            SCIP_CALL( SCIPreleaseCons(scip, &conss[order[i]]) );
+         }
       }
    }
 
    SCIPfreeBlockMemoryArray(scip, &order, nconss);
    SCIPfreeBlockMemoryArray(scip, &inIS, nconss);
    SCIPfreeBlockMemoryArray(scip, &conss, nconss);
+   SCIPiisSetSubscipInfeasible(iis, TRUE);
+
+   if( !silent )
+      SCIPiisfinderInfoMessage(iis, FALSE);
 
    return SCIP_OKAY;
 }
