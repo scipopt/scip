@@ -723,6 +723,9 @@ SCIP_RETCODE fjSolverUpdateJumpValue(
             validrangeub = -bounds[0];
       }
 
+      SCIPdebugMsg(scip, "cstridx=%d coeff=%g weight=%g residual=%g range=[%g,%g]\n", cstridx, cellcoeff,
+         constraint->weight, residualincumbent, validrangelb, validrangeub);
+
       if( validrangelb > currentvalue )
       {
          currentslope -= constraint->weight;
@@ -801,6 +804,8 @@ SCIP_RETCODE fjSolverUpdateJumpValue(
       currentslope += solver->shiftbuffer[i]->weight;
       currentvalue = solver->shiftbuffer[i]->value;
 
+      SCIPdebugMsg(scip, "breakpoint i=%d value=%g slope=%g\n", i, currentvalue, currentslope);
+
       if( i + 1 == solver->nshiftbuffer
          || SCIPisPositive(scip, currentslope) || ( SCIPisZero(scip, currentslope)
          && ( SCIPisPositive(scip, var->objcoeff) || ( SCIPisZero(scip, var->objcoeff)
@@ -816,6 +821,8 @@ SCIP_RETCODE fjSolverUpdateJumpValue(
    /* force significant shift */
    if( SCIPisEQ(scip, currentvalue, varincumbent) )
    {
+      SCIPdebugMsg(scip, "min at incumbent, forcing shift\n");
+
       bestscore = INFINITY;
       currentscore = 0.0;
       currentvaluestore = currentvalue;
@@ -830,6 +837,8 @@ SCIP_RETCODE fjSolverUpdateJumpValue(
             currentscore += (solver->shiftbuffer[i]->value - currentvalue) * currentslope;
             currentslope += solver->shiftbuffer[i]->weight;
             currentvalue = solver->shiftbuffer[i]->value;
+
+            SCIPdebugMsg(scip, "right i=%d value=%g slope=%g score=%g\n", i, currentvalue, currentslope, currentscore);
          }
          while( SCIPisLE(scip, currentvalue, varincumbent) );
 
@@ -850,6 +859,8 @@ SCIP_RETCODE fjSolverUpdateJumpValue(
             --i;
             currentscore += (solver->shiftbuffer[i]->value - currentvalue) * currentslope;
             currentvalue = solver->shiftbuffer[i]->value;
+
+            SCIPdebugMsg(scip, "left i=%d value=%g slope=%g score=%g\n", i, currentvalue, currentslope, currentscore);
          }
          while( SCIPisGE(scip, currentvalue, varincumbent) );
 
@@ -857,6 +868,8 @@ SCIP_RETCODE fjSolverUpdateJumpValue(
             bestvalue = currentvalue;
       }
    }
+
+   SCIPdebugMsg(scip, "varidx=%d best=%g\n", varidx, bestvalue);
 
    solver->jumpmoves[varidx].value = bestvalue;
 
@@ -1823,21 +1836,20 @@ SCIP_RETCODE fjCheckTermination(
          quitnumsol = (nfoundsols >= heurdata->maxsols);
          if( quitnumsol )
          {
-            SCIPdebugMsg(scip, "Feasibility Jump: quitting because number of solutions %d >= %d.\n",
-               nfoundsols, heurdata->maxsols);
+            SCIPdebugMsg(scip, "quitting because number of solutions %d >= %d.\n", nfoundsols, heurdata->maxsols);
          }
 
          quiteffort = (solver->totaleffort - solver->effortatlastimprovement > heurdata->maxeffort);
          if( quiteffort )
          {
-            SCIPdebugMsg(scip, "Feasibility Jump: quitting because effort %d > %d.\n",
+            SCIPdebugMsg(scip, "quitting because effort %d > %d.\n",
                solver->totaleffort - solver->effortatlastimprovement, heurdata->maxeffort);
          }
 
          quitnoimprove = (solver->percentdecrease < heurdata->mindecrease);
          if( quitnoimprove )
          {
-            SCIPdebugMsg(scip, "Feasibility Jump: Percentage decrease of violated constraints (%d) "
+            SCIPdebugMsg(scip, "percentage decrease of violated constraints (%d) "
                "is smaller than the minimum of %d percent decrease.\n", solver->percentdecrease,
                heurdata->mindecrease);
          }
@@ -1848,8 +1860,7 @@ SCIP_RETCODE fjCheckTermination(
       if( *terminate )
       {
          SCIP_Real time = SCIPgetSolvingTime(scip) - starttime;
-         SCIPdebugMsg(scip, "Feasibility Jump: effort rate: %g Mops/sec\n",
-            solver->totaleffort / time / 1.0e6);
+         SCIPdebugMsg(scip, "effort rate: %g Mops/sec\n", solver->totaleffort / (1e+6 * time));
          if( heurdata->verbosity >= 2 )
             SCIPinfoMessage(scip, NULL, "Feasibility Jump: quitting.\n");
       }
@@ -1873,6 +1884,7 @@ SCIP_RETCODE runFeasjump(
    SCIP_COL** cols;
    SCIP_ROW** rows;
    SCIP_Real starttime;
+   SCIP_Bool success;
    SCIP_Bool terminate;
    int ncols;
    int nrows;
@@ -1891,14 +1903,6 @@ SCIP_RETCODE runFeasjump(
 
    if( heurtiming == SCIP_HEURTIMING_BEFOREPRESOL )
    {
-      SCIP_Bool success;
-
-      if( SCIPgetNVars(scip) == 0 || SCIPgetNConss(scip) == 0 )
-      {
-         SCIP_CALL( fjProblemFree(scip, &problem) );
-         return SCIP_OKAY;
-      }
-
       SCIP_CALL( extractProblemDataBeforePresolve(scip, problem, &success) );
 
       if( !success )
@@ -1911,13 +1915,6 @@ SCIP_RETCODE runFeasjump(
    {
       SCIP_CALL( SCIPgetLPColsData(scip, &cols, &ncols) );
       SCIP_CALL( SCIPgetLPRowsData(scip, &rows, &nrows) );
-
-      if( ncols == 0 || nrows == 0 )
-      {
-         SCIP_CALL( fjProblemFree(scip, &problem) );
-         return SCIP_OKAY;
-      }
-
       SCIP_CALL( extractProblemData(scip, problem, cols, rows, ncols, nrows) );
 
       /* add objective cutoff */
@@ -1926,8 +1923,12 @@ SCIP_RETCODE runFeasjump(
          SCIP_CALL( addObjCutoff(scip, problem, cols, ncols) );
       }
    }
-   assert(problem->nvars >= 1);
-   assert(problem->nconstraints >= 1);
+
+   if( problem->nvars == 0 || problem->nconstraints == 0 )
+   {
+      SCIP_CALL( fjProblemFree(scip, &problem) );
+      return SCIP_OKAY;
+   }
 
    SCIP_CALL( fjSolverCreate(scip, &solver, problem, heurdata->randnumgen, heurdata->verbosity,
          heurdata->weightupdatedecay, SCIPinfinity(scip), heurdata->iterations, heurdata->samplesize,
@@ -2017,6 +2018,10 @@ SCIP_RETCODE runFeasjump(
 
          solver->prevviolations = problem->nviolated;
       }
+
+      SCIPdebugMsg(scip, "step=%d varidx=%d value=%g viol=%d good=%d effort=%d obj=%g\n", step, varidx,
+         problem->incumbentassignment[varidx], problem->nviolated, solver->ngoodvars, solver->totaleffort,
+         problem->incumbentobjective);
 
       /* check termination conditions */
       SCIP_CALL( fjCheckTermination(scip, solver, problem, heurdata, heur, heurtiming, solution, &nsols, result,
