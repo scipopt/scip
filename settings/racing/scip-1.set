@@ -1,3 +1,0 @@
-# Racing configuration 1: default SCIP.
-# No parameter changes; this solver differs from a sequential SCIP run only by
-# its racing seed.

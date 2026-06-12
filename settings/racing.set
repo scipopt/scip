@@ -1,6 +1,0 @@
-# Concurrent racing with the settings portfolio from settings/racing/.
-# Each concurrent solver scip-<n> loads settings/racing/scip-<n>.set on top of
-# the default concurrent configuration; the prefix is resolved relative to the
-# working directory. A line is printed for every new globally best solution.
-concurrent/paramsetprefix = "settings/racing/"
-concurrent/printincumbents = TRUE

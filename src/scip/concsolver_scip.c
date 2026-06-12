@@ -329,6 +329,221 @@ SCIP_RETCODE setChildSelRule(
    return SCIP_OKAY;
 }
 
+/** number of configurations in the built-in racing parameter portfolio */
+#define NRACINGCONFIGS 10
+
+/** short description of each configuration in the built-in racing parameter portfolio */
+static const char* const racingconfignames[NRACINGCONFIGS] =
+{
+   "default",
+   "feasibility emphasis",
+   "feasibility emphasis",
+   "no separation with fast presolving",
+   "cpsolver emphasis",
+   "cpsolver emphasis with rapid restarts",
+   "large neighborhood search improver",
+   "no presolving",
+   "early feasibility jump",
+   "intensified separation and strong branching"
+};
+
+/** temporarily fixes the parameters of a concurrent solver's SCIP that must keep their current
+ *  values while emphasis or portfolio settings are applied, i.e., the limit, numerics, memory,
+ *  and synchronization parameters; the returned buffer array must be released with
+ *  unfixProtectedParams()
+ */
+static
+SCIP_RETCODE fixProtectedParams(
+   SCIP*                 solverscip,         /**< the concurrent solver's SCIP datastructure */
+   SCIP_PARAM***         fixedparams,        /**< buffer to store the array of fixed parameters */
+   int*                  nfixedparams        /**< buffer to store the number of fixed parameters */
+   )
+{
+   SCIP_PARAM** params;
+   int nparams;
+   int i;
+
+   params = SCIPgetParams(solverscip);
+   nparams = SCIPgetNParams(solverscip);
+   SCIP_CALL( SCIPallocBufferArray(solverscip, fixedparams, nparams) );
+   *nfixedparams = 0;
+
+   for( i = 0; i < nparams; ++i )
+   {
+      const char* paramname;
+
+      paramname = SCIPparamGetName(params[i]);
+
+      if( strncmp(paramname, "limits/", 7) == 0 ||
+          strncmp(paramname, "numerics/", 9) == 0 ||
+          strncmp(paramname, "memory/", 7) == 0 ||
+          strncmp(paramname, "concurrent/sync/", 16) == 0 ||
+          strncmp(paramname, "heuristics/sync/", 16) == 0 ||
+          strncmp(paramname, "propagating/sync/", 17) == 0 )
+      {
+         (*fixedparams)[(*nfixedparams)++] = params[i];
+         SCIP_CALL( SCIPfixParam(solverscip, paramname) );
+      }
+   }
+
+   return SCIP_OKAY;
+}
+
+/** unfixes the parameters that were fixed by fixProtectedParams() and releases the buffer array */
+static
+SCIP_RETCODE unfixProtectedParams(
+   SCIP*                 solverscip,         /**< the concurrent solver's SCIP datastructure */
+   SCIP_PARAM***         fixedparams,        /**< array of fixed parameters */
+   int                   nfixedparams        /**< number of fixed parameters */
+   )
+{
+   int i;
+
+   for( i = 0; i < nfixedparams; ++i )
+      SCIP_CALL( SCIPunfixParam(solverscip, SCIPparamGetName((*fixedparams)[i])) );
+
+   SCIPfreeBufferArray(solverscip, fixedparams);
+
+   return SCIP_OKAY;
+}
+
+/** applies one configuration of the built-in racing parameter portfolio to a concurrent solver's SCIP
+ *
+ *  The portfolio diversifies the concurrent solvers towards finding feasible solutions early while
+ *  one part of the portfolio keeps pushing the dual bound:
+ *  - 0: default settings; differs from a sequential SCIP only by the racing seed
+ *  - 1/2: feasibility emphasis; used twice since the different racing seeds make the search
+ *         trajectories distinct
+ *  - 3: no separation with fast presolving; trades bound quality for node throughput
+ *  - 4: constraint programming style search; no LP relaxation, aggressive conflict analysis,
+ *       depth first search
+ *  - 5: constraint programming style search with a SAT-style geometric restart schedule and the
+ *       LP-free feasibility jump heuristic before presolving; never solves an LP, so it cannot
+ *       stall on instances with hard root LPs
+ *  - 6: large neighborhood search improver; fires the LNS heuristics aggressively and immediately
+ *       on new incumbents, so solutions found by the other concurrent solvers are polished as soon
+ *       as they arrive; separation is throttled to leave the CPU to the LNS sub-MIPs
+ *  - 7: no presolving; starts the search immediately on the original formulation, providing early
+ *       feasible solutions on instances where presolving takes long
+ *  - 8: early feasibility jump; runs the feasibility jump heuristic before presolving to find
+ *       feasible solutions in the first seconds
+ *  - 9: intensified separation and reliability branching; strengthens separators and presolvers
+ *       that are active by default (more rounds, more cuts, deeper probing, larger strong
+ *       branching budgets) to drive the dual bound
+ */
+static
+SCIP_RETCODE applyRacingSettings(
+   SCIP*                 solverscip,         /**< the concurrent solver's SCIP datastructure */
+   int                   config              /**< index of the racing configuration to apply */
+   )
+{
+   assert(solverscip != NULL);
+   assert(config >= 0 && config < NRACINGCONFIGS);
+
+   switch( config )
+   {
+   case 0:
+      break;
+
+   case 1:
+   case 2:
+      SCIP_CALL( SCIPsetEmphasis(solverscip, SCIP_PARAMEMPHASIS_FEASIBILITY, TRUE) );
+      break;
+
+   case 3:
+      SCIP_CALL( SCIPsetSeparating(solverscip, SCIP_PARAMSETTING_OFF, TRUE) );
+      SCIP_CALL( SCIPsetPresolving(solverscip, SCIP_PARAMSETTING_FAST, TRUE) );
+      break;
+
+   case 4:
+      SCIP_CALL( SCIPsetEmphasis(solverscip, SCIP_PARAMEMPHASIS_CPSOLVER, TRUE) );
+      break;
+
+   case 5:
+      SCIP_CALL( SCIPsetEmphasis(solverscip, SCIP_PARAMEMPHASIS_CPSOLVER, TRUE) );
+      SCIP_CALL( SCIPsetIntParam(solverscip, "conflict/restartnum", 100) );
+      SCIP_CALL( SCIPsetRealParam(solverscip, "conflict/restartfac", 1.5) );
+      SCIP_CALL( SCIPsetIntParam(solverscip, "presolving/maxrestarts", 100) );
+      SCIP_CALL( SCIPsetBoolParam(solverscip, "heuristics/feasjump/beforepresol", TRUE) );
+      break;
+
+   case 6:
+      SCIP_CALL( SCIPsetIntParam(solverscip, "heuristics/rins/freq", 10) );
+      SCIP_CALL( SCIPsetIntParam(solverscip, "heuristics/rins/nwaitingnodes", 0) );
+      SCIP_CALL( SCIPsetRealParam(solverscip, "heuristics/rins/minimprove", 0.001) );
+      SCIP_CALL( SCIPsetRealParam(solverscip, "heuristics/rins/nodesquot", 0.5) );
+      SCIP_CALL( SCIPsetIntParam(solverscip, "heuristics/rins/maxnodes", 10000) );
+      SCIP_CALL( SCIPsetIntParam(solverscip, "heuristics/crossover/freq", 10) );
+      SCIP_CALL( SCIPsetLongintParam(solverscip, "heuristics/crossover/nwaitingnodes", 0LL) );
+      SCIP_CALL( SCIPsetBoolParam(solverscip, "heuristics/crossover/dontwaitatroot", TRUE) );
+      SCIP_CALL( SCIPsetIntParam(solverscip, "heuristics/crossover/nusedsols", 4) );
+      SCIP_CALL( SCIPsetRealParam(solverscip, "heuristics/crossover/minimprove", 0.001) );
+      SCIP_CALL( SCIPsetIntParam(solverscip, "heuristics/dins/freq", 15) );
+      SCIP_CALL( SCIPsetIntParam(solverscip, "heuristics/localbranching/freq", 25) );
+      SCIP_CALL( SCIPsetIntParam(solverscip, "heuristics/mutation/freq", 25) );
+      SCIP_CALL( SCIPsetIntParam(solverscip, "heuristics/trustregion/freq", 25) );
+      SCIP_CALL( SCIPsetIntParam(solverscip, "heuristics/rens/freq", 15) );
+      SCIP_CALL( SCIPsetIntParam(solverscip, "heuristics/gins/freq", 10) );
+      SCIP_CALL( SCIPsetIntParam(solverscip, "separating/maxrounds", 1) );
+      SCIP_CALL( SCIPsetIntParam(solverscip, "separating/maxroundsroot", 5) );
+      break;
+
+   case 7:
+      SCIP_CALL( SCIPsetPresolving(solverscip, SCIP_PARAMSETTING_OFF, TRUE) );
+      break;
+
+   case 8:
+      SCIP_CALL( SCIPsetBoolParam(solverscip, "heuristics/feasjump/beforepresol", TRUE) );
+      break;
+
+   case 9:
+      SCIP_CALL( SCIPsetRealParam(solverscip, "branching/relpscost/sbiterquot", 1.0) );
+      SCIP_CALL( SCIPsetRealParam(solverscip, "branching/relpscost/maxreliable", 10.0) );
+      SCIP_CALL( SCIPsetRealParam(solverscip, "presolving/restartfac", 0.0125) );
+      SCIP_CALL( SCIPsetRealParam(solverscip, "presolving/restartminred", 0.06) );
+      SCIP_CALL( SCIPsetIntParam(solverscip, "separating/maxroundsrootsubrun", 5) );
+      SCIP_CALL( SCIPsetIntParam(solverscip, "separating/maxaddrounds", 5) );
+      SCIP_CALL( SCIPsetIntParam(solverscip, "separating/maxcutsroot", 5000) );
+      SCIP_CALL( SCIPsetIntParam(solverscip, "separating/gomory/maxroundsroot", 15) );
+      SCIP_CALL( SCIPsetIntParam(solverscip, "separating/gomory/maxsepacutsroot", 400) );
+      SCIP_CALL( SCIPsetIntParam(solverscip, "separating/aggregation/maxfailsroot", 200) );
+      SCIP_CALL( SCIPsetIntParam(solverscip, "separating/aggregation/maxsepacutsroot", 1000) );
+      SCIP_CALL( SCIPsetIntParam(solverscip, "separating/zerohalf/maxroundsroot", 30) );
+      SCIP_CALL( SCIPsetIntParam(solverscip, "separating/zerohalf/maxsepacutsroot", 200) );
+      SCIP_CALL( SCIPsetIntParam(solverscip, "separating/rlt/freq", 20) );
+      SCIP_CALL( SCIPsetIntParam(solverscip, "separating/rlt/maxroundsroot", 15) );
+      SCIP_CALL( SCIPsetIntParam(solverscip, "separating/disjunctive/freq", 20) );
+      SCIP_CALL( SCIPsetIntParam(solverscip, "separating/disjunctive/maxroundsroot", 150) );
+      SCIP_CALL( SCIPsetIntParam(solverscip, "separating/clique/freq", 20) );
+      SCIP_CALL( SCIPsetIntParam(solverscip, "separating/mcf/freq", 20) );
+      SCIP_CALL( SCIPsetIntParam(solverscip, "separating/mcf/maxtestdelta", -1) );
+      SCIP_CALL( SCIPsetBoolParam(solverscip, "separating/mcf/trynegscaling", TRUE) );
+      SCIP_CALL( SCIPsetIntParam(solverscip, "separating/mcf/maxsepacutsroot", 400) );
+      SCIP_CALL( SCIPsetIntParam(solverscip, "constraints/linear/sepafreq", 10) );
+      SCIP_CALL( SCIPsetIntParam(solverscip, "constraints/linear/maxsepacutsroot", 500) );
+      SCIP_CALL( SCIPsetBoolParam(solverscip, "constraints/linear/separateall", TRUE) );
+      SCIP_CALL( SCIPsetIntParam(solverscip, "constraints/knapsack/sepafreq", 10) );
+      SCIP_CALL( SCIPsetIntParam(solverscip, "constraints/knapsack/maxsepacutsroot", 500) );
+      SCIP_CALL( SCIPsetIntParam(solverscip, "constraints/logicor/sepafreq", 10) );
+      SCIP_CALL( SCIPsetIntParam(solverscip, "constraints/or/sepafreq", 10) );
+      SCIP_CALL( SCIPsetIntParam(solverscip, "constraints/setppc/sepafreq", 10) );
+      SCIP_CALL( SCIPsetBoolParam(solverscip, "constraints/setppc/cliquelifting", TRUE) );
+      SCIP_CALL( SCIPsetIntParam(solverscip, "constraints/SOS2/sepafreq", 10) );
+      SCIP_CALL( SCIPsetIntParam(solverscip, "constraints/varbound/sepafreq", 10) );
+      SCIP_CALL( SCIPsetIntParam(solverscip, "constraints/xor/sepafreq", 10) );
+      SCIP_CALL( SCIPsetIntParam(solverscip, "propagating/probing/maxuseless", 1500) );
+      SCIP_CALL( SCIPsetIntParam(solverscip, "propagating/probing/maxtotaluseless", 75) );
+      SCIP_CALL( SCIPsetRealParam(solverscip, "cutselection/hybrid/minorthoroot", 0.1) );
+      break;
+
+   default:
+      SCIPerrorMessage("invalid racing configuration index <%d>\n", config);
+      return SCIP_INVALIDDATA;
+   }
+
+   return SCIP_OKAY;
+}
+
 /** initialize the concurrent SCIP solver, i.e., setup the copy of the problem and the
  *  mapping of the variables */
 static
@@ -517,45 +732,42 @@ SCIP_DECL_CONCSOLVERCREATEINST(concsolverScipCreateInstance)
 
    SCIP_CALL( initConcsolver(scip, concsolver) );
 
-   /* check if emphasis setting should be loaded */
+   /* check if emphasis setting should be loaded; fix certain parameters before loading the
+    * emphasis to avoid setting them to default values
+    */
    if( typedata->loademphasis )
    {
-      SCIP_PARAM** params;
       SCIP_PARAM** fixedparams;
-      int nparams;
       int nfixedparams;
-      int i;
 
-      params = SCIPgetParams(data->solverscip);
-      nparams = SCIPgetNParams(data->solverscip);
-      SCIP_CALL( SCIPallocBufferArray(data->solverscip, &fixedparams, nparams) );
-      nfixedparams = 0;
-
-      /* fix certain parameters before loading emphasis to avoid setting them to default values */
-      for( i = 0; i < nparams; ++i )
-      {
-         const char* paramname;
-
-         paramname = SCIPparamGetName(params[i]);
-
-         if( strncmp(paramname, "limits/", 7) == 0 ||
-             strncmp(paramname, "numerics/", 9) == 0 ||
-             strncmp(paramname, "memory/", 7) == 0 ||
-             strncmp(paramname, "concurrent/sync/", 16) == 0 ||
-             strncmp(paramname, "heuristics/sync/", 16) == 0 ||
-             strncmp(paramname, "propagating/sync/", 17) == 0 )
-         {
-            fixedparams[nfixedparams++] = params[i];
-            SCIP_CALL( SCIPfixParam(data->solverscip, paramname) );
-         }
-      }
-
+      SCIP_CALL( fixProtectedParams(data->solverscip, &fixedparams, &nfixedparams) );
       SCIP_CALL( SCIPsetEmphasis(data->solverscip, typedata->emphasis, TRUE) );
+      SCIP_CALL( unfixProtectedParams(data->solverscip, &fixedparams, nfixedparams) );
+   }
+   else
+   {
+      SCIP_Bool racingportfolio;
 
-      for( i = 0; i < nfixedparams; ++i )
-         SCIP_CALL( SCIPunfixParam(data->solverscip, SCIPparamGetName(fixedparams[i])) );
+      /* diversify the concurrent solvers with the built-in racing portfolio; settings files
+       * loaded below through concurrent/paramsetprefix may override the portfolio settings
+       */
+      SCIP_CALL( SCIPgetBoolParam(scip, "concurrent/racingportfolio", &racingportfolio) );
 
-      SCIPfreeBufferArray(data->solverscip, &fixedparams);
+      if( racingportfolio )
+      {
+         SCIP_PARAM** fixedparams;
+         int config;
+         int nfixedparams;
+
+         config = SCIPconcsolverGetIdx(concsolver) % NRACINGCONFIGS;
+
+         SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "applying racing configuration <%s> to concurrent solver <%s>\n",
+            racingconfignames[config], SCIPconcsolverGetName(concsolver));
+
+         SCIP_CALL( fixProtectedParams(data->solverscip, &fixedparams, &nfixedparams) );
+         SCIP_CALL( applyRacingSettings(data->solverscip, config) );
+         SCIP_CALL( unfixProtectedParams(data->solverscip, &fixedparams, nfixedparams) );
+      }
    }
 
    /* load settings file if it exists */
