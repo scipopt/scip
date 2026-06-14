@@ -264,6 +264,7 @@ Fixed bugs
 - fixed statistic on added linear constraints in propagation
 - keep variable for impossible substitution in presolRoundCardinality() to avoid duplication error
 - restore infeasible original problem in IIS addition filter if interrupt or limit is hit
+- correct integer variable offset when removing duplicate variables from xor constraint
 
 Miscellaneous
 -------------

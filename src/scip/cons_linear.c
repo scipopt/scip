@@ -5835,15 +5835,14 @@ SCIP_RETCODE rangedRowPropagation(
 
    /* we now partition all unfixed variables in two groups:
     *
-    * the first one contains all integral variable with integral
-    * coefficient so that all variables in this group will have a gcd greater than 1, this group will be implicitly
-    * given
+    * The first one contains all integral variables with integral coefficient so that all variables in this group will
+    * have a gcd greater than 1. This group will be implicitly given.
     *
-    * the second group will contain all left unfixed variables and will be saved as infcheckvars with corresponding
-    * coefficients as infcheckvals, the order of these variables should be the same as in the consdata object
+    * The second group will contain all left unfixed variables and will be saved as infcheckvars with corresponding
+    * coefficients as infcheckvals. The order of these variables should be the same as in the consdata object.
     */
 
-   /* find first integral variables with integral coefficient greater than 1, thereby collecting all other unfixed
+   /* first find integral variables with integral coefficient greater than 1, thereby collecting all other unfixed
     * variables
     */
    ninfcheckvars = 0;
@@ -6023,7 +6022,7 @@ SCIP_RETCODE rangedRowPropagation(
    SCIPdebugMsg(scip, "minactinfvarsinvalid = %u, minactinfvars = %g, maxactinfvarsinvalid = %u, maxactinfvars = %g, gcd = %lld, ninfcheckvars = %d, ncontvars = %d\n",
       minactinfvarsinvalid, minactinfvars, maxactinfvarsinvalid, maxactinfvars, gcd, ninfcheckvars, ncontvars);
 
-   /* @todo maybe we took the wrong variables as infcheckvars we could try to exchange integer variables */
+   /* @todo maybe we took the wrong variables as infcheckvars - we could try to exchange integer variables */
    /* @todo if minactinfvarsinvalid or maxactinfvarsinvalid are true, try to exchange both partitions to maybe get valid
     *       activities */
    /* @todo calculate minactivity and maxactivity for all non-intcheckvars, and use this for better bounding,
@@ -6032,12 +6031,12 @@ SCIP_RETCODE rangedRowPropagation(
     *       are not at their global bound
     */
 
-   /* check if between left hand side and right hand side exist a feasible point, if not the constraint leads to
+   /* check if between left hand side and right hand side there exists a feasible point, if not, the constraint leads to
     * infeasibility */
    if( !SCIPisIntegral(scip, (lhs - maxactinfvars) / gcd) &&
       SCIPisGT(scip, SCIPceil(scip, (lhs - maxactinfvars) / gcd) * gcd, rhs - minactinfvars) )
    {
-      SCIPdebugMsg(scip, "no feasible value exist, constraint <%s> lead to infeasibility", SCIPconsGetName(cons));
+      SCIPdebugMsg(scip, "no feasible value exists, constraint <%s> leads to infeasibility", SCIPconsGetName(cons));
       SCIPdebugPrintCons(scip, cons, NULL);
 
       /* start conflict analysis */
@@ -6102,7 +6101,7 @@ SCIP_RETCODE rangedRowPropagation(
 
                 maxvalue = value;
              }
-            value += gcdinfvars;
+             value += gcdinfvars;
          }
          assert(nsols < 2 || minvalue <= maxvalue);
 
@@ -6144,7 +6143,7 @@ SCIP_RETCODE rangedRowPropagation(
          {
             SCIPdebugMsg(scip, "gcdinfvars = %lld, gcd = %lld, correctedlhs = %g, correctedrhs = %g\n",
                gcdinfvars, gcd, lhs, rhs);
-            SCIPdebugMsg(scip, "no solution found; constraint <%s> lead to infeasibility\n", SCIPconsGetName(cons));
+            SCIPdebugMsg(scip, "no solution found; constraint <%s> leads to infeasibility\n", SCIPconsGetName(cons));
             SCIPdebugPrintCons(scip, cons, NULL);
 
             /* start conflict analysis */
@@ -6153,7 +6152,7 @@ SCIP_RETCODE rangedRowPropagation(
 
             *cutoff = TRUE;
          }
-         /* if only one solution exist we can extract a new constraint or fix variables */
+         /* if only one solution exists, we can extract a new constraint or fix variables */
          else if( nsols == 1 )
          {
             assert(minvalue == maxvalue); /*lint !e777*/
@@ -6319,7 +6318,7 @@ SCIP_RETCODE rangedRowPropagation(
          /* at least two solutions */
          else
          {
-            /* @todo if we found more then one solution, we may reduced domains due to dualpresolving? */
+            /* @todo If we found more than one solution, can we reduce domains due to dualpresolving? */
 
             /* only one variable in the second set, so we can bound this variables */
             if( ninfcheckvars == 1 )
@@ -6384,7 +6383,7 @@ SCIP_RETCODE rangedRowPropagation(
                      ++(*nchgbds);
                }
             }
-            /* check if we have only one not infcheckvars, if so we can tighten this variable */
+            /* check if we have only one variable not in infcheckvars, if so we can tighten this variable */
             else if( ninfcheckvars == nunfixedvars - 1 )
             {
                SCIP_Bool foundvar = FALSE;
@@ -6657,6 +6656,7 @@ SCIP_RETCODE rangedRowPropagation(
             }
          }
       }
+
       if( v == consdata->nvars && !SCIPisHugeValue(scip, -minact) && !SCIPisHugeValue(scip, maxact) )
       {
          SCIP_CONS* newcons;

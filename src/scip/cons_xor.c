@@ -968,9 +968,8 @@ SCIP_RETCODE applyFixings(
          /* delete both variables */
          SCIPdebugMsg(scip, "xor constraint <%s>: deleting pair of equal variables <%s>\n",
                SCIPconsGetName(cons), SCIPvarGetName(consdata->vars[v]));
-         SCIP_CALL( delCoefPos(scip, cons, eventhdlr, v + 1) );
-         SCIP_CALL( delCoefPos(scip, cons, eventhdlr, v) );
-         *nchgcoefs += 2;
+
+         /* collect variable to subtract from intvar after pair removal */
          if( consdata->intvar != NULL )
          {
             assert(intoffsetvars != NULL);
@@ -989,6 +988,10 @@ SCIP_RETCODE applyFixings(
                ++intoffsetnvars;
             }
          }
+
+         SCIP_CALL( delCoefPos(scip, cons, eventhdlr, v + 1) );
+         SCIP_CALL( delCoefPos(scip, cons, eventhdlr, v) );
+         *nchgcoefs += 2;
          --v;
       }
       else if( consdata->vars[v] == SCIPvarGetNegatedVar(consdata->vars[v + 1]) ) /*lint !e679*/
@@ -996,12 +999,15 @@ SCIP_RETCODE applyFixings(
          /* delete both variables and negate the rhs */
          SCIPdebugMsg(scip, "xor constraint <%s>: deleting pair of negated variables <%s> and <%s>\n",
                SCIPconsGetName(cons), SCIPvarGetName(consdata->vars[v]), SCIPvarGetName(consdata->vars[v+1])); /*lint !e679*/
-         SCIP_CALL( delCoefPos(scip, cons, eventhdlr, v + 1) );
-         SCIP_CALL( delCoefPos(scip, cons, eventhdlr, v) );
-         *nchgcoefs += 2;
+
+         /* flip rhs and track constant offset to subtract from intvar after pair removal */
          consdata->rhs = !consdata->rhs;
          if( consdata->rhs )
             ++intoffsetconst;
+
+         SCIP_CALL( delCoefPos(scip, cons, eventhdlr, v + 1) );
+         SCIP_CALL( delCoefPos(scip, cons, eventhdlr, v) );
+         *nchgcoefs += 2;
          --v;
       }
       else
@@ -1009,7 +1015,8 @@ SCIP_RETCODE applyFixings(
       --v;
    }
 
-   /* if there is an offset of the integer variable y, it needs to be replaced by z with
+   /* a xor constraint is represented by sum(x) - 2 * intvar = rhs, so variable duplicate
+    * offsets need to be eliminated from the integer variable y, replacing it by z with
     * y = z + intoffsetsum and z in [max(lb_y - intoffsetmax, 0), ub_y - intoffsetmin]
     */
    if( consdata->intvar != NULL )
