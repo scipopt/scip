@@ -67,6 +67,7 @@
 #include "scip/cons_varbound.h"
 #include "scip/cons_and.h"
 #include "scip/cons_bounddisjunction.h"
+#include "scip/cons_setppc.h"
 #include "scip/heur_subnlp.h"
 #include "scip/heur_trysol.h"
 #include "scip/lapack_calls.h"
@@ -4399,9 +4400,12 @@ SCIP_RETCODE getBinaryProductExpr(
       if( nchildren == 2 )
       {
          SCIP_CLIQUE** xcliques;
+         SCIP_CONS* clqcons;
+         SCIP_VAR* clqvars[2];
          SCIP_VAR* x;
          SCIP_VAR* y;
          SCIP_Bool found_clique = FALSE;
+         char clqname[SCIP_MAXSTRLEN];
          int c;
 
          /* get variables from the product expression */
@@ -4419,9 +4423,20 @@ SCIP_RETCODE getBinaryProductExpr(
          {
             if( SCIPcliqueHasVar(xcliques[c], y, TRUE) ) /* x + y <= 1 => x*y = 0 */
             {
+               /* add clique as explicit set packing constraint to preserve model completeness */
+               clqvars[0] = x;
+               clqvars[1] = y;
+               (void) SCIPsnprintf(clqname, SCIP_MAXSTRLEN, "binreform_%s_%s",
+                     SCIPvarGetName(clqvars[0]), SCIPvarGetName(clqvars[1]));
+               SCIP_CALL( SCIPcreateConsBasicSetpack(scip, &clqcons, clqname, 2, clqvars) );
+               SCIP_CALL( SCIPaddCons(scip, clqcons) );
+               SCIP_CALL( SCIPreleaseCons(scip, &clqcons) );
+
                /* create zero value expression */
                SCIP_CALL( SCIPcreateExprValue(scip, newexpr, 0.0, exprownerCreate, (void*)conshdlr) );
 
+               if( naddconss != NULL )
+                  *naddconss += 1;
                if( nchgcoefs != NULL )
                   *nchgcoefs += 1;
 
@@ -4431,9 +4446,20 @@ SCIP_RETCODE getBinaryProductExpr(
 
             if( SCIPcliqueHasVar(xcliques[c], y, FALSE) ) /* x + (1-y) <= 1 => x*y = x */
             {
+               /* add clique as explicit set packing constraint: x + (1-y) <= 1 */
+               clqvars[0] = x;
+               SCIP_CALL( SCIPgetNegatedVar(scip, y, &clqvars[1]) );
+               (void) SCIPsnprintf(clqname, SCIP_MAXSTRLEN, "binreform_%s_%s",
+                     SCIPvarGetName(clqvars[0]), SCIPvarGetName(clqvars[1]));
+               SCIP_CALL( SCIPcreateConsBasicSetpack(scip, &clqcons, clqname, 2, clqvars) );
+               SCIP_CALL( SCIPaddCons(scip, clqcons) );
+               SCIP_CALL( SCIPreleaseCons(scip, &clqcons) );
+
                /* create variable expression for x */
                SCIP_CALL( createExprVar(scip, conshdlr, newexpr, x) );
 
+               if( naddconss != NULL )
+                  *naddconss += 1;
                if( nchgcoefs != NULL )
                   *nchgcoefs += 2;
 
@@ -4451,9 +4477,20 @@ SCIP_RETCODE getBinaryProductExpr(
             {
                if( SCIPcliqueHasVar(xcliques[c], y, TRUE) ) /* (1-x) + y <= 1 => x*y = y */
                {
+                  /* add clique as explicit set packing constraint: (1-x) + y <= 1 */
+                  SCIP_CALL( SCIPgetNegatedVar(scip, x, &clqvars[0]) );
+                  clqvars[1] = y;
+                  (void) SCIPsnprintf(clqname, SCIP_MAXSTRLEN, "binreform_%s_%s",
+                        SCIPvarGetName(clqvars[0]), SCIPvarGetName(clqvars[1]));
+                  SCIP_CALL( SCIPcreateConsBasicSetpack(scip, &clqcons, clqname, 2, clqvars) );
+                  SCIP_CALL( SCIPaddCons(scip, clqcons) );
+                  SCIP_CALL( SCIPreleaseCons(scip, &clqcons) );
+
                   /* create variable expression for y */
                   SCIP_CALL( createExprVar(scip, conshdlr, newexpr, y) );
 
+                  if( naddconss != NULL )
+                     *naddconss += 1;
                   if( nchgcoefs != NULL )
                      *nchgcoefs += 1;
 
@@ -4463,6 +4500,15 @@ SCIP_RETCODE getBinaryProductExpr(
 
                if( SCIPcliqueHasVar(xcliques[c], y, FALSE) ) /* (1-x) + (1-y) <= 1 => x*y = x + y - 1 */
                {
+                  /* add clique as explicit set covering constraint: x + y >= 1 */
+                  clqvars[0] = x;
+                  clqvars[1] = y;
+                  (void) SCIPsnprintf(clqname, SCIP_MAXSTRLEN, "binreform_%s_%s",
+                        SCIPvarGetName(clqvars[0]), SCIPvarGetName(clqvars[1]));
+                  SCIP_CALL( SCIPcreateConsBasicSetcover(scip, &clqcons, clqname, 2, clqvars) );
+                  SCIP_CALL( SCIPaddCons(scip, clqcons) );
+                  SCIP_CALL( SCIPreleaseCons(scip, &clqcons) );
+
                   /* create sum expression */
                   SCIP_EXPR* sum_children[2];
                   SCIP_Real sum_coefs[2];
@@ -4475,6 +4521,8 @@ SCIP_RETCODE getBinaryProductExpr(
                   SCIP_CALL( SCIPreleaseExpr(scip, &sum_children[0]) );
                   SCIP_CALL( SCIPreleaseExpr(scip, &sum_children[1]) );
 
+                  if( naddconss != NULL )
+                     *naddconss += 1;
                   if( nchgcoefs != NULL )
                      *nchgcoefs += 3;
 
@@ -4582,14 +4630,18 @@ SCIP_RETCODE replaceBinaryProducts(
  *    z_{ij} \leq x_i, \qquad z_{ij} \leq x_j, \qquad x_i + x_j - z_{ij} \leq 1.
  * \f]
  *
- * Before reformulating \f$x_i x_j\f$ in this way, it is checked whether there is a clique that contains \f$x_i\f$ and \f$x_j\f$.
- * These cliques allow for a better reformulation. There are four cases:
+ * Before reformulating \f$x_i x_j\f$ in this way, it is checked whether there is a clique that contains \f$x_i\f$ and
+ * \f$x_j\f$. These cliques allow for a better reformulation. There are four cases:
  *
  *    1. \f$x_i + x_j \leq 1\f$ implies that \f$x_i x_j = 0\f$
  *    2. \f$x_i + (1 - x_j) \leq 1\f$ implies \f$x_i x_j = x_i\f$
  *    3. \f$(1 - x_i) + x_j \leq 1\f$ implies \f$x_i x_j = x_j\f$
  *    4. \f$(1 - x_i) + (1 - x_j) \leq 1\f$ implies \f$x_i x_j = x_i + x_j - 1\f$
  *
+ * When a clique is used, the corresponding inequality is added as an explicit set packing or covering
+ * constraint to preserve model completeness, since the clique may have been derived from a constraint containing
+ * \f$x_i x_j\f$. For example, when \f$x_i x_j \leq 0\f$ provides the clique \f$(x_i, x_j)\f$, then the binary
+ * reformulation replaces \f$x_i x_j\f$ by 0 (case 1), but now \f$0 \leq 0\f$ no longer enforces \f$x_i = 0 \vee x_j = 0\f$.
  * The reformulation using \f$z_{ij}\f$ or the cliques is implemented in getBinaryProductExpr().
  *
  * Introducing too many extra variables and constraints can have a negative impact on the performance (e.g., due to
