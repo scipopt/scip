@@ -39,6 +39,7 @@
 #define DEFAULT_MASTERGAPLIMIT         0.1        /**< gap bound for approximately solving the master problem */
 #define DEFAULT_REOPTIMIZATION         TRUE       /**< Use reoptimization to solve master problem? */
 #define DEFAULT_MASTERSTALLNODES       5000L      /**< stall nodes for the master problem */
+#define DEFAULT_SCALEALTLPSIDE         TRUE       /**< Scale the rhs of the alternative polyhedron? */
 
 /** data needed for cut generation */
 struct BENDERS_Data
@@ -552,7 +553,9 @@ SCIP_RETCODE createAltLPColumn(
 static
 SCIP_RETCODE createAltLP(
    SCIP*                 origscip,           /**< original SCIP instance */
-   SCIP_LPI*             lp                  /**< alternative polyhedron */
+   SCIP_LPI*             lp,                 /**< alternative polyhedron */
+   SCIP_Real*            sumabssides,        /**< pointer to return the sum of the absolute values of all lhs/rhs */
+   int*                  nnonzerosumsides    /**< pointer to store the number of nonzeros in the sum of all lhs/rhs */
    )
 {
    SCIP_CONS** origconss;
@@ -562,6 +565,11 @@ SCIP_RETCODE createAltLP(
 
    assert( origscip != NULL );
    assert( lp != NULL );
+   assert( sumabssides != NULL );
+   assert( nnonzerosumsides != NULL );
+
+   *sumabssides = 0.0;
+   *nnonzerosumsides = 0;
 
    origconss = SCIPgetConss(origscip);
    norigconss = SCIPgetNConss(origscip);
@@ -583,11 +591,30 @@ SCIP_RETCODE createAltLP(
 
       if ( strcmp(origconshdlrname, "linear") == 0 )
       {
+         SCIP_Real lhs;
+         SCIP_Real rhs;
+
          origconsvars = SCIPgetVarsLinear(origscip, origcons);
          norigconsvars = SCIPgetNVarsLinear(origscip, origcons);
 
-         SCIP_CALL( createAltLPColumn(origscip, lp, norigconsvars, origconsvars, SCIPgetValsLinear(origscip, origcons), SCIPgetRhsLinear(origscip, origcons), 1.0) );
-         SCIP_CALL( createAltLPColumn(origscip, lp, norigconsvars, origconsvars, SCIPgetValsLinear(origscip, origcons), SCIPgetLhsLinear(origscip, origcons), -1.0) );
+         lhs = SCIPgetLhsLinear(origscip, origcons);
+         rhs = SCIPgetRhsLinear(origscip, origcons);
+         SCIP_CALL( createAltLPColumn(origscip, lp, norigconsvars, origconsvars, SCIPgetValsLinear(origscip, origcons), rhs, 1.0) );
+         SCIP_CALL( createAltLPColumn(origscip, lp, norigconsvars, origconsvars, SCIPgetValsLinear(origscip, origcons), lhs, -1.0) );
+
+         if ( ! SCIPisInfinity(origscip, rhs) )
+         {
+            *sumabssides += REALABS(rhs);
+            if ( ! SCIPisZero(origscip, rhs) )
+               ++(*nnonzerosumsides);
+         }
+
+         if ( ! SCIPisInfinity(origscip, - lhs) )
+         {
+            *sumabssides += REALABS(lhs);
+            if ( ! SCIPisZero(origscip, lhs) )
+               ++(*nnonzerosumsides);
+         }
       }
       else if ( strcmp(origconshdlrname, "setppc") == 0 )
       {
@@ -599,12 +626,18 @@ SCIP_RETCODE createAltLP(
          case SCIP_SETPPCTYPE_PARTITIONING :
             SCIP_CALL( createAltLPColumn(origscip, lp, norigconsvars, origconsvars, NULL, 1.0, 1.0) );
             SCIP_CALL( createAltLPColumn(origscip, lp, norigconsvars, origconsvars, NULL, 1.0, -1.0) );
+            *sumabssides += 2.0;
+            *nnonzerosumsides += 2;
             break;
          case SCIP_SETPPCTYPE_PACKING :
             SCIP_CALL( createAltLPColumn(origscip, lp, norigconsvars, origconsvars, NULL, 1.0, 1.0) );
+            *sumabssides += 1.0;
+            ++(*nnonzerosumsides);
             break;
          case SCIP_SETPPCTYPE_COVERING :
             SCIP_CALL( createAltLPColumn(origscip, lp, norigconsvars, origconsvars, NULL, 1.0, -1.0) );
+            *sumabssides += 1.0;
+            ++(*nnonzerosumsides);
             break;
          }
       }
@@ -614,6 +647,8 @@ SCIP_RETCODE createAltLP(
          norigconsvars = SCIPgetNVarsLogicor(origscip, origcons);
 
          SCIP_CALL( createAltLPColumn(origscip, lp, norigconsvars, origconsvars, NULL, 1.0, -1.0) );
+         *sumabssides += 1.0;
+         ++(*nnonzerosumsides);
       }
       else if ( strcmp(origconshdlrname, "knapsack") == 0 )
       {
@@ -631,6 +666,8 @@ SCIP_RETCODE createAltLP(
             consvals[v] = (SCIP_Real) origweights[v];
 
          SCIP_CALL( createAltLPColumn(origscip, lp, norigconsvars, origconsvars, consvals, (SCIP_Real) SCIPgetCapacityKnapsack(origscip, origcons), 1.0) );
+         *sumabssides += (SCIP_Real) SCIPgetCapacityKnapsack(origscip, origcons);
+         ++(*nnonzerosumsides);
 
          SCIPfreeBufferArray(origscip, &consvals);
       }
@@ -638,6 +675,8 @@ SCIP_RETCODE createAltLP(
       {
 	 SCIP_VAR* consvars[2];
 	 SCIP_Real consvals[2];
+         SCIP_Real lhs;
+         SCIP_Real rhs;
 
          consvars[0] = SCIPgetVarVarbound(origscip, origcons);
          consvars[1] = SCIPgetVbdvarVarbound(origscip, origcons);
@@ -645,8 +684,23 @@ SCIP_RETCODE createAltLP(
          consvals[0] = 1.0;
          consvals[1] = SCIPgetVbdcoefVarbound(origscip, origcons);
 
-         SCIP_CALL( createAltLPColumn(origscip, lp, 2, consvars, consvals, SCIPgetRhsVarbound(origscip, origcons), 1.0) );
-         SCIP_CALL( createAltLPColumn(origscip, lp, 2, consvars, consvals, SCIPgetLhsVarbound(origscip, origcons), -1.0) );
+         lhs = SCIPgetLhsVarbound(origscip, origcons);
+         rhs = SCIPgetRhsVarbound(origscip, origcons);
+         SCIP_CALL( createAltLPColumn(origscip, lp, 2, consvars, consvals, rhs, 1.0) );
+         SCIP_CALL( createAltLPColumn(origscip, lp, 2, consvars, consvals, lhs, -1.0) );
+
+         if ( ! SCIPisInfinity(origscip, rhs) )
+         {
+            *sumabssides += REALABS(rhs);
+            if ( ! SCIPisZero(origscip, rhs) )
+               ++(*nnonzerosumsides);
+         }
+         if ( ! SCIPisInfinity(origscip, - lhs) )
+         {
+            *sumabssides += REALABS(lhs);
+            if ( ! SCIPisZero(origscip, lhs) )
+               ++(*nnonzerosumsides);
+         }
       }
       else
       {
@@ -673,12 +727,14 @@ SCIP_RETCODE solveMinIISC(
    SCIP* origscip;
    SCIP_STATUS status;
    SCIP_LPI* lp;
+   SCIP_Real sumabssides;
    SCIP_Real lhs = -1.0;
    SCIP_Real rhs = -1.0;
    SCIP_VAR** origvars;
    SCIP_Real obj = 0.0;
    SCIP_Real lb = 0.0;
    SCIP_Real ub;
+   int nnonzerosumsides;
    int norigvars;
    int nrows = 0;
    int m = 0;
@@ -689,6 +745,7 @@ SCIP_RETCODE solveMinIISC(
    SCIP_Longint masterstallnodes;
    SCIP_Real mastergaplimit;
    SCIP_Bool reoptimization;
+   SCIP_Bool scalealtlpside;
 
    /* create master SCIP */
    SCIP_CALL( SCIPcreate(&masterscip) );
@@ -727,6 +784,11 @@ SCIP_RETCODE solveMinIISC(
          "miniisc/reoptimization",
          "Use reoptimization to solve master problem?",
          &reoptimization, TRUE, DEFAULT_REOPTIMIZATION, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddBoolParam(masterscip,
+         "miniisc/scalealtlpside",
+         "Scale the rhs of the alternative polyhedron?",
+         &scalealtlpside, TRUE, DEFAULT_SCALEALTLPSIDE, NULL, NULL) );
 
    /* read parameters if required */
    if ( settingsname != NULL )
@@ -794,7 +856,7 @@ SCIP_RETCODE solveMinIISC(
    SCIP_CALL( SCIPlpiGetNRows(lp, &nrows) );
 
    /* create alternative polyhedron */
-   SCIP_CALL( createAltLP(origscip, lp) );
+   SCIP_CALL( createAltLP(origscip, lp, &sumabssides, &nnonzerosumsides) );
 
    /* get number of constraints */
    SCIP_CALL( SCIPlpiGetNCols(lp, &m) );
@@ -822,6 +884,8 @@ SCIP_RETCODE solveMinIISC(
          {
             matind[cnt] = 0;
             matval[cnt++] = -val;
+            sumabssides += REALABS(val);
+            ++nnonzerosumsides;
          }
          matind[cnt] = SCIPvarGetIndex(var) + 1;
          matval[cnt++] = -1.0;
@@ -837,11 +901,26 @@ SCIP_RETCODE solveMinIISC(
          {
             matind[cnt] = 0;
             matval[cnt++] = val;
+            sumabssides += REALABS(val);
+            ++nnonzerosumsides;
          }
          matind[cnt] = SCIPvarGetIndex(var) + 1;
          matval[cnt++] = 1.0;
          SCIP_CALL( SCIPlpiAddCols(lp, 1, &obj, &lb, &ub, NULL, cnt, &matbeg, matind, matval) );
       }
+   }
+
+   /* scale rhs of alternative polyhedron if requrested */
+   if ( scalealtlpside && nnonzerosumsides > 0 )
+   {
+      SCIP_Real val;
+      int ind = 0;
+
+      /* We change the rhs of the normalizing constraint in the alternative polyhedron by the average value in the
+       * corresponding row. This often improves numerical stability, e.e., if the values are large. */
+      assert( SCIPisPositive(origscip, sumabssides) );
+      val = - sumabssides / (SCIP_Real) nnonzerosumsides;
+      SCIP_CALL( SCIPlpiChgSides(lp, 1, &ind, &val, &val) );
    }
 
    /* free SCIP instance */
