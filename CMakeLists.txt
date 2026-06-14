@@ -26,7 +26,7 @@ set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_DEBUG} ${CMAKE_CXX_FLAGS_R
 set(SCIP_VERSION_MAJOR 11)
 set(SCIP_VERSION_MINOR 0)
 set(SCIP_VERSION_PATCH 0)
-set(SCIP_VERSION_API 163)
+set(SCIP_VERSION_API 164)
 
 project(SCIP
     VERSION ${SCIP_VERSION_MAJOR}.${SCIP_VERSION_MINOR}.${SCIP_VERSION_PATCH}
@@ -1035,7 +1035,6 @@ if(BUILD_TESTING)
     #
     add_custom_target(unittests)
     add_subdirectory(tests EXCLUDE_FROM_ALL)
-    add_subdirectory(doc EXCLUDE_FROM_ALL)
 
     #
     # add examples
@@ -1053,6 +1052,8 @@ if(BUILD_TESTING)
 
     add_custom_target(all_executables DEPENDS scip unittests examples applications)
 endif()
+
+add_subdirectory(doc EXCLUDE_FROM_ALL)
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${OLD_CMAKE_RUNTIME_OUTPUT_DIRECTORY})
 

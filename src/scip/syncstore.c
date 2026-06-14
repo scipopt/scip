@@ -266,6 +266,18 @@ void SCIPsyncstoreSetSolveIsStopped(
    syncstore->stopped = stopped;
 
    SCIP_CALL_ABORT( SCIPtpiReleaseLock(syncstore->lock) );
+
+   /* wake up any solvers blocked in SCIPsyncstoreEnsureAllSynced so they can
+    * check the stopped flag and exit instead of waiting for all syncs to complete */
+   if( stopped && syncstore->initialized )
+   {
+      int i;
+
+      for( i = 0; i < syncstore->nsyncdata; ++i )
+      {
+         SCIP_CALL_ABORT( SCIPtpiBroadcastCondition(syncstore->syncdata[i].allsynced) );
+      }
+   }
 }
 
 /** gets the upperbound from the last synchronization */
@@ -418,7 +430,7 @@ SCIP_RETCODE SCIPsyncstoreEnsureAllSynced(
    /* check if waiting is required, make sure to hold the lock */
    SCIP_CALL( SCIPtpiAcquireLock(syncdata->lock) );
 
-   while( syncdata->syncedcount < syncstore->nsolvers )
+   while( syncdata->syncedcount < syncstore->nsolvers && !syncstore->stopped )
    {
       /* yes, so wait on the condition variable
        * (automatically releases the lock and reacquires it after the waiting)
@@ -491,6 +503,15 @@ SCIP_RETCODE SCIPsyncstoreFinishSync(
    assert(syncstore->initialized);
 
    ++(*syncdata)->syncedcount;
+
+   /* record lastsync as soon as a terminal status is available, even if not all solvers
+    * have synced yet; this ensures SCIPsyncstoreGetWinner returns the correct winner when
+    * SolveIsStopped causes remaining solvers to skip their sync */
+   if( (*syncdata)->status != SCIP_STATUS_UNKNOWN && syncstore->lastsync != *syncdata )
+   {
+      syncstore->lastsync = *syncdata;
+      printline = TRUE;
+   }
 
    if( (*syncdata)->syncedcount == syncstore->nsolvers )
    {

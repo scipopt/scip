@@ -385,7 +385,7 @@ SCIP_RETCODE heurExec(
       /* give up if an error occurred or no primal values are accessible */
       if( solstat > SCIP_NLPSOLSTAT_LOCINFEASIBLE )
       {
-         SCIPdebugMsg(scip, "error occured during NLP solve -> stop!\n");
+         SCIPdebugMsg(scip, "error occurred during NLP solve -> stop!\n");
          break;
       }
 

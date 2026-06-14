@@ -180,10 +180,12 @@ BEGIN {
    ssim = 0;
    ssblp = 0;
    stottime = 0.0;
+   snormtime = 0.0;
    stimetofirst = 0.0;
    stimetobest = 0.0;
    nodegeom = 0.0;
    timegeom = 0.0;
+   normtimegeom = 0.0;
    timetofirstgeom = 0.0;
    timetobestgeom = 0.0;
    sblpgeom = 0.0;
@@ -193,6 +195,7 @@ BEGIN {
    overheadtimegeom = 0.0;
    shiftednodegeom = nodegeomshift;
    shiftedtimegeom = timegeomshift;
+   shiftednormtimegeom = timegeomshift;
    shiftedsblpgeom = sblpgeomshift;
    shiftedconftimegeom = timegeomshift;
    shiftedconfgeom = timegeomshift;
@@ -351,6 +354,13 @@ BEGIN {
    certified_ori = 0;
    certified_fail = 0;
    vipr_ori = 0;
+   instructions = -1;
+   cycles = -1;
+   clock = -1;
+   targetfreq = 0;
+   meanfreq = 0;
+   nmsfreq = 0;
+   normtime = 0;
 }
 
 /@03/ {
@@ -358,6 +368,28 @@ BEGIN {
 }
 /@04/ {
    endtime = $2;
+}
+/@06/ {
+   printperf = 1;
+   for( i = 2; i <= NF; i++ )
+   {
+      split($i, kv, "=");
+      if( kv[1] == "instructions:u" ) instructions = kv[2];
+      else if( kv[1] == "cpu-cycles:u" ) cycles = kv[2];
+      else if( kv[1] == "task-clock" ) clock = kv[2];
+   }
+}
+/@09/ {
+   targetfreq = $2;
+}
+/@10/ {
+   for( i = 2; i <= NF; i++ )
+   {
+      split($i, kv, "=");
+      if( kv[1] == "meanfreq" ) meanfreq = kv[2];
+      else if( kv[1] == "nmsfreq" ) nmsfreq = kv[2];
+      else if( kv[1] == "normtime" ) normtime = kv[2];
+   }
 }
 
 /^SCIP version/ {
@@ -893,15 +925,15 @@ BEGIN {
       # append rest of header
       if( reoptimization == 0 )
       {
-         tablehead1 = tablehead1"+------+--- Original --+-- Presolved --+----------------+----------------+------+---------+--------+-------+";
-         tablehead2 = tablehead2"| Type | Conss |  Vars | Conss |  Vars |   Dual Bound   |  Primal Bound  | Gap%% |  Iters  |  Nodes |  Time |";
-         tablehead3 = tablehead3"+------+-------+-------+-------+-------+----------------+----------------+------+---------+--------+-------+";
+         tablehead1 = tablehead1"+------+--- Original --+-- Presolved --+----------------+----------------+------+---------+--------+--------+";
+         tablehead2 = tablehead2"| Type | Conss |  Vars | Conss |  Vars |   Dual Bound   |  Primal Bound  | Gap%% |  Iters  |  Nodes |   Time |";
+         tablehead3 = tablehead3"+------+-------+-------+-------+-------+----------------+----------------+------+---------+--------+--------+";
       }
       else
       {
-         tablehead1 = tablehead1"+------+--- Original --+-- Presolved --+-----------+----------------+----------------+---------+--------+-------+";
-         tablehead2 = tablehead2"| Type | Conss |  Vars | Conss |  Vars | Reopt Its | last Dual Bnd  | last Primal Bnd|  Iters  |  Nodes |  Time |";
-         tablehead3 = tablehead3"+------+-------+-------+-------+-------+-----------+----------------+----------------+---------+--------+-------+";
+         tablehead1 = tablehead1"+------+--- Original --+-- Presolved --+-----------+----------------+----------------+---------+--------+--------+";
+         tablehead2 = tablehead2"| Type | Conss |  Vars | Conss |  Vars | Reopt Its | last Dual Bnd  | last Primal Bnd|  Iters  |  Nodes |   Time |";
+         tablehead3 = tablehead3"+------+-------+-------+-------+-------+-----------+----------------+----------------+---------+--------+--------+";
       }
 
       if( analyseconf == 1 )
@@ -913,14 +945,25 @@ BEGIN {
 
       if( printsoltimes == 1 )
       {
-         tablehead1 = tablehead1"----------+---------+";
-         tablehead2 = tablehead2" To First | To Best |";
-         tablehead3 = tablehead3"----------+---------+";
+         tablehead1 = tablehead1"---------+---------+";
+         tablehead2 = tablehead2"To First | To Best |";
+         tablehead3 = tablehead3"---------+---------+";
       }
 
-      tablehead1 = tablehead1"--------\n";
-      tablehead2 = tablehead2"        \n";
-      tablehead3 = tablehead3"--------\n";
+      if( printperf )
+      {
+         tablehead1 = tablehead1"--------------+--------------+--------------+----------+--------+";
+         tablehead2 = tablehead2" Instructions |    Cycles    |    Clock     |  NMSFreq |NrmTime |";
+         tablehead3 = tablehead3"--------------+--------------+--------------+----------+--------+";
+      }
+
+      tablehead1 = tablehead1"--------+";
+      tablehead2 = tablehead2"        |";
+      tablehead3 = tablehead3"--------+";
+
+      tablehead1 = tablehead1"\n";
+      tablehead2 = tablehead2"\n";
+      tablehead3 = tablehead3"\n";
 
       printf(tablehead1);
       printf(tablehead2);
@@ -1044,7 +1087,7 @@ BEGIN {
             probtype = "  MIP";
       }
 
-      if( aborted && endtime - starttime > timelimit && timelimit > 0.0 )
+      if( aborted && endtime - starttime >= timelimit && timelimit > 0.0 )
       {
          timeout = 1;
          tottime = endtime - starttime;
@@ -1064,6 +1107,14 @@ BEGIN {
       if( usetimestamps != 0 )
          tottime = endtime - starttime;
 
+      if( meanfreq > 0 && targetfreq > 0 )
+      {
+         freqdev = (meanfreq - targetfreq) / targetfreq;
+         if( freqdev > 0.1 || freqdev < -0.1 )
+            printf("WARNING: %s mean frequency %.0f KHz deviates by %.1f%% from target %.0f KHz\n",
+               shortprob, meanfreq, freqdev * 100, targetfreq) > "/dev/stderr";
+      }
+
       if( aborted || timetobest < 0.0 )
       {
          timetofirst = tottime;
@@ -1074,6 +1125,7 @@ BEGIN {
       lps = primlps + duallps;
       simplex = primiter + dualiter;
       stottime += tottime;
+      snormtime += normtime;
       stimetofirst += timetofirst;
       stimetobest += timetobest;
       sbab += bbnodes;
@@ -1088,12 +1140,14 @@ BEGIN {
       nodegeom = nodegeom^((nprobs-1)/nprobs) * max(bbnodes, 1.0)^(1.0/nprobs);
       sblpgeom = sblpgeom^((nprobs-1)/nprobs) * max(sblps, 1.0)^(1.0/nprobs);
       timegeom = timegeom^((nprobs-1)/nprobs) * max(tottime, 1.0)^(1.0/nprobs);
+      normtimegeom = normtimegeom^((nprobs-1)/nprobs) * max(normtime, 1.0)^(1.0/nprobs);
       overheadtimegeom = overheadtimegeom^((nprobs-1)/nprobs) * max(overheadtime, 1.0)^(1.0/nprobs);
       basictimegeom = basictimegeom^((nprobs-1)/nprobs) * max(basictime, 1.0)^(1.0/nprobs);
 
       shiftednodegeom = shiftednodegeom^((nprobs-1)/nprobs) * max(bbnodes+nodegeomshift, 1.0)^(1.0/nprobs);
       shiftedsblpgeom = shiftedsblpgeom^((nprobs-1)/nprobs) * max(sblps+sblpgeomshift, 1.0)^(1.0/nprobs);
       shiftedtimegeom = shiftedtimegeom^((nprobs-1)/nprobs) * max(tottime+timegeomshift, 1.0)^(1.0/nprobs);
+      shiftednormtimegeom = shiftednormtimegeom^((nprobs-1)/nprobs) * max(normtime+timegeomshift, 1.0)^(1.0/nprobs);
       shiftedoverheadtimegeom = shiftedoverheadtimegeom^((nprobs-1)/nprobs) * max(overheadtime+timegeomshift, 1.0)^(1.0/nprobs);
       shiftedbasictimegeom = shiftedbasictimegeom^((nprobs-1)/nprobs) * max(basictime+timegeomshift, 1.0)^(1.0/nprobs);
 
@@ -1336,22 +1390,25 @@ BEGIN {
          # note: probtype has length 5, but field width is 6
          if( reoptimization == 0 )
          {
-            printf("%-*s  %-5s %7d %7d %7d %7d %16.9g %16.9g %6s %9d %8d %7.1f ",
+            printf("%-*s  %-5s %7d %7d %7d %7d %16.9g %16.9g %6s %9d %8d %8.3f ",
                    namelength, shortprob, probtype, origcons, origvars, cons, vars, db, pb, gapstr, simpiters, bbnodes, tottime);
          }
          else
          {
-            printf("%-*s  %-5s %7d %7d %7d %7d %11d %16.9g %16.9g %9d %8d %7.1f ",
+            printf("%-*s  %-5s %7d %7d %7d %7d %11d %16.9g %16.9g %9d %8d %8.3f ",
                    namelength, shortprob, probtype, origcons, origvars, cons, vars, niter, db, pb, simpiters, bbnodes, tottime);
 	 }
 
 	 if( analyseconf == 1 )
          {
-            printf("%7d %7d %7d %7d %7d %7.1f ", conf_infLP, conf_bndEx, conf_strbr, conf_prop, conf_pseud, conftime);
+            printf("%7d %7d %7d %7d %7d %7.3f ", conf_infLP, conf_bndEx, conf_strbr, conf_prop, conf_pseud, conftime);
          }
 
 	 if( printsoltimes )
-            printf(" %9.1f %9.1f ", timetofirst, timetobest);
+            printf("%9.3f %9.3f ", timetofirst, timetobest);
+
+	 if( printperf )
+            printf("%14d %14d %14.3f %10.0f %8.3f ", instructions, cycles, clock, nmsfreq, normtime);
 
          printf("%s\n", status);
       }
@@ -1418,6 +1475,7 @@ END {
    shiftednodegeom -= nodegeomshift;
    shiftedsblpgeom -= sblpgeomshift;
    shiftedtimegeom -= timegeomshift;
+   shiftednormtimegeom -= timegeomshift;
    shiftedconftimegeom -= timegeomshift;
    shiftedoverheadtimegeom -= timegeomshift;
    shiftedbasictimegeom -= timegeomshift;
@@ -1470,6 +1528,13 @@ END {
       tablefooter3 = tablefooter3"-----------------------------------------";
    }
 
+   if( printperf )
+   {
+      tablefooter1 = tablefooter1"----[NormTime]-------";
+      tablefooter2 = tablefooter2"     total     geom. ";
+      tablefooter3 = tablefooter3"---------------------";
+   }
+
    tablefooter1 = tablefooter1"\n";
    tablefooter2 = tablefooter2"\n";
    tablefooter3 = tablefooter3"\n";
@@ -1478,23 +1543,26 @@ END {
    printf(tablefooter2);
    printf(tablefooter3);
 
-   printf("%5d %5d %7d %5d %9d %9.1f %9.1f %9.1f ",
+   printf("%5d %5d %7d %5d %9d %9.3f %9.3f %9.3f ",
           nprobs, pass, nlimits, fail, sbab / 1000, nodegeom, stottime, timegeom);
-
+   if( printperf )
+      printf("%9.3f %9.3f ", snormtime, normtimegeom);
    if( analyseconf == 1 )
-     printf("%9d %9.1f %9.1f %9.1f", sumconfs, confgeom, conftottime, conftimegeom);
-
+     printf("%9d %9.3f %9.3f %9.3f", sumconfs, confgeom, conftottime, conftimegeom);
    if( printsoltimes )
-      printf("%9.1f %9.1f %9.1f %9.1f", stimetofirst, timetofirstgeom, stimetobest, timetobestgeoconftimem);
-
+      printf("%9.3f %9.3f %9.3f %9.3f", stimetofirst, timetofirstgeom, stimetobest, timetobestgeoconftimem);
    printf("\n");
-   printf(" shifted geom. [%5d/%5.1f]        %9.1f           %9.1f ",
+
+   printf(" shifted geom. [%5d/%5.1f]        %9.3f           %9.3f ",
           nodegeomshift, timegeomshift, shiftednodegeom, shiftedtimegeom);
+   if( printperf )
+      printf("          %9.3f ", shiftednormtimegeom);
    if( analyseconf )
-      printf("          %9.1f           %9.1f ", shiftedconfgeom, shiftedconftimegeom);
+      printf("          %9.3f           %9.3f ", shiftedconfgeom, shiftedconftimegeom);
    if( printsoltimes )
-      printf("          %9.1f           %9.1f ", shiftedtimetofirstgeom, shiftedtimetobestgeom);
+      printf("          %9.3f           %9.3f ", shiftedtimetofirstgeom, shiftedtimetobestgeom);
    printf("\n");
+
    printf(tablefooter3);
 
    if( TEXFILE != "" )

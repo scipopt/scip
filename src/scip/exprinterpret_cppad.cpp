@@ -1461,8 +1461,8 @@ SCIP_RETCODE eval(
 static
 void cppaderrorcallback(
    bool                  known,              /**< is the error from a known source? */
-   int                   line,               /**< line where error occured */
-   const char*           file,               /**< file where error occured */
+   int                   line,               /**< line where error occurred */
+   const char*           file,               /**< file where error occurred */
    const char*           cond,               /**< error condition */
    const char*           msg                 /**< error message */
    )

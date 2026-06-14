@@ -887,9 +887,7 @@ SCIP_RETCODE presolRoundCardinality(
    /* check for variables fixed to 0 and bounds that fix a variable to be nonzero */
    while ( j < consdata->nvars )
    {
-      int l;
       SCIP_VAR* var;
-      SCIP_VAR* oldvar;
       SCIP_VAR* indvar;
       SCIP_Real lb;
       SCIP_Real ub;
@@ -905,42 +903,37 @@ SCIP_RETCODE presolRoundCardinality(
        * variable is 0 */
       var = vars[j];
       indvar = indvars[j];
-      oldvar = var;
       SCIP_CALL( SCIPgetProbvarSum(scip, &var, &scalar, &constant) );
 
-      /* if constant is zero and we get a different variable, substitute variable */
-      if( SCIPisZero(scip, constant) && !SCIPisZero(scip, scalar) && var != vars[j] )
+      /* try to substitute variable entry */
+      if( var != vars[j] )
       {
-         SCIPdebugMsg(scip, "substituted variable <%s> by <%s>.\n", SCIPvarGetName(vars[j]), SCIPvarGetName(var));
+         /* only if constant is zero and scalar not zero, the variable condition is equivalent */
+         if( SCIPisZero(scip, constant) && !SCIPisZero(scip, scalar) )
+         {
+            SCIPdebugMsg(scip, "substituted variable <%s> by <%s>.\n", SCIPvarGetName(vars[j]), SCIPvarGetName(var));
 
-         /* we reuse the same indicator variable for the new variable */
-         SCIP_CALL( dropVarEventCardinality(scip, eventhdlr, consdata, consdata->vars[j], consdata->indvars[j],
-              &consdata->eventdatas[j]) );
-         SCIP_CALL( catchVarEventCardinality(scip, eventhdlr, consdata, var, consdata->indvars[j], j,
-              &consdata->eventdatas[j]) );
-         assert(consdata->eventdatas[j] != NULL);
+            /* we reuse the same indicator variable for the new variable */
+            SCIP_CALL( dropVarEventCardinality(scip, eventhdlr, consdata, consdata->vars[j], consdata->indvars[j],
+                  &consdata->eventdatas[j]) );
+            SCIP_CALL( catchVarEventCardinality(scip, eventhdlr, consdata, var, consdata->indvars[j], j,
+                  &consdata->eventdatas[j]) );
+            assert(consdata->eventdatas[j] != NULL);
 
-         /* change the rounding locks */
-         SCIP_CALL( unlockVariableCardinality(scip, cons, consdata->vars[j], consdata->indvars[j]) );
-         SCIP_CALL( lockVariableCardinality(scip, cons, var, consdata->indvars[j]) );
+            /* change the rounding locks */
+            SCIP_CALL( unlockVariableCardinality(scip, cons, consdata->vars[j], consdata->indvars[j]) );
+            SCIP_CALL( lockVariableCardinality(scip, cons, var, consdata->indvars[j]) );
 
-         /* update event data */
-         consdata->eventdatas[j]->var = var;
+            /* update event data */
+            consdata->eventdatas[j]->var = var;
 
-         vars[j] = var;
+            vars[j] = var;
+         }
+         /* otherwise reset variable */
+         else
+            var = vars[j];
       }
       assert(var == vars[j]);
-
-      /* check whether the variable appears again later */
-      for( l = j+1; l < consdata->nvars; ++l )
-      {
-         if( var == vars[l] || oldvar == vars[l] )
-         {
-            SCIPdebugMsg(scip, "variable <%s> appears twice in constraint <%s>.\n", SCIPvarGetName(vars[j]),
-                 SCIPconsGetName(cons));
-            return SCIP_INVALIDDATA;
-         }
-      }
 
       /* get bounds of variable */
       lb = SCIPvarGetLbLocal(var);

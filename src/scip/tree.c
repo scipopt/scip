@@ -4741,7 +4741,7 @@ SCIP_RETCODE focusnodeToFork(
    SCIPsetDebugMsg(set, "focusnode #%" SCIP_LONGINT_FORMAT " to fork at depth %d\n",
       SCIPnodeGetNumber(tree->focusnode), SCIPnodeGetDepth(tree->focusnode));
 
-   /* usually, the LP should be solved to optimality; otherwise, numerical troubles occured,
+   /* usually, the LP should be solved to optimality; otherwise, numerical troubles occurred,
     * and we have to forget about the LP and transform the node into a junction (see below)
     */
    lperror = FALSE;
@@ -4853,7 +4853,7 @@ SCIP_RETCODE focusnodeToSubroot(
    SCIPsetDebugMsg(set, "focusnode #%" SCIP_LONGINT_FORMAT " to subroot at depth %d\n",
       SCIPnodeGetNumber(tree->focusnode), SCIPnodeGetDepth(tree->focusnode));
 
-   /* usually, the LP should be solved to optimality; otherwise, numerical troubles occured,
+   /* usually, the LP should be solved to optimality; otherwise, numerical troubles occurred,
     * and we have to forget about the LP and transform the node into a junction (see below)
     */
    lperror = FALSE;
@@ -7991,7 +7991,7 @@ SCIP_RETCODE SCIPtreeEndProbing(
    /* if no LP was solved during probing and the LP before probing was not solved, then it should not be solved now */
    assert(tree->probingsolvedlp || tree->probinglpwassolved || !lp->solved);
 
-   /* if the LP was solved (and hence flushed) before probing, then lp->solved should be TRUE unless we occured an error
+   /* if the LP was solved (and hence flushed) before probing, then lp->solved should be TRUE unless we occurred an error
     * during resolving right above
     */
    assert(!tree->probinglpwassolved || !tree->probinglpwasflushed || lp->solved || lp->resolvelperror);

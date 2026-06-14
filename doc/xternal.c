@@ -8846,6 +8846,7 @@
  *  \arg <code>THREADS</code> - the number of threads used for solving LPs, if the linked LP solver supports multithreading [default: 1]
  *  \arg <code>VALGRIND</code> - run valgrind on the SCIP binary; errors and memory leaks found by valgrind are reported as fails [default: "false"]
  *  \arg <code>KEEPSOL</code> - if set to 'false', the best found solution is no longer written out to a solution file [default: "true"]
+ *  \arg <code>DEBUGTOOL</code> - runs SCIP through an additional tool, possible values: valgrind, rr, gdb, perf, "" [default: ""]
  *
  *
  *  @section COMPARE Comparing test runs for different settings
@@ -8919,7 +8920,7 @@
  *       processed nodes or in the total number of simplex iterations.
  *  \arg <code>equal</code> - Solvers with instances whose number of processed nodes and total number of
  *       simplex iterations is equal to the reference solver (including a 10% tolerance) and where no timeout
- *       occured.
+ *       occurred.
  *  \arg <code>all optimal</code> - Solvers with instances that could be solved to optimality by
  *       <em>all</em> solvers; in particular, no timeout occurred.
  *

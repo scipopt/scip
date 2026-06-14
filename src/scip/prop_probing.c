@@ -353,7 +353,7 @@ SCIP_RETCODE applyProbing(
    int                   oldnfixedvars,      /**< number of previously fixed variables */
    int                   oldnaggrvars,       /**< number of previously aggregated variables */
    SCIP_Bool*            delay,              /**< pointer to store whether propagator should be delayed */
-   SCIP_Bool*            cutoff              /**< pointer to store whether cutoff occured */
+   SCIP_Bool*            cutoff              /**< pointer to store whether cutoff occurred */
    )
 {
    SCIP_Real* zeroimpllbs;

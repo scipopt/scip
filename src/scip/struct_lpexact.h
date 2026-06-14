@@ -333,7 +333,7 @@ struct SCIP_LpExact
    SCIP_Bool             dualfeasible;       /**< is current LP solution (rather LPI state) dual feasible? */
    SCIP_Bool             dualchecked;        /**< was current LP solution checked for primal feasibility?? */
    SCIP_Bool             solisbasic;         /**< is current LP solution a basic solution? */
-   SCIP_Bool             resolvelperror;     /**< an error occured during resolving the LP after diving or probing */
+   SCIP_Bool             resolvelperror;     /**< an error occurred during resolving the LP after diving or probing */
    SCIP_Bool             lpihasscaling;      /**< does the LPI support the SCALING parameter? */
    SCIP_Bool             lpihaspresolving;   /**< does the LPI support the PRESOLVING parameter? */
    SCIP_Bool             projshiftpossible;  /**< can a safe bound be computed with project-and-shift? */
