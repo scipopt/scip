@@ -12,6 +12,7 @@ Fixed bugs
 - keep variable for impossible substitution in presolRoundCardinality() to avoid duplication error
 - restore infeasible original problem in IIS addition filter if interrupt or limit is hit
 - correct integer variable offset when removing duplicate variables from xor constraint
+- add applied clique as constraint when reformulating binary product to avoid problem relaxation
 
 Miscellaneous
 -------------
