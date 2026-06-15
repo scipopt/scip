@@ -340,21 +340,6 @@ SCIP_RETCODE setChildSelRule(
 /** number of configurations in the built-in racing parameter portfolio */
 #define NRACINGCONFIGS 10
 
-/** short description of each configuration in the built-in racing parameter portfolio */
-static const char* const racingconfignames[NRACINGCONFIGS] =
-{
-   "default",
-   "feasibility emphasis",
-   "feasibility emphasis",
-   "no separation with fast presolving",
-   "cpsolver emphasis",
-   "cpsolver emphasis with rapid restarts",
-   "large neighborhood search improver",
-   "no presolving",
-   "early feasibility jump",
-   "intensified separation and strong branching"
-};
-
 /** temporarily fixes the parameters of a concurrent solver's SCIP that must keep their current
  *  values while emphasis or portfolio settings are applied, i.e., the limit, numerics, memory,
  *  and synchronization parameters; the returned buffer array must be released with
@@ -415,30 +400,7 @@ SCIP_RETCODE unfixProtectedParams(
    return SCIP_OKAY;
 }
 
-/** applies one configuration of the built-in racing parameter portfolio to a concurrent solver's SCIP
- *
- *  The portfolio diversifies the concurrent solvers towards finding feasible solutions early while
- *  one part of the portfolio keeps pushing the dual bound:
- *  - 0: default settings; differs from a sequential SCIP only by the racing seed
- *  - 1/2: feasibility emphasis; used twice since the different racing seeds make the search
- *         trajectories distinct
- *  - 3: no separation with fast presolving; trades bound quality for node throughput
- *  - 4: constraint programming style search; no LP relaxation, aggressive conflict analysis,
- *       depth first search
- *  - 5: constraint programming style search with a SAT-style geometric restart schedule and the
- *       LP-free feasibility jump heuristic before presolving; never solves an LP, so it cannot
- *       stall on instances with hard root LPs
- *  - 6: large neighborhood search improver; fires the LNS heuristics aggressively and immediately
- *       on new incumbents, so solutions found by the other concurrent solvers are polished as soon
- *       as they arrive; separation is throttled to leave the CPU to the LNS sub-MIPs
- *  - 7: no presolving; starts the search immediately on the original formulation, providing early
- *       feasible solutions on instances where presolving takes long
- *  - 8: early feasibility jump; runs the feasibility jump heuristic before presolving to find
- *       feasible solutions in the first seconds
- *  - 9: intensified separation and reliability branching; strengthens separators and presolvers
- *       that are active by default (more rounds, more cuts, deeper probing, larger strong
- *       branching budgets) to drive the dual bound
- */
+/** applies one configuration of the built-in racing parameter portfolio to a concurrent solver's SCIP */
 static
 SCIP_RETCODE applyRacingSettings(
    SCIP*                 solverscip,         /**< the concurrent solver's SCIP datastructure */
@@ -450,23 +412,30 @@ SCIP_RETCODE applyRacingSettings(
 
    switch( config )
    {
+   /* default settings; differs from a sequential SCIP only by the racing seed */
    case 0:
       break;
 
+   /* feasibility emphasis; used twice since the different racing seeds make the search distinct */
    case 1:
    case 2:
       SCIP_CALL( SCIPsetEmphasis(solverscip, SCIP_PARAMEMPHASIS_FEASIBILITY, TRUE) );
       break;
 
+   /* no separation with fast presolving; trades bound quality for node throughput */
    case 3:
       SCIP_CALL( SCIPsetSeparating(solverscip, SCIP_PARAMSETTING_OFF, TRUE) );
       SCIP_CALL( SCIPsetPresolving(solverscip, SCIP_PARAMSETTING_FAST, TRUE) );
       break;
 
+   /* constraint programming style search; no LP relaxation, aggressive conflict analysis, depth first search */
    case 4:
       SCIP_CALL( SCIPsetEmphasis(solverscip, SCIP_PARAMEMPHASIS_CPSOLVER, TRUE) );
       break;
 
+   /* cpsolver search with a geometric restart schedule and feasibility jump before presolving; never
+    * solves an LP, so it cannot stall on instances with hard root LPs
+    */
    case 5:
       SCIP_CALL( SCIPsetEmphasis(solverscip, SCIP_PARAMEMPHASIS_CPSOLVER, TRUE) );
       SCIP_CALL( SCIPsetIntParam(solverscip, "conflict/restartnum", 100) );
@@ -475,6 +444,10 @@ SCIP_RETCODE applyRacingSettings(
       SCIP_CALL( SCIPsetBoolParam(solverscip, "heuristics/feasjump/beforepresol", TRUE) );
       break;
 
+   /* large neighborhood search improver; fires the LNS heuristics aggressively and immediately on new
+    * incumbents, so solutions from the other solvers are polished as soon as they arrive; separation is
+    * throttled to leave the CPU to the LNS sub-MIPs
+    */
    case 6:
       SCIP_CALL( SCIPsetIntParam(solverscip, "heuristics/rins/freq", 10) );
       SCIP_CALL( SCIPsetIntParam(solverscip, "heuristics/rins/nwaitingnodes", 0) );
@@ -496,14 +469,24 @@ SCIP_RETCODE applyRacingSettings(
       SCIP_CALL( SCIPsetIntParam(solverscip, "separating/maxroundsroot", 5) );
       break;
 
+   /* no presolving; starts the search immediately on the original formulation, providing early feasible
+    * solutions on instances where presolving takes long
+    */
    case 7:
       SCIP_CALL( SCIPsetPresolving(solverscip, SCIP_PARAMSETTING_OFF, TRUE) );
       break;
 
+   /* early feasibility jump; runs the feasibility jump heuristic before presolving to find feasible
+    * solutions in the first seconds
+    */
    case 8:
       SCIP_CALL( SCIPsetBoolParam(solverscip, "heuristics/feasjump/beforepresol", TRUE) );
       break;
 
+   /* intensified separation and reliability branching; strengthens the separators and presolvers that
+    * are active by default (more rounds, more cuts, deeper probing, larger strong branching budgets) to
+    * drive the dual bound
+    */
    case 9:
       SCIP_CALL( SCIPsetRealParam(solverscip, "branching/relpscost/sbiterquot", 1.0) );
       SCIP_CALL( SCIPsetRealParam(solverscip, "branching/relpscost/maxreliable", 10.0) );
@@ -769,8 +752,8 @@ SCIP_DECL_CONCSOLVERCREATEINST(concsolverScipCreateInstance)
 
          config = SCIPconcsolverGetIdx(concsolver) % NRACINGCONFIGS;
 
-         SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "applying racing configuration <%s> to concurrent solver <%s>\n",
-            racingconfignames[config], SCIPconcsolverGetName(concsolver));
+         SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "applying racing configuration <%d> to concurrent solver <%s>\n",
+            config, SCIPconcsolverGetName(concsolver));
 
          SCIP_CALL( fixProtectedParams(data->solverscip, &fixedparams, &nfixedparams) );
          SCIP_CALL( applyRacingSettings(data->solverscip, config) );
