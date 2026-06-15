@@ -13,6 +13,7 @@ Performance improvements
 
 - Implemented interval function evaluation callback in CONOPT interface.
 - reduced complexity of SCIPundoBdchgsProof() during conflict analysis accelerating execution for many variables
+- terminate the dynamic programming in the exact knapsack solver early once the optimal LP-based upper bound is reached
 
 Fixed bugs
 ----------
