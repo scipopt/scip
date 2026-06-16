@@ -164,30 +164,65 @@ then
     NODE_CPUS=$(( NODE_CORES * NODE_SOCKETS ))
 else
     NODE_CPUS=1
-    echo "Warning: could not determine node topology for partition ${CLUSTERQUEUE}; assuming ${NODE_CPUS} core"
 fi
 
-# compute AUTO instances-per-node
+# compute or validate instances-per-node
 if test "${AUTO_PPN_PENDING}" -eq 1
 then
-    NODE_MEM_MB=$(${SINFO_CMD} memory,features | ${SINFO_FILTER} | awk '{print $1}' | sort -n | head -1 | tr -d ' ')
-    if test "${NODE_MEM_MB:-0}" -le 0
+    if test "${NODE_SOCKETS:-0}" -gt 0 && test "${NODE_CORES:-0}" -gt 0
     then
-        echo "Warning: could not determine node memory; falling back to AUTO_PPN=1"
-    else
+        if test "${NODE_CPUS}" -lt "${THREADS_SAFE}"
+        then
+            echo "Error: threads exceed available node core resource: NODE_CPUS=${NODE_CPUS}, THREADS=${THREADS_SAFE}."
+            exit 1
+        fi
         PPN_CPU=$(( NODE_CPUS / THREADS_SAFE ))
-        PPN_MEM=$(( NODE_MEM_MB / HARDMEMLIMIT ))
-        AUTO_PPN=$(( PPN_CPU < PPN_MEM ? PPN_CPU : PPN_MEM ))
-        if test "${AUTO_PPN}" -lt 1
+    else
+        echo "Warning: could not determine node cores for partition ${CLUSTERQUEUE}."
+    fi
+    NODE_MEM=$(${SINFO_CMD} memory,features | ${SINFO_FILTER} | awk '{print $1}' | sort -n | head -1 | tr -d ' ')
+    if test "${NODE_MEM:-0}" -gt 0
+    then
+        if test "${NODE_MEM}" -lt "${HARDMEMLIMIT}"
+        then
+            echo "Error: memory exceeds available node storage resource: NODE_MEM=${NODE_MEM}, HARDMEMLIMIT=${HARDMEMLIMIT}."
+            exit 1
+        fi
+        PPN_MEM=$(( NODE_MEM / HARDMEMLIMIT ))
+    else
+        echo "Warning: could not determine node memory for partition ${CLUSTERQUEUE}."
+    fi
+    if test "${PPN}" -gt 0
+    then
+        if test -n "${PPN_CPU}" && test "${PPN}" -gt "${PPN_CPU}"
+        then
+            echo "Error: PPN=${PPN} exceeds PPN_CPU=${PPN_CPU} (NODE_CPUS=${NODE_CPUS}, THREADS=${THREADS_SAFE})."
+            exit 1
+        fi
+        if test -n "${PPN_MEM}" && test "${PPN}" -gt "${PPN_MEM}"
+        then
+            echo "Error: PPN=${PPN} exceeds PPN_MEM=${PPN_MEM} (NODE_MEM=${NODE_MEM}, HARDMEMLIMIT=${HARDMEMLIMIT})."
+            exit 1
+        fi
+        AUTO_PPN="${PPN}"
+    else
+        AUTO_PPN="${PPN_CPU}"
+        if test -z "${AUTO_PPN}" || test -n "${PPN_MEM}" && test "${PPN_MEM}" -lt "${AUTO_PPN}"
+        then
+            AUTO_PPN="${PPN_MEM}"
+        fi
+        if test -z "${AUTO_PPN}"
         then
             AUTO_PPN=1
         fi
     fi
-    # apply user-specified upper bound
-    if test "${PPN}" -gt 0 && test "${AUTO_PPN}" -gt "${PPN}"
-    then
-        AUTO_PPN="${PPN}"
-    fi
+fi
+
+# non-auto srun uses one instance per sbatch
+if test "${QUEUETYPE}" = "srun" && test "${AUTO_PPN_PENDING}" -eq 0 && test "${PPN}" -gt 1
+then
+    echo "Error: PPN=${PPN} requires EXCLUSIVE=auto."
+    exit 1
 fi
 
 # compute NODE_FLAGS once (CLUSTERNODES/EXCLUDENODES don't change per instance)
