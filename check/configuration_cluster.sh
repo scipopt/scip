@@ -115,7 +115,6 @@ then
 fi
 
 # check if the slurm blades should be used exclusively
-AUTO_PPN=1
 if test "${EXCLUSIVE}" = "true"
 then
     EXCLUSIVE=" --exclusive"
