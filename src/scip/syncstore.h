@@ -88,7 +88,8 @@ void SCIPsyncstoreSetSolveIsStopped(
  *  concurrent solver; used for printing new incumbents and as the improvement filter of the
  *  solution pool. If the solution pool is enabled and solution values are passed, the
  *  improving solution is published in the pool so that the other concurrent solvers can
- *  install it as an incumbent at their next drain.
+ *  install it as an incumbent at their next drain. If published is not NULL, it returns whether
+ *  the solution was actually added to the pool, so the caller can count it as shared.
  */
 SCIP_EXPORT
 void SCIPsyncstoreUpdateBestMinObj(
@@ -98,7 +99,8 @@ void SCIPsyncstoreUpdateBestMinObj(
    int                   ownerid,            /**< index of the concurrent solver that found the solution */
    SCIP_Real*            solvals,            /**< solution values in the communication variable order, or NULL to
                                               *   only communicate the objective value */
-   int                   nsolvals            /**< number of solution values */
+   int                   nsolvals,           /**< number of solution values */
+   SCIP_Bool*            published           /**< pointer to return whether the solution was added to the pool, or NULL */
    );
 
 /** returns whether the solution pool for immediate solution sharing is enabled */

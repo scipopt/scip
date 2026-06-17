@@ -313,11 +313,75 @@ void SCIPsyncstoreSetSolveIsStopped(
    }
 }
 
+/** appends an improving solution to the solution pool; the caller must hold the syncstore lock.
+ *  Entries are append-only and immutable once published, and the size counter is incremented
+ *  only after the entry is fully written, so the lock-free size hint read by the sync
+ *  heuristics never exposes a partial entry.
+ */
+static
+void syncstoreAddPoolSol(
+   SCIP_SYNCSTORE*       syncstore,          /**< the synchronization store */
+   SCIP_Real             minobj,             /**< objective value in minimization-normalized original objective space */
+   int                   ownerid,            /**< index of the concurrent solver that found the solution */
+   SCIP_Real*            solvals,            /**< solution values in the communication variable order */
+   int                   nsolvals            /**< number of solution values */
+   )
+{
+   assert(syncstore != NULL);
+   assert(syncstore->usesolpool);
+   assert(solvals != NULL);
+
+   if( syncstore->npoolsols == syncstore->poolsolssize )
+   {
+      int newsize;
+
+      newsize = MAX(64, 2 * syncstore->poolsolssize);
+      SCIP_ALLOC_ABORT( BMSreallocMemoryArray(&syncstore->poolsols, newsize) );
+      SCIP_ALLOC_ABORT( BMSreallocMemoryArray(&syncstore->poolobjs, newsize) );
+      SCIP_ALLOC_ABORT( BMSreallocMemoryArray(&syncstore->poolsource, newsize) );
+      SCIP_ALLOC_ABORT( BMSreallocMemoryArray(&syncstore->poolnvals, newsize) );
+      syncstore->poolsolssize = newsize;
+   }
+
+   SCIP_ALLOC_ABORT( BMSduplicateMemoryArray(&syncstore->poolsols[syncstore->npoolsols], solvals, nsolvals) );
+   syncstore->poolobjs[syncstore->npoolsols] = minobj;
+   syncstore->poolsource[syncstore->npoolsols] = ownerid;
+   syncstore->poolnvals[syncstore->npoolsols] = nsolvals;
+
+   ++syncstore->npoolsols;
+}
+
+/** prints a line for a new globally best solution found by a concurrent solver; the caller must
+ *  hold the syncstore lock so that the printed objective values are monotone and the lines of
+ *  different solvers do not interleave
+ */
+static
+void syncstorePrintIncumbent(
+   SCIP_SYNCSTORE*       syncstore,          /**< the synchronization store */
+   SCIP_Real             minobj,             /**< objective value in minimization-normalized original objective space */
+   const char*           solvername          /**< name of the concurrent solver that found the solution */
+   )
+{
+   SCIP_Real origobj;
+
+   assert(syncstore != NULL);
+
+   /* the communicated objective lives in the space of the main SCIP's transformed
+    * problem, of which the concurrent solvers are copies; that space may be scaled
+    * and shifted relative to the user's original problem (e.g. objective scaling by
+    * a gcd during the transformation), so map the value back before printing
+    */
+   origobj = SCIPretransformObj(syncstore->mainscip, minobj);
+   SCIPverbMessage(syncstore->mainscip, SCIP_VERBLEVEL_NORMAL, NULL, "%.2f I.SOL %.9g  (%s)\n",
+      SCIPgetSolvingTime(syncstore->mainscip), origobj, solvername);
+}
+
 /** updates the minimization-normalized objective value of the best solution found by any
  *  concurrent solver; used for printing new incumbents and as the improvement filter of the
  *  solution pool. If the solution pool is enabled and solution values are passed, the
  *  improving solution is published in the pool so that the other concurrent solvers can
- *  install it as an incumbent at their next drain.
+ *  install it as an incumbent at their next drain. If published is not NULL, it returns whether
+ *  the solution was actually added to the pool, so the caller can count it as shared.
  */
 void SCIPsyncstoreUpdateBestMinObj(
    SCIP_SYNCSTORE*       syncstore,          /**< the synchronization store */
@@ -326,11 +390,15 @@ void SCIPsyncstoreUpdateBestMinObj(
    int                   ownerid,            /**< index of the concurrent solver that found the solution */
    SCIP_Real*            solvals,            /**< solution values in the communication variable order, or NULL to
                                               *   only communicate the objective value */
-   int                   nsolvals            /**< number of solution values */
+   int                   nsolvals,           /**< number of solution values */
+   SCIP_Bool*            published           /**< pointer to return whether the solution was added to the pool, or NULL */
    )
 {
    assert(syncstore != NULL);
    assert(syncstore->initialized);
+
+   if( published != NULL )
+      *published = FALSE;
 
    SCIP_CALL_ABORT( SCIPtpiAcquireLock(syncstore->lock) );
 
@@ -338,47 +406,18 @@ void SCIPsyncstoreUpdateBestMinObj(
    {
       syncstore->bestminobj = minobj;
 
+      /* publish the improving solution in the pool so the other solvers can install it (pool mode only) */
       if( syncstore->usesolpool && solvals != NULL )
       {
-         if( syncstore->npoolsols == syncstore->poolsolssize )
-         {
-            int newsize;
+         syncstoreAddPoolSol(syncstore, minobj, ownerid, solvals, nsolvals);
 
-            newsize = MAX(64, 2 * syncstore->poolsolssize);
-            SCIP_ALLOC_ABORT( BMSreallocMemoryArray(&syncstore->poolsols, newsize) );
-            SCIP_ALLOC_ABORT( BMSreallocMemoryArray(&syncstore->poolobjs, newsize) );
-            SCIP_ALLOC_ABORT( BMSreallocMemoryArray(&syncstore->poolsource, newsize) );
-            SCIP_ALLOC_ABORT( BMSreallocMemoryArray(&syncstore->poolnvals, newsize) );
-            syncstore->poolsolssize = newsize;
-         }
-
-         SCIP_ALLOC_ABORT( BMSduplicateMemoryArray(&syncstore->poolsols[syncstore->npoolsols], solvals, nsolvals) );
-         syncstore->poolobjs[syncstore->npoolsols] = minobj;
-         syncstore->poolsource[syncstore->npoolsols] = ownerid;
-         syncstore->poolnvals[syncstore->npoolsols] = nsolvals;
-
-         /* the counter is incremented only after the entry is fully written, so the
-          * lock-free size hint read by the sync heuristics never exposes a partial entry
-          */
-         ++syncstore->npoolsols;
+         if( published != NULL )
+            *published = TRUE;
       }
 
-      /* print the new incumbent while holding the lock so that the printed objective
-       * values are monotone and the lines of different solvers do not interleave
-       */
+      /* optionally log the new global incumbent; independent of the solution pool and active in both modes */
       if( syncstore->printincumbents )
-      {
-         SCIP_Real origobj;
-
-         /* the communicated objective lives in the space of the main SCIP's transformed
-          * problem, of which the concurrent solvers are copies; that space may be scaled
-          * and shifted relative to the user's original problem (e.g. objective scaling by
-          * a gcd during the transformation), so map the value back before printing
-          */
-         origobj = SCIPretransformObj(syncstore->mainscip, minobj);
-         SCIPverbMessage(syncstore->mainscip, SCIP_VERBLEVEL_NORMAL, NULL, "%.2f I.SOL %.9g  (%s)\n",
-            SCIPgetSolvingTime(syncstore->mainscip), origobj, solvername);
-      }
+         syncstorePrintIncumbent(syncstore, minobj, solvername);
    }
 
    SCIP_CALL_ABORT( SCIPtpiReleaseLock(syncstore->lock) );
