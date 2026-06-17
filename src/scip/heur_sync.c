@@ -173,6 +173,7 @@ SCIP_DECL_HEUREXEC(heurExecSync)
       SCIP_SYNCSTORE* syncstore;
       int npoolsols;
       int ownerid;
+      int nrecvd = 0;
 
       syncstore = SCIPgetSyncstore(scip);
       assert(syncstore != NULL);
@@ -193,6 +194,11 @@ SCIP_DECL_HEUREXEC(heurExecSync)
          if( source == ownerid )
             continue;
 
+         /* count the solution as received, mirroring the synchronization-point path which counts
+          * every solution pulled in from another solver regardless of whether it is accepted
+          */
+         ++nrecvd;
+
          if( *result == SCIP_DIDNOTRUN )
             *result = SCIP_DIDNOTFIND;
 
@@ -203,6 +209,9 @@ SCIP_DECL_HEUREXEC(heurExecSync)
          if( stored )
             *result = SCIP_FOUNDSOL;
       }
+
+      if( nrecvd > 0 )
+         SCIPconcsolverAddNSolsRecvd(heurdata->concsolver, nrecvd);
    }
 
    return SCIP_OKAY;

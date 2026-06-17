@@ -210,6 +210,7 @@ SCIP_DECL_EVENTEXEC(eventExecSync)
       SCIP_Real minobj;
       SCIP_Real* solvals = NULL;
       int nsolvals = 0;
+      SCIP_Bool published = FALSE;
 
       eventhdlrdata = (SCIP_EVENTHDLRDATA*)SCIPeventhdlrGetData(eventhdlr);
       syncstore = SCIPgetSyncstore(scip);
@@ -244,7 +245,14 @@ SCIP_DECL_EVENTEXEC(eventExecSync)
       }
 
       SCIPsyncstoreUpdateBestMinObj(syncstore, minobj, SCIPconcsolverGetName(eventhdlrdata->concsolver),
-         SCIPconcsolverGetIdx(eventhdlrdata->concsolver), solvals, nsolvals);
+         SCIPconcsolverGetIdx(eventhdlrdata->concsolver), solvals, nsolvals, &published);
+
+      /* the solution was published in the pool and will be drained by the other solvers, so count
+       * it as shared here; in solution-pool mode no solutions are written at the synchronization
+       * points, so this is the only place the shared-solution statistic is updated
+       */
+      if( published )
+         SCIPconcsolverAddNSolsShared(eventhdlrdata->concsolver, 1);
 
       SCIPfreeBufferArrayNull(scip, &solvals);
 
@@ -1043,35 +1051,42 @@ SCIP_DECL_CONCSOLVERSYNCWRITE(concsolverScipSyncWrite)
 
    SCIPdebugMessage("syncing in concurrent solver %s\n", SCIPconcsolverGetName(concsolver));
 
-   /* consider at most maxcandsols many solutions, and since the solution array is sorted, consider best solutions */
-   nsols = SCIPgetNSols(data->solverscip);
-   nsols = MIN(nsols, maxcandsols);
-   sols = SCIPgetSols(data->solverscip);
-
-   for( i = 0; i < nsols; ++i )
+   /* in solution-pool mode new incumbents are shared immediately through the pool, so the
+    * synchronization data carries only bound changes; in the regular protocol the best
+    * solutions are collected into the synchronization data here
+    */
+   if( !SCIPsyncstoreSolPoolEnabled(syncstore) )
    {
-      if( SCIPIsConcurrentSolNew(data->solverscip, sols[i]) )
+      /* consider at most maxcandsols many solutions, and since the solution array is sorted, consider best solutions */
+      nsols = SCIPgetNSols(data->solverscip);
+      nsols = MIN(nsols, maxcandsols);
+      sols = SCIPgetSols(data->solverscip);
+
+      for( i = 0; i < nsols; ++i )
       {
-         SCIP_Real solobj;
-         SCIP_Real* solvals;
+         if( SCIPIsConcurrentSolNew(data->solverscip, sols[i]) )
+         {
+            SCIP_Real solobj;
+            SCIP_Real* solvals;
 
-         solobj = SCIPgetSolOrigObj(data->solverscip, sols[i]);
+            solobj = SCIPgetSolOrigObj(data->solverscip, sols[i]);
 
-         SCIPdebugMessage("adding sol in concurrent solver %s\n", SCIPconcsolverGetName(concsolver));
-         SCIPsyncdataGetSolutionBuffer(syncstore, syncdata, solobj, concsolverid, &solvals);
+            SCIPdebugMessage("adding sol in concurrent solver %s\n", SCIPconcsolverGetName(concsolver));
+            SCIPsyncdataGetSolutionBuffer(syncstore, syncdata, solobj, concsolverid, &solvals);
 
-         /* if syncstore has no place for this solution, we can stop, since the next solution will have
-          * a worse objective value and thus won't be accepted either
-          */
-         if( solvals == NULL )
-            break;
+            /* if syncstore has no place for this solution, we can stop, since the next solution will have
+             * a worse objective value and thus won't be accepted either
+             */
+            if( solvals == NULL )
+               break;
 
-         ++(*nsolsshared);
-         SCIP_CALL( SCIPgetSolVals(data->solverscip, sols[i], data->nvars, data->vars, solvals) );
+            ++(*nsolsshared);
+            SCIP_CALL( SCIPgetSolVals(data->solverscip, sols[i], data->nvars, data->vars, solvals) );
 
-         /* if we have added the maximum number of solutions we can also stop */
-         if( *nsolsshared == maxsharedsols )
-            break;
+            /* if we have added the maximum number of solutions we can also stop */
+            if( *nsolsshared == maxsharedsols )
+               break;
+         }
       }
    }
 

@@ -645,6 +645,20 @@ SCIP_Longint SCIPconcsolverGetNSolsRecvd(
    return concsolver->nsolsrecvd;
 }
 
+/** adds to the number of solutions the concurrent solver received from the other solvers; used in
+ *  solution-pool mode where solutions are drained from the pool instead of read at the synchronization points
+ */
+void SCIPconcsolverAddNSolsRecvd(
+   SCIP_CONCSOLVER*      concsolver,         /**< concurrent solver */
+   SCIP_Longint          nsols               /**< number of received solutions to add */
+   )
+{
+   assert(concsolver != NULL);
+   assert(nsols >= 0);
+
+   concsolver->nsolsrecvd += nsols;
+}
+
 /** gets the number of solutions the concurrent solver shared during synchronization */
 SCIP_Longint SCIPconcsolverGetNSolsShared(
    SCIP_CONCSOLVER*      concsolver          /**< concurrent solver */
@@ -653,6 +667,20 @@ SCIP_Longint SCIPconcsolverGetNSolsShared(
    assert(concsolver != NULL);
 
    return concsolver->nsolsshared;
+}
+
+/** adds to the number of solutions the concurrent solver shared with the other solvers; used in
+ *  solution-pool mode where solutions are shared immediately instead of at the synchronization points
+ */
+void SCIPconcsolverAddNSolsShared(
+   SCIP_CONCSOLVER*      concsolver,         /**< concurrent solver */
+   SCIP_Longint          nsols               /**< number of shared solutions to add */
+   )
+{
+   assert(concsolver != NULL);
+   assert(nsols >= 0);
+
+   concsolver->nsolsshared += nsols;
 }
 
 /** gets the number of tighter global variable bounds the solver received */
