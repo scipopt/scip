@@ -249,7 +249,7 @@ SCIP_DECL_HEUREXEC(heurExecSync)
       }
 
       if( nrecvd > 0 )
-         SCIPconcsolverAddNSolsRecvd(heurdata->concsolver, nrecvd);
+         SCIPconcsolverAddNSolsRecvd(heurdata->concsolver, (SCIP_Longint)nrecvd);
    }
 
    /* communicate the cutoff: a received solution may not register as this solver's incumbent, leaving

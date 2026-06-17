@@ -252,7 +252,7 @@ SCIP_DECL_EVENTEXEC(eventExecSync)
        * points, so this is the only place the shared-solution statistic is updated
        */
       if( published )
-         SCIPconcsolverAddNSolsShared(eventhdlrdata->concsolver, 1);
+         SCIPconcsolverAddNSolsShared(eventhdlrdata->concsolver, 1LL);
 
       SCIPfreeBufferArrayNull(scip, &solvals);
 
