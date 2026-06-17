@@ -125,6 +125,17 @@ SCIP_DECL_HEUREXITSOL(heurExitSync)
 }
 
 
+/** returns whether objective value newobj is strictly better than oldobj for the given sense */
+static
+SCIP_Bool objIsBetter(
+   SCIP_OBJSENSE         objsense,           /**< objective sense */
+   SCIP_Real             newobj,             /**< objective value to test */
+   SCIP_Real             oldobj              /**< objective value to compare against */
+   )
+{
+   return objsense == SCIP_OBJSENSE_MINIMIZE ? newobj < oldobj : newobj > oldobj;
+}
+
 /** execution method of primal heuristic */
 static
 SCIP_DECL_HEUREXEC(heurExecSync)
@@ -132,6 +143,9 @@ SCIP_DECL_HEUREXEC(heurExecSync)
    SCIP_HEURDATA* heurdata;
    SCIP_SOL* newsol;
    SCIP_Bool stored;
+   SCIP_Real bestrecvdobj;
+   SCIP_Bool havebestrecvd;
+   SCIP_OBJSENSE objsense;
    int i;
 
    assert(heur != NULL);
@@ -154,9 +168,24 @@ SCIP_DECL_HEUREXEC(heurExecSync)
       SCIPheurSetFreq(heur, -1);
 
    SCIPdebugMessage("exec method of sync primal heuristic.\n");
+
+   /* best objective received from other solvers, used to tighten the objlimit below */
+   havebestrecvd = FALSE;
+   bestrecvdobj = 0.0;
+   objsense = SCIPgetObjsense(scip);
+
    *result = heurdata->nsols > 0 ? SCIP_DIDNOTFIND : SCIP_DIDNOTRUN;
    for( i = 0; i < heurdata->nsols; ++i )
    {
+      SCIP_Real solobj;
+
+      solobj = SCIPgetSolOrigObj(scip, heurdata->sols[i]);
+      if( !havebestrecvd || objIsBetter(objsense, solobj, bestrecvdobj) )
+      {
+         bestrecvdobj = solobj;
+         havebestrecvd = TRUE;
+      }
+
       SCIP_CALL( SCIPtrySolFree(scip, &heurdata->sols[i], FALSE, FALSE, FALSE, FALSE, FALSE, &stored) );
       if( stored )
          *result = SCIP_FOUNDSOL;
@@ -184,6 +213,7 @@ SCIP_DECL_HEUREXEC(heurExecSync)
       while( heurdata->nextpoolsol < npoolsols )
       {
          SCIP_Real* solvals;
+         SCIP_Real solobj;
          int nsolvals;
          int source;
 
@@ -204,6 +234,14 @@ SCIP_DECL_HEUREXEC(heurExecSync)
 
          SCIP_CALL( SCIPcreateOrigSol(scip, &newsol, heur) );
          SCIP_CALL( SCIPsetSolVals(scip, newsol, MIN(nsolvals, heurdata->npoolvars), heurdata->poolvars, solvals) );
+
+         solobj = SCIPgetSolOrigObj(scip, newsol);
+         if( !havebestrecvd || objIsBetter(objsense, solobj, bestrecvdobj) )
+         {
+            bestrecvdobj = solobj;
+            havebestrecvd = TRUE;
+         }
+
          SCIP_CALL( SCIPtrySolFree(scip, &newsol, FALSE, FALSE, TRUE, TRUE, TRUE, &stored) );
 
          if( stored )
@@ -212,6 +250,14 @@ SCIP_DECL_HEUREXEC(heurExecSync)
 
       if( nrecvd > 0 )
          SCIPconcsolverAddNSolsRecvd(heurdata->concsolver, nrecvd);
+   }
+
+   /* communicate the cutoff: a received solution may not register as this solver's incumbent, leaving
+    * the upper bound infinite, so tighten the objlimit to the best received objective
+    */
+   if( havebestrecvd && objIsBetter(objsense, bestrecvdobj, SCIPgetObjlimit(scip)) )
+   {
+      SCIP_CALL( SCIPsetObjlimit(scip, bestrecvdobj) );
    }
 
    return SCIP_OKAY;
