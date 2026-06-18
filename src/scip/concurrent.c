@@ -314,7 +314,9 @@ SCIP_Longint SCIPgetConcurrentMemTotal(
    }
 }
 
-/** gets the dualbound in the last synchronization */
+/** gets the global dual bound of the concurrent solve; in solution-pool mode this is the
+ *  immediately-tracked value, otherwise it is the bound from the last synchronization
+ */
 SCIP_Real SCIPgetConcurrentDualbound(
    SCIP*                 scip                /**< SCIP data structure */
    )
@@ -336,7 +338,9 @@ SCIP_Real SCIPgetConcurrentDualbound(
    return SCIPprobExternObjval(scip->transprob, scip->origprob, scip->set, SCIPsyncstoreGetLastLowerbound(syncstore));
 }
 
-/** gets the primalbound in the last synchronization */
+/** gets the global primal bound of the concurrent solve; in solution-pool mode this is the
+ *  immediately-tracked value, otherwise it is the bound from the last synchronization
+ */
 SCIP_Real SCIPgetConcurrentPrimalbound(
    SCIP*                 scip                /**< SCIP data structure */
    )

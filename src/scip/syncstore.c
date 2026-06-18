@@ -192,7 +192,7 @@ SCIP_RETCODE SCIPsyncstoreInit(
    syncstore->initialized = TRUE;
    syncstore->stopped = FALSE;
    syncstore->bestminobj = SCIP_REAL_MAX;
-   syncstore->bestdualbound = -SCIPinfinity(scip);
+   syncstore->bestdualbound = -SCIP_REAL_MAX;
    SCIP_CALL( SCIPgetBoolParam(scip, "concurrent/printincumbents", &syncstore->printincumbents) );
 
    SCIP_CALL( SCIPgetIntParam(scip, "parallel/mode", &paramode) );

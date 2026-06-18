@@ -428,7 +428,9 @@ SCIP_RETCODE applyRacingSettings(
       SCIP_CALL( SCIPsetPresolving(solverscip, SCIP_PARAMSETTING_FAST, TRUE) );
       break;
 
-   /* constraint programming style search; no LP relaxation, aggressive conflict analysis, depth first search */
+   /* early feasibility jump; runs the feasibility jump heuristic before presolving to find feasible
+    * solutions in the first seconds
+    */
    case 4:
       SCIP_CALL( SCIPsetBoolParam(solverscip, "heuristics/feasjump/beforepresol", TRUE) );
       break;
@@ -476,9 +478,7 @@ SCIP_RETCODE applyRacingSettings(
       SCIP_CALL( SCIPsetPresolving(solverscip, SCIP_PARAMSETTING_OFF, TRUE) );
       break;
 
-   /* early feasibility jump; runs the feasibility jump heuristic before presolving to find feasible
-    * solutions in the first seconds
-    */
+   /* constraint programming style search; no LP relaxation, aggressive conflict analysis, depth first search */
    case 8:
       SCIP_CALL( SCIPsetEmphasis(solverscip, SCIP_PARAMEMPHASIS_CPSOLVER, TRUE) );
       break;
