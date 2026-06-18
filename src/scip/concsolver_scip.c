@@ -430,7 +430,7 @@ SCIP_RETCODE applyRacingSettings(
 
    /* constraint programming style search; no LP relaxation, aggressive conflict analysis, depth first search */
    case 4:
-      SCIP_CALL( SCIPsetEmphasis(solverscip, SCIP_PARAMEMPHASIS_CPSOLVER, TRUE) );
+      SCIP_CALL( SCIPsetBoolParam(solverscip, "heuristics/feasjump/beforepresol", TRUE) );
       break;
 
    /* cpsolver search with a geometric restart schedule and feasibility jump before presolving; never
@@ -480,7 +480,7 @@ SCIP_RETCODE applyRacingSettings(
     * solutions in the first seconds
     */
    case 8:
-      SCIP_CALL( SCIPsetBoolParam(solverscip, "heuristics/feasjump/beforepresol", TRUE) );
+      SCIP_CALL( SCIPsetEmphasis(solverscip, SCIP_PARAMEMPHASIS_CPSOLVER, TRUE) );
       break;
 
    /* intensified separation and reliability branching; strengthens the separators and presolvers that
