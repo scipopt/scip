@@ -65,6 +65,8 @@ struct SCIP_HeurData
    SCIP_VAR**            poolvars;           /**< variables of this SCIP in the communication variable order */
    int                   npoolvars;          /**< number of variables in the above array */
    int                   nextpoolsol;        /**< index of the next solution to be drained from the solution pool */
+   SCIP_Real             lastdualbound;      /**< minimization-normalized dual bound this solver last reported to the
+                                              *   syncstore, to skip redundant updates of the global dual bound */
 };
 
 
@@ -200,6 +202,7 @@ SCIP_DECL_HEUREXEC(heurExecSync)
    if( heurdata->concsolver != NULL )
    {
       SCIP_SYNCSTORE* syncstore;
+      SCIP_Real mindual;
       int npoolsols;
       int ownerid;
       int nrecvd = 0;
@@ -250,6 +253,17 @@ SCIP_DECL_HEUREXEC(heurExecSync)
 
       if( nrecvd > 0 )
          SCIPconcsolverAddNSolsRecvd(heurdata->concsolver, (SCIP_Longint)nrecvd);
+
+      /* report this solver's dual bound immediately so the global dual bound (and thus
+       * SCIPgetConcurrentDualbound) stays current in solution-pool mode; normalize to minimization
+       * and skip when it did not improve since the last report to avoid redundant locked updates
+       */
+      mindual = objsense == SCIP_OBJSENSE_MINIMIZE ? SCIPgetDualbound(scip) : -SCIPgetDualbound(scip);
+      if( mindual > heurdata->lastdualbound )
+      {
+         SCIPsyncstoreUpdateBestDualbound(syncstore, mindual);
+         heurdata->lastdualbound = mindual;
+      }
    }
 
    /* communicate the cutoff: a received solution may not register as this solver's incumbent, leaving
@@ -284,6 +298,7 @@ SCIP_RETCODE SCIPincludeHeurSync(
    heurdata->poolvars = NULL;
    heurdata->npoolvars = 0;
    heurdata->nextpoolsol = 0;
+   heurdata->lastdualbound = -SCIPinfinity(scip);
 
    /* include primal heuristic */
    SCIP_CALL( SCIPincludeHeurBasic(scip, &heur,
@@ -330,6 +345,7 @@ void SCIPheurSyncEnableSolPool(
    heurdata->poolvars = vars;
    heurdata->npoolvars = nvars;
    heurdata->nextpoolsol = 0;
+   heurdata->lastdualbound = -SCIPinfinity(scip);
    SCIPheurSetFreq(heur, 1);
 }
 

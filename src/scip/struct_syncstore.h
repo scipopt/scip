@@ -55,6 +55,9 @@ struct SCIP_SyncStore
                                               *   for each active synchronization */
    SCIP_SYNCDATA*        lastsync;           /**< pointer to the last synchronization data that has been synchronized
                                               *   by all threads */
+   SCIP_Real             bestdualbound;      /**< minimization-normalized best global dual bound, updated immediately by the
+                                              *   concurrent solvers in solution-pool mode and read by SCIPgetConcurrentDualbound;
+                                              *   the primal counterpart is bestminobj */
 
    SCIP*                 mainscip;           /**< the SCIP instance that was used for initializing the syncstore */
    SCIP_Real             limit_gap;          /**< relative gap limit in main SCIP */

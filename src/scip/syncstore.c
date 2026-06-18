@@ -80,6 +80,7 @@ SCIP_RETCODE SCIPsyncstoreCreate(
    (*syncstore)->stopped = FALSE;
    (*syncstore)->nuses = 1;
    (*syncstore)->bestminobj = SCIP_REAL_MAX;
+   (*syncstore)->bestdualbound = -SCIP_REAL_MAX;
    (*syncstore)->printincumbents = FALSE;
    (*syncstore)->usesolpool = FALSE;
    (*syncstore)->poolsols = NULL;
@@ -191,6 +192,7 @@ SCIP_RETCODE SCIPsyncstoreInit(
    syncstore->initialized = TRUE;
    syncstore->stopped = FALSE;
    syncstore->bestminobj = SCIP_REAL_MAX;
+   syncstore->bestdualbound = -SCIPinfinity(scip);
    SCIP_CALL( SCIPgetBoolParam(scip, "concurrent/printincumbents", &syncstore->printincumbents) );
 
    SCIP_CALL( SCIPgetIntParam(scip, "parallel/mode", &paramode) );
@@ -423,6 +425,25 @@ void SCIPsyncstoreUpdateBestMinObj(
    SCIP_CALL_ABORT( SCIPtpiReleaseLock(syncstore->lock) );
 }
 
+/** updates the minimization-normalized best global dual bound; the concurrent solvers call this
+ *  immediately while solving so that SCIPgetConcurrentDualbound stays up to date in solution-pool mode
+ */
+void SCIPsyncstoreUpdateBestDualbound(
+   SCIP_SYNCSTORE*       syncstore,          /**< the synchronization store */
+   SCIP_Real             dualbound           /**< dual bound in minimization-normalized original objective space */
+   )
+{
+   assert(syncstore != NULL);
+   assert(syncstore->initialized);
+
+   SCIP_CALL_ABORT( SCIPtpiAcquireLock(syncstore->lock) );
+
+   if( dualbound > syncstore->bestdualbound )
+      syncstore->bestdualbound = dualbound;
+
+   SCIP_CALL_ABORT( SCIPtpiReleaseLock(syncstore->lock) );
+}
+
 /** returns whether the solution pool for immediate solution sharing is enabled */
 SCIP_Bool SCIPsyncstoreSolPoolEnabled(
    SCIP_SYNCSTORE*       syncstore           /**< the synchronization store */
@@ -431,6 +452,18 @@ SCIP_Bool SCIPsyncstoreSolPoolEnabled(
    assert(syncstore != NULL);
 
    return syncstore->usesolpool;
+}
+
+/** returns the main SCIP that initialized the synchronization store; the bounds reported in
+ *  solution-pool mode live in this SCIP's objective space, so it is used to convert them
+ */
+SCIP* SCIPsyncstoreGetMainScip(
+   SCIP_SYNCSTORE*       syncstore           /**< the synchronization store */
+   )
+{
+   assert(syncstore != NULL);
+
+   return syncstore->mainscip;
 }
 
 /** gets the current number of solutions in the solution pool; reads the counter without
@@ -503,6 +536,12 @@ SCIP_Real SCIPsyncstoreGetLastUpperbound(
    assert(syncstore != NULL);
    assert(syncstore->initialized);
 
+   /* in solution-pool mode lastsync is not advanced during solving; report the immediately-tracked global
+    * primal bound (bestminobj), which the getter then converts to the caller's objective space and sense
+    */
+   if( syncstore->usesolpool )
+      return syncstore->bestminobj < SCIP_REAL_MAX ? syncstore->bestminobj : SCIPinfinity(syncstore->mainscip);
+
    return syncstore->lastsync == NULL ? SCIPinfinity(syncstore->mainscip) : syncstore->lastsync->bestupperbound;
 }
 
@@ -513,6 +552,12 @@ SCIP_Real SCIPsyncstoreGetLastLowerbound(
 {
    assert(syncstore != NULL);
    assert(syncstore->initialized);
+
+   /* in solution-pool mode lastsync is not advanced during solving; report the immediately-tracked global
+    * dual bound, which the getter then converts to the caller's objective space and sense
+    */
+   if( syncstore->usesolpool )
+      return syncstore->bestdualbound > -SCIP_REAL_MAX ? syncstore->bestdualbound : -SCIPinfinity(syncstore->mainscip);
 
    return syncstore->lastsync == NULL ? -SCIPinfinity(syncstore->mainscip) : syncstore->lastsync->bestlowerbound;
 }
