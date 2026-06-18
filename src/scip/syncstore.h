@@ -103,9 +103,26 @@ void SCIPsyncstoreUpdateBestMinObj(
    SCIP_Bool*            published           /**< pointer to return whether the solution was added to the pool, or NULL */
    );
 
+/** updates the minimization-normalized best global dual bound; the concurrent solvers call this
+ *  immediately while solving so that SCIPgetConcurrentDualbound stays up to date in solution-pool mode
+ */
+SCIP_EXPORT
+void SCIPsyncstoreUpdateBestDualbound(
+   SCIP_SYNCSTORE*       syncstore,          /**< the synchronization store */
+   SCIP_Real             dualbound           /**< dual bound in minimization-normalized original objective space */
+   );
+
 /** returns whether the solution pool for immediate solution sharing is enabled */
 SCIP_EXPORT
 SCIP_Bool SCIPsyncstoreSolPoolEnabled(
+   SCIP_SYNCSTORE*       syncstore           /**< the synchronization store */
+   );
+
+/** returns the main SCIP that initialized the synchronization store; the bounds reported in
+ *  solution-pool mode live in this SCIP's objective space, so it is used to convert them
+ */
+SCIP_EXPORT
+SCIP* SCIPsyncstoreGetMainScip(
    SCIP_SYNCSTORE*       syncstore           /**< the synchronization store */
    );
 

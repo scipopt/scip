@@ -326,6 +326,13 @@ SCIP_Real SCIPgetConcurrentDualbound(
    syncstore = SCIPgetSyncstore(scip);
    assert(syncstore != NULL);
 
+   /* in solution-pool mode the reported bound lives in the main SCIP's objective space (it is tracked
+    * immediately by the workers), so convert it with the main SCIP's objective; this makes the getter
+    * correct even when it is queried from a worker whose own presolve scaled the objective differently
+    */
+   if( SCIPsyncstoreSolPoolEnabled(syncstore) )
+      scip = SCIPsyncstoreGetMainScip(syncstore);
+
    return SCIPprobExternObjval(scip->transprob, scip->origprob, scip->set, SCIPsyncstoreGetLastLowerbound(syncstore));
 }
 
@@ -340,6 +347,13 @@ SCIP_Real SCIPgetConcurrentPrimalbound(
 
    syncstore = SCIPgetSyncstore(scip);
    assert(syncstore != NULL);
+
+   /* in solution-pool mode the reported bound lives in the main SCIP's objective space (it is tracked
+    * immediately by the workers), so convert it with the main SCIP's objective; this makes the getter
+    * correct even when it is queried from a worker whose own presolve scaled the objective differently
+    */
+   if( SCIPsyncstoreSolPoolEnabled(syncstore) )
+      scip = SCIPsyncstoreGetMainScip(syncstore);
 
    return SCIPprobExternObjval(scip->transprob, scip->origprob, scip->set, SCIPsyncstoreGetLastUpperbound(syncstore));
 }
