@@ -38,6 +38,7 @@
 #include "scip/type_syncstore.h"
 #include "scip/type_scip.h"
 #include "scip/type_retcode.h"
+#include "scip/type_lp.h"
 
 /** creates and captures a new synchronization store */
 SCIP_EXPORT
@@ -145,6 +146,40 @@ void SCIPsyncstoreGetPoolSol(
    SCIP_Real**           solvals,            /**< pointer to return the solution values in communication variable order */
    int*                  nsolvals,           /**< pointer to return the number of solution values */
    int*                  ownerid             /**< pointer to return the index of the contributing concurrent solver */
+   );
+
+/** records a tightened global variable bound on the shared bound board for immediate sharing; the
+ *  board keeps, per communication variable, the tightest bound contributed by any concurrent solver
+ */
+SCIP_EXPORT
+void SCIPsyncstoreAddBound(
+   SCIP_SYNCSTORE*       syncstore,          /**< the synchronization store */
+   int                   varidx,             /**< communication variable index of the bound */
+   SCIP_Real             newbound,           /**< the variable's new global bound in communication space */
+   SCIP_BOUNDTYPE        boundtype           /**< whether the new bound is a lower or an upper bound */
+   );
+
+/** gets the change counter of the shared bound board; read without locking, so it may momentarily lag
+ *  a concurrent update, which is fine for its use as a cheap hint that gates the per-node drain
+ */
+SCIP_EXPORT
+int SCIPsyncstoreGetBoundVersion(
+   SCIP_SYNCSTORE*       syncstore           /**< the synchronization store */
+   );
+
+/** gets the tightest shared global bounds of a communication variable from the bound board */
+SCIP_EXPORT
+void SCIPsyncstoreGetBound(
+   SCIP_SYNCSTORE*       syncstore,          /**< the synchronization store */
+   int                   varidx,             /**< communication variable index */
+   SCIP_Real*            lb,                 /**< pointer to return the tightest shared lower bound, or -infinity */
+   SCIP_Real*            ub                  /**< pointer to return the tightest shared upper bound, or +infinity */
+   );
+
+/** returns whether the bound board for immediate global bound sharing is enabled */
+SCIP_EXPORT
+SCIP_Bool SCIPsyncstoreBoundPoolEnabled(
+   SCIP_SYNCSTORE*       syncstore           /**< the synchronization store */
    );
 
 /** Tries to acquire the synchronization data with the given number for non-blocking reading.

@@ -91,6 +91,11 @@ SCIP_RETCODE SCIPsyncstoreCreate(
    (*syncstore)->poolnvals = NULL;
    (*syncstore)->npoolsols = 0;
    (*syncstore)->poolsolssize = 0;
+   (*syncstore)->useboundpool = FALSE;
+   (*syncstore)->boardlb = NULL;
+   (*syncstore)->boardub = NULL;
+   (*syncstore)->boardsize = 0;
+   (*syncstore)->boardversion = 0;
 
    SCIP_CALL( SCIPtpiInitLock(&(*syncstore)->lock) );
 
@@ -209,6 +214,28 @@ SCIP_RETCODE SCIPsyncstoreInit(
    syncstore->usesolpool = syncstore->usesolpool && syncstore->mode == SCIP_PARA_OPPORTUNISTIC;
    syncstore->npoolsols = 0;
 
+   /* like the solution pool, the bound board bypasses the synchronization barrier and is therefore
+    * only available in opportunistic mode; it is sized for the communication variables and starts at
+    * the trivial bounds, so that the first tightening shared by any solver wins the comparison
+    */
+   SCIP_CALL( SCIPgetBoolParam(scip, "concurrent/boundpool", &syncstore->useboundpool) );
+   syncstore->useboundpool = syncstore->useboundpool && syncstore->mode == SCIP_PARA_OPPORTUNISTIC;
+   syncstore->boardversion = 0;
+   syncstore->boardsize = 0;
+
+   if( syncstore->useboundpool )
+   {
+      syncstore->boardsize = syncstore->ninitvars;
+      SCIP_CALL( SCIPallocBlockMemoryArray(syncstore->mainscip, &syncstore->boardlb, syncstore->boardsize) );
+      SCIP_CALL( SCIPallocBlockMemoryArray(syncstore->mainscip, &syncstore->boardub, syncstore->boardsize) );
+
+      for( i = 0; i < syncstore->boardsize; ++i )
+      {
+         syncstore->boardlb[i] = -SCIPinfinity(scip);
+         syncstore->boardub[i] = SCIPinfinity(scip);
+      }
+   }
+
    SCIP_CALL( SCIPtpiInit(syncstore->nsolvers, INT_MAX, FALSE) );
    SCIP_CALL( SCIPautoselectDisps(scip) );
 
@@ -269,6 +296,13 @@ SCIP_RETCODE SCIPsyncstoreExit(
    syncstore->npoolsols = 0;
    syncstore->poolsolssize = 0;
    syncstore->usesolpool = FALSE;
+
+   /* the bound board is block memory of the main SCIP, allocated and freed single-threaded */
+   SCIPfreeBlockMemoryArrayNull(syncstore->mainscip, &syncstore->boardlb, syncstore->boardsize);
+   SCIPfreeBlockMemoryArrayNull(syncstore->mainscip, &syncstore->boardub, syncstore->boardsize);
+   syncstore->boardsize = 0;
+   syncstore->boardversion = 0;
+   syncstore->useboundpool = FALSE;
 
    syncstore->initialized = FALSE;
    syncstore->stopped = FALSE;
@@ -509,6 +543,92 @@ void SCIPsyncstoreGetPoolSol(
    *ownerid = syncstore->poolsource[idx];
 
    SCIP_CALL_ABORT( SCIPtpiReleaseLock(syncstore->lock) );
+}
+
+/** records a tightened global variable bound on the shared bound board; the board keeps, per
+ *  communication variable, the tightest bound contributed by any concurrent solver. Bounds are
+ *  monotone, so re-recording a weaker bound is ignored. The change counter is bumped only after the
+ *  new value is written, so the lock-free version read never reports a change before the value is
+ *  visible. Does nothing if the bound board is disabled or the variable index is out of range.
+ */
+void SCIPsyncstoreAddBound(
+   SCIP_SYNCSTORE*       syncstore,          /**< the synchronization store */
+   int                   varidx,             /**< communication variable index of the bound */
+   SCIP_Real             newbound,           /**< the variable's new global bound in communication space */
+   SCIP_BOUNDTYPE        boundtype           /**< whether the new bound is a lower or an upper bound */
+   )
+{
+   assert(syncstore != NULL);
+   assert(syncstore->initialized);
+
+   if( !syncstore->useboundpool || varidx < 0 || varidx >= syncstore->boardsize )
+      return;
+
+   SCIP_CALL_ABORT( SCIPtpiAcquireLock(syncstore->lock) );
+
+   if( boundtype == SCIP_BOUNDTYPE_LOWER )
+   {
+      if( newbound > syncstore->boardlb[varidx] )
+      {
+         syncstore->boardlb[varidx] = newbound;
+         ++syncstore->boardversion;
+      }
+   }
+   else
+   {
+      if( newbound < syncstore->boardub[varidx] )
+      {
+         syncstore->boardub[varidx] = newbound;
+         ++syncstore->boardversion;
+      }
+   }
+
+   SCIP_CALL_ABORT( SCIPtpiReleaseLock(syncstore->lock) );
+}
+
+/** gets the change counter of the shared bound board; read without locking, so it may momentarily lag
+ *  a concurrent update, which is fine for its use as a cheap hint that gates the per-node drain
+ */
+int SCIPsyncstoreGetBoundVersion(
+   SCIP_SYNCSTORE*       syncstore           /**< the synchronization store */
+   )
+{
+   assert(syncstore != NULL);
+   assert(syncstore->initialized);
+
+   return syncstore->boardversion;
+}
+
+/** gets the tightest shared global bounds of a communication variable from the bound board */
+void SCIPsyncstoreGetBound(
+   SCIP_SYNCSTORE*       syncstore,          /**< the synchronization store */
+   int                   varidx,             /**< communication variable index */
+   SCIP_Real*            lb,                 /**< pointer to return the tightest shared lower bound, or -infinity */
+   SCIP_Real*            ub                  /**< pointer to return the tightest shared upper bound, or +infinity */
+   )
+{
+   assert(syncstore != NULL);
+   assert(syncstore->initialized);
+   assert(lb != NULL);
+   assert(ub != NULL);
+   assert(varidx >= 0 && varidx < syncstore->boardsize);
+
+   SCIP_CALL_ABORT( SCIPtpiAcquireLock(syncstore->lock) );
+
+   *lb = syncstore->boardlb[varidx];
+   *ub = syncstore->boardub[varidx];
+
+   SCIP_CALL_ABORT( SCIPtpiReleaseLock(syncstore->lock) );
+}
+
+/** returns whether the bound board for immediate global bound sharing is enabled */
+SCIP_Bool SCIPsyncstoreBoundPoolEnabled(
+   SCIP_SYNCSTORE*       syncstore           /**< the synchronization store */
+   )
+{
+   assert(syncstore != NULL);
+
+   return syncstore->useboundpool;
 }
 
 /** gets the minimization-normalized objective value of the best solution found by any

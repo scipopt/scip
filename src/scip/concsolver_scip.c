@@ -39,7 +39,10 @@
 #include "scip/concsolver.h"
 #include "scip/concsolver_scip.h"
 #include "scip/concurrent.h"
+#include "scip/event_globalbnd.h"
 #include "scip/heur_sync.h"
+#include "scip/prop_sync.h"
+#include "scip/scip_prop.h"
 #include "scip/pub_disp.h"
 #include "scip/pub_event.h"
 #include "scip/pub_heur.h"
@@ -308,10 +311,22 @@ SCIP_RETCODE disableConflictingDualReductions(
    )
 {
    SCIP_Bool commvarbnds;
+   SCIP_Bool boundpool;
+   int paramode;
 
    SCIP_CALL( SCIPgetBoolParam(scip, "concurrent/commvarbnds", &commvarbnds) );
+   SCIP_CALL( SCIPgetBoolParam(scip, "concurrent/boundpool", &boundpool) );
+   SCIP_CALL( SCIPgetIntParam(scip, "parallel/mode", &paramode) );
 
-   if( !commvarbnds )
+   /* the bound board shares bounds only in opportunistic mode */
+   if( paramode != (int) SCIP_PARA_OPPORTUNISTIC )
+      boundpool = FALSE;
+
+   /* sharing variable bounds carries the hazard that a strong dual reduction keeps only one optimal
+    * solution, so combining conflicting ones from different solvers can cut off all optima; only when
+    * no bounds are shared at all can every solver keep performing its own strong dual reductions
+    */
+   if( !commvarbnds && !boundpool )
       return SCIP_OKAY;
 
    SCIP_CALL( SCIPsetBoolParam(scip, "misc/allowstrongdualreds", FALSE) );
@@ -698,6 +713,28 @@ SCIP_RETCODE initConcsolver(
       assert(heursync != NULL);
 
       SCIPheurSyncEnableSolPool(data->solverscip, heursync, concsolver, data->vars, data->nvars);
+   }
+
+   /* enable immediate sharing of tightened global variable bounds: the global bound event handler
+    * publishes each tightening to the shared board and the sync propagator drains and applies it at
+    * every node, so global bounds propagate between the solvers without waiting for a synchronization point
+    */
+   {
+      SCIP_Bool useboundpool;
+
+      SCIP_CALL( SCIPgetBoolParam(scip, "concurrent/boundpool", &useboundpool) );
+
+      if( useboundpool && paramode == (int) SCIP_PARA_OPPORTUNISTIC )
+      {
+         SCIP_PROP* propsync;
+
+         SCIP_CALL( SCIPeventGlobalbndEnableBoundPool(data->solverscip) );
+
+         propsync = SCIPfindProp(data->solverscip, "sync");
+         assert(propsync != NULL);
+
+         SCIPpropSyncEnableBoundPool(data->solverscip, propsync, concsolver, data->vars, data->nvars);
+      }
    }
    SCIPfreeBufferArray(data->solverscip, &mainallvars);
    SCIPfreeBufferArray(data->solverscip, &varperm);

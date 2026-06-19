@@ -500,6 +500,10 @@
                                                       *   synchronization points? this also stops the solvers from
                                                       *   blocking on the synchronization barrier
                                                       *   (only used in opportunistic mode) */
+#define SCIP_DEFAULT_CONCURRENT_BOUNDPOOL       TRUE /**< should tightened global variable bounds be shared between the
+                                                      *   concurrent solvers immediately through a bound board, applied at
+                                                      *   every node, instead of only at the synchronization points?
+                                                      *   (only used in opportunistic mode) */
 #define SCIP_DEFAULT_CONCURRENT_PRINTINCUMBENTS FALSE /**< should a line be printed for every new globally best solution
                                                        *   found by a concurrent solver? */
 #define SCIP_DEFAULT_CONCURRENT_PRESOLVEBEFORE  FALSE /**< should the problem be presolved before it is copied to the concurrent solvers? */
@@ -2837,6 +2841,11 @@ SCIP_RETCODE SCIPsetCreate(
          "concurrent/solpool",
          "should new incumbents be shared between the concurrent solvers immediately through a solution pool instead of only at the synchronization points? this also stops the solvers from blocking on the synchronization barrier (only used in opportunistic mode)",
          &(*set)->concurrent_solpool, FALSE, SCIP_DEFAULT_CONCURRENT_SOLPOOL,
+         NULL, NULL) );
+   SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
+         "concurrent/boundpool",
+         "should tightened global variable bounds be shared between the concurrent solvers immediately through a bound board, applied at every node, instead of only at the synchronization points? (only used in opportunistic mode)",
+         &(*set)->concurrent_boundpool, FALSE, SCIP_DEFAULT_CONCURRENT_BOUNDPOOL,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
          "concurrent/printincumbents",
