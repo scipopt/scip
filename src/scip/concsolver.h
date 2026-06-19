@@ -211,6 +211,16 @@ void SCIPconcsolverAddNSolsShared(
    SCIP_Longint          nsols               /**< number of shared solutions to add */
    );
 
+/** adds to the number of tighter global variable bounds the solver received from the other solvers;
+ *  used in opportunistic mode where bounds are drained from the shared board instead of read at the
+ *  synchronization points
+ */
+void SCIPconcsolverAddNTighterBnds(
+   SCIP_CONCSOLVER*      concsolver,         /**< concurrent solver */
+   SCIP_Longint          nbnds,              /**< number of received tighter bounds to add */
+   SCIP_Longint          nintbnds            /**< number of received tighter integer bounds to add */
+   );
+
 /** gets the number of tighter global variable bounds the solver received */
 SCIP_Longint SCIPconcsolverGetNTighterBnds(
    SCIP_CONCSOLVER*      concsolver          /**< concurrent solver */

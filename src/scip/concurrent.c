@@ -113,7 +113,10 @@ SCIP_RETCODE SCIPcreateConcurrent(
    scip->concurrent->eventglobalbnd = NULL;
    assert(SCIPfindEventhdlr(scip, "globalbnd") == NULL);
 
-   if( scip->set->concurrent_commvarbnds )
+   /* the global bound change event handler is also needed when bounds are shared immediately through the
+    * board, since that is where the tightenings are detected and published
+    */
+   if( scip->set->concurrent_commvarbnds || scip->set->concurrent_boundpool )
    {
       SCIP_CALL( SCIPincludeEventHdlrGlobalbnd(scip) );
       scip->concurrent->eventglobalbnd = SCIPfindEventhdlr(scip, "globalbnd");

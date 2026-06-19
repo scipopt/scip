@@ -83,6 +83,16 @@ struct SCIP_SyncStore
    int                   npoolsols;          /**< current number of solutions in the pool; incremented only after the
                                               *   entry is fully written, so it doubles as a lock-free size hint */
    int                   poolsolssize;       /**< allocated capacity of the pool arrays */
+   SCIP_Bool             useboundpool;       /**< should tightened global variable bounds be shared immediately through
+                                              *   the bound board instead of only at the synchronization points?
+                                              *   (only used in opportunistic mode) */
+   SCIP_Real*            boardlb;            /**< per communication variable, the tightest global lower bound contributed
+                                              *   by any concurrent solver, or -infinity; monotonically non-decreasing */
+   SCIP_Real*            boardub;            /**< per communication variable, the tightest global upper bound contributed
+                                              *   by any concurrent solver, or +infinity; monotonically non-increasing */
+   int                   boardsize;          /**< number of communication variables the bound board is sized for */
+   int                   boardversion;       /**< counter bumped whenever a board bound is tightened; incremented only
+                                              *   after the new bound is written, so it is a safe lock-free change hint */
 
    int                   nsyncdata;          /**< the size of the synchronization data array */
    SCIP_Real             minsyncdelay;       /**< the minimum delay before a synchronization data may be read */
