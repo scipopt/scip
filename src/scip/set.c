@@ -503,7 +503,7 @@
 #define SCIP_DEFAULT_CONCURRENT_PRINTINCUMBENTS FALSE /**< should a line be printed for every new globally best solution
                                                        *   found by a concurrent solver? */
 #define SCIP_DEFAULT_CONCURRENT_PRESOLVEBEFORE  FALSE /**< should the problem be presolved before it is copied to the concurrent solvers? */
-#define SCIP_DEFAULT_CONCURRENT_SYMMETRYBEFORE  TRUE /**< should symmetry be computed before concurrent solving? */
+#define SCIP_DEFAULT_CONCURRENT_SYMMETRYBEFORE  FALSE /**< should symmetry be computed before concurrent solving? */
 #define SCIP_DEFAULT_CONCURRENT_INITSEED     5131912 /**< the seed used to initialize the random seeds for the concurrent solvers */
 #define SCIP_DEFAULT_CONCURRENT_FREQINIT        10.0 /**< initial frequency of synchronization with other threads
                                                       *   (fraction of time required for solving the root LP) */
