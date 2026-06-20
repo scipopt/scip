@@ -45,7 +45,8 @@
 #define HEUR_FREQ             -1
 #define HEUR_FREQOFS          0
 #define HEUR_MAXDEPTH         -1
-#define HEUR_TIMING           SCIP_HEURTIMING_DURINGLPLOOP | SCIP_HEURTIMING_BEFOREPRESOL | SCIP_HEURTIMING_BEFORENODE
+/* TODO: SCIP_HEURTIMING_BEFOREPRESOL removed (causes false OPTIMAL with presolvebefore=FALSE); fix properly */
+#define HEUR_TIMING           SCIP_HEURTIMING_DURINGLPLOOP | SCIP_HEURTIMING_BEFORENODE
 #define HEUR_USESSUBSCIP      FALSE  /**< does the heuristic use a secondary SCIP instance? */
 
 
