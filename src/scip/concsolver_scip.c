@@ -437,7 +437,6 @@ SCIP_RETCODE applyRacingSettings(
     * solutions in the first seconds
     */
    case 4:
-      SCIP_CALL( SCIPsetBoolParam(solverscip, "heuristics/feasjump/beforepresol", TRUE) );
       SCIP_CALL( SCIPsetBoolParam(solverscip, "symmetries/enabled", FALSE) );
       break;
 
@@ -449,7 +448,6 @@ SCIP_RETCODE applyRacingSettings(
       SCIP_CALL( SCIPsetIntParam(solverscip, "conflict/restartnum", 100) );
       SCIP_CALL( SCIPsetRealParam(solverscip, "conflict/restartfac", 1.5) );
       SCIP_CALL( SCIPsetIntParam(solverscip, "presolving/maxrestarts", 100) );
-      SCIP_CALL( SCIPsetBoolParam(solverscip, "heuristics/feasjump/beforepresol", TRUE) );
       break;
 
    /* large neighborhood search improver; fires the LNS heuristics aggressively and immediately on new
