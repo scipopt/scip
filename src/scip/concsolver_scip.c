@@ -419,6 +419,9 @@ SCIP_RETCODE applyRacingSettings(
 
    /* feasibility emphasis; used twice since the different racing seeds make the search distinct */
    case 1:
+      SCIP_CALL( SCIPsetBoolParam(solverscip, "symmetries/enabled", FALSE) );
+      SCIP_CALL( SCIPsetEmphasis(solverscip, SCIP_PARAMEMPHASIS_FEASIBILITY, TRUE) );
+      break;
    case 2:
       SCIP_CALL( SCIPsetEmphasis(solverscip, SCIP_PARAMEMPHASIS_FEASIBILITY, TRUE) );
       break;
@@ -427,6 +430,7 @@ SCIP_RETCODE applyRacingSettings(
    case 3:
       SCIP_CALL( SCIPsetSeparating(solverscip, SCIP_PARAMSETTING_OFF, TRUE) );
       SCIP_CALL( SCIPsetPresolving(solverscip, SCIP_PARAMSETTING_FAST, TRUE) );
+      SCIP_CALL( SCIPsetBoolParam(solverscip, "symmetries/enabled", FALSE) );
       break;
 
    /* early feasibility jump; runs the feasibility jump heuristic before presolving to find feasible
@@ -434,6 +438,7 @@ SCIP_RETCODE applyRacingSettings(
     */
    case 4:
       SCIP_CALL( SCIPsetBoolParam(solverscip, "heuristics/feasjump/beforepresol", TRUE) );
+      SCIP_CALL( SCIPsetBoolParam(solverscip, "symmetries/enabled", FALSE) );
       break;
 
    /* cpsolver search with a geometric restart schedule and feasibility jump before presolving; never
@@ -470,6 +475,7 @@ SCIP_RETCODE applyRacingSettings(
       SCIP_CALL( SCIPsetIntParam(solverscip, "heuristics/gins/freq", 10) );
       SCIP_CALL( SCIPsetIntParam(solverscip, "separating/maxrounds", 1) );
       SCIP_CALL( SCIPsetIntParam(solverscip, "separating/maxroundsroot", 5) );
+      SCIP_CALL( SCIPsetBoolParam(solverscip, "symmetries/enabled", FALSE) );
       break;
 
    /* no presolving; starts the search immediately on the original formulation, providing early feasible
@@ -477,6 +483,7 @@ SCIP_RETCODE applyRacingSettings(
     */
    case 7:
       SCIP_CALL( SCIPsetPresolving(solverscip, SCIP_PARAMSETTING_OFF, TRUE) );
+      SCIP_CALL( SCIPsetBoolParam(solverscip, "symmetries/enabled", FALSE) );
       break;
 
    /* constraint programming style search; no LP relaxation, aggressive conflict analysis, depth first search */
