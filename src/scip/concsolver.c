@@ -418,7 +418,13 @@ SCIP_RETCODE SCIPconcsolverSync(
 
    if( SCIPsyncdataGetStatus(syncdata) != SCIP_STATUS_UNKNOWN )
    {
-      SCIP_CALL( SCIPconcsolverStop(concsolver) );
+      int c;
+
+      /* The winner stops the whole portfolio */
+      for( c = 0; c < set->nconcsolvers; ++c )
+      {
+         SCIP_CALL( SCIPconcsolverStop(set->concsolvers[c]) );
+      }
    }
    else if( !SCIPsyncstoreSolPoolEnabled(syncstore) &&
       SCIPsyncdataGetNSynced(syncdata) == SCIPsyncstoreGetNSolvers(syncstore) - 1 )

@@ -53,6 +53,7 @@
 #include "scip/scip_event.h"
 #include "scip/scip_general.h"
 #include "scip/scip_heur.h"
+#include "scip/scip_lp.h"
 #include "scip/scip_mem.h"
 #include "scip/scip_message.h"
 #include "scip/scip_numerics.h"
@@ -992,7 +993,8 @@ SCIP_DECL_CONCSOLVERSTOP(concsolverScipStop)
    data = SCIPconcsolverGetData(concsolver);
    assert(data != NULL);
 
-   SCIP_CALL( SCIPinterruptSolve(data->solverscip) );
+   /* Interrupts both the LP solve and sets the user interrupt flag */
+   SCIP_CALL( SCIPinterruptLP(data->solverscip, TRUE) );
 
    return SCIP_OKAY;
 }
