@@ -2907,6 +2907,10 @@ SCIP_RETCODE paramsetSetHeuristicsAggressive(
       /* dualval heuristic should stay disabled */
       if( strcmp(heurname, "dualval") == 0 )
          continue;
+      
+      /* zeroobj heuristic should stay disabled */
+      if( strcmp(heurname, "zeroobj") == 0 )
+         continue;
 
       /* the aggressive Benders' decomposition heuristics should remain disabled */
       if( strstr(heurname, "benders") != NULL )
