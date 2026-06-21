@@ -884,12 +884,13 @@ SCIP_RETCODE SCIPinterruptLP(
 {
    SCIP_CALL( SCIPcheckStage(scip, "SCIPinterruptLP", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
 
+   if( interrupt )
+      scip->stat->userinterrupt = TRUE;
+
    if( scip->lp == NULL )
       return SCIP_OKAY;
 
    SCIP_CALL( SCIPlpInterrupt(scip->lp, interrupt) );
-   if( interrupt )
-      scip->stat->userinterrupt = TRUE;
 
    return SCIP_OKAY;
 }
