@@ -1223,20 +1223,6 @@ target_link_libraries(scip
     ${LPS_LIBRARIES}
 )
 
-# add /bigobj when compiling debug with MSVC with SoPlex interface to avoid
-# error C1128: number of sections exceeded object file format limit
-# (see also https://github.com/scipopt/scip/pull/200)
-if(LPS STREQUAL "spx")
-  foreach(_target IN ITEMS liblpi libscip scip)
-    if(TARGET ${_target})
-      target_compile_options(${_target}
-        PRIVATE
-          $<$<AND:$<CONFIG:Debug>,$<COMPILE_LANG_AND_ID:CXX,MSVC>>:/bigobj>
-      )
-    endif()
-  endforeach()
-endif()
-
 add_dependencies(libscip scip_update_githash)
 add_dependencies(scip scip_update_githash)
 
