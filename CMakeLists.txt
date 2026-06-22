@@ -264,6 +264,11 @@ set(ADD_CXX_FLAGS -Wnon-virtual-dtor -Wreorder -Woverloaded-virtual -Wsign-promo
 # disable fused floating point contraction to enhance reproducibility across compilers and architectures
 if(CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
     add_compile_options(/fp:precise)
+    if((LPS STREQUAL "spx") AND (CMAKE_BUILD_TYPE STREQUAL "Debug"))
+        # add /bigobj to avoid error C1128: number of sections exceeded object file format limit
+        # (see also https://github.com/scipopt/scip/pull/200)
+        add_compile_options(/bigobj)
+    endif()
 elseif(CMAKE_CXX_COMPILER_ID MATCHES "Intel")
     add_compile_options(-fp-model=precise)
     # to prevent symbols from svml exported twice we use the -shared-intel flag, see https://git.zib.de/integer/scip/issues/2872
