@@ -2422,6 +2422,21 @@ SCIP_DECL_CONSDELETE(consDeleteCardinality)
 
    SCIPfreeBlockMemory(scip, consdata);
 
+   /* Make sure that the hash for indicator binary variables is freed. If we read a problem and then another problem without
+    * solving (transforming) between, then no callback of constraint handlers are called. Thus, we cannot easily free the
+    * hash map there. */
+   if ( SCIPconshdlrGetNConss(conshdlr) == 0 )
+   {
+      SCIP_CONSHDLRDATA* conshdlrdata;
+
+      /* get constraint handler data */
+      conshdlrdata = SCIPconshdlrGetData(conshdlr);
+      assert( conshdlrdata != NULL );
+
+      if ( conshdlrdata->varhash != NULL )
+         SCIPhashmapFree(&conshdlrdata->varhash);
+   }
+
    return SCIP_OKAY;
 }
 
