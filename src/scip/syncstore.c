@@ -81,6 +81,8 @@ SCIP_RETCODE SCIPsyncstoreCreate(
    (*syncstore)->nuses = 1;
    (*syncstore)->bestminobj = SCIP_REAL_MAX;
    (*syncstore)->bestdualbound = -SCIP_REAL_MAX;
+   (*syncstore)->winnerid = -1;
+   (*syncstore)->winnerstatus = SCIP_STATUS_UNKNOWN;
    (*syncstore)->printincumbents = FALSE;
    (*syncstore)->usesolpool = FALSE;
    (*syncstore)->poolsols = NULL;
@@ -193,6 +195,8 @@ SCIP_RETCODE SCIPsyncstoreInit(
    syncstore->stopped = FALSE;
    syncstore->bestminobj = SCIP_REAL_MAX;
    syncstore->bestdualbound = -SCIP_REAL_MAX;
+   syncstore->winnerid = -1;
+   syncstore->winnerstatus = SCIP_STATUS_UNKNOWN;
    SCIP_CALL( SCIPgetBoolParam(scip, "concurrent/printincumbents", &syncstore->printincumbents) );
 
    SCIP_CALL( SCIPgetIntParam(scip, "parallel/mode", &paramode) );
@@ -793,17 +797,8 @@ SCIP_RETCODE SCIPsyncstoreStartSync(
 
    if( (*syncdata)->syncnum != syncnum )
    {
-      /* in solution-pool mode writers are not throttled by readers, so a fast solver can wrap
-       * around the syncdata ring while others lag; never recycle the slot recorded as the last
-       * synchronization, because it backs the winner and status determination at the end
-       */
-      if( syncstore->usesolpool && *syncdata == syncstore->lastsync )
-      {
-         SCIP_CALL( SCIPtpiReleaseLock((*syncdata)->lock) );
-         *syncdata = NULL;
-         return SCIP_OKAY;
-      }
-
+      /* recycle freely: in solution-pool mode the winner is on the scalar channel, not this ring, so
+       * never skipping the write lets a finishing solver record its terminal status and stop the portfolio */
       SCIPboundstoreClear((*syncdata)->boundstore);
       (*syncdata)->nsols = 0;
       (*syncdata)->memtotal = SCIPgetMemTotal(syncstore->mainscip);
@@ -817,6 +812,29 @@ SCIP_RETCODE SCIPsyncstoreStartSync(
    }
 
    return SCIP_OKAY;
+}
+
+/** whether terminal status (newstatus,newid) beats (curstatus,curid): closer to OPTIMAL wins, UNKNOWN
+ *  worst, ties by smaller id; matches the ranking in SCIPsyncdataSetStatus */
+static
+SCIP_Bool syncstoreStatusIsBetter(
+   SCIP_STATUS           newstatus,          /**< candidate terminal status */
+   int                   newid,              /**< candidate solver id */
+   SCIP_STATUS           curstatus,          /**< current best terminal status */
+   int                   curid               /**< current best solver id */
+   )
+{
+   if( curstatus == SCIP_STATUS_UNKNOWN )
+      return newstatus != SCIP_STATUS_UNKNOWN;
+
+   if( newstatus == SCIP_STATUS_UNKNOWN )
+      return FALSE;
+
+   /* both are real statuses; the smaller enum value is closer to SCIP_STATUS_OPTIMAL and thus better */
+   if( newstatus != curstatus )
+      return newstatus < curstatus;
+
+   return newid < curid;
 }
 
 /** finishes synchronization for the synchronization data */
@@ -834,13 +852,28 @@ SCIP_RETCODE SCIPsyncstoreFinishSync(
 
    ++(*syncdata)->syncedcount;
 
-   /* record lastsync as soon as a terminal status is available, even if not all solvers
-    * have synced yet; this ensures SCIPsyncstoreGetWinner returns the correct winner when
-    * SolveIsStopped causes remaining solvers to skip their sync */
-   if( (*syncdata)->status != SCIP_STATUS_UNKNOWN && syncstore->lastsync != *syncdata )
+   /* record the globally best terminal status on the scalar winner channel; in solution-pool mode the
+    * ring is recycled without the barrier, so lastsync may be overwritten or hold a worse, later status */
+   if( (*syncdata)->status != SCIP_STATUS_UNKNOWN )
    {
-      syncstore->lastsync = *syncdata;
-      printline = TRUE;
+      /* shared scalar but only the syncdata lock is held here; guard it (syncdata->syncstore ordering
+       * matches the all-synced branch's SetSolveIsStopped) */
+      SCIP_CALL( SCIPtpiAcquireLock(syncstore->lock) );
+
+      if( syncstore->winnerstatus == SCIP_STATUS_UNKNOWN ||
+         syncstoreStatusIsBetter((*syncdata)->status, (*syncdata)->winner, syncstore->winnerstatus, syncstore->winnerid) )
+      {
+         syncstore->winnerstatus = (*syncdata)->status;
+         syncstore->winnerid = (*syncdata)->winner;
+      }
+
+      SCIP_CALL( SCIPtpiReleaseLock(syncstore->lock) );
+
+      if( syncstore->lastsync != *syncdata )
+      {
+         syncstore->lastsync = *syncdata;
+         printline = TRUE;
+      }
    }
 
    if( (*syncdata)->syncedcount == syncstore->nsolvers )
@@ -885,6 +918,10 @@ int SCIPsyncstoreGetWinner(
 {
    assert(syncstore != NULL);
    assert(syncstore->initialized);
+
+   /* solution-pool mode: the ring/lastsync is recycled, read the scalar winner */
+   if( syncstore->usesolpool )
+      return syncstore->winnerstatus == SCIP_STATUS_UNKNOWN ? -1 : syncstore->winnerid;
 
    if( syncstore->lastsync == NULL || syncstore->lastsync->status == SCIP_STATUS_UNKNOWN )
       return -1;
