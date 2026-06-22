@@ -1034,6 +1034,19 @@ SCIP_DECL_CONCSOLVERSYNCWRITE(concsolverScipSyncWrite)
    SCIPsyncdataSetLowerbound(syncdata, SCIPgetDualbound(data->solverscip));
    SCIPsyncdataSetUpperbound(syncdata, SCIPgetPrimalbound(data->solverscip));
 
+   /* push the finalized dual bound into bestdualbound; the sync heuristic samples it per node and
+    * misses the terminal bound that this sync write (incl. the post-solve one) sees finalized */
+   if( SCIPsyncstoreSolPoolEnabled(syncstore) )
+   {
+      SCIP_Real mindual;
+
+      mindual = SCIPgetDualbound(data->solverscip);
+      if( SCIPgetObjsense(data->solverscip) == SCIP_OBJSENSE_MAXIMIZE )
+         mindual = -mindual;
+
+      SCIPsyncstoreUpdateBestDualbound(syncstore, mindual);
+   }
+
    SCIPdebugMessage("syncing in concurrent solver %s\n", SCIPconcsolverGetName(concsolver));
 
    /* in solution-pool mode new incumbents are shared immediately through the pool, so the

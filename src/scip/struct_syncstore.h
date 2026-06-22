@@ -67,6 +67,9 @@ struct SCIP_SyncStore
    SCIP_Real             bestminobj;         /**< minimization-normalized original objective value of the best solution found
                                               *   by any concurrent solver; communicated immediately between the solvers
                                               *   in opportunistic mode, outside of the regular synchronization points */
+   int                   winnerid;           /**< solver id of the best terminal status so far, or -1; scalar winner
+                                              *   channel used instead of the recyclable ring in solution-pool mode */
+   SCIP_STATUS           winnerstatus;       /**< the best terminal status reported so far, or SCIP_STATUS_UNKNOWN */
    SCIP_Bool             printincumbents;    /**< should a line be printed for every new globally best solution found
                                               *   by a concurrent solver? */
    SCIP_Bool             usesolpool;         /**< should new globally best solutions be shared immediately through
