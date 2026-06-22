@@ -2863,8 +2863,8 @@ SCIP_DECL_CONSLOCK(consLockCardinality)
          SCIP_CALL( SCIPaddVarLocksType(scip, var, locktype, nlocksneg, nlockspos) );
       }
 
-      /* add lock on indicator variable; @todo write constraint handler to handle down locks */
-      SCIP_CALL( SCIPaddVarLocksType(scip, indvar, locktype, nlockspos, nlockspos) );
+      /* add up-lock on indicator variable; @todo write constraint handler to handle down locks */
+      SCIP_CALL( SCIPaddVarLocksType(scip, indvar, locktype, nlocksneg, nlockspos) );
    }
 
    return SCIP_OKAY;
