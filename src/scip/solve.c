@@ -5507,6 +5507,7 @@ SCIP_RETCODE SCIPsolveCIP(
          /* select node to process in next solving loop; the primal heuristics need to know whether a child/sibling
           * (plunging) will be selected as next node or not
           */
+         nodesel = SCIPsetGetNodesel(set, stat);
          SCIP_CALL( SCIPnodeselSelect(nodesel, set, &nextnode) );
          assert(BMSgetNUsedBufferMemory(mem->buffer) == 0);
 
