@@ -425,10 +425,10 @@ SCIP_RETCODE consdataEnsurevarsSizeCardinality(
  *
  *  We perform the following steps:
  *
- *  - catch bound change events of variable.
- *  - update rounding locks of variable.
- *  - don't allow multiaggregation of variable, since this cannot be handled by branching in the current implementation
- *  - update lower and upper bound row, i.e., the linear representations of the cardinality constraints
+ *  - Catch bound change events of variable.
+ *  - Update rounding locks of variable.
+ *  - Don't allow multiaggregation of variable, since this cannot be handled by branching in the current implementation.
+ *  - Update lower and upper bound row, i.e., the linear representations of the cardinality constraints.
  */
 static
 SCIP_RETCODE handleNewVariableCardinality(
@@ -1110,13 +1110,13 @@ SCIP_RETCODE presolRoundCardinality(
  *
  *  We perform the following propagation steps:
  *
- *  - if the number 'ntreatnonzeros' is greater than the cardinality value of the constraint, then the current subproblem
+ *  - If the number 'ntreatnonzeros' is greater than the cardinality value of the constraint, then the current subproblem
  *    is marked as infeasible.
- *  - if the cardinality constraint is saturated, i.e., the number 'ntreatnonzeros' is equal to the cardinality value of
+ *  - If the cardinality constraint is saturated, i.e., the number 'ntreatnonzeros' is equal to the cardinality value of
  *    the constraint, then fix all the other variables of the constraint to zero.
- *  - remove the cardinality constraint locally if all variables are either fixed to zero or can be treated as nonzero.
- *  - if a (binary) indicator variable is fixed to zero, then fix the corresponding implied variable to zero.
- *  - if zero is outside of the domain of an implied variable, then fix the corresponding indicator variable to one.
+ *  - Remove the cardinality constraint locally if all variables are either fixed to zero or can be treated as nonzero.
+ *  - If a (binary) indicator variable is fixed to zero, then fix the corresponding implied variable to zero.
+ *  - If zero is outside of the domain of an implied variable, then fix the corresponding indicator variable to one.
  */
 static
 SCIP_RETCODE propCardinality(
@@ -1175,9 +1175,8 @@ SCIP_RETCODE propCardinality(
          {
 #ifndef NDEBUG
             ++cnt;
-#else
-            ;
 #endif
+         }
          /* else fix variable to zero if not done already */
          else
          {
@@ -2610,9 +2609,9 @@ SCIP_DECL_CONSPRESOL(consPresolCardinality)
    }
    (*nchgcoefs) += nremovedvars;
 
-   SCIPdebug( SCIPdebugMsg(scip, "presolving fixed %d variables, removed %d variables, deleted %d constraints, \
-        and upgraded %d constraints.\n", *nfixedvars - oldnfixedvars, nremovedvars, *ndelconss - oldndelconss,
-        *nupgdconss - oldnupgdconss); )
+   SCIPdebug( SCIPdebugMsg(scip, "presolving fixed %d variables, removed %d variables, deleted %d constraints, "
+         "and upgraded %d constraints.\n", *nfixedvars - oldnfixedvars, nremovedvars, *ndelconss - oldndelconss,
+         *nupgdconss - oldnupgdconss); )
 
    return SCIP_OKAY;
 }
@@ -3532,9 +3531,9 @@ SCIP_DECL_EVENTEXEC(eventExecCardinality)
    }
    assert(0 <= consdata->ntreatnonzeros && consdata->ntreatnonzeros <= consdata->nvars);
 
-   SCIPdebugMsg(scip, "event exec cons <%s>: changed bound of variable <%s> from %f to %f (ntreatnonzeros: %d).\n",
-        SCIPconsGetName(consdata->cons), SCIPvarGetName(SCIPeventGetVar(event)),
-        oldbound, newbound, consdata->ntreatnonzeros);
+   SCIPdebugMsg(scip, "event exec cons <%s>: changed %s bound of variable <%s> from %g to %g (ntreatnonzeros: %d).\n",
+      SCIPconsGetName(consdata->cons), eventtype & (SCIP_EVENTTYPE_UBTIGHTENED | SCIP_EVENTTYPE_GUBCHANGED) ? "upper" : "lower", SCIPvarGetName(SCIPeventGetVar(event)),
+      oldbound, newbound, consdata->ntreatnonzeros);
 
    return SCIP_OKAY;
 }
