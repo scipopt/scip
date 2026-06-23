@@ -72,6 +72,7 @@ Fixed bugs
 - correct integer variable offset when removing duplicate variables from xor constraint
 - add applied clique as constraint when reformulating binary product to avoid problem relaxation
 - fixed indexing in the heap implementation in Dijkstra's algorithm; behavior of heap was and is correct
+- round integral aggregation with epsilon coefficient tolerance to ensure integrality consistency
 
 Miscellaneous
 -------------
