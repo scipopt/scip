@@ -331,6 +331,10 @@ SCIP_RETCODE disableConflictingDualReductions(
 
    SCIP_CALL( SCIPsetBoolParam(scip, "misc/allowstrongdualreds", FALSE) );
 
+   /* symmetry is a dual reduction too, but orbital reduction/orbisack/symresack ignore the flag above;
+    * disable it so only worker 0 produces (and shares) symmetry-derived bounds */
+   SCIP_CALL( SCIPsetBoolParam(scip, "symmetries/enabled", FALSE) );
+
    return SCIP_OKAY;
 }
 
