@@ -15,6 +15,9 @@ Fixed bugs
 - add applied clique as constraint when reformulating binary product to avoid problem relaxation
 - fixed indexing in the heap implementation in Dijkstra's algorithm; behavior of heap was and is correct
 - round integral aggregation with epsilon coefficient tolerance to ensure integrality consistency
+- fix locking of indicator variables in cons_cardinality
+- free hashmap in cons_cardinality if problem is freed before transforming
+- fix CONSGETVARS and CONSGETNVARS in cons_cardinality
 
 Miscellaneous
 -------------
