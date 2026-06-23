@@ -7768,42 +7768,51 @@ SCIP_RETCODE SCIPvarTryAggregateVars(
 
    assert(typex >= typey);
 
-   /* figure out, which variable should be aggregated */
    easyaggr = FALSE;
-
-   /* check if it is an easy aggregation */
-   if( typex == SCIP_VARTYPE_CONTINUOUS && typey != SCIP_VARTYPE_CONTINUOUS )
-   {
-      easyaggr = TRUE;
-   }
-   else if( SCIPsetIsFeasIntegral(set, scalary/scalarx) )
-   {
-      easyaggr = TRUE;
-   }
-   else if( typex == typey && SCIPsetIsFeasIntegral(set, scalarx / scalary) )
-   {
-      /* we have an easy aggregation if we flip the variables x and y */
-      SCIP_VAR* var;
-
-      /* switch the variables, such that varx is the aggregated variable */
-      var = vary;
-      vary = varx;
-      varx = var;
-      scalar = scalary;
-      scalary = scalarx;
-      scalarx = scalar;
-      easyaggr = TRUE;
-   }
-   else if( typex == SCIP_VARTYPE_CONTINUOUS )
-   {
-      /* the aggregation is still easy if both variables are continuous */
-      assert(typey == SCIP_VARTYPE_CONTINUOUS); /* otherwise we are in the first case */
-      easyaggr = TRUE;
-   }
 
    /* calculate aggregation scalar and constant: a*x + b*y == c  =>  x == -b/a * y + c/a */
    scalar = -scalary / scalarx;
    constant = rhs / scalarx;
+
+   /* check if it is an easy aggregation */
+   if( typex == SCIP_VARTYPE_CONTINUOUS )
+   {
+      easyaggr = TRUE;
+   }
+   else if( SCIPsetIsIntegral(set, scalar) )
+   {
+      if( SCIPsetIsFeasIntegral(set, constant) )
+         constant = SCIPsetRound(set, constant);
+      else
+      {
+         *infeasible = TRUE;
+         return SCIP_OKAY;
+      }
+
+      scalar = SCIPsetRound(set, scalar);
+      easyaggr = TRUE;
+   }
+   else if( typex == typey && SCIPsetIsIntegral(set, scalarx / scalary) )
+   {
+      /* swap the variables, such that varx is the aggregated variable */
+      SCIP_VAR* var;
+
+      constant = rhs / scalary;
+
+      if( SCIPsetIsFeasIntegral(set, constant) )
+         constant = SCIPsetRound(set, constant);
+      else
+      {
+         *infeasible = TRUE;
+         return SCIP_OKAY;
+      }
+
+      scalar = SCIPsetRound(set, -scalarx / scalary);
+      var = varx;
+      varx = vary;
+      vary = var;
+      easyaggr = TRUE;
+   }
 
    /* terminate if a bound on resolved aggregation scalar becomes too small or large so that numerical cancellation may be caused */
    if( !SCIPvarIsAggrCoefAcceptable(set, varx, scalar) )
@@ -7817,18 +7826,10 @@ SCIP_RETCODE SCIPvarTryAggregateVars(
       if( REALABS(constant) > SCIPsetGetHugeValue(set) * SCIPsetFeastol(set) ) /*lint !e653*/
          return SCIP_OKAY;
 
-      /* check aggregation for integer feasibility */
-      if( typex != SCIP_VARTYPE_CONTINUOUS && typey != SCIP_VARTYPE_CONTINUOUS
-         && SCIPsetIsFeasIntegral(set, scalar) && !SCIPsetIsFeasIntegral(set, constant) )
-      {
-         *infeasible = TRUE;
-         return SCIP_OKAY;
-      }
-
-      /* if the aggregation scalar is fractional, we cannot (for technical reasons) and do not want to aggregate implicit integer variables,
+      /* if the aggregation scalar is fractional, we cannot aggregate integral variables,
        * since then we would loose the corresponding divisibility property
        */
-      assert(typex != SCIP_DEPRECATED_VARTYPE_IMPLINT || SCIPsetIsFeasIntegral(set, scalar));
+      assert(typex == SCIP_VARTYPE_CONTINUOUS || SCIPsetIsIntegral(set, scalar));
 
       /* aggregate the variable */
       SCIP_CALL( SCIPvarAggregate(varx, blkmem, set, stat, transprob, origprob, primal, tree, reopt, lp, cliquetable,
