@@ -458,8 +458,9 @@ SCIP_RETCODE handleNewVariableCardinality(
       assert(eventdata != NULL );
 
       /* if the variable is fixed to nonzero */
-      assert(consdata->ntreatnonzeros >= 0 );
-      if( SCIPisFeasEQ(scip, SCIPvarGetLbLocal(indvar), 1.0) )
+      assert(consdata->ntreatnonzeros >= 0);
+      assert(SCIPvarIsBinary(indvar));
+      if( SCIPvarGetLbLocal(indvar) > 0.5 )
          ++consdata->ntreatnonzeros;
    }
 
@@ -737,7 +738,8 @@ SCIP_RETCODE deleteVarCardinality(
         &consdata->eventdatas[pos]) );
 
    /* update number of variables that may be treated as nonzero */
-   if( SCIPisFeasEQ(scip, SCIPvarGetLbLocal(consdata->indvars[pos]), 1.0) )
+   assert(SCIPvarIsBinary(consdata->indvars[pos]));
+   if( SCIPvarGetLbLocal(consdata->indvars[pos]) > 0.5 )
       --(consdata->ntreatnonzeros);
 
    /* delete variable - need to copy since order is important */
@@ -899,10 +901,12 @@ SCIP_RETCODE presolRoundCardinality(
       scalar = 1.0;
       constant = 0.0;
 
+      indvar = indvars[j];
+      assert(SCIPvarIsBinary(indvar));
+
       /* check for aggregation: if the constant is zero the variable is zero iff the aggregated
        * variable is 0 */
       var = vars[j];
-      indvar = indvars[j];
       SCIP_CALL( SCIPgetProbvarSum(scip, &var, &scalar, &constant) );
 
       /* try to substitute variable entry */
@@ -942,8 +946,6 @@ SCIP_RETCODE presolRoundCardinality(
       /* if the variable is fixed to nonzero */
       if( SCIPisFeasPositive(scip, lb) || SCIPisFeasNegative(scip, ub) )
       {
-         assert(SCIPvarIsBinary(indvar));
-
          /* fix (binary) indicator variable to 1.0 (the cardinality constraint will then be modified below) */
          SCIP_CALL( SCIPfixVar(scip, indvar, 1.0, &infeasible, &fixed) );
          if( infeasible )
@@ -962,8 +964,6 @@ SCIP_RETCODE presolRoundCardinality(
       /* if the variable is fixed to 0 */
       if( SCIPisFeasZero(scip, lb) && SCIPisFeasZero(scip, ub) )
       {
-         assert(SCIPvarIsBinary(indvar));
-
          /* fix (binary) indicator variable to 0.0, if possible (the cardinality constraint will then be modified below)
           * note that an infeasibility implies no cut off */
          SCIP_CALL( SCIPfixVar(scip, indvar, 0.0, &infeasible, &fixed) );
@@ -979,7 +979,7 @@ SCIP_RETCODE presolRoundCardinality(
       indub = SCIPvarGetUbLocal(indvar);
 
       /* if the variable may be treated as nonzero */
-      if( SCIPisFeasEQ(scip, indlb, 1.0) )
+      if( indlb > 0.5 )
       {
          assert(indub == 1.0);
 
@@ -991,7 +991,7 @@ SCIP_RETCODE presolRoundCardinality(
          ++(*nremovedvars);
       }
       /* if the indicator variable is fixed to 0 */
-      else if( SCIPisFeasEQ(scip, indub, 0.0) )
+      else if( indub < 0.5 )
       {
          assert(indlb == 0.0);
 
@@ -1170,7 +1170,9 @@ SCIP_RETCODE propCardinality(
       for( j = 0; j < nvars; ++j )
       {
          /* if variable is implied to be treated as nonzero */
-         if( SCIPisFeasEQ(scip, SCIPvarGetLbLocal(indvars[j]), 1.0) )
+         assert( SCIPvarIsBinary(indvars[j]) );
+         if( SCIPvarGetLbLocal(indvars[j]) > 0.5 )
+         {
 #ifndef NDEBUG
             ++cnt;
 #else
@@ -1307,10 +1309,10 @@ SCIP_RETCODE propCardinality(
                assert(SCIPvarIsBinary(indvar));
 
                /* fix indicator variable to 1.0 if not done already */
-               if( !SCIPisFeasEQ(scip, SCIPvarGetLbLocal(indvar), 1.0) )
+               if( SCIPvarGetLbLocal(indvar) < 0.5 )
                {
                   /* if fixing is infeasible */
-                  if( SCIPvarGetUbLocal(indvar) != 1.0 )
+                  if( SCIPvarGetUbLocal(indvar) < 0.5 )
                   {
                      SCIPdebugMsg(scip, "the node is infeasible, implied variable %s is fixed to nonzero "
                         "although indicator variable %s is 0.\n", SCIPvarGetName(var), SCIPvarGetName(indvar));
@@ -1391,7 +1393,7 @@ SCIP_RETCODE branchUnbalancedCardinality(
       for( j = 0; j < nvars; ++j )
       {
          /* we only consider variables in constraint that are not the branching variable and are not fixed to nonzero */
-         if( j != branchpos && SCIPvarGetLbLocal(indvars[j]) != 1.0 && !SCIPisFeasPositive(scip, SCIPvarGetLbLocal(vars[j]))
+         if( j != branchpos && SCIPvarGetLbLocal(indvars[j]) < 0.5 && !SCIPisFeasPositive(scip, SCIPvarGetLbLocal(vars[j]))
             && !SCIPisFeasNegative(scip, SCIPvarGetUbLocal(vars[j]))
             )
          {
@@ -1416,7 +1418,7 @@ SCIP_RETCODE branchUnbalancedCardinality(
       for( j = 0; j < nvars; ++j )
       {
          /* we only consider variables in constraint that are not the branching variable and are not fixed to nonzero */
-         if( j != branchpos && SCIPvarGetLbLocal(indvars[j]) != 1.0
+         if( j != branchpos && SCIPvarGetLbLocal(indvars[j]) < 0.5
             && !SCIPisFeasPositive(scip, SCIPvarGetLbLocal(vars[j]))
             && !SCIPisFeasNegative(scip, SCIPvarGetUbLocal(vars[j]))
             )
@@ -1502,7 +1504,7 @@ SCIP_RETCODE branchBalancedCardinality(
       var = vars[j];
 
       /* if(binary) indicator variable is not fixed to 1.0 */
-      if( SCIPvarGetLbLocal(indvars[j]) != 1.0 && !SCIPisFeasPositive(scip, SCIPvarGetLbLocal(var))
+      if( SCIPvarGetLbLocal(indvars[j]) < 0.5 && !SCIPisFeasPositive(scip, SCIPvarGetLbLocal(var))
            && !SCIPisFeasNegative(scip, SCIPvarGetUbLocal(var)) )
       {
          /* if implied variable is not already fixed to zero */
@@ -1844,7 +1846,7 @@ SCIP_RETCODE enforceCardinality(
          var = vars[j];
 
          /* variable is not fixed to nonzero */
-         if( SCIPvarGetLbLocal(indvars[j]) != 1.0
+         if( SCIPvarGetLbLocal(indvars[j]) < 0.5
              && !SCIPisFeasPositive(scip, SCIPvarGetLbLocal(var))
              && !SCIPisFeasNegative(scip, SCIPvarGetUbLocal(var))
            )
@@ -1898,7 +1900,8 @@ SCIP_RETCODE enforceCardinality(
             var = vars[v];
 
             /* variable is not fixed to nonzero */
-            if( !SCIPisFeasEQ(scip, SCIPvarGetLbLocal(indvars[v]), 1.0)
+            assert(SCIPvarIsBinary(indvars[v]));
+            if( SCIPvarGetLbLocal(indvars[v]) < 0.5
                 && !SCIPisFeasPositive(scip, SCIPvarGetLbLocal(var))
                 && !SCIPisFeasNegative(scip, SCIPvarGetUbLocal(var))
               )
@@ -2084,7 +2087,7 @@ SCIP_RETCODE generateRowCardinality(
             val = SCIPvarGetLbGlobal(consdata->vars[j]);
 
          /* if a variable may be treated as nonzero, then update cardinality value */
-         if( SCIPisFeasEQ(scip, SCIPvarGetLbGlobal(consdata->indvars[j]), 1.0) )
+         if( SCIPvarGetLbGlobal(consdata->indvars[j]) > 0.5 )
          {
             --cardval;
             continue;
@@ -2503,7 +2506,7 @@ SCIP_DECL_CONSTRANS(consTransCardinality)
       SCIP_CALL( SCIPgetTransformedVar(scip, sourcedata->indvars[j], &(consdata->indvars[j])) );
 
       /* if variable is fixed to be nonzero */
-      if( SCIPisFeasEQ(scip, SCIPvarGetLbLocal(consdata->indvars[j]), 1.0) )
+      if( SCIPvarGetLbLocal(consdata->indvars[j]) > 0.5 )
          ++(consdata->ntreatnonzeros);
    }
 
