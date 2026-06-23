@@ -136,7 +136,7 @@ SCIP_RETCODE readCol(
       return SCIP_READERROR;
 
    SCIP_CALL( SCIPallocBufferArray(scip, &probname, (j-i-4)) );
-   (void) strncpy(probname, &filename[i+1], (j-i-5)); /*lint !e732 !e776*/
+   (void) memcpy(probname, &filename[i+1], (size_t)(j-i-5)); /*lint !e732 !e776*/
    probname[j-i-5]= '\0';
 
    /* Read until information about graph starts */
