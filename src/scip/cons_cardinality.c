@@ -3121,13 +3121,20 @@ SCIP_DECL_CONSGETVARS(consGetVarsCardinality)
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
 
-   if( varssize < consdata->nvars )
+   if( varssize < 2 * consdata->nvars )
       (*success) = FALSE;
    else
    {
+      int v;
+      int cnt = 0;
+
       assert(vars != NULL);
 
-      BMScopyMemoryArray(vars, consdata->vars, consdata->nvars);
+      for (v = 0; v < consdata->nvars; ++v)
+      {
+         vars[cnt++] = consdata->vars[v];
+         vars[cnt++] = consdata->indvars[v];
+      }
       (*success) = TRUE;
    }
 
@@ -3143,7 +3150,7 @@ SCIP_DECL_CONSGETNVARS(consGetNVarsCardinality)
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
 
-   (*nvars) = consdata->nvars;
+   (*nvars) = 2 * consdata->nvars;
    (*success) = TRUE;
 
    return SCIP_OKAY;
