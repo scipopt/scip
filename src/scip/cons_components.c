@@ -2373,7 +2373,7 @@ SCIP_DECL_CONSPRESOL(consPresolComponents)
       int ncompconss;
       int comp;
 
-      SCIPdebugMsg(scip, "found %d components (%d with small size) during presolving; overall problem size: %d vars (%d int, %d bin, %d cont), %d conss\n",
+      SCIPdebugMsg(scip, "found %d components (%d with small size) during presolving; overall problem size: %d vars (%d bin, %d int, %d cont), %d conss\n",
          ncomponents, ncompsmaxsize, SCIPgetNVars(scip), SCIPgetNBinVars(scip), SCIPgetNIntVars(scip), SCIPgetNContVars(scip) + SCIPgetNImplVars(scip), SCIPgetNConss(scip));
 
       /* build subscip */
