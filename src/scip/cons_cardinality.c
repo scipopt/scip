@@ -2907,6 +2907,14 @@ SCIP_DECL_CONSPRINT(consPrintCardinality)
       if( j > 0 )
          SCIPinfoMessage(scip, file, ", ");
       SCIP_CALL( SCIPwriteVarName(scip, file, consdata->vars[j], FALSE) );
+
+      if( consdata->indvars[j] != NULL )
+      {
+         SCIPinfoMessage(scip, file, " [");
+         SCIP_CALL( SCIPwriteVarName(scip, file, consdata->indvars[j], FALSE) );
+         SCIPinfoMessage(scip, file, "]");
+      }
+
       if( consdata->weights == NULL )
          SCIPinfoMessage(scip, file, " (%d)", j+1);
       else
@@ -3001,6 +3009,7 @@ static
 SCIP_DECL_CONSPARSE(consParseCardinality)
 {  /*lint --e{715}*/
    SCIP_VAR* var;
+   SCIP_VAR* indvar;
    SCIP_Real weight;
    int cardval;
    const char* s;
@@ -3034,19 +3043,54 @@ SCIP_DECL_CONSPARSE(consParseCardinality)
          break;
       }
 
-      /* skip until beginning of weight */
-      t = strchr(t, '(');
+      /* skip until beginning of indicator variable or weight */
+      while( *t != '\0' && *t != '(' && *t != '[' )
+         ++t;
 
-      if( t == NULL )
+      if( *t == '\0' )
       {
-         SCIPerrorMessage("Syntax error: expected opening '(' at input: %s\n", s);
+         SCIPerrorMessage("Syntax error: expected opening '[' or '(' at input: %s\n", s);
          *success = FALSE;
          break;
       }
 
       s = t;
 
+      /* parse indicator variable */
+      indvar = NULL;
+      if( *s == '[' )
+      {
+         ++s;
+         SCIP_CALL( SCIPparseVarName(scip, s, &indvar, &t) );
+
+         if( indvar == NULL )
+         {
+            SCIPerrorMessage("Syntax error: expected indicator variable name at input: %s\n", s);
+            *success = FALSE;
+            break;
+         }
+         s = t;
+
+         /* skip ']' */
+         if( *s != ']' )
+         {
+            SCIPerrorMessage("Syntax error: expected closing ']' at input: %s\n", s);
+            *success = FALSE;
+            break;
+         }
+         ++s;
+
+         /* skip white space */
+         SCIP_CALL( SCIPskipSpace((char**)&s) );
+      }
+
       /* skip '(' */
+      if( *s != '(' )
+      {
+         SCIPerrorMessage("Syntax error: expected opening '(' at input: %s\n", s);
+         *success = FALSE;
+         break;
+      }
       ++s;
 
       /* find weight */
@@ -3074,6 +3118,12 @@ SCIP_DECL_CONSPARSE(consParseCardinality)
       s = t;
 
       /* skip ')' */
+      if( *s != ')' )
+      {
+         SCIPerrorMessage("Syntax error: expected closing ')' at input: %s\n", s);
+         *success = FALSE;
+         break;
+      }
       ++s;
 
       /* skip white space */
@@ -3084,7 +3134,7 @@ SCIP_DECL_CONSPARSE(consParseCardinality)
          ++s;
 
       /* add variable */
-      SCIP_CALL( SCIPaddVarCardinality(scip, *cons, var, NULL, weight) );
+      SCIP_CALL( SCIPaddVarCardinality(scip, *cons, var, indvar, weight) );
    }
 
    /* check if there is a '<=' */
