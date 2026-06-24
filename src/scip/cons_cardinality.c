@@ -961,8 +961,8 @@ SCIP_RETCODE presolRoundCardinality(
          }
       }
 
-      /* if the variable is fixed to 0 */
-      if( SCIPisFeasZero(scip, lb) && SCIPisFeasZero(scip, ub) )
+      /* if the variable is fixed to 0 and strong dual reductions are allowed */
+      if( SCIPisFeasZero(scip, lb) && SCIPisFeasZero(scip, ub) && SCIPallowStrongDualReds(scip) )
       {
          /* fix (binary) indicator variable to 0.0, if possible (the cardinality constraint will then be modified below)
           * note that an infeasibility implies no cut off */
