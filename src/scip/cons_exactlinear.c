@@ -6398,7 +6398,10 @@ SCIP_DECL_EVENTEXEC(eventExecExactLinear)
          consdataInvalidateActivities(consdata);
 
       consdata->presolved = FALSE;
-      consdata->rangedrowpropagated = 0;
+
+      /* in probing do not reset disabled ranged row propagation */
+      if( !SCIPinProbing(scip) )
+         consdata->rangedrowpropagated = 0;
 
       /* bound change can turn the constraint infeasible or redundant only if it was a tightening */
       if( (eventtype & SCIP_EVENTTYPE_BOUNDTIGHTENED) != 0 )
