@@ -15,6 +15,8 @@ Fixed bugs
 - add applied clique as constraint when reformulating binary product to avoid problem relaxation
 - fixed indexing in the heap implementation in Dijkstra's algorithm; behavior of heap was and is correct
 - round integral aggregation with epsilon coefficient tolerance to ensure integrality consistency
+- define result of SCIPconsProp() also if no propagation callback is available
+- keep flag rangedrowpropagated of linear and exactlinear constraints for probing bound changes to avoid duplicate constraints by ranged row propagation
 
 Miscellaneous
 -------------

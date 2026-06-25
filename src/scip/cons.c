@@ -7895,6 +7895,8 @@ SCIP_RETCODE SCIPconsProp(
    conshdlr = cons->conshdlr;
    assert(conshdlr != NULL);
 
+   *result = SCIP_DIDNOTRUN;
+
    /* call external method */
    if( conshdlr->consprop != NULL )
    {
