@@ -17,6 +17,7 @@ Fixed bugs
 - round integral aggregation with epsilon coefficient tolerance to ensure integrality consistency
 - define result of SCIPconsProp() also if no propagation callback is available
 - keep flag rangedrowpropagated of linear and exactlinear constraints for probing bound changes to avoid duplicate constraints by ranged row propagation
+- fixed that SCIP did not catch Ctrl+C in concurrent mode
 
 Miscellaneous
 -------------
