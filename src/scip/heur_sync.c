@@ -147,7 +147,6 @@ SCIP_DECL_HEUREXEC(heurExecSync)
    SCIP_SOL* newsol;
    SCIP_Bool stored;
    SCIP_Real bestrecvdobj;
-   SCIP_Bool havebestrecvd;
    SCIP_OBJSENSE objsense;
    int i;
 
@@ -163,19 +162,17 @@ SCIP_DECL_HEUREXEC(heurExecSync)
    assert(heurdata != NULL);
    assert(heurdata->nsols > 0 || heurdata->concsolver != NULL);
 
-   /* if no solutions are exchanged through the solution pool between synchronization points,
-    * the heuristic only runs when solutions were passed to it and goes back to sleep
-    * afterwards; otherwise it stays enabled to drain new pooled solutions at every node
-    */
+   /* without the solution pool the heuristic only runs when solutions were passed to it; with it
+    * the heuristic stays enabled to drain new pooled solutions at every node */
    if( heurdata->concsolver == NULL )
       SCIPheurSetFreq(heur, -1);
 
    SCIPdebugMessage("exec method of sync primal heuristic.\n");
 
-   /* best objective received from other solvers, used to tighten the objlimit below */
-   havebestrecvd = FALSE;
-   bestrecvdobj = 0.0;
+   /* best objective received from other solvers, used to tighten the objlimit below; the infinity
+    * sentinel doubles as "nothing received" since it never beats the objlimit */
    objsense = SCIPgetObjsense(scip);
+   bestrecvdobj = objsense == SCIP_OBJSENSE_MINIMIZE ? SCIPinfinity(scip) : -SCIPinfinity(scip);
 
    *result = heurdata->nsols > 0 ? SCIP_DIDNOTFIND : SCIP_DIDNOTRUN;
    for( i = 0; i < heurdata->nsols; ++i )
@@ -183,11 +180,8 @@ SCIP_DECL_HEUREXEC(heurExecSync)
       SCIP_Real solobj;
 
       solobj = SCIPgetSolOrigObj(scip, heurdata->sols[i]);
-      if( !havebestrecvd || objIsBetter(objsense, solobj, bestrecvdobj) )
-      {
+      if( objIsBetter(objsense, solobj, bestrecvdobj) )
          bestrecvdobj = solobj;
-         havebestrecvd = TRUE;
-      }
 
       SCIP_CALL( SCIPtrySolFree(scip, &heurdata->sols[i], FALSE, FALSE, FALSE, FALSE, FALSE, &stored) );
       if( stored )
@@ -196,10 +190,8 @@ SCIP_DECL_HEUREXEC(heurExecSync)
 
    heurdata->nsols = 0;
 
-   /* drain new solutions from the solution pool; entries are published by the other concurrent
-    * solvers immediately when they find a new globally best solution, so installing them here
-    * gives every solver the incumbent itself instead of only its objective value as cutoff
-    */
+   /* drain new solutions published by the other solvers, installing the incumbent itself rather
+    * than only its objective value as a cutoff */
    if( heurdata->concsolver != NULL )
    {
       SCIP_SYNCSTORE* syncstore;
@@ -228,9 +220,7 @@ SCIP_DECL_HEUREXEC(heurExecSync)
          if( source == ownerid )
             continue;
 
-         /* count the solution as received, mirroring the synchronization-point path which counts
-          * every solution pulled in from another solver regardless of whether it is accepted
-          */
+         /* count as received, matching the sync-point path which counts every pulled-in solution */
          ++nrecvd;
 
          if( *result == SCIP_DIDNOTRUN )
@@ -240,11 +230,8 @@ SCIP_DECL_HEUREXEC(heurExecSync)
          SCIP_CALL( SCIPsetSolVals(scip, newsol, MIN(nsolvals, heurdata->npoolvars), heurdata->poolvars, solvals) );
 
          solobj = SCIPgetSolOrigObj(scip, newsol);
-         if( !havebestrecvd || objIsBetter(objsense, solobj, bestrecvdobj) )
-         {
+         if( objIsBetter(objsense, solobj, bestrecvdobj) )
             bestrecvdobj = solobj;
-            havebestrecvd = TRUE;
-         }
 
          SCIP_CALL( SCIPtrySolFree(scip, &newsol, FALSE, FALSE, TRUE, TRUE, TRUE, &stored) );
 
@@ -255,10 +242,8 @@ SCIP_DECL_HEUREXEC(heurExecSync)
       if( nrecvd > 0 )
          SCIPconcsolverAddNSolsRecvd(heurdata->concsolver, (SCIP_Longint)nrecvd);
 
-      /* report this solver's dual bound immediately so the global dual bound (and thus
-       * SCIPgetConcurrentDualbound) stays current in solution-pool mode; normalize to minimization
-       * and skip when it did not improve since the last report to avoid redundant locked updates
-       */
+      /* report this solver's dual bound immediately so SCIPgetConcurrentDualbound stays current;
+       * skip when it did not improve to avoid redundant locked updates */
       mindual = objsense == SCIP_OBJSENSE_MINIMIZE ? SCIPgetDualbound(scip) : -SCIPgetDualbound(scip);
       if( mindual > heurdata->lastdualbound )
       {
@@ -267,10 +252,9 @@ SCIP_DECL_HEUREXEC(heurExecSync)
       }
    }
 
-   /* communicate the cutoff: a received solution may not register as this solver's incumbent, leaving
-    * the upper bound infinite, so tighten the objlimit to the best received objective
-    */
-   if( havebestrecvd && objIsBetter(objsense, bestrecvdobj, SCIPgetObjlimit(scip)) )
+   /* a received solution may not register as this solver's incumbent, so tighten the objlimit to its
+    * objective to communicate the cutoff */
+   if( objIsBetter(objsense, bestrecvdobj, SCIPgetObjlimit(scip)) )
    {
       SCIP_CALL( SCIPsetObjlimit(scip, bestrecvdobj) );
    }

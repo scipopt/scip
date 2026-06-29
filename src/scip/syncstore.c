@@ -621,16 +621,6 @@ void SCIPsyncstoreGetBound(
    SCIP_CALL_ABORT( SCIPtpiReleaseLock(syncstore->lock) );
 }
 
-/** returns whether the bound board for immediate global bound sharing is enabled */
-SCIP_Bool SCIPsyncstoreBoundPoolEnabled(
-   SCIP_SYNCSTORE*       syncstore           /**< the synchronization store */
-   )
-{
-   assert(syncstore != NULL);
-
-   return syncstore->useboundpool;
-}
-
 /** gets the minimization-normalized objective value of the best solution found by any
  *  concurrent solver, or SCIP_REAL_MAX if no solution was registered yet
  */

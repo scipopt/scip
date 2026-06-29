@@ -202,10 +202,8 @@ SCIP_DECL_EVENTEXEC(eventExecSync)
 
    SCIP_STRINGEQ( SCIPeventhdlrGetName(eventhdlr), EVENTHDLR_NAME, SCIP_INVALIDCALL );
 
-   /* communicate the objective value of new incumbent solutions to the other concurrent
-    * solvers immediately; if the solution pool is enabled the solution values are published
-    * there as well, otherwise they are exchanged at the synchronization points
-    */
+   /* communicate the objective of new incumbents to the other solvers immediately; with the solution
+    * pool enabled the values are published there too, otherwise exchanged at the sync points */
    if( SCIPeventGetType(event) == SCIP_EVENTTYPE_BESTSOLFOUND )
    {
       SCIP_EVENTHDLRDATA* eventhdlrdata;
@@ -251,10 +249,7 @@ SCIP_DECL_EVENTEXEC(eventExecSync)
       SCIPsyncstoreUpdateBestMinObj(syncstore, minobj, SCIPconcsolverGetName(eventhdlrdata->concsolver),
          SCIPconcsolverGetIdx(eventhdlrdata->concsolver), solvals, nsolvals, &published);
 
-      /* the solution was published in the pool and will be drained by the other solvers, so count
-       * it as shared here; in solution-pool mode no solutions are written at the synchronization
-       * points, so this is the only place the shared-solution statistic is updated
-       */
+      /* count it as shared; in solution-pool mode this is the only place the statistic is updated */
       if( published )
          SCIPconcsolverAddNSolsShared(eventhdlrdata->concsolver, 1LL);
 
@@ -432,36 +427,23 @@ SCIP_RETCODE applyRacingSettings(
 
    switch( config )
    {
-   /* default settings; differs from a sequential SCIP only by the racing seed */
+   /* default settings; differs from a sequential SCIP only by the racing seed (config 4 also lands here) */
    case 0:
-      break;
-
-   /* feasibility emphasis; used twice since the different racing seeds make the search distinct */
    case 1:
-      SCIP_CALL( SCIPsetBoolParam(solverscip, "symmetries/enabled", FALSE) );
-      SCIP_CALL( SCIPsetEmphasis(solverscip, SCIP_PARAMEMPHASIS_FEASIBILITY, TRUE) );
       break;
+   /* feasibility emphasis; configs 1 and 2 differ only by the racing seed */
    case 2:
+   case 3:
       SCIP_CALL( SCIPsetEmphasis(solverscip, SCIP_PARAMEMPHASIS_FEASIBILITY, TRUE) );
       break;
 
    /* no separation with fast presolving; trades bound quality for node throughput */
-   case 3:
+   case 4:
       SCIP_CALL( SCIPsetSeparating(solverscip, SCIP_PARAMSETTING_OFF, TRUE) );
       SCIP_CALL( SCIPsetPresolving(solverscip, SCIP_PARAMSETTING_FAST, TRUE) );
-      SCIP_CALL( SCIPsetBoolParam(solverscip, "symmetries/enabled", FALSE) );
       break;
 
-   /* early feasibility jump; runs the feasibility jump heuristic before presolving to find feasible
-    * solutions in the first seconds
-    */
-   case 4:
-      SCIP_CALL( SCIPsetBoolParam(solverscip, "symmetries/enabled", FALSE) );
-      break;
-
-   /* cpsolver search with a geometric restart schedule and feasibility jump before presolving; never
-    * solves an LP, so it cannot stall on instances with hard root LPs
-    */
+   /* cpsolver search with more aggressive restarts; never solves an LP */
    case 5:
       SCIP_CALL( SCIPsetEmphasis(solverscip, SCIP_PARAMEMPHASIS_CPSOLVER, TRUE) );
       SCIP_CALL( SCIPsetIntParam(solverscip, "conflict/restartnum", 100) );
@@ -469,10 +451,7 @@ SCIP_RETCODE applyRacingSettings(
       SCIP_CALL( SCIPsetIntParam(solverscip, "presolving/maxrestarts", 100) );
       break;
 
-   /* large neighborhood search improver; fires the LNS heuristics aggressively and immediately on new
-    * incumbents, so solutions from the other solvers are polished as soon as they arrive; separation is
-    * throttled to leave the CPU to the LNS sub-MIPs
-    */
+   /* large neighborhood search improver; fires the LNS heuristics aggressively, less separation */
    case 6:
       SCIP_CALL( SCIPsetIntParam(solverscip, "heuristics/rins/freq", 10) );
       SCIP_CALL( SCIPsetIntParam(solverscip, "heuristics/rins/nwaitingnodes", 0) );
@@ -492,18 +471,14 @@ SCIP_RETCODE applyRacingSettings(
       SCIP_CALL( SCIPsetIntParam(solverscip, "heuristics/gins/freq", 10) );
       SCIP_CALL( SCIPsetIntParam(solverscip, "separating/maxrounds", 1) );
       SCIP_CALL( SCIPsetIntParam(solverscip, "separating/maxroundsroot", 5) );
-      SCIP_CALL( SCIPsetBoolParam(solverscip, "symmetries/enabled", FALSE) );
       break;
 
-   /* no presolving; starts the search immediately on the original formulation, providing early feasible
-    * solutions on instances where presolving takes long
-    */
+   /* no presolving; search the original formulation immediately */
    case 7:
       SCIP_CALL( SCIPsetPresolving(solverscip, SCIP_PARAMSETTING_OFF, TRUE) );
-      SCIP_CALL( SCIPsetBoolParam(solverscip, "symmetries/enabled", FALSE) );
       break;
 
-   /* constraint programming style search; no LP relaxation, aggressive conflict analysis, depth first search */
+   /* constraint programming style search; no LP relaxation */
    case 8:
       SCIP_CALL( SCIPsetEmphasis(solverscip, SCIP_PARAMEMPHASIS_CPSOLVER, TRUE) );
       break;

@@ -343,11 +343,11 @@ SCIP_DECL_PROPEXEC(propExecSync)
          *result = SCIP_REDUCEDDOM;
    }
 
-   /* drain the shared bound board: apply the tightest global bounds contributed by the other concurrent
-    * solvers. The board is monotone and the tightening is idempotent, so no ordering or barrier is needed
-    * and a stale read only delays a tightening to the next node. The change counter gates the scan, so the
-    * common no-change case costs a single read; only when a bound was shared since the last drain is the
-    * board scanned. The version is read before the scan, so a change landing during the scan is caught next time.
+   /* Apply the tightest global bounds the other solvers published on the shared board. No locking is
+    * needed: board bounds only get tighter and re-applying a known bound is a no-op, so missing the
+    * newest bound just defers it to the next node. boardversion is bumped on every tightening; skip the
+    * whole scan when it has not changed since the last drain. Read the version before scanning so that a
+    * bound landing mid-scan leaves version != lastboundversion and is picked up at the next node.
     */
    if( data->useboundpool && *result != SCIP_CUTOFF )
    {

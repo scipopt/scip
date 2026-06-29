@@ -176,12 +176,6 @@ void SCIPsyncstoreGetBound(
    SCIP_Real*            ub                  /**< pointer to return the tightest shared upper bound, or +infinity */
    );
 
-/** returns whether the bound board for immediate global bound sharing is enabled */
-SCIP_EXPORT
-SCIP_Bool SCIPsyncstoreBoundPoolEnabled(
-   SCIP_SYNCSTORE*       syncstore           /**< the synchronization store */
-   );
-
 /** Tries to acquire the synchronization data with the given number for non-blocking reading.
  *  On success the synchronization data is returned in locked state and must be released with
  *  SCIPsyncstoreUnlockSyncdata after reading. If the data is not ready, NULL is returned and
