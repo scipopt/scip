@@ -373,7 +373,7 @@ In your SCIP main directory, enter `make [options]` with the following options:
 | `SYM=none`            | `[none, nauty, snauty, bliss, sbliss, dejavu]` | to choose method for computing symmetries in mixed nonlinear integer programs                  |
 | `TPI=none`            | `[none, omp, tny]`   | to disable the task processing interface or use it with the openmp or tinycthreads interface for concurrent solves |
 | `VERBOSE=false`       | `[false, true]`      | to suppress or display of compiler and linker invocations                                        |
-| `WORHP=false`         | `[false, true]`      | to disable or enable WORHP interface (needs WORHP >= 2.00)                                       |
+| `WORHP=false`         | `[false, true]`      | to disable or enable WORHP interface (needs WORHP >= 1.10)                                       |
 | `ZIMPL=false`         | `[false, true, auto]`| to enable or disable ZIMPL file reader (needs ZIMPL and GMP to be installed)                     |
 | `ZLIB=true`           | `[true, false]`      | to enable or disable zlib for reading of compressed files                                        |
 
