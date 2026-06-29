@@ -3118,12 +3118,6 @@ SCIP_DECL_CONSPARSE(consParseCardinality)
       s = t;
 
       /* skip ')' */
-      if( *s != ')' )
-      {
-         SCIPerrorMessage("Syntax error: expected closing ')' at input: %s\n", s);
-         *success = FALSE;
-         break;
-      }
       ++s;
 
       /* skip white space */
