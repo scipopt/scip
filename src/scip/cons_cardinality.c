@@ -425,10 +425,10 @@ SCIP_RETCODE consdataEnsurevarsSizeCardinality(
  *
  *  We perform the following steps:
  *
- *  - catch bound change events of variable.
- *  - update rounding locks of variable.
- *  - don't allow multiaggregation of variable, since this cannot be handled by branching in the current implementation
- *  - update lower and upper bound row, i.e., the linear representations of the cardinality constraints
+ *  - Catch bound change events of variable.
+ *  - Update rounding locks of variable.
+ *  - Don't allow multiaggregation of variable, since this cannot be handled by branching in the current implementation.
+ *  - Update lower and upper bound row, i.e., the linear representations of the cardinality constraints.
  */
 static
 SCIP_RETCODE handleNewVariableCardinality(
@@ -458,8 +458,9 @@ SCIP_RETCODE handleNewVariableCardinality(
       assert(eventdata != NULL );
 
       /* if the variable is fixed to nonzero */
-      assert(consdata->ntreatnonzeros >= 0 );
-      if( SCIPisFeasEQ(scip, SCIPvarGetLbLocal(indvar), 1.0) )
+      assert(consdata->ntreatnonzeros >= 0);
+      assert(SCIPvarIsBinary(indvar));
+      if( SCIPvarGetLbLocal(indvar) > 0.5 )
          ++consdata->ntreatnonzeros;
    }
 
@@ -737,7 +738,8 @@ SCIP_RETCODE deleteVarCardinality(
         &consdata->eventdatas[pos]) );
 
    /* update number of variables that may be treated as nonzero */
-   if( SCIPisFeasEQ(scip, SCIPvarGetLbLocal(consdata->indvars[pos]), 1.0) )
+   assert(SCIPvarIsBinary(consdata->indvars[pos]));
+   if( SCIPvarGetLbLocal(consdata->indvars[pos]) > 0.5 )
       --(consdata->ntreatnonzeros);
 
    /* delete variable - need to copy since order is important */
@@ -899,10 +901,12 @@ SCIP_RETCODE presolRoundCardinality(
       scalar = 1.0;
       constant = 0.0;
 
+      indvar = indvars[j];
+      assert(SCIPvarIsBinary(indvar));
+
       /* check for aggregation: if the constant is zero the variable is zero iff the aggregated
        * variable is 0 */
       var = vars[j];
-      indvar = indvars[j];
       SCIP_CALL( SCIPgetProbvarSum(scip, &var, &scalar, &constant) );
 
       /* try to substitute variable entry */
@@ -942,8 +946,6 @@ SCIP_RETCODE presolRoundCardinality(
       /* if the variable is fixed to nonzero */
       if( SCIPisFeasPositive(scip, lb) || SCIPisFeasNegative(scip, ub) )
       {
-         assert(SCIPvarIsBinary(indvar));
-
          /* fix (binary) indicator variable to 1.0 (the cardinality constraint will then be modified below) */
          SCIP_CALL( SCIPfixVar(scip, indvar, 1.0, &infeasible, &fixed) );
          if( infeasible )
@@ -959,11 +961,9 @@ SCIP_RETCODE presolRoundCardinality(
          }
       }
 
-      /* if the variable is fixed to 0 */
-      if( SCIPisFeasZero(scip, lb) && SCIPisFeasZero(scip, ub) )
+      /* if the variable is fixed to 0 and strong dual reductions are allowed */
+      if( SCIPisFeasZero(scip, lb) && SCIPisFeasZero(scip, ub) && SCIPallowStrongDualReds(scip) )
       {
-         assert(SCIPvarIsBinary(indvar));
-
          /* fix (binary) indicator variable to 0.0, if possible (the cardinality constraint will then be modified below)
           * note that an infeasibility implies no cut off */
          SCIP_CALL( SCIPfixVar(scip, indvar, 0.0, &infeasible, &fixed) );
@@ -979,7 +979,7 @@ SCIP_RETCODE presolRoundCardinality(
       indub = SCIPvarGetUbLocal(indvar);
 
       /* if the variable may be treated as nonzero */
-      if( SCIPisFeasEQ(scip, indlb, 1.0) )
+      if( indlb > 0.5 )
       {
          assert(indub == 1.0);
 
@@ -991,7 +991,7 @@ SCIP_RETCODE presolRoundCardinality(
          ++(*nremovedvars);
       }
       /* if the indicator variable is fixed to 0 */
-      else if( SCIPisFeasEQ(scip, indub, 0.0) )
+      else if( indub < 0.5 )
       {
          assert(indlb == 0.0);
 
@@ -1110,13 +1110,13 @@ SCIP_RETCODE presolRoundCardinality(
  *
  *  We perform the following propagation steps:
  *
- *  - if the number 'ntreatnonzeros' is greater than the cardinality value of the constraint, then the current subproblem
+ *  - If the number 'ntreatnonzeros' is greater than the cardinality value of the constraint, then the current subproblem
  *    is marked as infeasible.
- *  - if the cardinality constraint is saturated, i.e., the number 'ntreatnonzeros' is equal to the cardinality value of
+ *  - If the cardinality constraint is saturated, i.e., the number 'ntreatnonzeros' is equal to the cardinality value of
  *    the constraint, then fix all the other variables of the constraint to zero.
- *  - remove the cardinality constraint locally if all variables are either fixed to zero or can be treated as nonzero.
- *  - if a (binary) indicator variable is fixed to zero, then fix the corresponding implied variable to zero.
- *  - if zero is outside of the domain of an implied variable, then fix the corresponding indicator variable to one.
+ *  - Remove the cardinality constraint locally if all variables are either fixed to zero or can be treated as nonzero.
+ *  - If a (binary) indicator variable is fixed to zero, then fix the corresponding implied variable to zero.
+ *  - If zero is outside of the domain of an implied variable, then fix the corresponding indicator variable to one.
  */
 static
 SCIP_RETCODE propCardinality(
@@ -1170,12 +1170,13 @@ SCIP_RETCODE propCardinality(
       for( j = 0; j < nvars; ++j )
       {
          /* if variable is implied to be treated as nonzero */
-         if( SCIPisFeasEQ(scip, SCIPvarGetLbLocal(indvars[j]), 1.0) )
+         assert( SCIPvarIsBinary(indvars[j]) );
+         if( SCIPvarGetLbLocal(indvars[j]) > 0.5 )
+         {
 #ifndef NDEBUG
             ++cnt;
-#else
-            ;
 #endif
+         }
          /* else fix variable to zero if not done already */
          else
          {
@@ -1307,10 +1308,10 @@ SCIP_RETCODE propCardinality(
                assert(SCIPvarIsBinary(indvar));
 
                /* fix indicator variable to 1.0 if not done already */
-               if( !SCIPisFeasEQ(scip, SCIPvarGetLbLocal(indvar), 1.0) )
+               if( SCIPvarGetLbLocal(indvar) < 0.5 )
                {
                   /* if fixing is infeasible */
-                  if( SCIPvarGetUbLocal(indvar) != 1.0 )
+                  if( SCIPvarGetUbLocal(indvar) < 0.5 )
                   {
                      SCIPdebugMsg(scip, "the node is infeasible, implied variable %s is fixed to nonzero "
                         "although indicator variable %s is 0.\n", SCIPvarGetName(var), SCIPvarGetName(indvar));
@@ -1391,7 +1392,7 @@ SCIP_RETCODE branchUnbalancedCardinality(
       for( j = 0; j < nvars; ++j )
       {
          /* we only consider variables in constraint that are not the branching variable and are not fixed to nonzero */
-         if( j != branchpos && SCIPvarGetLbLocal(indvars[j]) != 1.0 && !SCIPisFeasPositive(scip, SCIPvarGetLbLocal(vars[j]))
+         if( j != branchpos && SCIPvarGetLbLocal(indvars[j]) < 0.5 && !SCIPisFeasPositive(scip, SCIPvarGetLbLocal(vars[j]))
             && !SCIPisFeasNegative(scip, SCIPvarGetUbLocal(vars[j]))
             )
          {
@@ -1416,7 +1417,7 @@ SCIP_RETCODE branchUnbalancedCardinality(
       for( j = 0; j < nvars; ++j )
       {
          /* we only consider variables in constraint that are not the branching variable and are not fixed to nonzero */
-         if( j != branchpos && SCIPvarGetLbLocal(indvars[j]) != 1.0
+         if( j != branchpos && SCIPvarGetLbLocal(indvars[j]) < 0.5
             && !SCIPisFeasPositive(scip, SCIPvarGetLbLocal(vars[j]))
             && !SCIPisFeasNegative(scip, SCIPvarGetUbLocal(vars[j]))
             )
@@ -1502,7 +1503,7 @@ SCIP_RETCODE branchBalancedCardinality(
       var = vars[j];
 
       /* if(binary) indicator variable is not fixed to 1.0 */
-      if( SCIPvarGetLbLocal(indvars[j]) != 1.0 && !SCIPisFeasPositive(scip, SCIPvarGetLbLocal(var))
+      if( SCIPvarGetLbLocal(indvars[j]) < 0.5 && !SCIPisFeasPositive(scip, SCIPvarGetLbLocal(var))
            && !SCIPisFeasNegative(scip, SCIPvarGetUbLocal(var)) )
       {
          /* if implied variable is not already fixed to zero */
@@ -1844,7 +1845,7 @@ SCIP_RETCODE enforceCardinality(
          var = vars[j];
 
          /* variable is not fixed to nonzero */
-         if( SCIPvarGetLbLocal(indvars[j]) != 1.0
+         if( SCIPvarGetLbLocal(indvars[j]) < 0.5
              && !SCIPisFeasPositive(scip, SCIPvarGetLbLocal(var))
              && !SCIPisFeasNegative(scip, SCIPvarGetUbLocal(var))
            )
@@ -1898,7 +1899,8 @@ SCIP_RETCODE enforceCardinality(
             var = vars[v];
 
             /* variable is not fixed to nonzero */
-            if( !SCIPisFeasEQ(scip, SCIPvarGetLbLocal(indvars[v]), 1.0)
+            assert(SCIPvarIsBinary(indvars[v]));
+            if( SCIPvarGetLbLocal(indvars[v]) < 0.5
                 && !SCIPisFeasPositive(scip, SCIPvarGetLbLocal(var))
                 && !SCIPisFeasNegative(scip, SCIPvarGetUbLocal(var))
               )
@@ -2084,7 +2086,7 @@ SCIP_RETCODE generateRowCardinality(
             val = SCIPvarGetLbGlobal(consdata->vars[j]);
 
          /* if a variable may be treated as nonzero, then update cardinality value */
-         if( SCIPisFeasEQ(scip, SCIPvarGetLbGlobal(consdata->indvars[j]), 1.0) )
+         if( SCIPvarGetLbGlobal(consdata->indvars[j]) > 0.5 )
          {
             --cardval;
             continue;
@@ -2426,6 +2428,21 @@ SCIP_DECL_CONSDELETE(consDeleteCardinality)
 
    SCIPfreeBlockMemory(scip, consdata);
 
+   /* Make sure that the hash for indicator binary variables is freed. If we read a problem and then another problem without
+    * solving (transforming) between, then no callback of constraint handlers are called. Thus, we cannot easily free the
+    * hash map there. */
+   if ( SCIPconshdlrGetNConss(conshdlr) == 0 )
+   {
+      SCIP_CONSHDLRDATA* conshdlrdata;
+
+      /* get constraint handler data */
+      conshdlrdata = SCIPconshdlrGetData(conshdlr);
+      assert( conshdlrdata != NULL );
+
+      if ( conshdlrdata->varhash != NULL )
+         SCIPhashmapFree(&conshdlrdata->varhash);
+   }
+
    return SCIP_OKAY;
 }
 
@@ -2493,7 +2510,7 @@ SCIP_DECL_CONSTRANS(consTransCardinality)
       SCIP_CALL( SCIPgetTransformedVar(scip, sourcedata->indvars[j], &(consdata->indvars[j])) );
 
       /* if variable is fixed to be nonzero */
-      if( SCIPisFeasEQ(scip, SCIPvarGetLbLocal(consdata->indvars[j]), 1.0) )
+      if( SCIPvarGetLbLocal(consdata->indvars[j]) > 0.5 )
          ++(consdata->ntreatnonzeros);
    }
 
@@ -2598,9 +2615,9 @@ SCIP_DECL_CONSPRESOL(consPresolCardinality)
    }
    (*nchgcoefs) += nremovedvars;
 
-   SCIPdebug( SCIPdebugMsg(scip, "presolving fixed %d variables, removed %d variables, deleted %d constraints, \
-        and upgraded %d constraints.\n", *nfixedvars - oldnfixedvars, nremovedvars, *ndelconss - oldndelconss,
-        *nupgdconss - oldnupgdconss); )
+   SCIPdebug( SCIPdebugMsg(scip, "presolving fixed %d variables, removed %d variables, deleted %d constraints, "
+         "and upgraded %d constraints.\n", *nfixedvars - oldnfixedvars, nremovedvars, *ndelconss - oldndelconss,
+         *nupgdconss - oldnupgdconss); )
 
    return SCIP_OKAY;
 }
@@ -2876,8 +2893,8 @@ SCIP_DECL_CONSLOCK(consLockCardinality)
          SCIP_CALL( SCIPaddVarLocksType(scip, var, locktype, nlocksneg, nlockspos) );
       }
 
-      /* add lock on indicator variable; @todo write constraint handler to handle down locks */
-      SCIP_CALL( SCIPaddVarLocksType(scip, indvar, locktype, nlockspos, nlockspos) );
+      /* add lock on indicator variable in both directions; @todo write constraint handler to handle down locks */
+      SCIP_CALL( SCIPaddVarLocksType(scip, indvar, locktype, nlockspos + nlocksneg, nlockspos + nlocksneg) );
    }
 
    return SCIP_OKAY;
@@ -2904,6 +2921,14 @@ SCIP_DECL_CONSPRINT(consPrintCardinality)
       if( j > 0 )
          SCIPinfoMessage(scip, file, ", ");
       SCIP_CALL( SCIPwriteVarName(scip, file, consdata->vars[j], FALSE) );
+
+      if( consdata->indvars[j] != NULL )
+      {
+         SCIPinfoMessage(scip, file, " [");
+         SCIP_CALL( SCIPwriteVarName(scip, file, consdata->indvars[j], FALSE) );
+         SCIPinfoMessage(scip, file, "]");
+      }
+
       if( consdata->weights == NULL )
          SCIPinfoMessage(scip, file, " (%d)", j+1);
       else
@@ -2999,6 +3024,7 @@ static
 SCIP_DECL_CONSPARSE(consParseCardinality)
 {  /*lint --e{715}*/
    SCIP_VAR* var;
+   SCIP_VAR* indvar;
    SCIP_Real weight;
    int cardval;
    const char* s;
@@ -3033,19 +3059,54 @@ SCIP_DECL_CONSPARSE(consParseCardinality)
          break;
       }
 
-      /* skip until beginning of weight */
-      t = strchr(t, '(');
+      /* skip until beginning of indicator variable or weight */
+      while( *t != '\0' && *t != '(' && *t != '[' )
+         ++t;
 
-      if( t == NULL )
+      if( *t == '\0' )
       {
-         SCIPerrorMessage("Syntax error: expected opening '(' at input: %s\n", s);
+         SCIPerrorMessage("Syntax error: expected opening '[' or '(' at input: %s\n", s);
          *success = FALSE;
          break;
       }
 
       s = t;
 
+      /* parse indicator variable */
+      indvar = NULL;
+      if( *s == '[' )
+      {
+         ++s;
+         SCIP_CALL( SCIPparseVarName(scip, s, &indvar, &t) );
+
+         if( indvar == NULL )
+         {
+            SCIPerrorMessage("Syntax error: expected indicator variable name at input: %s\n", s);
+            *success = FALSE;
+            break;
+         }
+         s = t;
+
+         /* skip ']' */
+         if( *s != ']' )
+         {
+            SCIPerrorMessage("Syntax error: expected closing ']' at input: %s\n", s);
+            *success = FALSE;
+            break;
+         }
+         ++s;
+
+         /* skip white space */
+         SCIP_CALL( SCIPskipSpace((char**)&s) );
+      }
+
       /* skip '(' */
+      if( *s != '(' )
+      {
+         SCIPerrorMessage("Syntax error: expected opening '(' at input: %s\n", s);
+         *success = FALSE;
+         break;
+      }
       ++s;
 
       /* find weight */
@@ -3083,7 +3144,7 @@ SCIP_DECL_CONSPARSE(consParseCardinality)
          ++s;
 
       /* add variable */
-      SCIP_CALL( SCIPaddVarCardinality(scip, *cons, var, NULL, weight) );
+      SCIP_CALL( SCIPaddVarCardinality(scip, *cons, var, indvar, weight) );
    }
 
    /* check if there is a '<=' */
@@ -3120,13 +3181,20 @@ SCIP_DECL_CONSGETVARS(consGetVarsCardinality)
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
 
-   if( varssize < consdata->nvars )
+   if( varssize < 2 * consdata->nvars )
       (*success) = FALSE;
    else
    {
+      int v;
+      int cnt = 0;
+
       assert(vars != NULL);
 
-      BMScopyMemoryArray(vars, consdata->vars, consdata->nvars);
+      for (v = 0; v < consdata->nvars; ++v)
+      {
+         vars[cnt++] = consdata->vars[v];
+         vars[cnt++] = consdata->indvars[v];
+      }
       (*success) = TRUE;
    }
 
@@ -3142,7 +3210,7 @@ SCIP_DECL_CONSGETNVARS(consGetNVarsCardinality)
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
 
-   (*nvars) = consdata->nvars;
+   (*nvars) = 2 * consdata->nvars;
    (*success) = TRUE;
 
    return SCIP_OKAY;
@@ -3531,9 +3599,9 @@ SCIP_DECL_EVENTEXEC(eventExecCardinality)
    }
    assert(0 <= consdata->ntreatnonzeros && consdata->ntreatnonzeros <= consdata->nvars);
 
-   SCIPdebugMsg(scip, "event exec cons <%s>: changed bound of variable <%s> from %f to %f (ntreatnonzeros: %d).\n",
-        SCIPconsGetName(consdata->cons), SCIPvarGetName(SCIPeventGetVar(event)),
-        oldbound, newbound, consdata->ntreatnonzeros);
+   SCIPdebugMsg(scip, "event exec cons <%s>: changed %s bound of variable <%s> from %g to %g (ntreatnonzeros: %d).\n",
+      SCIPconsGetName(consdata->cons), eventtype & (SCIP_EVENTTYPE_UBTIGHTENED | SCIP_EVENTTYPE_GUBCHANGED) ? "upper" : "lower", SCIPvarGetName(SCIPeventGetVar(event)),
+      oldbound, newbound, consdata->ntreatnonzeros);
 
    return SCIP_OKAY;
 }

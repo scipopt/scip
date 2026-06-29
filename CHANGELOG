@@ -269,6 +269,9 @@ Fixed bugs
 - add applied clique as constraint when reformulating binary product to avoid problem relaxation
 - fixed indexing in the heap implementation in Dijkstra's algorithm; behavior of heap was and is correct
 - round integral aggregation with epsilon coefficient tolerance to ensure integrality consistency
+- fix locking of indicator variables in cons_cardinality
+- free hashmap in cons_cardinality if problem is freed before transforming
+- fix CONSGETVARS and CONSGETNVARS in cons_cardinality
 - define result of SCIPconsProp() also if no propagation callback is available
 - keep flag rangedrowpropagated of linear and exactlinear constraints for probing bound changes to avoid duplicate constraints by ranged row propagation
 - fixed that SCIP did not catch Ctrl+C in concurrent mode
@@ -282,6 +285,7 @@ Miscellaneous
 - check scripts now write available memory (kB) and the current cumulative CPU ticks (from /proc/stat) before and after the solve to the .out file (new sections @07 and @08)
 - allow to return SCIP_CONSADDED when propagating constraints
 - add /bigobj compiler flag when compiling with cmake, MSVC, LPS=spx, and in debug mode
+- cons_cardinality now parses/writes the indicator variables
 
 @section RN1002 SCIP 10.0.2
 ***************************
