@@ -136,9 +136,8 @@ SCIP_RETCODE readCol(
    if( j-i-4 <= 0 )
       return SCIP_READERROR;
 
-   SCIP_CALL( SCIPallocBufferArray(scip, &probname, (j-i-4)) );
-   (void) strncpy(probname, &filename[i+1], (j-i-5)); /*lint !e732 !e776*/
-   probname[j-i-5]= '\0';
+   SCIP_CALL( SCIPallocBufferArray(scip, &probname, j-i-4) );
+   (void) SCIPstrncpy(probname, filename + (i+1), j-i-4);
 
    /* Read until information about graph starts */
    while( !SCIPfeof(fp) && (buf[0] != 'p') )

@@ -18,6 +18,9 @@ Fixed bugs
 - fix locking of indicator variables in cons_cardinality
 - free hashmap in cons_cardinality if problem is freed before transforming
 - fix CONSGETVARS and CONSGETNVARS in cons_cardinality
+- define result of SCIPconsProp() also if no propagation callback is available
+- keep flag rangedrowpropagated of linear and exactlinear constraints for probing bound changes to avoid duplicate constraints by ranged row propagation
+- fixed that SCIP did not catch Ctrl+C in concurrent mode
 
 Miscellaneous
 -------------
