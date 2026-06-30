@@ -33,8 +33,8 @@
 #include <assert.h>
 #include <math.h>
 
-#include "cons_nonlinear.h"
-#include "prop_distance.h"
+#include "scip/cons_nonlinear.h"
+#include "scip/prop_distance.h"
 
 /* fundamental propagator properties */
 #define PROP_NAME              "distance"
@@ -42,7 +42,7 @@
 #define PROP_PRIORITY                 0 /**< propagator priority */
 #define PROP_FREQ                     1 /**< propagator frequency */
 #define PROP_DELAY                FALSE /**< should propagation method be delayed, if other propagators found reductions? */
-#define PROP_TIMING             SCIP_PROPTIMING_BEFORELP/**< propagation timing mask */
+#define PROP_TIMING             SCIP_PROPTIMING_BEFORELP /**< propagation timing mask */
 
 #define DEFAULT_MAXNDCONSSFORPAIRS   20 /**< maximum number of distance constraints for which propagation of pairs is applied */
 #define DEFAULT_MULTBISECTION       0.1 /**< multiplier used in bisection to split interval [l,u] at point l + multiplier*(u - l) */
@@ -138,7 +138,7 @@ typedef struct DISTCONS_MinFixed
 } DISTCONS_MINFIXED;
 
 /** container for pairs of overlapping minimum distance constraints */
-typedef struct DISTCONS_MINPAIR
+typedef struct DISTCONS_MinPair
 {
    int                   dimension;          /**< dimension of distance constraints' ambient space */
    SCIP_VAR*             commonvars[3];      /**< common variables of pair of distance constraints */
@@ -152,7 +152,7 @@ typedef struct DISTCONS_MINPAIR
 } DISTCONS_MINPAIR;
 
 /** container for pairs of overlapping minimum distance constraints w.r.t. a fixed point */
-typedef struct DISTCONS_MINFPAIR
+typedef struct DISTCONS_MinFPair
 {
    int                   dimension;          /**< dimension of distance constraints' ambient space */
    SCIP_VAR*             vars[3];            /**< common variables of pair of distance constraints */
@@ -182,7 +182,7 @@ struct SCIP_PropData
    DISTCONS_MINPAIR**    minpdconss;         /**< minpd constraints */
    int                   nminpdconss;        /**< number of minpd constraints */
    int                   lenminpdconss;      /**< length of minpdconss */
-   DISTCONS_MINFPAIR**   minfpdconss;        /**< minfpd conatraints */
+   DISTCONS_MINFPAIR**   minfpdconss;        /**< minfpd constraints */
    int                   nminfpdconss;       /**< number of minfpd constraints */
    int                   lenminfpdconss;     /**< length of minfpdconss */
 
@@ -193,7 +193,7 @@ struct SCIP_PropData
    /* event handler related data to more efficiently propagate bounds */
    SCIP_EVENTHDLR*       eventhdlr;          /**< event handler to handle bound change events */
    SCIP_EVENTDATA**      eventdatamind;      /**< event data for mind constraints */
-   SCIP_EVENTDATA**      eventdataminfd;     /**< event data for mminfd constraints */
+   SCIP_EVENTDATA**      eventdataminfd;     /**< event data for minfd constraints */
    SCIP_EVENTDATA**      eventdataminpd;     /**< event data for minpd constraints */
    SCIP_EVENTDATA**      eventdataminfpd;    /**< event data for minfpd constraints */
    SCIP_Bool*            dopropmind;         /**< array storing which mind constraint shall be propagated */
@@ -684,14 +684,7 @@ SCIP_RETCODE tryExtractDistconsMinfd(
       goto FREEMEMORY;
 
    /* store constraint */
-   if( *ndistconss >= *lendistconss )
-   {
-      int newsize;
-
-      newsize = SCIPcalcMemGrowSize(scip, *ndistconss + 1);
-      SCIP_CALL( SCIPreallocBlockMemoryArray(scip, distconss, *lendistconss, newsize) );
-      *lendistconss = newsize;
-   }
+   SCIP_CALL( SCIPensureBlockMemoryArray(scip, distconss, lendistconss, *ndistconss + 1) );
    SCIP_CALL( SCIPallocBlockMemory(scip, &(*distconss)[*ndistconss]) );
 
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(*distconss)[*ndistconss]->vars, npowvars) );
@@ -741,13 +734,10 @@ SCIP_RETCODE tryExtractDistconsMinfd(
    }
    (*distconss)[*ndistconss]->lenvars = npowvars;
    (*distconss)[*ndistconss]->lastpropnode = NULL;
-   (*ndistconss) += 1;
+   (*ndistconss)++;
 
  FREEMEMORY:
-   if( pow2lin != NULL )
-   {
-      SCIPfreeBufferArray(scip, &pow2lin);
-   }
+   SCIPfreeBufferArrayNull(scip, &pow2lin);
    SCIPfreeBufferArray(scip, &lincoefs);
    SCIPfreeBufferArray(scip, &linvars);
    SCIPfreeBufferArray(scip, &powvars);
@@ -869,16 +859,13 @@ SCIP_RETCODE tryExtractDistconsMind(
       }
       else if( SCIPisExprProduct(scip, child) )
       {
-         SCIP_Real tmpcoef;
-
          /* we can only handle products of two variables */
          if( SCIPexprGetNChildren(child) != 2 )
             break;
          assert(nprodexprs < ndistterms - 1);
 
-         tmpcoef = sumcoefs[c] * SCIPgetCoefExprProduct(child);
-
-         if( !SCIPisEQ(scip, prodcoef, tmpcoef) )
+         assert(SCIPgetCoefExprProduct(child) == 1.0);
+         if( !SCIPisEQ(scip, prodcoef, sumcoefs[c]) )
             break;
 
          if( !SCIPisExprVar(scip, SCIPexprGetChildren(child)[0])
@@ -897,7 +884,7 @@ SCIP_RETCODE tryExtractDistconsMind(
    if( c < nsummands )
       goto FREEMEMORY;
 
-   /* if there a no product variables, we cannot detect a distance constraint */
+   /* if there are no product variables, we cannot detect a distance constraint */
    if( nprodexprs <= 0 )
       goto FREEMEMORY;
 
@@ -905,7 +892,7 @@ SCIP_RETCODE tryExtractDistconsMind(
    if( nprodexprs != npowexprs )
       goto FREEMEMORY;
 
-   /* if it is a distance constraint, then it is trivially satisfied */
+   /* if the minimal distance is constraint to be zero, then it is trivially satisfied */
    if( boundingvar == NULL && SCIPisZero(scip, constant) )
       goto FREEMEMORY;
 
@@ -960,14 +947,7 @@ SCIP_RETCODE tryExtractDistconsMind(
       goto FREEMEMORY;
 
    /* ensure that memory suffices to store constraint */
-   if( *ndistconss >= *lendistconss )
-   {
-      int newsize;
-
-      newsize = SCIPcalcMemGrowSize(scip, *ndistconss + 1);
-      SCIP_CALL( SCIPreallocBlockMemoryArray(scip, distconss, *lendistconss, newsize) );
-      *lendistconss = newsize;
-   }
+   SCIP_CALL( SCIPensureBlockMemoryArray(scip, distconss, lendistconss, *ndistconss + 1) );
    SCIP_CALL( SCIPallocBlockMemory(scip, &(*distconss)[*ndistconss]) );
 
    (*distconss)[*ndistconss]->lenvars = nprodexprs / 2;
@@ -984,7 +964,7 @@ SCIP_RETCODE tryExtractDistconsMind(
    (*distconss)[*ndistconss]->distval = isleq ? constant : -constant;
    (*distconss)[*ndistconss]->hasvardist = boundingvar != NULL;
    (*distconss)[*ndistconss]->lastpropnode = NULL;
-   *ndistconss += 1;
+   (*ndistconss)++;
 
  FREEMEMORY:
    SCIPfreeBufferArray(scip, &prodvars);
@@ -1160,15 +1140,17 @@ SCIP_RETCODE improveLb(
    assert(infeasible != NULL);
    assert(nred != NULL);
 
-   if( SCIPisLE(scip, bound, SCIPvarGetLbLocal(var)) )
-      return SCIP_OKAY;
-   if( SCIPisGT(scip, bound, SCIPvarGetUbLocal(var)) )
-      *infeasible = TRUE;
-   else
-   {
-      SCIP_CALL( SCIPchgVarLb(scip, var, bound) );
-      *nred += 1;
-   }
+   SCIP_Bool tightened;
+
+   assert(scip != NULL);
+   assert(var != NULL);
+   assert(infeasible != NULL);
+   assert(nred != NULL);
+
+   SCIP_CALL( SCIPtightenVarLb(scip, var, bound, FALSE, infeasible, &tightened) );
+
+   if( tightened )
+      ++(*nred);
 
    return SCIP_OKAY;
 }
@@ -1183,20 +1165,17 @@ SCIP_RETCODE improveUb(
    int*                  nred                /**< pointer to increment by number of found reductions */
    )
 {
+   SCIP_Bool tightened;
+
    assert(scip != NULL);
    assert(var != NULL);
    assert(infeasible != NULL);
    assert(nred != NULL);
 
-   if( SCIPisGE(scip, bound, SCIPvarGetUbLocal(var)) )
-      return SCIP_OKAY;
-   if( SCIPisLT(scip, bound, SCIPvarGetLbLocal(var)) )
-      *infeasible = TRUE;
-   else
-   {
-      SCIP_CALL( SCIPchgVarUb(scip, var, bound) );
-      *nred += 1;
-   }
+   SCIP_CALL( SCIPtightenVarUb(scip, var, bound, FALSE, infeasible, &tightened) );
+
+   if( tightened )
+      ++(*nred);
 
    return SCIP_OKAY;
 }
@@ -1247,7 +1226,7 @@ SCIP_Real getDistL2Sq(
    assert(point2 != NULL);
 
    for( d = 0; d < dim; ++d )
-      res += pow(point1[d] - point2[d], 2);
+      res += SQR(point1[d] - point2[d]);
 
    return res;
 }
@@ -1295,13 +1274,19 @@ SCIP_RETCODE propagateMindConsSimple1D(
    {
       /* var1 is to the left of var2 */
       SCIP_CALL( improveUb(scip, var1, ub2 - distbound, infeasible, nred) );
-      SCIP_CALL( improveLb(scip, var2, lb1 + distbound, infeasible, nred) );
+      if( !*infeasible )
+      {
+         SCIP_CALL( improveLb(scip, var2, lb1 + distbound, infeasible, nred) );
+      }
    }
    else if( SCIPisGE(scip, lb1, ub2) )
    {
       /* var2 is to the left of var1 */
       SCIP_CALL( improveUb(scip, var2, ub1 - distbound, infeasible, nred) );
-      SCIP_CALL( improveLb(scip, var1, lb2 + distbound, infeasible, nred) );
+      if( !*infeasible )
+      {
+         SCIP_CALL( improveLb(scip, var1, lb2 + distbound, infeasible, nred) );
+      }
    }
    else if( SCIPisGE(scip, ub1, ub2) && SCIPisLE(scip, lb1, lb2) )
    {
@@ -1322,7 +1307,7 @@ SCIP_RETCODE propagateMindConsSimple1D(
       {
          SCIP_CALL( improveUb(scip, var1, ub2 - distbound, infeasible, nred) );
       }
-      if( SCIPisLT(scip, lb2 - lb1, distbound) && SCIPisLT(scip, ub1 - lb2, distbound) )
+      if( !*infeasible && SCIPisLT(scip, lb2 - lb1, distbound) && SCIPisLT(scip, ub1 - lb2, distbound) )
       {
          SCIP_CALL( improveLb(scip, var2, lb1 + distbound, infeasible, nred) );
       }
@@ -1334,7 +1319,7 @@ SCIP_RETCODE propagateMindConsSimple1D(
       {
          SCIP_CALL( improveUb(scip, var2, ub1 - distbound, infeasible, nred) );
       }
-      if( SCIPisLT(scip, lb1 - lb2, distbound) && SCIPisLT(scip, ub2 - lb1, distbound) )
+      if( !*infeasible && SCIPisLT(scip, lb1 - lb2, distbound) && SCIPisLT(scip, ub2 - lb1, distbound) )
       {
          SCIP_CALL( improveLb(scip, var1, lb2 + distbound, infeasible, nred) );
       }
@@ -1395,14 +1380,10 @@ SCIP_RETCODE propagateMindConsSimple(
       totalsquareddist += pow(maxDistVarPair(vars1[i], vars2[i]), 2);
 
    /* propagate bounds of variables */
-   for( i = 0; i < nvars; ++i )
+   for( i = 0; i < nvars && !*infeasible; ++i )
    {
       dist = pow(maxDistVarPair(vars1[i], vars2[i]), 2);
-      totalsquareddist -= dist;
-
-      SCIP_CALL( propagateMindConsSimple1D(scip, vars1[i], vars2[i], distbound - totalsquareddist, infeasible, nred) );
-
-      totalsquareddist += dist;
+      SCIP_CALL( propagateMindConsSimple1D(scip, vars1[i], vars2[i], distbound - (totalsquareddist - dist), infeasible, nred) );
    }
 
    return SCIP_OKAY;
@@ -1485,7 +1466,7 @@ SCIP_RETCODE propagateMinfdConsSimple1D(
       {
          SCIP_CALL( improveLb(scip, var, coord + distbound, infeasible, nred) );
       }
-      if( SCIPisLT(scip, ub - coord, distbound) )
+      if( !*infeasible && SCIPisLT(scip, ub - coord, distbound) )
       {
          SCIP_CALL( improveUb(scip, var, coord - distbound, infeasible, nred) );
       }
@@ -1540,10 +1521,10 @@ SCIP_RETCODE propagateMinfdConsSimple(
    }
 
    /* propagate bounds of variables */
-   for( i = 0; i < nvars; ++i )
+   for( i = 0; i < nvars && !*infeasible; ++i )
    {
       dist = MAX(ABS(SCIPvarGetLbLocal(vars[i]) - point[i]), ABS(SCIPvarGetUbLocal(vars[i]) - point[i]));
-      dist = pow(dist, 2);
+      dist = SQR(dist);
       totalsquareddist -= dist;
 
       SCIP_CALL( propagateMinfdConsSimple1D(scip, vars[i], point[i], sqdistbound - totalsquareddist,
