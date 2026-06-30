@@ -1306,15 +1306,13 @@ SCIP_RETCODE propagateMindConsSimple1D(
    else if( SCIPisGE(scip, ub1, ub2) && SCIPisLE(scip, lb1, lb2) )
    {
       /* var1's domain contains var2's domain */
-      if( SCIPisLT(scip, lb2 - lb1, distbound) && SCIPisLT(scip, ub1 - lb2, distbound)
-         && SCIPisLT(scip, ub2 - lb1, distbound) && SCIPisLT(scip, ub1 - ub2, distbound))
+      if( SCIPisLT(scip, ub2 - lb1, distbound) && SCIPisLT(scip, ub1 - lb2, distbound) )
          *infeasible = TRUE;
    }
    else if( SCIPisGE(scip, ub2, ub1) && SCIPisLE(scip, lb2, lb1) )
    {
       /* var2's domain contains var1's domain */
-      if( SCIPisLT(scip, lb1 - lb2, distbound) && SCIPisLT(scip, ub2 - lb1, distbound)
-         && SCIPisLT(scip, ub1 - lb2, distbound) && SCIPisLT(scip, ub2 - ub1, distbound) )
+      if( SCIPisLT(scip, ub1 - lb2, distbound) && SCIPisLT(scip, ub2 - lb1, distbound) )
          *infeasible = TRUE;
    }
    else if( SCIPisLT(scip, lb1, lb2) )
