@@ -276,6 +276,7 @@ Fixed bugs
 - keep flag rangedrowpropagated of linear and exactlinear constraints for probing bound changes to avoid duplicate constraints by ranged row propagation
 - fixed that SCIP did not catch Ctrl+C in concurrent mode
 - SCIPsolveConcurrent now returns with an error when reoptimization is enabled, since the concurrent sub-solvers do not perform reoptimization and the combination could segfault after SCIPfreeReoptSolve
+- in cons_components avoid solving last component if all others are trivial
 
 Miscellaneous
 -------------
