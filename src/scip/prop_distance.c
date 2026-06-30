@@ -116,7 +116,7 @@ typedef struct DISTCONS_Min
    SCIP_Real             scalar;             /**< multiplicator \f$r\f$ of distance */
    SCIP_Bool             hasvardist;         /**< whether the constraint has a variable distance */
    SCIP_Bool             issquared;          /**< whether distance constraint is squared */
-   SCIP_NODE*            lastpropnode;       /**< latest node at which constraint has been propagated */
+   SCIP_Longint          lastpropnode;       /**< ID of latest node at which constraint has been propagated */
 } DISTCONS_MIN;
 
 /* container for distance constraints of type
@@ -134,7 +134,7 @@ typedef struct DISTCONS_MinFixed
    SCIP_Real             distval;            /**< fixed distance \f$c\f$ (if distvar is NULL) */
    SCIP_Real             scalar;             /**< multiplicator \f$r\f$ of distance */
    SCIP_Bool             hasvardist;         /**< whether the constraint has a variable distance */
-   SCIP_NODE*            lastpropnode;       /**< latest node at which constraint has been propagated */
+   SCIP_Longint          lastpropnode;       /**< ID of latest node at which constraint has been propagated */
 } DISTCONS_MINFIXED;
 
 /** container for pairs of overlapping minimum distance constraints */
@@ -734,7 +734,7 @@ SCIP_RETCODE tryExtractDistconsMinfd(
       (*distconss)[*ndistconss]->distval = constant;
    }
    (*distconss)[*ndistconss]->lenvars = npowvars;
-   (*distconss)[*ndistconss]->lastpropnode = NULL;
+   (*distconss)[*ndistconss]->lastpropnode = -1;
    (*ndistconss)++;
 
  FREEMEMORY:
@@ -970,7 +970,7 @@ SCIP_RETCODE tryExtractDistconsMind(
    (*distconss)[*ndistconss]->scalar = isleq ? boundingcoef : -boundingcoef;
    (*distconss)[*ndistconss]->distval = isleq ? constant : -constant;
    (*distconss)[*ndistconss]->hasvardist = boundingvar != NULL;
-   (*distconss)[*ndistconss]->lastpropnode = NULL;
+   (*distconss)[*ndistconss]->lastpropnode = -1;
    (*ndistconss)++;
 
  FREEMEMORY:
@@ -2035,7 +2035,7 @@ static
 SCIP_DECL_DISTCONSPROP(propMinpd)
 {
    DISTCONS_MINPAIR* minpdcons;
-   SCIP_NODE* node;
+   SCIP_Longint nodeid;
    int ntmpred;
    int c;
 
@@ -2049,8 +2049,7 @@ SCIP_DECL_DISTCONSPROP(propMinpd)
 
    if( propdata->nminpdconss <= 0 )
       return SCIP_OKAY;
-   node = SCIPgetCurrentNode(scip);
-   assert(node != NULL);
+   nodeid = SCIPnodeGetNumber(SCIPgetCurrentNode(scip));
 
    for( c = 0; c < propdata->nminpdconss && !(*infeasible); ++c )
    {
@@ -2059,11 +2058,13 @@ SCIP_DECL_DISTCONSPROP(propMinpd)
 
       /* do not propagate the constraint if one constraint of the pair has found a reduction */
       minpdcons = propdata->minpdconss[c];
-      if( node == minpdcons->dconss[0]->lastpropnode || node == minpdcons->dconss[1]->lastpropnode )
+      if( nodeid == minpdcons->dconss[0]->lastpropnode || nodeid == minpdcons->dconss[1]->lastpropnode )
       {
          propdata->dopropminpd[c] = FALSE;
          continue;
       }
+      minpdcons->dconss[0]->lastpropnode = nodeid;
+      minpdcons->dconss[1]->lastpropnode = nodeid;
 
       SCIP_CALL( propagateMinpdCons(scip, propdata->minpdconss[c], infeasible, &ntmpred,
             propdata->multbisection, propdata->gapbisection, propdata->maxniterbisection) );
@@ -2180,7 +2181,7 @@ static
 SCIP_DECL_DISTCONSPROP(propMinfpd)
 {
    DISTCONS_MINFPAIR* minfpdcons;
-   SCIP_NODE* node;
+   SCIP_Longint nodeid;
    int ntmpred;
    int c;
 
@@ -2194,8 +2195,7 @@ SCIP_DECL_DISTCONSPROP(propMinfpd)
 
    if( propdata->nminfpdconss <= 0 )
       return SCIP_OKAY;
-   node = SCIPgetCurrentNode(scip);
-   assert(node != NULL);
+   nodeid = SCIPnodeGetNumber(SCIPgetCurrentNode(scip));
 
    for( c = 0; c < propdata->nminfpdconss && !(*infeasible); ++c )
    {
@@ -2204,11 +2204,13 @@ SCIP_DECL_DISTCONSPROP(propMinfpd)
 
       /* do not propagate the constraint if one constraint of the pair has found a reduction */
       minfpdcons = propdata->minfpdconss[c];
-      if( node == minfpdcons->dconss[0]->lastpropnode || node == minfpdcons->dconss[1]->lastpropnode )
+      if( nodeid == minfpdcons->dconss[0]->lastpropnode || nodeid == minfpdcons->dconss[1]->lastpropnode )
       {
          propdata->dopropminpd[c] = FALSE;
          continue;
       }
+      minfpdcons->dconss[0]->lastpropnode = nodeid;
+      minfpdcons->dconss[1]->lastpropnode = nodeid;
 
       SCIP_CALL( propagateMinfpdCons(scip, propdata->minfpdconss[c], infeasible, &ntmpred,
             propdata->multbisection, propdata->gapbisection, propdata->maxniterbisection) );
