@@ -1287,7 +1287,7 @@ SCIP_RETCODE processBinvarFixings(
          fixedonefound = FALSE;
 #endif
 
-         for( v = 0; v < nvars && consdata->nfixedones == 1 && !(*cutoff); ++v )
+         for( v = 0; v < nvars && consdata->nfixedones == 1 && !(*cutoff); ++v )  /* cppcheck-suppress knownConditionTrueFalse */
          {
             var = vars[v];
             assert(SCIPvarIsBinary(var));
@@ -1329,7 +1329,7 @@ SCIP_RETCODE processBinvarFixings(
       /* now all other variables are fixed to zero:
        * the constraint is feasible, and if it's not modifiable, it is redundant
        */
-      if( !SCIPconsIsModifiable(cons) && consdata->nfixedones == 1 )
+      if( !SCIPconsIsModifiable(cons) && consdata->nfixedones == 1 )  /* cppcheck-suppress knownConditionTrueFalse */
       {
          SCIPdebugMsg(scip, " -> disabling set linking constraint <%s>\n", SCIPconsGetName(cons));
          SCIP_CALL( SCIPdelConsLocal(scip, cons) );

@@ -3866,7 +3866,7 @@ SCIP_RETCODE copyConsPseudoboolean(
          assert(ntargetandconss <= ntargetlinvars);
       }
 
-      if( *valid )  /* cppcheck-suppress duplicateCondition */
+      if( *valid )
       {
          SCIP_Real targetrhs;
          SCIP_Real targetlhs;
