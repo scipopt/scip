@@ -3285,8 +3285,8 @@ void QSnum_factor_btran (
    int nzcnt;
    int sparse;
    int *aindx;
-   QSnum_type *acoef = a->coef;
-   QSnum_type *work_coef = f->work_coef;
+   QSnum_type *acoef;
+   QSnum_type *work_coef;
    int dimr;
 
    if( a->nzcnt >= SPARSE_FACTOR * f->dimr )
@@ -3312,7 +3312,7 @@ void QSnum_factor_btran (
    }
    else
    {
-      qsnum_factor_btranu (f, work_coef, &f->xtmp);
+      qsnum_factor_btranu (f, work_coef, &f->xtmp);  /*lint !e644*/
    }
 
    if( f->xtmp.nzcnt >= SPARSE_FACTOR * f->dimr )
