@@ -1297,7 +1297,7 @@ SCIP_RETCODE propagateMindConsSimple1D(
       SCIP_CALL( improveUb(scip, var1, ub2 - distbound, infeasible, nred) );
       SCIP_CALL( improveLb(scip, var2, lb1 + distbound, infeasible, nred) );
    }
-   else if( SCIPisGT(scip, lb2, ub1) )
+   else if( SCIPisGE(scip, lb1, ub2) )
    {
       /* var2 is to the left of var1 */
       SCIP_CALL( improveUb(scip, var2, ub1 - distbound, infeasible, nred) );
