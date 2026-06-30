@@ -193,9 +193,9 @@ struct SCIP_PropData
    /* event handler related data to more efficiently propagate bounds */
    SCIP_EVENTHDLR*       eventhdlr;          /**< event handler to handle bound change events */
    SCIP_EVENTDATA*       eventdatamind;      /**< event data for mind constraints */
-   SCIP_EVENTDATA**      eventdataminfd;     /**< event data for minfd constraints */
-   SCIP_EVENTDATA**      eventdataminpd;     /**< event data for minpd constraints */
-   SCIP_EVENTDATA**      eventdataminfpd;    /**< event data for minfpd constraints */
+   SCIP_EVENTDATA*       eventdataminfd;     /**< event data for minfd constraints */
+   SCIP_EVENTDATA*       eventdataminpd;     /**< event data for minpd constraints */
+   SCIP_EVENTDATA*       eventdataminfpd;    /**< event data for minfpd constraints */
    SCIP_Bool*            dopropmind;         /**< array storing which mind constraint shall be propagated */
    SCIP_Bool*            dopropminfd;        /**< array storing which minfd constraints shall be propagated */
    SCIP_Bool*            dopropminpd;        /**< array storing which minpd constraints shall be propagated */
@@ -233,15 +233,15 @@ SCIP_RETCODE catchVarEvents(
    DISTCONS_MINFIXED**   minfdconss,         /**< minfd conss */
    int                   nminfdconss,        /**< number of minfd conss */
    SCIP_Bool**           dopropminfd,        /**< array storing which minfd conss shall be propagated */
-   SCIP_EVENTDATA***     eventdataminfd,     /**< event data for minfd conss */
+   SCIP_EVENTDATA**      eventdataminfd,     /**< event data for minfd conss */
    DISTCONS_MINPAIR**    minpdconss,         /**< minpd conss */
    int                   nminpdconss,        /**< number of minpd conss */
    SCIP_Bool**           dopropminpd,        /**< array storing which minpd conss shall be propagated */
-   SCIP_EVENTDATA***     eventdataminpd,     /**< event data for minpd conss */
+   SCIP_EVENTDATA**      eventdataminpd,     /**< event data for minpd conss */
    DISTCONS_MINFPAIR**   minfpdconss,        /**< minfpd conss */
    int                   nminfpdconss,       /**< number of minfpd conss */
    SCIP_Bool**           dopropminfpd,       /**< array storing which minfpd conss shall be propagated */
-   SCIP_EVENTDATA***     eventdataminfpd     /**< event data for minfpd conss */
+   SCIP_EVENTDATA**      eventdataminfpd     /**< event data for minfpd conss */
    )
 {
    SCIP_EVENTDATA* eventdata;
@@ -302,8 +302,7 @@ SCIP_RETCODE catchVarEvents(
       {
          assert(minfdconss[c] != NULL);
 
-         SCIP_CALL( SCIPallocBlockMemory(scip, &(*eventdataminfd)[c]) );
-         eventdata = (*eventdataminfd)[c];
+         eventdata = &(*eventdataminfd)[c];
          eventdata->type = DCONS_TYPE_MINFIXED;
          eventdata->considx = c;
 
@@ -331,8 +330,7 @@ SCIP_RETCODE catchVarEvents(
       {
          assert(minpdconss[c] != NULL);
 
-         SCIP_CALL( SCIPallocBlockMemory(scip, &(*eventdataminpd)[c]) );
-         eventdata = (*eventdataminpd)[c];
+         eventdata = &(*eventdataminpd)[c];
          eventdata->type = DCONS_TYPE_MINPAIR;
          eventdata->considx = c;
 
@@ -366,8 +364,7 @@ SCIP_RETCODE catchVarEvents(
       {
          assert(minfpdconss[c] != NULL);
 
-         SCIP_CALL( SCIPallocBlockMemory(scip, &(*eventdataminfpd)[c]) );
-         eventdata = (*eventdataminfpd)[c];
+         eventdata = &(*eventdataminfpd)[c];
          eventdata->type = DCONS_TYPE_MINFIXEDPAIR;
          eventdata->considx = c;
 
@@ -404,13 +401,13 @@ SCIP_RETCODE dropVarEvents(
    SCIP_EVENTDATA*       eventdatamind,      /**< event data for mind conss */
    DISTCONS_MINFIXED**   minfdconss,         /**< minfd conss */
    int                   nminfdconss,        /**< number of minfd conss */
-   SCIP_EVENTDATA**      eventdataminfd,     /**< event data for minfd conss */
+   SCIP_EVENTDATA*       eventdataminfd,     /**< event data for minfd conss */
    DISTCONS_MINPAIR**    minpdconss,         /**< minpd conss */
    int                   nminpdconss,        /**< number of minpd conss */
-   SCIP_EVENTDATA**      eventdataminpd,     /**< event data for minpd conss */
+   SCIP_EVENTDATA*       eventdataminpd,     /**< event data for minpd conss */
    DISTCONS_MINFPAIR**   minfpdconss,        /**< minfpd conss */
    int                   nminfpdconss,       /**< number of minfpd conss */
-   SCIP_EVENTDATA**      eventdataminfpd     /**< event data for minfpd conss */
+   SCIP_EVENTDATA*       eventdataminfpd     /**< event data for minfpd conss */
    )
 {
    SCIP_EVENTTYPE eventtype;
@@ -455,12 +452,12 @@ SCIP_RETCODE dropVarEvents(
          dim = minfdconss[c]->lenvars;
          for( d = 0; d < dim; ++d )
          {
-            SCIP_CALL( SCIPdropVarEvent(scip, minfdconss[c]->vars[d], eventtype, eventhdlr, eventdataminfd[c], -1) );
+            SCIP_CALL( SCIPdropVarEvent(scip, minfdconss[c]->vars[d], eventtype, eventhdlr, &eventdataminfd[c], -1) );
          }
          if( minfdconss[c]->distvar != NULL )
          {
             SCIP_CALL( SCIPdropVarEvent(scip, minfdconss[c]->distvar, SCIP_EVENTTYPE_LBTIGHTENED,
-                  eventhdlr, eventdataminfd[c], -1) );
+                  eventhdlr, &eventdataminfd[c], -1) );
          }
       }
    }
@@ -476,19 +473,19 @@ SCIP_RETCODE dropVarEvents(
          for( d = 0; d < dim; ++d )
          {
             SCIP_CALL( SCIPdropVarEvent(scip, minpdconss[c]->commonvars[d], eventtype, eventhdlr,
-                  eventdataminpd[c], -1) );
-            SCIP_CALL( SCIPdropVarEvent(scip, minpdconss[c]->vars1[d], eventtype, eventhdlr, eventdataminpd[c], -1) );
-            SCIP_CALL( SCIPdropVarEvent(scip, minpdconss[c]->vars2[d], eventtype, eventhdlr, eventdataminpd[c], -1) );
+                  &eventdataminpd[c], -1) );
+            SCIP_CALL( SCIPdropVarEvent(scip, minpdconss[c]->vars1[d], eventtype, eventhdlr, &eventdataminpd[c], -1) );
+            SCIP_CALL( SCIPdropVarEvent(scip, minpdconss[c]->vars2[d], eventtype, eventhdlr, &eventdataminpd[c], -1) );
          }
          if( minpdconss[c]->distvars[0] != NULL )
          {
             SCIP_CALL( SCIPdropVarEvent(scip, minpdconss[c]->distvars[0], SCIP_EVENTTYPE_LBTIGHTENED,
-                  eventhdlr, eventdataminpd[c], -1) );
+                  eventhdlr, &eventdataminpd[c], -1) );
          }
          if( minpdconss[c]->distvars[1] != NULL )
          {
             SCIP_CALL( SCIPdropVarEvent(scip, minpdconss[c]->distvars[1], SCIP_EVENTTYPE_LBTIGHTENED,
-                  eventhdlr, eventdataminpd[c], -1) );
+                  eventhdlr, &eventdataminpd[c], -1) );
          }
       }
    }
@@ -503,17 +500,17 @@ SCIP_RETCODE dropVarEvents(
          dim = minfpdconss[c]->dimension;
          for( d = 0; d < dim; ++d )
          {
-            SCIP_CALL( SCIPdropVarEvent(scip, minfpdconss[c]->vars[d], eventtype, eventhdlr, eventdataminfpd[c], -1) );
+            SCIP_CALL( SCIPdropVarEvent(scip, minfpdconss[c]->vars[d], eventtype, eventhdlr, &eventdataminfpd[c], -1) );
          }
          if( minfpdconss[c]->distvars[0] != NULL )
          {
             SCIP_CALL( SCIPdropVarEvent(scip, minfpdconss[c]->distvars[0], SCIP_EVENTTYPE_LBTIGHTENED,
-                  eventhdlr, eventdataminfpd[c], -1) );
+                  eventhdlr, &eventdataminfpd[c], -1) );
          }
          if( minfpdconss[c]->distvars[1] != NULL )
          {
             SCIP_CALL( SCIPdropVarEvent(scip, minfpdconss[c]->distvars[1], SCIP_EVENTTYPE_LBTIGHTENED,
-                  eventhdlr, eventdataminfpd[c], -1) );
+                  eventhdlr, &eventdataminfpd[c], -1) );
          }
       }
    }
@@ -2229,20 +2226,8 @@ SCIP_RETCODE clearPropData(
    SCIPfreeBlockMemoryArrayNull(scip, &propdata->dopropminfpd, propdata->nminfpdconss);
 
    SCIPfreeBlockMemoryArrayNull(scip, &propdata->eventdatamind, propdata->nmindconss);
-   for( i = 0; i < propdata->nminfdconss; ++i )
-   {
-      SCIPfreeBlockMemory(scip, &propdata->eventdataminfd[i]);
-   }
    SCIPfreeBlockMemoryArrayNull(scip, &propdata->eventdataminfd, propdata->nminfdconss);
-   for( i = 0; i < propdata->nminpdconss; ++i )
-   {
-      SCIPfreeBlockMemory(scip, &propdata->eventdataminpd[i]);
-   }
    SCIPfreeBlockMemoryArrayNull(scip, &propdata->eventdataminpd, propdata->nminpdconss);
-   for( i = 0; i < propdata->nminfpdconss; ++i )
-   {
-      SCIPfreeBlockMemory(scip, &propdata->eventdataminfpd[i]);
-   }
    SCIPfreeBlockMemoryArrayNull(scip, &propdata->eventdataminfpd, propdata->nminfpdconss);
 
    for( i = 0; i < propdata->nmindconss; ++i )
