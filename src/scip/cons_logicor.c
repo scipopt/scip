@@ -2616,7 +2616,6 @@ SCIP_RETCODE removeRedundantNonZeros(
    assert(0 < nentries);
 
    /* temporary exchange the variable for calculating a valid signature */
-   oldvar = vars[artpos];
    vars[artpos] = artvar;
    signature = calcSignature(vars, nvars);
 

@@ -3777,7 +3777,7 @@ void SCIPvarCapture(
 #endif
    )
    {
-      printf("Captured variable " DEBUGUSES_VARNAME " in SCIP %p, now %d uses; captured at\n", (void*)var->scip, var->nuses);  /* cppcheck-suppress syntaxError */
+      printf("Captured variable " DEBUGUSES_VARNAME " in SCIP %p, now %d uses; captured at\n", (void*)var->scip, var->nuses);
       print_backtrace();
    }
 #endif
