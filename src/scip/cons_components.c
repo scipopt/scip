@@ -2373,7 +2373,7 @@ SCIP_DECL_CONSPRESOL(consPresolComponents)
       int ncompconss;
       int comp;
 
-      SCIPdebugMsg(scip, "found %d components (%d with small size) during presolving; overall problem size: %d vars (%d int, %d bin, %d cont), %d conss\n",
+      SCIPdebugMsg(scip, "found %d components (%d with small size) during presolving; overall problem size: %d vars (%d bin, %d int, %d cont), %d conss\n",
          ncomponents, ncompsmaxsize, SCIPgetNVars(scip), SCIPgetNBinVars(scip), SCIPgetNIntVars(scip), SCIPgetNContVars(scip) + SCIPgetNImplVars(scip), SCIPgetNConss(scip));
 
       /* build subscip */
@@ -2393,6 +2393,13 @@ SCIP_DECL_CONSPRESOL(consPresolComponents)
       /* loop over all components */
       for( comp = 0; comp < ncompsmaxsize && !SCIPisStopped(scip); comp++ )
       {
+         /* if there is only one component left, let's solve this in the main SCIP */
+         if( nsolved == ncomponents - 1 )
+         {
+            SCIPdebugMsg(scip, "Solve one remaining component in main SCIP ...\n");
+            break;
+         }
+
 #ifdef WITH_DEBUG_SOLUTION
          if( SCIPgetStage(subscip) > SCIP_STAGE_INIT )
          {
@@ -2412,6 +2419,8 @@ SCIP_DECL_CONSPRESOL(consPresolComponents)
          if( ncompconss == 0 )
          {
             assert(ncompvars == 1);
+            SCIPdebugMsg(scip, "Skipping component %d of size %d without constraints.\n", comp, ncompvars);
+            ++nsolved;
             continue;
          }
 
@@ -2495,9 +2504,6 @@ SCIP_DECL_CONSPRESOL(consPresolComponents)
 
          /* if the component is unbounded or infeasible, this holds for the complete problem as well */
          if( *result == SCIP_UNBOUNDED || *result == SCIP_CUTOFF )
-            break;
-         /* if there is only one component left, let's solve this in the main SCIP */
-         else if( nsolved == ncomponents - 1 )
             break;
       }
 
