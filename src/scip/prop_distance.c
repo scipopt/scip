@@ -1049,7 +1049,6 @@ SCIP_RETCODE detectDistconssMinfd(
 static
 SCIP_RETCODE getMinDistanceConss(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_PROBDATA*        probdata,           /**< problem data */
    DISTCONS_MIN***       mindconss,          /**< pointer to store mind conss */
    int*                  nmindconss,         /**< pointer to store number of mind conss */
    int*                  lenmindconss,       /**< pointer to store length of mindconss */
@@ -2874,15 +2873,12 @@ static
 SCIP_DECL_PROPEXEC(propExecDistance)
 {  /*lint --e{715}*/
    SCIP_PROPDATA* propdata;
-   SCIP_PROBDATA* probdata;
    SCIP_Bool didrun = FALSE;
    SCIP_Bool infeasible = FALSE;
    SCIP_Bool tmpdidrun;
    int ntmpred = 0;
    int nred = 0;
    int p;
-
-   probdata = SCIPgetProbData(scip);
 
    propdata = SCIPpropGetData(prop);
    assert(propdata != NULL);
@@ -2896,7 +2892,7 @@ SCIP_DECL_PROPEXEC(propExecDistance)
       maxndconss = propdata->maxndconssforpairs;
 
       /* detect distance constraints */
-      SCIP_CALL( getMinDistanceConss(scip, probdata, &propdata->mindconss, &propdata->nmindconss,
+      SCIP_CALL( getMinDistanceConss(scip, &propdata->mindconss, &propdata->nmindconss,
             &propdata->lenmindconss, &propdata->minfdconss, &propdata->nminfdconss, &propdata->lenminfdconss) );
 
       if( maxndconss > 0 && maxndconss >= propdata->nmindconss + propdata->nminfdconss )
