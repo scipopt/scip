@@ -3576,8 +3576,10 @@ void RECTLUfreeFactorization(
    qsnum_factor_work*    f                   /**< factor work */
    )
 {
+   assert(f != NULL);
+
    QSnum_factor_free_factor_work (f);
    QSnum_factor_clear ();
-   if (f) free (f);
+   free (f);
 }
 #endif
