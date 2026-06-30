@@ -1934,9 +1934,9 @@ SCIP_RETCODE propagateMinpdCons(
 {
    SCIP_Real sqrad1;
    SCIP_Real sqrad2;
-   BOX* commonbox;
-   BOX* box1;
-   BOX* box2;
+   BOX commonbox;
+   BOX box1;
+   BOX box2;
    int ntmpred;
    int nverts;
    int tmpv;
@@ -1954,17 +1954,13 @@ SCIP_RETCODE propagateMinpdCons(
    *infeasible = FALSE;
 
    /* prepare box domains for common and distinct variables of pair of mind conss */
-   SCIP_CALL( SCIPallocBlockMemory(scip, &commonbox) );
-   SCIP_CALL( SCIPallocBlockMemory(scip, &box1) );
-   SCIP_CALL( SCIPallocBlockMemory(scip, &box2) );
-
    nverts = 1u << minpdcons->dimension;
-   commonbox->nvertices = nverts;
-   commonbox->dim = minpdcons->dimension;
-   box1->nvertices = nverts;
-   box1->dim = minpdcons->dimension;
-   box2->nvertices = nverts;
-   box2->dim = minpdcons->dimension;
+   commonbox.nvertices = nverts;
+   commonbox.dim = minpdcons->dimension;
+   box1.nvertices = nverts;
+   box1.dim = minpdcons->dimension;
+   box2.nvertices = nverts;
+   box2.dim = minpdcons->dimension;
 
    /* get vertices of box domains of distinct variables (they will not change in propagation)
     * (do not set upper/lower bounds, not needed for box1 and box2)
@@ -1974,9 +1970,9 @@ SCIP_RETCODE propagateMinpdCons(
       tmpv = i;
       for( d = 0; d < minpdcons->dimension; ++d, ++pos )
       {
-         box1->vertices[pos] =
+         box1.vertices[pos] =
             (tmpv % 2) == 0 ? SCIPvarGetLbLocal(minpdcons->vars1[d]) : SCIPvarGetUbLocal(minpdcons->vars1[d]);
-         box2->vertices[pos] =
+         box2.vertices[pos] =
             (tmpv % 2) == 0 ? SCIPvarGetLbLocal(minpdcons->vars2[d]) : SCIPvarGetUbLocal(minpdcons->vars2[d]);
          tmpv = tmpv >> 1;
       }
@@ -1992,7 +1988,7 @@ SCIP_RETCODE propagateMinpdCons(
 
    /* do nothing if the bound is negative (this can happen for variable distances if no solution has been found yet) */
    if( SCIPisLE(scip, sqrad1, 0.0) )
-      goto FREEBOXES;
+      return SCIP_OKAY;
    assert(sqrad1 >= 0);
 
    sqrad2 = minpdcons->constants[1];
@@ -2004,7 +2000,7 @@ SCIP_RETCODE propagateMinpdCons(
 
    /* do nothing if the bound is negative (this can happen for variable distances if no solution has been found yet) */
    if( SCIPisLE(scip, sqrad2, 0.0) )
-      goto FREEBOXES;
+      return SCIP_OKAY;
    assert(sqrad2 >= 0);
 
    /* propagate all facets of the box domain of the common variables */
@@ -2013,19 +2009,14 @@ SCIP_RETCODE propagateMinpdCons(
       for( i = 0; i < 2; ++i )
       {
          SCIP_CALL( propagatePairedDistConsFacet(scip, minpdcons->commonvars, minpdcons->dimension,
-               d, i == 0, commonbox, box1, box2, sqrad1, sqrad2,
+               d, i == 0, &commonbox, &box1, &box2, sqrad1, sqrad2,
                infeasible, &ntmpred, multbisection, gapbisection, maxniterbisection) );
 
          if( *infeasible )
-            goto FREEBOXES;
+            return SCIP_OKAY;
          *nred += ntmpred;
       }
    }
-
- FREEBOXES:
-   SCIPfreeBlockMemory(scip, &box2);
-   SCIPfreeBlockMemory(scip, &box1);
-   SCIPfreeBlockMemory(scip, &commonbox);
 
    return SCIP_OKAY;
 }
@@ -2091,9 +2082,9 @@ SCIP_RETCODE propagateMinfpdCons(
 {
    SCIP_Real sqrad1;
    SCIP_Real sqrad2;
-   BOX* commonbox;
-   BOX* box1;
-   BOX* box2;
+   BOX commonbox;
+   BOX box1;
+   BOX box2;
    int ntmpred;
    int nverts;
    int i;
@@ -2109,25 +2100,21 @@ SCIP_RETCODE propagateMinfpdCons(
    *infeasible = FALSE;
 
    /* prepare box domains for common and distinct variables of pair of mind conss */
-   SCIP_CALL( SCIPallocBlockMemory(scip, &commonbox) );
-   SCIP_CALL( SCIPallocBlockMemory(scip, &box1) );
-   SCIP_CALL( SCIPallocBlockMemory(scip, &box2) );
-
    nverts = pow(2, minfpdcons->dimension);
-   commonbox->nvertices = nverts;
-   commonbox->dim = minfpdcons->dimension;
-   box1->nvertices = 1;
-   box1->dim = minfpdcons->dimension;
-   box2->nvertices = 1;
-   box2->dim = minfpdcons->dimension;
+   commonbox.nvertices = nverts;
+   commonbox.dim = minfpdcons->dimension;
+   box1.nvertices = 1;
+   box1.dim = minfpdcons->dimension;
+   box2.nvertices = 1;
+   box2.dim = minfpdcons->dimension;
 
    /* get fixed points of distance constraints (they will not change in propagation)
     * (do not set upper/lower bounds, not needed for box1 and box2)
     */
    for( d = 0; d < minfpdcons->dimension; ++d)
    {
-      box1->vertices[d] = minfpdcons->point1[d];
-      box2->vertices[d] = minfpdcons->point2[d];
+      box1.vertices[d] = minfpdcons->point1[d];
+      box2.vertices[d] = minfpdcons->point2[d];
    }
 
    /* get squared radii used for propagation */
@@ -2140,7 +2127,7 @@ SCIP_RETCODE propagateMinfpdCons(
 
    /* this can happen if the distance variable is unbounded (e.g., no solution found yet) */
    if( SCIPisLE(scip, sqrad1, 0.0) )
-      goto FREEBOXES;
+      return SCIP_OKAY;
 
    sqrad2 = minfpdcons->constants[1];
    if( minfpdcons->distvars[1] != NULL )
@@ -2151,7 +2138,7 @@ SCIP_RETCODE propagateMinfpdCons(
 
    /* this can happen if the distance variable is unbounded (e.g., no solution found yet) */
    if( SCIPisLE(scip, sqrad2, 0.0) )
-      goto FREEBOXES;
+      return SCIP_OKAY;
 
    /* propagate all facets of the box domain of the common variables */
    for( d = 0; d < minfpdcons->dimension; ++d )
@@ -2159,19 +2146,14 @@ SCIP_RETCODE propagateMinfpdCons(
       for( i = 0; i < 2; ++i )
       {
          SCIP_CALL( propagatePairedDistConsFacet(scip, minfpdcons->vars, minfpdcons->dimension,
-               d, i == 0, commonbox, box1, box2, sqrad1, sqrad2,
+               d, i == 0, &commonbox, &box1, &box2, sqrad1, sqrad2,
                infeasible, &ntmpred, multbisection, gapbisection, maxniterbisection) );
 
          if( *infeasible )
-            goto FREEBOXES;
+            return SCIP_OKAY;
          *nred += ntmpred;
       }
    }
-
- FREEBOXES:
-   SCIPfreeBlockMemory(scip, &box2);
-   SCIPfreeBlockMemory(scip, &box1);
-   SCIPfreeBlockMemory(scip, &commonbox);
 
    return SCIP_OKAY;
 }
