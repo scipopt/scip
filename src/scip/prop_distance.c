@@ -1191,28 +1191,22 @@ SCIP_RETCODE improveUb(
  *  where \f$x\f$ corresponds to a distance variable */
 static
 SCIP_Real getMinimumScalarVariableProduct(
-   SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Real             lb,                 /**< lower bound on variable */
    SCIP_Real             ub,                 /**< upper bound on variable */
    SCIP_Real             scalar,             /**< scalar in front of variable */
    SCIP_Bool             issquared           /**< whether we consider a squared variable expression */
    )
 {
-   assert(scip != NULL);
-
    if( !issquared )
-   {
-      if( SCIPisNegative(scip, scalar) )
-         return scalar * ub;
-      return scalar * lb;
-   }
+      return scalar < 0.0 ? scalar * ub : scalar * lb;
 
-   if( SCIPisNegative(scip, scalar) )
+   if( scalar < 0.0 )
       return scalar * MIN(lb * lb, ub * ub);
 
-   if( SCIPisGE(scip, lb, 0.0) )
+   if( lb > 0.0 )
       return scalar * lb * lb;
-   else if( SCIPisLE(scip, ub, 0.0) )
+
+   if( ub < 0.0 )
       return scalar * ub * ub;
 
    return 0.0;
@@ -1374,7 +1368,7 @@ SCIP_RETCODE propagateMindConsSimple(
       lb = SCIPvarGetLbLocal(mindcons->distvar);
       ub = SCIPvarGetUbLocal(mindcons->distvar);
 
-      distbound = getMinimumScalarVariableProduct(scip, lb, ub, mindcons->scalar, mindcons->issquared);
+      distbound = getMinimumScalarVariableProduct(lb, ub, mindcons->scalar, mindcons->issquared);
    }
    distbound += mindcons->distval;
 
@@ -1513,7 +1507,7 @@ SCIP_RETCODE propagateMinfdConsSimple(
    nvars = minfdcons->lenvars;
    sqdistbound = minfdcons->distval;
    if( minfdcons->hasvardist )
-      sqdistbound += getMinimumScalarVariableProduct(scip, SCIPvarGetLbLocal(minfdcons->distvar),
+      sqdistbound += getMinimumScalarVariableProduct(SCIPvarGetLbLocal(minfdcons->distvar),
          SCIPvarGetUbLocal(minfdcons->distvar), minfdcons->scalar, FALSE);
 
    /* do nothing if the bound is negative (this can happen for variable distances if no solution has been found yet) */
@@ -1992,7 +1986,7 @@ SCIP_RETCODE propagateMinpdCons(
    sqrad1 = minpdcons->constants[0];
    if( minpdcons->distvars[0] != NULL )
    {
-      sqrad1 += getMinimumScalarVariableProduct(scip, SCIPvarGetLbLocal(minpdcons->distvars[0]),
+      sqrad1 += getMinimumScalarVariableProduct(SCIPvarGetLbLocal(minpdcons->distvars[0]),
          SCIPvarGetUbLocal(minpdcons->distvars[0]), minpdcons->scalars[0], minpdcons->issquared[0]);
    }
 
@@ -2004,7 +1998,7 @@ SCIP_RETCODE propagateMinpdCons(
    sqrad2 = minpdcons->constants[1];
    if( minpdcons->distvars[1] != NULL )
    {
-      sqrad2 += getMinimumScalarVariableProduct(scip, SCIPvarGetLbLocal(minpdcons->distvars[1]),
+      sqrad2 += getMinimumScalarVariableProduct(SCIPvarGetLbLocal(minpdcons->distvars[1]),
          SCIPvarGetUbLocal(minpdcons->distvars[1]), minpdcons->scalars[1], minpdcons->issquared[1]);
    }
 
@@ -2139,7 +2133,7 @@ SCIP_RETCODE propagateMinfpdCons(
    sqrad1 = minfpdcons->constants[0];
    if( minfpdcons->distvars[0] != NULL )
    {
-      sqrad1 += getMinimumScalarVariableProduct(scip, SCIPvarGetLbLocal(minfpdcons->distvars[0]),
+      sqrad1 += getMinimumScalarVariableProduct(SCIPvarGetLbLocal(minfpdcons->distvars[0]),
          SCIPvarGetUbLocal(minfpdcons->distvars[0]), minfpdcons->scalars[0], FALSE);
    }
 
@@ -2150,7 +2144,7 @@ SCIP_RETCODE propagateMinfpdCons(
    sqrad2 = minfpdcons->constants[1];
    if( minfpdcons->distvars[1] != NULL )
    {
-      sqrad2 += getMinimumScalarVariableProduct(scip, SCIPvarGetLbLocal(minfpdcons->distvars[1]),
+      sqrad2 += getMinimumScalarVariableProduct(SCIPvarGetLbLocal(minfpdcons->distvars[1]),
          SCIPvarGetUbLocal(minfpdcons->distvars[1]), minfpdcons->scalars[1], FALSE);
    }
 
