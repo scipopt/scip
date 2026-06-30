@@ -1893,7 +1893,6 @@ static int qsnum_dense_build_matrix(
    f->dense_base = f->stage;
    f->dmat = dmat;
    f->dsize = dsize;
-   dmat = 0;
 
    /* CLEANUP:  */
    return rval;
