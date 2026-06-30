@@ -1455,9 +1455,9 @@ SCIP_RETCODE propagateMinfdConsSimple1D(
       /* var is to the left of coord */
       SCIP_CALL( improveUb(scip, var, coord - distbound, infeasible, nred) );
    }
-   else if( SCIPisGT(scip, coord, ub) )
+   else if( SCIPisLE(scip, coord, lb) )
    {
-      /* var is to the left of coord */
+      /* var is to the right of coord */
       SCIP_CALL( improveLb(scip, var, coord + distbound, infeasible, nred) );
    }
    else if( SCIPisGE(scip, ub, coord) && SCIPisLE(scip, lb, coord) )
