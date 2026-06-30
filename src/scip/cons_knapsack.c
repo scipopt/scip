@@ -8177,7 +8177,6 @@ SCIP_RETCODE detectRedundantVars(
    SCIP_Longint* weights;
    SCIP_Longint capacity;
    SCIP_Longint sum;
-   int noldchgcoefs;
    int nvars;
    int v;
    int w;
@@ -8194,7 +8193,6 @@ SCIP_RETCODE detectRedundantVars(
    assert(consdata->nvars >= 2);
    assert(consdata->weightsum > consdata->capacity);
 
-   noldchgcoefs = *nchgcoefs;
    vars = consdata->vars;
    weights = consdata->weights;
    nvars = consdata->nvars;
@@ -8231,10 +8229,6 @@ SCIP_RETCODE detectRedundantVars(
 
       return SCIP_OKAY;
    }
-
-   /* if we already found some redundant variables, stop here */
-   if( *nchgcoefs > noldchgcoefs )
-      return SCIP_OKAY;
 
    assert(vars == consdata->vars);
    assert(weights == consdata->weights);
