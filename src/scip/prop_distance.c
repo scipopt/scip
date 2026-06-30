@@ -26,6 +26,18 @@
  * @ingroup DEFPLUGINS_PROP
  * @brief  propagator for Euclidean distance constraints
  * @author Christopher Hojny
+ *
+ * This propagator tightens variable domains based on Euclidean distance constraints \f$\| y-z \|_2^2 \geq \delta^2\f$,
+ * where both \f$y\f$ and \f$z\f$ are \f$d\f$-dimensional variable vectors and \f$\delta \geq 0\f$ is a variable or
+ * fixed number. These constraints are referred to as minimum distance constraints (mindconss) and, if one of the
+ * variable vectors is in fact a fixed vector, as minimum distance w.r.t. fixed point (minfd). Moreover, reductions
+ * based on pairs of mindconss and minfdconss are derived, which are called minpd and minfpd, respectively.
+ *
+ * The methods implemented in this propagator are described in the preprint
+ *
+ * A computational comparison of handling distance constraints in MINLP@n
+ * Christopher Hojny and Leo Liberti,@n
+ * https://arxiv.org/abs/2605.02305 (2026)
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
