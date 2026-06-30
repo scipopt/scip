@@ -2314,8 +2314,6 @@ SCIP_RETCODE initPropData(
    SCIP_PROPDATA*        propdata            /**< propagator data */
    )
 {
-   int i;
-
    assert(propdata != NULL);
 
    BMSclearMemory(propdata);
@@ -2361,7 +2359,6 @@ void tryExtractDataMinpd2D(
             distinctvars1[1] = vars2a[1 - i];
             distinctvars2[0] = vars2b[j];
             distinctvars2[1] = vars2b[1 - j];
-            return SCIP_OKAY;
          }
          else if( vars1a[i] == vars2b[j] && vars1a[1 - i] == vars2b[1 - j] )
          {
@@ -2371,7 +2368,6 @@ void tryExtractDataMinpd2D(
             distinctvars1[1] = vars2a[1 - i];
             distinctvars2[0] = vars1b[j];
             distinctvars2[1] = vars1b[1 - j];
-            return SCIP_OKAY;
          }
          else if( vars2a[i] == vars1b[j] && vars2a[1 - i] == vars1b[1 - j] )
          {
@@ -2381,7 +2377,6 @@ void tryExtractDataMinpd2D(
             distinctvars1[1] = vars1a[1 - i];
             distinctvars2[0] = vars2b[j];
             distinctvars2[1] = vars2b[1 - j];
-            return SCIP_OKAY;
          }
          else if( vars2a[i] == vars2b[j] && vars2a[1 - i] == vars2b[1 - j] )
          {
@@ -2391,13 +2386,10 @@ void tryExtractDataMinpd2D(
             distinctvars1[1] = vars1a[1 - i];
             distinctvars2[0] = vars1b[j];
             distinctvars2[1] = vars1b[1 - j];
-            return SCIP_OKAY;
          }
       }
    }
    *success = FALSE;
-
-   return SCIP_OKAY;
 }
 
 
@@ -2424,7 +2416,6 @@ void tryExtractDataMinfpd2D(
       point1[1] = dcpoint1[1];
       point2[0] = dcpoint2[0];
       point2[1] = dcpoint2[1];
-      return SCIP_OKAY;
    }
    else if( dcvars1[0] == dcvars2[1] && dcvars1[1] == dcvars2[0] )
    {
@@ -2434,11 +2425,8 @@ void tryExtractDataMinfpd2D(
       point1[1] = dcpoint1[1];
       point2[0] = dcpoint2[1];
       point2[1] = dcpoint2[0];
-      return SCIP_OKAY;
    }
    *success = FALSE;
-
-   return SCIP_OKAY;
 }
 
 
@@ -2519,7 +2507,6 @@ void tryExtractDataMinpd3D(
                            distinctvars2[0] = varsdc2[1 - r1b][0];
                            distinctvars2[1] = varsdc2[1 - r2b][1];
                            distinctvars2[2] = varsdc2[1 - r3b][2];
-                           return SCIP_OKAY;
                         }
                      }
                   }
@@ -2529,8 +2516,6 @@ void tryExtractDataMinpd3D(
       }
    }
    *success = FALSE;
-
-   return SCIP_OKAY;
 }
 
 /** given the data of two 3-dimensional minfd conss, tries to extract common and distinct variables */
@@ -2571,13 +2556,10 @@ void tryExtractDataMinfpd3D(
             point2[0] = dcpoint2[i];
             point2[1] = dcpoint2[j];
             point2[2] = dcpoint2[k];
-            return SCIP_OKAY;
          }
       }
    }
    *success = FALSE;
-
-   return SCIP_OKAY;
 }
 
 /** tries whether pairs of mind conss can be propagated together */
@@ -2612,15 +2594,13 @@ SCIP_RETCODE tryCreateMinpdCons(
 
    if( dim == 2 )
    {
-      SCIP_CALL( tryExtractDataMinpd2D(dc1->vars1, dc1->vars2, dc2->vars1, dc2->vars2,
-            commonvars, vars1, vars2, &success) );
+      tryExtractDataMinpd2D(dc1->vars1, dc1->vars2, dc2->vars1, dc2->vars2, commonvars, vars1, vars2, &success);
    }
    else
    {
       assert(dim == 3);
 
-      SCIP_CALL( tryExtractDataMinpd3D(dc1->vars1, dc1->vars2, dc2->vars1, dc2->vars2,
-            commonvars, vars1, vars2, &success) );
+      tryExtractDataMinpd3D(dc1->vars1, dc1->vars2, dc2->vars1, dc2->vars2, commonvars, vars1, vars2, &success);
    }
 
    if( !success )
@@ -2686,15 +2666,13 @@ SCIP_RETCODE tryCreateMinfpdCons(
 
    if( dim == 2 )
    {
-      SCIP_CALL( tryExtractDataMinfpd2D(dc1->vars, dc1->point, dc2->vars, dc2->point,
-            vars, point1, point2, &success) );
+      tryExtractDataMinfpd2D(dc1->vars, dc1->point, dc2->vars, dc2->point, vars, point1, point2, &success);
    }
    else
    {
       assert(dim == 3);
 
-      SCIP_CALL( tryExtractDataMinfpd3D(dc1->vars, dc1->point, dc2->vars, dc2->point,
-            vars, point1, point2, &success) );
+      tryExtractDataMinfpd3D(dc1->vars, dc1->point, dc2->vars, dc2->point, vars, point1, point2, &success);
    }
 
    if( !success )
