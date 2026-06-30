@@ -642,10 +642,11 @@ SCIP_RETCODE tryExtractDistconsMinfd(
          else
             powvars[npowvars++] = SCIPgetVarExprVar(SCIPexprGetChildren(child)[0]);
       }
-      else if( SCIPisExprValue(scip, child) )
-         constant += SCIPgetCoefsExprSum(expr)[i] * SCIPgetValueExprValue(child);
       else
+      {
+         assert(!SCIPisExprValue(scip, child));
          goto FREEMEMORY;
+      }
    }
 
    /* in a distance constraint, every linear variable has a power variable (except for at most one variable) */
@@ -771,7 +772,7 @@ SCIP_RETCODE tryExtractDistconsMind(
    int c;
    SCIP_Bool success = FALSE;
    SCIP_VAR* boundingvar = NULL;
-   SCIP_Real boundingpow = 1.0;
+   SCIP_Bool issquared = FALSE;
    int npowexprs = 0;
    int nprodexprs = 0;
    SCIP_Real boundingcoef = 0.0;
@@ -837,8 +838,10 @@ SCIP_RETCODE tryExtractDistconsMind(
 
          powchild = SCIPexprGetChildren(child)[0];
          assert(powchild != NULL);
-         assert(npowexprs < ndistterms);
 
+         /* if there are too many power expressions, it canot be a distance constraint */
+         if( npowexprs >= ndistterms )
+            break;
          if( !SCIPisExprVar(scip, powchild) )
             break;
          if( !SCIPisEQ(scip, SCIPgetExponentExprPow(child), 2.0) )
@@ -849,7 +852,7 @@ SCIP_RETCODE tryExtractDistconsMind(
             {
                boundingvar = SCIPgetVarExprVar(powchild);
                boundingcoef = sumcoefs[c];
-               boundingpow = 2.0;
+               issquared = TRUE;
             }
             else
                break;
@@ -862,7 +865,10 @@ SCIP_RETCODE tryExtractDistconsMind(
          /* we can only handle products of two variables */
          if( SCIPexprGetNChildren(child) != 2 )
             break;
-         assert(nprodexprs < ndistterms - 1);
+
+         /* if there are too many product expressions, it canot be a distance constraint */
+         if( nprodexprs >= ndistterms - 1 )
+            break;
 
          assert(SCIPgetCoefExprProduct(child) == 1.0);
          if( !SCIPisEQ(scip, prodcoef, sumcoefs[c]) )
@@ -874,10 +880,11 @@ SCIP_RETCODE tryExtractDistconsMind(
          prodvars[nprodexprs++] = SCIPgetVarExprVar(SCIPexprGetChildren(child)[0]);
          prodvars[nprodexprs++] = SCIPgetVarExprVar(SCIPexprGetChildren(child)[1]);
       }
-      else if( SCIPisExprValue(scip, child) )
-         constant += sumcoefs[c] * SCIPgetValueExprValue(child);
       else
+      {
+         assert(!SCIPisExprValue(scip, child));
          break;
+      }
    }
 
    /* if we terminated early, we had no success */
@@ -959,7 +966,7 @@ SCIP_RETCODE tryExtractDistconsMind(
       (*distconss)[*ndistconss]->vars2[c] = prodvars[2*c + 1];
    }
    (*distconss)[*ndistconss]->distvar = boundingvar;
-   (*distconss)[*ndistconss]->issquared = SCIPisEQ(scip, boundingpow, 2.0) ? TRUE : FALSE;
+   (*distconss)[*ndistconss]->issquared = issquared;
    (*distconss)[*ndistconss]->scalar = isleq ? boundingcoef : -boundingcoef;
    (*distconss)[*ndistconss]->distval = isleq ? constant : -constant;
    (*distconss)[*ndistconss]->hasvardist = boundingvar != NULL;
