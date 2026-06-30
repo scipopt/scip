@@ -574,7 +574,8 @@ SCIP_RETCODE tryExtractDistconsMinfd(
    SCIP_Real             rhs,                /**< right-hand side of constraint */
    DISTCONS_MINFIXED***  distconss,          /**< pointer to store minfd conss */
    int*                  ndistconss,         /**< pointer to store number of minfd */
-   int*                  lendistconss        /**< pointer to store length of minfd conss */
+   int*                  lendistconss,       /**< pointer to store length of minfd conss */
+   SCIP_Bool*            success             /**< pointer to store whether a minfd cons could be extracted */
    )
 {
    SCIP_Real constant = 0.0;
@@ -587,7 +588,6 @@ SCIP_RETCODE tryExtractDistconsMinfd(
    SCIP_Real distcoef = 0.0;
    SCIP_Real powcoef;
    SCIP_Bool isleq;
-   SCIP_Bool success;
    int nchildren;
    int npowvars = 0;
    int nlinvars = 0;
@@ -601,11 +601,22 @@ SCIP_RETCODE tryExtractDistconsMinfd(
    assert(ndistconss != NULL);
    assert(lendistconss != NULL);
 
-   success = FALSE;
+   *success = FALSE;
 
-   /* currently, we only handle inequalities with one infinite bound */
+   /* if both lhs and rhs are finite, check whether one of these inequalities corresponds to a minfd cons */
    if( !SCIPisInfinity(scip, rhs) && !SCIPisInfinity(scip, -lhs) )
+   {
+      SCIP_CALL( tryExtractDistconsMinfd(scip, expr, lhs, SCIPinfinity(scip),
+            distconss, ndistconss, lendistconss, success) );
+
+      if( !*success )
+      {
+         SCIP_CALL( tryExtractDistconsMinfd(scip, expr, -SCIPinfinity(scip), rhs,
+               distconss, ndistconss, lendistconss, success) );
+      }
+
       return SCIP_OKAY;
+   }
 
    /* the root expression needs to be a sum expression */
    if( !SCIPisExprSum(scip, expr) )
@@ -661,11 +672,11 @@ SCIP_RETCODE tryExtractDistconsMinfd(
    SCIP_CALL( SCIPallocBufferArray(scip, &pow2lin, npowvars) );
    for( i = 0; i < npowvars; ++i )
       pow2lin[i] = -1;         /* map power variables -> linear variables */
-   success = TRUE;             /* needed in case there is no linear variable */
+   *success = TRUE;            /* needed in case there is no linear variable */
    start = 0;
    for( i = 0; i < nlinvars && success; ++i )
    {
-      success = FALSE;
+      *success = FALSE;
       for( j = start; j < npowvars; ++j )
       {
          if( pow2lin[j] != -1 )
@@ -673,7 +684,7 @@ SCIP_RETCODE tryExtractDistconsMinfd(
 
          if( linvars[i] == powvars[j] )
          {
-            success = TRUE;
+            *success = TRUE;
             pow2lin[j] = i;
             if( j == start )
                ++start;
@@ -681,15 +692,15 @@ SCIP_RETCODE tryExtractDistconsMinfd(
       }
 
       /* one unmatched variable can be turned into a distance variable */
-      if( !success && distvar == NULL )
+      if( !*success && distvar == NULL )
       {
          distvar = linvars[i];
          distcoef = lincoefs[i];
-         success = TRUE;
+         *success = TRUE;
       }
    }
 
-   if( !success )
+   if( !*success )
       goto FREEMEMORY;
 
    /* store constraint */
@@ -744,6 +755,7 @@ SCIP_RETCODE tryExtractDistconsMinfd(
    (*distconss)[*ndistconss]->lenvars = npowvars;
    (*distconss)[*ndistconss]->lastpropnode = -1;
    (*ndistconss)++;
+   assert(*success);
 
  FREEMEMORY:
    SCIPfreeBufferArrayNull(scip, &pow2lin);
@@ -758,27 +770,26 @@ SCIP_RETCODE tryExtractDistconsMinfd(
 static
 SCIP_RETCODE tryExtractDistconsMind(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONS*            cons,               /**< nonlinear constraint */
+   SCIP_EXPR*            expr,               /**< expression modeling nonlinear constraint */
+   SCIP_Real             lhs,                /**< left-hand side of constraint */
+   SCIP_Real             rhs,                /**< right-hand side of constraint */
    DISTCONS_MIN***       distconss,          /**< pointer to store minimum distance constraints */
    int*                  ndistconss,         /**< pointer to store number of minimum distance constraints */
-   int*                  lendistconss        /**< pointer to store length of mindistconss */
+   int*                  lendistconss,       /**< pointer to store length of mindistconss */
+   SCIP_Bool*            success             /**< pointer to store whether a mind cons could be extracted */
    )
 {
    SCIP_EXPR** summands;
    SCIP_VAR** powvars;
    SCIP_VAR** prodvars;
-   SCIP_EXPR* expr;
    SCIP_Real* sumcoefs;
    SCIP_Bool* used;
    SCIP_Real prodcoef;
    SCIP_Real powcoef;
-   SCIP_Real lhs;
-   SCIP_Real rhs;
    int ndistterms;
    int nsummands;
    int start;
    int c;
-   SCIP_Bool success = FALSE;
    SCIP_VAR* boundingvar = NULL;
    SCIP_Bool issquared = FALSE;
    int npowexprs = 0;
@@ -789,15 +800,25 @@ SCIP_RETCODE tryExtractDistconsMind(
 
    assert(scip != NULL);
 
-   expr = SCIPgetExprNonlinear(cons);
-   lhs = SCIPgetLhsNonlinear(cons);
-   rhs = SCIPgetRhsNonlinear(cons);
    assert(expr != NULL);
    assert(!SCIPisInfinity(scip, rhs) || !SCIPisInfinity(scip, -lhs));
 
-   /* currently, we only handle inequalities with one infinite bound */
+   *success = FALSE;
+
+   /* if both lhs and rhs are finite, check whether one of these inequalities corresponds to a mind cons */
    if( !SCIPisInfinity(scip, rhs) && !SCIPisInfinity(scip, -lhs) )
+   {
+      SCIP_CALL( tryExtractDistconsMind(scip, expr, lhs, SCIPinfinity(scip),
+            distconss, ndistconss, lendistconss, success) );
+
+      if( !*success )
+      {
+         SCIP_CALL( tryExtractDistconsMind(scip, expr, -SCIPinfinity(scip), rhs,
+               distconss, ndistconss, lendistconss, success) );
+      }
+
       return SCIP_OKAY;
+   }
 
    /*
     * We scan for expressions of type sum(x_{i,d}^2 - 2x_{i,d}x_{j,d} + x_{j,d}^2, i,j,d) + rest,
@@ -914,7 +935,7 @@ SCIP_RETCODE tryExtractDistconsMind(
    /* check whether the product and power expressions match */
    SCIP_CALL( SCIPallocClearBufferArray(scip, &used, nprodexprs) );
    start = 0;
-   success = TRUE;
+   *success = TRUE;
    for( c = 0; c < nprodexprs / 2; ++c )
    {
       SCIP_VAR* var1;
@@ -952,13 +973,13 @@ SCIP_RETCODE tryExtractDistconsMind(
 
       if( !found1 || !found2 )
       {
-         success = FALSE;
+         *success = FALSE;
          break;
       }
    }
    SCIPfreeBufferArray(scip, &used);
 
-   if( !success )
+   if( !*success )
       goto FREEMEMORY;
 
    /* ensure that memory suffices to store constraint */
@@ -980,6 +1001,7 @@ SCIP_RETCODE tryExtractDistconsMind(
    (*distconss)[*ndistconss]->hasvardist = boundingvar != NULL;
    (*distconss)[*ndistconss]->lastpropnode = -1;
    (*ndistconss)++;
+   *success = TRUE;
 
  FREEMEMORY:
    SCIPfreeBufferArray(scip, &prodvars);
@@ -999,6 +1021,10 @@ SCIP_RETCODE detectDistconssMind(
    )
 {
    SCIP_CONS** conss;
+   SCIP_EXPR* expr;
+   SCIP_Real lhs;
+   SCIP_Real rhs;
+   SCIP_Bool success;
    int nconss;
    int c;
 
@@ -1011,7 +1037,11 @@ SCIP_RETCODE detectDistconssMind(
 
    for( c = 0; c < nconss; ++c )
    {
-      SCIP_CALL( tryExtractDistconsMind(scip, conss[c], distconss, ndistconss, lendistconss) );
+      expr = SCIPgetExprNonlinear(conss[c]);
+      lhs = SCIPgetLhsNonlinear(conss[c]);
+      rhs = SCIPgetRhsNonlinear(conss[c]);
+
+      SCIP_CALL( tryExtractDistconsMind(scip, expr, lhs, rhs, distconss, ndistconss, lendistconss, &success) );
    }
 
    return SCIP_OKAY;
@@ -1031,6 +1061,7 @@ SCIP_RETCODE detectDistconssMinfd(
    SCIP_EXPR* expr;
    SCIP_Real lhs;
    SCIP_Real rhs;
+   SCIP_Bool success;
    int nconss;
    int c;
 
@@ -1047,7 +1078,7 @@ SCIP_RETCODE detectDistconssMinfd(
       lhs = SCIPgetLhsNonlinear(conss[c]);
       rhs = SCIPgetRhsNonlinear(conss[c]);
 
-      SCIP_CALL( tryExtractDistconsMinfd(scip, expr, lhs, rhs, distconss, ndistconss, lendistconss) );
+      SCIP_CALL( tryExtractDistconsMinfd(scip, expr, lhs, rhs, distconss, ndistconss, lendistconss, &success) );
    }
 
    return SCIP_OKAY;
