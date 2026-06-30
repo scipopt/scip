@@ -2960,6 +2960,13 @@ SCIP_RETCODE SCIPsolveConcurrent(
       return SCIP_NOTIMPLEMENTED;
    }
 
+   /* concurrent solvers do not support reoptimization */
+   if( scip->set->reopt_enable )
+   {
+      SCIPerrorMessage("Concurrent solve not implemented for reoptimization mode.\n");
+      return SCIP_NOTIMPLEMENTED;
+   }
+
    SCIP_CALL( SCIPsetIntParam(scip, "timing/clocktype", (int)SCIP_CLOCKTYPE_WALL) );
 
    minnthreads = scip->set->parallel_minnthreads;
