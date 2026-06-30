@@ -2867,7 +2867,7 @@ SCIP_DECL_PROBDELORIG(probdataDelOrigNl)
 
    assert(probnldata != NULL);
    assert(probnldata->vars != NULL || probnldata->nvars == 0);
-   assert(probnldata->conss != NULL || probnldata->conss == 0);
+   assert(probnldata->conss != NULL || probnldata->nconss == 0);
 
    for( i = 0; i < probnldata->nconss; ++i )
    {
