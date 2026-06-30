@@ -3450,7 +3450,7 @@ int QSnum_svector_alloc(
    int                   nzcnt               /**< nonzero count */
    )
 {
-   int rval = 0;
+   int rval;
 
    s->nzcnt = nzcnt;
    if( nzcnt == 0 )
