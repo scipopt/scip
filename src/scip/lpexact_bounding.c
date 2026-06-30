@@ -1486,7 +1486,7 @@ SCIP_RETCODE projectShift(
 #endif
 
       /* rval = 0 -> fail */
-      if( rval )  /* cppcheck-suppress knownConditionTrueFalse */
+      if( rval )
       {
          lp->hasprovedbound = FALSE;
          if( usefarkas )

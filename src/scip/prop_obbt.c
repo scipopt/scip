@@ -1629,7 +1629,7 @@ SCIP_DECL_SORTPTRCOMP(compBoundsBoundtype)
       return diff;
 
    diff = (bound1->boundtype == SCIP_BOUNDTYPE_LOWER ? 1 : 0) - (bound2->boundtype == SCIP_BOUNDTYPE_LOWER ? 1 : 0);
-   if( diff != 0 )  /* cppcheck-suppress knownConditionTrueFalse */
+   if( diff != 0 )
       return diff;
 
    return (bound1->score == bound2->score) ? 0 : (bound1->score > bound2->score ? 1 : -1);
