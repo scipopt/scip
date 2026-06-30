@@ -20,6 +20,9 @@ missingOverride:src/objscip/*
 cstyleCast:*.cpp
 cstyleCast:src/objscip/*.h
 
+// members of C++ classes do not have explicit initializer
+uninitMemberVarNoCtor
+
 // potential possibilities to improve C++ code - check later
 functionStatic:src/scip/reader_nl.cpp
 duplInheritedMember:src/scip/reader_nl.cpp

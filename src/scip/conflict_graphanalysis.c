@@ -2914,13 +2914,10 @@ SCIP_RETCODE conflictsetAddBounds(
                /* replace worse bound change info by tighter bound change info */
                confbdchginfos[k] = confbdchginfos[i];
                confrelaxedbds[k] = confrelaxedbds[i];
-               confsortvals[k] = confsortvals[i];
                ++i;
             }
             else
             {
-               assert(confsortvals[k] == confsortvals[i]);
-
                /* both bound change are equivalent; hence, keep the worse relaxed bound and remove one of them */
                confrelaxedbds[k] = (confsortvals[k] % 2 == 0) ? MAX(confrelaxedbds[k], confrelaxedbds[i]) : MIN(confrelaxedbds[k], confrelaxedbds[i]);
                ++i;

@@ -1619,7 +1619,7 @@ SCIP_DECL_PRESOLCOPY(presolCopyMILP)
 static
 SCIP_DECL_PRESOLFREE(presolFreeMILP)
 {  /*lint --e{715}*/
-   SCIP_PRESOLMILPDATA* data = (SCIP_PRESOLMILPDATA*)SCIPpresolGetData(presol);
+   SCIP_PRESOLMILPDATA* data = reinterpret_cast<SCIP_PRESOLMILPDATA*>(SCIPpresolGetData(presol));
    assert(data != NULL);
 
    SCIPpresolSetData(presol, NULL);
@@ -1631,7 +1631,7 @@ SCIP_DECL_PRESOLFREE(presolFreeMILP)
 static
 SCIP_DECL_PRESOLINIT(presolInitMILP)
 {  /*lint --e{715}*/
-   SCIP_PRESOLMILPDATA* data = (SCIP_PRESOLMILPDATA*)SCIPpresolGetData(presol);
+   SCIP_PRESOLMILPDATA* data = reinterpret_cast<SCIP_PRESOLMILPDATA*>(SCIPpresolGetData(presol));
    assert(data != NULL);
 
    data->lastncols = -1;
@@ -1653,7 +1653,7 @@ SCIP_DECL_PRESOLEXEC(presolExecMILP)
 
    *result = SCIP_DIDNOTRUN;
 
-   data = (SCIP_PRESOLMILPDATA*)SCIPpresolGetData(presol);
+   data = reinterpret_cast<SCIP_PRESOLMILPDATA*>(SCIPpresolGetData(presol));
 
    int nvars = SCIPgetNVars(scip);
    int nconss = SCIPgetNConss(scip);
@@ -1750,7 +1750,7 @@ SCIP_RETCODE SCIPincludePresolMILP(
    /* include presolver */
    SCIP_CALL( SCIPincludePresolBasic(scip, &presol, PRESOL_NAME, PRESOL_DESC, PRESOL_PRIORITY, PRESOL_MAXROUNDS, PRESOL_TIMING,
          presolExecMILP,
-         (SCIP_PRESOLDATA*)presoldata) );
+         reinterpret_cast<SCIP_PRESOLDATA*>(presoldata)) );
 
    assert(presol != NULL);
 

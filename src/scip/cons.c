@@ -8270,7 +8270,6 @@ int SCIPlinConsStatsGetTypeCount(
 {
    assert(linconsstats != NULL);
    assert(0 <= (int)linconstype && (int)linconstype < SCIP_NLINCONSTYPES); /*lint !e587 !e685 !e568*/
-   assert(linconsstats->counter != NULL);
 
    return linconsstats->counter[(int)linconstype];
 }
@@ -8295,7 +8294,6 @@ void SCIPlinConsStatsIncTypeCount(
    assert(linconsstats != NULL);
    assert(increment >= 1);
    assert(0 <= (int)linconstype && (int)linconstype < SCIP_NLINCONSTYPES); /*lint !e587 !e685 !e568*/
-   assert(linconsstats->counter != NULL);
 
    linconsstats->counter[(int)linconstype] += increment;
    linconsstats->sum += increment;
