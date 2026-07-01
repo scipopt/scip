@@ -1420,12 +1420,12 @@ SCIP_RETCODE propagateMindConsSimple(
 
    /* compute total sum of squared distances */
    for( i = 0; i < nvars; ++i )
-      totalsquareddist += SQR(maxDistVarPair(vars1[i], vars2[i]));
+      totalsquareddist += SQR(maxDistVarPair(vars1[i], vars2[i])); /*lint !e666*/
 
    /* propagate bounds of variables */
    for( i = 0; i < nvars && !*infeasible; ++i )
    {
-      dist = SQR(maxDistVarPair(vars1[i], vars2[i]));
+      dist = SQR(maxDistVarPair(vars1[i], vars2[i])); /*lint !e666*/
       SCIP_CALL( propagateMindConsSimple1D(scip, vars1[i], vars2[i], distbound - (totalsquareddist - dist), infeasible, nred) );
    }
 
@@ -2311,7 +2311,7 @@ SCIP_RETCODE clearPropData(
 
    for( i = 0; i < propdata->nprops; ++i )
    {
-      SCIPfreeBlockMemory(scip, &propdata->props[i]);
+      SCIPfreeBlockMemory(scip, &propdata->props[i]); /*lint !e866*/
    }
    propdata->nprops = 0;
 
