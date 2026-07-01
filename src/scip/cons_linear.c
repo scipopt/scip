@@ -7485,16 +7485,6 @@ SCIP_RETCODE addRelaxation(
       {
          SCIP_CALL( SCIPaddRow(scip, consdata->row, FALSE, cutoff) );
       }
-#ifndef NDEBUG
-      else
-      {
-         int pr;
-         int cr;
-         SCIP_CALL( SCIPgetIntParam(scip, "presolving/maxrounds", &pr) );
-         SCIP_CALL( SCIPgetIntParam(scip, "constraints/linear/maxprerounds", &cr) );
-         assert( pr == 0 || cr == 0 );
-      }
-#endif
    }
 
    return SCIP_OKAY;

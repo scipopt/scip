@@ -260,35 +260,37 @@ Miscellaneous
 Fixed bugs
 ----------
 
-- disregard deletable flag in IIS generation to reenable removal of unused variables
-- fixed that doc target in cmake builds was not available when using -DBUILD_TESTING=OFF
 - fixed statistic on added linear constraints in propagation
-- keep variable for impossible substitution in presolRoundCardinality() to avoid duplication error
-- restore infeasible original problem in IIS addition filter if interrupt or limit is hit
-- correct integer variable offset when removing duplicate variables from xor constraint
-- add applied clique as constraint when reformulating binary product to avoid problem relaxation
-- fixed indexing in the heap implementation in Dijkstra's algorithm; behavior of heap was and is correct
-- round integral aggregation with epsilon coefficient tolerance to ensure integrality consistency
-- fix locking of indicator variables in cons_cardinality
-- free hashmap in cons_cardinality if problem is freed before transforming
-- fix CONSGETVARS and CONSGETNVARS in cons_cardinality
-- define result of SCIPconsProp() also if no propagation callback is available
 - keep flag rangedrowpropagated of linear and exactlinear constraints for probing bound changes to avoid duplicate constraints by ranged row propagation
+- define result of SCIPconsProp() also if no propagation callback is available
+- keep variable for impossible substitution in cardinality constraint presolving to avoid duplication error
+- fix locking of indicator variables associated with cardinality constraints
+- free hashmap in cardinality constraints if problem is freed before transforming
+- fix CONSGETVARS and CONSGETNVARS callbacks of cardinality constraint handler
+- correct integer variable offset when removing duplicate variables from xor constraint
+- add applied clique as constraint when reformulating a binary product to avoid problem relaxation
+- round coefficients when aggregating integer variables with epsilon coefficient tolerance to ensure consistency of integrality
+- in the components constraint handler, avoid solving last component as a subproblem if all others components were trivial
+- when solving a node is interrupted, create a node branched event for the artificial child node
+- disregard deletable flag in IIS generation to reenable removal of unused variables
+- restore infeasible original problem in IIS addition filter if interrupted or hitting a limit
 - fixed that SCIP did not catch Ctrl+C in concurrent mode
-- SCIPsolveConcurrent now returns with an error when reoptimization is enabled, since the concurrent sub-solvers do not perform reoptimization and the combination could segfault after SCIPfreeReoptSolve
-- in cons_components avoid solving last component if all others are trivial
-- create node branched event for artificial child node after node solving interruptions
+- SCIPsolveConcurrent() now returns with an error when reoptimization is enabled, since the concurrent sub-solvers do not perform reoptimization and the combination could segfault after SCIPfreeReoptSolve()
+- fixed indexing in the heap implementation in Dijkstra's algorithm; behavior of heap was and is correct
+
+Build systems
+-------------
+
+- fixed that the doc target in cmake builds was not available when using -DBUILD_TESTING=OFF
+- add /bigobj compiler flag when compiling with cmake, MSVC, LPS=spx, and in debug mode
 
 Miscellaneous
 -------------
 
-- added EXCLUSIVE=auto option to reserve nodes exclusively and run multiple instances in parallel with slurm assignment
-- PPN used as instance limit per node in auto exclusive mode
-- added DEBUGTOOL=perf option for check scripts to collect perf statistics (new sections @06, @09, @10), including computation and comparison of non-memory-stalling frequency-normalized time while switching to --cpu-freq=medium-medium:Performance for stable frequency scaling
+- added DEBUGTOOL=perf option for check scripts to collect perf statistics (new sections @06, @09, @10), including computation and comparison of non-memory-stalling frequency-normalized time
 - check scripts now write available memory (kB) and the current cumulative CPU ticks (from /proc/stat) before and after the solve to the .out file (new sections @07 and @08)
 - allow to return SCIP_CONSADDED when propagating constraints
-- add /bigobj compiler flag when compiling with cmake, MSVC, LPS=spx, and in debug mode
-- cons_cardinality now parses/writes the indicator variables
+- cardinality constraint handler now parses and writes the indicator variables
 
 @section RN1002 SCIP 10.0.2
 ***************************
