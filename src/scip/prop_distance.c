@@ -556,7 +556,7 @@ SCIP_DECL_EVENTEXEC(eventExecDistcons)
    default:
       assert(eventdata->type == DCONS_TYPE_MINFIXEDPAIR);
       propdata->dopropminfpd[eventdata->considx] = TRUE;
-   }
+   } /*lint !e788*/
 
    return SCIP_OKAY;
 }
@@ -578,7 +578,7 @@ SCIP_RETCODE tryExtractDistconsMinfd(
    SCIP_Bool*            success             /**< pointer to store whether a minfd cons could be extracted */
    )
 {
-   SCIP_Real constant = 0.0;
+   SCIP_Real constant;
    SCIP_EXPR** children;
    SCIP_VAR** powvars;
    SCIP_VAR** linvars;
@@ -648,10 +648,10 @@ SCIP_RETCODE tryExtractDistconsMinfd(
       }
       else if( SCIPisExprPower(scip, child) )
       {
-         SCIP_Real pow;
+         SCIP_Real power;
 
-         pow = SCIPgetExponentExprPow(child);
-         if( !SCIPisEQ(scip, pow, 2.0) )
+         power = SCIPgetExponentExprPow(child);
+         if( !SCIPisEQ(scip, power, 2.0) )
             goto FREEMEMORY;
          if( !SCIPisExprVar(scip, SCIPexprGetChildren(child)[0]) )
             goto FREEMEMORY;
@@ -705,7 +705,7 @@ SCIP_RETCODE tryExtractDistconsMinfd(
 
    /* store constraint */
    SCIP_CALL( SCIPensureBlockMemoryArray(scip, distconss, lendistconss, *ndistconss + 1) );
-   SCIP_CALL( SCIPallocBlockMemory(scip, &(*distconss)[*ndistconss]) );
+   SCIP_CALL( SCIPallocBlockMemory(scip, &(*distconss)[*ndistconss]) ); /*lint !e866*/
 
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(*distconss)[*ndistconss]->vars, npowvars) );
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(*distconss)[*ndistconss]->point, npowvars) );
@@ -988,7 +988,7 @@ SCIP_RETCODE tryExtractDistconsMind(
 
    /* ensure that memory suffices to store constraint */
    SCIP_CALL( SCIPensureBlockMemoryArray(scip, distconss, lendistconss, *ndistconss + 1) );
-   SCIP_CALL( SCIPallocBlockMemory(scip, &(*distconss)[*ndistconss]) );
+   SCIP_CALL( SCIPallocBlockMemory(scip, &(*distconss)[*ndistconss]) ); /*lint !e866*/
 
    (*distconss)[*ndistconss]->lenvars = nprodexprs / 2;
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(*distconss)[*ndistconss]->vars1, nprodexprs / 2) );
@@ -1420,12 +1420,12 @@ SCIP_RETCODE propagateMindConsSimple(
 
    /* compute total sum of squared distances */
    for( i = 0; i < nvars; ++i )
-      totalsquareddist += pow(maxDistVarPair(vars1[i], vars2[i]), 2);
+      totalsquareddist += SQR(maxDistVarPair(vars1[i], vars2[i]));
 
    /* propagate bounds of variables */
    for( i = 0; i < nvars && !*infeasible; ++i )
    {
-      dist = pow(maxDistVarPair(vars1[i], vars2[i]), 2);
+      dist = SQR(maxDistVarPair(vars1[i], vars2[i]));
       SCIP_CALL( propagateMindConsSimple1D(scip, vars1[i], vars2[i], distbound - (totalsquareddist - dist), infeasible, nred) );
    }
 
@@ -1559,14 +1559,14 @@ SCIP_RETCODE propagateMinfdConsSimple(
    /* compute total sum of squared distances */
    for( i = 0; i < nvars; ++i )
    {
-      tmpmaxdist = MAX(ABS(SCIPvarGetLbLocal(vars[i]) - point[i]), ABS(SCIPvarGetUbLocal(vars[i]) - point[i]));
-      totalsquareddist += pow(tmpmaxdist, 2);
+      tmpmaxdist = MAX(ABS(SCIPvarGetLbLocal(vars[i]) - point[i]), ABS(SCIPvarGetUbLocal(vars[i]) - point[i])); /*lint !e666*/
+      totalsquareddist += SQR(tmpmaxdist);
    }
 
    /* propagate bounds of variables */
    for( i = 0; i < nvars && !*infeasible; ++i )
    {
-      dist = MAX(ABS(SCIPvarGetLbLocal(vars[i]) - point[i]), ABS(SCIPvarGetUbLocal(vars[i]) - point[i]));
+      dist = MAX(ABS(SCIPvarGetLbLocal(vars[i]) - point[i]), ABS(SCIPvarGetUbLocal(vars[i]) - point[i])); /*lint !e666*/
       dist = SQR(dist);
 
       SCIP_CALL( propagateMinfdConsSimple1D(scip, vars[i], point[i], sqdistbound - (totalsquareddist - dist),
@@ -1663,7 +1663,7 @@ SCIP_Bool intersectionPointsEdgeCloseEnough(
       intersection[d] = edgecoord;
       diff = point[d] - edgecoord;
       sqdistval -= diff * diff;
-      tmpidx = tmpidx >> 1;
+      tmpidx = tmpidx >> 1;  /*lint !e702*/
    }
 
    /*
@@ -1844,8 +1844,8 @@ SCIP_RETCODE propagatePairedDistConsFacet(
 {
    int propcoords[4];
    int npropcoords = 0;
-   SCIP_Real proplb = -SCIP_REAL_MAX;
-   SCIP_Real propub = SCIP_REAL_MAX;
+   SCIP_Real proplb;
+   SCIP_Real propub;
    SCIP_Real boundguess;
    SCIP_Real step;
    int maxiter;
@@ -1876,7 +1876,7 @@ SCIP_RETCODE propagatePairedDistConsFacet(
       return SCIP_OKAY;
 
    /* collect information about the box domain of the common variables */
-   nverts = 1u << dim;
+   nverts = 1u << dim; /*lint !e713*/
    for( v = 0, pos = 0; v < nverts; ++v )
    {
       tmpv = v;
@@ -1885,7 +1885,7 @@ SCIP_RETCODE propagatePairedDistConsFacet(
          commonbox->vertices[pos] =
             (tmpv % 2) == 0 ? SCIPvarGetLbLocal(commonvars[d]) : SCIPvarGetUbLocal(commonvars[d]);
 
-         /* keep track of entries that can be changed due to propagation 
+         /* keep track of entries that can be changed due to propagation
           * to find an improvement on the lower bound, we need to find an box that is infeasible after reducing the upper bound
           * and vice versa for the upper bound
           */
@@ -1895,7 +1895,7 @@ SCIP_RETCODE propagatePairedDistConsFacet(
                propcoords[npropcoords++] = pos;
          }
 
-         tmpv = tmpv >> 1;
+         tmpv = tmpv >> 1; /*lint !e702*/
       }
    }
    assert(dim != 2 || npropcoords == 1 || npropcoords == 2);
@@ -1923,7 +1923,7 @@ SCIP_RETCODE propagatePairedDistConsFacet(
        * For this reason, if we want to propagate a lower bound, we update the upper bound
        * of the box to see whether all parts with a worse lower bound can be cut off. */
       for( v = 0; v < npropcoords; ++v )
-         commonbox->vertices[propcoords[v]] = boundguess;
+         commonbox->vertices[propcoords[v]] = boundguess; /*lint !e644*/
       if( doproplb )
          commonbox->ubs[propidx] = boundguess;
       else
@@ -1996,7 +1996,7 @@ SCIP_RETCODE propagateMinpdCons(
    *infeasible = FALSE;
 
    /* prepare box domains for common and distinct variables of pair of mind conss */
-   nverts = 1u << minpdcons->dimension;
+   nverts = 1u << minpdcons->dimension; /*lint !e713*/
    commonbox.nvertices = nverts;
    commonbox.dim = minpdcons->dimension;
    box1.nvertices = nverts;
@@ -2016,7 +2016,7 @@ SCIP_RETCODE propagateMinpdCons(
             (tmpv % 2) == 0 ? SCIPvarGetLbLocal(minpdcons->vars1[d]) : SCIPvarGetUbLocal(minpdcons->vars1[d]);
          box2.vertices[pos] =
             (tmpv % 2) == 0 ? SCIPvarGetLbLocal(minpdcons->vars2[d]) : SCIPvarGetUbLocal(minpdcons->vars2[d]);
-         tmpv = tmpv >> 1;
+         tmpv = tmpv >> 1; /*lint !e702*/
       }
    }
 
@@ -2142,7 +2142,7 @@ SCIP_RETCODE propagateMinfpdCons(
    *infeasible = FALSE;
 
    /* prepare box domains for common and distinct variables of pair of mind conss */
-   nverts = pow(2, minfpdcons->dimension);
+   nverts = pow(2, minfpdcons->dimension); /*lint !e747 !e524*/
    commonbox.nvertices = nverts;
    commonbox.dim = minfpdcons->dimension;
    box1.nvertices = 1;
@@ -2295,7 +2295,7 @@ SCIP_RETCODE clearPropData(
 
    for( i = 0; i < propdata->nminpdconss; ++i )
    {
-      SCIPfreeBlockMemory(scip, &propdata->minpdconss[i]);
+      SCIPfreeBlockMemory(scip, &propdata->minpdconss[i]); /*lint !e866*/
    }
    SCIPfreeBlockMemoryArrayNull(scip, &propdata->minpdconss, propdata->lenminpdconss);
    propdata->nminpdconss = 0;
@@ -2303,7 +2303,7 @@ SCIP_RETCODE clearPropData(
 
    for( i = 0; i < propdata->nminfpdconss; ++i )
    {
-      SCIPfreeBlockMemory(scip, &propdata->minfpdconss[i]);
+      SCIPfreeBlockMemory(scip, &propdata->minfpdconss[i]); /*lint !e866*/
    }
    SCIPfreeBlockMemoryArrayNull(scip, &propdata->minfpdconss, propdata->lenminfpdconss);
    propdata->nminfpdconss = 0;
@@ -2621,7 +2621,7 @@ SCIP_RETCODE tryCreateMinpdCons(
    SCIP_CALL( SCIPensureBlockMemoryArray(scip, minpdconss, lenminpdconss, *nminpdconss + 1) );
 
    /* store information about pair of mind conss */
-   SCIP_CALL( SCIPallocBlockMemory(scip, &(*minpdconss)[*nminpdconss]) );
+   SCIP_CALL( SCIPallocBlockMemory(scip, &(*minpdconss)[*nminpdconss]) ); /*lint !e866*/
    mdc = (*minpdconss)[*nminpdconss];
    mdc->dimension = dim;
    for( d = 0; d < dim; ++d )
@@ -2693,7 +2693,7 @@ SCIP_RETCODE tryCreateMinfpdCons(
    SCIP_CALL( SCIPensureBlockMemoryArray(scip, minfpdconss, lenminfpdconss, *nminfpdconss + 1) );
 
    /* store information about minfpd cons */
-   SCIP_CALL( SCIPallocBlockMemory(scip, &(*minfpdconss)[*nminfpdconss]) );
+   SCIP_CALL( SCIPallocBlockMemory(scip, &(*minfpdconss)[*nminfpdconss]) ); /*lint !e866*/
    mdc = (*minfpdconss)[*nminfpdconss];
    mdc->dimension = dim;
    for( d = 0; d < dim; ++d )
@@ -2839,22 +2839,22 @@ SCIP_RETCODE registerPropagators(
 
    if( propdata->nmindconss > 0 )
    {
-      SCIP_CALL( SCIPallocBlockMemory(scip, &propdata->props[propdata->nprops]) );
+      SCIP_CALL( SCIPallocBlockMemory(scip, &propdata->props[propdata->nprops]) ); /*lint !e866*/
       propdata->props[propdata->nprops++]->prop = propMind;
    }
    if( propdata->nminfdconss > 0 )
    {
-      SCIP_CALL( SCIPallocBlockMemory(scip, &propdata->props[propdata->nprops]) );
+      SCIP_CALL( SCIPallocBlockMemory(scip, &propdata->props[propdata->nprops]) ); /*lint !e866*/
       propdata->props[propdata->nprops++]->prop = propMinfd;
    }
    if( propdata->nminpdconss > 0 )
    {
-      SCIP_CALL( SCIPallocBlockMemory(scip, &propdata->props[propdata->nprops]) );
+      SCIP_CALL( SCIPallocBlockMemory(scip, &propdata->props[propdata->nprops]) ); /*lint !e866*/
       propdata->props[propdata->nprops++]->prop = propMinpd;
    }
    if( propdata->nminfpdconss > 0 )
    {
-      SCIP_CALL( SCIPallocBlockMemory(scip, &propdata->props[propdata->nprops]) );
+      SCIP_CALL( SCIPallocBlockMemory(scip, &propdata->props[propdata->nprops]) ); /*lint !e866*/
       propdata->props[propdata->nprops++]->prop = propMinfpd;
    }
 
