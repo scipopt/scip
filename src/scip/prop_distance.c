@@ -953,7 +953,11 @@ SCIP_RETCODE tryExtractDistconsMind(
       for( i = start; i < npowexprs && (!found1 || !found2); ++i )
       {
          if( used[i] )
+         {
+            if( i == start )
+               ++start;
             continue;
+         }
 
          if( !found1 && powvars[i] == var1 )
          {
