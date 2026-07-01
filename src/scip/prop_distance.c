@@ -2895,6 +2895,21 @@ SCIP_DECL_PROPFREE(propFreeDistance)
    return SCIP_OKAY;
 }
 
+/** copy method for constraint handler plugins (called when SCIP copies plugins) */
+static
+SCIP_DECL_PROPCOPY(propCopyDistance)
+{  /*lint --e{715}*/
+   assert(scip != NULL);
+   assert(prop != NULL);
+
+   SCIP_STRINGEQ( SCIPpropGetName(prop), PROP_NAME, SCIP_INVALIDCALL );
+
+   /* call inclusion method of propagator */
+   SCIP_CALL( SCIPincludePropDistance(scip) );
+
+   return SCIP_OKAY;
+}
+
 /** execution method of propagator */
 static
 SCIP_DECL_PROPEXEC(propExecDistance)
@@ -2992,6 +3007,7 @@ SCIP_RETCODE SCIPincludePropDistance(
    /* set optional callbacks via setter functions */
    SCIP_CALL( SCIPsetPropExit(scip, prop, propExitDistance) );
    SCIP_CALL( SCIPsetPropFree(scip, prop, propFreeDistance) );
+   SCIP_CALL( SCIPsetPropCopy(scip, prop, propCopyDistance) );
 
    SCIP_CALL( SCIPaddIntParam(scip, "propagating/" PROP_NAME "/maxndconssforpairs",
          "maximum number of distance constraints for which propagation of pairs is applied",
