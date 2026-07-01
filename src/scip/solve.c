@@ -6534,8 +6534,7 @@ SCIP_RETCODE SCIPsolveCIP(
 
       branched = (tree->nchildren > 0);
 
-      if( stopped )
-         break;
+      assert(!(*restart) || !stopped);
 
       /* check for restart */
       if( !(*restart) && !postpone )
@@ -6544,7 +6543,7 @@ SCIP_RETCODE SCIPsolveCIP(
          SCIPvisualSolvedNode(stat->visual, set, stat, focusnode);
 
          /* check, if the current solution is feasible */
-         if( !infeasible )
+         if( !stopped && !infeasible )
          {
             SCIP_Bool feasible;
 
@@ -6605,7 +6604,7 @@ SCIP_RETCODE SCIPsolveCIP(
                }
             }
          }
-         else if( !unbounded || branched )
+         else if( branched || ( !stopped && !unbounded ) )
          {
             /* node solution is not feasible */
             if( !branched )
@@ -6660,6 +6659,9 @@ SCIP_RETCODE SCIPsolveCIP(
             SCIP_CALL( SCIPeventProcess(&event, set, NULL, NULL, NULL, eventfilter) );
          }
          assert(BMSgetNUsedBufferMemory(mem->buffer) == 0);
+
+         if( stopped )
+            break;
 
          /* if no branching was created, the node was not cut off, but its lower bound is still smaller than
           * the cutoff bound, we have to branch on a non-fixed variable;
@@ -6743,6 +6745,8 @@ SCIP_RETCODE SCIPsolveCIP(
       else if( postpone )
       {
          SCIP_NODE* newfocusnode = NULL;
+
+         assert(!stopped);
 
          /* @todo should we re-install the old focus node in order to somehow set the forks more clever? */
          SCIP_CALL( SCIPnodeFocus(&newfocusnode, blkmem, set, messagehdlr, stat, transprob, origprob, primal, tree, reopt, lp,
