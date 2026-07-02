@@ -3727,7 +3727,9 @@ SCIP_RETCODE presolRoundIndicator(
          SCIP_CALL( SCIPaddVarLocksType(scip, consdata->binvar, SCIP_LOCKTYPE_MODEL, 0, -1) );
          SCIP_CALL( SCIPaddVarLocksType(scip, var, SCIP_LOCKTYPE_MODEL, 0, 1) );
 
-         /* change binvary variable */
+         /* change binary variable */
+         SCIP_CALL( SCIPcaptureVar(scip, var) );
+         SCIP_CALL( SCIPreleaseVar(scip, &consdata->binvar) );
          consdata->binvar = var;
       }
    }
@@ -5999,7 +6001,11 @@ SCIP_DECL_CONSDELETE(consDeleteIndicator)
       assert( SCIPconsGetNUpgradeLocks((*consdata)->lincons) == 0 );
    }
 
-   /* release linear constraint and slack variable */
+   /* release binary variable, slack variable, and linear constraint */
+   if( (*consdata)->binvar != NULL )
+   {
+      SCIP_CALL( SCIPreleaseVar(scip, &(*consdata)->binvar) );
+   }
    SCIP_CALL( SCIPreleaseVar(scip, &(*consdata)->slackvar) );
    SCIP_CALL( SCIPreleaseCons(scip, &(*consdata)->lincons) );
 
@@ -6062,7 +6068,8 @@ SCIP_DECL_CONSTRANS(consTransIndicator)
    consdata->activeone = sourcedata->activeone;
    assert( consdata != NULL );
 
-   /* capture slack variable and linear constraint */
+   /* capture binary variable, slack variable, and linear constraint */
+   SCIP_CALL( SCIPcaptureVar(scip, consdata->binvar) );
    SCIP_CALL( SCIPcaptureVar(scip, consdata->slackvar) );
    SCIP_CALL( SCIPcaptureCons(scip, consdata->lincons) );
 
@@ -8170,7 +8177,12 @@ SCIP_RETCODE SCIPcreateConsIndicatorGeneric(
       SCIP_CALL( consdataCreate(scip, conshdlr, conshdlrdata, name, &consdata, conshdlrdata->eventhdlrrestart,
             binvar, activeone, lessthanineq, slackvar, lincons, linconsactive) );
       assert( consdata != NULL );
+
       /* do not need to capture slack variable and linear constraint here */
+      if( consdata->binvar != NULL )
+      {
+         SCIP_CALL( SCIPcaptureVar(scip, consdata->binvar) );
+      }
 
       /* create constraint */
       SCIP_CALL( SCIPcreateCons(scip, cons, name, conshdlr, consdata, initial, separate, enforce, check, propagate,
@@ -8378,7 +8390,11 @@ SCIP_RETCODE SCIPcreateConsIndicatorGenericLinCons(
       }
    }
 
-   /* capture slack variable and linear constraint */
+   /* capture binary variable, slack variable, and linear constraint */
+   if( consdata != NULL )
+   {
+      SCIP_CALL( SCIPcaptureVar(scip, consdata->binvar) );
+   }
    SCIP_CALL( SCIPcaptureVar(scip, slackvar) );
    SCIP_CALL( SCIPcaptureCons(scip, lincons) );
 
@@ -8682,7 +8698,11 @@ SCIP_RETCODE SCIPcreateConsIndicatorGenericLinConsPure(
       }
    }
 
-   /* capture slack variable and linear constraint */
+   /* capture binary variable and linear constraint */
+   if( consdata != NULL )
+   {
+      SCIP_CALL( SCIPcaptureVar(scip, consdata->binvar) );
+   }
    SCIP_CALL( SCIPcaptureCons(scip, lincons) );
 
    return SCIP_OKAY;
@@ -8941,6 +8961,7 @@ SCIP_RETCODE SCIPsetBinaryVarIndicator(
       if ( ! consdata->activeone )
          SCIP_CALL( SCIPgetNegatedVar(scip, var, &var) );
 
+      SCIP_CALL( SCIPcaptureVar(scip, var) );
       consdata->binvar = var;
 
       conshdlr = SCIPconsGetHdlr(cons);
@@ -8971,6 +8992,8 @@ SCIP_RETCODE SCIPsetBinaryVarIndicator(
    {
       if ( ! consdata->activeone )
          SCIP_CALL( SCIPgetNegatedVar(scip, binvar, &binvar) );
+
+      SCIP_CALL( SCIPcaptureVar(scip, binvar) );
       consdata->binvar = binvar;
    }
 
