@@ -76,6 +76,7 @@ Fixed bugs
 - round coefficients when aggregating integer variables with epsilon coefficient tolerance to ensure consistency of integrality
 - in the components constraint handler, avoid solving last component as a subproblem if all others components were trivial
 - when solving a node is interrupted, create a node branched event for the artificial child node
+- add missing capture of binary variable in indicator constraint handler
 - disregard deletable flag in IIS generation to reenable removal of unused variables
 - restore infeasible original problem in IIS addition filter if interrupted or hitting a limit
 - fixed that SCIP did not catch Ctrl+C in concurrent mode
