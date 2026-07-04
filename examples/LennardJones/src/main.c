@@ -37,6 +37,7 @@
 
 #include "scip/scip.h"
 #include "scip/scipdefplugins.h"
+#include "nlhdlr_lj.h"
 
 #define BOX 9.0
 #define MINSEP 0.467856  /* minimal separation distance of particles */

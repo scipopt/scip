@@ -68,7 +68,7 @@ include $(SCIPDIR)/make/make.project
 #-----------------------------------------------------------------------------
 
 MAINNAME	=	lj
-MAINOBJ		=	main.o
+MAINOBJ		=	main.o nlhdlr_lj.o
 
 MAINSRC		=	$(addprefix $(SRCDIR)/,$(MAINOBJ:.o=.c))
 
