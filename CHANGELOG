@@ -206,7 +206,6 @@ Interface changes
 - enum SCIP_BOUNDCHGTYPE got extended by new type SCIP_BOUNDCHGTYPE_SYMINFER
 - exchanged definition of SYM_SPEC_BINARY and SYM_SPEC_INTEGER
 - removed SYM_TIMING_DURINGPRESOL and SYM_COMPUTETIMING_DURINGPRESOL, and replaced definition of SYM_TIMING_AFTERPRESOL
-- new data structures DISTCONS_MIN, DISTCONS_MINFIXED, DISTCONS_MINPAIR, DISTCONS_MINFPAIR for storing distance constraints in prop_distance.c
 
 @page RN10 Release notes for SCIP 10
 
