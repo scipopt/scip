@@ -217,8 +217,8 @@ SCIP_DECL_NLHDLRDETECT(nlhdlrDetectLJ)
    SCIP_Bool doabove = FALSE;
    int i;
 
-   /* if no under- or overestimators are needed, then do nothing */
-   if( (*enforcing & SCIP_NLHDLR_METHOD_SEPABOTH) == SCIP_NLHDLR_METHOD_SEPABOTH )
+   /* if no under- or overestimators and no activity are needed, then do nothing */
+   if( (*enforcing & (SCIP_NLHDLR_METHOD_SEPABOTH | SCIP_NLHDLR_METHOD_ACTIVITY)) == (SCIP_NLHDLR_METHOD_SEPABOTH | SCIP_NLHDLR_METHOD_ACTIVITY) )
       return SCIP_OKAY;
 
    /* look for an expression r^(-6) - r^(-3) - p */
@@ -300,26 +300,26 @@ SCIP_DECL_NLHDLRDETECT(nlhdlrDetectLJ)
    assert(dobelow != doabove);
    if( dobelow )
    {
-      /* if someone already provides good underestimators, then skip */
-      if( *enforcing & SCIP_NLHDLR_METHOD_SEPABELOW )
-         return SCIP_OKAY;
-      *participating = SCIP_NLHDLR_METHOD_SEPABELOW;
+      /* if noone yet provides good underestimators, then we do */
+      if( !(*enforcing & SCIP_NLHDLR_METHOD_SEPABELOW) )
+         *participating = SCIP_NLHDLR_METHOD_SEPABELOW;
    }
    else
    {
-      /* if someone already provides good overestimators, then skip */
-      if( *enforcing & SCIP_NLHDLR_METHOD_SEPAABOVE )
-         return SCIP_OKAY;
-      *participating = SCIP_NLHDLR_METHOD_SEPAABOVE;
+      /* if noone yet provides good overestimators, then we do */
+      if( !(*enforcing & SCIP_NLHDLR_METHOD_SEPAABOVE) )
+         *participating = SCIP_NLHDLR_METHOD_SEPAABOVE;
    }
 
-   /* our method is enforcing */
+   /* our estimators are enforcing */
    *enforcing |= *participating;
 
+   *participating |= SCIP_NLHDLR_METHOD_ACTIVITY;
+
    /* we need an auxiliary variable for r and will use its activity for the under- or overestimator */
-   SCIP_CALL( SCIPregisterExprUsageNonlinear(scip, r, TRUE, FALSE, dobelow, doabove) );
+   SCIP_CALL( SCIPregisterExprUsageNonlinear(scip, r, TRUE, TRUE, dobelow, doabove) );
    /* we need an (auxiliary) variable for p */
-   SCIP_CALL( SCIPregisterExprUsageNonlinear(scip, p, TRUE, FALSE, FALSE, FALSE) );
+   SCIP_CALL( SCIPregisterExprUsageNonlinear(scip, p, TRUE, TRUE, FALSE, FALSE) );
 
    SCIP_CALL( SCIPallocBlockMemory(scip, nlhdlrexprdata) );
    (*nlhdlrexprdata)->r = r;
@@ -573,18 +573,111 @@ SCIP_DECL_NLHDLRSOLLINEARIZE(nlhdlrSollinearizeLJ)
 
 
 /** nonlinear handler interval evaluation callback */
-#if 0
 static
 SCIP_DECL_NLHDLRINTEVAL(nlhdlrIntevalLJ)
 { /*lint --e{715}*/
-   SCIPerrorMessage("method of lj nonlinear handler not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
+   SCIP_ROUNDMODE origroundmode;
+   SCIP_INTERVAL r;
+   SCIP_INTERVAL p;
+   SCIP_Real pow6, pow3;
+
+   assert(nlhdlrexprdata != NULL);
+
+   r = SCIPexprGetActivity(nlhdlrexprdata->r);
+
+   if( SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, r) )
+   {
+      SCIPintervalSetEmpty(interval);
+      return SCIP_OKAY;
+   }
+
+   origroundmode = SCIPintervalGetRoundingMode();
+
+   /* minimum of r^-6 - r^-3 */
+   if( r.inf < RMINIMUM && r.sup > RMINIMUM )
+   {
+      /* set interval to pow(RMINIMUM, -6) - pow(RMINIMUM, -3) = -0.25 */
+      interval->inf = -0.25;
+   }
+   else if( r.inf >= RMINIMUM )
+   {
+      /* function is monotonical increasing, so minimum is at r.inf */
+      pow6 = SCIPintervalPowerScalarIntegerInf(r.inf, -6.0);
+      pow3 = SCIPintervalPowerScalarIntegerSup(r.inf, -3.0);
+      SCIPintervalSetRoundingModeDownwards();
+      interval->inf = pow6 - pow3;
+      SCIPintervalSetRoundingMode(origroundmode);
+   }
+   else
+   {
+      /* function is monotonical decreasing, so minimum is at r.sup */
+      assert(r.sup < RMINIMUM);
+      pow6 = SCIPintervalPowerScalarIntegerInf(r.sup, -6.0);
+      pow3 = SCIPintervalPowerScalarIntegerSup(r.sup, -3.0);
+      SCIPintervalSetRoundingModeDownwards();
+      interval->inf = pow6 - pow3;
+      SCIPintervalSetRoundingMode(origroundmode);
+   }
+
+   /* maximum of r^-6 - r^-3 */
+   if( r.inf <= 0.0 || r.sup >= SCIP_INTERVAL_INFINITY )
+   {
+      interval->sup = SCIP_INTERVAL_INFINITY;
+   }
+   else if( r.inf < RMINIMUM && r.sup > RMINIMUM )
+   {
+      /* max is either at r.inf or r.sup */
+      SCIP_Real sup2;
+
+      /* function value at r.inf */
+      pow6 = SCIPintervalPowerScalarIntegerSup(r.inf, -6.0);
+      pow3 = SCIPintervalPowerScalarIntegerInf(r.inf, -3.0);
+      SCIPintervalSetRoundingModeUpwards();
+      interval->sup = pow6 - pow3;
+      SCIPintervalSetRoundingMode(origroundmode);
+
+      pow6 = SCIPintervalPowerScalarIntegerSup(r.sup, -6.0);
+      pow3 = SCIPintervalPowerScalarIntegerInf(r.sup, -3.0);
+      SCIPintervalSetRoundingModeUpwards();
+      sup2 = pow6 - pow3;
+      SCIPintervalSetRoundingMode(origroundmode);
+
+      if( sup2 > interval->sup )
+         interval->sup = sup2;
+   }
+   else if( r.inf >= RMINIMUM )
+   {
+      /* function is monotonical increasing, so maximum is at r.sup */
+      pow6 = SCIPintervalPowerScalarIntegerSup(r.sup, -6.0);
+      pow3 = SCIPintervalPowerScalarIntegerInf(r.sup, -3.0);
+      SCIPintervalSetRoundingModeUpwards();
+      interval->sup = pow6 - pow3;
+      SCIPintervalSetRoundingMode(origroundmode);
+   }
+   else
+   {
+      /* function is monotonical decreasing, so maximum is at r.inf */
+      assert(r.sup < RMINIMUM);
+      assert(r.inf > 0.0);
+
+      pow6 = SCIPintervalPowerScalarIntegerSup(r.inf, -6.0);
+      pow3 = SCIPintervalPowerScalarIntegerInf(r.inf, -3.0);
+      SCIPintervalSetRoundingModeUpwards();
+      interval->sup = pow6 - pow3;
+      SCIPintervalSetRoundingMode(origroundmode);
+   }
+
+   SCIPdebugMsg(scip, "r = [%g,%g] -> f(r) = [%g,%g]\n", r.inf, r.sup, interval->inf, interval->sup);
+
+   SCIPintervalMulScalar(SCIP_INTERVAL_INFINITY, interval, *interval, nlhdlrexprdata->rcoef);
+
+   /* add pcoef * p */
+   p = SCIPexprGetActivity(nlhdlrexprdata->p);
+   SCIPintervalMulScalar(SCIP_INTERVAL_INFINITY, &p, p, nlhdlrexprdata->pcoef);
+   SCIPintervalAdd(SCIP_INTERVAL_INFINITY, interval, *interval, p);
 
    return SCIP_OKAY;
 }
-#else
-#define nlhdlrIntevalLJ NULL
-#endif
 
 
 /** nonlinear handler callback for reverse propagation */
