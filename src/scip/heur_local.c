@@ -120,7 +120,7 @@ struct LS_IdxCoeff
 };
 typedef struct LS_IdxCoeff LS_IDXCOEFF;
 
-/** variable structure (model + search state) */
+/** variable structure (static model data) */
 struct LS_Var
 {
    LS_VARTYPE            vartype;            /**< variable type */
@@ -131,30 +131,22 @@ struct LS_Var
    int                   ncoeffs;            /**< number of constraint appearances */
    int                   coeffssize;         /**< allocated size of coeffs array */
    int                   objidx;             /**< position in objvaridxs[], -1 if not in obj */
-   int                   allowincstep;       /**< tabu: earliest step allowing increase */
-   int                   allowdecstep;       /**< tabu: earliest step allowing decrease */
-   int                   lastincstep;        /**< step of last increase */
-   int                   lastdecstep;        /**< step of last decrease */
 };
 typedef struct LS_Var LS_VAR;
 
-/** constraint structure (model + search state, normalized) */
+/** constraint structure (static model data, normalized) */
 struct LS_Constraint
 {
    SCIP_Real             rhs;                /**< normalized right hand side */
    LS_IDXCOEFF*          coeffs;             /**< normalized variable coefficients */
    int                   ncoeffs;            /**< number of variable appearances */
    int                   coeffssize;         /**< allocated size of coeffs array */
-   SCIP_Real             lhs;                /**< current LHS = sum(norm_coeff * value) */
-   int                   weight;             /**< penalty weight (integer) */
-   int                   unsatidx;           /**< position in unsatidxs, -1 if satisfied */
 };
 typedef struct LS_Constraint LS_CONSTRAINT;
 
-/** problem data */
+/** problem data (static model) */
 struct LS_Problem
 {
-   SCIP*                 scip;               /**< SCIP data structure */
    LS_VAR*               vars;               /**< variables */
    int                   nvars;              /**< number of variables */
    int                   varssize;           /**< allocated size of vars array */
@@ -163,35 +155,31 @@ struct LS_Problem
    int                   constraintssize;    /**< allocated size of constraints array */
    int*                  objvaridxs;         /**< variable indices with nonzero obj coeff */
    int                   nobjvars;           /**< number of objective variables */
-   int*                  unsatidxs;          /**< violated constraint indices */
-   int                   nunsat;             /**< number of violated constraints */
    int*                  binaryidxs;         /**< binary variable indices */
    int                   nbinary;            /**< number of binary variables */
    int                   nnonzeros;          /**< total number of nonzero entries */
-   SCIP_Real*            incumbentassignment; /**< current variable assignment */
-   SCIP_Real             incumbentobjective; /**< current objective value */
 };
 typedef struct LS_Problem LS_PROBLEM;
 
-/** solver data */
+/** solver data (dynamic solving state) */
 struct LS_Solver
 {
    LS_PROBLEM*           problem;            /**< problem data */
-   SCIP_RANDNUMGEN*      randnumgen;         /**< random number generator */
    int                   curstep;            /**< current iteration step */
    SCIP_Bool             iskeepfeas;         /**< currently in lift-move chain? */
    SCIP_Real             objcutoff;          /**< objective cutoff bound */
    int                   objweight;          /**< objective scoring weight */
-   int                   tabubase;           /**< minimum tabu tenure */
-   int                   tabuvariation;      /**< random tabu variation */
-   int                   smoothprob;         /**< smooth probability (out of 10000) */
-   int                   sampleunsat;        /**< unsat constraints to sample */
-   int                   bmsunsatinfeas;     /**< max moves scored (infeasible) */
-   int                   bmsunsatfeas;       /**< max moves scored (feasible) */
-   int                   samplesat;          /**< sat constraints to sample */
-   int                   bmssat;             /**< max moves scored (sat) */
-   int                   bmsflip;            /**< binary flip candidates */
-   int                   bmsrandom;          /**< random move candidates */
+   SCIP_Real*            incumbentassignment; /**< current variable assignment */
+   SCIP_Real             incumbentobjective; /**< current objective value */
+   int*                  unsatidxs;          /**< violated constraint indices */
+   int                   nunsat;             /**< number of violated constraints */
+   SCIP_Real*            lhs;                /**< per-constraint current LHS */
+   int*                  weight;             /**< per-constraint penalty weight */
+   int*                  unsatidx;           /**< per-constraint position in unsatidxs */
+   int*                  allowincstep;       /**< per-variable tabu: earliest allow increase */
+   int*                  allowdecstep;       /**< per-variable tabu: earliest allow decrease */
+   int*                  lastincstep;        /**< per-variable step of last increase */
+   int*                  lastdecstep;        /**< per-variable step of last decrease */
    int*                  neighborvaridxs;    /**< neighbor candidate var indices */
    SCIP_Real*            neighborvalues;     /**< neighbor candidate move values */
    int                   neighborsize;       /**< current number of neighbors */
@@ -209,8 +197,6 @@ struct LS_Solver
    int*                  affectedvars;       /**< stack of affected var indices */
    int                   naffected;          /**< number of affected variables */
    SCIP_Longint          subscore;           /**< secondary score (set by tightScore) */
-   int                   verbosity;          /**< verbosity level */
-   int                   callbackeffort;     /**< effort between termination checks */
    int                   effortatlastcallback; /**< effort at last termination check */
    int                   effortatlastimprovement; /**< effort at last improvement */
    int                   totaleffort;        /**< total effort spent */
@@ -219,7 +205,6 @@ struct LS_Solver
    int                   prevviolations;     /**< violations at last progress check */
    SCIP_Real             prevobjective;      /**< objective at last progress check */
    SCIP_Bool             isimproved;         /**< improved at last progress check? */
-   int                   checkiterations;    /**< iterations between progress checks */
 };
 typedef struct LS_Solver LS_SOLVER;
 
@@ -267,7 +252,6 @@ SCIP_RETCODE lsProblemCreate(
 
    SCIP_CALL( SCIPallocBlockMemory(scip, &prob) );
    BMSclearMemory(prob);
-   prob->scip = scip;
 
    *problem = prob;
 
@@ -290,17 +274,11 @@ SCIP_RETCODE lsProblemFree(
    prob = *problem;
    assert(prob != NULL);
 
-   if( prob->unsatidxs != NULL )
-      SCIPfreeBlockMemoryArray(scip, &prob->unsatidxs, prob->nconstraints);
-
    if( prob->binaryidxs != NULL )
       SCIPfreeBlockMemoryArray(scip, &prob->binaryidxs, prob->nbinary);
 
    if( prob->objvaridxs != NULL )
       SCIPfreeBlockMemoryArray(scip, &prob->objvaridxs, prob->nobjvars);
-
-   if( prob->incumbentassignment != NULL )
-      SCIPfreeBlockMemoryArray(scip, &prob->incumbentassignment, prob->nvars);
 
    if( prob->constraints != NULL )
    {
@@ -348,13 +326,12 @@ SCIP_RETCODE lsProblemAddVar(
    if( problem->nvars >= problem->varssize )
    {
       newsize = SCIPcalcMemGrowSize(scip, problem->nvars + 1);
-      SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &problem->vars, problem->varssize, newsize)
-);
+      SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &problem->vars, problem->varssize, newsize) );
       problem->varssize = newsize;
    }
 
    *idx = problem->nvars;
-   var = &problem->vars[problem->nvars];
+   var = problem->vars + problem->nvars;
    var->vartype = vartype;
    var->lb = lb;
    var->ub = ub;
@@ -363,10 +340,6 @@ SCIP_RETCODE lsProblemAddVar(
    var->ncoeffs = 0;
    var->coeffssize = 0;
    var->objidx = -1;
-   var->allowincstep = 0;
-   var->allowdecstep = 0;
-   var->lastincstep = 0;
-   var->lastdecstep = 0;
 
    ++problem->nvars;
 
@@ -419,13 +392,10 @@ SCIP_RETCODE lsProblemAddConstraint(
    if( idx != NULL )
       *idx = problem->nconstraints;
 
-   constraint = &problem->constraints[problem->nconstraints];
+   constraint = problem->constraints + problem->nconstraints;
    constraint->rhs = (rhs - constant) / scalar;
    constraint->ncoeffs = 0;
    constraint->coeffssize = ncoeffs;
-   constraint->lhs = 0.0;
-   constraint->weight = 1;
-   constraint->unsatidx = -1;
 
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &constraint->coeffs, constraint->coeffssize) );
 
@@ -433,12 +403,11 @@ SCIP_RETCODE lsProblemAddConstraint(
    {
       normcoeff = coeffvals[i] / scalar;
 
-      var = &problem->vars[varidxs[i]];
+      var = problem->vars + varidxs[i];
       if( var->ncoeffs >= var->coeffssize )
       {
          newsize = SCIPcalcMemGrowSize(scip, var->ncoeffs + 1);
-         SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &var->coeffs, var->coeffssize, newsize)
-);
+         SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &var->coeffs, var->coeffssize, newsize) );
          var->coeffssize = newsize;
       }
 
@@ -463,40 +432,42 @@ SCIP_RETCODE lsProblemAddConstraint(
 
 /** inserts a constraint into the unsatisfied set */
 static
-void lsProblemInsertUnsat(
-   LS_PROBLEM*           problem,            /**< problem */
+void lsSolverInsertUnsat(
+   LS_SOLVER*            solver,             /**< solver */
    int                   constridx           /**< constraint index */
    )
 {
-   assert(problem != NULL);
-   assert(constridx >= 0 && constridx < problem->nconstraints);
-   assert(problem->constraints[constridx].unsatidx == -1);
-   assert(problem->nunsat < problem->nconstraints);
+   assert(solver != NULL);
+   assert(constridx >= 0);
+   assert(constridx < solver->problem->nconstraints);
+   assert(solver->unsatidx[constridx] == -1);
+   assert(solver->nunsat < solver->problem->nconstraints);
 
-   problem->constraints[constridx].unsatidx = problem->nunsat;
-   problem->unsatidxs[problem->nunsat++] = constridx;
+   solver->unsatidx[constridx] = solver->nunsat;
+   solver->unsatidxs[solver->nunsat++] = constridx;
 }
 
 /** removes a constraint from the unsatisfied set */
 static
-void lsProblemRemoveUnsat(
-   LS_PROBLEM*           problem,            /**< problem */
+void lsSolverRemoveUnsat(
+   LS_SOLVER*            solver,             /**< solver */
    int                   constridx           /**< constraint index */
    )
 {
    int lastconstridx;
    int pos;
 
-   assert(problem != NULL);
-   assert(constridx >= 0 && constridx < problem->nconstraints);
-   assert(problem->constraints[constridx].unsatidx >= 0);
-   assert(problem->nunsat > 0);
+   assert(solver != NULL);
+   assert(constridx >= 0);
+   assert(constridx < solver->problem->nconstraints);
+   assert(solver->unsatidx[constridx] >= 0);
+   assert(solver->nunsat > 0);
 
-   pos = problem->constraints[constridx].unsatidx;
-   lastconstridx = problem->unsatidxs[--problem->nunsat];
-   problem->unsatidxs[pos] = lastconstridx;
-   problem->constraints[lastconstridx].unsatidx = pos;
-   problem->constraints[constridx].unsatidx = -1;
+   pos = solver->unsatidx[constridx];
+   lastconstridx = solver->unsatidxs[--solver->nunsat];
+   solver->unsatidxs[pos] = lastconstridx;
+   solver->unsatidx[lastconstridx] = pos;
+   solver->unsatidx[constridx] = -1;
 }
 
 
@@ -509,21 +480,7 @@ static
 SCIP_RETCODE lsSolverCreate(
    SCIP*                 scip,               /**< SCIP data structure */
    LS_SOLVER**           solver,             /**< pointer to solver */
-   LS_PROBLEM*           problem,            /**< problem */
-   SCIP_RANDNUMGEN*      randnumgen,         /**< random number generator */
-   int                   verbosity,          /**< verbosity level */
-   int                   tabubase,           /**< minimum tabu tenure */
-   int                   tabuvariation,      /**< random tabu variation */
-   int                   smoothprob,         /**< smooth probability */
-   int                   sampleunsat,        /**< unsat constraints to sample */
-   int                   bmsunsatinfeas,     /**< max moves scored (infeasible) */
-   int                   bmsunsatfeas,       /**< max moves scored (feasible) */
-   int                   samplesat,          /**< sat constraints to sample */
-   int                   bmssat,             /**< max moves scored (sat) */
-   int                   bmsflip,            /**< binary flip candidates */
-   int                   bmsrandom,          /**< random move candidates */
-   int                   callbackeffort,     /**< effort between callbacks */
-   int                   checkiterations     /**< iterations between progress checks */
+   LS_PROBLEM*           problem             /**< problem */
    )
 {
    LS_SOLVER* solv;
@@ -544,23 +501,13 @@ SCIP_RETCODE lsSolverCreate(
    SCIP_CALL( SCIPallocBlockMemory(scip, &solv) );
 
    solv->problem = problem;
-   solv->randnumgen = randnumgen;
    solv->curstep = 0;
    solv->iskeepfeas = FALSE;
    solv->objcutoff = SCIPgetCutoffbound(scip);
    solv->objweight = 1;
-   solv->tabubase = tabubase;
-   solv->tabuvariation = tabuvariation;
-   solv->smoothprob = smoothprob;
-   solv->sampleunsat = sampleunsat;
-   solv->bmsunsatinfeas = bmsunsatinfeas;
-   solv->bmsunsatfeas = bmsunsatfeas;
-   solv->samplesat = samplesat;
-   solv->bmssat = bmssat;
-   solv->bmsflip = bmsflip;
-   solv->bmsrandom = bmsrandom;
-   solv->verbosity = verbosity;
-   solv->callbackeffort = callbackeffort;
+   solv->incumbentassignment = NULL;
+   solv->incumbentobjective = 0.0;
+   solv->nunsat = 0;
    solv->effortatlastcallback = 0;
    solv->effortatlastimprovement = 0;
    solv->totaleffort = 0;
@@ -569,27 +516,38 @@ SCIP_RETCODE lsSolverCreate(
    solv->prevviolations = INT_MAX;
    solv->prevobjective = SCIPinfinity(scip);
    solv->isimproved = TRUE;
-   solv->checkiterations = checkiterations;
    solv->subscore = 0;
    solv->naffected = 0;
+   solv->neighborsize = 0;
+   solv->nscoreidxs = 0;
+   solv->nsampled = 0;
 
-   /* allocate work arrays (nnonzeros + nobjvars to account for soft obj terms) */
+   /* allocate per-variable parallel arrays */
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &solv->allowincstep, nvars) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &solv->allowdecstep, nvars) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &solv->lastincstep, nvars) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &solv->lastdecstep, nvars) );
+
+   /* allocate per-constraint parallel arrays */
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &solv->lhs, nconstraints) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &solv->weight, nconstraints) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &solv->unsatidx, nconstraints) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &solv->unsatidxs, nconstraints) );
+
+   /* allocate work arrays */
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &solv->neighborvaridxs, nnonzeros) );
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &solv->neighborvalues, nnonzeros) );
-   solv->neighborsize = 0;
    solv->neighborcap = nnonzeros;
 
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &solv->scoretable, nvars) );
    BMSclearMemoryArray(solv->scoretable, nvars);
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &solv->scoreidxs, nvars) );
-   solv->nscoreidxs = 0;
 
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &solv->tempunsatidxs, nconstraints) );
 
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &solv->sampledconstrs, nconstraints) );
    BMSclearMemoryArray(solv->sampledconstrs, nconstraints);
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &solv->sampledidxs, nconstraints) );
-   solv->nsampled = 0;
 
    if( nobjvars > 0 )
    {
@@ -652,6 +610,22 @@ SCIP_RETCODE lsSolverFree(
    SCIPfreeBlockMemoryArray(scip, &solv->neighborvalues, nnonzeros);
    SCIPfreeBlockMemoryArray(scip, &solv->neighborvaridxs, nnonzeros);
 
+   /* free per-constraint parallel arrays */
+   SCIPfreeBlockMemoryArray(scip, &solv->unsatidxs, nconstraints);
+   SCIPfreeBlockMemoryArray(scip, &solv->unsatidx, nconstraints);
+   SCIPfreeBlockMemoryArray(scip, &solv->weight, nconstraints);
+   SCIPfreeBlockMemoryArray(scip, &solv->lhs, nconstraints);
+
+   /* free per-variable parallel arrays */
+   SCIPfreeBlockMemoryArray(scip, &solv->lastdecstep, nvars);
+   SCIPfreeBlockMemoryArray(scip, &solv->lastincstep, nvars);
+   SCIPfreeBlockMemoryArray(scip, &solv->allowdecstep, nvars);
+   SCIPfreeBlockMemoryArray(scip, &solv->allowincstep, nvars);
+
+   /* free moved arrays */
+   if( solv->incumbentassignment != NULL )
+      SCIPfreeBlockMemoryArray(scip, &solv->incumbentassignment, nvars);
+
    SCIPfreeBlockMemory(scip, solver);
 
    return SCIP_OKAY;
@@ -675,9 +649,9 @@ SCIP_RETCODE lsSolverInitSolution(
 
    problem = solver->problem;
 
-   if( problem->incumbentassignment == NULL )
+   if( solver->incumbentassignment == NULL )
    {
-      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &problem->incumbentassignment, problem->nvars) );
+      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &solver->incumbentassignment, problem->nvars) );
    }
 
    if( sol != NULL )
@@ -687,20 +661,20 @@ SCIP_RETCODE lsSolverInitSolution(
 
       for( i = 0; i < ncols; ++i )
       {
-         problem->incumbentassignment[i] = SCIPgetSolVal(scip, sol, SCIPcolGetVar(cols[i]));
+         solver->incumbentassignment[i] = SCIPgetSolVal(scip, sol, SCIPcolGetVar(cols[i]));
          if( problem->vars[i].vartype != LS_CONTINUOUS )
-            problem->incumbentassignment[i] = round(problem->incumbentassignment[i]);
-         if( problem->incumbentassignment[i] < problem->vars[i].lb )
-            problem->incumbentassignment[i] = problem->vars[i].lb;
-         else if( problem->incumbentassignment[i] > problem->vars[i].ub )
-            problem->incumbentassignment[i] = problem->vars[i].ub;
+            solver->incumbentassignment[i] = round(solver->incumbentassignment[i]);
+         if( solver->incumbentassignment[i] < problem->vars[i].lb )
+            solver->incumbentassignment[i] = problem->vars[i].lb;
+         else if( solver->incumbentassignment[i] > problem->vars[i].ub )
+            solver->incumbentassignment[i] = problem->vars[i].ub;
       }
    }
    else
    {
       for( i = 0; i < problem->nvars; ++i )
       {
-         problem->incumbentassignment[i] = !SCIPisInfinity(scip, -problem->vars[i].lb) ? problem->vars[i].lb
+         solver->incumbentassignment[i] = !SCIPisInfinity(scip, -problem->vars[i].lb) ? problem->vars[i].lb
                : !SCIPisInfinity(scip, problem->vars[i].ub) ? problem->vars[i].ub : 0.0;
       }
    }
@@ -712,16 +686,18 @@ SCIP_RETCODE lsSolverInitSolution(
 static
 void lsSolverRecomputeObjective(
    SCIP*                 scip,               /**< SCIP data structure */
-   LS_PROBLEM*           problem,            /**< problem */
    LS_SOLVER*            solver              /**< solver */
    )
 {
+   LS_PROBLEM* problem;
    int i;
 
-   problem->incumbentobjective = 0.0;
+   problem = solver->problem;
+
+   solver->incumbentobjective = 0.0;
    for( i = 0; i < problem->nobjvars; ++i )
-      problem->incumbentobjective += problem->vars[problem->objvaridxs[i]].objcoeff
-            * problem->incumbentassignment[problem->objvaridxs[i]];
+      solver->incumbentobjective += problem->vars[problem->objvaridxs[i]].objcoeff
+            * solver->incumbentassignment[problem->objvaridxs[i]];
 
    solver->totaleffort += problem->nobjvars;
 }
@@ -744,36 +720,41 @@ SCIP_RETCODE lsSolverInitState(
 
    problem = solver->problem;
 
-   /* allocate unsatidxs if needed */
-   if( problem->unsatidxs == NULL )
+   /* init per-variable dynamic arrays */
+   BMSclearMemoryArray(solver->allowincstep, problem->nvars);
+   BMSclearMemoryArray(solver->allowdecstep, problem->nvars);
+   BMSclearMemoryArray(solver->lastincstep, problem->nvars);
+   BMSclearMemoryArray(solver->lastdecstep, problem->nvars);
+
+   /* init per-constraint dynamic arrays */
+   solver->nunsat = 0;
+   for( i = 0; i < problem->nconstraints; ++i )
    {
-      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &problem->unsatidxs, problem->nconstraints) );
+      solver->weight[i] = 1;
+      solver->unsatidx[i] = -1;
    }
-   problem->nunsat = 0;
 
    /* compute constraint LHS values */
    for( i = 0; i < problem->nconstraints; ++i )
    {
-      constraint = &problem->constraints[i];
+      constraint = problem->constraints + i;
 
-      constraint->lhs = 0.0;
+      solver->lhs[i] = 0.0;
       for( j = 0; j < constraint->ncoeffs; ++j )
       {
-         constraint->lhs += constraint->coeffs[j].coeff
-               * problem->incumbentassignment[constraint->coeffs[j].idx];
+         solver->lhs[i] += constraint->coeffs[j].coeff
+               * solver->incumbentassignment[constraint->coeffs[j].idx];
       }
 
-      violation = constraint->lhs - constraint->rhs;
+      violation = solver->lhs[i] - constraint->rhs;
       if( SCIPisFeasPositive(scip, violation) )
-         lsProblemInsertUnsat(problem, i);
-      else
-         constraint->unsatidx = -1;
+         lsSolverInsertUnsat(solver, i);
    }
 
    solver->totaleffort += problem->nnonzeros;
 
    /* compute objective value */
-   lsSolverRecomputeObjective(scip, problem, solver);
+   lsSolverRecomputeObjective(scip, solver);
 
    return SCIP_OKAY;
 }
@@ -788,6 +769,7 @@ static
 void lsSolverApplyMove(
    SCIP*                 scip,               /**< SCIP data structure */
    LS_SOLVER*            solver,             /**< solver */
+   SCIP_HEURDATA*        heurdata,           /**< heuristic data */
    int                   varidx,             /**< variable index */
    SCIP_Real             newvalue            /**< new variable value */
    )
@@ -806,51 +788,52 @@ void lsSolverApplyMove(
 
    assert(scip != NULL);
    assert(solver != NULL);
+   assert(heurdata != NULL);
 
    problem = solver->problem;
-   var = &problem->vars[varidx];
+   var = problem->vars + varidx;
 
    /* update variable value */
-   oldvalue = problem->incumbentassignment[varidx];
-   problem->incumbentassignment[varidx] = newvalue;
+   oldvalue = solver->incumbentassignment[varidx];
+   solver->incumbentassignment[varidx] = newvalue;
 
-   assert(problem->incumbentassignment[varidx] >= var->lb);
-   assert(problem->incumbentassignment[varidx] <= var->ub);
-   assert(var->vartype == LS_CONTINUOUS || SCIPrealIsExactlyIntegral(problem->incumbentassignment[varidx]));
+   assert(solver->incumbentassignment[varidx] >= var->lb);
+   assert(solver->incumbentassignment[varidx] <= var->ub);
+   assert(var->vartype == LS_CONTINUOUS || SCIPrealIsExactlyIntegral(solver->incumbentassignment[varidx]));
 
    /* recompute objective */
    if( !SCIPisInfinity(scip, solver->objcutoff) && var->objidx >= 0 )
-      lsSolverRecomputeObjective(scip, problem, solver);
+      lsSolverRecomputeObjective(scip, solver);
 
    /* recompute LHS for each affected constraint */
    for( i = 0; i < var->ncoeffs; ++i )
    {
       constridx = var->coeffs[i].idx;
-      constraint = &problem->constraints[constridx];
-      oldlhs = constraint->lhs;
+      constraint = problem->constraints + constridx;
+      oldlhs = solver->lhs[constridx];
       newlhs = 0.0;
 
       /* full recompute */
       for( j = 0; j < constraint->ncoeffs; ++j )
       {
          newlhs += constraint->coeffs[j].coeff
-               * problem->incumbentassignment[constraint->coeffs[j].idx];
+               * solver->incumbentassignment[constraint->coeffs[j].idx];
       }
 
       previol = oldlhs - constraint->rhs;
       newviol = newlhs - constraint->rhs;
-      constraint->lhs = newlhs;
+      solver->lhs[constridx] = newlhs;
 
       /* update violation tracking */
       if( !SCIPisFeasPositive(scip, previol) && SCIPisFeasPositive(scip, newviol) )
       {
          /* became violated */
-         lsProblemInsertUnsat(problem, constridx);
+         lsSolverInsertUnsat(solver, constridx);
       }
       else if( SCIPisFeasPositive(scip, previol) && !SCIPisFeasPositive(scip, newviol) )
       {
          /* became satisfied */
-         lsProblemRemoveUnsat(problem, constridx);
+         lsSolverRemoveUnsat(solver, constridx);
       }
 
       solver->totaleffort += constraint->ncoeffs;
@@ -859,15 +842,15 @@ void lsSolverApplyMove(
    /* set tabu */
    if( newvalue > oldvalue )
    {
-      var->lastincstep = solver->curstep;
-      var->allowdecstep = solver->curstep + solver->tabubase
-            + SCIPrandomGetInt(solver->randnumgen, 0, solver->tabuvariation);
+      solver->lastincstep[varidx] = solver->curstep;
+      solver->allowdecstep[varidx] = solver->curstep + heurdata->tabubase
+            + SCIPrandomGetInt(heurdata->randnumgen, 0, heurdata->tabuvariation);
    }
    else
    {
-      var->lastdecstep = solver->curstep;
-      var->allowincstep = solver->curstep + solver->tabubase
-            + SCIPrandomGetInt(solver->randnumgen, 0, solver->tabuvariation);
+      solver->lastdecstep[varidx] = solver->curstep;
+      solver->allowincstep[varidx] = solver->curstep + heurdata->tabubase
+            + SCIPrandomGetInt(heurdata->randnumgen, 0, heurdata->tabuvariation);
    }
 }
 
@@ -875,12 +858,14 @@ void lsSolverApplyMove(
 static
 SCIP_Bool lsSolverTightMove(
    SCIP*                 scip,               /**< SCIP data structure */
-   LS_PROBLEM*           problem,            /**< problem */
-   LS_CONSTRAINT*        constraint,         /**< constraint */
+   LS_SOLVER*            solver,             /**< solver */
+   int                   constridx,          /**< constraint index */
    int                   termidx,            /**< term index within constraint */
    SCIP_Real*            result              /**< pointer to store move value */
    )
 {
+   LS_PROBLEM* problem;
+   LS_CONSTRAINT* constraint;
    SCIP_Real value;
    SCIP_Real residual;
    SCIP_Real coeff;
@@ -889,17 +874,19 @@ SCIP_Bool lsSolverTightMove(
    LS_VAR* var;
 
    assert(scip != NULL);
-   assert(constraint != NULL);
+   assert(solver != NULL);
    assert(result != NULL);
 
+   problem = solver->problem;
+   constraint = problem->constraints + constridx;
    coeff = constraint->coeffs[termidx].coeff;
    varidx = constraint->coeffs[termidx].idx;
-   var = &problem->vars[varidx];
+   var = problem->vars + varidx;
 
    assert(coeff != 0.0); /*lint !e777*/
 
-   value = problem->incumbentassignment[varidx];
-   residual = constraint->lhs - value * coeff;
+   value = solver->incumbentassignment[varidx];
+   residual = solver->lhs[constridx] - value * coeff;
    movevalue = (constraint->rhs - residual) / coeff;
 
    /* round, verify, and adjust */
@@ -958,7 +945,8 @@ SCIP_Longint lsSolverTightScore(
    SCIP_Bool nowbetter;
    int constridx;
    SCIP_Real coeff;
-   LS_CONSTRAINT* constraint;
+   SCIP_Real lhs;
+   SCIP_Real rhs;
    SCIP_Real newlhs;
    SCIP_Real previol;
    SCIP_Real newviol;
@@ -972,29 +960,29 @@ SCIP_Longint lsSolverTightScore(
    assert(solver != NULL);
 
    problem = solver->problem;
-   var = &problem->vars[varidx];
-   value = problem->incumbentassignment[varidx];
+   var = problem->vars + varidx;
+   value = solver->incumbentassignment[varidx];
    score = 0;
    solver->subscore = 0;
 
    /* objective scoring */
    if( !SCIPisInfinity(scip, solver->objcutoff) && var->objidx >= 0 )
    {
-      objresidual = problem->incumbentobjective - value * var->objcoeff;
+      objresidual = solver->incumbentobjective - value * var->objcoeff;
       newobj = newvalue * var->objcoeff + objresidual;
 
-      if( ( !SCIPisInfinity(scip, newobj) || !SCIPisInfinity(scip, problem->incumbentobjective) )
-         && ( !SCIPisInfinity(scip, -newobj) || !SCIPisInfinity(scip, -problem->incumbentobjective) )
-         && !SCIPisEQ(scip, newobj, problem->incumbentobjective) )
+      if( ( !SCIPisInfinity(scip, newobj) || !SCIPisInfinity(scip, solver->incumbentobjective) )
+         && ( !SCIPisInfinity(scip, -newobj) || !SCIPisInfinity(scip, -solver->incumbentobjective) )
+         && !SCIPisEQ(scip, newobj, solver->incumbentobjective) )
       {
-         if( newobj < problem->incumbentobjective )
+         if( newobj < solver->incumbentobjective )
             score += solver->objweight;
          else
             score -= solver->objweight;
       }
 
       /* subscore: crossing objcutoff boundary */
-      prebetter = SCIPisLT(scip, problem->incumbentobjective, solver->objcutoff);
+      prebetter = SCIPisLT(scip, solver->incumbentobjective, solver->objcutoff);
       nowbetter = SCIPisLT(scip, newobj, solver->objcutoff);
 
       if( !prebetter && nowbetter )
@@ -1008,25 +996,26 @@ SCIP_Longint lsSolverTightScore(
    {
       constridx = var->coeffs[i].idx;
       coeff = var->coeffs[i].coeff;
-      constraint = &problem->constraints[constridx];
-      residual = constraint->lhs - value * coeff;
+      lhs = solver->lhs[constridx];
+      rhs = problem->constraints[constridx].rhs;
+      residual = lhs - value * coeff;
       newlhs = newvalue * coeff + residual;
-      previol = constraint->lhs - constraint->rhs;
-      newviol = newlhs - constraint->rhs;
+      previol = lhs - rhs;
+      newviol = newlhs - rhs;
       presat = !SCIPisFeasPositive(scip, previol);
       nowsat = !SCIPisFeasPositive(scip, newviol);
 
       if( !presat && nowsat )
-         score += constraint->weight;
+         score += solver->weight[constridx];
       else if( presat && !nowsat )
-         score -= constraint->weight;
+         score -= solver->weight[constridx];
       else if( !presat && !nowsat && ( !SCIPisInfinity(scip, previol) || !SCIPisInfinity(scip, newviol) )
          && !SCIPisEQ(scip, previol, newviol) )
       {
          if( previol > newviol )
-            score += constraint->weight / 2;
+            score += solver->weight[constridx] / 2;
          else
-            score -= constraint->weight / 2;
+            score -= solver->weight[constridx] / 2;
       }
 
       /* subscore: stable transitions */
@@ -1034,9 +1023,9 @@ SCIP_Longint lsSolverTightScore(
       nowstable = SCIPisFeasNegative(scip, newviol);
 
       if( !prestable && nowstable )
-         solver->subscore += constraint->weight;
+         solver->subscore += solver->weight[constridx];
       else if( prestable && !nowstable )
-         solver->subscore -= constraint->weight;
+         solver->subscore -= solver->weight[constridx];
    }
 
    solver->totaleffort += var->ncoeffs + 1;
@@ -1056,25 +1045,22 @@ void lsSolverUpdateWeight(
    LS_SOLVER*            solver              /**< solver */
    )
 {
-   LS_PROBLEM* problem;
    int constridx;
    int i;
 
    assert(scip != NULL);
    assert(solver != NULL);
 
-   problem = solver->problem;
-
-   for( i = 0; i < problem->nunsat; ++i )
+   for( i = 0; i < solver->nunsat; ++i )
    {
-      constridx = problem->unsatidxs[i];
-      ++problem->constraints[constridx].weight;
+      constridx = solver->unsatidxs[i];
+      ++solver->weight[constridx];
    }
 
-   if( problem->nunsat == 0 )
+   if( solver->nunsat == 0 )
       ++solver->objweight;
 
-   solver->totaleffort += problem->nunsat + 1;
+   solver->totaleffort += solver->nunsat + 1;
 }
 
 /** smooths weights of satisfied constraints */
@@ -1085,7 +1071,6 @@ void lsSolverSmoothWeight(
    )
 {
    LS_PROBLEM* problem;
-   LS_CONSTRAINT* constraint;
    SCIP_Real violation;
    int i;
 
@@ -1096,15 +1081,14 @@ void lsSolverSmoothWeight(
 
    for( i = 0; i < problem->nconstraints; ++i )
    {
-      constraint = &problem->constraints[i];
-      violation = constraint->lhs - constraint->rhs;
+      violation = solver->lhs[i] - problem->constraints[i].rhs;
 
-      if( !SCIPisFeasPositive(scip, violation) && constraint->weight > 0 )
-         --constraint->weight;
+      if( !SCIPisFeasPositive(scip, violation) && solver->weight[i] > 0 )
+         --solver->weight[i];
    }
 
-   if( solver->objweight > 0 && !SCIPisInfinity(scip, problem->incumbentobjective)
-      && SCIPisLT(scip, problem->incumbentobjective, solver->objcutoff) )
+   if( solver->objweight > 0 && !SCIPisInfinity(scip, solver->incumbentobjective)
+      && SCIPisLT(scip, solver->incumbentobjective, solver->objcutoff) )
       --solver->objweight;
 
    solver->totaleffort += problem->nconstraints + 1;
@@ -1120,6 +1104,7 @@ static
 SCIP_RETCODE lsSolverUnsatTightMove(
    SCIP*                 scip,               /**< SCIP data structure */
    LS_SOLVER*            solver,             /**< solver */
+   SCIP_HEURDATA*        heurdata,           /**< heuristic data */
    SCIP_Bool*            result              /**< pointer to store whether move was applied */
    );
 
@@ -1128,6 +1113,7 @@ static
 SCIP_RETCODE lsSolverSatTightMove(
    SCIP*                 scip,               /**< SCIP data structure */
    LS_SOLVER*            solver,             /**< solver */
+   SCIP_HEURDATA*        heurdata,           /**< heuristic data */
    SCIP_Bool*            result              /**< pointer to store whether move was applied */
    );
 
@@ -1136,6 +1122,7 @@ static
 SCIP_RETCODE lsSolverFlipMove(
    SCIP*                 scip,               /**< SCIP data structure */
    LS_SOLVER*            solver,             /**< solver */
+   SCIP_HEURDATA*        heurdata,           /**< heuristic data */
    SCIP_Bool*            result              /**< pointer to store whether move was applied */
    );
 
@@ -1143,7 +1130,8 @@ SCIP_RETCODE lsSolverFlipMove(
 static
 SCIP_RETCODE lsSolverRandomTightMove(
    SCIP*                 scip,               /**< SCIP data structure */
-   LS_SOLVER*            solver              /**< solver */
+   LS_SOLVER*            solver,             /**< solver */
+   SCIP_HEURDATA*        heurdata            /**< heuristic data */
    );
 
 /** performs the lift move */
@@ -1151,6 +1139,7 @@ static
 SCIP_RETCODE lsSolverLiftMove(
    SCIP*                 scip,               /**< SCIP data structure */
    LS_SOLVER*            solver,             /**< solver */
+   SCIP_HEURDATA*        heurdata,           /**< heuristic data */
    SCIP_Bool*            result              /**< pointer to store whether move was applied */
    );
 
@@ -1159,12 +1148,13 @@ static
 void collectConstraintNeighbors(
    SCIP*                 scip,               /**< SCIP data structure */
    LS_SOLVER*            solver,             /**< solver */
-   LS_CONSTRAINT*        constraint,         /**< constraint */
+   int                   constridx,          /**< constraint index */
    SCIP_Bool             towardsatisfy       /**< TRUE: fallback toward satisfaction,
                                               *   FALSE: fallback toward boundary */
    )
 {
    LS_PROBLEM* problem;
+   LS_CONSTRAINT* constraint;
    int varidx;
    LS_VAR* var;
    SCIP_Real value;
@@ -1173,17 +1163,17 @@ void collectConstraintNeighbors(
 
    assert(scip != NULL);
    assert(solver != NULL);
-   assert(constraint != NULL);
 
    problem = solver->problem;
+   constraint = problem->constraints + constridx;
 
    for( j = 0; j < constraint->ncoeffs; ++j )
    {
       varidx = constraint->coeffs[j].idx;
-      var = &problem->vars[varidx];
-      value = problem->incumbentassignment[varidx];
+      var = problem->vars + varidx;
+      value = solver->incumbentassignment[varidx];
 
-      if( !lsSolverTightMove(scip, problem, constraint, j, &movevalue) && !towardsatisfy )
+      if( !lsSolverTightMove(scip, solver, constridx, j, &movevalue) && !towardsatisfy )
       {
          /* move to opposite bound that tightens constraint */
          if( constraint->coeffs[j].coeff < 0.0 )
@@ -1193,8 +1183,8 @@ void collectConstraintNeighbors(
       }
 
       /* tabu check */
-      if( (movevalue < value && solver->curstep < var->allowdecstep)
-         || (movevalue > value && solver->curstep < var->allowincstep) )
+      if( (movevalue < value && solver->curstep < solver->allowdecstep[varidx])
+         || (movevalue > value && solver->curstep < solver->allowincstep[varidx]) )
          continue;
 
       /* skip zero moves */
@@ -1236,12 +1226,12 @@ void collectObjectiveNeighbors(
    for( i = 0; i < problem->nobjvars; ++i )
    {
       varidx = problem->objvaridxs[i];
-      var = &problem->vars[varidx];
+      var = problem->vars + varidx;
 
       assert(var->objcoeff != 0.0); /*lint !e777*/
 
-      value = problem->incumbentassignment[varidx];
-      residual = problem->incumbentobjective - value * var->objcoeff;
+      value = solver->incumbentassignment[varidx];
+      residual = solver->incumbentobjective - value * var->objcoeff;
       movevalue = (objtarget - residual) / var->objcoeff;
 
       /* round, verify, and adjust */
@@ -1277,14 +1267,14 @@ void collectObjectiveNeighbors(
       /* tabu check */
       if( softtabu )
       {
-         if( (movevalue < value && solver->curstep == var->lastincstep + 1)
-            || (movevalue > value && solver->curstep == var->lastdecstep + 1) )
+         if( (movevalue < value && solver->curstep == solver->lastincstep[varidx] + 1)
+            || (movevalue > value && solver->curstep == solver->lastdecstep[varidx] + 1) )
             continue;
       }
       else
       {
-         if( (movevalue < value && solver->curstep < var->allowdecstep)
-            || (movevalue > value && solver->curstep < var->allowincstep) )
+         if( (movevalue < value && solver->curstep < solver->allowdecstep[varidx])
+            || (movevalue > value && solver->curstep < solver->allowincstep[varidx]) )
             continue;
       }
 
@@ -1304,6 +1294,7 @@ void collectObjectiveNeighbors(
 static
 void subsampleNeighbors(
    LS_SOLVER*            solver,             /**< solver */
+   SCIP_HEURDATA*        heurdata,           /**< heuristic data */
    int                   budget              /**< max neighbors to keep */
    )
 {
@@ -1313,13 +1304,14 @@ void subsampleNeighbors(
    int i;
 
    assert(solver != NULL);
+   assert(heurdata != NULL);
 
    if( solver->neighborsize <= budget )
       return;
 
    for( i = 0; i < budget; ++i )
    {
-      randidx = SCIPrandomGetInt(solver->randnumgen, 0, solver->neighborsize - 1 - i) + i;
+      randidx = SCIPrandomGetInt(heurdata->randnumgen, 0, solver->neighborsize - 1 - i) + i;
 
       tmpvar = solver->neighborvaridxs[randidx];
       tmpvalue = solver->neighborvalues[randidx];
@@ -1365,7 +1357,7 @@ SCIP_Bool selectBestNeighbor(
    {
       varidx = solver->neighborvaridxs[i];
       movevalue = solver->neighborvalues[i];
-      var = &problem->vars[varidx];
+      var = problem->vars + varidx;
 
       /* dedup binaries */
       if( var->vartype == LS_BINARY )
@@ -1411,10 +1403,10 @@ static
 SCIP_RETCODE lsSolverUnsatTightMove(
    SCIP*                 scip,               /**< SCIP data structure */
    LS_SOLVER*            solver,             /**< solver */
+   SCIP_HEURDATA*        heurdata,           /**< heuristic data */
    SCIP_Bool*            result              /**< pointer to store whether move was applied */
    )
 {
-   LS_PROBLEM* problem;
    int nsample;
    int budget;
    int bestvaridx;
@@ -1427,25 +1419,25 @@ SCIP_RETCODE lsSolverUnsatTightMove(
 
    assert(scip != NULL);
    assert(solver != NULL);
+   assert(heurdata != NULL);
    assert(result != NULL);
 
    *result = FALSE;
-   problem = solver->problem;
    solver->neighborsize = 0;
    solver->nscoreidxs = 0;
 
    /* sample unsat constraints */
-   if( problem->nunsat > 0 )
+   if( solver->nunsat > 0 )
    {
-      nsample = MIN(solver->sampleunsat, problem->nunsat);
+      nsample = MIN(heurdata->sampleunsat, solver->nunsat);
 
-      if( nsample < problem->nunsat )
+      if( nsample < solver->nunsat )
       {
          /* partial Fisher-Yates shuffle on temp copy */
-         BMScopyMemoryArray(solver->tempunsatidxs, problem->unsatidxs, problem->nunsat);
+         BMScopyMemoryArray(solver->tempunsatidxs, solver->unsatidxs, solver->nunsat);
          for( i = 0; i < nsample; ++i )
          {
-            randidx = SCIPrandomGetInt(solver->randnumgen, 0, problem->nunsat - 1 - i) + i;
+            randidx = SCIPrandomGetInt(heurdata->randnumgen, 0, solver->nunsat - 1 - i) + i;
             tmp = solver->tempunsatidxs[i];
 
             solver->tempunsatidxs[i] = solver->tempunsatidxs[randidx];
@@ -1454,31 +1446,31 @@ SCIP_RETCODE lsSolverUnsatTightMove(
 
          for( i = 0; i < nsample; ++i )
          {
-            collectConstraintNeighbors(scip, solver, &problem->constraints[solver->tempunsatidxs[i]], TRUE);
+            collectConstraintNeighbors(scip, solver, solver->tempunsatidxs[i], TRUE);
          }
       }
       else
       {
-         for( i = 0; i < problem->nunsat; ++i )
+         for( i = 0; i < solver->nunsat; ++i )
          {
-            collectConstraintNeighbors(scip, solver, &problem->constraints[problem->unsatidxs[i]], TRUE);
+            collectConstraintNeighbors(scip, solver, solver->unsatidxs[i], TRUE);
          }
       }
    }
 
    /* collect objective terms if needed */
-   if( SCIPisInfinity(scip, problem->incumbentobjective)
-      || SCIPisGE(scip, problem->incumbentobjective, solver->objcutoff) )
+   if( SCIPisInfinity(scip, solver->incumbentobjective)
+      || SCIPisGE(scip, solver->incumbentobjective, solver->objcutoff) )
       collectObjectiveNeighbors(scip, solver, FALSE);
 
    /* subsample to budget */
-   budget = !SCIPisInfinity(scip, solver->objcutoff) ? solver->bmsunsatfeas : solver->bmsunsatinfeas;
-   subsampleNeighbors(solver, budget);
+   budget = !SCIPisInfinity(scip, solver->objcutoff) ? heurdata->bmsunsatfeas : heurdata->bmsunsatinfeas;
+   subsampleNeighbors(solver, heurdata, budget);
 
    /* score and select */
    if( selectBestNeighbor(scip, solver, (SCIP_Longint)0, &bestvaridx, &bestvalue) )
    {
-      lsSolverApplyMove(scip, solver, bestvaridx, bestvalue);
+      lsSolverApplyMove(scip, solver, heurdata, bestvaridx, bestvalue);
       cleanScoreTable(solver);
       *result = TRUE;
       return SCIP_OKAY;
@@ -1489,7 +1481,7 @@ SCIP_RETCODE lsSolverUnsatTightMove(
    {
       satresult = FALSE;
 
-      SCIP_CALL( lsSolverSatTightMove(scip, solver, &satresult) );
+      SCIP_CALL( lsSolverSatTightMove(scip, solver, heurdata, &satresult) );
       if( satresult )
       {
          cleanScoreTable(solver);
@@ -1500,7 +1492,7 @@ SCIP_RETCODE lsSolverUnsatTightMove(
 
    flipresult = FALSE;
 
-   SCIP_CALL( lsSolverFlipMove(scip, solver, &flipresult) );
+   SCIP_CALL( lsSolverFlipMove(scip, solver, heurdata, &flipresult) );
    cleanScoreTable(solver);
    *result = flipresult;
 
@@ -1512,6 +1504,7 @@ static
 SCIP_RETCODE lsSolverSatTightMove(
    SCIP*                 scip,               /**< SCIP data structure */
    LS_SOLVER*            solver,             /**< solver */
+   SCIP_HEURDATA*        heurdata,           /**< heuristic data */
    SCIP_Bool*            result              /**< pointer to store whether move was applied */
    )
 {
@@ -1520,7 +1513,6 @@ SCIP_RETCODE lsSolverSatTightMove(
    int bestvaridx;
    SCIP_Real bestvalue;
    int constridx;
-   LS_CONSTRAINT* constraint;
    SCIP_Real violation;
    int newcount;
    int randidx;
@@ -1536,6 +1528,7 @@ SCIP_RETCODE lsSolverSatTightMove(
 
    assert(scip != NULL);
    assert(solver != NULL);
+   assert(heurdata != NULL);
    assert(result != NULL);
 
    *result = FALSE;
@@ -1547,18 +1540,16 @@ SCIP_RETCODE lsSolverSatTightMove(
 
    /* sample SAT constraints (skip duplicates, unsat, and cutoff; matching Local's sampleSet) */
    solver->nsampled = 0;
-   for( i = 0; i < solver->samplesat; ++i )
+   for( i = 0; i < heurdata->samplesat; ++i )
    {
-      constridx = SCIPrandomGetInt(solver->randnumgen, 0, problem->nconstraints - 1);
+      constridx = SCIPrandomGetInt(heurdata->randnumgen, 0, problem->nconstraints - 1);
 
       /* skip already sampled */
       if( solver->sampledconstrs[constridx] )
          continue;
 
-      constraint = &problem->constraints[constridx];
-
       /* skip UNSAT */
-      violation = constraint->lhs - constraint->rhs;
+      violation = solver->lhs[constridx] - problem->constraints[constridx].rhs;
       if( SCIPisFeasPositive(scip, violation) )
          continue;
 
@@ -1566,7 +1557,7 @@ SCIP_RETCODE lsSolverSatTightMove(
       solver->sampledconstrs[constridx] = TRUE;
       solver->sampledidxs[solver->nsampled++] = constridx;
 
-      collectConstraintNeighbors(scip, solver, constraint, FALSE);
+      collectConstraintNeighbors(scip, solver, constridx, FALSE);
    }
 
    /* clean up sampled flags */
@@ -1575,14 +1566,14 @@ SCIP_RETCODE lsSolverSatTightMove(
    solver->nsampled = 0;
 
    /* subsample to budget (only new entries) */
-   if( solver->neighborsize - nsaved > solver->bmssat )
+   if( solver->neighborsize - nsaved > heurdata->bmssat )
    {
       /* shuffle only the new entries */
       newcount = solver->neighborsize - nsaved;
 
-      for( i = 0; i < solver->bmssat; ++i )
+      for( i = 0; i < heurdata->bmssat; ++i )
       {
-         randidx = SCIPrandomGetInt(solver->randnumgen, 0, newcount - 1 - i) + i;
+         randidx = SCIPrandomGetInt(heurdata->randnumgen, 0, newcount - 1 - i) + i;
 
          tmpvar = solver->neighborvaridxs[nsaved + randidx];
          tmpvalue = solver->neighborvalues[nsaved + randidx];
@@ -1591,7 +1582,7 @@ SCIP_RETCODE lsSolverSatTightMove(
          solver->neighborvaridxs[nsaved + i] = tmpvar;
          solver->neighborvalues[nsaved + i] = tmpvalue;
       }
-      solver->neighborsize = nsaved + solver->bmssat;
+      solver->neighborsize = nsaved + heurdata->bmssat;
    }
 
    /* score from nsaved onward using shared scoretable */
@@ -1605,7 +1596,7 @@ SCIP_RETCODE lsSolverSatTightMove(
    {
       varidx = solver->neighborvaridxs[i];
       movevalue = solver->neighborvalues[i];
-      var = &problem->vars[varidx];
+      var = problem->vars + varidx;
 
       if( var->vartype == LS_BINARY )
       {
@@ -1629,7 +1620,7 @@ SCIP_RETCODE lsSolverSatTightMove(
 
    if( bestvaridx >= 0 )
    {
-      lsSolverApplyMove(scip, solver, bestvaridx, bestvalue);
+      lsSolverApplyMove(scip, solver, heurdata, bestvaridx, bestvalue);
       *result = TRUE;
    }
 
@@ -1641,6 +1632,7 @@ static
 SCIP_RETCODE lsSolverFlipMove(
    SCIP*                 scip,               /**< SCIP data structure */
    LS_SOLVER*            solver,             /**< solver */
+   SCIP_HEURDATA*        heurdata,           /**< heuristic data */
    SCIP_Bool*            result              /**< pointer to store whether move was applied */
    )
 {
@@ -1659,6 +1651,7 @@ SCIP_RETCODE lsSolverFlipMove(
 
    assert(scip != NULL);
    assert(solver != NULL);
+   assert(heurdata != NULL);
    assert(result != NULL);
 
    *result = FALSE;
@@ -1672,11 +1665,11 @@ SCIP_RETCODE lsSolverFlipMove(
    bestvaridx = -1;
    bestvalue = 0.0;
 
-   for( i = 0; i < solver->bmsflip; ++i )
+   for( i = 0; i < heurdata->bmsflip; ++i )
    {
-      binidx = SCIPrandomGetInt(solver->randnumgen, 0, problem->nbinary - 1);
+      binidx = SCIPrandomGetInt(heurdata->randnumgen, 0, problem->nbinary - 1);
       varidx = problem->binaryidxs[binidx];
-      var = &problem->vars[varidx];
+      var = problem->vars + varidx;
 
       /* dedup */
       if( solver->scoretable[varidx] )
@@ -1684,14 +1677,14 @@ SCIP_RETCODE lsSolverFlipMove(
       solver->scoretable[varidx] = TRUE;
       solver->scoreidxs[solver->nscoreidxs++] = varidx;
 
-      value = problem->incumbentassignment[varidx];
+      value = solver->incumbentassignment[varidx];
       movevalue = (value > 0.5) ? 0.0 : 1.0;
 
       /* bounds and tabu check */
       if( ( movevalue < value
-         && ( SCIPisFeasPositive(scip, var->lb) || solver->curstep < var->allowdecstep ) )
+         && ( SCIPisFeasPositive(scip, var->lb) || solver->curstep < solver->allowdecstep[varidx] ) )
          || ( movevalue > value
-         && ( SCIPisFeasNegative(scip, var->ub - 1.0) || solver->curstep < var->allowincstep ) ) )
+         && ( SCIPisFeasNegative(scip, var->ub - 1.0) || solver->curstep < solver->allowincstep[varidx] ) ) )
          continue;
 
       score = lsSolverTightScore(scip, solver, varidx, movevalue);
@@ -1706,11 +1699,11 @@ SCIP_RETCODE lsSolverFlipMove(
       }
    }
 
-   solver->totaleffort += solver->bmsflip;
+   solver->totaleffort += heurdata->bmsflip;
 
    if( bestvaridx >= 0 )
    {
-      lsSolverApplyMove(scip, solver, bestvaridx, bestvalue);
+      lsSolverApplyMove(scip, solver, heurdata, bestvaridx, bestvalue);
       *result = TRUE;
    }
 
@@ -1721,46 +1714,46 @@ SCIP_RETCODE lsSolverFlipMove(
 static
 SCIP_RETCODE lsSolverRandomTightMove(
    SCIP*                 scip,               /**< SCIP data structure */
-   LS_SOLVER*            solver              /**< solver */
+   LS_SOLVER*            solver,             /**< solver */
+   SCIP_HEURDATA*        heurdata            /**< heuristic data */
    )
 {
    LS_PROBLEM* problem;
+   LS_CONSTRAINT* constraint;
    int bestvaridx;
    SCIP_Real bestvalue;
    int randidx;
    int constridx;
-   LS_CONSTRAINT* constraint;
    int varidx;
-   LS_VAR* var;
    SCIP_Real value;
    SCIP_Real movevalue;
    int j;
 
    assert(scip != NULL);
    assert(solver != NULL);
+   assert(heurdata != NULL);
 
    problem = solver->problem;
    solver->neighborsize = 0;
 
    /* pick 1 random unsat constraint */
-   if( problem->nunsat > 0 )
+   if( solver->nunsat > 0 )
    {
-      randidx = SCIPrandomGetInt(solver->randnumgen, 0, problem->nunsat - 1);
-      constridx = problem->unsatidxs[randidx];
-      constraint = &problem->constraints[constridx];
+      randidx = SCIPrandomGetInt(heurdata->randnumgen, 0, solver->nunsat - 1);
+      constridx = solver->unsatidxs[randidx];
+      constraint = problem->constraints + constridx;
 
       /* collect terms with soft tabu */
       for( j = 0; j < constraint->ncoeffs; ++j )
       {
          varidx = constraint->coeffs[j].idx;
-         var = &problem->vars[varidx];
-         value = problem->incumbentassignment[varidx];
+         value = solver->incumbentassignment[varidx];
 
-         (void)lsSolverTightMove(scip, problem, constraint, j, &movevalue);
+         (void)lsSolverTightMove(scip, solver, constridx, j, &movevalue);
 
          /* soft aspiration: only block immediate reversal */
-         if( (movevalue < value && solver->curstep == var->lastincstep + 1)
-            || (movevalue > value && solver->curstep == var->lastdecstep + 1) )
+         if( (movevalue < value && solver->curstep == solver->lastincstep[varidx] + 1)
+            || (movevalue > value && solver->curstep == solver->lastdecstep[varidx] + 1) )
             continue;
 
          if( SCIPisEQ(scip, movevalue, value) )
@@ -1774,16 +1767,16 @@ SCIP_RETCODE lsSolverRandomTightMove(
    }
 
    /* collect objective terms if needed */
-   if( SCIPisInfinity(scip, problem->incumbentobjective)
-      || SCIPisGE(scip, problem->incumbentobjective, solver->objcutoff) )
+   if( SCIPisInfinity(scip, solver->incumbentobjective)
+      || SCIPisGE(scip, solver->incumbentobjective, solver->objcutoff) )
       collectObjectiveNeighbors(scip, solver, TRUE);
 
    /* subsample */
-   subsampleNeighbors(solver, solver->bmsrandom);
+   subsampleNeighbors(solver, heurdata, heurdata->bmsrandom);
 
    /* score ALL (accept negative scores) */
    if( selectBestNeighbor(scip, solver, -SCIP_LONGINT_MAX, &bestvaridx, &bestvalue) )
-      lsSolverApplyMove(scip, solver, bestvaridx, bestvalue);
+      lsSolverApplyMove(scip, solver, heurdata, bestvaridx, bestvalue);
    cleanScoreTable(solver);
 
    return SCIP_OKAY;
@@ -1794,6 +1787,7 @@ static
 SCIP_RETCODE lsSolverLiftMove(
    SCIP*                 scip,               /**< SCIP data structure */
    LS_SOLVER*            solver,             /**< solver */
+   SCIP_HEURDATA*        heurdata,           /**< heuristic data */
    SCIP_Bool*            result              /**< pointer to store whether move was applied */
    )
 {
@@ -1826,13 +1820,13 @@ SCIP_RETCODE lsSolverLiftMove(
    int objpos;
    int d;
    int cidx;
-   LS_CONSTRAINT* con;
    SCIP_Real gap2;
    SCIP_Real coeff2;
    SCIP_Real movevalue2;
 
    assert(scip != NULL);
    assert(solver != NULL);
+   assert(heurdata != NULL);
    assert(result != NULL);
 
    *result = FALSE;
@@ -1847,7 +1841,7 @@ SCIP_RETCODE lsSolverLiftMove(
       for( termidx = 0; termidx < problem->nobjvars; ++termidx )
       {
          varidx = problem->objvaridxs[termidx];
-         var = &problem->vars[varidx];
+         var = problem->vars + varidx;
 
          solver->liftlowervalue[termidx] = var->lb;
          solver->liftuppervalue[termidx] = var->ub;
@@ -1855,19 +1849,18 @@ SCIP_RETCODE lsSolverLiftMove(
          for( c = 0; c < var->ncoeffs; ++c )
          {
             constridx = var->coeffs[c].idx;
-            constraint = &problem->constraints[constridx];
-            gap = constraint->lhs - constraint->rhs;
+            gap = solver->lhs[constridx] - problem->constraints[constridx].rhs;
             coeff = var->coeffs[c].coeff;
 
             if( SCIPisFeasZero(scip, gap) )
             {
                /* constraint is tight */
                if( coeff > 0.0 )
-                  solver->liftuppervalue[termidx] = problem->incumbentassignment[varidx];
+                  solver->liftuppervalue[termidx] = solver->incumbentassignment[varidx];
                else
-                  solver->liftlowervalue[termidx] = problem->incumbentassignment[varidx];
+                  solver->liftlowervalue[termidx] = solver->incumbentassignment[varidx];
             }
-            else if( lsSolverTightMove(scip, problem, constraint, var->coeffs[c].pos, &movevalue) )
+            else if( lsSolverTightMove(scip, solver, constridx, var->coeffs[c].pos, &movevalue) )
             {
                if( coeff > 0.0 )
                {
@@ -1890,7 +1883,7 @@ SCIP_RETCODE lsSolverLiftMove(
    }
 
    /* select best objective-improving move */
-   bestobjvalue = problem->incumbentobjective;
+   bestobjvalue = solver->incumbentobjective;
    bestvaridx = -1;
    bestvalue = 0.0;
    bestlaststep = INT_MAX;
@@ -1898,9 +1891,9 @@ SCIP_RETCODE lsSolverLiftMove(
    for( termidx = 0; termidx < problem->nobjvars; ++termidx )
    {
       varidx = problem->objvaridxs[termidx];
-      var = &problem->vars[varidx];
+      var = problem->vars + varidx;
       objcoeff = var->objcoeff;
-      value = problem->incumbentassignment[varidx];
+      value = solver->incumbentassignment[varidx];
       lv = solver->liftlowervalue[termidx];
       uv = solver->liftuppervalue[termidx];
 
@@ -1908,7 +1901,7 @@ SCIP_RETCODE lsSolverLiftMove(
          continue;
 
       /* pick direction improving objective */
-      objresidual = problem->incumbentobjective - value * objcoeff;
+      objresidual = solver->incumbentobjective - value * objcoeff;
       if( objcoeff > 0.0 )
       {
          objvalue = lv * objcoeff + objresidual;
@@ -1924,7 +1917,7 @@ SCIP_RETCODE lsSolverLiftMove(
       if( SCIPisEQ(scip, varvalue, value) )
          continue;
 
-      laststep = (varvalue < value) ? var->lastdecstep : var->lastincstep;
+      laststep = (varvalue < value) ? solver->lastdecstep[varidx] : solver->lastincstep[varidx];
 
       if( ( SCIPisInfinity(scip, -objvalue) || SCIPisInfinity(scip, bestobjvalue)
          || SCIPisLE(scip, objvalue, bestobjvalue) )
@@ -1940,18 +1933,18 @@ SCIP_RETCODE lsSolverLiftMove(
 
    if( bestvaridx >= 0 )
    {
-      lsSolverApplyMove(scip, solver, bestvaridx, bestvalue);
+      lsSolverApplyMove(scip, solver, heurdata, bestvaridx, bestvalue);
       solver->iskeepfeas = TRUE;
       *result = TRUE;
 
       /* recompute value ranges for affected variables */
-      bestvar = &problem->vars[bestvaridx];
+      bestvar = problem->vars + bestvaridx;
       solver->naffected = 0;
 
       for( c = 0; c < bestvar->ncoeffs; ++c )
       {
          constridx = bestvar->coeffs[c].idx;
-         constraint = &problem->constraints[constridx];
+         constraint = problem->constraints + constridx;
 
          for( t = 0; t < constraint->ncoeffs; ++t )
          {
@@ -1969,7 +1962,7 @@ SCIP_RETCODE lsSolverLiftMove(
       for( c = 0; c < solver->naffected; ++c )
       {
          affidx = solver->affectedvars[c];
-         affvar = &problem->vars[affidx];
+         affvar = problem->vars + affidx;
          objpos = affvar->objidx;
 
          solver->affectedset[affidx] = FALSE;
@@ -1983,18 +1976,17 @@ SCIP_RETCODE lsSolverLiftMove(
          for( d = 0; d < affvar->ncoeffs; ++d )
          {
             cidx = affvar->coeffs[d].idx;
-            con = &problem->constraints[cidx];
-            gap2 = con->lhs - con->rhs;
+            gap2 = solver->lhs[cidx] - problem->constraints[cidx].rhs;
             coeff2 = affvar->coeffs[d].coeff;
 
             if( SCIPisFeasZero(scip, gap2) )
             {
                if( coeff2 > 0.0 )
-                  solver->liftuppervalue[objpos] = problem->incumbentassignment[affidx];
+                  solver->liftuppervalue[objpos] = solver->incumbentassignment[affidx];
                else
-                  solver->liftlowervalue[objpos] = problem->incumbentassignment[affidx];
+                  solver->liftlowervalue[objpos] = solver->incumbentassignment[affidx];
             }
-            else if( lsSolverTightMove(scip, problem, con, affvar->coeffs[d].pos, &movevalue2) )
+            else if( lsSolverTightMove(scip, solver, cidx, affvar->coeffs[d].pos, &movevalue2) )
             {
                if( coeff2 > 0.0 )
                {
@@ -2336,8 +2328,7 @@ SCIP_RETCODE extractProblemData(
       vartype = SCIPvarIsIntegral(var)
          ? (SCIPvarIsBinary(var) ? LS_BINARY : LS_INTEGER)
          : LS_CONTINUOUS;
-      SCIP_CALL( lsProblemAddVar(scip, problem, vartype, SCIPcolGetLb(col), SCIPcolGetUb(col),
-&idx) );
+      SCIP_CALL( lsProblemAddVar(scip, problem, vartype, SCIPcolGetLb(col), SCIPcolGetUb(col), &idx) );
       problem->vars[idx].objcoeff = SCIPcolGetObj(col);
    }
 
@@ -2404,7 +2395,7 @@ SCIP_RETCODE checkIncumbentSol(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_HEUR*            heur,               /**< heuristic pointer */
    SCIP_HEURTIMING       heurtiming,         /**< heuristic timing mask */
-   LS_PROBLEM*           problem,            /**< problem */
+   LS_SOLVER*            solver,             /**< solver */
    SCIP_RESULT*          result              /**< pointer to store the result */
    )
 {
@@ -2418,7 +2409,7 @@ SCIP_RETCODE checkIncumbentSol(
 
    assert(scip != NULL);
    assert(heur != NULL);
-   assert(problem != NULL);
+   assert(solver != NULL);
    assert(result != NULL);
 
    SCIP_CALL( SCIPcreateSol(scip, &sol, heur) );
@@ -2430,7 +2421,7 @@ SCIP_RETCODE checkIncumbentSol(
 
       for( i = 0; i < nvars; ++i )
       {
-         SCIP_CALL( SCIPsetSolVal(scip, sol, vars[i], problem->incumbentassignment[i]) );
+         SCIP_CALL( SCIPsetSolVal(scip, sol, vars[i], solver->incumbentassignment[i]) );
       }
    }
    else
@@ -2439,7 +2430,7 @@ SCIP_RETCODE checkIncumbentSol(
 
       for( i = 0; i < ncols; ++i )
       {
-         SCIP_CALL( SCIPsetSolVal(scip, sol, SCIPcolGetVar(cols[i]), problem->incumbentassignment[i]) );
+         SCIP_CALL( SCIPsetSolVal(scip, sol, SCIPcolGetVar(cols[i]), solver->incumbentassignment[i]) );
       }
    }
 
@@ -2461,7 +2452,6 @@ static
 SCIP_RETCODE lsCheckTermination(
    SCIP*                 scip,               /**< SCIP data structure */
    LS_SOLVER*            solver,             /**< solver */
-   LS_PROBLEM*           problem,            /**< problem */
    SCIP_HEURDATA*        heurdata,           /**< heuristic data */
    SCIP_HEUR*            heur,               /**< heuristic */
    SCIP_HEURTIMING       heurtiming,         /**< heuristic timing */
@@ -2473,7 +2463,6 @@ SCIP_RETCODE lsCheckTermination(
 {
    assert(scip != NULL);
    assert(solver != NULL);
-   assert(problem != NULL);
    assert(heurdata != NULL);
    assert(heur != NULL);
    assert(nsols != NULL);
@@ -2482,7 +2471,7 @@ SCIP_RETCODE lsCheckTermination(
 
    *terminate = FALSE;
 
-   if( solution != NULL || solver->totaleffort - solver->effortatlastcallback > solver->callbackeffort )
+   if( solution != NULL || solver->totaleffort - solver->effortatlastcallback > heurdata->callbackeffort )
    {
       SCIP_Bool quitnumsol;
       SCIP_Bool quiteffort;
@@ -2494,7 +2483,7 @@ SCIP_RETCODE lsCheckTermination(
 
       if( solution != NULL )
       {
-         SCIP_CALL( checkIncumbentSol(scip, heur, heurtiming, problem, result) );
+         SCIP_CALL( checkIncumbentSol(scip, heur, heurtiming, solver, result) );
 
          if( *result == SCIP_FOUNDSOL )
          {
@@ -2504,7 +2493,7 @@ SCIP_RETCODE lsCheckTermination(
             if( heurdata->verbosity >= 1 )
             {
                SCIPinfoMessage(scip, NULL, "Local search: found solution #%d obj=%g\n",
-                  nfoundsols, problem->incumbentobjective);
+                  nfoundsols, solver->incumbentobjective);
             }
          }
          else
@@ -2526,7 +2515,7 @@ SCIP_RETCODE lsCheckTermination(
             SCIPdebugMsg(scip, "Local: quitting, no improvement\n");
          }
 
-         quitunbounded = (problem->nunsat == 0 && SCIPisInfinity(scip, -problem->incumbentobjective));
+         quitunbounded = (solver->nunsat == 0 && SCIPisInfinity(scip, -solver->incumbentobjective));
          if( quitunbounded )
          {
             SCIPdebugMsg(scip, "Local: quitting, unbounded\n");
@@ -2599,12 +2588,7 @@ SCIP_RETCODE runLocal(
    }
 
    /* create solver */
-   SCIP_CALL( lsSolverCreate(scip, &solver, problem, heurdata->randnumgen,
-         heurdata->verbosity, heurdata->tabubase, heurdata->tabuvariation,
-         heurdata->smoothprob, heurdata->sampleunsat, heurdata->bmsunsatinfeas,
-         heurdata->bmsunsatfeas, heurdata->samplesat, heurdata->bmssat,
-         heurdata->bmsflip, heurdata->bmsrandom, heurdata->callbackeffort,
-         heurdata->iterations) );
+   SCIP_CALL( lsSolverCreate(scip, &solver, problem) );
 
    /* initialize solution */
    bestsol = (heurdata->useinitialsol && heurtiming != SCIP_HEURTIMING_BEFOREPRESOL) ? SCIPgetBestSol(scip) : NULL;
@@ -2626,28 +2610,28 @@ SCIP_RETCODE runLocal(
       solution = NULL;
 
       /* feasible phase */
-      if( problem->nunsat == 0 )
+      if( solver->nunsat == 0 )
       {
-         if( !SCIPisInfinity(scip, problem->incumbentobjective)
-            && SCIPisLT(scip, problem->incumbentobjective, solver->objcutoff) )
+         if( !SCIPisInfinity(scip, solver->incumbentobjective)
+            && SCIPisLT(scip, solver->incumbentobjective, solver->objcutoff) )
          {
             solver->effortatlastimprovement = solver->totaleffort;
             solver->isimproved = TRUE;
-            solution = problem->incumbentassignment;
+            solution = solver->incumbentassignment;
          }
 
-         SCIP_CALL( lsCheckTermination(scip, solver, problem, heurdata, heur, heurtiming, solution, &nsols, result,
+         SCIP_CALL( lsCheckTermination(scip, solver, heurdata, heur, heurtiming, solution, &nsols, result,
                &terminate) );
          if( terminate )
             break;
 
          liftresult = FALSE;
 
-         SCIP_CALL( lsSolverLiftMove(scip, solver, &liftresult) );
+         SCIP_CALL( lsSolverLiftMove(scip, solver, heurdata, &liftresult) );
          ++solver->curstep;
 
          SCIPdebugMsg(scip, "Local: step=%d nunsat=%d effort=%d obj=%g phase=lift\n",
-               solver->curstep, problem->nunsat, solver->totaleffort, problem->incumbentobjective);
+               solver->curstep, solver->nunsat, solver->totaleffort, solver->incumbentobjective);
 
          if( liftresult )
             continue;
@@ -2656,56 +2640,56 @@ SCIP_RETCODE runLocal(
       /* infeasible phase */
       moveresult = FALSE;
 
-      SCIP_CALL( lsSolverUnsatTightMove(scip, solver, &moveresult) );
+      SCIP_CALL( lsSolverUnsatTightMove(scip, solver, heurdata, &moveresult) );
 
       if( !moveresult )
       {
-         if( SCIPrandomGetInt(solver->randnumgen, 0, 9999) > solver->smoothprob )
+         if( SCIPrandomGetInt(heurdata->randnumgen, 0, 9999) > heurdata->smoothprob )
             lsSolverUpdateWeight(scip, solver);
          else
             lsSolverSmoothWeight(scip, solver);
 
-         SCIP_CALL( lsSolverRandomTightMove(scip, solver) );
+         SCIP_CALL( lsSolverRandomTightMove(scip, solver, heurdata) );
       }
 
       /* track improvement */
-      if( problem->nunsat < solver->bestviolations
-         || ( problem->nunsat == solver->bestviolations
-         && !SCIPisInfinity(scip, problem->incumbentobjective) && !SCIPisInfinity(scip, -solver->bestobjective)
-         && SCIPisLT(scip, problem->incumbentobjective, solver->bestobjective) ) )
+      if( solver->nunsat < solver->bestviolations
+         || ( solver->nunsat == solver->bestviolations
+         && !SCIPisInfinity(scip, solver->incumbentobjective) && !SCIPisInfinity(scip, -solver->bestobjective)
+         && SCIPisLT(scip, solver->incumbentobjective, solver->bestobjective) ) )
       {
          solver->effortatlastimprovement = solver->totaleffort;
-         solver->bestviolations = problem->nunsat;
-         solver->bestobjective = problem->incumbentobjective;
+         solver->bestviolations = solver->nunsat;
+         solver->bestobjective = solver->incumbentobjective;
       }
 
       /* track progress */
       if( solver->curstep == 0 )
       {
-         solver->prevviolations = problem->nunsat;
-         solver->prevobjective = problem->incumbentobjective;
+         solver->prevviolations = solver->nunsat;
+         solver->prevobjective = solver->incumbentobjective;
       }
-      else if( solver->curstep % solver->checkiterations == 0 )
+      else if( solver->curstep % heurdata->iterations == 0 )
       {
-         violationsdecrease = solver->prevviolations - problem->nunsat;
+         violationsdecrease = solver->prevviolations - solver->nunsat;
          if( solver->prevviolations == 0 || heurdata->mindecrease * solver->prevviolations <= 100 * violationsdecrease )
             solver->isimproved = TRUE;
          else if( violationsdecrease < 0 )
             solver->isimproved = FALSE;
          else
-            solver->isimproved = (!SCIPisInfinity(scip, problem->incumbentobjective)
+            solver->isimproved = (!SCIPisInfinity(scip, solver->incumbentobjective)
                   && !SCIPisInfinity(scip, -solver->prevobjective)
-                  && SCIPisLT(scip, problem->incumbentobjective, solver->prevobjective));
-         solver->prevviolations = problem->nunsat;
-         solver->prevobjective = problem->incumbentobjective;
+                  && SCIPisLT(scip, solver->incumbentobjective, solver->prevobjective));
+         solver->prevviolations = solver->nunsat;
+         solver->prevobjective = solver->incumbentobjective;
       }
 
       ++solver->curstep;
 
       SCIPdebugMsg(scip, "Local: step=%d nunsat=%d effort=%d obj=%g phase=search\n",
-            solver->curstep, problem->nunsat, solver->totaleffort, problem->incumbentobjective);
+            solver->curstep, solver->nunsat, solver->totaleffort, solver->incumbentobjective);
 
-      SCIP_CALL( lsCheckTermination(scip, solver, problem, heurdata, heur, heurtiming, NULL, &nsols, result,
+      SCIP_CALL( lsCheckTermination(scip, solver, heurdata, heur, heurtiming, NULL, &nsols, result,
             &terminate) );
    }
 
