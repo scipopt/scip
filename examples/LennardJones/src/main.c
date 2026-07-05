@@ -40,7 +40,6 @@
 #include "nlhdlr_lj.h"
 
 #define BOX 9.0
-#define MINSEP 0.467856  /* minimal separation distance of particles */
 
 /** create problem in given SCIP and add all variables and constraints to model the Lennard-Jones Cluster problem */
 static SCIP_RETCODE setupProblem(
@@ -86,7 +85,7 @@ static SCIP_RETCODE setupProblem(
       for( j = i + 1; j < nparticles; ++j )
       {
          (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "r_%d_%d", i, j);
-         SCIP_CALL( SCIPcreateVarBasic(scip, &r[i * nparticles + j], name, MINSEP, SCIPinfinity(scip), 0.0, SCIP_VARTYPE_CONTINUOUS) );
+         SCIP_CALL( SCIPcreateVarBasic(scip, &r[i * nparticles + j], name, 0.0, SCIPinfinity(scip), 0.0, SCIP_VARTYPE_CONTINUOUS) );
          SCIP_CALL( SCIPaddVar(scip, r[i * nparticles + j]) );
 
          (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "p_%d_%d", i, j);

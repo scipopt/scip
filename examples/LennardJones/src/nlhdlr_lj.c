@@ -120,7 +120,7 @@ SCIP_Bool underestimator(
    SCIP_Real r;
 
    /* too close or negative of zero */
-   if( SCIPisNegative(scip, rval) )
+   if( !SCIPisPositive(scip, rval) )
       return FALSE;
 
    if( SCIPisLE(scip, rval, RMINIMUM) || SCIPisLE(scip, rub, RINFLECT) )
@@ -132,7 +132,7 @@ SCIP_Bool underestimator(
       *slope = -6.0 * pow(rval, -7.0) + 3.0 * pow(rval, -4.0);
       *constant = pow(rval, -6.0) - pow(rval, -3.0) - *slope * rval;
 
-      assert(rval > RMINIMUM || SCIPisNegative(scip, *slope));
+      assert(rval > RMINIMUM || !SCIPisPositive(scip, *slope));
 
       return TRUE;
    }
@@ -362,18 +362,96 @@ SCIP_DECL_NLHDLREVALAUX(nlhdlrEvalauxLJ)
 }
 
 /** separation initialization method of a nonlinear handler (called during CONSINITLP) */
-#if 0
 static
 SCIP_DECL_NLHDLRINITSEPA(nlhdlrInitSepaLJ)
 { /*lint --e{715}*/
-   SCIPerrorMessage("method of lj nonlinear handler not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
+   char name[100];
+   SCIP_ROW* row;
+   SCIP_VAR* raux;
+   SCIP_COL* rcol;
+   SCIP_VAR* paux;
+   SCIP_Real rlb;
+   SCIP_Real rub;
+   SCIP_Real slope;
+   SCIP_Real constant;
+
+   assert(nlhdlrexprdata != NULL);
+
+   raux = SCIPgetExprAuxVarNonlinear(nlhdlrexprdata->r);
+   paux = SCIPgetExprAuxVarNonlinear(nlhdlrexprdata->p);
+   assert(raux != NULL);
+   assert(paux != NULL);
+
+   rcol = SCIPvarGetCol(raux);
+   assert(rcol != NULL);
+
+   rlb = SCIPvarGetLbGlobal(raux);
+   rub = SCIPvarGetUbGlobal(raux);
+
+   if( SCIPisLT(scip, rlb, RMINIMUM) )
+   {
+      /* create an underestimator in the convex region left of the minimizer */
+      if( underestimator(scip, &slope, &constant, (rlb + RMINIMUM) / 2.0, rlb, rub) )
+      {
+         slope *= nlhdlrexprdata->rcoef;
+         constant *= nlhdlrexprdata->rcoef;
+
+         SCIPsnprintf(name, sizeof(name), "ljinit1_%s", SCIPconsGetName(cons));
+
+         SCIP_CALL( SCIPcreateRowCons(scip, &row, cons, name, 1, &rcol, &slope,
+            nlhdlrexprdata->rcoef == 1.0 ? -SCIPinfinity(scip) : -constant,
+            nlhdlrexprdata->rcoef == -1.0 ? SCIPinfinity(scip) : -constant, FALSE, FALSE, FALSE) );
+         SCIP_CALL( SCIPaddVarToRow(scip, row, paux, nlhdlrexprdata->pcoef) );
+
+         SCIPdebug( SCIPinfoMessage(scip, NULL, "adding initial tangent at r=%g: ", (rlb + RMINIMUM) / 2.0) );
+         SCIPdebug( SCIPprintRow(scip, row, NULL) );
+
+         SCIP_CALL( SCIPaddRow(scip, row, FALSE, infeasible) );
+
+         SCIP_CALL( SCIPreleaseRow(scip, &row) );
+
+         if( *infeasible )
+            return SCIP_OKAY;
+      }
+      else
+      {
+         SCIPdebugMessage("initial tangent could not be added\n");
+      }
+   }
+
+   if( SCIPisGT(scip, rub, RMINIMUM) )
+   {
+      /* create an underestimator in the possibly non-convex region right of the minimizer */
+      if( underestimator(scip, &slope, &constant, MIN(rub, RINFLECT), rlb, rub) )
+      {
+         slope *= nlhdlrexprdata->rcoef;
+         constant *= nlhdlrexprdata->rcoef;
+
+         SCIPsnprintf(name, sizeof(name), "ljinit2_%s", SCIPconsGetName(cons));
+
+         SCIP_CALL( SCIPcreateRowCons(scip, &row, cons, name, 1, &rcol, &slope,
+            nlhdlrexprdata->rcoef == 1.0 ? -SCIPinfinity(scip) : -constant,
+            nlhdlrexprdata->rcoef == -1.0 ? SCIPinfinity(scip) : -constant, FALSE, FALSE, FALSE) );
+         SCIP_CALL( SCIPaddVarToRow(scip, row, paux, nlhdlrexprdata->pcoef) );
+
+         SCIPdebug( SCIPinfoMessage(scip, NULL, "adding initial secant: ") );
+         SCIPdebug( SCIPprintRow(scip, row, NULL) );
+
+         SCIP_CALL( SCIPaddRow(scip, row, FALSE, infeasible) );
+
+         SCIP_CALL( SCIPreleaseRow(scip, &row) );
+
+         if( *infeasible )
+            return SCIP_OKAY;
+      }
+      else
+      {
+         SCIPdebugMessage("initial secant could not be added; upper bound %g\n", rub);
+      }
+   }
 
    return SCIP_OKAY;
 }
-#else
-#define nlhdlrInitSepaLJ NULL
-#endif
 
 /** nonlinear handler under/overestimation callback */
 static
