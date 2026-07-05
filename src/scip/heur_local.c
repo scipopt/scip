@@ -126,7 +126,7 @@ struct LS_Var
    LS_VARTYPE            vartype;            /**< variable type */
    SCIP_Real             lb;                 /**< lower bound */
    SCIP_Real             ub;                 /**< upper bound */
-   SCIP_Real             objcoeff;           /**< objective coefficient (0 if not in obj) */
+   SCIP_Real             obj;                /**< objective coefficient */
    LS_IDXCOEFF*          coeffs;             /**< constraints this var appears in */
    int                   ncoeffs;            /**< number of constraint appearances */
    int                   coeffssize;         /**< allocated size of coeffs array */
@@ -313,7 +313,7 @@ SCIP_RETCODE lsProblemAddVar(
    LS_VARTYPE            vartype,            /**< variable type */
    SCIP_Real             lb,                 /**< lower bound */
    SCIP_Real             ub,                 /**< upper bound */
-   int*                  idx                 /**< pointer to store variable index */
+   SCIP_Real             obj                 /**< objective coefficient */
    )
 {
    LS_VAR* var;
@@ -321,7 +321,6 @@ SCIP_RETCODE lsProblemAddVar(
 
    assert(scip != NULL);
    assert(problem != NULL);
-   assert(idx != NULL);
 
    if( problem->nvars >= problem->varssize )
    {
@@ -330,12 +329,11 @@ SCIP_RETCODE lsProblemAddVar(
       problem->varssize = newsize;
    }
 
-   *idx = problem->nvars;
    var = problem->vars + problem->nvars;
    var->vartype = vartype;
    var->lb = lb;
    var->ub = ub;
-   var->objcoeff = 0.0;
+   var->obj = obj;
    var->coeffs = NULL;
    var->ncoeffs = 0;
    var->coeffssize = 0;
@@ -355,8 +353,7 @@ SCIP_RETCODE lsProblemAddConstraint(
    SCIP_Real             rhs,                /**< right hand side */
    int                   ncoeffs,            /**< number of coefficients */
    int*                  varidxs,            /**< variable indices */
-   SCIP_Real*            coeffvals,          /**< coefficient values */
-   int*                  idx                 /**< pointer to store constraint index, or NULL */
+   SCIP_Real*            coeffs           /**< coefficient values */
    )
 {
    LS_CONSTRAINT* constraint;
@@ -369,15 +366,11 @@ SCIP_RETCODE lsProblemAddConstraint(
    assert(scip != NULL);
    assert(problem != NULL);
    assert(varidxs != NULL || ncoeffs == 0);
-   assert(coeffvals != NULL || ncoeffs == 0);
+   assert(coeffs != NULL || ncoeffs == 0);
 
    /* skip empty constraints */
    if( ncoeffs == 0 )
-   {
-      if( idx != NULL )
-         *idx = -1;
       return SCIP_OKAY;
-   }
 
    scalar = MAX3(rhs, -rhs, 1.0);
 
@@ -389,9 +382,6 @@ SCIP_RETCODE lsProblemAddConstraint(
       problem->constraintssize = newsize;
    }
 
-   if( idx != NULL )
-      *idx = problem->nconstraints;
-
    constraint = problem->constraints + problem->nconstraints;
    constraint->rhs = (rhs - constant) / scalar;
    constraint->ncoeffs = 0;
@@ -401,7 +391,7 @@ SCIP_RETCODE lsProblemAddConstraint(
 
    for( i = 0; i < ncoeffs; ++i )
    {
-      normcoeff = coeffvals[i] / scalar;
+      normcoeff = coeffs[i] / scalar;
 
       var = problem->vars + varidxs[i];
       if( var->ncoeffs >= var->coeffssize )
@@ -696,7 +686,7 @@ void lsSolverRecomputeObjective(
 
    solver->incumbentobjective = 0.0;
    for( i = 0; i < problem->nobjvars; ++i )
-      solver->incumbentobjective += problem->vars[problem->objvaridxs[i]].objcoeff
+      solver->incumbentobjective += problem->vars[problem->objvaridxs[i]].obj
             * solver->incumbentassignment[problem->objvaridxs[i]];
 
    solver->totaleffort += problem->nobjvars;
@@ -968,8 +958,8 @@ SCIP_Longint lsSolverTightScore(
    /* objective scoring */
    if( !SCIPisInfinity(scip, solver->objcutoff) && var->objidx >= 0 )
    {
-      objresidual = solver->incumbentobjective - value * var->objcoeff;
-      newobj = newvalue * var->objcoeff + objresidual;
+      objresidual = solver->incumbentobjective - value * var->obj;
+      newobj = newvalue * var->obj + objresidual;
 
       if( ( !SCIPisInfinity(scip, newobj) || !SCIPisInfinity(scip, solver->incumbentobjective) )
          && ( !SCIPisInfinity(scip, -newobj) || !SCIPisInfinity(scip, -solver->incumbentobjective) )
@@ -1228,18 +1218,18 @@ void collectObjectiveNeighbors(
       varidx = problem->objvaridxs[i];
       var = problem->vars + varidx;
 
-      assert(var->objcoeff != 0.0); /*lint !e777*/
+      assert(var->obj != 0.0); /*lint !e777*/
 
       value = solver->incumbentassignment[varidx];
-      residual = solver->incumbentobjective - value * var->objcoeff;
-      movevalue = (objtarget - residual) / var->objcoeff;
+      residual = solver->incumbentobjective - value * var->obj;
+      movevalue = (objtarget - residual) / var->obj;
 
       /* round, verify, and adjust */
       if( var->vartype == LS_CONTINUOUS )
       {
-         if( SCIPisFeasPositive(scip, movevalue * var->objcoeff + residual - objtarget) )
+         if( SCIPisFeasPositive(scip, movevalue * var->obj + residual - objtarget) )
          {
-            if( var->objcoeff < 0.0 )
+            if( var->obj < 0.0 )
                movevalue = nextafter(movevalue, SCIP_DEFAULT_INFINITY);
             else
                movevalue = nextafter(movevalue, -SCIP_DEFAULT_INFINITY);
@@ -1249,9 +1239,9 @@ void collectObjectiveNeighbors(
       {
          movevalue = round(movevalue);
 
-         if( SCIPisFeasPositive(scip, movevalue * var->objcoeff + residual - objtarget) )
+         if( SCIPisFeasPositive(scip, movevalue * var->obj + residual - objtarget) )
          {
-            if( var->objcoeff < 0.0 )
+            if( var->obj < 0.0 )
                movevalue += 1.0;
             else
                movevalue -= 1.0;
@@ -1892,7 +1882,7 @@ SCIP_RETCODE lsSolverLiftMove(
    {
       varidx = problem->objvaridxs[termidx];
       var = problem->vars + varidx;
-      objcoeff = var->objcoeff;
+      objcoeff = var->obj;
       value = solver->incumbentassignment[varidx];
       lv = solver->liftlowervalue[termidx];
       uv = solver->liftuppervalue[termidx];
@@ -2034,7 +2024,6 @@ SCIP_RETCODE addRowInLocalSolver(
    )
 {
    SCIP_Real* negvals;
-   int idx;
    int i;
 
    assert(scip != NULL);
@@ -2043,24 +2032,24 @@ SCIP_RETCODE addRowInLocalSolver(
    /* ranged row */
    if( !SCIPisInfinity(scip, -lhs) && !SCIPisInfinity(scip, rhs) && !SCIPisEQ(scip, lhs, rhs) )
    {
-      SCIP_CALL( lsProblemAddConstraint(scip, problem, constant, rhs, consnvars, consinds, consvals, &idx) );
+      SCIP_CALL( lsProblemAddConstraint(scip, problem, constant, rhs, consnvars, consinds, consvals) );
 
       /* negated constraint for GTE side */
       SCIP_CALL( SCIPallocBufferArray(scip, &negvals, consnvars) );
       for( i = 0; i < consnvars; ++i )
          negvals[i] = -consvals[i];
-      SCIP_CALL( lsProblemAddConstraint(scip, problem, -constant, -lhs, consnvars, consinds, negvals, &idx) );
+      SCIP_CALL( lsProblemAddConstraint(scip, problem, -constant, -lhs, consnvars, consinds, negvals) );
       SCIPfreeBufferArray(scip, &negvals);
    }
    else if( SCIPisEQ(scip, rhs, lhs) )
    {
       /* equality: two constraints */
-      SCIP_CALL( lsProblemAddConstraint(scip, problem, constant, rhs, consnvars, consinds, consvals, &idx) );
+      SCIP_CALL( lsProblemAddConstraint(scip, problem, constant, rhs, consnvars, consinds, consvals) );
 
       SCIP_CALL( SCIPallocBufferArray(scip, &negvals, consnvars) );
       for( i = 0; i < consnvars; ++i )
          negvals[i] = -consvals[i];
-      SCIP_CALL( lsProblemAddConstraint(scip, problem, -constant, -rhs, consnvars, consinds, negvals, &idx) );
+      SCIP_CALL( lsProblemAddConstraint(scip, problem, -constant, -rhs, consnvars, consinds, negvals) );
       SCIPfreeBufferArray(scip, &negvals);
    }
    else if( SCIPisInfinity(scip, rhs) )
@@ -2069,14 +2058,14 @@ SCIP_RETCODE addRowInLocalSolver(
       SCIP_CALL( SCIPallocBufferArray(scip, &negvals, consnvars) );
       for( i = 0; i < consnvars; ++i )
          negvals[i] = -consvals[i];
-      SCIP_CALL( lsProblemAddConstraint(scip, problem, -constant, -lhs, consnvars, consinds, negvals, &idx) );
+      SCIP_CALL( lsProblemAddConstraint(scip, problem, -constant, -lhs, consnvars, consinds, negvals) );
       SCIPfreeBufferArray(scip, &negvals);
    }
    else
    {
       /* LTE */
       assert(SCIPisInfinity(scip, -lhs));
-      SCIP_CALL( lsProblemAddConstraint(scip, problem, constant, rhs, consnvars, consinds, consvals, &idx) );
+      SCIP_CALL( lsProblemAddConstraint(scip, problem, constant, rhs, consnvars, consinds, consvals) );
    }
 
    return SCIP_OKAY;
@@ -2100,7 +2089,7 @@ SCIP_RETCODE setupObjective(
    nobjvars = 0;
    for( i = 0; i < problem->nvars; ++i )
    {
-      if( !SCIPisZero(scip, problem->vars[i].objcoeff) )
+      if( !SCIPisZero(scip, problem->vars[i].obj) )
          ++nobjvars;
    }
 
@@ -2113,7 +2102,7 @@ SCIP_RETCODE setupObjective(
       SCIP_CALL( SCIPallocBlockMemoryArray(scip, &problem->objvaridxs, nobjvars) );
       for( i = 0; i < problem->nvars; ++i )
       {
-         if( !SCIPisZero(scip, problem->vars[i].objcoeff) )
+         if( !SCIPisZero(scip, problem->vars[i].obj) )
          {
             problem->vars[i].objidx = pos;
             problem->objvaridxs[pos++] = i;
@@ -2136,17 +2125,16 @@ SCIP_RETCODE extractProblemDataBeforePresolve(
    SCIP_VAR** consvars;
    SCIP_CONS** conss;
    SCIP_CONSHDLR* conshdlr;
+   SCIP_VAR* var;
+   SCIP_CONS* cons;
    SCIP_Real* consvals;
    int* consinds;
-   int nvars;
-   int nconss;
-   int nlinconss;
-   LS_VARTYPE vartype;
-   int idx;
-   SCIP_CONS* cons;
    SCIP_Real constant;
    SCIP_Real lhs;
    SCIP_Real rhs;
+   int nvars;
+   int nconss;
+   int nlinconss;
    int consnvars;
    int requiredsize;
    int nbinary;
@@ -2198,12 +2186,10 @@ SCIP_RETCODE extractProblemDataBeforePresolve(
    /* add variables */
    for( j = 0; j < nvars; ++j )
    {
-      vartype = SCIPvarIsIntegral(vars[j])
-         ? (SCIPvarIsBinary(vars[j]) ? LS_BINARY : LS_INTEGER)
-         : LS_CONTINUOUS;
-      SCIP_CALL( lsProblemAddVar(scip, problem, vartype,
-            SCIPvarGetLbLocal(vars[j]), SCIPvarGetUbLocal(vars[j]), &idx) );
-      problem->vars[idx].objcoeff = SCIPvarGetObj(vars[j]);
+      var = vars[j];
+      SCIP_CALL( lsProblemAddVar(scip, problem,
+            SCIPvarIsIntegral(var) ? (SCIPvarIsBinary(var) ? LS_BINARY : LS_INTEGER) : LS_CONTINUOUS,
+            SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var), SCIPvarGetObj(var)) );
    }
 
    /* setup objective */
@@ -2294,15 +2280,13 @@ SCIP_RETCODE extractProblemData(
    int                   nrows               /**< number of LP rows */
    )
 {
-   SCIP_Real* vals;
-   int* inds;
-   SCIP_COL* col;
-   SCIP_VAR* var;
-   LS_VARTYPE vartype;
-   int idx;
-   SCIP_ROW* row;
    SCIP_COL** rowcols;
+   SCIP_VAR* var;
+   SCIP_COL* col;
+   SCIP_ROW* row;
+   SCIP_Real* vals;
    SCIP_Real* rowvals;
+   int* inds;
    SCIP_Real constant;
    SCIP_Real lhs;
    SCIP_Real rhs;
@@ -2324,12 +2308,9 @@ SCIP_RETCODE extractProblemData(
    {
       col = cols[i];
       var = SCIPcolGetVar(col);
-
-      vartype = SCIPvarIsIntegral(var)
-         ? (SCIPvarIsBinary(var) ? LS_BINARY : LS_INTEGER)
-         : LS_CONTINUOUS;
-      SCIP_CALL( lsProblemAddVar(scip, problem, vartype, SCIPcolGetLb(col), SCIPcolGetUb(col), &idx) );
-      problem->vars[idx].objcoeff = SCIPcolGetObj(col);
+      SCIP_CALL( lsProblemAddVar(scip, problem,
+            SCIPvarIsIntegral(var) ? (SCIPvarIsBinary(var) ? LS_BINARY : LS_INTEGER) : LS_CONTINUOUS,
+            SCIPcolGetLb(col), SCIPcolGetUb(col), SCIPcolGetObj(col)) );
    }
 
    /* setup objective */
