@@ -28,6 +28,7 @@ instances/MINLP/meanvarx.nl
 instances/MINLP/meanvarxsc.lp
 instances/MINLP/m3.osil
 instances/MINLP/parincQuadratic.osil
+instances/MINLP/pointpack04.osil
 instances/MINLP/tltr.mps
 instances/MINLP/tltr.nl
 instances/PseudoBoolean/factor-mod-size=9-P0=263-P1=409-P2=29-P3=379-B.opb
