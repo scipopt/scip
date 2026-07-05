@@ -222,6 +222,7 @@ SCIP_RETCODE SCIPincludeDefaultPlugins(
    SCIP_CALL( SCIPincludeHeurMultistart(scip) );
    SCIP_CALL( SCIPincludeHeurTrySol(scip) );
    SCIP_CALL( SCIPincludePropRootredcost(scip) );
+   SCIP_CALL( SCIPincludePropDistance(scip) );
    SCIP_CALL( SCIPincludePropDualfix(scip) );
    SCIP_CALL( SCIPincludePropGenvbounds(scip) );
    SCIP_CALL( SCIPincludePropVbounds(scip) );

@@ -15,6 +15,7 @@ Features
 - added new plugin type symmetry handler to allow users to add their own symmetry handling methods to SCIP
 - separated batch size handling for addition filter, constraint deletion filter, and bound deletion filter in greedy IIS finder
 - added detection and deletion of disconnected components to greedy IIS finder
+- added new propagator for Euclidean distance constraints
 
 Performance improvements
 ------------------------
@@ -54,6 +55,7 @@ Interface changes
 - new methods SCIPsetIncludeSymhdlr(), SCIPsetSortSymhdlrs(), SCIPsetSortSymhdlrsProp(), SCIPsetSortSymhdlrsPresol(), SCIPsetSortSymhdlrsSepa(), SCIPsetSortSymhdlrsName(), SCIPsetFindSymhdlr() to sort symmetry handlers
 - new methods SCIPtryAddSymmetryHandlingMethods(), SCIPpresolveSymmetryHandlingMethods() to call try-add and presolve routines of symmetry handlers
 - new methods SCIPsymhdlrCreate(), SCIPsymhdlrCopyInclude(), SCIPsymhdlrFree(), SCIPsymhdlrExit(), SCIPsymhdlrInit(), SCIPsymhdlrInitsol(), SCIPsymhdlrExitsol(), SCIPsymhdlrPresol(), SCIPsymhdlrProp(), SCIPsymhdlrResolvePropagation(), SCIPsymhdlrSepaLP(), SCIPsymhdlrSepaSol(), SCIPsymhdlrTryAdd(), SCIPsymhdlrSetSepa(), SCIPsymhdlrSetProp(), SCIPsymhdlrSetCopy(), SCIPsymhdlrSetFree(), SCIPsymhdlrSetInit(), SCIPsymhdlrSetExit(), SCIPsymhdlrSetInitsol(), SCIPsymhdlrSetExitsol(), SCIPsymhdlrSetPresol(), SCIPsymhdlrSetResprop(), SCIPaddSymhdlrComponent(), SCIPcreateSymmetryComponent(), SCIPsyminfoCompressPermInfo(), SCIPdisplaySymmetryGenerators() to execute callback methods of symmetry handlers
+- new method SCIPincludePropDistance()
 
 ### New parameters
 
@@ -135,6 +137,17 @@ Interface changes
 - `symmetries/sst/requirecontvars`: whether SST cuts shall only be added if symmetry component has continuous variables
 - `symmetries/sst/sepapriority`: priority of the symmetry handler's separation method
 - `symmetries/sst/tryaddpriority`: priority of the symmetry handler's try-add method
+- `propagating/distance/freq`: frequency of distance propagator
+- `propagating/distance/maxprerounds`: maximal number of presolving rounds the distance propagator participates in
+- `propagating/distance/delay`: whether the distance propagator should be delayed, if other propagators found reductions
+- `propagating/distance/gapbisection`: domain width at which bisection in the distance propagator is stopped
+- `propagating/distance/maxndconssforpairs`: maximum number of distance constraints for which distance propagation of pairs is applied
+- `propagating/distance/maxniterbisection`: maximum number of iterations used in bisection of the distance propagator
+- `propagating/distance/multbisection`: multiplier used in bisection of the distance propagator to split interval [l,u] at point l + multiplier*(u - l)
+- `propagating/distance/presolpriority`: presolving priority of the distance propagator
+- `propagating/distance/presoltiming`: timing mask of the presolving method of the distance propagator
+- `propagating/distance/priority`: priority of distance propagator
+- `propagating/distance/timingmask`: timing when distance propagator should be called
 
 ### Changed parameters
 

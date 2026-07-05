@@ -208,6 +208,7 @@ set(scipsources
     scip/presol_stuffing.c
     scip/presol_trivial.c
     scip/presol_tworowbnd.c
+    scip/prop_distance.c
     scip/prop_dualfix.c
     scip/prop_genvbounds.c
     scip/prop_nlobbt.c
@@ -765,6 +766,7 @@ set(scipheaders
     scip/pricestore.h
     scip/primal.h
     scip/prob.h
+    scip/prop_distance.h
     scip/prop_dualfix.h
     scip/prop_genvbounds.h
     scip/prop.h
