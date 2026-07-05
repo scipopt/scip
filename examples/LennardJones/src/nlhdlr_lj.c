@@ -515,18 +515,61 @@ SCIP_DECL_NLHDLRESTIMATE(nlhdlrEstimateLJ)
 }
 
 /** nonlinear handler solution linearization callback */
-#if !1
 static
 SCIP_DECL_NLHDLRSOLLINEARIZE(nlhdlrSollinearizeLJ)
 { /*lint --e{715}*/
-   SCIPerrorMessage("method of lj nonlinear handler not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
+   char name[100];
+   SCIP_ROW* row;
+   SCIP_VAR* raux;
+   SCIP_VAR* paux;
+   SCIP_Real rlb;
+   SCIP_Real rub;
+   SCIP_Real rval;
+   SCIP_Real slope;
+   SCIP_Real constant;
+
+   assert(nlhdlrexprdata != NULL);
+
+   raux = SCIPgetExprAuxVarNonlinear(nlhdlrexprdata->r);
+   paux = SCIPgetExprAuxVarNonlinear(nlhdlrexprdata->p);
+   assert(raux != NULL);
+   assert(paux != NULL);
+
+   rval = SCIPgetSolVal(scip, sol, raux);
+   rlb = SCIPvarGetLbGlobal(raux);
+   rub = SCIPvarGetUbGlobal(raux);
+
+   /* skip if not in the convex region (left of minimizer or upper bound not larger than inflection point */
+   if( !SCIPisLT(scip, rval, RMINIMUM) && SCIPisGT(scip, rub, RINFLECT) )
+      return SCIP_OKAY;
+
+   if( underestimator(scip, &slope, &constant, rval, rlb, rub) )
+   {
+      SCIP_COL* rcol;
+
+      rcol = SCIPvarGetCol(raux);
+      assert(rcol != NULL);
+
+      slope *= nlhdlrexprdata->rcoef;
+      constant *= nlhdlrexprdata->rcoef;
+
+      SCIPsnprintf(name, sizeof(name), "ljsollin_%s", SCIPconsGetName(cons));
+
+      SCIP_CALL( SCIPcreateRowCons(scip, &row, cons, name, 1, &rcol, &slope,
+         nlhdlrexprdata->rcoef == 1.0 ? -SCIPinfinity(scip) : -constant,
+            nlhdlrexprdata->rcoef == -1.0 ? SCIPinfinity(scip) : -constant, FALSE, FALSE, FALSE) );
+      SCIP_CALL( SCIPaddVarToRow(scip, row, paux, nlhdlrexprdata->pcoef) );
+
+      SCIPdebug( SCIPinfoMessage(scip, NULL, "adding tangent at r=%g: ", rval) );
+      SCIPdebug( SCIPprintRow(scip, row, NULL) );
+
+      SCIP_CALL( SCIPaddPoolCut(scip, row) );
+
+      SCIP_CALL( SCIPreleaseRow(scip, &row) );
+   }
 
    return SCIP_OKAY;
 }
-#else
-#define nlhdlrSollinearizeLJ NULL
-#endif
 
 
 /** nonlinear handler interval evaluation callback */
@@ -579,6 +622,7 @@ SCIP_RETCODE SCIPincludeNlhdlrLJ(
    SCIPnlhdlrSetCopyHdlr(nlhdlr, nlhdlrCopyhdlrLJ);
    SCIPnlhdlrSetFreeExprData(nlhdlr, nlhdlrFreeExprDataLJ);
    SCIPnlhdlrSetSepa(nlhdlr, nlhdlrInitSepaLJ, NULL, nlhdlrEstimateLJ, NULL);
+   SCIPnlhdlrSetSollinearize(nlhdlr, nlhdlrSollinearizeLJ);
    SCIPnlhdlrSetProp(nlhdlr, nlhdlrIntevalLJ, nlhdlrReversepropLJ);
 
    return SCIP_OKAY;
