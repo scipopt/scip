@@ -320,8 +320,16 @@ SCIP_RETCODE lsProblemAddVar(
 
    var = problem->vars + problem->nvars;
    var->vartype = vartype;
-   var->lb = lb;
-   var->ub = ub;
+   if( vartype == LS_CONTINUOUS )
+   {
+      var->lb = lb;
+      var->ub = ub;
+   }
+   else
+   {
+      var->lb = SCIPfeasCeil(scip, lb);
+      var->ub = SCIPfeasFloor(scip, ub);
+   }
    var->obj = obj;
    var->coeffs = NULL;
    var->ncoeffs = 0;
@@ -555,7 +563,7 @@ SCIP_RETCODE lsSolverCreate(
       {
          solver->incumbentassignment[i] = SCIPgetSolVal(scip, sol, SCIPcolGetVar(cols[i]));
          if( problem->vars[i].vartype != LS_CONTINUOUS )
-            solver->incumbentassignment[i] = round(solver->incumbentassignment[i]);
+            solver->incumbentassignment[i] = SCIPfeasRound(scip, solver->incumbentassignment[i]);
          if( solver->incumbentassignment[i] < problem->vars[i].lb )
             solver->incumbentassignment[i] = problem->vars[i].lb;
          else if( solver->incumbentassignment[i] > problem->vars[i].ub )
