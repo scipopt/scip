@@ -1424,7 +1424,6 @@ SCIP_RETCODE lsSolverSatTightMove(
    int bestvaridx;
    SCIP_Real bestvalue;
    int constridx;
-   SCIP_Real violation;
    int newcount;
    int randidx;
    int tmpvar;
@@ -1460,8 +1459,7 @@ SCIP_RETCODE lsSolverSatTightMove(
          continue;
 
       /* skip UNSAT */
-      violation = solver->act[constridx] - problem->conss[constridx].rhs;
-      if( SCIPisFeasPositive(scip, violation) )
+      if( solver->unsatidx[constridx] >= 0 )
          continue;
 
       /* mark as sampled */
