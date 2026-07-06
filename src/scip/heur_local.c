@@ -1423,12 +1423,6 @@ SCIP_RETCODE lsSolverSatTightMove(
    int bestvaridx;
    SCIP_Real bestvalue;
    int constridx;
-   SCIP_Longint bestscore;
-   SCIP_Longint bestsubscore;
-   int varidx;
-   SCIP_Real movevalue;
-   LS_VAR* var;
-   SCIP_Longint score;
    int i;
 
    assert(scip != NULL);
@@ -1472,40 +1466,8 @@ SCIP_RETCODE lsSolverSatTightMove(
    /* subsample to budget */
    subsampleNeighbors(solver, heurdata, heurdata->bmssat);
 
-   /* score neighbors using shared scoretable */
-   bestscore = 0;
-   bestsubscore = -SCIP_LONGINT_MAX;
-
-   bestvaridx = -1;
-   bestvalue = 0.0;
-
-   for( i = 0; i < solver->neighborsize; ++i )
-   {
-      varidx = solver->neighborvaridxs[i];
-      movevalue = solver->neighborvalues[i];
-      var = problem->vars + varidx;
-
-      if( var->vartype == LS_BINARY )
-      {
-         if( solver->scoretable[varidx] )
-            continue;
-         solver->scoretable[varidx] = TRUE;
-         solver->scoreidxs[solver->nscoreidxs++] = varidx;
-      }
-
-      score = lsSolverTightScore(scip, solver, varidx, movevalue);
-
-      if( score > bestscore
-         || (score == bestscore && solver->subscore > bestsubscore) )
-      {
-         bestscore = score;
-         bestsubscore = solver->subscore;
-         bestvaridx = varidx;
-         bestvalue = movevalue;
-      }
-   }
-
-   if( bestvaridx >= 0 )
+   /* score and select */
+   if( selectBestNeighbor(scip, solver, (SCIP_Longint)0, &bestvaridx, &bestvalue) )
    {
       lsSolverApplyMove(scip, solver, heurdata, bestvaridx, bestvalue);
       *result = TRUE;
