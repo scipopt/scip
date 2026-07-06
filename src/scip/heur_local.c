@@ -436,200 +436,6 @@ void lsSolverRemoveUnsat(
  * Local methods for LS_Solver
  */
 
-/** creates a solver */
-static
-SCIP_RETCODE lsSolverCreate(
-   SCIP*                 scip,               /**< SCIP data structure */
-   LS_SOLVER**           solver,             /**< pointer to solver */
-   LS_PROBLEM*           problem             /**< problem */
-   )
-{
-   LS_SOLVER* solv;
-   int nvars;
-   int nobjvars;
-   int nnonzeros;
-   int nconss;
-
-   assert(scip != NULL);
-   assert(solver != NULL);
-   assert(problem != NULL);
-
-   nvars = problem->nvars;
-   nobjvars = problem->nobjvars;
-   nnonzeros = problem->nnonzeros + nobjvars;
-   nconss = problem->nconss;
-
-   SCIP_CALL( SCIPallocBlockMemory(scip, &solv) );
-
-   solv->problem = problem;
-   solv->curstep = 0;
-   solv->iskeepfeas = FALSE;
-   solv->objcutoff = SCIPgetCutoffbound(scip);
-   solv->objweight = 1;
-   solv->incumbentassignment = NULL;
-   solv->incumbentobjective = 0.0;
-   solv->nunsat = 0;
-   solv->effortatlastcallback = 0;
-   solv->effortatlastimprovement = 0;
-   solv->totaleffort = 0;
-   solv->bestviolations = INT_MAX;
-   solv->bestobjective = SCIPinfinity(scip);
-   solv->prevviolations = INT_MAX;
-   solv->prevobjective = SCIPinfinity(scip);
-   solv->isimproved = TRUE;
-   solv->subscore = 0;
-   solv->naffected = 0;
-   solv->neighborsize = 0;
-   solv->nscoreidxs = 0;
-   solv->nsampled = 0;
-
-   /* allocate per-variable parallel arrays */
-   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &solv->allowincstep, nvars) );
-   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &solv->allowdecstep, nvars) );
-   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &solv->lastincstep, nvars) );
-   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &solv->lastdecstep, nvars) );
-
-   /* allocate per-constraint parallel arrays */
-   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &solv->lhs, nconss) );
-   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &solv->weight, nconss) );
-   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &solv->unsatidx, nconss) );
-   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &solv->unsatidxs, nconss) );
-
-   /* allocate work arrays */
-   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &solv->neighborvaridxs, nnonzeros) );
-   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &solv->neighborvalues, nnonzeros) );
-   solv->neighborcap = nnonzeros;
-   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &solv->scoretable, nvars) );
-   BMSclearMemoryArray(solv->scoretable, nvars);
-   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &solv->scoreidxs, nvars) );
-   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &solv->tempunsatidxs, nconss) );
-   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &solv->sampledconstrs, nconss) );
-   BMSclearMemoryArray(solv->sampledconstrs, nconss);
-   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &solv->sampledidxs, nconss) );
-   if( nobjvars > 0 )
-   {
-      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &solv->liftlowervalue, nobjvars) );
-      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &solv->liftuppervalue, nobjvars) );
-   }
-   else
-   {
-      solv->liftlowervalue = NULL;
-      solv->liftuppervalue = NULL;
-   }
-   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &solv->affectedset, nvars) );
-   BMSclearMemoryArray(solv->affectedset, nvars);
-   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &solv->affectedvars, nvars) );
-
-   *solver = solv;
-
-   return SCIP_OKAY;
-}
-
-/** frees a solver */
-static
-SCIP_RETCODE lsSolverFree(
-   SCIP*                 scip,               /**< SCIP data structure */
-   LS_SOLVER**           solver              /**< pointer to solver */
-   )
-{
-   LS_SOLVER* solv;
-   int nvars;
-   int nobjvars;
-   int nnonzeros;
-   int nconss;
-
-   assert(scip != NULL);
-   assert(solver != NULL);
-
-   solv = *solver;
-   assert(solv != NULL);
-
-   nvars = solv->problem->nvars;
-   nobjvars = solv->problem->nobjvars;
-   nnonzeros = solv->problem->nnonzeros + nobjvars;
-   nconss = solv->problem->nconss;
-
-   SCIPfreeBlockMemoryArray(scip, &solv->affectedvars, nvars);
-   SCIPfreeBlockMemoryArray(scip, &solv->affectedset, nvars);
-   if( nobjvars > 0 )
-   {
-      SCIPfreeBlockMemoryArray(scip, &solv->liftuppervalue, nobjvars);
-      SCIPfreeBlockMemoryArray(scip, &solv->liftlowervalue, nobjvars);
-   }
-   SCIPfreeBlockMemoryArray(scip, &solv->sampledidxs, nconss);
-   SCIPfreeBlockMemoryArray(scip, &solv->sampledconstrs, nconss);
-   SCIPfreeBlockMemoryArray(scip, &solv->tempunsatidxs, nconss);
-   SCIPfreeBlockMemoryArray(scip, &solv->scoreidxs, nvars);
-   SCIPfreeBlockMemoryArray(scip, &solv->scoretable, nvars);
-   SCIPfreeBlockMemoryArray(scip, &solv->neighborvalues, nnonzeros);
-   SCIPfreeBlockMemoryArray(scip, &solv->neighborvaridxs, nnonzeros);
-   SCIPfreeBlockMemoryArray(scip, &solv->unsatidxs, nconss);
-   SCIPfreeBlockMemoryArray(scip, &solv->unsatidx, nconss);
-   SCIPfreeBlockMemoryArray(scip, &solv->weight, nconss);
-   SCIPfreeBlockMemoryArray(scip, &solv->lhs, nconss);
-   SCIPfreeBlockMemoryArray(scip, &solv->lastdecstep, nvars);
-   SCIPfreeBlockMemoryArray(scip, &solv->lastincstep, nvars);
-   SCIPfreeBlockMemoryArray(scip, &solv->allowdecstep, nvars);
-   SCIPfreeBlockMemoryArray(scip, &solv->allowincstep, nvars);
-   if( solv->incumbentassignment != NULL )
-      SCIPfreeBlockMemoryArray(scip, &solv->incumbentassignment, nvars);
-
-   SCIPfreeBlockMemory(scip, solver);
-
-   return SCIP_OKAY;
-}
-
-/** initializes variable values */
-static
-SCIP_RETCODE lsSolverInitSolution(
-   SCIP*                 scip,               /**< SCIP data structure */
-   LS_SOLVER*            solver,             /**< solver */
-   SCIP_SOL*             sol,                /**< SCIP solution, or NULL for bounds */
-   SCIP_COL**            cols,               /**< LP columns, or NULL */
-   int                   ncols               /**< number of LP columns, or 0 */
-   )
-{
-   LS_PROBLEM* problem;
-   int i;
-
-   assert(scip != NULL);
-   assert(solver != NULL);
-
-   problem = solver->problem;
-
-   if( solver->incumbentassignment == NULL )
-   {
-      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &solver->incumbentassignment, problem->nvars) );
-   }
-
-   if( sol != NULL )
-   {
-      assert(cols != NULL);
-      assert(ncols == problem->nvars);
-
-      for( i = 0; i < ncols; ++i )
-      {
-         solver->incumbentassignment[i] = SCIPgetSolVal(scip, sol, SCIPcolGetVar(cols[i]));
-         if( problem->vars[i].vartype != LS_CONTINUOUS )
-            solver->incumbentassignment[i] = round(solver->incumbentassignment[i]);
-         if( solver->incumbentassignment[i] < problem->vars[i].lb )
-            solver->incumbentassignment[i] = problem->vars[i].lb;
-         else if( solver->incumbentassignment[i] > problem->vars[i].ub )
-            solver->incumbentassignment[i] = problem->vars[i].ub;
-      }
-   }
-   else
-   {
-      for( i = 0; i < problem->nvars; ++i )
-      {
-         solver->incumbentassignment[i] = !SCIPisInfinity(scip, -problem->vars[i].lb) ? problem->vars[i].lb
-               : !SCIPisInfinity(scip, problem->vars[i].ub) ? problem->vars[i].ub : 0.0;
-      }
-   }
-
-   return SCIP_OKAY;
-}
-
 /** recomputes incumbent objective from current assignment */
 static
 void lsSolverRecomputeObjective(
@@ -644,46 +450,143 @@ void lsSolverRecomputeObjective(
 
    solver->incumbentobjective = 0.0;
    for( i = 0; i < problem->nobjvars; ++i )
+   {
       solver->incumbentobjective += problem->vars[problem->objvaridxs[i]].obj
             * solver->incumbentassignment[problem->objvaridxs[i]];
+   }
 
    solver->totaleffort += problem->nobjvars;
 }
 
-/** initializes constraint LHS values and violation tracking */
+/** creates and initializes a solver */
 static
-SCIP_RETCODE lsSolverInitState(
+SCIP_RETCODE lsSolverCreate(
    SCIP*                 scip,               /**< SCIP data structure */
-   LS_SOLVER*            solver              /**< solver */
+   LS_SOLVER**           solverptr,          /**< pointer to solver */
+   LS_PROBLEM*           problem,            /**< problem */
+   SCIP_SOL*             sol,                /**< SCIP solution, or NULL for bounds */
+   SCIP_COL**            cols                /**< LP columns, or NULL */
    )
 {
-   LS_PROBLEM* problem;
+   LS_SOLVER* solver;
    LS_CONSTRAINT* cons;
    SCIP_Real violation;
+   int nvars;
+   int nobjvars;
+   int nnonzeros;
+   int nconss;
    int i;
    int j;
 
    assert(scip != NULL);
-   assert(solver != NULL);
+   assert(solverptr != NULL);
+   assert(problem != NULL);
 
-   problem = solver->problem;
+   nvars = problem->nvars;
+   nobjvars = problem->nobjvars;
+   nnonzeros = problem->nnonzeros + nobjvars;
+   nconss = problem->nconss;
+
+   SCIP_CALL( SCIPallocBlockMemory(scip, &solver) );
+
+   solver->problem = problem;
+   solver->curstep = 0;
+   solver->iskeepfeas = FALSE;
+   solver->objcutoff = SCIPgetCutoffbound(scip);
+   solver->objweight = 1;
+   solver->effortatlastcallback = 0;
+   solver->effortatlastimprovement = 0;
+   solver->totaleffort = 0;
+   solver->bestviolations = INT_MAX;
+   solver->bestobjective = SCIPinfinity(scip);
+   solver->prevviolations = INT_MAX;
+   solver->prevobjective = SCIPinfinity(scip);
+   solver->isimproved = TRUE;
+   solver->subscore = 0;
+   solver->naffected = 0;
+   solver->neighborsize = 0;
+   solver->nscoreidxs = 0;
+   solver->nsampled = 0;
+
+   /* allocate per-variable parallel arrays */
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &solver->incumbentassignment, nvars) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &solver->allowincstep, nvars) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &solver->allowdecstep, nvars) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &solver->lastincstep, nvars) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &solver->lastdecstep, nvars) );
+
+   /* allocate per-constraint parallel arrays */
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &solver->lhs, nconss) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &solver->weight, nconss) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &solver->unsatidx, nconss) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &solver->unsatidxs, nconss) );
+
+   /* allocate work arrays */
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &solver->neighborvaridxs, nnonzeros) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &solver->neighborvalues, nnonzeros) );
+   solver->neighborcap = nnonzeros;
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &solver->scoretable, nvars) );
+   BMSclearMemoryArray(solver->scoretable, nvars);
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &solver->scoreidxs, nvars) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &solver->tempunsatidxs, nconss) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &solver->sampledconstrs, nconss) );
+   BMSclearMemoryArray(solver->sampledconstrs, nconss);
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &solver->sampledidxs, nconss) );
+   if( nobjvars > 0 )
+   {
+      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &solver->liftlowervalue, nobjvars) );
+      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &solver->liftuppervalue, nobjvars) );
+   }
+   else
+   {
+      solver->liftlowervalue = NULL;
+      solver->liftuppervalue = NULL;
+   }
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &solver->affectedset, nvars) );
+   BMSclearMemoryArray(solver->affectedset, nvars);
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &solver->affectedvars, nvars) );
+
+   /* initialize variable values */
+   if( sol != NULL )
+   {
+      assert(cols != NULL);
+
+      for( i = 0; i < nvars; ++i )
+      {
+         solver->incumbentassignment[i] = SCIPgetSolVal(scip, sol, SCIPcolGetVar(cols[i]));
+         if( problem->vars[i].vartype != LS_CONTINUOUS )
+            solver->incumbentassignment[i] = round(solver->incumbentassignment[i]);
+         if( solver->incumbentassignment[i] < problem->vars[i].lb )
+            solver->incumbentassignment[i] = problem->vars[i].lb;
+         else if( solver->incumbentassignment[i] > problem->vars[i].ub )
+            solver->incumbentassignment[i] = problem->vars[i].ub;
+      }
+   }
+   else
+   {
+      for( i = 0; i < nvars; ++i )
+      {
+         solver->incumbentassignment[i] = !SCIPisInfinity(scip, -problem->vars[i].lb) ? problem->vars[i].lb
+               : !SCIPisInfinity(scip, problem->vars[i].ub) ? problem->vars[i].ub : 0.0;
+      }
+   }
 
    /* init per-variable dynamic arrays */
-   BMSclearMemoryArray(solver->allowincstep, problem->nvars);
-   BMSclearMemoryArray(solver->allowdecstep, problem->nvars);
-   BMSclearMemoryArray(solver->lastincstep, problem->nvars);
-   BMSclearMemoryArray(solver->lastdecstep, problem->nvars);
+   BMSclearMemoryArray(solver->allowincstep, nvars);
+   BMSclearMemoryArray(solver->allowdecstep, nvars);
+   BMSclearMemoryArray(solver->lastincstep, nvars);
+   BMSclearMemoryArray(solver->lastdecstep, nvars);
 
    /* init per-constraint dynamic arrays */
    solver->nunsat = 0;
-   for( i = 0; i < problem->nconss; ++i )
+   for( i = 0; i < nconss; ++i )
    {
       solver->weight[i] = 1;
       solver->unsatidx[i] = -1;
    }
 
    /* compute constraint LHS values */
-   for( i = 0; i < problem->nconss; ++i )
+   for( i = 0; i < nconss; ++i )
    {
       cons = problem->conss + i;
 
@@ -703,9 +606,63 @@ SCIP_RETCODE lsSolverInitState(
    /* compute objective value */
    lsSolverRecomputeObjective(scip, solver);
 
+   *solverptr = solver;
+
    return SCIP_OKAY;
 }
 
+/** frees a solver */
+static
+SCIP_RETCODE lsSolverFree(
+   SCIP*                 scip,               /**< SCIP data structure */
+   LS_SOLVER**           solverptr           /**< pointer to solver */
+   )
+{
+   LS_SOLVER* solver;
+   int nvars;
+   int nobjvars;
+   int nnonzeros;
+   int nconss;
+
+   assert(scip != NULL);
+   assert(solverptr != NULL);
+
+   solver = *solverptr;
+   assert(solver != NULL);
+
+   nvars = solver->problem->nvars;
+   nobjvars = solver->problem->nobjvars;
+   nnonzeros = solver->problem->nnonzeros + nobjvars;
+   nconss = solver->problem->nconss;
+
+   SCIPfreeBlockMemoryArray(scip, &solver->affectedvars, nvars);
+   SCIPfreeBlockMemoryArray(scip, &solver->affectedset, nvars);
+   if( nobjvars > 0 )
+   {
+      SCIPfreeBlockMemoryArray(scip, &solver->liftuppervalue, nobjvars);
+      SCIPfreeBlockMemoryArray(scip, &solver->liftlowervalue, nobjvars);
+   }
+   SCIPfreeBlockMemoryArray(scip, &solver->sampledidxs, nconss);
+   SCIPfreeBlockMemoryArray(scip, &solver->sampledconstrs, nconss);
+   SCIPfreeBlockMemoryArray(scip, &solver->tempunsatidxs, nconss);
+   SCIPfreeBlockMemoryArray(scip, &solver->scoreidxs, nvars);
+   SCIPfreeBlockMemoryArray(scip, &solver->scoretable, nvars);
+   SCIPfreeBlockMemoryArray(scip, &solver->neighborvalues, nnonzeros);
+   SCIPfreeBlockMemoryArray(scip, &solver->neighborvaridxs, nnonzeros);
+   SCIPfreeBlockMemoryArray(scip, &solver->unsatidxs, nconss);
+   SCIPfreeBlockMemoryArray(scip, &solver->unsatidx, nconss);
+   SCIPfreeBlockMemoryArray(scip, &solver->weight, nconss);
+   SCIPfreeBlockMemoryArray(scip, &solver->lhs, nconss);
+   SCIPfreeBlockMemoryArray(scip, &solver->lastdecstep, nvars);
+   SCIPfreeBlockMemoryArray(scip, &solver->lastincstep, nvars);
+   SCIPfreeBlockMemoryArray(scip, &solver->allowdecstep, nvars);
+   SCIPfreeBlockMemoryArray(scip, &solver->allowincstep, nvars);
+   SCIPfreeBlockMemoryArray(scip, &solver->incumbentassignment, nvars);
+
+   SCIPfreeBlockMemory(scip, solverptr);
+
+   return SCIP_OKAY;
+}
 
 /*
  * Core operations
@@ -2681,13 +2638,11 @@ SCIP_RETCODE runLocal(
       return SCIP_OKAY;
    }
 
-   /* create solver */
-   SCIP_CALL( lsSolverCreate(scip, &solver, problem) );
-
    /* initialize solution */
    bestsol = (heurdata->useinitialsol && heurtiming != SCIP_HEURTIMING_BEFOREPRESOL) ? SCIPgetBestSol(scip) : NULL;
-   SCIP_CALL( lsSolverInitSolution(scip, solver, bestsol, cols, ncols) );
-   SCIP_CALL( lsSolverInitState(scip, solver) );
+
+   /* create solver */
+   SCIP_CALL( lsSolverCreate(scip, &solver, problem, bestsol, cols) );
 
    if( heurdata->verbosity >= 1 )
    {
