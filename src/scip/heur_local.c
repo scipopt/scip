@@ -1420,14 +1420,9 @@ SCIP_RETCODE lsSolverSatTightMove(
    )
 {
    LS_PROBLEM* problem;
-   int nsaved;
    int bestvaridx;
    SCIP_Real bestvalue;
    int constridx;
-   int newcount;
-   int randidx;
-   int tmpvar;
-   SCIP_Real tmpvalue;
    SCIP_Longint bestscore;
    SCIP_Longint bestsubscore;
    int varidx;
@@ -1443,7 +1438,7 @@ SCIP_RETCODE lsSolverSatTightMove(
 
    *result = FALSE;
    problem = solver->problem;
-   nsaved = solver->neighborsize;
+   solver->neighborsize = 0;
 
    if( problem->nconss == 0 )
       return SCIP_OKAY;
@@ -1474,34 +1469,17 @@ SCIP_RETCODE lsSolverSatTightMove(
       solver->sampledconstrs[solver->sampledidxs[i]] = FALSE;
    solver->nsampled = 0;
 
-   /* subsample to budget (only new entries) */
-   if( solver->neighborsize - nsaved > heurdata->bmssat )
-   {
-      /* shuffle only the new entries */
-      newcount = solver->neighborsize - nsaved;
+   /* subsample to budget */
+   subsampleNeighbors(solver, heurdata, heurdata->bmssat);
 
-      for( i = 0; i < heurdata->bmssat; ++i )
-      {
-         randidx = SCIPrandomGetInt(heurdata->randnumgen, 0, newcount - 1 - i) + i;
-
-         tmpvar = solver->neighborvaridxs[nsaved + randidx];
-         tmpvalue = solver->neighborvalues[nsaved + randidx];
-         solver->neighborvaridxs[nsaved + randidx] = solver->neighborvaridxs[nsaved + i];
-         solver->neighborvalues[nsaved + randidx] = solver->neighborvalues[nsaved + i];
-         solver->neighborvaridxs[nsaved + i] = tmpvar;
-         solver->neighborvalues[nsaved + i] = tmpvalue;
-      }
-      solver->neighborsize = nsaved + heurdata->bmssat;
-   }
-
-   /* score from nsaved onward using shared scoretable */
+   /* score neighbors using shared scoretable */
    bestscore = 0;
    bestsubscore = -SCIP_LONGINT_MAX;
 
    bestvaridx = -1;
    bestvalue = 0.0;
 
-   for( i = nsaved; i < solver->neighborsize; ++i )
+   for( i = 0; i < solver->neighborsize; ++i )
    {
       varidx = solver->neighborvaridxs[i];
       movevalue = solver->neighborvalues[i];
