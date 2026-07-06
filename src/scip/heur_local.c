@@ -169,7 +169,7 @@ struct LS_Solver
    SCIP_Real             incumbentobjective; /**< current objective value */
    int*                  unsatidxs;          /**< violated constraint indices */
    int                   nunsat;             /**< number of violated constraints */
-   SCIP_Real*            lhs;                /**< per-constraint current LHS */
+   SCIP_Real*            act;                /**< per-constraint current activity */
    int*                  weight;             /**< per-constraint penalty weight */
    int*                  unsatidx;           /**< per-constraint position in unsatidxs */
    int*                  allowincstep;       /**< per-variable tabu: earliest allow increase */
@@ -516,7 +516,7 @@ SCIP_RETCODE lsSolverCreate(
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &solver->lastdecstep, nvars) );
 
    /* allocate per-constraint parallel arrays */
-   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &solver->lhs, nconss) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &solver->act, nconss) );
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &solver->weight, nconss) );
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &solver->unsatidx, nconss) );
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &solver->unsatidxs, nconss) );
@@ -585,18 +585,18 @@ SCIP_RETCODE lsSolverCreate(
       solver->unsatidx[i] = -1;
    }
 
-   /* compute constraint LHS values */
+   /* compute constraint activity values */
    for( i = 0; i < nconss; ++i )
    {
       cons = problem->conss + i;
 
-      solver->lhs[i] = 0.0;
+      solver->act[i] = 0.0;
       for( j = 0; j < cons->ncoeffs; ++j )
       {
-         solver->lhs[i] += cons->coeffs[j].coeff * solver->incumbentassignment[cons->coeffs[j].idx];
+         solver->act[i] += cons->coeffs[j].coeff * solver->incumbentassignment[cons->coeffs[j].idx];
       }
 
-      violation = solver->lhs[i] - cons->rhs;
+      violation = solver->act[i] - cons->rhs;
       if( SCIPisFeasPositive(scip, violation) )
          lsSolverInsertUnsat(solver, i);
    }
@@ -652,7 +652,7 @@ SCIP_RETCODE lsSolverFree(
    SCIPfreeBlockMemoryArray(scip, &solver->unsatidxs, nconss);
    SCIPfreeBlockMemoryArray(scip, &solver->unsatidx, nconss);
    SCIPfreeBlockMemoryArray(scip, &solver->weight, nconss);
-   SCIPfreeBlockMemoryArray(scip, &solver->lhs, nconss);
+   SCIPfreeBlockMemoryArray(scip, &solver->act, nconss);
    SCIPfreeBlockMemoryArray(scip, &solver->lastdecstep, nvars);
    SCIPfreeBlockMemoryArray(scip, &solver->lastincstep, nvars);
    SCIPfreeBlockMemoryArray(scip, &solver->allowdecstep, nvars);
@@ -683,8 +683,8 @@ void lsSolverApplyMove(
    SCIP_Real oldvalue;
    int constridx;
    LS_CONSTRAINT* cons;
-   SCIP_Real oldlhs;
-   SCIP_Real newlhs;
+   SCIP_Real oldact;
+   SCIP_Real newact;
    SCIP_Real previol;
    SCIP_Real newviol;
    int i;
@@ -709,23 +709,23 @@ void lsSolverApplyMove(
    if( !SCIPisInfinity(scip, solver->objcutoff) && var->objidx >= 0 )
       lsSolverRecomputeObjective(scip, solver);
 
-   /* recompute LHS for each affected constraint */
+   /* recompute activity for each affected constraint */
    for( i = 0; i < var->ncoeffs; ++i )
    {
       constridx = var->coeffs[i].idx;
       cons = problem->conss + constridx;
-      oldlhs = solver->lhs[constridx];
-      newlhs = 0.0;
+      oldact = solver->act[constridx];
+      newact = 0.0;
 
       /* full recompute */
       for( j = 0; j < cons->ncoeffs; ++j )
       {
-         newlhs += cons->coeffs[j].coeff * solver->incumbentassignment[cons->coeffs[j].idx];
+         newact += cons->coeffs[j].coeff * solver->incumbentassignment[cons->coeffs[j].idx];
       }
 
-      previol = oldlhs - cons->rhs;
-      newviol = newlhs - cons->rhs;
-      solver->lhs[constridx] = newlhs;
+      previol = oldact - cons->rhs;
+      newviol = newact - cons->rhs;
+      solver->act[constridx] = newact;
 
       /* update violation tracking */
       if( !SCIPisFeasPositive(scip, previol) && SCIPisFeasPositive(scip, newviol) )
@@ -789,7 +789,7 @@ SCIP_Bool lsSolverTightMove(
    assert(coeff != 0.0); /*lint !e777*/
 
    value = solver->incumbentassignment[varidx];
-   residual = solver->lhs[constridx] - value * coeff;
+   residual = solver->act[constridx] - value * coeff;
    movevalue = (cons->rhs - residual) / coeff;
 
    /* round, verify, and adjust */
@@ -848,9 +848,9 @@ SCIP_Longint lsSolverTightScore(
    SCIP_Bool nowbetter;
    int constridx;
    SCIP_Real coeff;
-   SCIP_Real lhs;
+   SCIP_Real act;
    SCIP_Real rhs;
-   SCIP_Real newlhs;
+   SCIP_Real newact;
    SCIP_Real previol;
    SCIP_Real newviol;
    SCIP_Bool presat;
@@ -899,12 +899,12 @@ SCIP_Longint lsSolverTightScore(
    {
       constridx = var->coeffs[i].idx;
       coeff = var->coeffs[i].coeff;
-      lhs = solver->lhs[constridx];
+      act = solver->act[constridx];
       rhs = problem->conss[constridx].rhs;
-      residual = lhs - value * coeff;
-      newlhs = newvalue * coeff + residual;
-      previol = lhs - rhs;
-      newviol = newlhs - rhs;
+      residual = act - value * coeff;
+      newact = newvalue * coeff + residual;
+      previol = act - rhs;
+      newviol = newact - rhs;
       presat = !SCIPisFeasPositive(scip, previol);
       nowsat = !SCIPisFeasPositive(scip, newviol);
 
@@ -984,7 +984,7 @@ void lsSolverSmoothWeight(
 
    for( i = 0; i < problem->nconss; ++i )
    {
-      violation = solver->lhs[i] - problem->conss[i].rhs;
+      violation = solver->act[i] - problem->conss[i].rhs;
 
       if( !SCIPisFeasPositive(scip, violation) && solver->weight[i] > 0 )
          --solver->weight[i];
@@ -1452,7 +1452,7 @@ SCIP_RETCODE lsSolverSatTightMove(
          continue;
 
       /* skip UNSAT */
-      violation = solver->lhs[constridx] - problem->conss[constridx].rhs;
+      violation = solver->act[constridx] - problem->conss[constridx].rhs;
       if( SCIPisFeasPositive(scip, violation) )
          continue;
 
@@ -1749,7 +1749,7 @@ SCIP_RETCODE lsSolverLiftMove(
          for( j = 0; j < var->ncoeffs; ++j )
          {
             constridx = var->coeffs[j].idx;
-            gap = solver->lhs[constridx] - problem->conss[constridx].rhs;
+            gap = solver->act[constridx] - problem->conss[constridx].rhs;
             coeff = var->coeffs[j].coeff;
 
             if( SCIPisFeasZero(scip, gap) )
@@ -1876,7 +1876,7 @@ SCIP_RETCODE lsSolverLiftMove(
          for( k = 0; k < affvar->ncoeffs; ++k )
          {
             cidx = affvar->coeffs[k].idx;
-            gap2 = solver->lhs[cidx] - problem->conss[cidx].rhs;
+            gap2 = solver->act[cidx] - problem->conss[cidx].rhs;
             coeff2 = affvar->coeffs[k].coeff;
 
             if( SCIPisFeasZero(scip, gap2) )
