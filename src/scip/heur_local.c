@@ -1002,50 +1002,6 @@ void lsSolverSmoothWeight(
  * Move operators
  */
 
-/** performs the unsat tight move */
-static
-SCIP_RETCODE lsSolverUnsatTightMove(
-   SCIP*                 scip,               /**< SCIP data structure */
-   LS_SOLVER*            solver,             /**< solver */
-   SCIP_HEURDATA*        heurdata,           /**< heuristic data */
-   SCIP_Bool*            result              /**< pointer to store whether move was applied */
-   );
-
-/** performs the sat tight move */
-static
-SCIP_RETCODE lsSolverSatTightMove(
-   SCIP*                 scip,               /**< SCIP data structure */
-   LS_SOLVER*            solver,             /**< solver */
-   SCIP_HEURDATA*        heurdata,           /**< heuristic data */
-   SCIP_Bool*            result              /**< pointer to store whether move was applied */
-   );
-
-/** performs the flip move */
-static
-SCIP_RETCODE lsSolverFlipMove(
-   SCIP*                 scip,               /**< SCIP data structure */
-   LS_SOLVER*            solver,             /**< solver */
-   SCIP_HEURDATA*        heurdata,           /**< heuristic data */
-   SCIP_Bool*            result              /**< pointer to store whether move was applied */
-   );
-
-/** performs the random tight move */
-static
-SCIP_RETCODE lsSolverRandomTightMove(
-   SCIP*                 scip,               /**< SCIP data structure */
-   LS_SOLVER*            solver,             /**< solver */
-   SCIP_HEURDATA*        heurdata            /**< heuristic data */
-   );
-
-/** performs the lift move */
-static
-SCIP_RETCODE lsSolverLiftMove(
-   SCIP*                 scip,               /**< SCIP data structure */
-   LS_SOLVER*            solver,             /**< solver */
-   SCIP_HEURDATA*        heurdata,           /**< heuristic data */
-   SCIP_Bool*            result              /**< pointer to store whether move was applied */
-   );
-
 /** collects neighbor candidates from a constraint */
 static
 void collectConstraintNeighbors(
@@ -1316,8 +1272,6 @@ SCIP_RETCODE lsSolverUnsatTightMove(
    SCIP_Real bestvalue;
    int randidx;
    int tmp;
-   SCIP_Bool satresult;
-   SCIP_Bool flipresult;
    int i;
 
    assert(scip != NULL);
@@ -1327,7 +1281,6 @@ SCIP_RETCODE lsSolverUnsatTightMove(
 
    *result = FALSE;
    solver->neighborsize = 0;
-   solver->nscoreidxs = 0;
 
    /* sample unsat constraints */
    if( solver->nunsat > 0 )
@@ -1374,30 +1327,8 @@ SCIP_RETCODE lsSolverUnsatTightMove(
    if( selectBestNeighbor(scip, solver, (SCIP_Longint)0, &bestvaridx, &bestvalue) )
    {
       lsSolverApplyMove(scip, solver, heurdata, bestvaridx, bestvalue);
-      cleanScoreTable(solver);
       *result = TRUE;
-      return SCIP_OKAY;
    }
-
-   /* fallback: try SatTightMove (if feasible), then FlipMove */
-   if( !SCIPisInfinity(scip, solver->objcutoff) )
-   {
-      satresult = FALSE;
-
-      SCIP_CALL( lsSolverSatTightMove(scip, solver, heurdata, &satresult) );
-      if( satresult )
-      {
-         cleanScoreTable(solver);
-         *result = TRUE;
-         return SCIP_OKAY;
-      }
-   }
-
-   flipresult = FALSE;
-
-   SCIP_CALL( lsSolverFlipMove(scip, solver, heurdata, &flipresult) );
-   cleanScoreTable(solver);
-   *result = flipresult;
 
    return SCIP_OKAY;
 }
@@ -1616,7 +1547,6 @@ SCIP_RETCODE lsSolverRandomTightMove(
    /* score ALL (accept negative scores) */
    if( selectBestNeighbor(scip, solver, -SCIP_LONGINT_MAX, &bestvaridx, &bestvalue) )
       lsSolverApplyMove(scip, solver, heurdata, bestvaridx, bestvalue);
-   cleanScoreTable(solver);
 
    return SCIP_OKAY;
 }
@@ -2648,8 +2578,20 @@ SCIP_RETCODE runLocal(
 
       SCIP_CALL( lsSolverUnsatTightMove(scip, solver, heurdata, &moveresult) );
 
+      if( !moveresult && !SCIPisInfinity(scip, solver->objcutoff) )
+      {
+         SCIP_CALL( lsSolverSatTightMove(scip, solver, heurdata, &moveresult) );
+      }
+
       if( !moveresult )
       {
+         SCIP_CALL( lsSolverFlipMove(scip, solver, heurdata, &moveresult) );
+      }
+
+      if( !moveresult )
+      {
+         cleanScoreTable(solver);
+
          if( SCIPrandomGetInt(heurdata->randnumgen, 0, 9999) > heurdata->smoothprob )
             lsSolverUpdateWeight(scip, solver);
          else
@@ -2657,6 +2599,8 @@ SCIP_RETCODE runLocal(
 
          SCIP_CALL( lsSolverRandomTightMove(scip, solver, heurdata) );
       }
+
+      cleanScoreTable(solver);
 
       /* track improvement */
       if( solver->nunsat < solver->bestviolations

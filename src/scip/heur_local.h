@@ -37,10 +37,10 @@
  *
  * The search uses five move operators:
  * - UnsatTightMove: samples violated constraints and moves toward satisfaction.
- * - SatTightMove: samples satisfied constraints and moves toward constraint boundaries.
+ * - SatTightMove: samples satisfied constraints and moves toward constraint boundaries (optimality mode only).
  * - FlipMove: flips binary variables with bounds checking.
  * - RandomTightMove: escapes local minima using soft aspiration tabu and accepting negative-score moves.
- * - LiftMove: improves objective variables while maintaining feasibility.
+ * - LiftMove: improves objective variables while maintaining feasibility (optimality mode only).
  *
  * Constraints are normalized to sum(coeff * var) <= rhs form. Move scores are integer sums of constraint weights based
  * on feasibility transitions. Constraint weights grow for persistent violations and decay for satisfied constraints.
