@@ -3,6 +3,11 @@
 @section RN1004 SCIP 10.0.4
 ***************************
 
+Fixed bugs
+----------
+
+- disabled use of std::unchecked_array_iterator in amplmp's variant of fmt when using MSVC >= 2026
+
 
 @section RN1003 SCIP 10.0.3
 ***************************
