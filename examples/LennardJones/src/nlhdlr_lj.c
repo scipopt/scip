@@ -401,10 +401,11 @@ SCIP_DECL_NLHDLRDETECT(nlhdlrDetectLJ)
          *participating = SCIP_NLHDLR_METHOD_SEPAABOVE;
    }
 
-   /* our estimators are enforcing */
-   *enforcing |= *participating;
+   if( !(*enforcing & SCIP_NLHDLR_METHOD_ACTIVITY) )
+      *participating |= SCIP_NLHDLR_METHOD_ACTIVITY;
 
-   *participating |= SCIP_NLHDLR_METHOD_ACTIVITY;
+   /* our estimators and bound tightening are enforcing */
+   *enforcing |= *participating;
 
    /* we need an auxiliary variable for r and will use its activity for the under- or overestimator */
    SCIP_CALL( SCIPregisterExprUsageNonlinear(scip, r, TRUE, TRUE, dobelow, doabove) );
