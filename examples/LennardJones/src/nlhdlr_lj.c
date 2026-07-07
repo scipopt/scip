@@ -177,6 +177,96 @@ SCIP_Bool underestimator(
    return TRUE;
 }
 
+/** Compute interval for r^(-6) - r^(-3). */
+static
+void range(
+   SCIP_INTERVAL*        resultant,
+   SCIP_INTERVAL         r
+)
+{
+   SCIP_ROUNDMODE origroundmode;
+   SCIP_Real pow3;
+   SCIP_Real pow6;
+
+   origroundmode = SCIPintervalGetRoundingMode();
+
+   /* minimum of r^-6 - r^-3 */
+   if( r.inf < RMINIMUM && r.sup > RMINIMUM )
+   {
+      /* set interval to pow(RMINIMUM, -6) - pow(RMINIMUM, -3) = -0.25 */
+      resultant->inf = -0.25;
+   }
+   else if( r.inf >= RMINIMUM )
+   {
+      /* function is monotonical increasing, so minimum is at r.inf */
+      pow6 = SCIPintervalPowerScalarIntegerInf(r.inf, -6.0);
+      pow3 = SCIPintervalPowerScalarIntegerSup(r.inf, -3.0);
+      SCIPintervalSetRoundingModeDownwards();
+      resultant->inf = pow6 - pow3;
+      SCIPintervalSetRoundingMode(origroundmode);
+   }
+   else
+   {
+      /* function is monotonical decreasing, so minimum is at r.sup */
+      assert(r.sup < RMINIMUM);
+      pow6 = SCIPintervalPowerScalarIntegerInf(r.sup, -6.0);
+      pow3 = SCIPintervalPowerScalarIntegerSup(r.sup, -3.0);
+      SCIPintervalSetRoundingModeDownwards();
+      resultant->inf = pow6 - pow3;
+      SCIPintervalSetRoundingMode(origroundmode);
+   }
+
+   /* maximum of r^-6 - r^-3 */
+   if( r.inf <= 0.0 || r.sup >= SCIP_INTERVAL_INFINITY )
+   {
+      resultant->sup = SCIP_INTERVAL_INFINITY;
+   }
+   else if( r.inf < RMINIMUM && r.sup > RMINIMUM )
+   {
+      /* max is either at r.inf or r.sup */
+      SCIP_Real sup2;
+
+      /* function value at r.inf */
+      pow6 = SCIPintervalPowerScalarIntegerSup(r.inf, -6.0);
+      pow3 = SCIPintervalPowerScalarIntegerInf(r.inf, -3.0);
+      SCIPintervalSetRoundingModeUpwards();
+      resultant->sup = pow6 - pow3;
+      SCIPintervalSetRoundingMode(origroundmode);
+
+      pow6 = SCIPintervalPowerScalarIntegerSup(r.sup, -6.0);
+      pow3 = SCIPintervalPowerScalarIntegerInf(r.sup, -3.0);
+      SCIPintervalSetRoundingModeUpwards();
+      sup2 = pow6 - pow3;
+      SCIPintervalSetRoundingMode(origroundmode);
+
+      if( sup2 > resultant->sup )
+         resultant->sup = sup2;
+   }
+   else if( r.inf >= RMINIMUM )
+   {
+      /* function is monotonical increasing, so maximum is at r.sup */
+      pow6 = SCIPintervalPowerScalarIntegerSup(r.sup, -6.0);
+      pow3 = SCIPintervalPowerScalarIntegerInf(r.sup, -3.0);
+      SCIPintervalSetRoundingModeUpwards();
+      resultant->sup = pow6 - pow3;
+      SCIPintervalSetRoundingMode(origroundmode);
+   }
+   else
+   {
+      /* function is monotonical decreasing, so maximum is at r.inf */
+      assert(r.sup < RMINIMUM);
+      assert(r.inf > 0.0);
+
+      pow6 = SCIPintervalPowerScalarIntegerSup(r.inf, -6.0);
+      pow3 = SCIPintervalPowerScalarIntegerInf(r.inf, -3.0);
+      SCIPintervalSetRoundingModeUpwards();
+      resultant->sup = pow6 - pow3;
+      SCIPintervalSetRoundingMode(origroundmode);
+   }
+
+   SCIPdebugMessage("r = [%g,%g] -> f(r) = [%g,%g]\n", r.inf, r.sup, resultant->inf, resultant->sup);
+}
+
 /*
  * Callback methods of nonlinear handler
  */
@@ -576,10 +666,8 @@ SCIP_DECL_NLHDLRSOLLINEARIZE(nlhdlrSollinearizeLJ)
 static
 SCIP_DECL_NLHDLRINTEVAL(nlhdlrIntevalLJ)
 { /*lint --e{715}*/
-   SCIP_ROUNDMODE origroundmode;
    SCIP_INTERVAL r;
    SCIP_INTERVAL p;
-   SCIP_Real pow6, pow3;
 
    assert(nlhdlrexprdata != NULL);
 
@@ -591,83 +679,7 @@ SCIP_DECL_NLHDLRINTEVAL(nlhdlrIntevalLJ)
       return SCIP_OKAY;
    }
 
-   origroundmode = SCIPintervalGetRoundingMode();
-
-   /* minimum of r^-6 - r^-3 */
-   if( r.inf < RMINIMUM && r.sup > RMINIMUM )
-   {
-      /* set interval to pow(RMINIMUM, -6) - pow(RMINIMUM, -3) = -0.25 */
-      interval->inf = -0.25;
-   }
-   else if( r.inf >= RMINIMUM )
-   {
-      /* function is monotonical increasing, so minimum is at r.inf */
-      pow6 = SCIPintervalPowerScalarIntegerInf(r.inf, -6.0);
-      pow3 = SCIPintervalPowerScalarIntegerSup(r.inf, -3.0);
-      SCIPintervalSetRoundingModeDownwards();
-      interval->inf = pow6 - pow3;
-      SCIPintervalSetRoundingMode(origroundmode);
-   }
-   else
-   {
-      /* function is monotonical decreasing, so minimum is at r.sup */
-      assert(r.sup < RMINIMUM);
-      pow6 = SCIPintervalPowerScalarIntegerInf(r.sup, -6.0);
-      pow3 = SCIPintervalPowerScalarIntegerSup(r.sup, -3.0);
-      SCIPintervalSetRoundingModeDownwards();
-      interval->inf = pow6 - pow3;
-      SCIPintervalSetRoundingMode(origroundmode);
-   }
-
-   /* maximum of r^-6 - r^-3 */
-   if( r.inf <= 0.0 || r.sup >= SCIP_INTERVAL_INFINITY )
-   {
-      interval->sup = SCIP_INTERVAL_INFINITY;
-   }
-   else if( r.inf < RMINIMUM && r.sup > RMINIMUM )
-   {
-      /* max is either at r.inf or r.sup */
-      SCIP_Real sup2;
-
-      /* function value at r.inf */
-      pow6 = SCIPintervalPowerScalarIntegerSup(r.inf, -6.0);
-      pow3 = SCIPintervalPowerScalarIntegerInf(r.inf, -3.0);
-      SCIPintervalSetRoundingModeUpwards();
-      interval->sup = pow6 - pow3;
-      SCIPintervalSetRoundingMode(origroundmode);
-
-      pow6 = SCIPintervalPowerScalarIntegerSup(r.sup, -6.0);
-      pow3 = SCIPintervalPowerScalarIntegerInf(r.sup, -3.0);
-      SCIPintervalSetRoundingModeUpwards();
-      sup2 = pow6 - pow3;
-      SCIPintervalSetRoundingMode(origroundmode);
-
-      if( sup2 > interval->sup )
-         interval->sup = sup2;
-   }
-   else if( r.inf >= RMINIMUM )
-   {
-      /* function is monotonical increasing, so maximum is at r.sup */
-      pow6 = SCIPintervalPowerScalarIntegerSup(r.sup, -6.0);
-      pow3 = SCIPintervalPowerScalarIntegerInf(r.sup, -3.0);
-      SCIPintervalSetRoundingModeUpwards();
-      interval->sup = pow6 - pow3;
-      SCIPintervalSetRoundingMode(origroundmode);
-   }
-   else
-   {
-      /* function is monotonical decreasing, so maximum is at r.inf */
-      assert(r.sup < RMINIMUM);
-      assert(r.inf > 0.0);
-
-      pow6 = SCIPintervalPowerScalarIntegerSup(r.inf, -6.0);
-      pow3 = SCIPintervalPowerScalarIntegerInf(r.inf, -3.0);
-      SCIPintervalSetRoundingModeUpwards();
-      interval->sup = pow6 - pow3;
-      SCIPintervalSetRoundingMode(origroundmode);
-   }
-
-   SCIPdebugMsg(scip, "r = [%g,%g] -> f(r) = [%g,%g]\n", r.inf, r.sup, interval->inf, interval->sup);
+   range(interval, r);
 
    SCIPintervalMulScalar(SCIP_INTERVAL_INFINITY, interval, *interval, nlhdlrexprdata->rcoef);
 
@@ -679,20 +691,50 @@ SCIP_DECL_NLHDLRINTEVAL(nlhdlrIntevalLJ)
    return SCIP_OKAY;
 }
 
-
 /** nonlinear handler callback for reverse propagation */
-#if 0
 static
 SCIP_DECL_NLHDLRREVERSEPROP(nlhdlrReversepropLJ)
 { /*lint --e{715}*/
-   SCIPerrorMessage("method of lj nonlinear handler not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
+   SCIP_INTERVAL p;
+   SCIP_INTERVAL fr;
+   SCIP_INTERVAL z;
+   SCIP_INTERVAL r;
+
+   assert(nlhdlrexprdata != NULL);
+
+   /* activity of pcoef * p */
+   p = SCIPexprGetActivity(nlhdlrexprdata->p);
+   SCIPintervalMulScalar(SCIP_INTERVAL_INFINITY, &p, p, nlhdlrexprdata->pcoef);
+
+   /* bounds on r^(-6) - r^(-3): (bounds - p) / rcoef */
+   SCIPintervalSub(SCIP_INTERVAL_INFINITY, &fr, bounds, p);
+   SCIPintervalDivScalar(SCIP_INTERVAL_INFINITY, &fr, fr, nlhdlrexprdata->rcoef);
+
+   /* solve r^(-6) - r^(-3) in fr
+    * 1. get interval z = r^(-3)
+    * 1. solve z^2 - z = fr intersected with z
+    * 2. solve r^(-3) = z
+    */
+   r = SCIPexprGetActivity(nlhdlrexprdata->r);
+   SCIPintervalPowerScalar(SCIP_INTERVAL_INFINITY, &z, r, -3.0);
+   SCIPintervalSolveUnivariateQuadExpression(SCIP_INTERVAL_INFINITY, &z, (SCIP_INTERVAL){1.0, 1.0}, (SCIP_INTERVAL){-1.0, -1.0}, fr, z);
+   SCIPintervalPowerScalarInverse(SCIP_INTERVAL_INFINITY, &r, r, -3.0, z);
+
+   SCIP_CALL( SCIPtightenExprIntervalNonlinear(scip, nlhdlrexprdata->r, r, infeasible, nreductions) );
+
+   if( *infeasible )
+      return SCIP_OKAY;
+
+   /* bounds on p: (bounds - rterm) / pcoef */
+   range(&fr, SCIPexprGetActivity(nlhdlrexprdata->r));
+   SCIPintervalMulScalar(SCIP_INTERVAL_INFINITY, &fr, fr, nlhdlrexprdata->rcoef);
+   SCIPintervalSub(SCIP_INTERVAL_INFINITY, &p, bounds, fr);
+   SCIPintervalDivScalar(SCIP_INTERVAL_INFINITY, &p, p, nlhdlrexprdata->pcoef);
+
+   SCIP_CALL( SCIPtightenExprIntervalNonlinear(scip, nlhdlrexprdata->p, p, infeasible, nreductions) );
 
    return SCIP_OKAY;
 }
-#else
-#define nlhdlrReversepropLJ NULL
-#endif
 
 
 /*
