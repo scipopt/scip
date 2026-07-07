@@ -187,8 +187,7 @@ struct LS_Solver
    SCIP_Bool*            sampledconstrs;     /**< per-constraint dedup flag for sat sampling */
    int*                  sampledidxs;        /**< stack of sampled constraint indices */
    int                   nsampled;           /**< number of sampled constraints */
-   SCIP_Real*            liftlowervalue;     /**< per obj-var: feasible lower value */
-   SCIP_Real*            liftuppervalue;     /**< per obj-var: feasible upper value */
+   SCIP_Real*            liftbound;          /**< per obj-var: feasible bound in improving direction */
    SCIP_Bool*            affectedset;        /**< per-variable affected flag */
    int*                  affectedvars;       /**< stack of affected var indices */
    int                   naffected;          /**< number of affected variables */
@@ -542,14 +541,10 @@ SCIP_RETCODE lsSolverCreate(
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &solver->sampledidxs, nconss) );
    if( nobjvars > 0 )
    {
-      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &solver->liftlowervalue, nobjvars) );
-      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &solver->liftuppervalue, nobjvars) );
+      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &solver->liftbound, nobjvars) );
    }
    else
-   {
-      solver->liftlowervalue = NULL;
-      solver->liftuppervalue = NULL;
-   }
+      solver->liftbound = NULL;
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &solver->affectedset, nvars) );
    BMSclearMemoryArray(solver->affectedset, nvars);
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &solver->affectedvars, nvars) );
@@ -646,10 +641,7 @@ SCIP_RETCODE lsSolverFree(
    SCIPfreeBlockMemoryArray(scip, &solver->affectedvars, nvars);
    SCIPfreeBlockMemoryArray(scip, &solver->affectedset, nvars);
    if( nobjvars > 0 )
-   {
-      SCIPfreeBlockMemoryArray(scip, &solver->liftuppervalue, nobjvars);
-      SCIPfreeBlockMemoryArray(scip, &solver->liftlowervalue, nobjvars);
-   }
+      SCIPfreeBlockMemoryArray(scip, &solver->liftbound, nobjvars);
    SCIPfreeBlockMemoryArray(scip, &solver->sampledidxs, nconss);
    SCIPfreeBlockMemoryArray(scip, &solver->sampledconstrs, nconss);
    SCIPfreeBlockMemoryArray(scip, &solver->tempunsatidxs, nconss);
@@ -1652,17 +1644,10 @@ SCIP_RETCODE lsSolverLiftMove(
    SCIP_Real objcoeff;
    SCIP_Real objvalue;
    SCIP_Real varvalue;
-   SCIP_Real lv;
-   SCIP_Real uv;
-   SCIP_Real gap;
-   SCIP_Real gap2;
    SCIP_Real coeff;
-   SCIP_Real coeff2;
    SCIP_Real movevalue;
-   SCIP_Real movevalue2;
    int varidx;
    int constridx;
-   int cidx;
    int affidx;
    int objpos;
    int laststep;
@@ -1681,47 +1666,66 @@ SCIP_RETCODE lsSolverLiftMove(
    if( SCIPisInfinity(scip, solver->objcutoff) || problem->nobjvars == 0 )
       return SCIP_OKAY;
 
-   /* compute feasible value ranges */
+   /* compute feasible bounds in improving direction */
    if( !solver->iskeepfeas )
    {
       for( i = 0; i < problem->nobjvars; ++i )
       {
          varidx = problem->objvaridxs[i];
          var = problem->vars + varidx;
+         value = solver->incumbentassignment[varidx];
 
-         solver->liftlowervalue[i] = var->lb;
-         solver->liftuppervalue[i] = var->ub;
-
-         for( j = 0; j < var->ncoeffs; ++j )
+         if( var->obj >= 0.0 )
          {
-            constridx = var->coeffs[j].idx;
-            gap = solver->act[constridx] - problem->conss[constridx].rhs;
-            coeff = var->coeffs[j].coeff;
+            solver->liftbound[i] = var->lb;
 
-            if( SCIPisFeasZero(scip, gap) )
+            if( SCIPisGE(scip, solver->liftbound[i], value) )
+               continue;
+
+            for( j = 0; j < var->ncoeffs; ++j )
             {
-               /* constraint is tight */
-               if( coeff > 0.0 )
-                  solver->liftuppervalue[i] = solver->incumbentassignment[varidx];
-               else
-                  solver->liftlowervalue[i] = solver->incumbentassignment[varidx];
-            }
-            else if( lsSolverTightMove(scip, solver, constridx, var->coeffs[j].pos, &movevalue) )
-            {
-               if( coeff > 0.0 )
+               constridx = var->coeffs[j].idx;
+               coeff = var->coeffs[j].coeff;
+
+               if( coeff >= 0.0 )
+                  continue;
+
+               (void)lsSolverTightMove(scip, solver, constridx, var->coeffs[j].pos, &movevalue);
+
+               if( solver->liftbound[i] < movevalue )
                {
-                  if( movevalue < solver->liftuppervalue[i] )
-                     solver->liftuppervalue[i] = movevalue;
-               }
-               else
-               {
-                  if( movevalue > solver->liftlowervalue[i] )
-                     solver->liftlowervalue[i] = movevalue;
+                  solver->liftbound[i] = movevalue;
+
+                  if( SCIPisGE(scip, solver->liftbound[i], value) )
+                     break;
                }
             }
+         }
+         else
+         {
+            solver->liftbound[i] = var->ub;
 
-            if( solver->liftlowervalue[i] >= solver->liftuppervalue[i] )
-               break;
+            if( SCIPisLE(scip, solver->liftbound[i], value) )
+               continue;
+
+            for( j = 0; j < var->ncoeffs; ++j )
+            {
+               constridx = var->coeffs[j].idx;
+               coeff = var->coeffs[j].coeff;
+
+               if( coeff <= 0.0 )
+                  continue;
+
+               (void)lsSolverTightMove(scip, solver, constridx, var->coeffs[j].pos, &movevalue);
+
+               if( solver->liftbound[i] > movevalue )
+               {
+                  solver->liftbound[i] = movevalue;
+
+                  if( SCIPisLE(scip, solver->liftbound[i], value) )
+                     break;
+               }
+            }
          }
 
          solver->totaleffort += var->ncoeffs;
@@ -1740,28 +1744,14 @@ SCIP_RETCODE lsSolverLiftMove(
       var = problem->vars + varidx;
       objcoeff = var->obj;
       value = solver->incumbentassignment[varidx];
-      lv = solver->liftlowervalue[i];
-      uv = solver->liftuppervalue[i];
-
-      if( lv == uv ) /*lint !e777*/
-         continue;
-
-      /* pick direction improving objective */
-      objresidual = solver->incumbentobjective - value * objcoeff;
-      if( objcoeff > 0.0 )
-      {
-         objvalue = lv * objcoeff + objresidual;
-         varvalue = lv;
-      }
-      else
-      {
-         objvalue = uv * objcoeff + objresidual;
-         varvalue = uv;
-      }
+      varvalue = solver->liftbound[i];
 
       /* skip zero move */
       if( SCIPisEQ(scip, varvalue, value) )
          continue;
+
+      objresidual = solver->incumbentobjective - value * objcoeff;
+      objvalue = varvalue * objcoeff + objresidual;
 
       laststep = (varvalue < value) ? solver->lastdecstep[varidx] : solver->lastincstep[varidx];
 
@@ -1816,38 +1806,59 @@ SCIP_RETCODE lsSolverLiftMove(
          if( objpos == -1 )
             continue;
 
-         solver->liftlowervalue[objpos] = affvar->lb;
-         solver->liftuppervalue[objpos] = affvar->ub;
+         value = solver->incumbentassignment[affidx];
 
-         for( k = 0; k < affvar->ncoeffs; ++k )
+         if( affvar->obj >= 0.0 )
          {
-            cidx = affvar->coeffs[k].idx;
-            gap2 = solver->act[cidx] - problem->conss[cidx].rhs;
-            coeff2 = affvar->coeffs[k].coeff;
+            solver->liftbound[objpos] = affvar->lb;
 
-            if( SCIPisFeasZero(scip, gap2) )
-            {
-               if( coeff2 > 0.0 )
-                  solver->liftuppervalue[objpos] = solver->incumbentassignment[affidx];
-               else
-                  solver->liftlowervalue[objpos] = solver->incumbentassignment[affidx];
-            }
-            else if( lsSolverTightMove(scip, solver, cidx, affvar->coeffs[k].pos, &movevalue2) )
-            {
-               if( coeff2 > 0.0 )
-               {
-                  if( movevalue2 < solver->liftuppervalue[objpos] )
-                     solver->liftuppervalue[objpos] = movevalue2;
-               }
-               else
-               {
-                  if( movevalue2 > solver->liftlowervalue[objpos] )
-                     solver->liftlowervalue[objpos] = movevalue2;
-               }
-            }
+            if( SCIPisGE(scip, solver->liftbound[objpos], value) )
+               continue;
 
-            if( solver->liftlowervalue[objpos] >= solver->liftuppervalue[objpos] )
-               break;
+            for( k = 0; k < affvar->ncoeffs; ++k )
+            {
+               constridx = affvar->coeffs[k].idx;
+               coeff = affvar->coeffs[k].coeff;
+
+               if( coeff >= 0.0 )
+                  continue;
+
+               (void)lsSolverTightMove(scip, solver, constridx, affvar->coeffs[k].pos, &movevalue);
+
+               if( solver->liftbound[objpos] < movevalue )
+               {
+                  solver->liftbound[objpos] = movevalue;
+
+                  if( SCIPisGE(scip, solver->liftbound[objpos], value) )
+                     break;
+               }
+            }
+         }
+         else
+         {
+            solver->liftbound[objpos] = affvar->ub;
+
+            if( SCIPisLE(scip, solver->liftbound[objpos], value) )
+               continue;
+
+            for( k = 0; k < affvar->ncoeffs; ++k )
+            {
+               constridx = affvar->coeffs[k].idx;
+               coeff = affvar->coeffs[k].coeff;
+
+               if( coeff <= 0.0 )
+                  continue;
+
+               (void)lsSolverTightMove(scip, solver, constridx, affvar->coeffs[k].pos, &movevalue);
+
+               if( solver->liftbound[objpos] > movevalue )
+               {
+                  solver->liftbound[objpos] = movevalue;
+
+                  if( SCIPisLE(scip, solver->liftbound[objpos], value) )
+                     break;
+               }
+            }
          }
 
          solver->totaleffort += affvar->ncoeffs;
