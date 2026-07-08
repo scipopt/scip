@@ -579,9 +579,7 @@ SCIP_RETCODE lsSolverCreate(
 
       solver->act[i] = 0.0;
       for( j = 0; j < cons->ncoeffs; ++j )
-      {
          solver->act[i] += cons->coeffs[j].coeff * solver->incumbentassignment[cons->coeffs[j].idx];
-      }
 
       violation = solver->act[i] - cons->rhs;
       if( SCIPisFeasPositive(scip, violation) )
@@ -704,25 +702,18 @@ void lsSolverApplyMove(
 
       /* full recompute */
       for( j = 0; j < cons->ncoeffs; ++j )
-      {
          newact += cons->coeffs[j].coeff * solver->incumbentassignment[cons->coeffs[j].idx];
-      }
 
       previol = oldact - cons->rhs;
       newviol = newact - cons->rhs;
       solver->act[constridx] = newact;
 
-      /* update violation tracking */
+      /* update violated constraint */
       if( !SCIPisFeasPositive(scip, previol) && SCIPisFeasPositive(scip, newviol) )
-      {
-         /* became violated */
          lsSolverInsertUnsat(solver, constridx);
-      }
+      /* update satisfied constraint */
       else if( SCIPisFeasPositive(scip, previol) && !SCIPisFeasPositive(scip, newviol) )
-      {
-         /* became satisfied */
          lsSolverRemoveUnsat(solver, constridx);
-      }
 
       solver->totaleffort += cons->ncoeffs;
    }
@@ -744,12 +735,11 @@ void lsSolverApplyMove(
 
 /** computes tight move value for a constraint term */
 static
-SCIP_Bool lsSolverTightMove(
+SCIP_Real getTightMove(
    SCIP*                 scip,               /**< SCIP data structure */
    LS_SOLVER*            solver,             /**< solver */
    int                   constridx,          /**< constraint index */
-   int                   termidx,            /**< term index within constraint */
-   SCIP_Real*            result              /**< pointer to store move value */
+   int                   termidx             /**< term index within constraint */
    )
 {
    LS_PROBLEM* problem;
@@ -763,7 +753,6 @@ SCIP_Bool lsSolverTightMove(
 
    assert(scip != NULL);
    assert(solver != NULL);
-   assert(result != NULL);
 
    problem = solver->problem;
    cons = problem->conss + constridx;
@@ -787,23 +776,15 @@ SCIP_Bool lsSolverTightMove(
 
    /* verify the constraint */
    if( movevalue == value
-      ? solver->unsatidx[constridx] == -1
-      : !SCIPisFeasPositive(scip, movevalue * coeff + residual - cons->rhs) ) /*lint !e777*/
-   {
-      *result = movevalue;
-
-      return TRUE;
-   }
+      ? solver->unsatidx[constridx] == -1 /*lint !e777*/
+      : !SCIPisFeasPositive(scip, movevalue * coeff + residual - cons->rhs) )
+      return movevalue;
 
    /* adjust towards feasibility */
    if( coeff >= 0.0 )
    {
       if( movevalue == var->lb ) /*lint !e777*/
-      {
-         *result = movevalue;
-
-         return FALSE;
-      }
+         return movevalue;
 
       if( var->vartype == LS_CONTINUOUS )
          movevalue = nextafter(movevalue, -SCIP_DEFAULT_INFINITY);
@@ -813,11 +794,7 @@ SCIP_Bool lsSolverTightMove(
    else
    {
       if( movevalue == var->ub ) /*lint !e777*/
-      {
-         *result = movevalue;
-
-         return FALSE;
-      }
+         return movevalue;
 
       if( var->vartype == LS_CONTINUOUS )
          movevalue = nextafter(movevalue, SCIP_DEFAULT_INFINITY);
@@ -825,15 +802,12 @@ SCIP_Bool lsSolverTightMove(
          movevalue += 1.0;
    }
 
-   *result = movevalue;
-
-   /* check adjusted move */
-   return !SCIPisFeasPositive(scip, movevalue * coeff + residual - cons->rhs);
+   return movevalue;
 }
 
 /** computes move score */
 static
-SCIP_Longint lsSolverTightScore(
+SCIP_Longint getTightScore(
    SCIP*                 scip,               /**< SCIP data structure */
    LS_SOLVER*            solver,             /**< solver */
    int                   varidx,             /**< variable index */
@@ -1010,13 +984,10 @@ static
 void collectConstraintNeighbors(
    SCIP*                 scip,               /**< SCIP data structure */
    LS_SOLVER*            solver,             /**< solver */
-   int                   constridx,          /**< constraint index */
-   SCIP_Bool             towardsatisfy       /**< TRUE: fallback toward satisfaction,
-                                              *   FALSE: fallback toward boundary */
+   int                   constridx           /**< constraint index */
    )
 {
    LS_PROBLEM* problem;
-   LS_VAR* var;
    LS_CONSTRAINT* cons;
    SCIP_Real value;
    SCIP_Real movevalue;
@@ -1032,17 +1003,8 @@ void collectConstraintNeighbors(
    for( i = 0; i < cons->ncoeffs; ++i )
    {
       varidx = cons->coeffs[i].idx;
-      var = problem->vars + varidx;
       value = solver->incumbentassignment[varidx];
-
-      if( !lsSolverTightMove(scip, solver, constridx, i, &movevalue) && !towardsatisfy )
-      {
-         /* move to opposite bound that tightens constraint */
-         if( cons->coeffs[i].coeff < 0.0 )
-            movevalue = var->lb;
-         else
-            movevalue = var->ub;
-      }
+      movevalue = getTightMove(scip, solver, constridx, i);
 
       /* tabu check */
       if( (movevalue < value && solver->curstep < solver->allowdecstep[varidx])
@@ -1230,7 +1192,7 @@ SCIP_Bool selectBestNeighbor(
          solver->scoreidxs[solver->nscoreidxs++] = varidx;
       }
 
-      score = lsSolverTightScore(scip, solver, varidx, movevalue);
+      score = getTightScore(scip, solver, varidx, movevalue);
 
       if( score > bestscore
          || (score == bestscore && solver->subscore > bestsubscore) )
@@ -1304,16 +1266,12 @@ SCIP_RETCODE lsSolverUnsatTightMove(
          }
 
          for( i = 0; i < nsample; ++i )
-         {
-            collectConstraintNeighbors(scip, solver, solver->tempunsatidxs[i], TRUE);
-         }
+            collectConstraintNeighbors(scip, solver, solver->tempunsatidxs[i]);
       }
       else
       {
          for( i = 0; i < solver->nunsat; ++i )
-         {
-            collectConstraintNeighbors(scip, solver, solver->unsatidxs[i], TRUE);
-         }
+            collectConstraintNeighbors(scip, solver, solver->unsatidxs[i]);
       }
    }
 
@@ -1381,7 +1339,7 @@ SCIP_RETCODE lsSolverSatTightMove(
       solver->sampledconstrs[constridx] = TRUE;
       solver->sampledidxs[solver->nsampled++] = constridx;
 
-      collectConstraintNeighbors(scip, solver, constridx, FALSE);
+      collectConstraintNeighbors(scip, solver, constridx);
    }
 
    /* clean up sampled flags */
@@ -1462,7 +1420,7 @@ SCIP_RETCODE lsSolverFlipMove(
          && ( SCIPisFeasNegative(scip, var->ub - 1.0) || solver->curstep < solver->allowincstep[varidx] ) ) )
          continue;
 
-      score = lsSolverTightScore(scip, solver, varidx, movevalue);
+      score = getTightScore(scip, solver, varidx, movevalue);
 
       if( score > bestscore
          || (score == bestscore && solver->subscore > bestsubscore) )
@@ -1521,8 +1479,7 @@ SCIP_RETCODE lsSolverRandomTightMove(
       {
          varidx = cons->coeffs[i].idx;
          value = solver->incumbentassignment[varidx];
-
-         (void)lsSolverTightMove(scip, solver, constridx, i, &movevalue);
+         movevalue = getTightMove(scip, solver, constridx, i);
 
          /* soft aspiration: only block immediate reversal */
          if( (movevalue < value && solver->curstep == solver->lastincstep[varidx] + 1)
@@ -1628,7 +1585,7 @@ SCIP_RETCODE lsSolverLiftMove(
                if( coeff >= 0.0 )
                   continue;
 
-               (void)lsSolverTightMove(scip, solver, var->coeffs[j].idx, var->coeffs[j].pos, &movevalue);
+               movevalue = getTightMove(scip, solver, var->coeffs[j].idx, var->coeffs[j].pos);
 
                if( solver->liftbound[i] < movevalue )
                {
@@ -1656,7 +1613,7 @@ SCIP_RETCODE lsSolverLiftMove(
                if( coeff <= 0.0 )
                   continue;
 
-               (void)lsSolverTightMove(scip, solver, var->coeffs[j].idx, var->coeffs[j].pos, &movevalue);
+               movevalue = getTightMove(scip, solver, var->coeffs[j].idx, var->coeffs[j].pos);
 
                if( solver->liftbound[i] > movevalue )
                {
@@ -1718,9 +1675,7 @@ SCIP_RETCODE lsSolverLiftMove(
       *result = TRUE;
    }
    else
-   {
       solver->iskeepfeas = FALSE;
-   }
 
    return SCIP_OKAY;
 }
