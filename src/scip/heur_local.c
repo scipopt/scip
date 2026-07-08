@@ -792,39 +792,57 @@ SCIP_Bool lsSolverTightMove(
    residual = solver->act[constridx] - value * coeff;
    movevalue = (cons->rhs - residual) / coeff;
 
-   /* round, verify, and adjust */
-   if( var->vartype == LS_CONTINUOUS )
-   {
-      if( SCIPisFeasPositive(scip, movevalue * coeff + residual - cons->rhs) )
-      {
-         if( coeff < 0.0 )
-            movevalue = nextafter(movevalue, SCIP_DEFAULT_INFINITY);
-         else
-            movevalue = nextafter(movevalue, -SCIP_DEFAULT_INFINITY);
-      }
-   }
-   else
-   {
-      movevalue = round(movevalue);
-
-      if( SCIPisFeasPositive(scip, movevalue * coeff + residual - cons->rhs) )
-      {
-         if( coeff < 0.0 )
-            movevalue += 1.0;
-         else
-            movevalue -= 1.0;
-      }
-   }
-
-   /* clamp move value to variable bounds */
+   /* bound and round */
    if( movevalue < var->lb )
       movevalue = var->lb;
    else if( movevalue > var->ub )
       movevalue = var->ub;
+   else if( var->vartype != LS_CONTINUOUS )
+      movevalue = round(movevalue);
+
+   /* verify the constraint */
+   if( movevalue == value
+      ? solver->unsatidx[constridx] == -1
+      : !SCIPisFeasPositive(scip, movevalue * coeff + residual - cons->rhs) ) /*lint !e777*/
+   {
+      *result = movevalue;
+
+      return TRUE;
+   }
+
+   /* adjust towards feasibility */
+   if( coeff >= 0.0 )
+   {
+      if( movevalue == var->lb ) /*lint !e777*/
+      {
+         *result = movevalue;
+
+         return FALSE;
+      }
+
+      if( var->vartype == LS_CONTINUOUS )
+         movevalue = nextafter(movevalue, -SCIP_DEFAULT_INFINITY);
+      else
+         movevalue -= 1.0;
+   }
+   else
+   {
+      if( movevalue == var->ub ) /*lint !e777*/
+      {
+         *result = movevalue;
+
+         return FALSE;
+      }
+
+      if( var->vartype == LS_CONTINUOUS )
+         movevalue = nextafter(movevalue, SCIP_DEFAULT_INFINITY);
+      else
+         movevalue += 1.0;
+   }
 
    *result = movevalue;
 
-   /* check whether clamped move value satisfies the constraint */
+   /* check adjusted move */
    return !SCIPisFeasPositive(scip, movevalue * coeff + residual - cons->rhs);
 }
 
