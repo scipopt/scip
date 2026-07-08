@@ -22,7 +22,7 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   heur_local.c
+/**@file   heur_localsearch.c
  * @ingroup DEFPLUGINS_HEUR
  * @brief  Local search heuristic
  * @author Dominik Kamp
@@ -43,7 +43,7 @@
 #include <math.h>
 
 #include "blockmemshell/memory.h"
-#include "scip/heur_local.h"
+#include "scip/heur_localsearch.h"
 #include "scip/pub_cons.h"
 #include "scip/pub_heur.h"
 #include "scip/pub_lp.h"
@@ -66,7 +66,7 @@
 #include "scip/scip_tree.h"
 #include "scip/scip_var.h"
 
-#define HEUR_NAME                  "local"
+#define HEUR_NAME                  "localsearch"
 #define HEUR_DESC                  "local search heuristic"
 #define HEUR_DISPCHAR              SCIP_HEURDISPCHAR_LNS
 #define HEUR_PRIORITY              800
@@ -2530,20 +2530,20 @@ SCIP_RETCODE runLocal(
 
 /** copy method for primal heuristic plugins (called when SCIP copies plugins) */
 static
-SCIP_DECL_HEURCOPY(heurCopyLocal)
+SCIP_DECL_HEURCOPY(heurCopyLocalsearch)
 {  /*lint --e{715}*/
    assert(scip != NULL);
    assert(heur != NULL);
    assert(strcmp(SCIPheurGetName(heur), HEUR_NAME) == 0);
 
-   SCIP_CALL( SCIPincludeHeurLocal(scip) );
+   SCIP_CALL( SCIPincludeHeurLocalsearch(scip) );
 
    return SCIP_OKAY;
 }
 
 /** destructor of primal heuristic to free user data (called when SCIP is exiting) */
 static
-SCIP_DECL_HEURFREE(heurFreeLocal)
+SCIP_DECL_HEURFREE(heurFreeLocalsearch)
 {  /*lint --e{715}*/
    SCIP_HEURDATA* heurdata;
 
@@ -2558,7 +2558,7 @@ SCIP_DECL_HEURFREE(heurFreeLocal)
 
 /** initialization method of primal heuristic (called after problem was transformed) */
 static
-SCIP_DECL_HEURINIT(heurInitLocal)
+SCIP_DECL_HEURINIT(heurInitLocalsearch)
 {  /*lint --e{715}*/
    SCIP_HEURDATA* heurdata;
 
@@ -2572,7 +2572,7 @@ SCIP_DECL_HEURINIT(heurInitLocal)
 
 /** deinitialization method of primal heuristic (called before transformed problem is freed) */
 static
-SCIP_DECL_HEUREXIT(heurExitLocal)
+SCIP_DECL_HEUREXIT(heurExitLocalsearch)
 {  /*lint --e{715}*/
    SCIP_HEURDATA* heurdata;
 
@@ -2586,7 +2586,7 @@ SCIP_DECL_HEUREXIT(heurExitLocal)
 
 /** execution method of primal heuristic */
 static
-SCIP_DECL_HEUREXEC(heurExecLocal)
+SCIP_DECL_HEUREXEC(heurExecLocalsearch)
 {  /*lint --e{715}*/
    SCIP_HEURDATA* heurdata;
    SCIP_Bool cutoff;
@@ -2635,8 +2635,8 @@ SCIP_DECL_HEUREXEC(heurExecLocal)
  * primal heuristic specific interface methods
  */
 
-/** creates the local search primal heuristic and includes it in SCIP */
-SCIP_RETCODE SCIPincludeHeurLocal(
+/** creates the localsearch primal heuristic and includes it in SCIP */
+SCIP_RETCODE SCIPincludeHeurLocalsearch(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
@@ -2653,14 +2653,14 @@ SCIP_RETCODE SCIPincludeHeurLocal(
    /* include primal heuristic */
    SCIP_CALL( SCIPincludeHeurBasic(scip, &heur,
          HEUR_NAME, HEUR_DESC, HEUR_DISPCHAR, HEUR_PRIORITY, HEUR_FREQ, HEUR_FREQOFS,
-         HEUR_MAXDEPTH, HEUR_TIMING, HEUR_USESSUBSCIP, heurExecLocal, heurdata) );
+         HEUR_MAXDEPTH, HEUR_TIMING, HEUR_USESSUBSCIP, heurExecLocalsearch, heurdata) );
 
    assert(heur != NULL);
 
-   SCIP_CALL( SCIPsetHeurCopy(scip, heur, heurCopyLocal) );
-   SCIP_CALL( SCIPsetHeurFree(scip, heur, heurFreeLocal) );
-   SCIP_CALL( SCIPsetHeurInit(scip, heur, heurInitLocal) );
-   SCIP_CALL( SCIPsetHeurExit(scip, heur, heurExitLocal) );
+   SCIP_CALL( SCIPsetHeurCopy(scip, heur, heurCopyLocalsearch) );
+   SCIP_CALL( SCIPsetHeurFree(scip, heur, heurFreeLocalsearch) );
+   SCIP_CALL( SCIPsetHeurInit(scip, heur, heurInitLocalsearch) );
+   SCIP_CALL( SCIPsetHeurExit(scip, heur, heurExitLocalsearch) );
 
    /* add parameters */
    SCIP_CALL( SCIPaddIntParam(scip,

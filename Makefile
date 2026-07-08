@@ -757,8 +757,8 @@ SCIPPLUGINLIBOBJ=	scip/benders_default.o \
 			scip/heur_intdiving.o \
 			scip/heur_intshifting.o \
 			scip/heur_linesearchdiving.o \
-			scip/heur_local.o \
 			scip/heur_localbranching.o \
+			scip/heur_localsearch.o \
 			scip/heur_lpface.o \
 			scip/heur_alns.o \
 			scip/heur_locks.o \

@@ -22,7 +22,7 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   heur_local.h
+/**@file   heur_localsearch.h
  * @ingroup PRIMALHEURISTICS
  * @brief  Local search heuristic
  * @author Dominik Kamp
@@ -55,8 +55,8 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#ifndef __SCIP_HEUR_LOCAL_H__
-#define __SCIP_HEUR_LOCAL_H__
+#ifndef __SCIP_HEUR_LOCALSEARCH_H__
+#define __SCIP_HEUR_LOCALSEARCH_H__
 
 #include "scip/def.h"
 #include "scip/type_retcode.h"
@@ -66,12 +66,12 @@
 extern "C" {
 #endif
 
-/** creates the local search primal heuristic and includes it in SCIP
+/** creates the localsearch primal heuristic and includes it in SCIP
  *
  *  @ingroup PrimalHeuristicIncludes
  */
 SCIP_EXPORT
-SCIP_RETCODE SCIPincludeHeurLocal(
+SCIP_RETCODE SCIPincludeHeurLocalsearch(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
