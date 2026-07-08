@@ -1316,9 +1316,10 @@ SCIP_RETCODE lsSolverSatTightMove(
 
    *result = FALSE;
    problem = solver->problem;
+   assert(problem->nconss > 0);
    solver->neighborsize = 0;
 
-   if( problem->nconss == 0 )
+   if( SCIPisInfinity(scip, solver->objcutoff) )
       return SCIP_OKAY;
 
    /* sample SAT constraints (skip duplicates, unsat, and cutoff; matching Local's sampleSet) */
@@ -2451,7 +2452,7 @@ SCIP_RETCODE runLocal(
 
       SCIP_CALL( lsSolverUnsatTightMove(scip, solver, heurdata, &moveresult) );
 
-      if( !moveresult && !SCIPisInfinity(scip, solver->objcutoff) )
+      if( !moveresult )
       {
          SCIP_CALL( lsSolverSatTightMove(scip, solver, heurdata, &moveresult) );
       }
