@@ -534,7 +534,7 @@ SCIP_RETCODE lsSolverCreate(
    solver->neighborcap = nnonzeros;
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &solver->scoretable, nvars) );
    BMSclearMemoryArray(solver->scoretable, nvars);
-   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &solver->scoreidxs, nvars) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &solver->scoreidxs, problem->nbinary) );
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &solver->tempunsatidxs, nconss) );
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &solver->sampledconstrs, nconss) );
    BMSclearMemoryArray(solver->sampledconstrs, nconss);
@@ -645,7 +645,7 @@ SCIP_RETCODE lsSolverFree(
    SCIPfreeBlockMemoryArray(scip, &solver->sampledidxs, nconss);
    SCIPfreeBlockMemoryArray(scip, &solver->sampledconstrs, nconss);
    SCIPfreeBlockMemoryArray(scip, &solver->tempunsatidxs, nconss);
-   SCIPfreeBlockMemoryArray(scip, &solver->scoreidxs, nvars);
+   SCIPfreeBlockMemoryArray(scip, &solver->scoreidxs, solver->problem->nbinary);
    SCIPfreeBlockMemoryArray(scip, &solver->scoretable, nvars);
    SCIPfreeBlockMemoryArray(scip, &solver->neighborvalues, nnonzeros);
    SCIPfreeBlockMemoryArray(scip, &solver->neighborvaridxs, nnonzeros);
