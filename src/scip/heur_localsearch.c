@@ -26,6 +26,7 @@
  * @ingroup DEFPLUGINS_HEUR
  * @brief  Local search heuristic
  * @author Dominik Kamp
+ * @author Gennesaret Tjusila
  *
  * Local search heuristic based on weighted constraint satisfaction with tabu control.
  *
