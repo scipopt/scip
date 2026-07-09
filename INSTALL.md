@@ -575,8 +575,7 @@ Make sure to replace the paths with your installation location.
 #### n) to use HiGHS
 
 ```
-export LIBRARY_PATH=<path to HiGHS>/lib
-export LD_LIBRARY_PATH=<path to HiGHS>/lib
+ln -s <path to HiGHS installation> <path to SCIP>/lib/static/highs.$(OSTYPE).$(ARCH).$(COMP).$(LPSOPT)
 ```
 
 ### 4. Run SCIP
