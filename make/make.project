@@ -436,6 +436,19 @@ LPSLIBFILES	=	$(CLPDIR)/lib/libClp.$(LIBEXTEXT) $(CLPDIR)/lib/libCoinUtils.$(LIB
 endif
 
 #-------------------------------------------------------
+# define flags for HiGHS
+ifeq ($(LPS),highs)
+HIGHSDIR	= 	$(SCIPREALPATH)/$(LIBDIR)/$(LIBEXTTYPE)/highs.$(OSTYPE).$(ARCH).$(COMP).$(LPSOPT)
+LPSLDFLAGS	+=	$(LINKCXX_L)$(HIGHSDIR)/lib $(LINKCXX_l)highs$(LINKLIBSUFFIX)
+# ensure that also shared libraries are found while running the binary
+ifneq ($(LINKRPATH),)
+HIGHSFULLPATH	:=	$(realpath $(HIGHSDIR))
+LPSLDFLAGS	+=	$(LINKRPATH)$(HIGHSFULLPATH)/lib
+endif
+LPSLIBFILES	=	$(HIGHSDIR)/lib/libhighs.$(LIBEXTEXT)
+endif
+
+#-------------------------------------------------------
 # define flags for QSOPT
 ifeq ($(LPS),qso)
 LPSLDFLAGS    	=	$(LINKCC_L)$(SCIPREALPATH)/$(LIBDIR)/static $(LINKCC_l)qsopt.$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX) $(LINKCC_l)pthread$(LINKLIBSUFFIX)
