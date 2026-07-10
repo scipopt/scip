@@ -482,7 +482,7 @@ void SCIPsyncstoreUpdateBestDualbound(
    SCIP_CALL_ABORT( SCIPtpiReleaseLock(syncstore->lock) );
 }
 
-/** returns whether the solution pool for immediate solution sharing is enabled */
+/** returns whether the solution pool is enabled for immediate solution sharing */
 SCIP_Bool SCIPsyncstoreSolPoolEnabled(
    SCIP_SYNCSTORE*       syncstore           /**< the synchronization store */
    )

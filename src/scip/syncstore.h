@@ -113,7 +113,7 @@ void SCIPsyncstoreUpdateBestDualbound(
    SCIP_Real             dualbound           /**< dual bound in minimization-normalized original objective space */
    );
 
-/** returns whether the solution pool for immediate solution sharing is enabled */
+/** returns whether the solution pool is enabled for immediate solution sharing */
 SCIP_EXPORT
 SCIP_Bool SCIPsyncstoreSolPoolEnabled(
    SCIP_SYNCSTORE*       syncstore           /**< the synchronization store */
@@ -181,7 +181,7 @@ void SCIPsyncstoreGetBound(
  *  SCIPsyncstoreUnlockSyncdata after reading. If the data is not ready, NULL is returned and
  *  lost indicates why: if the slot was overwritten by a newer synchronization the data is
  *  lost and the reader should skip this number, otherwise the synchronization has not been
- *  written by all solvers yet and the reader should retry later. Never blocks the caller.
+ *  written by all solvers yet and the reader should retry later. This method never blocks the caller.
  */
 SCIP_EXPORT
 SCIP_RETCODE SCIPsyncstoreTryLockCompleteSyncdata(
