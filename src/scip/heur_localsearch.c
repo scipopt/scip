@@ -870,6 +870,8 @@ SCIP_Longint getTightScore(
          solver->subscore += solver->objweight;
       else if( prebetter && !nowbetter )
          solver->subscore -= solver->objweight;
+
+      ++solver->totaleffort;
    }
 
    /* regular constraint scoring */
@@ -909,7 +911,7 @@ SCIP_Longint getTightScore(
          solver->subscore -= solver->weight[constridx];
    }
 
-   solver->totaleffort += var->ncoeffs + 1;
+   solver->totaleffort += var->ncoeffs;
 
    return score;
 }
@@ -940,8 +942,6 @@ void lsSolverUpdateWeight(
 
    if( solver->nunsat == 0 )
       ++solver->objweight;
-
-   solver->totaleffort += solver->nunsat + 1;
 }
 
 /** smooths weights of satisfied constraints */
@@ -952,7 +952,6 @@ void lsSolverSmoothWeight(
    )
 {
    LS_PROBLEM* problem;
-   SCIP_Real violation;
    int i;
 
    assert(scip != NULL);
@@ -962,17 +961,13 @@ void lsSolverSmoothWeight(
 
    for( i = 0; i < problem->nconss; ++i )
    {
-      violation = solver->act[i] - problem->conss[i].rhs;
-
-      if( !SCIPisFeasPositive(scip, violation) && solver->weight[i] > 0 )
+      if( solver->unsatidx[i] == -1 && solver->weight[i] > 0 )
          --solver->weight[i];
    }
 
    if( solver->objweight > 0 && !SCIPisInfinity(scip, solver->incumbentobjective)
       && SCIPisLT(scip, solver->incumbentobjective, solver->objcutoff) )
       --solver->objweight;
-
-   solver->totaleffort += problem->nconss + 1;
 }
 
 
@@ -1434,8 +1429,6 @@ SCIP_RETCODE lsSolverFlipMove(
       }
    }
 
-   solver->totaleffort += heurdata->bmsflip;
-
    if( bestvaridx >= 0 )
    {
       lsSolverApplyMove(scip, solver, heurdata, bestvaridx, bestvalue);
@@ -1496,6 +1489,8 @@ SCIP_RETCODE lsSolverRandomTightMove(
          solver->neighborvalues[solver->neighborsize] = movevalue;
          ++solver->neighborsize;
       }
+
+      solver->totaleffort += cons->ncoeffs;
    }
 
    /* collect objective terms if needed */
@@ -1653,6 +1648,8 @@ SCIP_RETCODE lsSolverLiftMove(
          bestlaststep = laststep;
       }
    }
+
+   solver->totaleffort += problem->nobjvars;
 
    if( bestvaridx >= 0 )
    {
