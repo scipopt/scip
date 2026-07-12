@@ -4,7 +4,7 @@ include(CTest)
 # simple test instances for Ringpacking
 #
 set(instances
-  "circle6\;1\;2" # the optimal value is 1, but without Ipopt it may not be found switch to a heuristic price-and-branch, so we test only for 2
+  "circle6\;1\;2" # the optimal value is 1, but without a NLP solver it may not be found and switch to a heuristic price-and-branch, so we test only for a primal bound of 2
   "ring1\;1\;1"
   "ring2\;1\;1"
   "ring3\;1\;1"
