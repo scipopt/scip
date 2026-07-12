@@ -319,6 +319,11 @@ SCIP_RETCODE lsProblemAddVar(
 
    var = problem->vars + problem->nvars;
    var->vartype = vartype;
+   var->obj = obj;
+   var->objidx = -1;
+   var->coeffs = NULL;
+   var->ncoeffs = 0;
+
    if( vartype == LS_CONTINUOUS )
    {
       var->lb = lb;
@@ -329,10 +334,6 @@ SCIP_RETCODE lsProblemAddVar(
       var->lb = SCIPfeasCeil(scip, lb);
       var->ub = SCIPfeasFloor(scip, ub);
    }
-   var->obj = obj;
-   var->coeffs = NULL;
-   var->ncoeffs = 0;
-   var->objidx = -1;
 
    ++problem->nvars;
 
@@ -361,7 +362,6 @@ SCIP_RETCODE lsProblemAddConstraint(
    assert(varidxs != NULL || ncoeffs == 0);
    assert(coeffs != NULL || ncoeffs == 0);
 
-   /* skip empty constraints */
    if( ncoeffs == 0 )
       return SCIP_OKAY;
 
@@ -379,6 +379,81 @@ SCIP_RETCODE lsProblemAddConstraint(
 
    problem->nnonzeros += ncoeffs;
    ++problem->nconss;
+
+   return SCIP_OKAY;
+}
+
+/** allocates and fills variable cross-references and builds the binary index */
+static
+SCIP_RETCODE lsProblemFillReferences(
+   SCIP*                 scip,               /**< SCIP data structure */
+   LS_PROBLEM*           problem,            /**< problem */
+   int*                  nvarcoeffs          /**< number of coefficients per variable */
+   )
+{
+   LS_VAR* var;
+   LS_CONSTRAINT* cons;
+   int varidx;
+   int pos;
+   int i;
+   int j;
+
+   assert(scip != NULL);
+   assert(problem != NULL);
+   assert(problem->binaryidxs == NULL);
+   assert(problem->nbinary == 0);
+   assert(nvarcoeffs != NULL);
+
+   /* count binary variables and allocate variable coefficients */
+   for( i = 0; i < problem->nvars; ++i )
+   {
+      assert(problem->vars[i].coeffs == NULL);
+      assert(problem->vars[i].ncoeffs == 0);
+
+      if( problem->vars[i].vartype == LS_BINARY )
+         ++problem->nbinary;
+
+      if( nvarcoeffs[i] > 0 )
+      {
+         SCIP_CALL( SCIPallocBlockMemoryArray(scip, &problem->vars[i].coeffs, nvarcoeffs[i]) );
+      }
+   }
+
+   /* fill variable cross-references */
+   for( i = 0; i < problem->nconss; ++i )
+   {
+      cons = problem->conss + i;
+
+      for( j = 0; j < cons->ncoeffs; ++j )
+      {
+         varidx = cons->coeffs[j].idx;
+         var = problem->vars + varidx;
+         assert(var->ncoeffs < nvarcoeffs[varidx]);
+         cons->coeffs[j].pos = var->ncoeffs;
+         var->coeffs[var->ncoeffs].idx = i;
+         var->coeffs[var->ncoeffs].coeff = cons->coeffs[j].coeff;
+         var->coeffs[var->ncoeffs].pos = j;
+         ++var->ncoeffs;
+      }
+   }
+
+#ifndef NDEBUG
+   for( i = 0; i < problem->nvars; ++i )
+      assert(problem->vars[i].ncoeffs == nvarcoeffs[i]);
+#endif
+
+   /* build binary index */
+   if( problem->nbinary > 0 )
+   {
+      pos = 0;
+
+      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &problem->binaryidxs, problem->nbinary) );
+      for( i = 0; i < problem->nvars; ++i )
+      {
+         if( problem->vars[i].vartype == LS_BINARY )
+            problem->binaryidxs[pos++] = i;
+      }
+   }
 
    return SCIP_OKAY;
 }
@@ -1703,42 +1778,21 @@ SCIP_RETCODE addRowInLocalSolver(
    assert(scip != NULL);
    assert(problem != NULL);
 
-   /* ranged row */
-   if( !SCIPisInfinity(scip, -lhs) && !SCIPisInfinity(scip, rhs) && !SCIPisEQ(scip, lhs, rhs) )
+   /* left hand side */
+   if( !SCIPisInfinity(scip, -lhs) )
    {
-      SCIP_CALL( lsProblemAddConstraint(scip, problem, constant, rhs, consnvars, consinds, consvals) );
-
-      /* negated constraint for GTE side */
       SCIP_CALL( SCIPallocBufferArray(scip, &negvals, consnvars) );
+
       for( i = 0; i < consnvars; ++i )
          negvals[i] = -consvals[i];
+
       SCIP_CALL( lsProblemAddConstraint(scip, problem, -constant, -lhs, consnvars, consinds, negvals) );
       SCIPfreeBufferArray(scip, &negvals);
    }
-   else if( SCIPisEQ(scip, rhs, lhs) )
-   {
-      /* equality: two constraints */
-      SCIP_CALL( lsProblemAddConstraint(scip, problem, constant, rhs, consnvars, consinds, consvals) );
 
-      SCIP_CALL( SCIPallocBufferArray(scip, &negvals, consnvars) );
-      for( i = 0; i < consnvars; ++i )
-         negvals[i] = -consvals[i];
-      SCIP_CALL( lsProblemAddConstraint(scip, problem, -constant, -rhs, consnvars, consinds, negvals) );
-      SCIPfreeBufferArray(scip, &negvals);
-   }
-   else if( SCIPisInfinity(scip, rhs) )
+   /* right hand side */
+   if( !SCIPisInfinity(scip, rhs) )
    {
-      /* GTE */
-      SCIP_CALL( SCIPallocBufferArray(scip, &negvals, consnvars) );
-      for( i = 0; i < consnvars; ++i )
-         negvals[i] = -consvals[i];
-      SCIP_CALL( lsProblemAddConstraint(scip, problem, -constant, -lhs, consnvars, consinds, negvals) );
-      SCIPfreeBufferArray(scip, &negvals);
-   }
-   else
-   {
-      /* LTE */
-      assert(SCIPisInfinity(scip, -lhs));
       SCIP_CALL( lsProblemAddConstraint(scip, problem, constant, rhs, consnvars, consinds, consvals) );
    }
 
@@ -1799,8 +1853,6 @@ SCIP_RETCODE extractProblemDataBeforePresolve(
    SCIP_VAR** consvars;
    SCIP_CONS** conss;
    SCIP_CONSHDLR* conshdlr;
-   LS_VAR* var;
-   LS_CONSTRAINT* cons;
    SCIP_Real* consvals;
    int* nvarcoeffs;
    int* consinds;
@@ -1812,9 +1864,7 @@ SCIP_RETCODE extractProblemDataBeforePresolve(
    int nlinconss;
    int consnvars;
    int requiredsize;
-   int nbinary;
-   int varidx;
-   int pos;
+   int nsides;
    int i;
    int j;
 
@@ -1866,7 +1916,6 @@ SCIP_RETCODE extractProblemDataBeforePresolve(
    {
       problem->consssize = 2 * nconss;
       SCIP_CALL( SCIPallocBlockMemoryArray(scip, &problem->conss, problem->consssize) );
-      BMSclearMemoryArray(problem->conss, problem->consssize);
    }
 
    /* add variables to problem */
@@ -1880,7 +1929,7 @@ SCIP_RETCODE extractProblemDataBeforePresolve(
    /* setup objective */
    SCIP_CALL( setupObjective(scip, problem) );
 
-   /* resolve and add constraints */
+   /* resolve problem constraints */
    for( i = 0; i < nconss; ++i )
    {
       SCIP_CALL( SCIPgetConsNVars(scip, conss[i], &consnvars, success) );
@@ -1906,7 +1955,6 @@ SCIP_RETCODE extractProblemDataBeforePresolve(
       if( !(*success) )
          goto TERMINATE;
 
-      /* resolve to active variables */
       constant = 0.0;
       SCIP_CALL( SCIPgetProbvarLinearSum(scip, consvars, consvals, &consnvars, nvars, &constant, &requiredsize) );
       assert(requiredsize <= nvars);
@@ -1914,80 +1962,21 @@ SCIP_RETCODE extractProblemDataBeforePresolve(
       if( consnvars == 0 )
          continue;
 
-      if( !SCIPisInfinity(scip, -lhs) && !SCIPisInfinity(scip, rhs) )
+      nsides = (!SCIPisInfinity(scip, -lhs) ? 1 : 0) + (!SCIPisInfinity(scip, rhs) ? 1 : 0);
+      assert(nsides > 0);
+
+      for( j = 0; j < consnvars; ++j )
       {
-         for( j = 0; j < consnvars; ++j )
-         {
-            consinds[j] = SCIPvarGetProbindex(consvars[j]);
-            assert(consinds[j] >= 0);
-            nvarcoeffs[consinds[j]] += 2;
-         }
-      }
-      else
-      {
-         for( j = 0; j < consnvars; ++j )
-         {
-            consinds[j] = SCIPvarGetProbindex(consvars[j]);
-            assert(consinds[j] >= 0);
-            ++nvarcoeffs[consinds[j]];
-         }
+         consinds[j] = SCIPvarGetProbindex(consvars[j]);
+         assert(consinds[j] >= 0);
+         assert(consinds[j] < nvars);
+         nvarcoeffs[consinds[j]] += nsides;
       }
 
       SCIP_CALL( addRowInLocalSolver(scip, problem, consvals, consinds, consnvars, constant, lhs, rhs) );
    }
 
-   /* allocate coefficient arrays */
-   for( i = 0; i < nvars; ++i )
-   {
-      if( nvarcoeffs[i] > 0 )
-      {
-         SCIP_CALL( SCIPallocBlockMemoryArray(scip, &problem->vars[i].coeffs, nvarcoeffs[i]) );
-      }
-   }
-
-   /* fill cross-references */
-   for( i = 0; i < problem->nconss; ++i )
-   {
-      cons = problem->conss + i;
-
-      for( j = 0; j < cons->ncoeffs; ++j )
-      {
-         varidx = cons->coeffs[j].idx;
-         var = problem->vars + varidx;
-         cons->coeffs[j].pos = var->ncoeffs;
-         var->coeffs[var->ncoeffs].idx = i;
-         var->coeffs[var->ncoeffs].coeff = cons->coeffs[j].coeff;
-         var->coeffs[var->ncoeffs].pos = j;
-         ++var->ncoeffs;
-      }
-   }
-
-#ifndef NDEBUG
-   for( i = 0; i < nvars; ++i )
-      assert(problem->vars[i].ncoeffs == nvarcoeffs[i]);
-#endif
-
-   /* build binary index */
-   nbinary = 0;
-
-   for( i = 0; i < problem->nvars; ++i )
-   {
-      if( problem->vars[i].vartype == LS_BINARY )
-         ++nbinary;
-   }
-   problem->nbinary = nbinary;
-
-   if( nbinary > 0 )
-   {
-      pos = 0;
-
-      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &problem->binaryidxs, nbinary) );
-      for( i = 0; i < problem->nvars; ++i )
-      {
-         if( problem->vars[i].vartype == LS_BINARY )
-            problem->binaryidxs[pos++] = i;
-      }
-   }
+   SCIP_CALL( lsProblemFillReferences(scip, problem, nvarcoeffs) );
 
    *success = TRUE;
 
@@ -2012,8 +2001,6 @@ SCIP_RETCODE extractProblemData(
    )
 {
    SCIP_COL** rowcols;
-   LS_VAR* var;
-   LS_CONSTRAINT* cons;
    SCIP_VAR* variable;
    SCIP_COL* col;
    SCIP_ROW* row;
@@ -2026,9 +2013,7 @@ SCIP_RETCODE extractProblemData(
    SCIP_Real rhs;
    int nnonz;
    int nvals;
-   int nbinary;
-   int varidx;
-   int pos;
+   int nsides;
    int i;
    int j;
 
@@ -2039,56 +2024,15 @@ SCIP_RETCODE extractProblemData(
    SCIP_CALL( SCIPallocBufferArray(scip, &vals, ncols) );
    SCIP_CALL( SCIPallocClearBufferArray(scip, &nvarcoeffs, ncols) );
 
-   /* count constraints and coefficients */
-   for( i = 0; i < nrows; ++i )
-   {
-      row = rows[i];
-      rowcols = SCIProwGetCols(row);
-      nnonz = SCIProwGetNNonz(row);
-
-      /* count columns for this row */
-      nvals = 0;
-      for( j = 0; j < nnonz; ++j )
-      {
-         if( SCIPcolIsInLP(rowcols[j]) )
-            ++nvals;
-      }
-
-      /* skip rows without columns */
-      if( nvals == 0 )
-         continue;
-
-      lhs = SCIProwGetLhs(row);
-      rhs = SCIProwGetRhs(row);
-
-      if( !SCIPisInfinity(scip, -lhs) && !SCIPisInfinity(scip, rhs) )
-      {
-         problem->nconss += 2;
-         for( j = 0; j < nnonz; ++j )
-         {
-            if( SCIPcolIsInLP(rowcols[j]) )
-               nvarcoeffs[SCIPcolGetLPPos(rowcols[j])] += 2;
-         }
-      }
-      else
-      {
-         ++problem->nconss;
-         for( j = 0; j < nnonz; ++j )
-         {
-            if( SCIPcolIsInLP(rowcols[j]) )
-               ++nvarcoeffs[SCIPcolGetLPPos(rowcols[j])];
-         }
-      }
-   }
-
    /* allocate variable and constraint arrays */
    if( ncols > 0 )
    {
       SCIP_CALL( SCIPallocBlockMemoryArray(scip, &problem->vars, ncols) );
    }
-   if( problem->nconss > 0 )
+   if( nrows > 0 )
    {
-      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &problem->conss, problem->nconss) );
+      problem->consssize = 2 * nrows;
+      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &problem->conss, problem->consssize) );
    }
 
    /* add variables to problem */
@@ -2101,23 +2045,10 @@ SCIP_RETCODE extractProblemData(
             SCIPcolGetLb(col), SCIPcolGetUb(col), SCIPcolGetObj(col)) );
    }
 
-   /* allocate coefficient arrays */
-   for( i = 0; i < ncols; ++i )
-   {
-      if( nvarcoeffs[i] > 0 )
-      {
-         SCIP_CALL( SCIPallocBlockMemoryArray(scip, &problem->vars[i].coeffs, nvarcoeffs[i]) );
-      }
-   }
-
    /* setup objective */
    SCIP_CALL( setupObjective(scip, problem) );
 
-   /* reset nconss before adding constraints */
-   problem->consssize = problem->nconss;
-   problem->nconss = 0;
-
-   /* add constraints to problem */
+   /* resolve problem constraints */
    for( i = 0; i < nrows; ++i )
    {
       row = rows[i];
@@ -2128,6 +2059,7 @@ SCIP_RETCODE extractProblemData(
       rhs = SCIProwGetRhs(row);
       nnonz = SCIProwGetNNonz(row);
       nvals = 0;
+      nsides = (!SCIPisInfinity(scip, -lhs) ? 1 : 0) + (!SCIPisInfinity(scip, rhs) ? 1 : 0);
 
       for( j = 0; j < nnonz; ++j )
       {
@@ -2138,6 +2070,7 @@ SCIP_RETCODE extractProblemData(
             assert(inds[nvals] >= 0);
             assert(inds[nvals] < ncols);
             vals[nvals] = rowvals[j];
+            nvarcoeffs[inds[nvals]] += nsides;
             ++nvals;
          }
       }
@@ -2145,56 +2078,16 @@ SCIP_RETCODE extractProblemData(
       if( nvals == 0 )
          continue;
 
+      assert(nsides > 0);
+
       SCIP_CALL( addRowInLocalSolver(scip, problem, vals, inds, nvals, constant, lhs, rhs) );
    }
 
-   /* fill cross-references */
-   for( i = 0; i < problem->nconss; ++i )
-   {
-      cons = problem->conss + i;
-
-      for( j = 0; j < cons->ncoeffs; ++j )
-      {
-         varidx = cons->coeffs[j].idx;
-         var = problem->vars + varidx;
-         cons->coeffs[j].pos = var->ncoeffs;
-         var->coeffs[var->ncoeffs].idx = i;
-         var->coeffs[var->ncoeffs].coeff = cons->coeffs[j].coeff;
-         var->coeffs[var->ncoeffs].pos = j;
-         ++var->ncoeffs;
-      }
-   }
-
-#ifndef NDEBUG
-   for( i = 0; i < ncols; ++i )
-      assert(problem->vars[i].ncoeffs == nvarcoeffs[i]);
-#endif
+   SCIP_CALL( lsProblemFillReferences(scip, problem, nvarcoeffs) );
 
    SCIPfreeBufferArray(scip, &nvarcoeffs);
    SCIPfreeBufferArray(scip, &vals);
    SCIPfreeBufferArray(scip, &inds);
-
-   /* build binary index */
-   nbinary = 0;
-
-   for( i = 0; i < problem->nvars; ++i )
-   {
-      if( problem->vars[i].vartype == LS_BINARY )
-         ++nbinary;
-   }
-   problem->nbinary = nbinary;
-
-   if( nbinary > 0 )
-   {
-      pos = 0;
-
-      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &problem->binaryidxs, nbinary) );
-      for( i = 0; i < problem->nvars; ++i )
-      {
-         if( problem->vars[i].vartype == LS_BINARY )
-            problem->binaryidxs[pos++] = i;
-      }
-   }
 
    return SCIP_OKAY;
 }
