@@ -31,10 +31,8 @@
  * Local search heuristic based on weighted constraint satisfaction with tabu control.
  *
  * The algorithm operates in two modes:
- * - Feasibility mode (cutoff bound infinite): starts from variable bounds, searches for a feasible solution using
- *   constraint-guided moves.
- * - Optimality mode (cutoff bound finite): starts from the best known solution, searches for an improving solution with
- *   objective breakpoint target set to cutoff bound minus cutoff bound delta.
+ * - Feasibility mode (before feasible solution): searches for feasible solution using constraint-guided moves.
+ * - Optimality mode (after feasible solution): searches for better solution additionally using objective-guided moves.
  *
  * The search uses five move operators:
  * - UnsatTightMove: samples violated constraints and moves toward satisfaction.

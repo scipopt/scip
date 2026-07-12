@@ -164,8 +164,9 @@ struct LS_Solver
 {
    LS_PROBLEM*           problem;            /**< problem data */
    int                   curstep;            /**< current iteration step */
+   SCIP_Bool             optimality;         /**< was feasibility reached once before? */
    SCIP_Bool             iskeepfeas;         /**< currently in lift-move chain? */
-   SCIP_Real             objcutoff;          /**< objective cutoff bound */
+   SCIP_Real             objtarget;          /**< objective constraint side, infinite if none */
    int                   objweight;          /**< objective scoring weight */
    SCIP_Real*            incumbentassignment; /**< current variable assignment */
    SCIP_Real             incumbentobjective; /**< current objective value */
@@ -558,8 +559,9 @@ SCIP_RETCODE lsSolverCreate(
 
    solver->problem = problem;
    solver->curstep = 0;
+   solver->optimality = FALSE;
    solver->iskeepfeas = FALSE;
-   solver->objcutoff = SCIPgetCutoffbound(scip);
+   solver->objtarget = SCIPgetCutoffbound(scip) - SCIPcutoffbounddelta(scip);
    solver->objweight = 1;
    solver->effortatlastcallback = 0;
    solver->effortatlastimprovement = 0;
@@ -648,6 +650,9 @@ SCIP_RETCODE lsSolverCreate(
       solver->unsatidx[i] = -1;
    }
 
+   /* compute objective value */
+   lsSolverRecomputeObjective(scip, solver);
+
    /* compute constraint activity values */
    for( i = 0; i < nconss; ++i )
    {
@@ -664,8 +669,9 @@ SCIP_RETCODE lsSolverCreate(
 
    solver->totaleffort += problem->nnonzeros;
 
-   /* compute objective value */
-   lsSolverRecomputeObjective(scip, solver);
+   /* enter optimality mode if initial assignment feasible */
+   if( solver->nunsat == 0 )
+      solver->optimality = TRUE;
 
    *solverptr = solver;
 
@@ -764,8 +770,8 @@ void lsSolverApplyMove(
    assert(solver->incumbentassignment[varidx] <= var->ub);
    assert(var->vartype == LS_CONTINUOUS || SCIPrealIsExactlyIntegral(solver->incumbentassignment[varidx]));
 
-   /* recompute objective */
-   if( !SCIPisInfinity(scip, solver->objcutoff) && var->objidx >= 0 )
+   /* recompute incumbent objective */
+   if( var->objidx >= 0 )
       lsSolverRecomputeObjective(scip, solver);
 
    /* recompute activity for each affected constraint */
@@ -794,6 +800,10 @@ void lsSolverApplyMove(
       solver->totaleffort += cons->ncoeffs;
    }
 
+   /* enter optimality mode if current assignment feasible */
+   if( solver->nunsat == 0 )
+      solver->optimality = TRUE;
+
    /* set tabu */
    if( newvalue > oldvalue )
    {
@@ -807,6 +817,73 @@ void lsSolverApplyMove(
       solver->allowincstep[varidx] = solver->curstep + heurdata->tabubase
             + SCIPrandomGetInt(heurdata->randnumgen, 0, heurdata->tabuvariation);
    }
+}
+
+/** computes tight move value for an objective term */
+static
+SCIP_Real getTargetMove(
+   SCIP*                 scip,               /**< SCIP data structure */
+   LS_SOLVER*            solver,             /**< solver */
+   int                   termidx             /**< term index within the objective */
+   )
+{
+   LS_PROBLEM* problem;
+   LS_VAR* var;
+   SCIP_Real value;
+   SCIP_Real residual;
+   SCIP_Real coeff;
+   SCIP_Real movevalue;
+   int varidx;
+
+   assert(scip != NULL);
+   assert(solver != NULL);
+
+   problem = solver->problem;
+   varidx = problem->objvaridxs[termidx];
+   var = problem->vars + varidx;
+   coeff = var->obj;
+
+   assert(coeff != 0.0); /*lint !e777*/
+
+   value = solver->incumbentassignment[varidx];
+   residual = solver->incumbentobjective - value * coeff;
+   movevalue = (solver->objtarget - residual) / coeff;
+
+   /* bound and round */
+   if( movevalue < var->lb )
+      movevalue = var->lb;
+   else if( movevalue > var->ub )
+      movevalue = var->ub;
+   else if( var->vartype != LS_CONTINUOUS )
+      movevalue = round(movevalue);
+
+   /* verify the objective */
+   if( movevalue != value && !SCIPisGT(scip, movevalue * coeff + residual, solver->objtarget) ) /*lint !e777*/
+      return movevalue;
+
+   /* adjust towards optimality */
+   if( coeff >= 0.0 )
+   {
+      if( movevalue == var->lb ) /*lint !e777*/
+         return movevalue;
+
+      if( var->vartype == LS_CONTINUOUS )
+         movevalue = nextafter(movevalue, -SCIP_DEFAULT_INFINITY);
+      else
+         movevalue -= 1.0;
+   }
+   else
+   {
+      if( movevalue == var->ub ) /*lint !e777*/
+         return movevalue;
+
+      if( var->vartype == LS_CONTINUOUS )
+         movevalue = nextafter(movevalue, SCIP_DEFAULT_INFINITY);
+      else
+         movevalue += 1.0;
+   }
+
+   return movevalue;
 }
 
 /** computes tight move value for a constraint term */
@@ -896,9 +973,6 @@ SCIP_Longint getTightScore(
    SCIP_Real residual;
    SCIP_Real objresidual;
    SCIP_Longint score;
-   SCIP_Real newobj;
-   SCIP_Bool prebetter;
-   SCIP_Bool nowbetter;
    int constridx;
    SCIP_Real coeff;
    SCIP_Real act;
@@ -921,29 +995,32 @@ SCIP_Longint getTightScore(
    score = 0;
    solver->subscore = 0;
 
-   /* objective scoring */
-   if( !SCIPisInfinity(scip, solver->objcutoff) && var->objidx >= 0 )
+   /* objective scoring in optimality mode */
+   if( solver->optimality && !SCIPisInfinity(scip, solver->objtarget) && var->objidx >= 0 )
    {
       objresidual = solver->incumbentobjective - value * var->obj;
-      newobj = newvalue * var->obj + objresidual;
+      newact = newvalue * var->obj + objresidual;
+      previol = solver->incumbentobjective - solver->objtarget;
+      newviol = newact - solver->objtarget;
 
-      if( ( !SCIPisInfinity(scip, newobj) || !SCIPisInfinity(scip, solver->incumbentobjective) )
-         && ( !SCIPisInfinity(scip, -newobj) || !SCIPisInfinity(scip, -solver->incumbentobjective) )
-         && !SCIPisEQ(scip, newobj, solver->incumbentobjective) )
+      /* score: objective change */
+      if( ( !SCIPisInfinity(scip, newviol) || !SCIPisInfinity(scip, previol) )
+         && ( !SCIPisInfinity(scip, -newviol) || !SCIPisInfinity(scip, -previol) )
+         && !SCIPisEQ(scip, newviol, previol) )
       {
-         if( newobj < solver->incumbentobjective )
+         if( previol > newviol )
             score += solver->objweight;
          else
             score -= solver->objweight;
       }
 
-      /* subscore: crossing objcutoff boundary */
-      prebetter = SCIPisLT(scip, solver->incumbentobjective, solver->objcutoff);
-      nowbetter = SCIPisLT(scip, newobj, solver->objcutoff);
+      /* subscore: stable objective transition */
+      prestable = SCIPisNegative(scip, previol);
+      nowstable = SCIPisNegative(scip, newviol);
 
-      if( !prebetter && nowbetter )
+      if( !prestable && nowstable )
          solver->subscore += solver->objweight;
-      else if( prebetter && !nowbetter )
+      else if( prestable && !nowstable )
          solver->subscore -= solver->objweight;
 
       ++solver->totaleffort;
@@ -960,6 +1037,8 @@ SCIP_Longint getTightScore(
       newact = newvalue * coeff + residual;
       previol = act - rhs;
       newviol = newact - rhs;
+
+      /* score: feasibility transition */
       presat = !SCIPisFeasPositive(scip, previol);
       nowsat = !SCIPisFeasPositive(scip, newviol);
 
@@ -976,7 +1055,7 @@ SCIP_Longint getTightScore(
             score -= solver->weight[constridx] / 2;
       }
 
-      /* subscore: stable transitions */
+      /* subscore: stable activity transition */
       prestable = SCIPisFeasNegative(scip, previol);
       nowstable = SCIPisFeasNegative(scip, newviol);
 
@@ -1009,13 +1088,15 @@ void lsSolverUpdateWeight(
    assert(scip != NULL);
    assert(solver != NULL);
 
+   /* increase constraint weights if violated */
    for( i = 0; i < solver->nunsat; ++i )
    {
       constridx = solver->unsatidxs[i];
       ++solver->weight[constridx];
    }
 
-   if( solver->nunsat == 0 )
+   /* increase objective weight if feasible */
+   if( solver->nunsat == 0 && !SCIPisInfinity(scip, solver->objtarget) )
       ++solver->objweight;
 }
 
@@ -1034,14 +1115,16 @@ void lsSolverSmoothWeight(
 
    problem = solver->problem;
 
+   /* decrease constraint weights if feasible */
    for( i = 0; i < problem->nconss; ++i )
    {
       if( solver->unsatidx[i] == -1 && solver->weight[i] > 0 )
          --solver->weight[i];
    }
 
-   if( solver->objweight > 0 && !SCIPisInfinity(scip, solver->incumbentobjective)
-      && SCIPisLT(scip, solver->incumbentobjective, solver->objcutoff) )
+   /* decrease objective weight if better */
+   if( solver->optimality && !SCIPisInfinity(scip, solver->objtarget)
+      && solver->objweight > 0 && SCIPisLE(scip, solver->incumbentobjective, solver->objtarget) )
       --solver->objweight;
 }
 
@@ -1078,8 +1161,8 @@ void collectConstraintNeighbors(
       movevalue = getTightMove(scip, solver, constridx, i);
 
       /* tabu check */
-      if( (movevalue < value && solver->curstep < solver->allowdecstep[varidx])
-         || (movevalue > value && solver->curstep < solver->allowincstep[varidx]) )
+      if( ( movevalue < value && solver->allowdecstep[varidx] > solver->curstep )
+         || ( movevalue > value && solver->allowincstep[varidx] > solver->curstep ) )
          continue;
 
       /* skip zero moves */
@@ -1104,11 +1187,8 @@ void collectObjectiveNeighbors(
    )
 {
    LS_PROBLEM* problem;
-   LS_VAR* var;
    SCIP_Real value;
-   SCIP_Real residual;
    SCIP_Real movevalue;
-   SCIP_Real objtarget;
    int varidx;
    int i;
 
@@ -1116,63 +1196,28 @@ void collectObjectiveNeighbors(
    assert(solver != NULL);
 
    problem = solver->problem;
-   objtarget = solver->objcutoff - SCIPcutoffbounddelta(scip);
 
    for( i = 0; i < problem->nobjvars; ++i )
    {
       varidx = problem->objvaridxs[i];
-      var = problem->vars + varidx;
-
-      assert(var->obj != 0.0); /*lint !e777*/
-
       value = solver->incumbentassignment[varidx];
-      residual = solver->incumbentobjective - value * var->obj;
-      movevalue = (objtarget - residual) / var->obj;
-
-      /* round, verify, and adjust */
-      if( var->vartype == LS_CONTINUOUS )
-      {
-         if( SCIPisFeasPositive(scip, movevalue * var->obj + residual - objtarget) )
-         {
-            if( var->obj < 0.0 )
-               movevalue = nextafter(movevalue, SCIP_DEFAULT_INFINITY);
-            else
-               movevalue = nextafter(movevalue, -SCIP_DEFAULT_INFINITY);
-         }
-      }
-      else
-      {
-         movevalue = round(movevalue);
-
-         if( SCIPisFeasPositive(scip, movevalue * var->obj + residual - objtarget) )
-         {
-            if( var->obj < 0.0 )
-               movevalue += 1.0;
-            else
-               movevalue -= 1.0;
-         }
-      }
-
-      /* clamp move value to variable bounds */
-      if( movevalue < var->lb )
-         movevalue = var->lb;
-      else if( movevalue > var->ub )
-         movevalue = var->ub;
+      movevalue = getTargetMove(scip, solver, i);
 
       /* tabu check */
       if( softtabu )
       {
-         if( (movevalue < value && solver->curstep == solver->lastincstep[varidx] + 1)
-            || (movevalue > value && solver->curstep == solver->lastdecstep[varidx] + 1) )
+         if( ( movevalue < value && solver->lastincstep[varidx] == solver->curstep - 1 )
+            || ( movevalue > value && solver->lastdecstep[varidx] == solver->curstep - 1 ) )
             continue;
       }
       else
       {
-         if( (movevalue < value && solver->curstep < solver->allowdecstep[varidx])
-            || (movevalue > value && solver->curstep < solver->allowincstep[varidx]) )
+         if( ( movevalue < value && solver->allowdecstep[varidx] > solver->curstep )
+            || ( movevalue > value && solver->allowincstep[varidx] > solver->curstep ) )
             continue;
       }
 
+      /* skip zero moves */
       if( SCIPisEQ(scip, movevalue, value) )
          continue;
 
@@ -1346,13 +1391,13 @@ SCIP_RETCODE lsSolverUnsatTightMove(
       }
    }
 
-   /* collect objective terms if needed */
-   if( SCIPisInfinity(scip, solver->incumbentobjective)
-      || SCIPisGE(scip, solver->incumbentobjective, solver->objcutoff) )
+   /* collect objective terms when the objective constraint is violated */
+   if( solver->optimality && !SCIPisInfinity(scip, solver->objtarget)
+      && SCIPisGT(scip, solver->incumbentobjective, solver->objtarget) )
       collectObjectiveNeighbors(scip, solver, FALSE);
 
    /* subsample to budget */
-   budget = !SCIPisInfinity(scip, solver->objcutoff) ? heurdata->bmsunsatfeas : heurdata->bmsunsatinfeas;
+   budget = solver->optimality ? heurdata->bmsunsatfeas : heurdata->bmsunsatinfeas;
    subsampleNeighbors(solver, heurdata, budget);
 
    /* score and select */
@@ -1390,7 +1435,7 @@ SCIP_RETCODE lsSolverSatTightMove(
    assert(problem->nconss > 0);
    solver->neighborsize = 0;
 
-   if( SCIPisInfinity(scip, solver->objcutoff) )
+   if( !solver->optimality )
       return SCIP_OKAY;
 
    /* sample SAT constraints (skip duplicates, unsat, and cutoff; matching Local's sampleSet) */
@@ -1449,7 +1494,6 @@ SCIP_RETCODE lsSolverFlipMove(
    int binidx;
    int varidx;
    LS_VAR* var;
-   SCIP_Real value;
    SCIP_Real movevalue;
    SCIP_Longint score;
    int i;
@@ -1482,15 +1526,23 @@ SCIP_RETCODE lsSolverFlipMove(
       solver->scoretable[varidx] = TRUE;
       solver->scoreidxs[solver->nscoreidxs++] = varidx;
 
-      value = solver->incumbentassignment[varidx];
-      movevalue = (value > 0.5) ? 0.0 : 1.0;
+      /* flip to opposite */
+      if( solver->incumbentassignment[varidx] >= 0.5 )
+      {
+         /* check lower tabu */
+         if( var->lb > 0.0 || solver->allowdecstep[varidx] > solver->curstep )
+            continue;
 
-      /* bounds and tabu check */
-      if( ( movevalue < value
-         && ( SCIPisFeasPositive(scip, var->lb) || solver->curstep < solver->allowdecstep[varidx] ) )
-         || ( movevalue > value
-         && ( SCIPisFeasNegative(scip, var->ub - 1.0) || solver->curstep < solver->allowincstep[varidx] ) ) )
-         continue;
+         movevalue = 0.0;
+      }
+      else
+      {
+         /* check upper tabu */
+         if( var->ub < 1.0 || solver->allowincstep[varidx] > solver->curstep )
+            continue;
+
+         movevalue = 1.0;
+      }
 
       score = getTightScore(scip, solver, varidx, movevalue);
 
@@ -1552,8 +1604,8 @@ SCIP_RETCODE lsSolverRandomTightMove(
          movevalue = getTightMove(scip, solver, constridx, i);
 
          /* soft aspiration: only block immediate reversal */
-         if( (movevalue < value && solver->curstep == solver->lastincstep[varidx] + 1)
-            || (movevalue > value && solver->curstep == solver->lastdecstep[varidx] + 1) )
+         if( ( movevalue < value && solver->lastincstep[varidx] == solver->curstep - 1 )
+            || ( movevalue > value && solver->lastdecstep[varidx] == solver->curstep - 1 ) )
             continue;
 
          if( SCIPisEQ(scip, movevalue, value) )
@@ -1568,9 +1620,9 @@ SCIP_RETCODE lsSolverRandomTightMove(
       solver->totaleffort += cons->ncoeffs;
    }
 
-   /* collect objective terms if needed */
-   if( SCIPisInfinity(scip, solver->incumbentobjective)
-      || SCIPisGE(scip, solver->incumbentobjective, solver->objcutoff) )
+   /* collect objective terms when the objective constraint is violated */
+   if( solver->optimality && !SCIPisInfinity(scip, solver->objtarget)
+      && SCIPisGT(scip, solver->incumbentobjective, solver->objtarget) )
       collectObjectiveNeighbors(scip, solver, TRUE);
 
    /* subsample */
@@ -1620,9 +1672,6 @@ SCIP_RETCODE lsSolverLiftMove(
 
    *result = FALSE;
    problem = solver->problem;
-
-   if( SCIPisInfinity(scip, solver->objcutoff) || problem->nobjvars == 0 )
-      return SCIP_OKAY;
 
    /* select best objective-improving move */
    bestobjvalue = solver->incumbentobjective;
@@ -2190,7 +2239,7 @@ SCIP_RETCODE lsCheckTermination(
 
          if( *result == SCIP_FOUNDSOL )
          {
-            solver->objcutoff = SCIPgetCutoffbound(scip);
+            solver->objtarget = SCIPgetCutoffbound(scip) - SCIPcutoffbounddelta(scip);
             ++nfoundsols;
 
             if( heurdata->verbosity >= 1 )
@@ -2314,7 +2363,7 @@ SCIP_RETCODE runLocal(
       if( solver->nunsat == 0 )
       {
          if( !SCIPisInfinity(scip, solver->incumbentobjective)
-            && SCIPisLT(scip, solver->incumbentobjective, solver->objcutoff) )
+            && SCIPisLE(scip, solver->incumbentobjective, solver->objtarget) )
          {
             solver->effortatlastimprovement = solver->totaleffort;
             solver->isimproved = TRUE;
