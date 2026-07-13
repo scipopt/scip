@@ -41,10 +41,9 @@
  * - RandomTightMove: escapes local minima using soft aspiration tabu and accepting negative-score moves.
  * - LiftMove: improves objective variables while maintaining feasibility (optimality mode only).
  *
- * Constraints are normalized to sum(coeff * var) <= rhs form. Move scores are integer sums of constraint weights based
- * on feasibility transitions. Constraint weights grow for persistent violations and decay for satisfied constraints.
- * Objective and constraint comparisons use infinity guards to handle values beyond the infinity range. Terminates on
- * infinite objective value.
+ * Move scores are integer sums of constraint weights based on feasibility transitions. Constraint weights grow for
+ * persistent violations and decay for satisfied constraints. Objective and constraint comparisons use infinity guards
+ * to handle values beyond the infinity range. Terminates on infinite objective value.
  *
  * Based on:
  *  Peng Lin, Shaowei Cai, Mengchuan Zou, Jinkun Lin.

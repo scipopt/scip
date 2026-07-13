@@ -137,7 +137,9 @@ typedef struct LS_Var LS_VAR;
 /** constraint structure (static model data, normalized) */
 struct LS_Constraint
 {
+   SCIP_Real             lhs;                /**< normalized left hand side, -infinity if single */
    SCIP_Real             rhs;                /**< normalized right hand side */
+   SCIP_Real             mhs;                /**< normalized middle hand side, -infinity if single */
    LS_IDXCOEFF*          coeffs;             /**< normalized variable coefficients */
    int                   ncoeffs;            /**< number of coefficients */
 };
@@ -341,44 +343,77 @@ SCIP_RETCODE lsProblemAddVar(
    return SCIP_OKAY;
 }
 
-/** adds a constraint to the problem (normalizes by max(|rhs|,1)) */
+/** tries to normalize and add constraint to the problem with scalar max(min(|lhs|,|rhs|),1) */
 static
 SCIP_RETCODE lsProblemAddConstraint(
    SCIP*                 scip,               /**< SCIP data structure */
    LS_PROBLEM*           problem,            /**< problem */
+   SCIP_Real*            consvals,           /**< coefficient values */
+   int*                  consinds,           /**< variable indices */
+   int                   consnvars,          /**< number of variables */
    SCIP_Real             constant,           /**< row activity constant */
+   SCIP_Real             lhs,                /**< left hand side */
    SCIP_Real             rhs,                /**< right hand side */
-   int                   ncoeffs,            /**< number of coefficients */
-   int*                  varidxs,            /**< variable indices */
-   SCIP_Real*            coeffs           /**< coefficient values */
+   SCIP_Bool*            success             /**< is addition successful? */
    )
 {
    LS_CONSTRAINT* cons;
+   SCIP_Real abslhs;
+   SCIP_Real absrhs;
    SCIP_Real scalar;
    int i;
 
    assert(scip != NULL);
    assert(problem != NULL);
    assert(problem->conss != NULL);
-   assert(varidxs != NULL || ncoeffs == 0);
-   assert(coeffs != NULL || ncoeffs == 0);
+   assert(consvals != NULL);
+   assert(consinds != NULL);
+   assert(consnvars >= 1);
+   assert(!SCIPisInfinity(scip, -lhs) || !SCIPisInfinity(scip, rhs));
+   assert(success != NULL);
 
-   if( ncoeffs == 0 )
-      return SCIP_OKAY;
+   /* normalize the sides so that right hand side is single or non-negative */
+   abslhs = REALABS(lhs);
+   absrhs = REALABS(rhs);
+   scalar = MIN(abslhs, absrhs);
+   if( scalar < 1.0 )
+      scalar = 1.0;
 
-   scalar = MAX3(rhs, -rhs, 1.0);
-   cons = problem->conss + problem->nconss;
-   cons->rhs = (rhs - constant) / scalar;
-   cons->ncoeffs = ncoeffs;
-   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &cons->coeffs, ncoeffs) );
-
-   for( i = 0; i < ncoeffs; ++i )
+   if( SCIPisInfinity(scip, rhs) || ( !SCIPisInfinity(scip, -lhs) && rhs < 0.0 ) )
    {
-      cons->coeffs[i].idx = varidxs[i];
-      cons->coeffs[i].coeff = coeffs[i] / scalar;
+      SCIPswapReals(&lhs, &rhs);
+      scalar *= -1.0;
    }
 
-   problem->nnonzeros += ncoeffs;
+   lhs = !SCIPisInfinity(scip, scalar > 0.0 ? -lhs : lhs) ? (lhs - constant) / scalar : -SCIPinfinity(scip);
+   rhs = (rhs - constant) / scalar;
+
+   /* terminate if a normalized side exceeds infinity threshold */
+   if( SCIPisInfinity(scip, lhs) || SCIPisInfinity(scip, -rhs) )
+   {
+      *success = FALSE;
+
+      return SCIP_OKAY;
+   }
+   assert(lhs <= rhs);
+
+   *success = TRUE;
+
+   /* normalize coefficients and store the constraint */
+   cons = problem->conss + problem->nconss;
+   cons->lhs = lhs;
+   cons->rhs = rhs;
+   cons->mhs = !SCIPisInfinity(scip, -lhs) ? 0.5 * (lhs + rhs) : lhs;
+   cons->ncoeffs = consnvars;
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &cons->coeffs, consnvars) );
+
+   for( i = 0; i < consnvars; ++i )
+   {
+      cons->coeffs[i].idx = consinds[i];
+      cons->coeffs[i].coeff = consvals[i] / scalar;
+   }
+
+   problem->nnonzeros += consnvars;
    ++problem->nconss;
 
    return SCIP_OKAY;
@@ -538,7 +573,6 @@ SCIP_RETCODE lsSolverCreate(
 {
    LS_SOLVER* solver;
    LS_CONSTRAINT* cons;
-   SCIP_Real violation;
    int nvars;
    int nobjvars;
    int nnonzeros;
@@ -662,8 +696,8 @@ SCIP_RETCODE lsSolverCreate(
       for( j = 0; j < cons->ncoeffs; ++j )
          solver->act[i] += cons->coeffs[j].coeff * solver->incumbentassignment[cons->coeffs[j].idx];
 
-      violation = solver->act[i] - cons->rhs;
-      if( SCIPisFeasPositive(scip, violation) )
+      if( SCIPisFeasPositive(scip, !SCIPisInfinity(scip, -cons->mhs) && solver->act[i] <= cons->mhs
+         ? cons->lhs - solver->act[i] : solver->act[i] - cons->rhs) )
          lsSolverInsertUnsat(solver, i);
    }
 
@@ -786,8 +820,8 @@ void lsSolverApplyMove(
       for( j = 0; j < cons->ncoeffs; ++j )
          newact += cons->coeffs[j].coeff * solver->incumbentassignment[cons->coeffs[j].idx];
 
-      previol = oldact - cons->rhs;
-      newviol = newact - cons->rhs;
+      previol = !SCIPisInfinity(scip, -cons->mhs) && oldact <= cons->mhs ? cons->lhs - oldact : oldact - cons->rhs;
+      newviol = !SCIPisInfinity(scip, -cons->mhs) && newact <= cons->mhs ? cons->lhs - newact : newact - cons->rhs;
       solver->act[constridx] = newact;
 
       /* update violated constraint */
@@ -833,6 +867,7 @@ SCIP_Real getTargetMove(
    SCIP_Real residual;
    SCIP_Real coeff;
    SCIP_Real movevalue;
+   SCIP_Bool decrease;
    int varidx;
 
    assert(scip != NULL);
@@ -842,12 +877,11 @@ SCIP_Real getTargetMove(
    varidx = problem->objvaridxs[termidx];
    var = problem->vars + varidx;
    coeff = var->obj;
-
    assert(coeff != 0.0); /*lint !e777*/
-
    value = solver->incumbentassignment[varidx];
    residual = solver->incumbentobjective - value * coeff;
    movevalue = (solver->objtarget - residual) / coeff;
+   decrease = coeff >= 0.0;
 
    /* bound and round */
    if( movevalue < var->lb )
@@ -857,42 +891,25 @@ SCIP_Real getTargetMove(
    else if( var->vartype != LS_CONTINUOUS )
       movevalue = round(movevalue);
 
-   /* verify the objective */
-   if( movevalue != value && !SCIPisGT(scip, movevalue * coeff + residual, solver->objtarget) ) /*lint !e777*/
+   /* at best bound or objective target reached */
+   if( (decrease ? movevalue == var->lb : movevalue == var->ub) /*lint !e777*/
+      || ( movevalue != value && SCIPisLE(scip, movevalue * coeff + residual, solver->objtarget) ) ) /*lint !e777*/
       return movevalue;
 
-   /* adjust towards optimality */
-   if( coeff >= 0.0 )
-   {
-      if( movevalue == var->lb ) /*lint !e777*/
-         return movevalue;
-
-      if( var->vartype == LS_CONTINUOUS )
-         movevalue = nextafter(movevalue, -SCIP_DEFAULT_INFINITY);
-      else
-         movevalue -= 1.0;
-   }
-   else
-   {
-      if( movevalue == var->ub ) /*lint !e777*/
-         return movevalue;
-
-      if( var->vartype == LS_CONTINUOUS )
-         movevalue = nextafter(movevalue, SCIP_DEFAULT_INFINITY);
-      else
-         movevalue += 1.0;
-   }
-
-   return movevalue;
+   /* improve a step */
+   return var->vartype == LS_CONTINUOUS
+         ? nextafter(movevalue, decrease ? -SCIP_DEFAULT_INFINITY : SCIP_DEFAULT_INFINITY)
+         : movevalue + (decrease ? -1.0 : 1.0);
 }
 
-/** computes tight move value for a constraint term */
+/** computes tight move value for a constraint term to the selected side */
 static
 SCIP_Real getTightMove(
    SCIP*                 scip,               /**< SCIP data structure */
    LS_SOLVER*            solver,             /**< solver */
    int                   constridx,          /**< constraint index */
-   int                   termidx             /**< term index within constraint */
+   int                   termidx,            /**< term index within constraint */
+   SCIP_Bool             tolhs               /**< move to left hand side instead of right hand side? */
    )
 {
    LS_PROBLEM* problem;
@@ -902,6 +919,10 @@ SCIP_Real getTightMove(
    SCIP_Real residual;
    SCIP_Real coeff;
    SCIP_Real movevalue;
+   SCIP_Real moveactivity;
+   SCIP_Real stepvalue;
+   SCIP_Real stepactivity;
+   SCIP_Bool decrease;
    int varidx;
 
    assert(scip != NULL);
@@ -909,15 +930,15 @@ SCIP_Real getTightMove(
 
    problem = solver->problem;
    cons = problem->conss + constridx;
-   coeff = cons->coeffs[termidx].coeff;
+   assert(!tolhs || !SCIPisInfinity(scip, -cons->lhs));
    varidx = cons->coeffs[termidx].idx;
    var = problem->vars + varidx;
-
+   coeff = cons->coeffs[termidx].coeff;
    assert(coeff != 0.0); /*lint !e777*/
-
    value = solver->incumbentassignment[varidx];
    residual = solver->act[constridx] - value * coeff;
-   movevalue = (cons->rhs - residual) / coeff;
+   movevalue = ((tolhs ? cons->lhs : cons->rhs) - residual) / coeff;
+   decrease = tolhs == (coeff < 0.0);
 
    /* bound and round */
    if( movevalue < var->lb )
@@ -927,34 +948,47 @@ SCIP_Real getTightMove(
    else if( var->vartype != LS_CONTINUOUS )
       movevalue = round(movevalue);
 
-   /* verify the constraint */
-   if( movevalue == value
-      ? solver->unsatidx[constridx] == -1 /*lint !e777*/
-      : !SCIPisFeasPositive(scip, movevalue * coeff + residual - cons->rhs) )
+   /* at nearest bound */
+   if( decrease ? movevalue == var->lb : movevalue == var->ub ) /*lint !e777*/
       return movevalue;
 
-   /* adjust towards feasibility */
-   if( coeff >= 0.0 )
+   /* get current activity */
+   if( movevalue == value ) /*lint !e777*/
    {
-      if( movevalue == var->lb ) /*lint !e777*/
+      if( solver->unsatidx[constridx] == -1 )
          return movevalue;
 
-      if( var->vartype == LS_CONTINUOUS )
-         movevalue = nextafter(movevalue, -SCIP_DEFAULT_INFINITY);
-      else
-         movevalue -= 1.0;
+      moveactivity = solver->act[constridx];
    }
+   /* get move activity */
    else
    {
-      if( movevalue == var->ub ) /*lint !e777*/
-         return movevalue;
+      moveactivity = movevalue * coeff + residual;
 
-      if( var->vartype == LS_CONTINUOUS )
-         movevalue = nextafter(movevalue, SCIP_DEFAULT_INFINITY);
-      else
-         movevalue += 1.0;
+      if( tolhs ? !SCIPisFeasNegative(scip, moveactivity - cons->lhs)
+                : !SCIPisFeasPositive(scip, moveactivity - cons->rhs) )
+         return movevalue;
    }
 
+   /* satisfy a step */
+   stepvalue = var->vartype == LS_CONTINUOUS
+         ? nextafter(movevalue, decrease ? -SCIP_DEFAULT_INFINITY : SCIP_DEFAULT_INFINITY)
+         : movevalue + (decrease ? -1.0 : 1.0);
+
+   /* single violation decreased */
+   if( SCIPisInfinity(scip, -cons->lhs) )
+      return stepvalue;
+
+   /* get step activity */
+   stepactivity = stepvalue * coeff + residual;
+
+   /* step smaller violation */
+   if( tolhs
+      ? SCIPisLT(scip, stepactivity - cons->rhs, cons->lhs - moveactivity)
+      : SCIPisLT(scip, cons->lhs - stepactivity, moveactivity - cons->rhs) )
+      return stepvalue;
+
+   /* move nearest otherwise */
    return movevalue;
 }
 
@@ -976,7 +1010,9 @@ SCIP_Longint getTightScore(
    int constridx;
    SCIP_Real coeff;
    SCIP_Real act;
+   SCIP_Real lhs;
    SCIP_Real rhs;
+   SCIP_Real mhs;
    SCIP_Real newact;
    SCIP_Real previol;
    SCIP_Real newviol;
@@ -1032,11 +1068,13 @@ SCIP_Longint getTightScore(
       constridx = var->coeffs[i].idx;
       coeff = var->coeffs[i].coeff;
       act = solver->act[constridx];
+      lhs = problem->conss[constridx].lhs;
       rhs = problem->conss[constridx].rhs;
+      mhs = problem->conss[constridx].mhs;
       residual = act - value * coeff;
       newact = newvalue * coeff + residual;
-      previol = act - rhs;
-      newviol = newact - rhs;
+      previol = !SCIPisInfinity(scip, -mhs) && act <= mhs ? lhs - act : act - rhs;
+      newviol = !SCIPisInfinity(scip, -mhs) && newact <= mhs ? lhs - newact : newact - rhs;
 
       /* score: feasibility transition */
       presat = !SCIPisFeasPositive(scip, previol);
@@ -1141,24 +1179,26 @@ void collectConstraintNeighbors(
    int                   constridx           /**< constraint index */
    )
 {
-   LS_PROBLEM* problem;
    LS_CONSTRAINT* cons;
    SCIP_Real value;
    SCIP_Real movevalue;
+   SCIP_Bool tolhs;
    int varidx;
    int i;
 
    assert(scip != NULL);
    assert(solver != NULL);
 
-   problem = solver->problem;
-   cons = problem->conss + constridx;
+   /* move to nearest side if infeasible and farthest side if satisfied */
+   cons = solver->problem->conss + constridx;
+   tolhs = !SCIPisInfinity(scip, -cons->mhs)
+         && SCIPisLE(scip, solver->act[constridx], cons->mhs) == (solver->unsatidx[constridx] >= 0);
 
    for( i = 0; i < cons->ncoeffs; ++i )
    {
       varidx = cons->coeffs[i].idx;
       value = solver->incumbentassignment[varidx];
-      movevalue = getTightMove(scip, solver, constridx, i);
+      movevalue = getTightMove(scip, solver, constridx, i, tolhs);
 
       /* tabu check */
       if( ( movevalue < value && solver->allowdecstep[varidx] > solver->curstep )
@@ -1344,7 +1384,7 @@ SCIP_RETCODE lsSolverUnsatTightMove(
    SCIP*                 scip,               /**< SCIP data structure */
    LS_SOLVER*            solver,             /**< solver */
    SCIP_HEURDATA*        heurdata,           /**< heuristic data */
-   SCIP_Bool*            result              /**< pointer to store whether move was applied */
+   SCIP_Bool*            result              /**< is move applied? */
    )
 {
    int nsample;
@@ -1416,7 +1456,7 @@ SCIP_RETCODE lsSolverSatTightMove(
    SCIP*                 scip,               /**< SCIP data structure */
    LS_SOLVER*            solver,             /**< solver */
    SCIP_HEURDATA*        heurdata,           /**< heuristic data */
-   SCIP_Bool*            result              /**< pointer to store whether move was applied */
+   SCIP_Bool*            result              /**< is move applied? */
    )
 {
    LS_PROBLEM* problem;
@@ -1483,7 +1523,7 @@ SCIP_RETCODE lsSolverFlipMove(
    SCIP*                 scip,               /**< SCIP data structure */
    LS_SOLVER*            solver,             /**< solver */
    SCIP_HEURDATA*        heurdata,           /**< heuristic data */
-   SCIP_Bool*            result              /**< pointer to store whether move was applied */
+   SCIP_Bool*            result              /**< is move applied? */
    )
 {
    LS_PROBLEM* problem;
@@ -1573,35 +1613,35 @@ SCIP_RETCODE lsSolverRandomTightMove(
    SCIP_HEURDATA*        heurdata            /**< heuristic data */
    )
 {
-   LS_PROBLEM* problem;
    LS_CONSTRAINT* cons;
-   int bestvaridx;
    SCIP_Real bestvalue;
-   int constridx;
-   int varidx;
    SCIP_Real value;
    SCIP_Real movevalue;
+   SCIP_Bool tolhs;
+   int bestvaridx;
+   int constridx;
+   int varidx;
    int i;
 
    assert(scip != NULL);
    assert(solver != NULL);
    assert(heurdata != NULL);
 
-   problem = solver->problem;
    solver->neighborsize = 0;
 
    /* pick 1 random unsat constraint */
    if( solver->nunsat > 0 )
    {
       constridx = solver->unsatidxs[SCIPrandomGetInt(heurdata->randnumgen, 0, solver->nunsat - 1)];
-      cons = problem->conss + constridx;
+      cons = solver->problem->conss + constridx;
+      tolhs = !SCIPisInfinity(scip, -cons->mhs) && solver->act[constridx] <= cons->mhs;
 
       /* collect terms with soft tabu */
       for( i = 0; i < cons->ncoeffs; ++i )
       {
          varidx = cons->coeffs[i].idx;
          value = solver->incumbentassignment[varidx];
-         movevalue = getTightMove(scip, solver, constridx, i);
+         movevalue = getTightMove(scip, solver, constridx, i, tolhs);
 
          /* soft aspiration: only block immediate reversal */
          if( ( movevalue < value && solver->lastincstep[varidx] == solver->curstep - 1 )
@@ -1641,27 +1681,26 @@ SCIP_RETCODE lsSolverLiftMove(
    SCIP*                 scip,               /**< SCIP data structure */
    LS_SOLVER*            solver,             /**< solver */
    SCIP_HEURDATA*        heurdata,           /**< heuristic data */
-   SCIP_Bool*            result              /**< pointer to store whether move was applied */
+   SCIP_Bool*            result              /**< is move applied? */
    )
 {
    LS_PROBLEM* problem;
-   SCIP_Real bestobjvalue;
-   int bestvaridx;
-   SCIP_Real bestvalue;
-   int bestlaststep;
-   LS_VAR* var;
    LS_VAR* bestvar;
+   LS_VAR* var;
    LS_CONSTRAINT* cons;
-   SCIP_Real value;
    SCIP_Real objresidual;
    SCIP_Real objcoeff;
    SCIP_Real objvalue;
-   SCIP_Real varvalue;
-   SCIP_Real coeff;
+   SCIP_Real bestobjvalue;
+   SCIP_Real bestvalue;
+   SCIP_Real value;
    SCIP_Real movevalue;
-   int varidx;
+   SCIP_Bool tolhs;
    int objpos;
+   int bestlaststep;
+   int bestvaridx;
    int laststep;
+   int varidx;
    int i;
    int j;
 
@@ -1691,57 +1730,73 @@ SCIP_RETCODE lsSolverLiftMove(
       {
          if( objcoeff >= 0.0 )
          {
-            solver->liftbound[i] = var->lb;
-
-            if( SCIPisGE(scip, solver->liftbound[i], value) )
+            /* at best bound */
+            if( SCIPisGE(scip, var->lb, value) )
             {
+               solver->liftbound[i] = value;
                solver->liftvalid[i] = TRUE;
                continue;
             }
 
+            solver->liftbound[i] = var->lb;
+
             for( j = 0; j < var->ncoeffs; ++j )
             {
-               coeff = var->coeffs[j].coeff;
+               cons = problem->conss + var->coeffs[j].idx;
+               tolhs = var->coeffs[j].coeff > 0.0;
 
-               if( coeff >= 0.0 )
+               /* no improvement restriction */
+               if( tolhs && SCIPisInfinity(scip, -cons->lhs) )
                   continue;
 
-               movevalue = getTightMove(scip, solver, var->coeffs[j].idx, var->coeffs[j].pos);
+               movevalue = getTightMove(scip, solver, var->coeffs[j].idx, var->coeffs[j].pos, tolhs);
 
                if( solver->liftbound[i] < movevalue )
                {
-                  solver->liftbound[i] = movevalue;
-
-                  if( SCIPisGE(scip, solver->liftbound[i], value) )
+                  /* lift is blocked */
+                  if( SCIPisGE(scip, movevalue, value) )
+                  {
+                     solver->liftbound[i] = value;
                      break;
+                  }
+
+                  solver->liftbound[i] = movevalue;
                }
             }
          }
          else
          {
-            solver->liftbound[i] = var->ub;
-
-            if( SCIPisLE(scip, solver->liftbound[i], value) )
+            /* at best bound */
+            if( SCIPisLE(scip, var->ub, value) )
             {
+               solver->liftbound[i] = value;
                solver->liftvalid[i] = TRUE;
                continue;
             }
 
+            solver->liftbound[i] = var->ub;
+
             for( j = 0; j < var->ncoeffs; ++j )
             {
-               coeff = var->coeffs[j].coeff;
+               cons = problem->conss + var->coeffs[j].idx;
+               tolhs = var->coeffs[j].coeff < 0.0;
 
-               if( coeff <= 0.0 )
+               /* no improvement restriction */
+               if( tolhs && SCIPisInfinity(scip, -cons->lhs) )
                   continue;
 
-               movevalue = getTightMove(scip, solver, var->coeffs[j].idx, var->coeffs[j].pos);
+               movevalue = getTightMove(scip, solver, var->coeffs[j].idx, var->coeffs[j].pos, tolhs);
 
                if( solver->liftbound[i] > movevalue )
                {
-                  solver->liftbound[i] = movevalue;
-
-                  if( SCIPisLE(scip, solver->liftbound[i], value) )
+                  /* lift is blocked */
+                  if( SCIPisLE(scip, movevalue, value) )
+                  {
+                     solver->liftbound[i] = value;
                      break;
+                  }
+
+                  solver->liftbound[i] = movevalue;
                }
             }
          }
@@ -1750,16 +1805,15 @@ SCIP_RETCODE lsSolverLiftMove(
          solver->totaleffort += j;
       }
 
-      varvalue = solver->liftbound[i];
+      movevalue = solver->liftbound[i];
 
-      /* skip zero move */
-      if( SCIPisEQ(scip, varvalue, value) )
+      /* skip blocked move */
+      if( objcoeff >= 0.0 ? SCIPisGE(scip, movevalue, value) : SCIPisLE(scip, movevalue, value) )
          continue;
 
       objresidual = solver->incumbentobjective - value * objcoeff;
-      objvalue = varvalue * objcoeff + objresidual;
-
-      laststep = (varvalue < value) ? solver->lastdecstep[varidx] : solver->lastincstep[varidx];
+      objvalue = movevalue * objcoeff + objresidual;
+      laststep = (movevalue < value) ? solver->lastdecstep[varidx] : solver->lastincstep[varidx];
 
       if( ( SCIPisInfinity(scip, -objvalue) || SCIPisInfinity(scip, bestobjvalue)
          || SCIPisLE(scip, objvalue, bestobjvalue) )
@@ -1768,7 +1822,7 @@ SCIP_RETCODE lsSolverLiftMove(
       {
          bestobjvalue = objvalue;
          bestvaridx = varidx;
-         bestvalue = varvalue;
+         bestvalue = movevalue;
          bestlaststep = laststep;
       }
    }
@@ -1784,13 +1838,18 @@ SCIP_RETCODE lsSolverLiftMove(
       {
          cons = problem->conss + bestvar->coeffs[i].idx;
 
-         /* invalidate lift bounds */
+         /* invalidate other bounds */
          for( j = 0; j < cons->ncoeffs; ++j )
          {
-            objpos = problem->vars[cons->coeffs[j].idx].objidx;
+            varidx = cons->coeffs[j].idx;
 
-            if( objpos >= 0 )
-               solver->liftvalid[objpos] = FALSE;
+            if( varidx != bestvaridx )
+            {
+               objpos = problem->vars[varidx].objidx;
+
+               if( objpos >= 0 )
+                  solver->liftvalid[objpos] = FALSE;
+            }
          }
       }
 
@@ -1807,46 +1866,6 @@ SCIP_RETCODE lsSolverLiftMove(
 /*
  * SCIP integration
  */
-
-/** adds a row to the local search problem */
-static
-SCIP_RETCODE addRowInLocalSolver(
-   SCIP*                 scip,               /**< SCIP data structure */
-   LS_PROBLEM*           problem,            /**< problem */
-   SCIP_Real*            consvals,           /**< coefficient values */
-   int*                  consinds,           /**< variable indices */
-   int                   consnvars,          /**< number of variables */
-   SCIP_Real             constant,           /**< row activity constant */
-   SCIP_Real             lhs,                /**< left hand side */
-   SCIP_Real             rhs                 /**< right hand side */
-   )
-{
-   SCIP_Real* negvals;
-   int i;
-
-   assert(scip != NULL);
-   assert(problem != NULL);
-
-   /* left hand side */
-   if( !SCIPisInfinity(scip, -lhs) )
-   {
-      SCIP_CALL( SCIPallocBufferArray(scip, &negvals, consnvars) );
-
-      for( i = 0; i < consnvars; ++i )
-         negvals[i] = -consvals[i];
-
-      SCIP_CALL( lsProblemAddConstraint(scip, problem, -constant, -lhs, consnvars, consinds, negvals) );
-      SCIPfreeBufferArray(scip, &negvals);
-   }
-
-   /* right hand side */
-   if( !SCIPisInfinity(scip, rhs) )
-   {
-      SCIP_CALL( lsProblemAddConstraint(scip, problem, constant, rhs, consnvars, consinds, consvals) );
-   }
-
-   return SCIP_OKAY;
-}
 
 /** sets up objective data on variables */
 static
@@ -1895,7 +1914,7 @@ static
 SCIP_RETCODE extractProblemDataBeforePresolve(
    SCIP*                 scip,               /**< SCIP data structure */
    LS_PROBLEM*           problem,            /**< problem */
-   SCIP_Bool*            success             /**< was the problem successfully extracted? */
+   SCIP_Bool*            success             /**< is the problem successfully extracted? */
    )
 {
    SCIP_VAR** vars;
@@ -1913,7 +1932,6 @@ SCIP_RETCODE extractProblemDataBeforePresolve(
    int nlinconss;
    int consnvars;
    int requiredsize;
-   int nsides;
    int i;
    int j;
 
@@ -1921,7 +1939,6 @@ SCIP_RETCODE extractProblemDataBeforePresolve(
    assert(problem != NULL);
    assert(success != NULL);
 
-   *success = FALSE;
    nvars = SCIPgetNVars(scip);
    nconss = SCIPgetNConss(scip);
    nlinconss = 0;
@@ -1947,8 +1964,13 @@ SCIP_RETCODE extractProblemDataBeforePresolve(
       nlinconss += SCIPconshdlrGetNConss(conshdlr);
 
    if( nlinconss < nconss )
-      return SCIP_OKAY;
+   {
+      *success = FALSE;
 
+      return SCIP_OKAY;
+   }
+
+   *success = TRUE;
    vars = SCIPgetVars(scip);
    conss = SCIPgetConss(scip);
    SCIP_CALL( SCIPallocBufferArray(scip, &consinds, nvars) );
@@ -1963,7 +1985,7 @@ SCIP_RETCODE extractProblemDataBeforePresolve(
    }
    if( nconss > 0 )
    {
-      problem->consssize = 2 * nconss;
+      problem->consssize = nconss;
       SCIP_CALL( SCIPallocBlockMemoryArray(scip, &problem->conss, problem->consssize) );
    }
 
@@ -2011,23 +2033,20 @@ SCIP_RETCODE extractProblemDataBeforePresolve(
       if( consnvars == 0 )
          continue;
 
-      nsides = (!SCIPisInfinity(scip, -lhs) ? 1 : 0) + (!SCIPisInfinity(scip, rhs) ? 1 : 0);
-      assert(nsides > 0);
-
       for( j = 0; j < consnvars; ++j )
       {
          consinds[j] = SCIPvarGetProbindex(consvars[j]);
          assert(consinds[j] >= 0);
          assert(consinds[j] < nvars);
-         nvarcoeffs[consinds[j]] += nsides;
+         ++nvarcoeffs[consinds[j]];
       }
 
-      SCIP_CALL( addRowInLocalSolver(scip, problem, consvals, consinds, consnvars, constant, lhs, rhs) );
+      SCIP_CALL( lsProblemAddConstraint(scip, problem, consvals, consinds, consnvars, constant, lhs, rhs, success) );
+      if( !(*success) )
+         goto TERMINATE;
    }
 
    SCIP_CALL( lsProblemFillReferences(scip, problem, nvarcoeffs) );
-
-   *success = TRUE;
 
 TERMINATE:
    SCIPfreeBufferArray(scip, &nvarcoeffs);
@@ -2046,7 +2065,8 @@ SCIP_RETCODE extractProblemData(
    SCIP_COL**            cols,               /**< LP columns */
    SCIP_ROW**            rows,               /**< LP rows */
    int                   ncols,              /**< number of LP columns */
-   int                   nrows               /**< number of LP rows */
+   int                   nrows,              /**< number of LP rows */
+   SCIP_Bool*            success             /**< is the problem successfully extracted? */
    )
 {
    SCIP_COL** rowcols;
@@ -2062,13 +2082,14 @@ SCIP_RETCODE extractProblemData(
    SCIP_Real rhs;
    int nnonz;
    int nvals;
-   int nsides;
    int i;
    int j;
 
    assert(scip != NULL);
    assert(problem != NULL);
+   assert(success != NULL);
 
+   *success = TRUE;
    SCIP_CALL( SCIPallocBufferArray(scip, &inds, ncols) );
    SCIP_CALL( SCIPallocBufferArray(scip, &vals, ncols) );
    SCIP_CALL( SCIPallocClearBufferArray(scip, &nvarcoeffs, ncols) );
@@ -2080,7 +2101,7 @@ SCIP_RETCODE extractProblemData(
    }
    if( nrows > 0 )
    {
-      problem->consssize = 2 * nrows;
+      problem->consssize = nrows;
       SCIP_CALL( SCIPallocBlockMemoryArray(scip, &problem->conss, problem->consssize) );
    }
 
@@ -2108,7 +2129,6 @@ SCIP_RETCODE extractProblemData(
       rhs = SCIProwGetRhs(row);
       nnonz = SCIProwGetNNonz(row);
       nvals = 0;
-      nsides = (!SCIPisInfinity(scip, -lhs) ? 1 : 0) + (!SCIPisInfinity(scip, rhs) ? 1 : 0);
 
       for( j = 0; j < nnonz; ++j )
       {
@@ -2119,7 +2139,7 @@ SCIP_RETCODE extractProblemData(
             assert(inds[nvals] >= 0);
             assert(inds[nvals] < ncols);
             vals[nvals] = rowvals[j];
-            nvarcoeffs[inds[nvals]] += nsides;
+            ++nvarcoeffs[inds[nvals]];
             ++nvals;
          }
       }
@@ -2127,13 +2147,14 @@ SCIP_RETCODE extractProblemData(
       if( nvals == 0 )
          continue;
 
-      assert(nsides > 0);
-
-      SCIP_CALL( addRowInLocalSolver(scip, problem, vals, inds, nvals, constant, lhs, rhs) );
+      SCIP_CALL( lsProblemAddConstraint(scip, problem, vals, inds, nvals, constant, lhs, rhs, success) );
+      if( !(*success) )
+         goto TERMINATE;
    }
 
    SCIP_CALL( lsProblemFillReferences(scip, problem, nvarcoeffs) );
 
+TERMINATE:
    SCIPfreeBufferArray(scip, &nvarcoeffs);
    SCIPfreeBufferArray(scip, &vals);
    SCIPfreeBufferArray(scip, &inds);
@@ -2319,21 +2340,15 @@ SCIP_RETCODE runLocal(
    if( heurtiming == SCIP_HEURTIMING_BEFOREPRESOL )
    {
       SCIP_CALL( extractProblemDataBeforePresolve(scip, problem, &success) );
-      if( !success )
-      {
-         SCIP_CALL( lsProblemFree(scip, &problem) );
-         return SCIP_OKAY;
-      }
    }
    else
    {
       SCIP_CALL( SCIPgetLPColsData(scip, &cols, &ncols) );
       SCIP_CALL( SCIPgetLPRowsData(scip, &rows, &nrows) );
-
-      SCIP_CALL( extractProblemData(scip, problem, cols, rows, ncols, nrows) );
+      SCIP_CALL( extractProblemData(scip, problem, cols, rows, ncols, nrows, &success) );
    }
 
-   if( problem->nvars == 0 || problem->nconss == 0 )
+   if( !success || problem->nvars == 0 || problem->nconss == 0 )
    {
       SCIP_CALL( lsProblemFree(scip, &problem) );
       return SCIP_OKAY;
