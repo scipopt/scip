@@ -228,7 +228,6 @@ do
                     SLURMACCOUNT="${ACCOUNT}"
                 fi
 
-                sleep 2
                 # CLUSTERNODES will never be empty (see check on top)
                 if test "${CLUSTERNODES}" = "all" && test "${EXCLUDENODES}" = "none"
                 then
