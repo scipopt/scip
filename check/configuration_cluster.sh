@@ -47,9 +47,10 @@ then
     exit 1
 fi
 
-# check whether there is enough memory on the host system, otherwise we need to submit from the target system
+# slurm submission configuration
 if test "${QUEUETYPE}" = "srun"
 then
+    # check whether there is enough memory on the host system, otherwise we need to submit from the target system
     HOSTMEM=$(ulimit -m)
     if test "${HOSTMEM}" != "unlimited"
     then
@@ -58,6 +59,14 @@ then
             echo "Not enough memory on host system - please submit from target system (e.g. ssh opt201)."
             exit 1
         fi
+    fi
+
+    # use medium frequency with Performance governor if available
+    if scontrol show config 2>/dev/null | grep -qE '^CpuFreqGovernors\b.*\bPerformance\b'
+    then
+        CPUFREQ="medium-medium:Performance"
+    else
+        CPUFREQ="medium-medium"
     fi
 fi
 
