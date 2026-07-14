@@ -872,6 +872,7 @@ SCIP_Real getTargetMove(
 
    assert(scip != NULL);
    assert(solver != NULL);
+   assert(!SCIPisInfinity(scip, solver->objtarget));
 
    problem = solver->problem;
    varidx = problem->objvaridxs[termidx];
@@ -1032,27 +1033,33 @@ SCIP_Longint getTightScore(
    solver->subscore = 0;
 
    /* objective scoring in optimality mode */
-   if( solver->optimality && !SCIPisInfinity(scip, solver->objtarget) && var->objidx >= 0 )
+   if( solver->optimality && var->objidx >= 0 )
    {
       objresidual = solver->incumbentobjective - value * var->obj;
       newact = newvalue * var->obj + objresidual;
-      previol = solver->incumbentobjective - solver->objtarget;
-      newviol = newact - solver->objtarget;
 
       /* score: objective change */
-      if( ( !SCIPisInfinity(scip, newviol) || !SCIPisInfinity(scip, previol) )
-         && ( !SCIPisInfinity(scip, -newviol) || !SCIPisInfinity(scip, -previol) )
-         && !SCIPisEQ(scip, newviol, previol) )
+      if( ( !SCIPisInfinity(scip, newact) || !SCIPisInfinity(scip, solver->incumbentobjective) )
+         && ( !SCIPisInfinity(scip, -newact) || !SCIPisInfinity(scip, -solver->incumbentobjective) )
+         && !SCIPisEQ(scip, newact, solver->incumbentobjective) )
       {
-         if( previol > newviol )
+         if( solver->incumbentobjective > newact )
             score += solver->objweight;
          else
             score -= solver->objweight;
       }
 
       /* subscore: stable objective transition */
-      prestable = SCIPisNegative(scip, previol);
-      nowstable = SCIPisNegative(scip, newviol);
+      if( !SCIPisInfinity(scip, solver->objtarget) )
+      {
+         prestable = SCIPisLT(scip, solver->incumbentobjective, solver->objtarget);
+         nowstable = SCIPisLT(scip, newact, solver->objtarget);
+      }
+      else
+      {
+         prestable = !SCIPisInfinity(scip, solver->incumbentobjective);
+         nowstable = !SCIPisInfinity(scip, newact);
+      }
 
       if( !prestable && nowstable )
          solver->subscore += solver->objweight;
@@ -1134,7 +1141,7 @@ void lsSolverUpdateWeight(
    }
 
    /* increase objective weight if feasible */
-   if( solver->nunsat == 0 && !SCIPisInfinity(scip, solver->objtarget) )
+   if( solver->nunsat == 0 )
       ++solver->objweight;
 }
 
@@ -1161,8 +1168,8 @@ void lsSolverSmoothWeight(
    }
 
    /* decrease objective weight if better */
-   if( solver->optimality && !SCIPisInfinity(scip, solver->objtarget)
-      && solver->objweight > 0 && SCIPisLE(scip, solver->incumbentobjective, solver->objtarget) )
+   if( solver->optimality && solver->objweight > 0 && !SCIPisInfinity(scip, solver->incumbentobjective)
+      && SCIPisLE(scip, solver->incumbentobjective, solver->objtarget) )
       --solver->objweight;
 }
 
