@@ -231,15 +231,15 @@ do
                 # CLUSTERNODES will never be empty (see check on top)
                 if test "${CLUSTERNODES}" = "all" && test "${EXCLUDENODES}" = "none"
                 then
-                    sbatch --ntasks=1 --cpus-per-task=$((THREADS + 1)) --job-name="${JOBNAME}" --mem="${HARDMEMLIMIT}" -p "${CLUSTERQUEUE}" -A "${SLURMACCOUNT}" ${NICE} --time="${HARDTIMELIMIT}" --cpu-freq=medium-medium:Performance ${EXCLUSIVE} --output=/dev/null run_fscip.sh
+                    sbatch --ntasks=1 --cpus-per-task=$((THREADS + 1)) --job-name="${JOBNAME}" --mem="${HARDMEMLIMIT}" -p "${CLUSTERQUEUE}" -A "${SLURMACCOUNT}" ${NICE} --time="${HARDTIMELIMIT}" --cpu-freq=${CPUFREQ} ${EXCLUSIVE} --output=/dev/null run_fscip.sh
                 elif test "${CLUSTERNODES}" != "all" && test "${EXCLUDENODES}" = "none"
                 then
-                    sbatch --ntasks=1 --cpus-per-task=$((THREADS + 1)) --job-name="${JOBNAME}" --mem="${HARDMEMLIMIT}" -p "${CLUSTERQUEUE}" -A "${SLURMACCOUNT}" ${NICE} --time="${HARDTIMELIMIT}" --cpu-freq=medium-medium:Performance ${EXCLUSIVE} -w "${CLUSTERNODES}" --output=/dev/null run_fscip.sh
+                    sbatch --ntasks=1 --cpus-per-task=$((THREADS + 1)) --job-name="${JOBNAME}" --mem="${HARDMEMLIMIT}" -p "${CLUSTERQUEUE}" -A "${SLURMACCOUNT}" ${NICE} --time="${HARDTIMELIMIT}" --cpu-freq=${CPUFREQ} ${EXCLUSIVE} -w "${CLUSTERNODES}" --output=/dev/null run_fscip.sh
                 elif test "${CLUSTERNODES}" = "all" && test "${EXCLUDENODES}" != "none"
                 then
-                    sbatch --ntasks=1 --cpus-per-task=$((THREADS + 1)) --job-name="${JOBNAME}" --mem="${HARDMEMLIMIT}" -p "${CLUSTERQUEUE}" -A "${SLURMACCOUNT}" ${NICE} --time="${HARDTIMELIMIT}" --cpu-freq=medium-medium:Performance ${EXCLUSIVE} -x "${EXCLUDENODES}" --output=/dev/null run_fscip.sh
+                    sbatch --ntasks=1 --cpus-per-task=$((THREADS + 1)) --job-name="${JOBNAME}" --mem="${HARDMEMLIMIT}" -p "${CLUSTERQUEUE}" -A "${SLURMACCOUNT}" ${NICE} --time="${HARDTIMELIMIT}" --cpu-freq=${CPUFREQ} ${EXCLUSIVE} -x "${EXCLUDENODES}" --output=/dev/null run_fscip.sh
                 else
-                    sbatch --ntasks=1 --cpus-per-task=$((THREADS + 1)) --job-name="${JOBNAME}" --mem="${HARDMEMLIMIT}" -p "${CLUSTERQUEUE}" -A "${SLURMACCOUNT}" ${NICE} --time="${HARDTIMELIMIT}" --cpu-freq=medium-medium:Performance ${EXCLUSIVE} -w "${CLUSTERNODES}" -x "${EXCLUDENODES}" --output=/dev/null run_fscip.sh
+                    sbatch --ntasks=1 --cpus-per-task=$((THREADS + 1)) --job-name="${JOBNAME}" --mem="${HARDMEMLIMIT}" -p "${CLUSTERQUEUE}" -A "${SLURMACCOUNT}" ${NICE} --time="${HARDTIMELIMIT}" --cpu-freq=${CPUFREQ} ${EXCLUSIVE} -w "${CLUSTERNODES}" -x "${EXCLUDENODES}" --output=/dev/null run_fscip.sh
                 fi
                 else
                     # -V to copy all environment variables

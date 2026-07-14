@@ -262,9 +262,9 @@ flush_auto_batch() {
         return
     fi
     GROUP_MEM=$(( AUTO_BATCH_COUNT * HARDMEMLIMIT ))
-    echo sbatch --job-name="${AUTO_BATCH_JOBNAME}" --constraint="${CONSTRAINT}" --mem="${GROUP_MEM}" -n "${AUTO_BATCH_COUNT}" -c "${THREADS_SAFE}" --distribution=cyclic:cyclic -p "${CLUSTERQUEUE}" -A "${SLURMACCOUNT}" ${NICE} --time="${AUTO_BATCH_TIME}" --cpu-freq=medium-medium:Performance --exclusive ${NODE_FLAGS} --output=/dev/null run_group.sh
+    echo sbatch --job-name="${AUTO_BATCH_JOBNAME}" --constraint="${CONSTRAINT}" --mem="${GROUP_MEM}" -n "${AUTO_BATCH_COUNT}" -c "${THREADS_SAFE}" --distribution=cyclic:cyclic -p "${CLUSTERQUEUE}" -A "${SLURMACCOUNT}" ${NICE} --time="${AUTO_BATCH_TIME}" --cpu-freq=${CPUFREQ} --exclusive ${NODE_FLAGS} --output=/dev/null run_group.sh
     echo "instances:${AUTO_BATCH_NAMES}"
-    sbatch --job-name="${AUTO_BATCH_JOBNAME}" --constraint="${CONSTRAINT}" --mem="${GROUP_MEM}" -n "${AUTO_BATCH_COUNT}" -c "${THREADS_SAFE}" --distribution=cyclic:cyclic -p "${CLUSTERQUEUE}" -A "${SLURMACCOUNT}" ${NICE} --time="${AUTO_BATCH_TIME}" --cpu-freq=medium-medium:Performance --exclusive ${NODE_FLAGS} --output=/dev/null run_group.sh "${AUTO_SRUN}" "${AUTO_BATCH_COUNT}" "${AUTO_BATCH_ARGS[@]}"
+    sbatch --job-name="${AUTO_BATCH_JOBNAME}" --constraint="${CONSTRAINT}" --mem="${GROUP_MEM}" -n "${AUTO_BATCH_COUNT}" -c "${THREADS_SAFE}" --distribution=cyclic:cyclic -p "${CLUSTERQUEUE}" -A "${SLURMACCOUNT}" ${NICE} --time="${AUTO_BATCH_TIME}" --cpu-freq=${CPUFREQ} --exclusive ${NODE_FLAGS} --output=/dev/null run_group.sh "${AUTO_SRUN}" "${AUTO_BATCH_COUNT}" "${AUTO_BATCH_ARGS[@]}"
     # reset accumulator
     AUTO_BATCH_COUNT=0
     AUTO_BATCH_JOBNAME=""
@@ -393,7 +393,7 @@ do
                         echo -e "#!/usr/bin/env bash \n ${EXECNAME} -s ${SETTINGS} -c 'set save ${CHECKSETFILE} quit'" > write-settings.sh
                         if test "${QUEUETYPE}" = "srun"
                         then
-                            sbatch --job-name=write-settings -n 1 -c "${THREADS_SAFE}" --mem="${HARDMEMLIMIT}" -p "${CLUSTERQUEUE}" -A "${SLURMACCOUNT}" ${NICE} --time="${HARDTIMELIMIT}" --cpu-freq=medium-medium:Performance ${EXCLUSIVE} --output=/dev/null write-settings.sh
+                            sbatch --job-name=write-settings -n 1 -c "${THREADS_SAFE}" --mem="${HARDMEMLIMIT}" -p "${CLUSTERQUEUE}" -A "${SLURMACCOUNT}" ${NICE} --time="${HARDTIMELIMIT}" --cpu-freq=${CPUFREQ} ${EXCLUSIVE} --output=/dev/null write-settings.sh
                         else
                             qsub -l walltime="${HARDTIMELIMIT}" -l nodes=1:ppn=$PPN -N write-settings \
                                 -V -q "${CLUSTERQUEUE}" -o /dev/null -e /dev/null write-settings.sh
@@ -431,19 +431,19 @@ do
                         export SRUN="srun --exact -n 1 -c ${THREADS_SAFE} --mem=${HARDMEMLIMIT} --propagate=STACK --cpu_bind=verbose,cores ${SRUN_FLAGS}"
                         if test "${CLUSTERNODES}" = "all" && test "${EXCLUDENODES}" = "none"
                         then
-                            echo sbatch --job-name="${JOBNAME}" --constraint="${CONSTRAINT}" -n 1 -c "${THREADS_SAFE}" --mem="${HARDMEMLIMIT}" -p "${CLUSTERQUEUE}" -A "${SLURMACCOUNT}" ${NICE} --time="${HARDTIMELIMIT}" --cpu-freq=medium-medium:Performance ${EXCLUSIVE} --output=/dev/null run.sh
-                            sbatch --job-name="${JOBNAME}" --constraint="${CONSTRAINT}" -n 1 -c "${THREADS_SAFE}" --mem="${HARDMEMLIMIT}" -p "${CLUSTERQUEUE}" -A "${SLURMACCOUNT}" ${NICE} --time="${HARDTIMELIMIT}" --cpu-freq=medium-medium:Performance ${EXCLUSIVE} --output=/dev/null run.sh
+                            echo sbatch --job-name="${JOBNAME}" --constraint="${CONSTRAINT}" -n 1 -c "${THREADS_SAFE}" --mem="${HARDMEMLIMIT}" -p "${CLUSTERQUEUE}" -A "${SLURMACCOUNT}" ${NICE} --time="${HARDTIMELIMIT}" --cpu-freq=${CPUFREQ} ${EXCLUSIVE} --output=/dev/null run.sh
+                            sbatch --job-name="${JOBNAME}" --constraint="${CONSTRAINT}" -n 1 -c "${THREADS_SAFE}" --mem="${HARDMEMLIMIT}" -p "${CLUSTERQUEUE}" -A "${SLURMACCOUNT}" ${NICE} --time="${HARDTIMELIMIT}" --cpu-freq=${CPUFREQ} ${EXCLUSIVE} --output=/dev/null run.sh
                         elif test "${CLUSTERNODES}" != "all" && test "${EXCLUDENODES}" = "none"
                         then
-                            echo sbatch --job-name="${JOBNAME}" --constraint="${CONSTRAINT}" -n 1 -c "${THREADS_SAFE}" --mem="${HARDMEMLIMIT}" -p "${CLUSTERQUEUE}" -A "${SLURMACCOUNT}" ${NICE} --time="${HARDTIMELIMIT}" --cpu-freq=medium-medium:Performance ${EXCLUSIVE} -w "${CLUSTERNODES}" --output=/dev/null run.sh
-                            sbatch --job-name="${JOBNAME}" --constraint="${CONSTRAINT}" -n 1 -c "${THREADS_SAFE}" --mem="${HARDMEMLIMIT}" -p "${CLUSTERQUEUE}" -A "${SLURMACCOUNT}" ${NICE} --time="${HARDTIMELIMIT}" --cpu-freq=medium-medium:Performance ${EXCLUSIVE} -w "${CLUSTERNODES}" --output=/dev/null run.sh
+                            echo sbatch --job-name="${JOBNAME}" --constraint="${CONSTRAINT}" -n 1 -c "${THREADS_SAFE}" --mem="${HARDMEMLIMIT}" -p "${CLUSTERQUEUE}" -A "${SLURMACCOUNT}" ${NICE} --time="${HARDTIMELIMIT}" --cpu-freq=${CPUFREQ} ${EXCLUSIVE} -w "${CLUSTERNODES}" --output=/dev/null run.sh
+                            sbatch --job-name="${JOBNAME}" --constraint="${CONSTRAINT}" -n 1 -c "${THREADS_SAFE}" --mem="${HARDMEMLIMIT}" -p "${CLUSTERQUEUE}" -A "${SLURMACCOUNT}" ${NICE} --time="${HARDTIMELIMIT}" --cpu-freq=${CPUFREQ} ${EXCLUSIVE} -w "${CLUSTERNODES}" --output=/dev/null run.sh
                         elif test "${CLUSTERNODES}" = "all" && test "${EXCLUDENODES}" != "none"
                         then
-                            echo sbatch --job-name="${JOBNAME}" --constraint="${CONSTRAINT}" -n 1 -c "${THREADS_SAFE}" --mem="${HARDMEMLIMIT}" -p "${CLUSTERQUEUE}" -A "${SLURMACCOUNT}" ${NICE} --time="${HARDTIMELIMIT}" --cpu-freq=medium-medium:Performance ${EXCLUSIVE} -x "${EXCLUDENODES}" --output=/dev/null run.sh
-                            sbatch --job-name="${JOBNAME}" --constraint="${CONSTRAINT}" -n 1 -c "${THREADS_SAFE}" --mem="${HARDMEMLIMIT}" -p "${CLUSTERQUEUE}" -A "${SLURMACCOUNT}" ${NICE} --time="${HARDTIMELIMIT}" --cpu-freq=medium-medium:Performance ${EXCLUSIVE} -x "${EXCLUDENODES}" --output=/dev/null run.sh
+                            echo sbatch --job-name="${JOBNAME}" --constraint="${CONSTRAINT}" -n 1 -c "${THREADS_SAFE}" --mem="${HARDMEMLIMIT}" -p "${CLUSTERQUEUE}" -A "${SLURMACCOUNT}" ${NICE} --time="${HARDTIMELIMIT}" --cpu-freq=${CPUFREQ} ${EXCLUSIVE} -x "${EXCLUDENODES}" --output=/dev/null run.sh
+                            sbatch --job-name="${JOBNAME}" --constraint="${CONSTRAINT}" -n 1 -c "${THREADS_SAFE}" --mem="${HARDMEMLIMIT}" -p "${CLUSTERQUEUE}" -A "${SLURMACCOUNT}" ${NICE} --time="${HARDTIMELIMIT}" --cpu-freq=${CPUFREQ} ${EXCLUSIVE} -x "${EXCLUDENODES}" --output=/dev/null run.sh
                         else
-                            echo sbatch --job-name="${JOBNAME}" --constraint="${CONSTRAINT}" -n 1 -c "${THREADS_SAFE}" --mem="${HARDMEMLIMIT}" -p "${CLUSTERQUEUE}" -A "${SLURMACCOUNT}" ${NICE} --time="${HARDTIMELIMIT}" --cpu-freq=medium-medium:Performance ${EXCLUSIVE} -w "${CLUSTERNODES}" -x "${EXCLUDENODES}" --output=/dev/null run.sh
-                            sbatch --job-name="${JOBNAME}" --constraint="${CONSTRAINT}" -n 1 -c "${THREADS_SAFE}" --mem="${HARDMEMLIMIT}" -p "${CLUSTERQUEUE}" -A "${SLURMACCOUNT}" ${NICE} --time="${HARDTIMELIMIT}" --cpu-freq=medium-medium:Performance ${EXCLUSIVE} -w "${CLUSTERNODES}" -x "${EXCLUDENODES}" --output=/dev/null run.sh
+                            echo sbatch --job-name="${JOBNAME}" --constraint="${CONSTRAINT}" -n 1 -c "${THREADS_SAFE}" --mem="${HARDMEMLIMIT}" -p "${CLUSTERQUEUE}" -A "${SLURMACCOUNT}" ${NICE} --time="${HARDTIMELIMIT}" --cpu-freq=${CPUFREQ} ${EXCLUSIVE} -w "${CLUSTERNODES}" -x "${EXCLUDENODES}" --output=/dev/null run.sh
+                            sbatch --job-name="${JOBNAME}" --constraint="${CONSTRAINT}" -n 1 -c "${THREADS_SAFE}" --mem="${HARDMEMLIMIT}" -p "${CLUSTERQUEUE}" -A "${SLURMACCOUNT}" ${NICE} --time="${HARDTIMELIMIT}" --cpu-freq=${CPUFREQ} ${EXCLUSIVE} -w "${CLUSTERNODES}" -x "${EXCLUDENODES}" --output=/dev/null run.sh
                         fi
                     fi
                 else
