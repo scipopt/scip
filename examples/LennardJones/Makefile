@@ -146,12 +146,8 @@ test:           $(MAINFILE) $(TESTSETDIR)
 		@-(cd check && ln -fs ../$(SCIPDIR)/check/configuration_set.sh);
 		@-(cd check && ln -fs ../$(SCIPDIR)/check/configuration_solufile.sh);
 		@-(cd check && ln -fs ../$(SCIPDIR)/check/configuration_logfiles.sh);
-		@-(cd check && ln -fs ../$(SCIPDIR)/check/configuration_tmpfile_setup_scip.sh);
+		@-(cd check && ln -fs ../$(SCIPDIR)/check/prepare_execname.sh);
 		@-(cd check && ln -fs ../$(SCIPDIR)/check/run.sh);
-ifeq ($(TEST), short)
-		@-(cd check && ln -fs ../$(SCIPDIR)/check/instances);
-		@-(cd check/testset && ln -fs ../../$(SCIPDIR)/check/testset/short.solu);
-endif
 		cd check; \
 		$(SHELL) ./check.sh $(TEST) $(EXECUTABLE) $(SETTINGS) $(BINID) $(OUTPUTDIR) $(TIME) $(NODES) $(MEM) $(THREADS) $(FEASTOL) $(DISPFREQ) \
 		$(CONTINUE) $(LOCK) "example" $(LPS) $(DEBUGTOOL) $(CLIENTTMPDIR) false $(OPTCOMMAND) $(SETCUTOFF) $(MAXJOBS) $(VISUALIZE) $(PERMUTE) \

@@ -1,0 +1,2 @@
+# ../../../.gitignore sets to ignore all check/*.sh in examples
+!configuration_tmpfile_setup_lj.sh 
