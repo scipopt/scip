@@ -219,7 +219,8 @@ static SCIP_RETCODE setupProblem(
  *  Sets up SCIP and the SCIP problem, solves the problem, and shows the solution.
  */
 static SCIP_RETCODE runLJ(
-   int                   nparticles          /**< number of particles */
+   int                   nparticles,         /**< number of particles */
+   const char*           setfile             /**< name of settings file to attempt reading */
    )
 {
    SCIP* scip;
@@ -248,7 +249,15 @@ static SCIP_RETCODE runLJ(
     */
    SCIP_CALL( SCIPsetRealParam(scip, "limits/gap", 0.01) );
 
-   SCIP_CALL( SCIPreadParams(scip, "scip.set") );
+   if( SCIPfileExists(setfile) )
+   {
+      SCIPinfoMessage(scip, NULL, "\nReading %s\n", setfile);
+      SCIP_CALL( SCIPreadParams(scip, setfile) );
+   }
+   else
+   {
+      SCIPinfoMessage(scip, NULL, "\nSettings file %s not found.\n", setfile);
+   }
 
    SCIPinfoMessage(scip, NULL, "\nSolving...\n");
    SCIP_CALL( SCIPsolve(scip) );
@@ -259,7 +268,7 @@ static SCIP_RETCODE runLJ(
       SCIP_CALL( SCIPprintSol(scip, SCIPgetBestSol(scip), NULL, FALSE) );
    }
 
-   /* SCIP_CALL( SCIPprintStatistics(scip, NULL) ); */
+   SCIP_CALL( SCIPprintStatistics(scip, NULL) );
 
    SCIP_CALL( SCIPfree(&scip) );
 
@@ -278,7 +287,7 @@ int main(
 
    if( argc <= 1 )
    {
-      printf("usage: %s NPARTICLES\n", argv[0]);
+      printf("usage: %s NPARTICLES <setfile> <\n", argv[0]);
       return EXIT_SUCCESS;
    }
 
@@ -302,7 +311,7 @@ int main(
    }
 
    /* run the example (setting up SCIP, solving the problem, showing the solution) */
-   retcode = runLJ((int)nparticles);
+   retcode = runLJ((int)nparticles, argc >= 3 ? argv[2] : "scip.set");
 
    /* evaluate return code of the SCIP process */
    if( retcode != SCIP_OKAY )
