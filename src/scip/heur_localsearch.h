@@ -37,7 +37,7 @@
  * The search uses five move operators:
  * - UnsatTightMove: samples violated constraints and moves toward satisfaction.
  * - SatTightMove: samples satisfied constraints and moves toward constraint boundaries (optimality mode only).
- * - FlipMove: flips binary variables with bounds checking.
+ * - FlipMove: flips binary variables between their bounds.
  * - RandomTightMove: escapes local minima using soft aspiration tabu and accepting negative-score moves.
  * - LiftMove: improves objective variables while maintaining feasibility (optimality mode only).
  *

@@ -103,15 +103,6 @@
  * Data structures
  */
 
-/** variable types */
-enum LS_Vartype
-{
-   LS_BINARY     = 0,
-   LS_INTEGER    = 1,
-   LS_CONTINUOUS = 2
-};
-typedef enum LS_Vartype LS_VARTYPE;
-
 /** index-coefficient pair for cross-references */
 struct LS_IdxCoeff
 {
@@ -124,7 +115,6 @@ typedef struct LS_IdxCoeff LS_IDXCOEFF;
 /** variable structure (static model data) */
 struct LS_Var
 {
-   LS_VARTYPE            vartype;            /**< variable type */
    SCIP_Real             lb;                 /**< lower bound */
    SCIP_Real             ub;                 /**< upper bound */
    SCIP_Real             obj;                /**< objective coefficient */
@@ -149,14 +139,15 @@ typedef struct LS_Constraint LS_CONSTRAINT;
 struct LS_Problem
 {
    LS_VAR*               vars;               /**< variables */
+   int*                  varidxs;            /**< variable index map */
+   int                   nbinvars;           /**< number of binary variables */
+   int                   nintvars;           /**< number of integral variables */
    int                   nvars;              /**< number of variables */
    LS_CONSTRAINT*        conss;              /**< regular constraints */
    int                   nconss;             /**< number of constraints */
    int                   consssize;          /**< constraint array size */
    int*                  objvaridxs;         /**< variable indices with nonzero obj coeff */
    int                   nobjvars;           /**< number of objective variables */
-   int*                  binaryidxs;         /**< binary variable indices */
-   int                   nbinary;            /**< number of binary variables */
    int                   nnonzeros;          /**< total number of nonzero entries */
 };
 typedef struct LS_Problem LS_PROBLEM;
@@ -272,8 +263,8 @@ SCIP_RETCODE lsProblemFree(
    prob = *problem;
    assert(prob != NULL);
 
-   if( prob->binaryidxs != NULL )
-      SCIPfreeBlockMemoryArray(scip, &prob->binaryidxs, prob->nbinary);
+   if( prob->varidxs != NULL )
+      SCIPfreeBlockMemoryArray(scip, &prob->varidxs, prob->nvars);
 
    if( prob->objvaridxs != NULL )
       SCIPfreeBlockMemoryArray(scip, &prob->objvaridxs, prob->nobjvars);
@@ -303,12 +294,11 @@ SCIP_RETCODE lsProblemFree(
    return SCIP_OKAY;
 }
 
-/** adds a variable to the problem */
+/** stores a variable at given index */
 static
 SCIP_RETCODE lsProblemAddVar(
-   SCIP*                 scip,               /**< SCIP data structure */
    LS_PROBLEM*           problem,            /**< problem */
-   LS_VARTYPE            vartype,            /**< variable type */
+   int                   idx,                /**< variable index */
    SCIP_Real             lb,                 /**< lower bound */
    SCIP_Real             ub,                 /**< upper bound */
    SCIP_Real             obj                 /**< objective coefficient */
@@ -316,29 +306,18 @@ SCIP_RETCODE lsProblemAddVar(
 {
    LS_VAR* var;
 
-   assert(scip != NULL);
    assert(problem != NULL);
    assert(problem->vars != NULL);
+   assert(problem->varidxs != NULL);
 
-   var = problem->vars + problem->nvars;
-   var->vartype = vartype;
+   var = problem->vars + idx;
+   var->lb = lb;
+   var->ub = ub;
    var->obj = obj;
    var->objidx = -1;
    var->coeffs = NULL;
    var->ncoeffs = 0;
-
-   if( vartype == LS_CONTINUOUS )
-   {
-      var->lb = lb;
-      var->ub = ub;
-   }
-   else
-   {
-      var->lb = SCIPfeasCeil(scip, lb);
-      var->ub = SCIPfeasFloor(scip, ub);
-   }
-
-   ++problem->nvars;
+   problem->varidxs[problem->nvars++] = idx;
 
    return SCIP_OKAY;
 }
@@ -430,24 +409,18 @@ SCIP_RETCODE lsProblemFillReferences(
    LS_VAR* var;
    LS_CONSTRAINT* cons;
    int varidx;
-   int pos;
    int i;
    int j;
 
    assert(scip != NULL);
    assert(problem != NULL);
-   assert(problem->binaryidxs == NULL);
-   assert(problem->nbinary == 0);
    assert(nvarcoeffs != NULL);
 
-   /* count binary variables and allocate variable coefficients */
+   /* allocate variable coefficients */
    for( i = 0; i < problem->nvars; ++i )
    {
       assert(problem->vars[i].coeffs == NULL);
       assert(problem->vars[i].ncoeffs == 0);
-
-      if( problem->vars[i].vartype == LS_BINARY )
-         ++problem->nbinary;
 
       if( nvarcoeffs[i] > 0 )
       {
@@ -477,19 +450,6 @@ SCIP_RETCODE lsProblemFillReferences(
    for( i = 0; i < problem->nvars; ++i )
       assert(problem->vars[i].ncoeffs == nvarcoeffs[i]);
 #endif
-
-   /* build binary index */
-   if( problem->nbinary > 0 )
-   {
-      pos = 0;
-
-      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &problem->binaryidxs, problem->nbinary) );
-      for( i = 0; i < problem->nvars; ++i )
-      {
-         if( problem->vars[i].vartype == LS_BINARY )
-            problem->binaryidxs[pos++] = i;
-      }
-   }
 
    return SCIP_OKAY;
 }
@@ -577,6 +537,7 @@ SCIP_RETCODE lsSolverCreate(
    int nobjvars;
    int nnonzeros;
    int nconss;
+   int varidx;
    int i;
    int j;
 
@@ -629,7 +590,7 @@ SCIP_RETCODE lsSolverCreate(
    solver->neighborcap = nnonzeros;
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &solver->scoretable, nvars) );
    BMSclearMemoryArray(solver->scoretable, nvars);
-   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &solver->scoreidxs, problem->nbinary) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &solver->scoreidxs, problem->nbinvars) );
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &solver->tempunsatidxs, nconss) );
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &solver->sampledconstrs, nconss) );
    BMSclearMemoryArray(solver->sampledconstrs, nconss);
@@ -652,13 +613,14 @@ SCIP_RETCODE lsSolverCreate(
 
       for( i = 0; i < nvars; ++i )
       {
-         solver->incumbentassignment[i] = SCIPgetSolVal(scip, sol, SCIPcolGetVar(cols[i]));
-         if( problem->vars[i].vartype != LS_CONTINUOUS )
-            solver->incumbentassignment[i] = SCIPfeasRound(scip, solver->incumbentassignment[i]);
-         if( solver->incumbentassignment[i] < problem->vars[i].lb )
-            solver->incumbentassignment[i] = problem->vars[i].lb;
-         else if( solver->incumbentassignment[i] > problem->vars[i].ub )
-            solver->incumbentassignment[i] = problem->vars[i].ub;
+         varidx = problem->varidxs[i];
+         solver->incumbentassignment[varidx] = SCIPgetSolVal(scip, sol, SCIPcolGetVar(cols[i]));
+         if( solver->incumbentassignment[varidx] < problem->vars[varidx].lb )
+            solver->incumbentassignment[varidx] = problem->vars[varidx].lb;
+         else if( solver->incumbentassignment[varidx] > problem->vars[varidx].ub )
+            solver->incumbentassignment[varidx] = problem->vars[varidx].ub;
+         else if( varidx < problem->nintvars )
+            solver->incumbentassignment[varidx] = SCIPfeasRound(scip, solver->incumbentassignment[varidx]);
       }
    }
    else
@@ -719,6 +681,7 @@ SCIP_RETCODE lsSolverFree(
    LS_SOLVER**           solverptr           /**< pointer to solver */
    )
 {
+   LS_PROBLEM* problem;
    LS_SOLVER* solver;
    int nvars;
    int nobjvars;
@@ -727,14 +690,13 @@ SCIP_RETCODE lsSolverFree(
 
    assert(scip != NULL);
    assert(solverptr != NULL);
-
    solver = *solverptr;
    assert(solver != NULL);
-
-   nvars = solver->problem->nvars;
-   nobjvars = solver->problem->nobjvars;
-   nnonzeros = solver->problem->nnonzeros + nobjvars;
-   nconss = solver->problem->nconss;
+   problem = solver->problem;
+   nvars = problem->nvars;
+   nobjvars = problem->nobjvars;
+   nnonzeros = problem->nnonzeros + nobjvars;
+   nconss = problem->nconss;
 
    if( nobjvars > 0 )
    {
@@ -744,7 +706,7 @@ SCIP_RETCODE lsSolverFree(
    SCIPfreeBlockMemoryArray(scip, &solver->sampledidxs, nconss);
    SCIPfreeBlockMemoryArray(scip, &solver->sampledconstrs, nconss);
    SCIPfreeBlockMemoryArray(scip, &solver->tempunsatidxs, nconss);
-   SCIPfreeBlockMemoryArray(scip, &solver->scoreidxs, solver->problem->nbinary);
+   SCIPfreeBlockMemoryArray(scip, &solver->scoreidxs, problem->nbinvars);
    SCIPfreeBlockMemoryArray(scip, &solver->scoretable, nvars);
    SCIPfreeBlockMemoryArray(scip, &solver->neighborvalues, nnonzeros);
    SCIPfreeBlockMemoryArray(scip, &solver->neighborvaridxs, nnonzeros);
@@ -802,7 +764,7 @@ void lsSolverApplyMove(
 
    assert(solver->incumbentassignment[varidx] >= var->lb);
    assert(solver->incumbentassignment[varidx] <= var->ub);
-   assert(var->vartype == LS_CONTINUOUS || SCIPrealIsExactlyIntegral(solver->incumbentassignment[varidx]));
+   assert(varidx >= problem->nintvars || SCIPrealIsExactlyIntegral(solver->incumbentassignment[varidx]));
 
    /* recompute incumbent objective */
    if( var->objidx >= 0 )
@@ -889,7 +851,7 @@ SCIP_Real getTargetMove(
       movevalue = var->lb;
    else if( movevalue > var->ub )
       movevalue = var->ub;
-   else if( var->vartype != LS_CONTINUOUS )
+   else if( varidx < problem->nintvars )
       movevalue = round(movevalue);
 
    /* at best bound or objective target reached */
@@ -898,9 +860,9 @@ SCIP_Real getTargetMove(
       return movevalue;
 
    /* improve a step */
-   return var->vartype == LS_CONTINUOUS
-         ? nextafter(movevalue, decrease ? -SCIP_DEFAULT_INFINITY : SCIP_DEFAULT_INFINITY)
-         : movevalue + (decrease ? -1.0 : 1.0);
+   return varidx < problem->nintvars
+         ? movevalue + (decrease ? -1.0 : 1.0)
+         : nextafter(movevalue, decrease ? -(SCIP_Real)INFINITY : (SCIP_Real)INFINITY);
 }
 
 /** computes tight move value for a constraint term to the selected side */
@@ -946,7 +908,7 @@ SCIP_Real getTightMove(
       movevalue = var->lb;
    else if( movevalue > var->ub )
       movevalue = var->ub;
-   else if( var->vartype != LS_CONTINUOUS )
+   else if( varidx < problem->nintvars )
       movevalue = round(movevalue);
 
    /* at nearest bound */
@@ -972,9 +934,9 @@ SCIP_Real getTightMove(
    }
 
    /* satisfy a step */
-   stepvalue = var->vartype == LS_CONTINUOUS
-         ? nextafter(movevalue, decrease ? -SCIP_DEFAULT_INFINITY : SCIP_DEFAULT_INFINITY)
-         : movevalue + (decrease ? -1.0 : 1.0);
+   stepvalue = varidx < problem->nintvars
+         ? movevalue + (decrease ? -1.0 : 1.0)
+         : nextafter(movevalue, decrease ? -(SCIP_Real)INFINITY : (SCIP_Real)INFINITY);
 
    /* single violation decreased */
    if( SCIPisInfinity(scip, -cons->lhs) )
@@ -1325,7 +1287,6 @@ SCIP_Bool selectBestNeighbor(
    SCIP_Longint bestsubscore;
    int varidx;
    SCIP_Real movevalue;
-   LS_VAR* var;
    SCIP_Longint score;
    int i;
 
@@ -1344,10 +1305,9 @@ SCIP_Bool selectBestNeighbor(
    {
       varidx = solver->neighborvaridxs[i];
       movevalue = solver->neighborvalues[i];
-      var = problem->vars + varidx;
 
       /* dedup binaries */
-      if( var->vartype == LS_BINARY )
+      if( varidx < problem->nbinvars )
       {
          if( solver->scoretable[varidx] )
             continue;
@@ -1538,7 +1498,6 @@ SCIP_RETCODE lsSolverFlipMove(
    SCIP_Longint bestsubscore;
    int bestvaridx;
    SCIP_Real bestvalue;
-   int binidx;
    int varidx;
    LS_VAR* var;
    SCIP_Real movevalue;
@@ -1553,7 +1512,7 @@ SCIP_RETCODE lsSolverFlipMove(
    *result = FALSE;
    problem = solver->problem;
 
-   if( problem->nbinary == 0 )
+   if( problem->nbinvars == 0 )
       return SCIP_OKAY;
 
    bestscore = 0;
@@ -1563,8 +1522,7 @@ SCIP_RETCODE lsSolverFlipMove(
 
    for( i = 0; i < heurdata->bmsflip; ++i )
    {
-      binidx = SCIPrandomGetInt(heurdata->randnumgen, 0, problem->nbinary - 1);
-      varidx = problem->binaryidxs[binidx];
+      varidx = SCIPrandomGetInt(heurdata->randnumgen, 0, problem->nbinvars - 1);
       var = problem->vars + varidx;
 
       /* dedup */
@@ -1574,21 +1532,21 @@ SCIP_RETCODE lsSolverFlipMove(
       solver->scoreidxs[solver->nscoreidxs++] = varidx;
 
       /* flip to opposite */
-      if( solver->incumbentassignment[varidx] >= 0.5 )
+      if( solver->incumbentassignment[varidx] != var->lb ) /*lint !e777*/
       {
          /* check lower tabu */
-         if( var->lb > 0.0 || solver->allowdecstep[varidx] > solver->curstep )
+         if( solver->allowdecstep[varidx] > solver->curstep )
             continue;
 
-         movevalue = 0.0;
+         movevalue = var->lb;
       }
       else
       {
          /* check upper tabu */
-         if( var->ub < 1.0 || solver->allowincstep[varidx] > solver->curstep )
+         if( solver->allowincstep[varidx] > solver->curstep )
             continue;
 
-         movevalue = 1.0;
+         movevalue = var->ub;
       }
 
       score = getTightScore(scip, solver, varidx, movevalue);
@@ -1931,9 +1889,15 @@ SCIP_RETCODE extractProblemDataBeforePresolve(
    SCIP_Real* consvals;
    int* nvarcoeffs;
    int* consinds;
+   SCIP_Real lb;
+   SCIP_Real ub;
    SCIP_Real constant;
    SCIP_Real lhs;
    SCIP_Real rhs;
+   int binpos;
+   int intpos;
+   int contpos;
+   int varidx;
    int nvars;
    int nconss;
    int nlinconss;
@@ -1944,6 +1908,10 @@ SCIP_RETCODE extractProblemDataBeforePresolve(
 
    assert(scip != NULL);
    assert(problem != NULL);
+   assert(problem->vars == NULL);
+   assert(problem->nvars == 0);
+   assert(problem->conss == NULL);
+   assert(problem->nconss == 0);
    assert(success != NULL);
 
    nvars = SCIPgetNVars(scip);
@@ -1985,10 +1953,11 @@ SCIP_RETCODE extractProblemDataBeforePresolve(
    SCIP_CALL( SCIPallocBufferArray(scip, &consvars, nvars) );
    SCIP_CALL( SCIPallocClearBufferArray(scip, &nvarcoeffs, nvars) );
 
-   /* allocate variable and constraint arrays */
+   /* allocate variable, index, and constraint arrays */
    if( nvars > 0 )
    {
       SCIP_CALL( SCIPallocBlockMemoryArray(scip, &problem->vars, nvars) );
+      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &problem->varidxs, nvars) );
    }
    if( nconss > 0 )
    {
@@ -1996,12 +1965,50 @@ SCIP_RETCODE extractProblemDataBeforePresolve(
       SCIP_CALL( SCIPallocBlockMemoryArray(scip, &problem->conss, problem->consssize) );
    }
 
-   /* add variables to problem */
+   /* count variables for each type */
    for( i = 0; i < nvars; ++i )
    {
-      SCIP_CALL( lsProblemAddVar(scip, problem,
-            SCIPvarIsIntegral(vars[i]) ? (SCIPvarIsBinary(vars[i]) ? LS_BINARY : LS_INTEGER) : LS_CONTINUOUS,
-            SCIPvarGetLbLocal(vars[i]), SCIPvarGetUbLocal(vars[i]), SCIPvarGetObj(vars[i])) );
+      if( SCIPvarIsIntegral(vars[i]) )
+      {
+         lb = SCIPfeasCeil(scip, SCIPvarGetLbLocal(vars[i]));
+         ub = SCIPfeasFloor(scip, SCIPvarGetUbLocal(vars[i]));
+
+         if( ub - lb == 1.0 ) /*lint !e777*/
+            ++problem->nbinvars;
+         else if( lb != ub ) /*lint !e777*/
+            ++problem->nintvars;
+      }
+   }
+
+   /* add variables to the problem */
+   problem->nintvars += problem->nbinvars;
+   binpos = 0;
+   intpos = problem->nbinvars;
+   contpos = problem->nintvars;
+
+   for( i = 0; i < nvars; ++i )
+   {
+      if( SCIPvarIsIntegral(vars[i]) )
+      {
+         lb = SCIPfeasCeil(scip, SCIPvarGetLbLocal(vars[i]));
+         ub = SCIPfeasFloor(scip, SCIPvarGetUbLocal(vars[i]));
+
+         if( ub - lb == 1.0 ) /*lint !e777*/
+            varidx = binpos++;
+         else if( lb != ub ) /*lint !e777*/
+            varidx = intpos++;
+         else
+            varidx = contpos++;
+      }
+      else
+      {
+         lb = SCIPvarGetLbLocal(vars[i]);
+         ub = SCIPvarGetUbLocal(vars[i]);
+
+         varidx = contpos++;
+      }
+
+      SCIP_CALL( lsProblemAddVar(problem, varidx, lb, ub, SCIPvarGetObj(vars[i])) );
    }
 
    /* setup objective */
@@ -2042,9 +2049,9 @@ SCIP_RETCODE extractProblemDataBeforePresolve(
 
       for( j = 0; j < consnvars; ++j )
       {
-         consinds[j] = SCIPvarGetProbindex(consvars[j]);
-         assert(consinds[j] >= 0);
-         assert(consinds[j] < nvars);
+         assert(SCIPvarGetProbindex(consvars[j]) >= 0);
+         assert(SCIPvarGetProbindex(consvars[j]) < nvars);
+         consinds[j] = problem->varidxs[SCIPvarGetProbindex(consvars[j])];
          ++nvarcoeffs[consinds[j]];
       }
 
@@ -2077,16 +2084,21 @@ SCIP_RETCODE extractProblemData(
    )
 {
    SCIP_COL** rowcols;
-   SCIP_VAR* variable;
    SCIP_COL* col;
    SCIP_ROW* row;
    SCIP_Real* vals;
    SCIP_Real* rowvals;
    int* nvarcoeffs;
    int* inds;
+   SCIP_Real lb;
+   SCIP_Real ub;
    SCIP_Real constant;
    SCIP_Real lhs;
    SCIP_Real rhs;
+   int binpos;
+   int intpos;
+   int contpos;
+   int varidx;
    int nnonz;
    int nvals;
    int i;
@@ -2094,6 +2106,10 @@ SCIP_RETCODE extractProblemData(
 
    assert(scip != NULL);
    assert(problem != NULL);
+   assert(problem->vars == NULL);
+   assert(problem->nvars == 0);
+   assert(problem->conss == NULL);
+   assert(problem->nconss == 0);
    assert(success != NULL);
 
    *success = TRUE;
@@ -2101,10 +2117,11 @@ SCIP_RETCODE extractProblemData(
    SCIP_CALL( SCIPallocBufferArray(scip, &vals, ncols) );
    SCIP_CALL( SCIPallocClearBufferArray(scip, &nvarcoeffs, ncols) );
 
-   /* allocate variable and constraint arrays */
+   /* allocate variable, index, and constraint arrays */
    if( ncols > 0 )
    {
       SCIP_CALL( SCIPallocBlockMemoryArray(scip, &problem->vars, ncols) );
+      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &problem->varidxs, ncols) );
    }
    if( nrows > 0 )
    {
@@ -2112,14 +2129,54 @@ SCIP_RETCODE extractProblemData(
       SCIP_CALL( SCIPallocBlockMemoryArray(scip, &problem->conss, problem->consssize) );
    }
 
-   /* add variables to problem */
+   /* count variables for each type */
    for( i = 0; i < ncols; ++i )
    {
       col = cols[i];
-      variable = SCIPcolGetVar(col);
-      SCIP_CALL( lsProblemAddVar(scip, problem,
-            SCIPvarIsIntegral(variable) ? (SCIPvarIsBinary(variable) ? LS_BINARY : LS_INTEGER) : LS_CONTINUOUS,
-            SCIPcolGetLb(col), SCIPcolGetUb(col), SCIPcolGetObj(col)) );
+
+      if( SCIPvarIsIntegral(SCIPcolGetVar(col)) )
+      {
+         lb = SCIPfeasCeil(scip, SCIPcolGetLb(col));
+         ub = SCIPfeasFloor(scip, SCIPcolGetUb(col));
+
+         if( ub - lb == 1.0 ) /*lint !e777*/
+            ++problem->nbinvars;
+         else if( lb != ub ) /*lint !e777*/
+            ++problem->nintvars;
+      }
+   }
+
+   /* add variables to the problem */
+   problem->nintvars += problem->nbinvars;
+   binpos = 0;
+   intpos = problem->nbinvars;
+   contpos = problem->nintvars;
+
+   for( i = 0; i < ncols; ++i )
+   {
+      col = cols[i];
+
+      if( SCIPvarIsIntegral(SCIPcolGetVar(col)) )
+      {
+         lb = SCIPfeasCeil(scip, SCIPcolGetLb(col));
+         ub = SCIPfeasFloor(scip, SCIPcolGetUb(col));
+
+         if( ub - lb == 1.0 ) /*lint !e777*/
+            varidx = binpos++;
+         else if( lb != ub ) /*lint !e777*/
+            varidx = intpos++;
+         else
+            varidx = contpos++;
+      }
+      else
+      {
+         lb = SCIPcolGetLb(col);
+         ub = SCIPcolGetUb(col);
+
+         varidx = contpos++;
+      }
+
+      SCIP_CALL( lsProblemAddVar(problem, varidx, lb, ub, SCIPcolGetObj(col)) );
    }
 
    /* setup objective */
@@ -2142,9 +2199,9 @@ SCIP_RETCODE extractProblemData(
          if( SCIPcolIsInLP(rowcols[j]) )
          {
             assert(nvals < ncols);
-            inds[nvals] = SCIPcolGetLPPos(rowcols[j]);
-            assert(inds[nvals] >= 0);
-            assert(inds[nvals] < ncols);
+            assert(SCIPcolGetLPPos(rowcols[j]) >= 0);
+            assert(SCIPcolGetLPPos(rowcols[j]) < ncols);
+            inds[nvals] = problem->varidxs[SCIPcolGetLPPos(rowcols[j])];
             vals[nvals] = rowvals[j];
             ++nvarcoeffs[inds[nvals]];
             ++nvals;
@@ -2179,11 +2236,12 @@ SCIP_RETCODE checkIncumbentSol(
    SCIP_RESULT*          result              /**< pointer to store the result */
    )
 {
+   LS_PROBLEM* problem;
+   SCIP_VAR** vars;
+   SCIP_COL** cols;
    SCIP_SOL* sol;
    SCIP_Bool stored;
-   SCIP_VAR** vars;
    int nvars;
-   SCIP_COL** cols;
    int ncols;
    int i;
 
@@ -2192,6 +2250,7 @@ SCIP_RETCODE checkIncumbentSol(
    assert(solver != NULL);
    assert(result != NULL);
 
+   problem = solver->problem;
    SCIP_CALL( SCIPcreateSol(scip, &sol, heur) );
 
    if( heurtiming == SCIP_HEURTIMING_BEFOREPRESOL )
@@ -2201,7 +2260,7 @@ SCIP_RETCODE checkIncumbentSol(
 
       for( i = 0; i < nvars; ++i )
       {
-         SCIP_CALL( SCIPsetSolVal(scip, sol, vars[i], solver->incumbentassignment[i]) );
+         SCIP_CALL( SCIPsetSolVal(scip, sol, vars[i], solver->incumbentassignment[problem->varidxs[i]]) );
       }
    }
    else
@@ -2210,7 +2269,7 @@ SCIP_RETCODE checkIncumbentSol(
 
       for( i = 0; i < ncols; ++i )
       {
-         SCIP_CALL( SCIPsetSolVal(scip, sol, SCIPcolGetVar(cols[i]), solver->incumbentassignment[i]) );
+         SCIP_CALL( SCIPsetSolVal(scip, sol, SCIPcolGetVar(cols[i]), solver->incumbentassignment[problem->varidxs[i]]) );
       }
    }
 
