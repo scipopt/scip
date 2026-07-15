@@ -231,15 +231,18 @@ static SCIP_RETCODE runLJ(
 
    SCIPinfoMessage(scip, NULL, "\n");
    SCIPinfoMessage(scip, NULL, "**************************************************\n");
-   SCIPinfoMessage(scip, NULL, "* Running Lennard-Jones Cluster for %02d particles *\n", nparticles);
+   SCIPinfoMessage(scip, NULL, "* Running Lennard-Jones Cluster for %d particles *\n", nparticles);
    SCIPinfoMessage(scip, NULL, "**************************************************\n");
    SCIPinfoMessage(scip, NULL, "\n");
+
+   SCIPprintVersion(scip, NULL);
+   SCIPprintExternalCodes(scip, NULL);
 
    SCIP_CALL( setupProblem(scip, nparticles) );
 
    if( nparticles <= 5 )
    {
-      SCIPinfoMessage(scip, NULL, "Original problem:\n");
+      SCIPinfoMessage(scip, NULL, "\nOriginal problem:\n");
       SCIP_CALL( SCIPprintOrigProblem(scip, NULL, "cip", FALSE) );
    }
 
