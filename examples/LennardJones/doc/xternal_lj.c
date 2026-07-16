@@ -50,8 +50,7 @@
  * \f{equation}{
  * \begin{aligned}
  * \min\; & 4\sum_{i=1}^N \sum_{j=i+1}^N p_{ij} \\
- * \text{s.t.}\; & p_{ij} \geq r_{ij}^{-6} - r_{ij}^{-3} && \forall i,j\in\{1,\ldots,N\}, i < j, \\
- * & r_{ij} = \Vert x^i - x^j\Vert_2^2 && \forall i,j\in\{1,\ldots,N\}, i < j, \\
+ * \text{s.t.}\; & p_{ij} \geq (\Vert x^i - x^j\Vert_2^2)^{-6} - (\Vert x^i - x^j\Vert_2^2)^{-3} && \forall i,j\in\{1,\ldots,N\}, i < j, \\
  * & x^i \in [-9,9]^3 && i\in\{1,\ldots,N\}.
  * \end{aligned}
  * \f}
@@ -59,7 +58,7 @@
  *
  * # Nonlinear Handler Implementation
  *
- * To solve this problem, SCIP needs to compute linear underestimators for the function \f$f(r) := r^{-6} - r^{-3}\f$.
+ * To solve this problem, SCIP needs to compute linear underestimators for the function \f$f(r) := r^{-6} - r^{-3}\f$, where \f$r\f$ is a variable that SCIP introduces to stand for the distance of two particles (\f$\Vert x^i - x^j\Vert_2^2\f$).
  * In the standard approach, \f$r^{-6}\f$ is recognized as convex and \f$-r^{-3}\f$ as concave.
  * A convex underestimator for \f$f(r)\f$ is then derived by replacing \f$-r^{-3}\f$ by the secant on the function between current lower and upper bounds on \f$r\f$.
  * While this gives a valid underestimator, it is far from being tight, which results in a weak dual bound.
@@ -70,8 +69,11 @@
  *
  * ## Detect Structure
  *
- * Given an algebraic expression, check whether it is of the form \f$r^{-6} - r^{-3} - p\f$ (\f$p\f$ stands here for variable \f$p_{ij}\f$).
- * If this is the case, the callback informs the handler for nonlinear constraints that it will provide underestimators for this expression and participate in bound tightening.
+ * Given an algebraic expression, check whether it is of the form \f$r^{-6} - r^{-3} - p\f$.
+ * Here, \f$r\f$ and \f$p\f$ could be any expressions, but will correspond to a quadratic expression \f$\Vert x^i - x^j\Vert_2^2\f$ and a variable expression \f$p_{ij}\f$, respectively, for some particles \f$i,j\f$ in this example.
+ * If an expression of this structure is found, the callback informs the handler for nonlinear constraints that it will provide underestimators and participate in bound tightening.
+ * To produce underestimators that can be added to the LP relaxation, the nonlinear handler requires variables that stand for \f$r\f$ and \f$p\f$.
+ * SCIP ensures that these are made available.
  *
  * In the actual implementation, the handler checks for \f$a r^{-6} - a r^{-3} + b p\f$ for some coefficients \f$a,b\neq 0\f$, because SCIP's handler for nonlinear constraints may multiply \f$p_{ij} \geq r_{ij}^{-6} - r_{ij}^{-3}\f$ by \f$-1\f$.
  * If \f$a<0\f$, the handler will provide overestimators instead of underestimators.
@@ -79,7 +81,7 @@
  *
  * ## Linear Estimators
  *
- * At a node of the branch-and-bound tree, let \f$(r',p')\f$ be the value of \f$r\f$ and \f$p\f$ at the current node and \f$\ell\f$ and \f$u\f$ be the current lower and upper bounds of \f$r\f$.
+ * At a node of the branch-and-bound tree, let \f$(r',p')\f$ be the value of the expressions \f$r\f$ and \f$p\f$ at the current node and \f$\ell\f$ and \f$u\f$ be the bounds on the expression \f$r\f$ (SCIP computes these via interval arithmetics).
  * The nonlinear handler needs to compute a linear underestimator for \f$f(r)-p\f$ that is as tight as possible at \f$(r',p')\f$.
  * Note that \f$f(r)\f$ attains its minimum at \f$r_{\min}=\sqrt[3]{2}\approx 1.2599\f$ and has an inflection point at \f$r_{\inf}=\sqrt[3]{\frac{7}{2}}\approx 1.51829\f$.
  * The function is convex for \f$0<r\leq r_{\inf}\f$ and concave for \f$r\geq r_{\inf}\f$.
