@@ -44,14 +44,15 @@
 /** create problem in given SCIP and add all variables and constraints to model the Lennard-Jones Cluster problem */
 static SCIP_RETCODE setupProblem(
    SCIP*                 scip,               /**< SCIP data structure */
-   int                   nparticles          /**< number of particles */
+   int                   nparticles,         /**< number of particles */
+   SCIP_Bool             distvars            /**< whether to introduce extra explicit variables and constraints for squared distance of particles */
    )
 {
    char name[SCIP_MAXSTRLEN];
    SCIP_VAR** x;
    SCIP_VAR** y;
    SCIP_VAR** z;
-   SCIP_VAR** r;
+   SCIP_VAR** r = NULL;
    SCIP_VAR** p;
    int i, j;
 
@@ -78,15 +79,21 @@ static SCIP_RETCODE setupProblem(
    }
 
    /* create variables for squared distance between particles and their Lennard-Jones Potential (objcoef 4.0) */
-   SCIP_CALL( SCIPallocClearMemoryArray(scip, &r, nparticles * nparticles) );
+   if( distvars )
+   {
+      SCIP_CALL( SCIPallocClearMemoryArray(scip, &r, nparticles * nparticles) );
+   }
    SCIP_CALL( SCIPallocClearMemoryArray(scip, &p, nparticles * nparticles) );
    for( i = 0; i < nparticles; ++i )
    {
       for( j = i + 1; j < nparticles; ++j )
       {
-         (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "r_%d_%d", i, j);
-         SCIP_CALL( SCIPcreateVarBasic(scip, &r[i * nparticles + j], name, 0.0, SCIPinfinity(scip), 0.0, SCIP_VARTYPE_CONTINUOUS) );
-         SCIP_CALL( SCIPaddVar(scip, r[i * nparticles + j]) );
+         if( distvars )
+         {
+            (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "r_%d_%d", i, j);
+            SCIP_CALL( SCIPcreateVarBasic(scip, &r[i * nparticles + j], name, 0.0, SCIPinfinity(scip), 0.0, SCIP_VARTYPE_CONTINUOUS) );
+            SCIP_CALL( SCIPaddVar(scip, r[i * nparticles + j]) );
+         }
 
          (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "p_%d_%d", i, j);
          SCIP_CALL( SCIPcreateVarBasic(scip, &p[i * nparticles + j], name, -SCIPinfinity(scip), SCIPinfinity(scip), 4.0, SCIP_VARTYPE_CONTINUOUS) );
@@ -102,7 +109,13 @@ static SCIP_RETCODE setupProblem(
       for( j = i + 1; j < nparticles; ++j )
       {
          SCIP_CONS* cons;
-         SCIP_Real minusone = -1.0;
+         SCIP_EXPR* distexpr;
+         SCIP_EXPR* pexpr;
+         SCIP_EXPR* rpow1;
+         SCIP_EXPR* rpow2;
+         SCIP_EXPR* sum;
+         SCIP_EXPR* terms[3];
+         SCIP_Real coefs[3];
 
          /* (x[i] - x[j])^2 + (y[i] - y[j])^2 + (z[i] - z[j])^2 - r[i,j] = 0 */
          SCIP_VAR* quadvars1[9];
@@ -154,23 +167,26 @@ static SCIP_RETCODE setupProblem(
          quadvars2[8] = z[j];
          quadcoefs[8] = 1.0;
 
-         (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "dist_%d_%d", i, j);
-         SCIP_CALL( SCIPcreateConsBasicQuadraticNonlinear(scip, &cons, name, 1, &r[i * nparticles + j], &minusone, 9, quadvars1, quadvars2, quadcoefs, 0.0, 0.0) );
-         SCIP_CALL( SCIPaddCons(scip, cons) );
-         SCIP_CALL( SCIPreleaseCons(scip, &cons) );
+         if( distvars )
+         {
+            SCIP_Real minusone = -1.0;
+
+            (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "dist_%d_%d", i, j);
+            SCIP_CALL( SCIPcreateConsBasicQuadraticNonlinear(scip, &cons, name, 1, &r[i * nparticles + j], &minusone, 9, quadvars1, quadvars2, quadcoefs, 0.0, 0.0) );
+            SCIP_CALL( SCIPaddCons(scip, cons) );
+            SCIP_CALL( SCIPreleaseCons(scip, &cons) );
+
+            SCIP_CALL( SCIPcreateExprVar(scip, &distexpr, r[i * nparticles + j], NULL, NULL) );
+         }
+         else
+         {
+            SCIP_CALL( SCIPcreateExprQuadratic(scip, &distexpr, 0, NULL, NULL, 9, quadvars1, quadvars2, quadcoefs, NULL, NULL) );
+         }
 
          /* p[i,j] >= r[i,j]^-6 - r[i,j]^-3 */
-         SCIP_EXPR* pexpr;
-         SCIP_EXPR* rexpr;
-         SCIP_EXPR* rpow1;
-         SCIP_EXPR* rpow2;
-         SCIP_EXPR* sum;
-         SCIP_EXPR* terms[3];
-         SCIP_Real coefs[3];
          SCIP_CALL( SCIPcreateExprVar(scip, &pexpr, p[i * nparticles + j], NULL, NULL) );
-         SCIP_CALL( SCIPcreateExprVar(scip, &rexpr, r[i * nparticles + j], NULL, NULL) );
-         SCIP_CALL( SCIPcreateExprPow(scip, &rpow1, rexpr, -6.0, NULL, NULL) );
-         SCIP_CALL( SCIPcreateExprPow(scip, &rpow2, rexpr, -3.0, NULL, NULL) );
+         SCIP_CALL( SCIPcreateExprPow(scip, &rpow1, distexpr, -6.0, NULL, NULL) );
+         SCIP_CALL( SCIPcreateExprPow(scip, &rpow2, distexpr, -3.0, NULL, NULL) );
          terms[0] = pexpr;
          coefs[0] = -1.0;
          terms[1] = rpow1;
@@ -185,7 +201,7 @@ static SCIP_RETCODE setupProblem(
          SCIP_CALL( SCIPreleaseCons(scip, &cons) );
 
          SCIP_CALL( SCIPreleaseExpr(scip, &pexpr) );
-         SCIP_CALL( SCIPreleaseExpr(scip, &rexpr) );
+         SCIP_CALL( SCIPreleaseExpr(scip, &distexpr) );
          SCIP_CALL( SCIPreleaseExpr(scip, &rpow1) );
          SCIP_CALL( SCIPreleaseExpr(scip, &rpow2) );
          SCIP_CALL( SCIPreleaseExpr(scip, &sum) );
@@ -197,7 +213,10 @@ static SCIP_RETCODE setupProblem(
    {
       for( j = i + 1; j < nparticles; ++j )
       {
-         SCIP_CALL( SCIPreleaseVar(scip, &r[i * nparticles + j]) );
+         if( distvars )
+         {
+            SCIP_CALL( SCIPreleaseVar(scip, &r[i * nparticles + j]) );
+         }
          SCIP_CALL( SCIPreleaseVar(scip, &p[i * nparticles + j]) );
       }
       SCIP_CALL( SCIPreleaseVar(scip, &x[i]) );
@@ -206,7 +225,7 @@ static SCIP_RETCODE setupProblem(
    }
 
    SCIPfreeMemoryArray(scip, &p);
-   SCIPfreeMemoryArray(scip, &r);
+   SCIPfreeMemoryArrayNull(scip, &r);
    SCIPfreeMemoryArray(scip, &z);
    SCIPfreeMemoryArray(scip, &y);
    SCIPfreeMemoryArray(scip, &x);
@@ -220,6 +239,7 @@ static SCIP_RETCODE setupProblem(
  */
 static SCIP_RETCODE runLJ(
    int                   nparticles,         /**< number of particles */
+   SCIP_Bool             distvars,           /**< whether to introduce extra explicit variables and constraints for squared distance of particles */
    const char*           setfile             /**< name of settings file to attempt reading */
    )
 {
@@ -238,7 +258,7 @@ static SCIP_RETCODE runLJ(
    SCIPprintVersion(scip, NULL);
    SCIPprintExternalCodes(scip, NULL);
 
-   SCIP_CALL( setupProblem(scip, nparticles) );
+   SCIP_CALL( setupProblem(scip, nparticles, distvars) );
 
    if( nparticles <= 5 )
    {
@@ -313,8 +333,10 @@ int main(
       return EXIT_FAILURE;
    }
 
-   /* run the example (setting up SCIP, solving the problem, showing the solution) */
-   retcode = runLJ((int)nparticles, argc >= 3 ? argv[2] : "scip.set");
+   /* run the example (setting up SCIP, solving the problem, showing the solution)
+    * second argument specified whether to introduce explicit variables for particle distances (r_ij)
+    */
+   retcode = runLJ((int)nparticles, FALSE, argc >= 3 ? argv[2] : "scip.set");
 
    /* evaluate return code of the SCIP process */
    if( retcode != SCIP_OKAY )
