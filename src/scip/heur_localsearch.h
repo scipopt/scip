@@ -43,7 +43,8 @@
  *
  * Move scores are integer sums of constraint weights based on feasibility transitions. Constraint weights grow for
  * persistent violations and decay for satisfied constraints. Objective and constraint comparisons use infinity guards
- * to handle values beyond the infinity range. Terminates on infinite objective value.
+ * to handle values beyond the infinity range. Terminates when the solution limit is reached, the current solution is
+ * proven optimal, or the effort budget is exhausted without improvement.
  *
  * Based on:
  *  Peng Lin, Shaowei Cai, Mengchuan Zou, Jinkun Lin.

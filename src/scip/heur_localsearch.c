@@ -88,15 +88,13 @@
 #define DEFAULT_BMSSAT             190       /**< max moves scored (sat) */
 #define DEFAULT_BMSFLIP            20        /**< binary flip candidates */
 #define DEFAULT_BMSRANDOM          150       /**< random move candidates */
-#define DEFAULT_MAXEFFORT          100000000 /**< max effort without improvement */
 #define DEFAULT_VERBOSITY          0         /**< verbosity level */
+#define DEFAULT_MAXSOLS            1         /**< max solutions to find */
+#define DEFAULT_MINDECREASEREL     0.1       /**< minimum violation decrease to reset the effort */
+#define DEFAULT_MAXEFFORTFAC       256       /**< maximum effort per nonzero after an improvement */
 #define DEFAULT_ONLYWITHOUTSOL     FALSE     /**< only run without existing solution? */
 #define DEFAULT_USEINITIALSOL      TRUE      /**< use best known solution as start? */
 #define DEFAULT_BEFOREPRESOL       FALSE     /**< run before presolving? */
-#define DEFAULT_MAXSOLS            1         /**< max solutions to find */
-#define DEFAULT_ITERATIONS         1000      /**< iterations to check progress */
-#define DEFAULT_MINPERCENTDECREASE 10        /**< minimum percent decrease required */
-#define DEFAULT_CALLBACKEFFORT     1000000   /**< effort between termination checks */
 
 
 /*
@@ -186,14 +184,10 @@ struct LS_Solver
    SCIP_Real*            liftbound;          /**< per obj-var: feasible bound in improving direction */
    SCIP_Bool*            liftvalid;          /**< are liftbounds valid */
    SCIP_Longint          subscore;           /**< secondary score (set by tightScore) */
-   int                   effortatlastcallback; /**< effort at last termination check */
-   int                   effortatlastimprovement; /**< effort at last improvement */
-   int                   totaleffort;        /**< total effort spent */
-   int                   bestviolations;     /**< best violation count seen */
-   SCIP_Real             bestobjective;      /**< best objective value seen */
-   int                   prevviolations;     /**< violations at last progress check */
-   SCIP_Real             prevobjective;      /**< objective at last progress check */
-   SCIP_Bool             isimproved;         /**< improved at last progress check? */
+   int                   nsols;              /**< number of solutions */
+   int                   previolations;      /**< violation count at last improvement */
+   SCIP_Real             preobjective;       /**< objective value at last improvement */
+   SCIP_Longint          effort;             /**< effort spent since last improvement */
 };
 typedef struct LS_Solver LS_SOLVER;
 
@@ -201,12 +195,10 @@ typedef struct LS_Solver LS_SOLVER;
 struct SCIP_HeurData
 {
    SCIP_RANDNUMGEN*      randnumgen;         /**< random number generator */
-   int                   maxeffort;          /**< max effort without improvement */
-   int                   iterations;         /**< iterations to check progress */
-   int                   mindecrease;        /**< minimum percent decrease required */
    int                   verbosity;          /**< verbosity level */
    int                   maxsols;            /**< max solutions to find */
-   int                   callbackeffort;     /**< effort between termination checks */
+   SCIP_Real             mindecreaserel;     /**< minimum violation decrease to reset the effort */
+   int                   maxeffortfac;       /**< maximum effort per nonzero after an improvement */
    int                   tabubase;           /**< minimum tabu tenure */
    int                   tabuvariation;      /**< random tabu variation */
    int                   smoothprob;         /**< smooth probability (out of 10000) */
@@ -220,6 +212,8 @@ struct SCIP_HeurData
    SCIP_Bool             onlywithoutsol;     /**< only run without existing solution? */
    SCIP_Bool             useinitialsol;      /**< use best known solution as start? */
    SCIP_Bool             beforepresol;       /**< run before presolving? */
+   SCIP_Real             locallowerbound;    /**< local lower bound */
+   SCIP_Longint          maxeffort;          /**< absolute effort budget */
 };
 
 
@@ -517,27 +511,26 @@ void lsSolverRecomputeObjective(
       solver->incumbentobjective += problem->vars[problem->objvaridxs[i]].obj
             * solver->incumbentassignment[problem->objvaridxs[i]];
    }
-
-   solver->totaleffort += problem->nobjvars;
 }
 
 /** creates and initializes a solver */
 static
 SCIP_RETCODE lsSolverCreate(
    SCIP*                 scip,               /**< SCIP data structure */
-   LS_SOLVER**           solverptr,          /**< pointer to solver */
-   LS_PROBLEM*           problem,            /**< problem */
+   SCIP_HEURTIMING       heurtiming,         /**< heuristic timing mask */
    SCIP_SOL*             sol,                /**< SCIP solution, or NULL for bounds */
-   SCIP_COL**            cols                /**< LP columns, or NULL */
+   LS_PROBLEM*           problem,            /**< problem */
+   LS_SOLVER**           solverptr           /**< pointer to solver */
    )
 {
    LS_SOLVER* solver;
    LS_CONSTRAINT* cons;
+   SCIP_VAR** vars;
+   SCIP_COL** cols;
    int nvars;
    int nobjvars;
    int nnonzeros;
    int nconss;
-   int varidx;
    int i;
    int j;
 
@@ -558,18 +551,11 @@ SCIP_RETCODE lsSolverCreate(
    solver->iskeepfeas = FALSE;
    solver->objtarget = SCIPgetCutoffbound(scip) - SCIPcutoffbounddelta(scip);
    solver->objweight = 1;
-   solver->effortatlastcallback = 0;
-   solver->effortatlastimprovement = 0;
-   solver->totaleffort = 0;
-   solver->bestviolations = INT_MAX;
-   solver->bestobjective = SCIPinfinity(scip);
-   solver->prevviolations = INT_MAX;
-   solver->prevobjective = SCIPinfinity(scip);
-   solver->isimproved = TRUE;
    solver->subscore = 0;
    solver->neighborsize = 0;
    solver->nscoreidxs = 0;
    solver->nsampled = 0;
+   solver->nsols = 0;
 
    /* allocate per-variable parallel arrays */
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &solver->incumbentassignment, nvars) );
@@ -606,29 +592,41 @@ SCIP_RETCODE lsSolverCreate(
       solver->liftvalid = NULL;
    }
 
-   /* initialize variable values */
-   if( sol != NULL )
-   {
-      assert(cols != NULL);
-
-      for( i = 0; i < nvars; ++i )
-      {
-         varidx = problem->varidxs[i];
-         solver->incumbentassignment[varidx] = SCIPgetSolVal(scip, sol, SCIPcolGetVar(cols[i]));
-         if( solver->incumbentassignment[varidx] < problem->vars[varidx].lb )
-            solver->incumbentassignment[varidx] = problem->vars[varidx].lb;
-         else if( solver->incumbentassignment[varidx] > problem->vars[varidx].ub )
-            solver->incumbentassignment[varidx] = problem->vars[varidx].ub;
-         else if( varidx < problem->nintvars )
-            solver->incumbentassignment[varidx] = SCIPfeasRound(scip, solver->incumbentassignment[varidx]);
-      }
-   }
-   else
+   /* initialize bound solution */
+   if( sol == NULL )
    {
       for( i = 0; i < nvars; ++i )
       {
          solver->incumbentassignment[i] = !SCIPisInfinity(scip, -problem->vars[i].lb) ? problem->vars[i].lb
                : !SCIPisInfinity(scip, problem->vars[i].ub) ? problem->vars[i].ub : 0.0;
+      }
+   }
+   /* initialize best solution */
+   else
+   {
+      if( heurtiming == SCIP_HEURTIMING_BEFOREPRESOL )
+      {
+         vars = SCIPgetVars(scip);
+
+         for( i = 0; i < nvars; ++i )
+            solver->incumbentassignment[problem->varidxs[i]] = SCIPgetSolVal(scip, sol, vars[i]);
+      }
+      else
+      {
+         SCIP_CALL( SCIPgetLPColsData(scip, &cols, NULL) );
+
+         for( i = 0; i < nvars; ++i )
+            solver->incumbentassignment[problem->varidxs[i]] = SCIPgetSolVal(scip, sol, SCIPcolGetVar(cols[i]));
+      }
+
+      for( i = 0; i < nvars; ++i )
+      {
+         if( solver->incumbentassignment[i] < problem->vars[i].lb )
+            solver->incumbentassignment[i] = problem->vars[i].lb;
+         else if( solver->incumbentassignment[i] > problem->vars[i].ub )
+            solver->incumbentassignment[i] = problem->vars[i].ub;
+         else if( i < problem->nintvars )
+            solver->incumbentassignment[i] = SCIPfeasRound(scip, solver->incumbentassignment[i]);
       }
    }
 
@@ -663,7 +661,10 @@ SCIP_RETCODE lsSolverCreate(
          lsSolverInsertUnsat(solver, i);
    }
 
-   solver->totaleffort += problem->nnonzeros;
+   /* initialize effort state */
+   solver->previolations = solver->nunsat;
+   solver->preobjective = solver->incumbentobjective;
+   solver->effort = 0;
 
    /* enter optimality mode if initial assignment feasible */
    if( solver->nunsat == 0 )
@@ -768,7 +769,10 @@ void lsSolverApplyMove(
 
    /* recompute incumbent objective */
    if( var->objidx >= 0 )
+   {
       lsSolverRecomputeObjective(scip, solver);
+      solver->effort += problem->nobjvars;
+   }
 
    /* recompute activity for each affected constraint */
    for( i = 0; i < var->ncoeffs; ++i )
@@ -793,7 +797,7 @@ void lsSolverApplyMove(
       else if( SCIPisFeasPositive(scip, previol) && !SCIPisFeasPositive(scip, newviol) )
          lsSolverRemoveUnsat(solver, constridx);
 
-      solver->totaleffort += cons->ncoeffs;
+      solver->effort += cons->ncoeffs;
    }
 
    /* enter optimality mode if current assignment feasible */
@@ -1028,7 +1032,7 @@ SCIP_Longint getTightScore(
       else if( prestable && !nowstable )
          solver->subscore -= solver->objweight;
 
-      ++solver->totaleffort;
+      ++solver->effort;
    }
 
    /* regular constraint scoring */
@@ -1072,7 +1076,7 @@ SCIP_Longint getTightScore(
          solver->subscore -= solver->weight[constridx];
    }
 
-   solver->totaleffort += var->ncoeffs;
+   solver->effort += var->ncoeffs;
 
    return score;
 }
@@ -1184,7 +1188,7 @@ void collectConstraintNeighbors(
       ++solver->neighborsize;
    }
 
-   solver->totaleffort += cons->ncoeffs;
+   solver->effort += cons->ncoeffs;
 }
 
 /** collects neighbor candidates from objective terms */
@@ -1236,7 +1240,7 @@ void collectObjectiveNeighbors(
       ++solver->neighborsize;
    }
 
-   solver->totaleffort += problem->nobjvars;
+   solver->effort += problem->nobjvars;
 }
 
 /** partial Fisher-Yates shuffle to subsample neighbors */
@@ -1622,7 +1626,7 @@ SCIP_RETCODE lsSolverRandomTightMove(
          ++solver->neighborsize;
       }
 
-      solver->totaleffort += cons->ncoeffs;
+      solver->effort += cons->ncoeffs;
    }
 
    /* collect objective terms when the objective constraint is violated */
@@ -1674,7 +1678,13 @@ SCIP_RETCODE lsSolverLiftMove(
    assert(heurdata != NULL);
    assert(result != NULL);
 
-   *result = FALSE;
+   if( solver->nunsat > 0 )
+   {
+      *result = FALSE;
+
+      return SCIP_OKAY;
+   }
+
    problem = solver->problem;
 
    /* select best objective-improving move */
@@ -1767,7 +1777,7 @@ SCIP_RETCODE lsSolverLiftMove(
          }
 
          solver->liftvalid[i] = TRUE;
-         solver->totaleffort += j;
+         solver->effort += j;
       }
 
       movevalue = solver->liftbound[i];
@@ -1792,7 +1802,7 @@ SCIP_RETCODE lsSolverLiftMove(
       }
    }
 
-   solver->totaleffort += problem->nobjvars;
+   solver->effort += problem->nobjvars;
 
    if( bestvaridx >= 0 )
    {
@@ -1822,7 +1832,10 @@ SCIP_RETCODE lsSolverLiftMove(
       *result = TRUE;
    }
    else
+   {
       solver->iskeepfeas = FALSE;
+      *result = FALSE;
+   }
 
    return SCIP_OKAY;
 }
@@ -2233,14 +2246,13 @@ SCIP_RETCODE checkIncumbentSol(
    SCIP_HEUR*            heur,               /**< heuristic pointer */
    SCIP_HEURTIMING       heurtiming,         /**< heuristic timing mask */
    LS_SOLVER*            solver,             /**< solver */
-   SCIP_RESULT*          result              /**< pointer to store the result */
+   SCIP_Bool*            stored              /**< pointer to store whether the solution was accepted */
    )
 {
    LS_PROBLEM* problem;
    SCIP_VAR** vars;
    SCIP_COL** cols;
    SCIP_SOL* sol;
-   SCIP_Bool stored;
    int nvars;
    int ncols;
    int i;
@@ -2248,7 +2260,7 @@ SCIP_RETCODE checkIncumbentSol(
    assert(scip != NULL);
    assert(heur != NULL);
    assert(solver != NULL);
-   assert(result != NULL);
+   assert(stored != NULL);
 
    problem = solver->problem;
    SCIP_CALL( SCIPcreateSol(scip, &sol, heur) );
@@ -2273,15 +2285,7 @@ SCIP_RETCODE checkIncumbentSol(
       }
    }
 
-   SCIP_CALL( SCIPtrySol(scip, sol, FALSE, FALSE, FALSE, FALSE, TRUE, &stored) );
-
-   if( stored )
-   {
-      SCIPdebugMsg(scip, "Local search found feasible solution\n");
-      *result = SCIP_FOUNDSOL;
-   }
-
-   SCIP_CALL( SCIPfreeSol(scip, &sol) );
+   SCIP_CALL( SCIPtrySolFree(scip, &sol, FALSE, FALSE, FALSE, FALSE, TRUE, stored) );
 
    return SCIP_OKAY;
 }
@@ -2294,76 +2298,74 @@ SCIP_RETCODE lsCheckTermination(
    SCIP_HEURDATA*        heurdata,           /**< heuristic data */
    SCIP_HEUR*            heur,               /**< heuristic */
    SCIP_HEURTIMING       heurtiming,         /**< heuristic timing */
-   SCIP_Real*            solution,           /**< solution to report, or NULL */
-   int*                  nsols,              /**< pointer to number of solutions found */
-   SCIP_RESULT*          result,             /**< pointer to store result */
    SCIP_Bool*            terminate           /**< pointer to store termination flag */
    )
 {
+   SCIP_Bool stored;
+
    assert(scip != NULL);
    assert(solver != NULL);
    assert(heurdata != NULL);
    assert(heur != NULL);
-   assert(nsols != NULL);
-   assert(result != NULL);
    assert(terminate != NULL);
 
-   *terminate = FALSE;
-
-   if( solution != NULL || solver->totaleffort - solver->effortatlastcallback > heurdata->callbackeffort )
+   /* check effort budget if without significant improvement */
+   if( solver->nunsat >= (1.0 - heurdata->mindecreaserel) * solver->previolations
+      && ( solver->nunsat > solver->previolations
+      || SCIPisInfinity(scip, solver->incumbentobjective) || SCIPisInfinity(scip, -solver->preobjective)
+      || SCIPisGE(scip, solver->incumbentobjective, solver->preobjective) ) )
    {
-      SCIP_Bool quitnumsol;
-      SCIP_Bool quiteffort;
-      SCIP_Bool quitunbounded;
-      int nfoundsols;
-
-      nfoundsols = *nsols;
-      solver->effortatlastcallback = solver->totaleffort;
-
-      if( solution != NULL )
+      if( solver->effort >= heurdata->maxeffort )
       {
-         SCIP_CALL( checkIncumbentSol(scip, heur, heurtiming, solver, result) );
+         SCIPdebugMsg(scip, "Local: quitting, no improvement\n");
+         *terminate = TRUE;
+      }
+      else
+         *terminate = FALSE;
+   }
+   /* reset effort state and check for solution */
+   else
+   {
+      solver->previolations = solver->nunsat;
+      solver->preobjective = solver->incumbentobjective;
+      solver->effort = 0;
 
-         if( *result == SCIP_FOUNDSOL )
+      if( solver->nunsat == 0
+         && !SCIPisInfinity(scip, solver->incumbentobjective)
+         && SCIPisLE(scip, solver->incumbentobjective, solver->objtarget) )
+      {
+         SCIP_CALL( checkIncumbentSol(scip, heur, heurtiming, solver, &stored) );
+
+         if( stored )
          {
             solver->objtarget = SCIPgetCutoffbound(scip) - SCIPcutoffbounddelta(scip);
-            ++nfoundsols;
+            ++solver->nsols;
 
             if( heurdata->verbosity >= 1 )
             {
                SCIPinfoMessage(scip, NULL, "Local search: found solution #%d obj=%g\n",
-                  nfoundsols, solver->incumbentobjective);
+                  solver->nsols, solver->incumbentobjective);
             }
+
+            if( solver->nsols >= heurdata->maxsols )
+            {
+               SCIPdebugMsg(scip, "Local: quitting, solutions %d >= %d\n", solver->nsols, heurdata->maxsols);
+               *terminate = TRUE;
+            }
+            else if( SCIPisInfinity(scip, -solver->incumbentobjective)
+               || SCIPisLE(scip, solver->incumbentobjective, heurdata->locallowerbound) )
+            {
+               SCIPdebugMsg(scip, "Local: quitting, optimal\n");
+               *terminate = TRUE;
+            }
+            else
+               *terminate = FALSE;
          }
          else
             *terminate = TRUE;
       }
-
-      if( !(*terminate) )
-      {
-         quitnumsol = (nfoundsols >= heurdata->maxsols);
-         if( quitnumsol )
-         {
-            SCIPdebugMsg(scip, "Local: quitting, solutions %d >= %d\n", nfoundsols, heurdata->maxsols);
-         }
-
-         quiteffort = (!solver->isimproved
-               || solver->totaleffort - solver->effortatlastimprovement > heurdata->maxeffort);
-         if( quiteffort )
-         {
-            SCIPdebugMsg(scip, "Local: quitting, no improvement\n");
-         }
-
-         quitunbounded = (solver->nunsat == 0 && SCIPisInfinity(scip, -solver->incumbentobjective));
-         if( quitunbounded )
-         {
-            SCIPdebugMsg(scip, "Local: quitting, unbounded\n");
-         }
-
-         *terminate = quitnumsol || quiteffort || quitunbounded;
-      }
-
-      *nsols = nfoundsols;
+      else
+         *terminate = FALSE;
    }
 
    return SCIP_OKAY;
@@ -2385,14 +2387,10 @@ SCIP_RETCODE runLocal(
    SCIP_ROW** rows = NULL;
    int ncols = 0;
    int nrows = 0;
-   int nsols;
    SCIP_Bool terminate;
    SCIP_Bool success;
-   SCIP_Real* solution;
    SCIP_SOL* bestsol;
-   SCIP_Bool liftresult;
    SCIP_Bool moveresult;
-   int violationsdecrease;
 
    assert(scip != NULL);
    assert(heur != NULL);
@@ -2401,6 +2399,7 @@ SCIP_RETCODE runLocal(
 
    *result = SCIP_DIDNOTFIND;
 
+   /* create problem structure */
    SCIP_CALL( lsProblemCreate(scip, &problem) );
 
    if( heurtiming == SCIP_HEURTIMING_BEFOREPRESOL )
@@ -2420,11 +2419,16 @@ SCIP_RETCODE runLocal(
       return SCIP_OKAY;
    }
 
-   /* initialize solution */
-   bestsol = (heurdata->useinitialsol && heurtiming != SCIP_HEURTIMING_BEFOREPRESOL) ? SCIPgetBestSol(scip) : NULL;
+   /* set local lower bound and absolute effort budget */
+   heurdata->locallowerbound = heurtiming == SCIP_HEURTIMING_BEFOREPRESOL
+         ? SCIPgetLowerbound(scip) : SCIPgetLocalLowerbound(scip);
+   heurdata->maxeffort = heurdata->maxeffortfac * ((SCIP_Longint)problem->nnonzeros + (SCIP_Longint)problem->nobjvars);
 
-   /* create solver */
-   SCIP_CALL( lsSolverCreate(scip, &solver, problem, bestsol, cols) );
+   /* get initial solution */
+   bestsol = heurdata->useinitialsol ? SCIPgetBestSol(scip) : NULL;
+
+   /* create solver structure */
+   SCIP_CALL( lsSolverCreate(scip, heurtiming, bestsol, problem, &solver) );
 
    if( heurdata->verbosity >= 1 )
    {
@@ -2432,111 +2436,53 @@ SCIP_RETCODE runLocal(
          problem->nvars, problem->nconss, problem->nnonzeros);
    }
 
-   /* main loop */
-   nsols = 0;
-   terminate = FALSE;
-
-   while( !terminate && !SCIPisStopped(scip) )
+   /* main search loop */
+   while( !SCIPisStopped(scip) )
    {
-      solution = NULL;
+      /* lift feasible solution to local optimality */
+      SCIP_CALL( lsSolverLiftMove(scip, solver, heurdata, &moveresult) );
+      if( moveresult )
+         goto STEP;
 
-      /* feasible phase */
-      if( solver->nunsat == 0 )
-      {
-         if( !SCIPisInfinity(scip, solver->incumbentobjective)
-            && SCIPisLE(scip, solver->incumbentobjective, solver->objtarget) )
-         {
-            solver->effortatlastimprovement = solver->totaleffort;
-            solver->isimproved = TRUE;
-            solution = solver->incumbentassignment;
-         }
+      /* reset effort budget, report feasible solution, and determine termination */
+      SCIP_CALL( lsCheckTermination(scip, solver, heurdata, heur, heurtiming, &terminate) );
+      if( terminate )
+         break;
 
-         SCIP_CALL( lsCheckTermination(scip, solver, heurdata, heur, heurtiming, solution, &nsols, result,
-               &terminate) );
-         if( terminate )
-            break;
-
-         liftresult = FALSE;
-
-         SCIP_CALL( lsSolverLiftMove(scip, solver, heurdata, &liftresult) );
-         ++solver->curstep;
-
-         SCIPdebugMsg(scip, "Local: step=%d nunsat=%d effort=%d obj=%g phase=lift\n",
-               solver->curstep, solver->nunsat, solver->totaleffort, solver->incumbentobjective);
-
-         if( liftresult )
-            continue;
-      }
-
-      /* infeasible phase */
-      moveresult = FALSE;
-
+      /* search for feasible or better solution */
       SCIP_CALL( lsSolverUnsatTightMove(scip, solver, heurdata, &moveresult) );
+      if( moveresult )
+         goto STEP;
 
-      if( !moveresult )
-      {
-         SCIP_CALL( lsSolverSatTightMove(scip, solver, heurdata, &moveresult) );
-      }
+      SCIP_CALL( lsSolverSatTightMove(scip, solver, heurdata, &moveresult) );
+      if( moveresult )
+         goto STEP;
 
-      if( !moveresult )
-      {
-         SCIP_CALL( lsSolverFlipMove(scip, solver, heurdata, &moveresult) );
-      }
-
-      if( !moveresult )
-      {
-         cleanScoreTable(solver);
-
-         if( SCIPrandomGetInt(heurdata->randnumgen, 0, 9999) > heurdata->smoothprob )
-            lsSolverUpdateWeight(scip, solver);
-         else
-            lsSolverSmoothWeight(scip, solver);
-
-         SCIP_CALL( lsSolverRandomTightMove(scip, solver, heurdata) );
-      }
+      SCIP_CALL( lsSolverFlipMove(scip, solver, heurdata, &moveresult) );
+      if( moveresult )
+         goto STEP;
 
       cleanScoreTable(solver);
 
-      /* track improvement */
-      if( solver->nunsat < solver->bestviolations
-         || ( solver->nunsat == solver->bestviolations
-         && !SCIPisInfinity(scip, solver->incumbentobjective) && !SCIPisInfinity(scip, -solver->bestobjective)
-         && SCIPisLT(scip, solver->incumbentobjective, solver->bestobjective) ) )
-      {
-         solver->effortatlastimprovement = solver->totaleffort;
-         solver->bestviolations = solver->nunsat;
-         solver->bestobjective = solver->incumbentobjective;
-      }
+      if( SCIPrandomGetInt(heurdata->randnumgen, 0, 9999) > heurdata->smoothprob )
+         lsSolverUpdateWeight(scip, solver);
+      else
+         lsSolverSmoothWeight(scip, solver);
 
-      /* track progress */
-      if( solver->curstep == 0 )
-      {
-         solver->prevviolations = solver->nunsat;
-         solver->prevobjective = solver->incumbentobjective;
-      }
-      else if( solver->curstep % heurdata->iterations == 0 )
-      {
-         violationsdecrease = solver->prevviolations - solver->nunsat;
-         if( solver->prevviolations == 0 || heurdata->mindecrease * solver->prevviolations <= 100 * violationsdecrease )
-            solver->isimproved = TRUE;
-         else if( violationsdecrease < 0 )
-            solver->isimproved = FALSE;
-         else
-            solver->isimproved = (!SCIPisInfinity(scip, solver->incumbentobjective)
-                  && !SCIPisInfinity(scip, -solver->prevobjective)
-                  && SCIPisLT(scip, solver->incumbentobjective, solver->prevobjective));
-         solver->prevviolations = solver->nunsat;
-         solver->prevobjective = solver->incumbentobjective;
-      }
+      SCIP_CALL( lsSolverRandomTightMove(scip, solver, heurdata) );
+
+   STEP:
+      cleanScoreTable(solver);
+
+      SCIPdebugMsg(scip, "Local: step=%d nunsat=%d effort=%" SCIP_LONGINT_FORMAT " obj=%g phase=search\n",
+            solver->curstep, solver->nunsat, solver->effort, solver->incumbentobjective);
 
       ++solver->curstep;
-
-      SCIPdebugMsg(scip, "Local: step=%d nunsat=%d effort=%d obj=%g phase=search\n",
-            solver->curstep, solver->nunsat, solver->totaleffort, solver->incumbentobjective);
-
-      SCIP_CALL( lsCheckTermination(scip, solver, heurdata, heur, heurtiming, NULL, &nsols, result,
-            &terminate) );
    }
+
+   /* report found solution */
+   if( solver->nsols > 0 )
+      *result = SCIP_FOUNDSOL;
 
    SCIP_CALL( lsSolverFree(scip, &solver) );
    SCIP_CALL( lsProblemFree(scip, &problem) );
@@ -2685,18 +2631,6 @@ SCIP_RETCODE SCIPincludeHeurLocalsearch(
 
    /* add parameters */
    SCIP_CALL( SCIPaddIntParam(scip,
-         "heuristics/" HEUR_NAME "/maxeffort",
-         "maximum effort spent in local search",
-         &heurdata->maxeffort, FALSE, DEFAULT_MAXEFFORT, 0, INT_MAX, NULL, NULL) );
-   SCIP_CALL( SCIPaddIntParam(scip,
-         "heuristics/" HEUR_NAME "/iterations",
-         "number of iterations to check progress",
-         &heurdata->iterations, FALSE, DEFAULT_ITERATIONS, 1, INT_MAX, NULL, NULL) );
-   SCIP_CALL( SCIPaddIntParam(scip,
-         "heuristics/" HEUR_NAME "/mindecrease",
-         "minimum percentage decrease for violated constraints",
-         &heurdata->mindecrease, FALSE, DEFAULT_MINPERCENTDECREASE, 0, 100, NULL, NULL) );
-   SCIP_CALL( SCIPaddIntParam(scip,
          "heuristics/" HEUR_NAME "/verbosity",
          "verbosity level of the local search solver",
          &heurdata->verbosity, FALSE, DEFAULT_VERBOSITY, 0, INT_MAX, NULL, NULL) );
@@ -2704,10 +2638,14 @@ SCIP_RETCODE SCIPincludeHeurLocalsearch(
          "heuristics/" HEUR_NAME "/maxsols",
          "maximum number of solutions to find",
          &heurdata->maxsols, FALSE, DEFAULT_MAXSOLS, 1, INT_MAX, NULL, NULL) );
+   SCIP_CALL( SCIPaddRealParam(scip,
+         "heuristics/" HEUR_NAME "/mindecreaserel",
+         "minimum relative decrease to reset the effort budget",
+         &heurdata->mindecreaserel, FALSE, DEFAULT_MINDECREASEREL, 0.0, 1.0, NULL, NULL) );
    SCIP_CALL( SCIPaddIntParam(scip,
-         "heuristics/" HEUR_NAME "/callbackeffort",
-         "effort between callbacks",
-         &heurdata->callbackeffort, FALSE, DEFAULT_CALLBACKEFFORT, 1, INT_MAX, NULL, NULL) );
+         "heuristics/" HEUR_NAME "/maxeffortfac",
+         "maximum effort factor per nonzero without improvement",
+         &heurdata->maxeffortfac, FALSE, DEFAULT_MAXEFFORTFAC, 0, INT_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddIntParam(scip,
          "heuristics/" HEUR_NAME "/tabubase",
          "minimum tabu tenure",
