@@ -268,9 +268,9 @@ static SCIP_RETCODE runLJ(
 
    /* By default, SCIP tries to close the gap between primal and dual bound completely.
     * This can take very long for this example, so we increase the gap tolerance to have
-    * SCIP stop when the distance between primal and dual bound is already below 1%.
+    * SCIP stop when the gap between primal and dual bound is already at most 0.01%.
     */
-   SCIP_CALL( SCIPsetRealParam(scip, "limits/gap", 0.01) );
+   SCIP_CALL( SCIPsetRealParam(scip, "limits/gap", 0.0001) );
 
    if( SCIPfileExists(setfile) )
    {

@@ -35,7 +35,7 @@ foreach(instance ${instances})
             )
     set_tests_properties("examples-lj-${nparticles}"
                          PROPERTIES
-                            PASS_REGULAR_EXPRESSION "optimal solution found.*Primal Bound *: ${optval}\\.0000.*e\\+00"
+                            PASS_REGULAR_EXPRESSION "(optimal solution found|gap limit reached).*Primal Bound *: ${optval}\\.0000.*e\\+00"
                             FAIL_REGULAR_EXPRESSION "ERROR"
                             DEPENDS examples-lj-build
                             RESOURCE_LOCK libscip
