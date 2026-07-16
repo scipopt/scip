@@ -188,6 +188,13 @@ void range(
    SCIP_Real pow3;
    SCIP_Real pow6;
 
+   if( r.inf <= 0.0 )
+   {
+      /* negative r beyond the scope of this example */
+      SCIPintervalSetEntire(SCIP_INTERVAL_INFINITY, resultant);
+      return;
+   }
+
    origroundmode = SCIPintervalGetRoundingMode();
 
    /* minimum of r^-6 - r^-3 */
@@ -713,6 +720,11 @@ SCIP_DECL_NLHDLRREVERSEPROP(nlhdlrReversepropLJ)
    r = SCIPexprGetActivity(nlhdlrexprdata->r);
    SCIPintervalPowerScalar(SCIP_INTERVAL_INFINITY, &z, r, -3.0);
    SCIPintervalSolveUnivariateQuadExpression(SCIP_INTERVAL_INFINITY, &z, (SCIP_INTERVAL){1.0, 1.0}, (SCIP_INTERVAL){-1.0, -1.0}, fr, z);
+   if( SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, z) )
+   {
+      *infeasible = TRUE;
+      return SCIP_OKAY;
+   }
    SCIPintervalPowerScalarInverse(SCIP_INTERVAL_INFINITY, &r, r, -3.0, z);
 
    SCIP_CALL( SCIPtightenExprIntervalNonlinear(scip, nlhdlrexprdata->r, r, infeasible, nreductions) );
