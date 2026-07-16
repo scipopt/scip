@@ -679,6 +679,12 @@ SCIP_DECL_NLHDLRINTEVAL(nlhdlrIntevalLJ)
 
    r = SCIPexprGetActivity(nlhdlrexprdata->r);
 
+   /* similar to expr_pow, modify bounds on r to be not too close to zero to ensure convergence */
+   if( SCIPisZero(scip, r.inf) )
+      r.inf = SCIPepsilon(scip);
+   else if( SCIPisZero(scip, r.sup) )
+      r.sup = SCIPepsilon(scip);
+
    if( SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, r) )
    {
       SCIPintervalSetEmpty(interval);
@@ -730,6 +736,12 @@ SCIP_DECL_NLHDLRREVERSEPROP(nlhdlrReversepropLJ)
       return SCIP_OKAY;
    }
    SCIPintervalPowerScalarInverse(SCIP_INTERVAL_INFINITY, &r, r, -3.0, z);
+
+   /* similar to expr_pow, ensure that bounds on r are not too close to zero to ensure convergence */
+   if( SCIPisZero(scip, r.inf) )
+      r.inf = SCIPepsilon(scip);
+   else if( SCIPisZero(scip, r.sup) )
+      r.sup = SCIPepsilon(scip);
 
    SCIP_CALL( SCIPtightenExprIntervalNonlinear(scip, nlhdlrexprdata->r, r, infeasible, nreductions) );
 
