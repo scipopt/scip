@@ -459,7 +459,6 @@ SCIP_DECL_NLHDLRINITSEPA(nlhdlrInitSepaLJ)
    char name[100];
    SCIP_ROW* row;
    SCIP_VAR* raux;
-   SCIP_COL* rcol;
    SCIP_VAR* paux;
    SCIP_Real rlb;
    SCIP_Real rub;
@@ -472,9 +471,6 @@ SCIP_DECL_NLHDLRINITSEPA(nlhdlrInitSepaLJ)
    paux = SCIPgetExprAuxVarNonlinear(nlhdlrexprdata->p);
    assert(raux != NULL);
    assert(paux != NULL);
-
-   rcol = SCIPvarGetCol(raux);
-   assert(rcol != NULL);
 
    rlb = SCIPvarGetLbGlobal(raux);
    rub = SCIPvarGetUbGlobal(raux);
@@ -489,9 +485,10 @@ SCIP_DECL_NLHDLRINITSEPA(nlhdlrInitSepaLJ)
 
          SCIPsnprintf(name, sizeof(name), "ljinit1_%s", SCIPconsGetName(cons));
 
-         SCIP_CALL( SCIPcreateRowCons(scip, &row, cons, name, 1, &rcol, &slope,
+         SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, cons, name,
             nlhdlrexprdata->rcoef == 1.0 ? -SCIPinfinity(scip) : -constant,
             nlhdlrexprdata->rcoef == -1.0 ? SCIPinfinity(scip) : -constant, FALSE, FALSE, FALSE) );
+         SCIP_CALL( SCIPaddVarToRow(scip, row, raux, slope) );
          SCIP_CALL( SCIPaddVarToRow(scip, row, paux, nlhdlrexprdata->pcoef) );
 
          SCIPdebug( SCIPinfoMessage(scip, NULL, "adding initial tangent at r=%g: ", (rlb + RMINIMUM) / 2.0) );
@@ -520,9 +517,10 @@ SCIP_DECL_NLHDLRINITSEPA(nlhdlrInitSepaLJ)
 
          SCIPsnprintf(name, sizeof(name), "ljinit2_%s", SCIPconsGetName(cons));
 
-         SCIP_CALL( SCIPcreateRowCons(scip, &row, cons, name, 1, &rcol, &slope,
+         SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, cons, name,
             nlhdlrexprdata->rcoef == 1.0 ? -SCIPinfinity(scip) : -constant,
             nlhdlrexprdata->rcoef == -1.0 ? SCIPinfinity(scip) : -constant, FALSE, FALSE, FALSE) );
+         SCIP_CALL( SCIPaddVarToRow(scip, row, raux, slope) );
          SCIP_CALL( SCIPaddVarToRow(scip, row, paux, nlhdlrexprdata->pcoef) );
 
          SCIPdebug( SCIPinfoMessage(scip, NULL, "adding initial secant: ") );
@@ -636,19 +634,15 @@ SCIP_DECL_NLHDLRSOLLINEARIZE(nlhdlrSollinearizeLJ)
 
    if( underestimator(scip, &slope, &constant, rval, rlb, rub) )
    {
-      SCIP_COL* rcol;
-
-      rcol = SCIPvarGetCol(raux);
-      assert(rcol != NULL);
-
       slope *= nlhdlrexprdata->rcoef;
       constant *= nlhdlrexprdata->rcoef;
 
       SCIPsnprintf(name, sizeof(name), "ljsollin_%s", SCIPconsGetName(cons));
 
-      SCIP_CALL( SCIPcreateRowCons(scip, &row, cons, name, 1, &rcol, &slope,
+      SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, cons, name,
          nlhdlrexprdata->rcoef == 1.0 ? -SCIPinfinity(scip) : -constant,
-            nlhdlrexprdata->rcoef == -1.0 ? SCIPinfinity(scip) : -constant, FALSE, FALSE, FALSE) );
+         nlhdlrexprdata->rcoef == -1.0 ? SCIPinfinity(scip) : -constant, FALSE, FALSE, FALSE) );
+      SCIP_CALL( SCIPaddVarToRow(scip, row, raux, slope) );
       SCIP_CALL( SCIPaddVarToRow(scip, row, paux, nlhdlrexprdata->pcoef) );
 
       SCIPdebug( SCIPinfoMessage(scip, NULL, "adding tangent at r=%g: ", rval) );
