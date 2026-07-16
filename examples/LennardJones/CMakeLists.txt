@@ -31,3 +31,6 @@ endif()
 if(TARGET examples)
   add_dependencies(examples lj)
 endif()
+
+add_subdirectory(check)
+enable_testing()
