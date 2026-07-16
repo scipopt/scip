@@ -400,12 +400,16 @@ SCIP_DECL_NLHDLRDETECT(nlhdlrDetectLJ)
       /* if noone yet provides good underestimators, then we do */
       if( !(*enforcing & SCIP_NLHDLR_METHOD_SEPABELOW) )
          *participating = SCIP_NLHDLR_METHOD_SEPABELOW;
+      else
+         dobelow = FALSE;
    }
    else
    {
       /* if noone yet provides good overestimators, then we do */
       if( !(*enforcing & SCIP_NLHDLR_METHOD_SEPAABOVE) )
          *participating = SCIP_NLHDLR_METHOD_SEPAABOVE;
+      else
+         doabove = FALSE;
    }
 
    if( !(*enforcing & SCIP_NLHDLR_METHOD_ACTIVITY) )
@@ -415,9 +419,9 @@ SCIP_DECL_NLHDLRDETECT(nlhdlrDetectLJ)
    *enforcing |= *participating;
 
    /* we need an auxiliary variable for r and will use its activity for the under- or overestimator */
-   SCIP_CALL( SCIPregisterExprUsageNonlinear(scip, r, TRUE, TRUE, dobelow, doabove) );
+   SCIP_CALL( SCIPregisterExprUsageNonlinear(scip, r, dobelow || doabove, TRUE, dobelow, doabove) );
    /* we need an (auxiliary) variable for p */
-   SCIP_CALL( SCIPregisterExprUsageNonlinear(scip, p, TRUE, TRUE, FALSE, FALSE) );
+   SCIP_CALL( SCIPregisterExprUsageNonlinear(scip, p, dobelow || doabove, TRUE, FALSE, FALSE) );
 
    SCIP_CALL( SCIPallocBlockMemory(scip, nlhdlrexprdata) );
    (*nlhdlrexprdata)->r = r;
