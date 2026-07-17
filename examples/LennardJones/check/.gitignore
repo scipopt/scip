@@ -1,2 +1,3 @@
-# ../../../.gitignore sets to ignore all check/*.sh in examples
+# undo some settings from ../../../.gitignore
 !configuration_tmpfile_setup_lj.sh 
+!instances
