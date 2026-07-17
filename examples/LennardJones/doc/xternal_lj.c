@@ -75,7 +75,7 @@
  * To produce underestimators that can be added to the LP relaxation, the nonlinear handler requires variables that stand for \f$r\f$ and \f$p\f$.
  * SCIP ensures that these are made available.
  *
- * In the actual implementation, the handler checks for \f$a r^{-6} - a r^{-3} + b p\f$ for some coefficients \f$a,b\neq 0\f$, because SCIP's handler for nonlinear constraints may multiply \f$p_{ij} \geq r_{ij}^{-6} - r_{ij}^{-3}\f$ by \f$-1\f$.
+ * In the actual implementation, the handler checks for \f$a r^{-6} - a r^{-3} + b p\f$ for some coefficients \f$a\in\{-1,1\}\f$ and \f$b\neq 0\f$, because SCIP's handler for nonlinear constraints may multiply \f$p_{ij} \geq r_{ij}^{-6} - r_{ij}^{-3}\f$ by \f$-1\f$.
  * If \f$a<0\f$, the handler will provide overestimators instead of underestimators.
  * For the remainder of this documentation, we will assume \f$a=1\f$ and \f$b=-1\f$, though.
  *

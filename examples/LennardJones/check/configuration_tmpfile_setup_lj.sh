@@ -62,10 +62,6 @@ KEEPSOL="${23}"        # - true, if file with solution values should be written 
 # updated environment variables after running this script
 # EXECNAME
 
-#if [ "${SETCUTOFF}" != 0 ] ; then
-#  echo "SETCUTOFF=${SETCUTOFF} not supported for Lennard-Jones Cluster example; ignored"
-#fi
-
 if [ "${REOPT}" = true ] ; then
   echo "REOPT=true not supported for Lennard-Jones Cluster example" > /dev/stderr
   exit 1

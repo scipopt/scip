@@ -33,8 +33,8 @@
 #ifndef __NLHDLR_LJ_H__
 #define __NLHDLR_LJ_H__
 
-#include "scip/scip.h"
-#include "scip/pub_nlhdlr.h"
+#include "scip/type_scip.h"
+#include "scip/type_retcode.h"
 
 
 #ifdef __cplusplus

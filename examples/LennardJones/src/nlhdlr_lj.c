@@ -22,13 +22,14 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   nlhdlr_lj.h
+/**@file   nlhdlr_lj.c
  * @brief  Lennard-Jones potential nonlinear handler
  * @author Stefan Vigerske
  */
 
 #include "nlhdlr_lj.h"
 #include "scip/cons_nonlinear.h"
+#include "scip/pub_nlhdlr.h"
 #include "scip/pub_misc_rowprep.h"
 
 
@@ -415,7 +416,7 @@ SCIP_DECL_NLHDLRDETECT(nlhdlrDetectLJ)
    if( !(*enforcing & SCIP_NLHDLR_METHOD_ACTIVITY) )
       *participating |= SCIP_NLHDLR_METHOD_ACTIVITY;
 
-   /* our estimators and bound tightening are enforcing */
+   /* our estimators and bound tightening are enforcing (that is, no other methods are necessary) */
    *enforcing |= *participating;
 
    /* we need an auxiliary variable for r and will use its activity for the under- or overestimator */
@@ -601,11 +602,7 @@ SCIP_DECL_NLHDLRESTIMATE(nlhdlrEstimateLJ)
       SCIP_Real violation;
 
       /* compute violation w.r.t. the auxiliary variable(s) */
-#ifndef BRSCORE_ABSVIOL
       SCIP_CALL( SCIPgetExprRelAuxViolationNonlinear(scip, expr, auxvalue, sol, &violation, NULL, NULL) );
-#else
-      SCIP_CALL( SCIPgetExprAbsAuxViolationNonlinear(scip, expr, auxvalue, sol, &violation, NULL, NULL) );
-#endif
       assert(violation > 0.0);  /* there should be a violation if we were called to enforce */
 
       SCIP_CALL( SCIPaddExprsViolScoreNonlinear(scip, &nlhdlrexprdata->r, 1, violation, sol, addedbranchscores) );
@@ -683,7 +680,7 @@ SCIP_DECL_NLHDLRINTEVAL(nlhdlrIntevalLJ)
    if( SCIPisZero(scip, r.inf) )
       r.inf = SCIPepsilon(scip);
    else if( SCIPisZero(scip, r.sup) )
-      r.sup = SCIPepsilon(scip);
+      r.sup = -SCIPepsilon(scip);
 
    if( SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, r) )
    {
@@ -741,7 +738,7 @@ SCIP_DECL_NLHDLRREVERSEPROP(nlhdlrReversepropLJ)
    if( SCIPisZero(scip, r.inf) )
       r.inf = SCIPepsilon(scip);
    else if( SCIPisZero(scip, r.sup) )
-      r.sup = SCIPepsilon(scip);
+      r.sup = -SCIPepsilon(scip);
 
    SCIP_CALL( SCIPtightenExprIntervalNonlinear(scip, nlhdlrexprdata->r, r, infeasible, nreductions) );
 
