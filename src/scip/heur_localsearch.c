@@ -161,6 +161,7 @@ struct LS_Solver
    int                   objweight;          /**< objective scoring weight */
    SCIP_Real*            incumbentassignment; /**< current variable assignment */
    SCIP_Real             incumbentobjective; /**< current objective value */
+   SCIP_Bool             objunsat;           /**< is the objective target unreached? */
    int*                  unsatidxs;          /**< violated constraint indices */
    int                   nunsat;             /**< number of violated constraints */
    SCIP_Real*            act;                /**< per-constraint current activity */
@@ -493,23 +494,73 @@ void lsSolverRemoveUnsat(
  * Local methods for LS_Solver
  */
 
-/** recomputes incumbent objective from current assignment */
+/** recomputes objective value from current incumbent assignment */
 static
 void lsSolverRecomputeObjective(
    SCIP*                 scip,               /**< SCIP data structure */
    LS_SOLVER*            solver              /**< solver */
    )
 {
-   LS_PROBLEM* problem;
+   LS_PROBLEM* problem = solver->problem;
    int i;
 
-   problem = solver->problem;
-
    solver->incumbentobjective = 0.0;
+
    for( i = 0; i < problem->nobjvars; ++i )
    {
       solver->incumbentobjective += problem->vars[problem->objvaridxs[i]].obj
             * solver->incumbentassignment[problem->objvaridxs[i]];
+   }
+}
+
+/** updates target flag from current objective value */
+static
+void lsSolverUpdateObjective(
+   SCIP*                 scip,               /**< SCIP data structure */
+   LS_SOLVER*            solver              /**< solver */
+   )
+{
+   solver->objunsat = !SCIPisInfinity(scip, solver->objtarget)
+         && SCIPisGT(scip, solver->incumbentobjective, solver->objtarget);
+}
+
+/** recomputes constraint activity from current incumbent assignment */
+static
+void lsSolverRecomputeConstraint(
+   SCIP*                 scip,               /**< SCIP data structure */
+   LS_SOLVER*            solver,             /**< solver */
+   int                   constridx           /**< constraint index */
+   )
+{
+   LS_CONSTRAINT* cons = solver->problem->conss + constridx;
+   int i;
+
+   solver->act[constridx] = 0.0;
+
+   for( i = 0; i < cons->ncoeffs; ++i )
+      solver->act[constridx] += cons->coeffs[i].coeff * solver->incumbentassignment[cons->coeffs[i].idx];
+}
+
+/** updates violation indicator from current constraint activity */
+static
+void lsSolverUpdateConstraint(
+   SCIP*                 scip,               /**< SCIP data structure */
+   LS_SOLVER*            solver,             /**< solver */
+   int                   constridx           /**< constraint index */
+   )
+{
+   LS_CONSTRAINT* cons = solver->problem->conss + constridx;
+
+   if( SCIPisFeasPositive(scip, !SCIPisInfinity(scip, -cons->mhs) && solver->act[constridx] <= cons->mhs
+      ? cons->lhs - solver->act[constridx] : solver->act[constridx] - cons->rhs) )
+   {
+      if( solver->unsatidx[constridx] < 0 )
+         lsSolverInsertUnsat(solver, constridx);
+   }
+   else
+   {
+      if( solver->unsatidx[constridx] >= 0 )
+         lsSolverRemoveUnsat(solver, constridx);
    }
 }
 
@@ -524,7 +575,6 @@ SCIP_RETCODE lsSolverCreate(
    )
 {
    LS_SOLVER* solver;
-   LS_CONSTRAINT* cons;
    SCIP_VAR** vars;
    SCIP_COL** cols;
    int nvars;
@@ -532,7 +582,6 @@ SCIP_RETCODE lsSolverCreate(
    int nnonzeros;
    int nconss;
    int i;
-   int j;
 
    assert(scip != NULL);
    assert(solverptr != NULL);
@@ -547,7 +596,6 @@ SCIP_RETCODE lsSolverCreate(
 
    solver->problem = problem;
    solver->curstep = 0;
-   solver->optimality = FALSE;
    solver->iskeepfeas = FALSE;
    solver->objtarget = SCIPgetCutoffbound(scip) - SCIPcutoffbounddelta(scip);
    solver->objweight = 1;
@@ -556,6 +604,7 @@ SCIP_RETCODE lsSolverCreate(
    solver->nscoreidxs = 0;
    solver->nsampled = 0;
    solver->nsols = 0;
+   solver->nunsat = 0;
 
    /* allocate per-variable parallel arrays */
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &solver->incumbentassignment, nvars) );
@@ -636,29 +685,17 @@ SCIP_RETCODE lsSolverCreate(
    BMSclearMemoryArray(solver->lastincstep, nvars);
    BMSclearMemoryArray(solver->lastdecstep, nvars);
 
-   /* init per-constraint dynamic arrays */
-   solver->nunsat = 0;
+   /* compute objective value with target flag */
+   lsSolverRecomputeObjective(scip, solver);
+   lsSolverUpdateObjective(scip, solver);
+
+   /* compute constraint activities with violation indicators */
    for( i = 0; i < nconss; ++i )
    {
       solver->weight[i] = 1;
       solver->unsatidx[i] = -1;
-   }
-
-   /* compute objective value */
-   lsSolverRecomputeObjective(scip, solver);
-
-   /* compute constraint activity values */
-   for( i = 0; i < nconss; ++i )
-   {
-      cons = problem->conss + i;
-
-      solver->act[i] = 0.0;
-      for( j = 0; j < cons->ncoeffs; ++j )
-         solver->act[i] += cons->coeffs[j].coeff * solver->incumbentassignment[cons->coeffs[j].idx];
-
-      if( SCIPisFeasPositive(scip, !SCIPisInfinity(scip, -cons->mhs) && solver->act[i] <= cons->mhs
-         ? cons->lhs - solver->act[i] : solver->act[i] - cons->rhs) )
-         lsSolverInsertUnsat(solver, i);
+      lsSolverRecomputeConstraint(scip, solver, i);
+      lsSolverUpdateConstraint(scip, solver, i);
    }
 
    /* initialize effort state */
@@ -667,8 +704,7 @@ SCIP_RETCODE lsSolverCreate(
    solver->effort = 0;
 
    /* enter optimality mode if initial assignment feasible */
-   if( solver->nunsat == 0 )
-      solver->optimality = TRUE;
+   solver->optimality = solver->nunsat == 0;
 
    *solverptr = solver;
 
@@ -745,12 +781,7 @@ void lsSolverApplyMove(
    SCIP_Real oldvalue;
    int constridx;
    LS_CONSTRAINT* cons;
-   SCIP_Real oldact;
-   SCIP_Real newact;
-   SCIP_Real previol;
-   SCIP_Real newviol;
    int i;
-   int j;
 
    assert(scip != NULL);
    assert(solver != NULL);
@@ -767,38 +798,41 @@ void lsSolverApplyMove(
    assert(solver->incumbentassignment[varidx] <= var->ub);
    assert(varidx >= problem->nintvars || SCIPrealIsExactlyIntegral(solver->incumbentassignment[varidx]));
 
-   /* recompute incumbent objective */
+   /* update objective value with target flag */
    if( var->objidx >= 0 )
    {
-      lsSolverRecomputeObjective(scip, solver);
-      solver->effort += problem->nobjvars;
+      solver->incumbentobjective += var->obj * (newvalue - oldvalue);
+
+      if( solver->incumbentobjective > solver->objtarget
+         && !SCIPisPositive(scip, 0.5 * (solver->incumbentobjective - solver->objtarget)) )
+      {
+         lsSolverRecomputeObjective(scip, solver);
+         solver->effort += problem->nobjvars;
+      }
+
+      lsSolverUpdateObjective(scip, solver);
+      ++solver->effort;
    }
 
-   /* recompute activity for each affected constraint */
+   /* update constraint activities with violation indicators */
    for( i = 0; i < var->ncoeffs; ++i )
    {
       constridx = var->coeffs[i].idx;
       cons = problem->conss + constridx;
-      oldact = solver->act[constridx];
-      newact = 0.0;
+      solver->act[constridx] += var->coeffs[i].coeff * (newvalue - oldvalue);
 
-      /* full recompute */
-      for( j = 0; j < cons->ncoeffs; ++j )
-         newact += cons->coeffs[j].coeff * solver->incumbentassignment[cons->coeffs[j].idx];
+      if( !SCIPisInfinity(scip, -cons->mhs) && solver->act[constridx] <= cons->mhs
+         ? solver->act[constridx] < cons->lhs && !SCIPisFeasNegative(scip, 0.5 * (solver->act[constridx] - cons->lhs))
+         : solver->act[constridx] > cons->rhs && !SCIPisFeasPositive(scip, 0.5 * (solver->act[constridx] - cons->rhs)) )
+      {
+         lsSolverRecomputeConstraint(scip, solver, constridx);
+         solver->effort += cons->ncoeffs;
+      }
 
-      previol = !SCIPisInfinity(scip, -cons->mhs) && oldact <= cons->mhs ? cons->lhs - oldact : oldact - cons->rhs;
-      newviol = !SCIPisInfinity(scip, -cons->mhs) && newact <= cons->mhs ? cons->lhs - newact : newact - cons->rhs;
-      solver->act[constridx] = newact;
-
-      /* update violated constraint */
-      if( !SCIPisFeasPositive(scip, previol) && SCIPisFeasPositive(scip, newviol) )
-         lsSolverInsertUnsat(solver, constridx);
-      /* update satisfied constraint */
-      else if( SCIPisFeasPositive(scip, previol) && !SCIPisFeasPositive(scip, newviol) )
-         lsSolverRemoveUnsat(solver, constridx);
-
-      solver->effort += cons->ncoeffs;
+      lsSolverUpdateConstraint(scip, solver, constridx);
    }
+
+   solver->effort += var->ncoeffs;
 
    /* enter optimality mode if current assignment feasible */
    if( solver->nunsat == 0 )
@@ -1137,16 +1171,16 @@ void lsSolverUpdateWeight(
    assert(scip != NULL);
    assert(solver != NULL);
 
+   /* increase objective weight if feasible */
+   if( solver->nunsat == 0 )
+      ++solver->objweight;
+
    /* increase constraint weights if violated */
    for( i = 0; i < solver->nunsat; ++i )
    {
       constridx = solver->unsatidxs[i];
       ++solver->weight[constridx];
    }
-
-   /* increase objective weight if feasible */
-   if( solver->nunsat == 0 )
-      ++solver->objweight;
 }
 
 /** smooths weights of satisfied constraints */
@@ -1164,17 +1198,17 @@ void lsSolverSmoothWeight(
 
    problem = solver->problem;
 
+   /* decrease objective weight if better */
+   if( solver->optimality && solver->objweight > 0 && !solver->objunsat
+      && !SCIPisInfinity(scip, solver->incumbentobjective) )
+      --solver->objweight;
+
    /* decrease constraint weights if feasible */
    for( i = 0; i < problem->nconss; ++i )
    {
       if( solver->unsatidx[i] == -1 && solver->weight[i] > 0 )
          --solver->weight[i];
    }
-
-   /* decrease objective weight if better */
-   if( solver->optimality && solver->objweight > 0 && !SCIPisInfinity(scip, solver->incumbentobjective)
-      && SCIPisLE(scip, solver->incumbentobjective, solver->objtarget) )
-      --solver->objweight;
 }
 
 
@@ -1445,8 +1479,7 @@ SCIP_RETCODE lsSolverUnsatTightMove(
    }
 
    /* collect objective terms when the objective constraint is violated */
-   if( solver->optimality && !SCIPisInfinity(scip, solver->objtarget)
-      && SCIPisGT(scip, solver->incumbentobjective, solver->objtarget) )
+   if( solver->optimality && solver->objunsat )
       collectObjectiveNeighbors(scip, solver, FALSE);
 
    /* subsample to budget */
@@ -1672,8 +1705,7 @@ SCIP_RETCODE lsSolverRandomTightMove(
    }
 
    /* collect objective terms when the objective constraint is violated */
-   if( solver->optimality && !SCIPisInfinity(scip, solver->objtarget)
-      && SCIPisGT(scip, solver->incumbentobjective, solver->objtarget) )
+   if( solver->optimality && solver->objunsat )
       collectObjectiveNeighbors(scip, solver, TRUE);
 
    /* subsample */
@@ -2377,15 +2409,14 @@ SCIP_RETCODE lsCheckTermination(
       solver->preobjective = solver->incumbentobjective;
       solver->effort = 0;
 
-      if( solver->nunsat == 0
-         && !SCIPisInfinity(scip, solver->incumbentobjective)
-         && SCIPisLE(scip, solver->incumbentobjective, solver->objtarget) )
+      if( solver->nunsat == 0 && !solver->objunsat && !SCIPisInfinity(scip, solver->incumbentobjective) )
       {
          SCIP_CALL( checkIncumbentSol(scip, heur, heurtiming, solver, &stored) );
 
          if( stored )
          {
             solver->objtarget = SCIPgetCutoffbound(scip) - SCIPcutoffbounddelta(scip);
+            lsSolverUpdateObjective(scip, solver);
             ++solver->nsols;
 
             if( heurdata->verbosity >= 1 )
