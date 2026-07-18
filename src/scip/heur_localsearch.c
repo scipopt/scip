@@ -565,8 +565,8 @@ void lsSolverUpdateConstraint(
 {
    LS_CONSTRAINT* cons = solver->problem->conss + constridx;
 
-   if( SCIPisFeasPositive(scip, !SCIPisInfinity(scip, -cons->mhs) && solver->act[constridx] <= cons->mhs
-      ? cons->lhs - solver->act[constridx] : solver->act[constridx] - cons->rhs) )
+   if( SCIPisFeasPositive(scip, 2.0 * (!SCIPisInfinity(scip, -cons->mhs) && solver->act[constridx] <= cons->mhs
+      ? cons->lhs - solver->act[constridx] : solver->act[constridx] - cons->rhs)) )
    {
       if( solver->unsatidx[constridx] < 0 )
          lsSolverInsertUnsat(solver, constridx);
@@ -860,9 +860,9 @@ void lsSolverApplyMove(
          if( heurdata->recomputefreq >= 0
             && ( !SCIPisInfinity(scip, -cons->mhs) && solver->act[constridx] <= cons->mhs
             ? solver->act[constridx] < cons->lhs
-            && !SCIPisFeasNegative(scip, 0.5 * (solver->act[constridx] - cons->lhs))
+            && !SCIPisFeasNegative(scip, solver->act[constridx] - cons->lhs)
             : solver->act[constridx] > cons->rhs
-            && !SCIPisFeasPositive(scip, 0.5 * (solver->act[constridx] - cons->rhs)) ) )
+            && !SCIPisFeasPositive(scip, solver->act[constridx] - cons->rhs) ) )
             recompute = TRUE;
       }
 
@@ -1045,8 +1045,8 @@ SCIP_Real getTightMove(
    {
       moveactivity = movevalue * coeff + residual;
 
-      if( tolhs ? !SCIPisFeasNegative(scip, moveactivity - cons->lhs)
-                : !SCIPisFeasPositive(scip, moveactivity - cons->rhs) )
+      if( tolhs ? !SCIPisFeasNegative(scip, 2.0 * (moveactivity - cons->lhs))
+                : !SCIPisFeasPositive(scip, 2.0 * (moveactivity - cons->rhs)) )
          return movevalue;
    }
 
@@ -1159,8 +1159,8 @@ SCIP_Longint getTightScore(
       mhs = problem->conss[constridx].mhs;
       residual = act - value * coeff;
       newact = newvalue * coeff + residual;
-      previol = !SCIPisInfinity(scip, -mhs) && act <= mhs ? lhs - act : act - rhs;
-      newviol = !SCIPisInfinity(scip, -mhs) && newact <= mhs ? lhs - newact : newact - rhs;
+      previol = 2.0 * (!SCIPisInfinity(scip, -mhs) && act <= mhs ? lhs - act : act - rhs);
+      newviol = 2.0 * (!SCIPisInfinity(scip, -mhs) && newact <= mhs ? lhs - newact : newact - rhs);
 
       /* score: feasibility transition */
       presat = !SCIPisFeasPositive(scip, previol);
