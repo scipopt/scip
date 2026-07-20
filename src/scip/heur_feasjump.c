@@ -175,6 +175,8 @@ struct FJ_Problem
    int                   nconstraints;       /**< number of constraints */
    int                   constraintssize;    /**< size of constraints array */
    int                   nnonzeros;          /**< number of nonzeros */
+   SCIP_Bool             feasibility;        /**< problem without objective? */
+   SCIP_Real             locallowerbound;    /**< local lower bound */
 };
 typedef struct FJ_Problem FJ_PROBLEM;
 
@@ -196,7 +198,6 @@ struct FJ_Solver
    int                   goodvarssize;       /**< size of good vars array */
    int*                  goodvarssetidx;     /**< mapping from variable to index in goodvarsset */
    SCIP_Real*            incumbentassignment;/**< incumbent assignment */
-   SCIP_Real             incumbentobjective; /**< incumbent objective value */
    SCIP_Real*            act;                /**< per-constraint current activity */
    int*                  unsatidxs;          /**< violated constraint indices */
    int                   nunsat;             /**< number of violated constraints */
@@ -284,6 +285,8 @@ SCIP_RETCODE fjProblemCreate(
    prob->nconstraints = 0;
    prob->constraintssize = 0;
    prob->nnonzeros = 0;
+   prob->feasibility = TRUE;
+   prob->locallowerbound = 0.0;
 
    *problem = prob;
 
@@ -388,6 +391,7 @@ SCIP_RETCODE fjProblemAddConstraint(
    int                   ncoeffs,            /**< number of coefficients */
    int*                  rowinds,            /**< variable indices */
    SCIP_Real*            rowcoeffs,          /**< coefficients */
+   SCIP_Bool             normalize,          /**< should the row be normalized by its right hand side magnitude? */
    int*                  idx                 /**< pointer to store constraint index */
    )
 {
@@ -400,7 +404,8 @@ SCIP_RETCODE fjProblemAddConstraint(
    assert(rowinds != NULL || ncoeffs == 0);
    assert(rowcoeffs != NULL || ncoeffs == 0);
 
-   scalar = MAX3(rhs, -rhs, 1.0);
+   /* the objective cutoff row is kept unnormalized to preserve the raw objective coefficients and target */
+   scalar = normalize ? MAX3(rhs, -rhs, 1.0) : 1.0;
 
    /* check if constraint is trivially satisfied or infeasible; the checked violation is doubled to classify within
     * half the feasibility tolerance, a margin for the normalization deviation
@@ -551,7 +556,6 @@ SCIP_RETCODE fjSolverCreate(
       solv->goodvarssetidx[i] = -1;
 
    solv->incumbentassignment = NULL;
-   solv->incumbentobjective = 0.0;
    solv->act = NULL;
    solv->unsatidxs = NULL;
    solv->nunsat = 0;
@@ -633,11 +637,6 @@ SCIP_RETCODE fjSolverResetIncumbent(
          solver->incumbentassignment[i] = !SCIPisInfinity(scip, -problem->vars[i].lb) ? problem->vars[i].lb
                : !SCIPisInfinity(scip, problem->vars[i].ub) ? problem->vars[i].ub : 0.0;
    }
-
-   /* reset incumbent objective */
-   solver->incumbentobjective = 0.0;
-   for( i = 0; i < problem->nvars; ++i )
-      solver->incumbentobjective += problem->vars[i].objcoeff * solver->incumbentassignment[i];
 
    /* reset constraint activities and violated constraints list; the checked violation is doubled to classify within
     * half the feasibility tolerance, a margin for the normalization deviation
@@ -758,6 +757,10 @@ SCIP_RETCODE fjSolverUpdateJumpValue(
       int cstridx = var->coeffs[i].idx;
 
       constraint = &problem->constraints[cstridx];
+
+      /* skip scoring of inactive objective constraint */
+      if( SCIPisInfinity(scip, constraint->rhs) )
+         continue;
 
       /* determine bounds based on constraint sense */
       if( constraint->sense == FJ_LTE )
@@ -1079,7 +1082,6 @@ SCIP_RETCODE fjSolverSetValue(
    oldvalue = solver->incumbentassignment[varidx];
    delta = newvalue - oldvalue;
    solver->incumbentassignment[varidx] = newvalue;
-   solver->incumbentobjective += problem->vars[varidx].objcoeff * delta;
    newscore = SCIP_INVALID;
 
    /* update activities of all involved constraints */
@@ -1108,8 +1110,13 @@ SCIP_RETCODE fjSolverSetValue(
          *effort += constraint->ncoeffs;
       }
 
-      newact = solver->act[cstridx];
       assert(newscore <= 0.0);
+
+      /* skip scoring of inactive objective constraint */
+      if( SCIPisInfinity(scip, constraint->rhs) )
+         continue;
+
+      newact = solver->act[cstridx];
 
       /* update the violated constraint list */
       if( solver->unsatidx[cstridx] == -1 && SCIPisFeasNegative(scip, 2.0 * newscore) )
@@ -1189,7 +1196,13 @@ SCIP_RETCODE fjSolverResetMoves(
       int cstridx = var->coeffs[i].idx;
       SCIP_Real coeff = var->coeffs[i].coeff;
       FJ_CONSTRAINT* constraint = &problem->constraints[cstridx];
-      SCIP_Real candidateact = solver->act[cstridx] + coeff * (move->value - solver->incumbentassignment[varidx]);
+      SCIP_Real candidateact;
+
+      /* skip scoring of inactive objective constraint */
+      if( SCIPisInfinity(scip, constraint->rhs) )
+         continue;
+
+      candidateact = solver->act[cstridx] + coeff * (move->value - solver->incumbentassignment[varidx]);
 
       move->score += solver->weight[cstridx] * (fjConstraintScore(constraint, candidateact)
             - fjConstraintScore(constraint, solver->act[cstridx]));
@@ -1451,9 +1464,9 @@ SCIP_RETCODE addRow(
    if( !SCIPisInfinity(scip, -lhs) && !SCIPisInfinity(scip, rhs) && !SCIPisEQ(scip, lhs, rhs) )
    {
       solverrhs = lhs;
-      SCIP_CALL( fjProblemAddConstraint(scip, problem, FJ_GTE, solverrhs, consnvars, consinds, consvals, &idx) );
+      SCIP_CALL( fjProblemAddConstraint(scip, problem, FJ_GTE, solverrhs, consnvars, consinds, consvals, TRUE, &idx) );
       solverrhs = rhs;
-      SCIP_CALL( fjProblemAddConstraint(scip, problem, FJ_LTE, solverrhs, consnvars, consinds, consvals, &idx) );
+      SCIP_CALL( fjProblemAddConstraint(scip, problem, FJ_LTE, solverrhs, consnvars, consinds, consvals, TRUE, &idx) );
    }
    else
    {
@@ -1473,61 +1486,74 @@ SCIP_RETCODE addRow(
          rowtype = FJ_LTE;
          solverrhs = rhs;
       }
-      SCIP_CALL( fjProblemAddConstraint(scip, problem, rowtype, solverrhs, consnvars, consinds, consvals, &idx) );
+      SCIP_CALL( fjProblemAddConstraint(scip, problem, rowtype, solverrhs, consnvars, consinds, consvals, TRUE, &idx) );
    }
 
    return SCIP_OKAY;
 }
 
-/** adds objective cutoff constraint */
+/** adds the objective cutoff constraint as the first constraint
+ *
+ *  The objective is folded into a single unnormalized less-or-equal constraint whose right hand side is the objective
+ *  target: the floored cutoff bound for an integral objective, the cutoff bound minus the minimal improvement otherwise,
+ *  or infinity without a cutoff bound so the side stays infinite until the first acceptance retightens it. An empty
+ *  objective adds no constraint and leaves the local lower bound at zero so the first feasible solution counts as
+ *  optimal; otherwise the local lower bound is stored for the optimality check.
+ */
 static
 SCIP_RETCODE addObjCutoff(
    SCIP*                 scip,               /**< SCIP data structure */
    FJ_PROBLEM*           problem,            /**< problem */
-   SCIP_COL**            cols,               /**< LP columns */
-   int                   ncols               /**< number of LP columns */
+   SCIP_Bool             global              /**< is problem global? */
    )
 {
    SCIP_Real* vals;
    int* inds;
+   SCIP_Real cutoffbound;
    SCIP_Real rhs;
-   int nnonz;
    int objnnzs;
    int i;
    int idx;
 
    assert(scip != NULL);
    assert(problem != NULL);
+   assert(problem->nconstraints == 0);
 
-   nnonz = ncols;
+   cutoffbound = SCIPgetCutoffbound(scip);
 
    inds = NULL;
    vals = NULL;
-   SCIP_CALL( SCIPallocBufferArray(scip, &inds, nnonz) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &vals, nnonz) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &inds, problem->nvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &vals, problem->nvars) );
 
+   /* collect the objective variables from the already extracted variable coefficients */
    objnnzs = 0;
-   for( i = 0; i < ncols; ++i )
+   for( i = 0; i < problem->nvars; ++i )
    {
-      SCIP_COL* col;
-      SCIP_Real obj;
-
-      col = cols[i];
-      obj = SCIPcolGetObj(col);
-
-      if( SCIPisZero(scip, obj) )
+      if( SCIPisZero(scip, problem->vars[i].objcoeff) )
          continue;
 
-      inds[objnnzs] = SCIPcolGetLPPos(col);
-      assert(inds[objnnzs] < ncols);
-
-      vals[objnnzs] = obj;
+      inds[objnnzs] = i;
+      vals[objnnzs] = problem->vars[i].objcoeff;
       objnnzs++;
    }
 
-   assert(!SCIPisInfinity(scip, SCIPgetCutoffbound(scip)));
-   rhs = SCIPgetCutoffbound(scip) - SCIPcutoffbounddelta(scip);
-   SCIP_CALL( fjProblemAddConstraint(scip, problem, FJ_LTE, rhs, objnnzs, inds, vals, &idx) );
+   /* add the objective cutoff for a non-empty objective */
+   if( objnnzs > 0 )
+   {
+      problem->feasibility = FALSE;
+      problem->locallowerbound = global ? SCIPgetLowerbound(scip) : SCIPgetLocalLowerbound(scip);
+
+      if( SCIPisInfinity(scip, cutoffbound) )
+         rhs = SCIPinfinity(scip);
+      else if( SCIPisObjIntegral(scip) )
+         rhs = floor(cutoffbound); /*lint !e644*/
+      else
+         rhs = cutoffbound - SCIPcutoffbounddelta(scip);
+
+      SCIP_CALL( fjProblemAddConstraint(scip, problem, FJ_LTE, rhs, objnnzs, inds, vals, FALSE, &idx) );
+      assert(idx == 0);
+   }
 
    SCIPfreeBufferArray(scip, &vals);
    SCIPfreeBufferArray(scip, &inds);
@@ -1617,6 +1643,9 @@ SCIP_RETCODE extractProblemDataBeforePresolve(
       vartype = SCIPvarIsIntegral(vars[j]) ? FJ_INTEGER : FJ_CONTINUOUS;
       SCIP_CALL( fjProblemAddVar(scip, problem, vartype, lb, ub, obj, &idx) );
    }
+
+   /* add non-empty cutoff before the constraints */
+   SCIP_CALL( addObjCutoff(scip, problem, TRUE) );
 
    /* create feasjump solver constraints */
    for( i = 0; i < nconss; ++i )
@@ -1726,6 +1755,9 @@ SCIP_RETCODE extractProblemData(
       vartype = SCIPvarIsIntegral(var) ? FJ_INTEGER : FJ_CONTINUOUS;
       SCIP_CALL( fjProblemAddVar(scip, problem, vartype, lb, ub, obj, &idx) );
    }
+
+   /* add non-empty cutoff before the rows */
+   SCIP_CALL( addObjCutoff(scip, problem, FALSE) );
 
    /* add the rows */
    for( i = 0; i < nrows; ++i )
@@ -1846,6 +1878,12 @@ SCIP_RETCODE fjCheckTermination(
    SCIP_Bool*            terminate           /**< pointer to store whether to terminate */
    )
 {
+   SCIP_Real objective;
+   SCIP_Bool quitnumsol;
+   SCIP_Bool quiteffort;
+   SCIP_Bool quitnoimprove;
+   int nfoundsols = *nsols;
+
    assert(scip != NULL);
    assert(solver != NULL);
    assert(problem != NULL);
@@ -1860,19 +1898,58 @@ SCIP_RETCODE fjCheckTermination(
    /* check whether the termination conditions should be evaluated */
    if( solution != NULL || solver->totaleffort - solver->effortatlastcallback > heurdata->callbackeffort )
    {
-      SCIP_Bool quitnumsol;
-      SCIP_Bool quiteffort;
-      SCIP_Bool quitnoimprove;
-      int nfoundsols = *nsols;
-
       solver->effortatlastcallback = solver->totaleffort;
 
       /* if we received a solution, check and report it */
       if( solution != NULL )
       {
          SCIP_CALL( checkIncumbentSol(scip, heur, heurtiming, solution, result) );
+
          if( *result == SCIP_FOUNDSOL )
-            nfoundsols++;
+         {
+            objective = !problem->feasibility ? solver->act[0] : 0.0;
+            ++nfoundsols;
+
+            /* stop when the reported objective reaches the lower bound, so no better solution can exist; a pure
+             * feasibility run has a zero lower bound, so its first solution stops here without an objective cutoff
+             */
+            if( SCIPisInfinity(scip, -objective)
+               || SCIPisLE(scip, objective, problem->locallowerbound) )
+               *terminate = TRUE;
+            else
+            {
+               FJ_CONSTRAINT* objcutoff = &problem->constraints[0];
+               SCIP_Real cutoffbound = SCIPgetCutoffbound(scip);
+               int i;
+
+               assert(objcutoff->sense == FJ_LTE);
+               assert(!SCIPisInfinity(scip, cutoffbound));
+
+               /* the search continues, so the objective cutoff exists at constraints[0]; retighten it to make further
+                * improvement re-enter as a violation
+                */
+               objcutoff->rhs = SCIPisObjIntegral(scip)
+                     ? floor(cutoffbound) : cutoffbound - SCIPcutoffbounddelta(scip); /*lint !e644*/
+
+               /* the activity is stale while the cutoff was skipped, so recompute it exactly before reclassifying */
+               fjSolverRecomputeConstraint(solver, 0);
+
+               /* the tightened cutoff makes the incumbent violate it, so improvement re-enters as a violation */
+               if( solver->unsatidx[0] == -1 && SCIPisFeasNegative(scip, 2.0 * fjConstraintScore(objcutoff,
+                        solver->act[0])) )
+               {
+                  solver->unsatidx[0] = solver->nunsat;
+                  solver->unsatidxs[solver->nunsat] = 0;
+                  solver->nunsat++;
+
+                  /* refresh the moves of the objective variables against the tightened cutoff */
+                  for( i = 0; i < objcutoff->ncoeffs; ++i )
+                  {
+                     SCIP_CALL( fjSolverResetMoves(scip, solver, objcutoff->coeffs[i].idx) );
+                  }
+               }
+            }
+         }
          /* if the heuristic returns a solution that is not feasible we have to stop */
          else
             *terminate = TRUE;
@@ -1907,6 +1984,7 @@ SCIP_RETCODE runFeasjump(
    FJ_SOLVER* solver;
    SCIP_COL** cols;
    SCIP_ROW** rows;
+   SCIP_Real objective;
    SCIP_Bool success;
    SCIP_Bool terminate;
    int ncols;
@@ -1939,12 +2017,6 @@ SCIP_RETCODE runFeasjump(
       SCIP_CALL( SCIPgetLPColsData(scip, &cols, &ncols) );
       SCIP_CALL( SCIPgetLPRowsData(scip, &rows, &nrows) );
       SCIP_CALL( extractProblemData(scip, problem, cols, rows, ncols, nrows) );
-
-      /* add objective cutoff */
-      if( SCIPgetBestSol(scip) != NULL )
-      {
-         SCIP_CALL( addObjCutoff(scip, problem, cols, ncols) );
-      }
    }
 
    if( problem->nvars == 0 || problem->nconstraints == 0 )
@@ -2000,10 +2072,11 @@ SCIP_RETCODE runFeasjump(
       }
 
       /* check for solution */
-      if( solver->nunsat == 0 && solver->incumbentobjective < solver->bestobjective )
+      objective = !problem->feasibility ? solver->act[0] : 0.0;
+      if( solver->nunsat == 0 && solver->bestobjective > objective )
       {
          solver->effortatlastimprovement = solver->totaleffort;
-         solver->bestobjective = solver->incumbentobjective;
+         solver->bestobjective = objective;
          solver->percentdecrease = 100;
          solution = solver->incumbentassignment;
       }
@@ -2024,7 +2097,7 @@ SCIP_RETCODE runFeasjump(
 
       SCIPdebugMsg(scip, "varidx=%d value=%g nunsat=%d good=%d effort=%d obj=%g\n", varidx,
          solver->incumbentassignment[varidx], solver->nunsat, solver->ngoodvars, solver->totaleffort,
-         solver->incumbentobjective);
+         !problem->feasibility ? solver->act[0] : 0.0);
 
       /* report the solution and check the termination conditions */
       SCIP_CALL( fjCheckTermination(scip, solver, problem, heurdata, heur, heurtiming, solution, &nsols, result,
