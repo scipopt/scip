@@ -514,9 +514,9 @@ SCIP_RETCODE varAddLbchginfo(
 
    SCIPsetDebugMsg(set, "adding lower bound change info to var <%s>[%g,%g]: depth=%d, pos=%d, infer%s=<%s>, inferinfo=%d, %g -> %g\n",
       SCIPvarGetName(var), var->locdom.lb, var->locdom.ub, depth, pos,
-      infercons != NULL ? "cons" : (inferprop != NULL ? "prop" : "symcomp"),
+      infercons != NULL ? "cons" : (inferprop != NULL ? "prop" : (infersymcomp != NULL ? "symcomp" : "-")),
       infercons != NULL ? SCIPconsGetName(infercons) :
-      (inferprop != NULL ? SCIPpropGetName(inferprop) : SCIPsymcompGetName(infersymcomp)),
+      (inferprop != NULL ? SCIPpropGetName(inferprop) : (infersymcomp != NULL ? SCIPsymcompGetName(infersymcomp) : "-")),
       inferinfo, oldbound, newbound);
 
    SCIP_CALL( varEnsureLbchginfosSize(var, blkmem, set, var->nlbchginfos+1) );
@@ -596,9 +596,9 @@ SCIP_RETCODE varAddUbchginfo(
 
    SCIPsetDebugMsg(set, "adding upper bound change info to var <%s>[%g,%g]: depth=%d, pos=%d, infer%s=<%s>, inferinfo=%d, %g -> %g\n",
       SCIPvarGetName(var), var->locdom.lb, var->locdom.ub, depth, pos,
-      infercons != NULL ? "cons" : (inferprop != NULL ? "prop" : "symcomp"),
+      infercons != NULL ? "cons" : (inferprop != NULL ? "prop" : (infersymcomp != NULL ? "symcomp" : "-")),
       infercons != NULL ? SCIPconsGetName(infercons) :
-      (inferprop != NULL ? SCIPpropGetName(inferprop) : SCIPsymcompGetName(infersymcomp)),
+      (inferprop != NULL ? SCIPpropGetName(inferprop) : (infersymcomp != NULL ? SCIPsymcompGetName(infersymcomp) : "-")),
       inferinfo, oldbound, newbound);
 
    SCIP_CALL( varEnsureUbchginfosSize(var, blkmem, set, var->nubchginfos+1) );
@@ -733,7 +733,7 @@ SCIP_RETCODE boundchgApplyExact(
                SCIP_CALL( varAddLbchginfo(var, blkmem, set, var->locdom.lb, boundchg->newbound, depth, pos,
                      boundchg->data.inferencedata.var, NULL, NULL, boundchg->data.inferencedata.reason.symcomp,
                      boundchg->data.inferencedata.info,
-                     (SCIP_BOUNDTYPE)(boundchg->inferboundtype), SCIP_BOUNDCHGTYPE_PROPINFER) );
+                     (SCIP_BOUNDTYPE)(boundchg->inferboundtype), SCIP_BOUNDCHGTYPE_SYMINFER) );
                break;
 
             default:
@@ -816,7 +816,7 @@ SCIP_RETCODE boundchgApplyExact(
                SCIP_CALL( varAddUbchginfo(var, blkmem, set, var->locdom.ub, boundchg->newbound, depth, pos,
                      boundchg->data.inferencedata.var, NULL, NULL, boundchg->data.inferencedata.reason.symcomp,
                      boundchg->data.inferencedata.info,
-                     (SCIP_BOUNDTYPE)(boundchg->inferboundtype), SCIP_BOUNDCHGTYPE_PROPINFER) );
+                     (SCIP_BOUNDTYPE)(boundchg->inferboundtype), SCIP_BOUNDCHGTYPE_SYMINFER) );
                break;
 
             default:
@@ -967,7 +967,7 @@ SCIP_RETCODE SCIPboundchgApply(
                SCIP_CALL( varAddLbchginfo(var, blkmem, set, var->locdom.lb, boundchg->newbound, depth, pos,
                      boundchg->data.inferencedata.var, NULL, NULL, boundchg->data.inferencedata.reason.symcomp,
                      boundchg->data.inferencedata.info,
-                     (SCIP_BOUNDTYPE)(boundchg->inferboundtype), SCIP_BOUNDCHGTYPE_PROPINFER) );
+                     (SCIP_BOUNDTYPE)(boundchg->inferboundtype), SCIP_BOUNDCHGTYPE_SYMINFER) );
                break;
 
             default:
@@ -1052,7 +1052,7 @@ SCIP_RETCODE SCIPboundchgApply(
                SCIP_CALL( varAddUbchginfo(var, blkmem, set, var->locdom.ub, boundchg->newbound, depth, pos,
                      boundchg->data.inferencedata.var, NULL, NULL, boundchg->data.inferencedata.reason.symcomp,
                      boundchg->data.inferencedata.info,
-                     (SCIP_BOUNDTYPE)(boundchg->inferboundtype), SCIP_BOUNDCHGTYPE_PROPINFER) );
+                     (SCIP_BOUNDTYPE)(boundchg->inferboundtype), SCIP_BOUNDCHGTYPE_SYMINFER) );
                break;
 
             default:
