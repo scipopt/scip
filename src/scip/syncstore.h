@@ -104,8 +104,9 @@ void SCIPsyncstoreUpdateBestMinObj(
    SCIP_Bool*            published           /**< pointer to return whether the solution was added to the pool, or NULL */
    );
 
-/** updates the minimization-normalized best global dual bound; the concurrent solvers call this
- *  immediately while solving so that SCIPgetConcurrentDualbound stays up to date in solution-pool mode
+/** updates the minimization-normalized best global dual bound; must only be called when the solution
+ *  pool is enabled, where the concurrent solvers report their dual bound immediately while solving so
+ *  that SCIPgetConcurrentDualbound stays up to date.
  */
 SCIP_EXPORT
 void SCIPsyncstoreUpdateBestDualbound(
@@ -119,25 +120,26 @@ SCIP_Bool SCIPsyncstoreSolPoolEnabled(
    SCIP_SYNCSTORE*       syncstore           /**< the synchronization store */
    );
 
-/** returns the main SCIP that initialized the synchronization store; the bounds reported in
- *  solution-pool mode live in this SCIP's objective space, so it is used to convert them
+/** returns the main SCIP that initialized the synchronization store; the bounds reported
+ *  when the solution pool is enabled live in this SCIP's objective space, so it is used to convert them
  */
 SCIP_EXPORT
 SCIP* SCIPsyncstoreGetMainScip(
    SCIP_SYNCSTORE*       syncstore           /**< the synchronization store */
    );
 
-/** gets the current number of solutions in the solution pool; reads the counter without
- *  locking, so it may lag behind concurrent pushes, which is fine for its use as a
- *  cheap size hint that is polled at every node
+/** gets the current number of solutions in the solution pool; must only be called when the
+ *  solution pool is enabled; reads the counter without locking, so it may lag behind
+ *  concurrent pushes, which is fine for its use as a cheap size hint that is polled at every node
  */
 SCIP_EXPORT
 int SCIPsyncstoreGetNPoolSols(
    SCIP_SYNCSTORE*       syncstore           /**< the synchronization store */
    );
 
-/** gets the solution with the given index from the solution pool; entries are immutable
- *  once published, so the returned values can be read without holding any lock
+/** gets the solution with the given index from the solution pool; must only be called when the
+ *  solution pool is enabled; entries are immutable once published, so the returned values can be
+ *  read without holding any lock
  */
 SCIP_EXPORT
 void SCIPsyncstoreGetPoolSol(
@@ -148,8 +150,8 @@ void SCIPsyncstoreGetPoolSol(
    int*                  ownerid             /**< pointer to return the index of the contributing concurrent solver */
    );
 
-/** records a tightened global variable bound on the shared bound board for immediate sharing; the
- *  board keeps, per communication variable, the tightest bound contributed by any concurrent solver
+/** records a tightened global variable bound on the shared bound pool for immediate sharing; the
+ *  pool keeps, per communication variable, the tightest bound contributed by any concurrent solver
  */
 SCIP_EXPORT
 void SCIPsyncstoreAddBound(
@@ -159,7 +161,7 @@ void SCIPsyncstoreAddBound(
    SCIP_BOUNDTYPE        boundtype           /**< whether the new bound is a lower or an upper bound */
    );
 
-/** gets the change counter of the shared bound board; read without locking, so it may momentarily lag
+/** gets the change counter of the shared bound pool; read without locking, so it may momentarily lag
  *  a concurrent update, which is fine for its use as a cheap hint that gates the per-node drain
  */
 SCIP_EXPORT
@@ -167,7 +169,7 @@ int SCIPsyncstoreGetBoundVersion(
    SCIP_SYNCSTORE*       syncstore           /**< the synchronization store */
    );
 
-/** gets the tightest shared global bounds of a communication variable from the bound board */
+/** gets the tightest shared global bounds of a communication variable from the bound pool */
 SCIP_EXPORT
 void SCIPsyncstoreGetBound(
    SCIP_SYNCSTORE*       syncstore,          /**< the synchronization store */

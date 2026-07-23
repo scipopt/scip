@@ -55,7 +55,7 @@ SCIP_RETCODE SCIPincludePropSync(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/** enables the bound-board drain in the sync propagator; it then runs at every node and applies the
+/** enables the bound-pool drain in the sync propagator; it then runs at every node and applies the
  *  tightened global variable bounds published immediately by the other concurrent solvers
  */
 SCIP_EXPORT

@@ -249,7 +249,7 @@ SCIP_DECL_EVENTEXEC(eventExecSync)
       SCIPsyncstoreUpdateBestMinObj(syncstore, minobj, SCIPconcsolverGetName(eventhdlrdata->concsolver),
          SCIPconcsolverGetIdx(eventhdlrdata->concsolver), solvals, nsolvals, &published);
 
-      /* count it as shared; in solution-pool mode this is the only place the statistic is updated */
+      /* count it as shared; when the solution pool is enabled this is the only place the statistic is updated */
       if( published )
          SCIPconcsolverAddNSolsShared(eventhdlrdata->concsolver, 1LL);
 
@@ -313,7 +313,7 @@ SCIP_RETCODE disableConflictingDualReductions(
    SCIP_CALL( SCIPgetBoolParam(scip, "concurrent/boundpool", &boundpool) );
    SCIP_CALL( SCIPgetIntParam(scip, "parallel/mode", &paramode) );
 
-   /* the bound board shares bounds only in opportunistic mode */
+   /* the bound pool shares bounds only in opportunistic mode */
    if( paramode != (int) SCIP_PARA_OPPORTUNISTIC )
       boundpool = FALSE;
 
@@ -695,7 +695,7 @@ SCIP_RETCODE initConcsolver(
    }
 
    /* enable immediate sharing of tightened global variable bounds: the global bound event handler
-    * publishes each tightening to the shared board and the sync propagator drains and applies it at
+    * publishes each tightening to the shared bound pool and the sync propagator drains and applies it at
     * every node, so global bounds propagate between the solvers without waiting for a synchronization point
     */
    {
@@ -1070,7 +1070,7 @@ SCIP_DECL_CONCSOLVERSYNCWRITE(concsolverScipSyncWrite)
 
    SCIPdebugMessage("syncing in concurrent solver %s\n", SCIPconcsolverGetName(concsolver));
 
-   /* in solution-pool mode new incumbents are shared immediately through the pool, so the
+   /* when the solution pool is enabled new incumbents are shared immediately through the pool, so the
     * synchronization data carries only bound changes; in the regular protocol the best
     * solutions are collected into the synchronization data here
     */

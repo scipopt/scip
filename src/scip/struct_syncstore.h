@@ -55,26 +55,15 @@ struct SCIP_SyncStore
                                               *   for each active synchronization */
    SCIP_SYNCDATA*        lastsync;           /**< pointer to the last synchronization data that has been synchronized
                                               *   by all threads */
-   SCIP_Real             bestdualbound;      /**< minimization-normalized best global dual bound, updated immediately by the
-                                              *   concurrent solvers in solution-pool mode and read by SCIPgetConcurrentDualbound;
-                                              *   the primal counterpart is bestminobj */
-
    SCIP*                 mainscip;           /**< the SCIP instance that was used for initializing the syncstore */
    SCIP_Real             limit_gap;          /**< relative gap limit in main SCIP */
    SCIP_Real             limit_absgap;       /**< absolute gap limit in main SCIP */
    SCIP_Bool             stopped;            /**< flag to indicate if the solving is stopped */
    SCIP_LOCK*            lock;               /**< lock to protect the syncstore data structure from data races */
-   SCIP_Real             bestminobj;         /**< minimization-normalized original objective value of the best solution found
-                                              *   by any concurrent solver; communicated immediately between the solvers
-                                              *   in opportunistic mode, outside of the regular synchronization points */
-   int                   winnerid;           /**< solver id of the best terminal status so far, or -1; scalar winner
-                                              *   channel used instead of the recyclable ring in solution-pool mode */
-   SCIP_STATUS           winnerstatus;       /**< the best termination status reported so far, or SCIP_STATUS_UNKNOWN */
    SCIP_Bool             printincumbents;    /**< should a line be printed for every new globally best solution found
                                               *   by a concurrent solver? */
    SCIP_Bool             usesolpool;         /**< should new globally best solutions be shared immediately through
-                                              *   the solution pool instead of only at synchronization points?
-                                              *   (only used in opportunistic mode) */
+                                              *   the solution pool instead of only at synchronization points? */
    SCIP_Real**           poolsols;           /**< solution value arrays of the pooled solutions; entries are
                                               *   append-only and immutable once published */
    SCIP_Real*            poolobjs;           /**< minimization-normalized original objective values of the pooled solutions */
@@ -83,15 +72,24 @@ struct SCIP_SyncStore
    int                   npoolsols;          /**< current number of solutions in the pool; incremented only after the
                                               *   entry is fully written, so it doubles as a lock-free size hint */
    int                   poolsolssize;       /**< allocated capacity of the pool arrays */
+   SCIP_Real             bestminobj;         /**< minimization-normalized original objective value of the best solution found
+                                              *   by any concurrent solver; updated immediately whenever a solver finds a
+                                              *   new incumbent, in both parallel modes */
+   SCIP_Real             bestdualbound;      /**< minimization-normalized best global dual bound, updated immediately by
+                                              *   the concurrent solvers when the solution pool is enabled and read by
+                                              *   SCIPgetConcurrentDualbound; the primal counterpart is bestminobj */
+   int                   winnerid;           /**< solver id of the best terminal status reported so far, or -1; kept
+                                              *   directly in the syncstore because when the solution pool is enabled
+                                              *   the syncdata slots may be reused before the main SCIP reads them */
+   SCIP_STATUS           winnerstatus;       /**< the best terminal status reported so far, or SCIP_STATUS_UNKNOWN */
    SCIP_Bool             useboundpool;       /**< should tightened global variable bounds be shared immediately through
-                                              *   the bound board instead of only at the synchronization points?
-                                              *   (only used in opportunistic mode) */
-   SCIP_Real*            boardlb;            /**< per communication variable, the tightest global lower bound contributed
+                                              *   the bound pool instead of only at the synchronization points? */
+   SCIP_Real*            boundpoollb;        /**< per communication variable, the tightest global lower bound contributed
                                               *   by any concurrent solver, or -infinity; monotonically non-decreasing */
-   SCIP_Real*            boardub;            /**< per communication variable, the tightest global upper bound contributed
+   SCIP_Real*            boundpoolub;        /**< per communication variable, the tightest global upper bound contributed
                                               *   by any concurrent solver, or +infinity; monotonically non-increasing */
-   int                   boardsize;          /**< number of communication variables the bound board is sized for */
-   int                   boardversion;       /**< counter bumped whenever a board bound is tightened; incremented only
+   int                   boundpoolsize;      /**< number of communication variables the bound pool is sized for */
+   int                   boundpoolversion;   /**< counter bumped whenever a pooled bound is tightened; incremented only
                                               *   after the new bound is written, so it is a safe lock-free change hint */
 
    int                   nsyncdata;          /**< the size of the synchronization data array */
