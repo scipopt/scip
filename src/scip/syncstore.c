@@ -212,11 +212,11 @@ SCIP_RETCODE SCIPsyncstoreInit(
     */
    SCIP_CALL( SCIPgetBoolParam(scip, "concurrent/solpool", &syncstore->usesolpool) );
 
-   /* inform the user if the pool was requested explicitly but is unavailable in the chosen mode */
-   if( syncstore->usesolpool && syncstore->mode != SCIP_PARA_OPPORTUNISTIC
-      && !SCIPparamIsDefault(SCIPgetParam(scip, "concurrent/solpool")) )
+   /* inform the user that the pool is unavailable in the chosen mode */
+   if( syncstore->usesolpool && syncstore->mode != SCIP_PARA_OPPORTUNISTIC )
    {
-      SCIPwarningMessage(scip, "parameter <concurrent/solpool> is only used in opportunistic parallel mode and will be ignored\n");
+      SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL,
+         "parameter <concurrent/solpool> is only used in opportunistic parallel mode and will be ignored\n");
    }
 
    syncstore->usesolpool = syncstore->usesolpool && syncstore->mode == SCIP_PARA_OPPORTUNISTIC;
@@ -228,11 +228,11 @@ SCIP_RETCODE SCIPsyncstoreInit(
     */
    SCIP_CALL( SCIPgetBoolParam(scip, "concurrent/boundpool", &syncstore->useboundpool) );
 
-   /* inform the user if the pool was requested explicitly but is unavailable in the chosen mode */
-   if( syncstore->useboundpool && syncstore->mode != SCIP_PARA_OPPORTUNISTIC
-      && !SCIPparamIsDefault(SCIPgetParam(scip, "concurrent/boundpool")) )
+   /* inform the user that the pool is unavailable in the chosen mode */
+   if( syncstore->useboundpool && syncstore->mode != SCIP_PARA_OPPORTUNISTIC )
    {
-      SCIPwarningMessage(scip, "parameter <concurrent/boundpool> is only used in opportunistic parallel mode and will be ignored\n");
+      SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL,
+         "parameter <concurrent/boundpool> is only used in opportunistic parallel mode and will be ignored\n");
    }
 
    syncstore->useboundpool = syncstore->useboundpool && syncstore->mode == SCIP_PARA_OPPORTUNISTIC;
