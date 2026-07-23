@@ -690,7 +690,7 @@ void SCIPconcsolverAddNSolsShared(
 }
 
 /** adds to the number of tighter global variable bounds the solver received from the other solvers;
- *  used in opportunistic mode where bounds are drained from the shared board instead of read at the
+ *  used in opportunistic mode where bounds are drained from the shared bound pool instead of read at the
  *  synchronization points
  */
 void SCIPconcsolverAddNTighterBnds(
