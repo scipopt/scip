@@ -55,13 +55,34 @@ struct SCIP_SyncStore
                                               *   for each active synchronization */
    SCIP_SYNCDATA*        lastsync;           /**< pointer to the last synchronization data that has been synchronized
                                               *   by all threads */
+
    SCIP*                 mainscip;           /**< the SCIP instance that was used for initializing the syncstore */
    SCIP_Real             limit_gap;          /**< relative gap limit in main SCIP */
    SCIP_Real             limit_absgap;       /**< absolute gap limit in main SCIP */
    SCIP_Bool             stopped;            /**< flag to indicate if the solving is stopped */
    SCIP_LOCK*            lock;               /**< lock to protect the syncstore data structure from data races */
+
+   int                   nsyncdata;          /**< the size of the synchronization data array */
+   SCIP_Real             minsyncdelay;       /**< the minimum delay before a synchronization data may be read */
+   int                   maxnsyncdelay;      /**< maximum number of synchronizations before the reading of the next
+                                              *   synchronization data is enforced regardless of the minimal synchronization
+                                              *   delay */
+   SCIP_Real             syncfreqinit;       /**< the initial synchronization frequency which is read from the settings
+                                              *   of the main SCIP when the syncstore is initialized */
+   SCIP_Real             syncfreqmax;        /**< the maximum synchronization frequency */
+   int                   maxnsols;           /**< maximum number of solutions that can be shared in one synchronization */
+   int                   nsolvers;           /**< number of solvers synchronizing with this syncstore */
+
    SCIP_Bool             printincumbents;    /**< should a line be printed for every new globally best solution found
                                               *   by a concurrent solver? */
+   SCIP_Real             bestminobj;         /**< minimization-normalized original objective value of the best solution found
+                                              *   by any concurrent solver; updated immediately whenever a solver finds a
+                                              *   new incumbent, in both parallel modes */
+
+   /* The following members implement the immediate sharing of solutions, dual bounds, and global variable
+    * bounds outside of the regular synchronization points. They are only used in opportunistic mode, when
+    * the solution pool respectively the bound pool is enabled.
+    */
    SCIP_Bool             usesolpool;         /**< should new globally best solutions be shared immediately through
                                               *   the solution pool instead of only at synchronization points? */
    SCIP_Real**           poolsols;           /**< solution value arrays of the pooled solutions; entries are
@@ -72,9 +93,6 @@ struct SCIP_SyncStore
    int                   npoolsols;          /**< current number of solutions in the pool; incremented only after the
                                               *   entry is fully written, so it doubles as a lock-free size hint */
    int                   poolsolssize;       /**< allocated capacity of the pool arrays */
-   SCIP_Real             bestminobj;         /**< minimization-normalized original objective value of the best solution found
-                                              *   by any concurrent solver; updated immediately whenever a solver finds a
-                                              *   new incumbent, in both parallel modes */
    SCIP_Real             bestdualbound;      /**< minimization-normalized best global dual bound, updated immediately by
                                               *   the concurrent solvers when the solution pool is enabled and read by
                                               *   SCIPgetConcurrentDualbound; the primal counterpart is bestminobj */
@@ -91,17 +109,6 @@ struct SCIP_SyncStore
    int                   boundpoolsize;      /**< number of communication variables the bound pool is sized for */
    int                   boundpoolversion;   /**< counter bumped whenever a pooled bound is tightened; incremented only
                                               *   after the new bound is written, so it is a safe lock-free change hint */
-
-   int                   nsyncdata;          /**< the size of the synchronization data array */
-   SCIP_Real             minsyncdelay;       /**< the minimum delay before a synchronization data may be read */
-   int                   maxnsyncdelay;      /**< maximum number of synchronizations before the reading of the next
-                                              *   synchronization data is enforced regardless of the minimal synchronization
-                                              *   delay */
-   SCIP_Real             syncfreqinit;       /**< the initial synchronization frequency which is read from the settings
-                                              *   of the main SCIP when the syncstore is initialized */
-   SCIP_Real             syncfreqmax;        /**< the maximum synchronization frequency */
-   int                   maxnsols;           /**< maximum number of solutions that can be shared in one synchronization */
-   int                   nsolvers;           /**< number of solvers synchronizing with this syncstore */
 };
 
 
