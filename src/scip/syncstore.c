@@ -432,12 +432,10 @@ void syncstorePrintIncumbent(
       SCIPgetSolvingTime(syncstore->mainscip), origobj, solvername);
 }
 
-/** updates the minimization-normalized objective value of the best solution found by any
- *  concurrent solver; used for printing new incumbents and as the improvement filter of the
- *  solution pool. If the solution pool is enabled and solution values are passed, the
- *  improving solution is published in the pool so that the other concurrent solvers can
- *  install it as an incumbent at their next drain. If published is not NULL, it returns whether
- *  the solution was actually added to the pool, so the caller can count it as shared.
+/** updates the minimization-normalized objective value of the best solution found by any concurrent
+ *  solver; if the solution pool is enabled and solution values are passed, an improving solution is
+ *  also published in the pool, and *published returns whether it was added. Minimization-normalized
+ *  values live in the transformed problem's objective space, which always minimizes in SCIP.
  */
 void SCIPsyncstoreUpdateBestMinObj(
    SCIP_SYNCSTORE*       syncstore,          /**< the synchronization store */
