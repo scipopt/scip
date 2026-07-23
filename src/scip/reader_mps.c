@@ -5835,8 +5835,15 @@ SCIP_RETCODE SCIPwriteMps(
    /* output COLUMNS section */
    printColumnSection(scip, file, matrix, varnameHashmap, indicatorSlackHash, maxnamelen, implintlevel);
 
-   /* output RHS section */
-   printRhsSection(scip, file, nconss + naddrows +naggvars, consnames, rhss, maxnamelen, objscale * objoffset);
+   /* output RHS section
+    *
+    * The transformed problem's objective offset (objoffset) does not include the
+    * objective constant of the original problem, which SCIP stores separately in
+    * origprob->objoffset and adds on top when converting between transformed and
+    * original objective values (see prob.c). Add it here so the written transformed
+    * problem carries the full objective constant and round-trips to the same optimum. */
+   printRhsSection(scip, file, nconss + naddrows +naggvars, consnames, rhss, maxnamelen,
+      objscale * objoffset + (transformed ? SCIPgetOrigObjoffset(scip) : 0.0));
 
    /* output RANGES section */
    if( needRANGES )
