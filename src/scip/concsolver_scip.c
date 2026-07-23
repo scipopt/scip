@@ -220,8 +220,6 @@ SCIP_DECL_EVENTEXEC(eventExecSync)
 
       sol = SCIPeventGetSol(event);
       minobj = SCIPgetSolOrigObj(scip, sol);
-      if( SCIPgetObjsense(scip) == SCIP_OBJSENSE_MAXIMIZE )
-         minobj = -minobj;
 
       /* extract the solution values only if this incumbent improves on the current global best;
        * the global best objective only decreases, so a solution filtered out here can never be
@@ -588,6 +586,10 @@ SCIP_RETCODE initConcsolver(
    SCIP_CALL( SCIPcopyConsCompression(scip, data->solverscip, varmapfw, NULL, SCIPconcsolverGetName(concsolver),
          NULL, NULL, 0, TRUE, FALSE, !symmetrybefore, FALSE, FALSE, &valid) );
    assert(valid);
+
+   /* the copy is made from the transformed problem, which SCIP always poses as a minimization problem;
+    * the concurrent communication relies on this fixed direction */
+   assert(SCIPgetObjsense(data->solverscip) == SCIP_OBJSENSE_MINIMIZE);
 
    /* Note that because some aggregations or fixed variables cannot be resolved by some constraint handlers (in
     * particular cons_sos1, cons_sos2, cons_and), the copied problem may contain more variables than the original
@@ -1058,15 +1060,7 @@ SCIP_DECL_CONCSOLVERSYNCWRITE(concsolverScipSyncWrite)
    /* push the finalized dual bound into bestdualbound; the sync heuristic samples it per node and
     * misses the terminal bound that this sync write (incl. the post-solve one) sees finalized */
    if( SCIPsyncstoreSolPoolEnabled(syncstore) )
-   {
-      SCIP_Real mindual;
-
-      mindual = SCIPgetDualbound(data->solverscip);
-      if( SCIPgetObjsense(data->solverscip) == SCIP_OBJSENSE_MAXIMIZE )
-         mindual = -mindual;
-
-      SCIPsyncstoreUpdateBestDualbound(syncstore, mindual);
-   }
+      SCIPsyncstoreUpdateBestDualbound(syncstore, SCIPgetDualbound(data->solverscip));
 
    SCIPdebugMessage("syncing in concurrent solver %s\n", SCIPconcsolverGetName(concsolver));
 

@@ -128,17 +128,6 @@ SCIP_DECL_HEUREXITSOL(heurExitSync)
 }
 
 
-/** returns whether objective value newobj is strictly better than oldobj for the given sense */
-static
-SCIP_Bool objIsBetter(
-   SCIP_OBJSENSE         objsense,           /**< objective sense */
-   SCIP_Real             newobj,             /**< objective value to test */
-   SCIP_Real             oldobj              /**< objective value to compare against */
-   )
-{
-   return objsense == SCIP_OBJSENSE_MINIMIZE ? newobj < oldobj : newobj > oldobj;
-}
-
 /** execution method of primal heuristic */
 static
 SCIP_DECL_HEUREXEC(heurExecSync)
@@ -147,7 +136,6 @@ SCIP_DECL_HEUREXEC(heurExecSync)
    SCIP_SOL* newsol;
    SCIP_Bool stored;
    SCIP_Real bestrecvdobj;
-   SCIP_OBJSENSE objsense;
    int i;
 
    assert(heur != NULL);
@@ -169,10 +157,8 @@ SCIP_DECL_HEUREXEC(heurExecSync)
 
    SCIPdebugMessage("exec method of sync primal heuristic.\n");
 
-   /* best objective received from other solvers, used to tighten the objlimit below; the infinity
-    * sentinel doubles as "nothing received" since it never beats the objlimit */
-   objsense = SCIPgetObjsense(scip);
-   bestrecvdobj = objsense == SCIP_OBJSENSE_MINIMIZE ? SCIPinfinity(scip) : -SCIPinfinity(scip);
+   /* best objective received from other solvers, used to tighten the objlimit below; initialized to infinity */
+   bestrecvdobj = SCIPinfinity(scip);
 
    *result = heurdata->nsols > 0 ? SCIP_DIDNOTFIND : SCIP_DIDNOTRUN;
    for( i = 0; i < heurdata->nsols; ++i )
@@ -180,7 +166,7 @@ SCIP_DECL_HEUREXEC(heurExecSync)
       SCIP_Real solobj;
 
       solobj = SCIPgetSolOrigObj(scip, heurdata->sols[i]);
-      if( objIsBetter(objsense, solobj, bestrecvdobj) )
+      if( solobj < bestrecvdobj )
          bestrecvdobj = solobj;
 
       SCIP_CALL( SCIPtrySolFree(scip, &heurdata->sols[i], FALSE, FALSE, FALSE, FALSE, FALSE, &stored) );
@@ -230,7 +216,7 @@ SCIP_DECL_HEUREXEC(heurExecSync)
          SCIP_CALL( SCIPsetSolVals(scip, newsol, MIN(nsolvals, heurdata->npoolvars), heurdata->poolvars, solvals) );
 
          solobj = SCIPgetSolOrigObj(scip, newsol);
-         if( objIsBetter(objsense, solobj, bestrecvdobj) )
+         if( solobj < bestrecvdobj )
             bestrecvdobj = solobj;
 
          SCIP_CALL( SCIPtrySolFree(scip, &newsol, FALSE, FALSE, TRUE, TRUE, TRUE, &stored) );
@@ -244,7 +230,7 @@ SCIP_DECL_HEUREXEC(heurExecSync)
 
       /* report this solver's dual bound immediately so SCIPgetConcurrentDualbound stays current;
        * skip when it did not improve to avoid redundant locked updates */
-      mindual = objsense == SCIP_OBJSENSE_MINIMIZE ? SCIPgetDualbound(scip) : -SCIPgetDualbound(scip);
+      mindual = SCIPgetDualbound(scip);
       if( mindual > heurdata->lastdualbound )
       {
          SCIPsyncstoreUpdateBestDualbound(syncstore, mindual);
@@ -254,7 +240,7 @@ SCIP_DECL_HEUREXEC(heurExecSync)
 
    /* a received solution may not register as this solver's incumbent, so tighten the objlimit to its
     * objective to communicate the cutoff */
-   if( objIsBetter(objsense, bestrecvdobj, SCIPgetObjlimit(scip)) )
+   if( bestrecvdobj < SCIPgetObjlimit(scip) )
    {
       SCIP_CALL( SCIPsetObjlimit(scip, bestrecvdobj) );
    }
