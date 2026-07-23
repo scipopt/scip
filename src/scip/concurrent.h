@@ -149,14 +149,14 @@ SCIP_Longint SCIPgetConcurrentMemTotal(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/** gets the global dual bound of the concurrent solve; in solution-pool mode this is the
+/** gets the global dual bound of the concurrent solve; when the solution pool is enabled this is the
  *  immediately-tracked value, otherwise it is the bound from the last synchronization
  */
 SCIP_Real SCIPgetConcurrentDualbound(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/** gets the global primal bound of the concurrent solve; in solution-pool mode this is the
+/** gets the global primal bound of the concurrent solve; when the solution pool is enabled this is the
  *  immediately-tracked value, otherwise it is the bound from the last synchronization
  */
 SCIP_Real SCIPgetConcurrentPrimalbound(

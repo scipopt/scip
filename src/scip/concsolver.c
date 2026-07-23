@@ -431,7 +431,7 @@ SCIP_RETCODE SCIPconcsolverSync(
    {
       /* if this is the last concurrent solver that is synchronizing for this synchronization data
        * it will adjust the synchronization frequency using the progress on the gap;
-       * in solution-pool mode the frequency stays fixed, since writers are not throttled by
+       * when the solution pool is enabled the frequency stays fixed, since writers are not throttled by
        * readers and the previous synchronization data may not have been written by all solvers
        */
       SCIP_Bool lbok;
@@ -507,7 +507,7 @@ SCIP_RETCODE SCIPconcsolverSync(
 
    concsolver->syncdelay += concsolver->timesincelastsync;
 
-   /* in solution-pool mode solutions are exchanged immediately through the pool and the cutoff
+   /* when the solution pool is enabled solutions are exchanged immediately through the pool and the cutoff
     * bound through the immediate communication; synchronization data is read non-blocking and
     * carries only the global bound changes: only synchronizations that have already been written
     * by all solvers are consumed, overwritten ones are skipped as lost, and the solver never
@@ -651,8 +651,8 @@ SCIP_Longint SCIPconcsolverGetNSolsRecvd(
    return concsolver->nsolsrecvd;
 }
 
-/** adds to the number of solutions the concurrent solver received from the other solvers; used in
- *  solution-pool mode where solutions are drained from the pool instead of read at the synchronization points
+/** adds to the number of solutions the concurrent solver received from the other solvers; used
+ *  when the solution pool is enabled, where solutions are drained from the pool instead of read at the synchronization points
  */
 void SCIPconcsolverAddNSolsRecvd(
    SCIP_CONCSOLVER*      concsolver,         /**< concurrent solver */
@@ -675,8 +675,8 @@ SCIP_Longint SCIPconcsolverGetNSolsShared(
    return concsolver->nsolsshared;
 }
 
-/** adds to the number of solutions the concurrent solver shared with the other solvers; used in
- *  solution-pool mode where solutions are shared immediately instead of at the synchronization points
+/** adds to the number of solutions the concurrent solver shared with the other solvers; used
+ *  when the solution pool is enabled, where solutions are shared immediately instead of at the synchronization points
  */
 void SCIPconcsolverAddNSolsShared(
    SCIP_CONCSOLVER*      concsolver,         /**< concurrent solver */

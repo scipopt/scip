@@ -65,7 +65,7 @@ struct SCIP_EventhdlrData
    int                    filterpos;
    SCIP_Bool              storebounds;
    SCIP_BOUNDSTORE*       boundstore;
-   SCIP_Bool              useboundpool;       /**< publish tightened global bounds immediately to the syncstore board? */
+   SCIP_Bool              useboundpool;       /**< publish tightened global bounds immediately to the syncstore bound pool? */
 };
 
 /*
@@ -123,7 +123,7 @@ SCIP_DECL_EVENTINIT(eventInitGlobalbnd)
       vars = SCIPgetVars(scip);
 
       /* the full bound store is only filled (and later communicated through the synchronization data) when
-       * variable bounds are shared at the synchronization points; for the immediate bound board alone the
+       * variable bounds are shared at the synchronization points; for the immediate bound pool alone the
        * events still have to be caught, but no per-solver bound store is needed
        */
       SCIP_CALL( SCIPgetBoolParam(scip, "concurrent/commvarbnds", &eventhdlrdata->storebounds) );
@@ -224,7 +224,7 @@ SCIP_DECL_EVENTEXEC(eventExecGlobalbnd)
          boundtype = scalar < 0.0 ? SCIPboundtypeOpposite(boundtype) : boundtype;
          newbound = (newbound - constant) / scalar;
 
-         /* the bound store is NULL when only the immediate board is used (commvarbnds off) */
+         /* the bound store is NULL when only the immediate bound pool is used (commvarbnds off) */
          if( eventhdlrdata->storebounds && eventhdlrdata->boundstore != NULL )
          {
             SCIP_CALL( SCIPboundstoreAdd(scip, eventhdlrdata->boundstore, varidx, newbound, boundtype) );
@@ -271,8 +271,8 @@ SCIP_RETCODE SCIPincludeEventHdlrGlobalbnd(
 }
 
 /** enables immediate publishing of this concurrent solver's tightened global variable bounds to the
- *  syncstore bound board; the global bound change events are caught in any case once the handler is
- *  included, this only turns the board updates on
+ *  syncstore bound pool; the global bound change events are caught in any case once the handler is
+ *  included, this only turns the bound-pool updates on
  */
 SCIP_RETCODE SCIPeventGlobalbndEnableBoundPool(
    SCIP*                 scip                /**< SCIP data structure */

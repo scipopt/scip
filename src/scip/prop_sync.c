@@ -75,10 +75,10 @@ struct SCIP_PropData
    int                   bndsize;       /**< current size of bound change array */
    SCIP_Longint          ntightened;    /**< number of tightened bounds */
    SCIP_Longint          ntightenedint; /**< number of tightened bounds of integer variables */
-   SCIP_Bool             useboundpool;  /**< should tightened global bounds be drained from the shared board every node? */
-   SCIP_VAR**            boardvars;     /**< this solver's variables in the communication variable order (not owned) */
-   int                   nboardvars;    /**< number of variables in boardvars */
-   int                   lastboundversion; /**< board change counter at the last drain, to skip the scan when unchanged */
+   SCIP_Bool             useboundpool;  /**< should tightened global bounds be drained from the shared bound pool every node? */
+   SCIP_VAR**            boundpoolvars; /**< this solver's variables in the communication variable order (not owned) */
+   int                   nboundpoolvars; /**< number of variables in boundpoolvars */
+   int                   lastboundversion; /**< bound-pool change counter at the last drain, to skip the scan when unchanged */
    SCIP_CONCSOLVER*      concsolver;    /**< the concurrent solver this propagator belongs to, for the shared statistics */
 };
 
@@ -155,12 +155,12 @@ SCIP_RETCODE applyBoundChanges(
    return SCIP_OKAY;
 }
 
-/** applies one shared global bound from the bound board to the local problem, resolving the variable
+/** applies one shared global bound from the bound pool to the local problem, resolving the variable
  *  through aggregations and skipping multi-aggregated variables; updates the tightening counters and
  *  the propagation result. The tightening is idempotent, so re-applying an already known bound is a no-op.
  */
 static
-SCIP_RETCODE applyBoardBound(
+SCIP_RETCODE applySharedBound(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_PROPDATA*        data,               /**< propagator data */
    SCIP_VAR*             var,                /**< this solver's variable in communication order */
@@ -343,9 +343,9 @@ SCIP_DECL_PROPEXEC(propExecSync)
          *result = SCIP_REDUCEDDOM;
    }
 
-   /* Apply the tightest global bounds the other solvers published on the shared board. No locking is
-    * needed: board bounds only get tighter and re-applying a known bound is a no-op, so missing the
-    * newest bound just defers it to the next node. boardversion is bumped on every tightening; skip the
+   /* Apply the tightest global bounds the other solvers published on the shared bound pool. No locking is
+    * needed: bounds only get tighter and re-applying a known bound is a no-op, so missing the
+    * newest bound just defers it to the next node. the version counter is bumped on every tightening; skip the
     * whole scan when it has not changed since the last drain. Read the version before scanning so that a
     * bound landing mid-scan leaves version != lastboundversion and is picked up at the next node.
     */
@@ -366,28 +366,28 @@ SCIP_DECL_PROPEXEC(propExecSync)
          nbnds0 = data->ntightened;
          nintbnds0 = data->ntightenedint;
 
-         for( v = 0; v < data->nboardvars && *result != SCIP_CUTOFF; ++v )
+         for( v = 0; v < data->nboundpoolvars && *result != SCIP_CUTOFF; ++v )
          {
             SCIP_VAR* var;
             SCIP_Real lb;
             SCIP_Real ub;
 
-            var = data->boardvars[v];
+            var = data->boundpoolvars[v];
             if( var == NULL )
                continue;
 
             SCIPsyncstoreGetBound(syncstore, v, &lb, &ub);
 
             if( !SCIPisInfinity(scip, -lb) )
-               SCIP_CALL( applyBoardBound(scip, data, var, lb, SCIP_BOUNDTYPE_LOWER, result) );
+               SCIP_CALL( applySharedBound(scip, data, var, lb, SCIP_BOUNDTYPE_LOWER, result) );
 
             if( *result != SCIP_CUTOFF && !SCIPisInfinity(scip, ub) )
-               SCIP_CALL( applyBoardBound(scip, data, var, ub, SCIP_BOUNDTYPE_UPPER, result) );
+               SCIP_CALL( applySharedBound(scip, data, var, ub, SCIP_BOUNDTYPE_UPPER, result) );
          }
 
-         /* report the bounds applied from the board as received tighter bounds, so the concurrent
+         /* report the bounds applied from the pool as received tighter bounds, so the concurrent
           * solver statistics reflect the immediate sharing the same way the synchronization-point
-          * path does (the propagator's own ntightened counters are updated in applyBoardBound)
+          * path does (the propagator's own ntightened counters are updated in applySharedBound)
           */
          if( data->concsolver != NULL && data->ntightened > nbnds0 )
             SCIPconcsolverAddNTighterBnds(data->concsolver, data->ntightened - nbnds0, data->ntightenedint - nintbnds0);
@@ -396,7 +396,7 @@ SCIP_DECL_PROPEXEC(propExecSync)
       }
    }
 
-   /* with the bound board active the propagator stays awake at every node to drain new bounds; otherwise
+   /* with the bound pool active the propagator stays awake at every node to drain new bounds; otherwise
     * it sleeps and is woken again when bounds are pushed via SCIPpropSyncAddBndchg
     */
    if( data->useboundpool )
@@ -421,8 +421,8 @@ SCIP_RETCODE SCIPincludePropSync(
 
    SCIP_CALL( SCIPallocBlockMemory(scip, &propdata) );
    propdata->useboundpool = FALSE;
-   propdata->boardvars = NULL;
-   propdata->nboardvars = 0;
+   propdata->boundpoolvars = NULL;
+   propdata->nboundpoolvars = 0;
    propdata->lastboundversion = 0;
    propdata->concsolver = NULL;
 
@@ -440,7 +440,7 @@ SCIP_RETCODE SCIPincludePropSync(
    return SCIP_OKAY;
 }
 
-/** enables the bound-board drain in the sync propagator; it then runs at every node and applies the
+/** enables the bound-pool drain in the sync propagator; it then runs at every node and applies the
  *  tightened global variable bounds published immediately by the other concurrent solvers
  */
 void SCIPpropSyncEnableBoundPool(
@@ -462,8 +462,8 @@ void SCIPpropSyncEnableBoundPool(
    assert(data != NULL);
 
    data->useboundpool = TRUE;
-   data->boardvars = vars;
-   data->nboardvars = nvars;
+   data->boundpoolvars = vars;
+   data->nboundpoolvars = nvars;
    data->lastboundversion = 0;
    data->concsolver = concsolver;
    SCIPpropSetFreq(prop, 1);

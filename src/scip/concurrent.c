@@ -114,7 +114,7 @@ SCIP_RETCODE SCIPcreateConcurrent(
    assert(SCIPfindEventhdlr(scip, "globalbnd") == NULL);
 
    /* the global bound change event handler is also needed when bounds are shared immediately through the
-    * board, since that is where the tightenings are detected and published
+    * pool, since that is where the tightenings are detected and published
     */
    if( scip->set->concurrent_commvarbnds || scip->set->concurrent_boundpool )
    {
@@ -317,7 +317,7 @@ SCIP_Longint SCIPgetConcurrentMemTotal(
    }
 }
 
-/** gets the global dual bound of the concurrent solve; in solution-pool mode this is the
+/** gets the global dual bound of the concurrent solve; when the solution pool is enabled this is the
  *  immediately-tracked value, otherwise it is the bound from the last synchronization
  */
 SCIP_Real SCIPgetConcurrentDualbound(
@@ -331,7 +331,7 @@ SCIP_Real SCIPgetConcurrentDualbound(
    syncstore = SCIPgetSyncstore(scip);
    assert(syncstore != NULL);
 
-   /* in solution-pool mode the tracked bound lives in the main SCIP's objective space, so convert it
+   /* when the solution pool is enabled the tracked bound lives in the main SCIP's objective space, so convert it
     * there; correct even when queried from a worker whose presolve scaled the objective differently */
    if( SCIPsyncstoreSolPoolEnabled(syncstore) )
       scip = SCIPsyncstoreGetMainScip(syncstore);
@@ -339,7 +339,7 @@ SCIP_Real SCIPgetConcurrentDualbound(
    return SCIPprobExternObjval(scip->transprob, scip->origprob, scip->set, SCIPsyncstoreGetLastLowerbound(syncstore));
 }
 
-/** gets the global primal bound of the concurrent solve; in solution-pool mode this is the
+/** gets the global primal bound of the concurrent solve; when the solution pool is enabled this is the
  *  immediately-tracked value, otherwise it is the bound from the last synchronization
  */
 SCIP_Real SCIPgetConcurrentPrimalbound(
@@ -353,7 +353,7 @@ SCIP_Real SCIPgetConcurrentPrimalbound(
    syncstore = SCIPgetSyncstore(scip);
    assert(syncstore != NULL);
 
-   /* in solution-pool mode the tracked bound lives in the main SCIP's objective space, so convert it
+   /* when the solution pool is enabled the tracked bound lives in the main SCIP's objective space, so convert it
     * there; correct even when queried from a worker whose presolve scaled the objective differently */
    if( SCIPsyncstoreSolPoolEnabled(syncstore) )
       scip = SCIPsyncstoreGetMainScip(syncstore);
