@@ -75,6 +75,7 @@ Build systems
 -------------
 
 - fixed makefiles for build with LPS=highs
+- added workaround to cmake system when using -isystem for ZLIB headers on macOS (leads to compilation issues for C++ code)
 
 @section RN1003 SCIP 10.0.3
 ***************************
