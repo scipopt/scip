@@ -422,6 +422,11 @@ endif()
 if(ZLIB_FOUND)
     message(STATUS "Finding ZLIB - found")
     set(SCIP_WITH_ZLIB ON)
+    # workaround for macOS SDK >= 26.4 not happy about an -isystem /path/to/macOS26.4.sdk/usr/include without a prior -isystem for C++ system headers
+    # removing the SYSTEM property for ZLIB (which is part of the macOS SDK) changes the -isystem to an -I
+    if(${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
+        set_property(TARGET ZLIB::ZLIB PROPERTY SYSTEM FALSE)
+    endif()
 else()
     message(STATUS "Support ZLIB: OFF")
     set(SCIP_WITH_ZLIB OFF)
