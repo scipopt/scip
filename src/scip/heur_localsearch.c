@@ -1428,7 +1428,7 @@ SCIP_Bool selectBestNeighbor(
 
    problem = solver->problem;
    bestscore = minscore;
-   bestsubscore = -SCIP_LONGINT_MAX;
+   bestsubscore = 0;
    *bestvaridx = -1;
    *bestvalue = 0.0;
 
@@ -1646,7 +1646,7 @@ SCIP_RETCODE lsSolverFlipMove(
       return SCIP_OKAY;
 
    bestscore = 0;
-   bestsubscore = -SCIP_LONGINT_MAX;
+   bestsubscore = 0;
    bestvaridx = -1;
    bestvalue = 0.0;
 
