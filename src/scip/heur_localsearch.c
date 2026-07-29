@@ -199,9 +199,11 @@ struct LS_Solver
    SCIP_Real*            act;                /**< per-constraint current activity */
    int*                  unsatidxs;          /**< violated constraint indices */
    int                   nunsat;             /**< number of violated constraints */
+   int*                  satidxs;            /**< satisfied constraint indices */
+   int                   nsat;               /**< number of satisfied constraints */
+   int*                  idxs;               /**< per-constraint index: >=0 unsatidxs position, <0 satidxs position */
    int*                  consnmoves;         /**< per-constraint moves since their last computation */
    int*                  weight;             /**< per-constraint penalty weight */
-   int*                  unsatidx;           /**< per-constraint position in unsatidxs */
    int*                  allowincstep;       /**< per-variable tabu: earliest allow increase */
    int*                  allowdecstep;       /**< per-variable tabu: earliest allow decrease */
    int*                  lastincstep;        /**< per-variable step of last increase */
@@ -463,26 +465,9 @@ SCIP_RETCODE lsProblemFillReferences(
  * Local methods for LS_Solver
  */
 
-/** inserts a constraint into the unsatisfied set */
+/** declares constraint violated: moves from satisfied to violated set */
 static
-void lsSolverInsertUnsat(
-   LS_SOLVER*            solver,             /**< solver */
-   int                   constridx           /**< constraint index */
-   )
-{
-   assert(solver != NULL);
-   assert(constridx >= 0);
-   assert(constridx < solver->problem->nconss);
-   assert(solver->unsatidx[constridx] == -1);
-   assert(solver->nunsat < solver->problem->nconss);
-
-   solver->unsatidx[constridx] = solver->nunsat;
-   solver->unsatidxs[solver->nunsat++] = constridx;
-}
-
-/** removes a constraint from the unsatisfied set */
-static
-void lsSolverRemoveUnsat(
+void lsSolverMakeUnsat(
    LS_SOLVER*            solver,             /**< solver */
    int                   constridx           /**< constraint index */
    )
@@ -493,14 +478,41 @@ void lsSolverRemoveUnsat(
    assert(solver != NULL);
    assert(constridx >= 0);
    assert(constridx < solver->problem->nconss);
-   assert(solver->unsatidx[constridx] >= 0);
-   assert(solver->nunsat > 0);
+   assert(solver->idxs[constridx] < 0);
+   assert(solver->nsat > 0);
+   assert(solver->nunsat < solver->problem->nconss);
 
-   pos = solver->unsatidx[constridx];
+   lastconstridx = solver->satidxs[--solver->nsat];
+   pos = -solver->idxs[constridx] - 1;
+   solver->satidxs[pos] = lastconstridx;
+   solver->idxs[lastconstridx] = -(pos + 1);
+   solver->unsatidxs[solver->nunsat] = constridx;
+   solver->idxs[constridx] = solver->nunsat++;
+}
+
+/** declares constraint satisfied: moves from violated to satisfied set */
+static
+void lsSolverMakeSat(
+   LS_SOLVER*            solver,             /**< solver */
+   int                   constridx           /**< constraint index */
+   )
+{
+   int lastconstridx;
+   int pos;
+
+   assert(solver != NULL);
+   assert(constridx >= 0);
+   assert(constridx < solver->problem->nconss);
+   assert(solver->idxs[constridx] >= 0);
+   assert(solver->nunsat > 0);
+   assert(solver->nsat < solver->problem->nconss);
+
    lastconstridx = solver->unsatidxs[--solver->nunsat];
+   pos = solver->idxs[constridx];
    solver->unsatidxs[pos] = lastconstridx;
-   solver->unsatidx[lastconstridx] = pos;
-   solver->unsatidx[constridx] = -1;
+   solver->idxs[lastconstridx] = pos;
+   solver->satidxs[solver->nsat] = constridx;
+   solver->idxs[constridx] = -(++solver->nsat);
 }
 
 /** recomputes objective value from current incumbent assignment */
@@ -567,13 +579,13 @@ void lsSolverUpdateConstraint(
    if( SCIPisFeasPositive(scip, 2.0 * (!SCIPisInfinity(scip, -cons->mhs) && solver->act[constridx] <= cons->mhs
       ? cons->lhs - solver->act[constridx] : solver->act[constridx] - cons->rhs)) )
    {
-      if( solver->unsatidx[constridx] < 0 )
-         lsSolverInsertUnsat(solver, constridx);
+      if( solver->idxs[constridx] < 0 )
+         lsSolverMakeUnsat(solver, constridx);
    }
    else
    {
-      if( solver->unsatidx[constridx] >= 0 )
-         lsSolverRemoveUnsat(solver, constridx);
+      if( solver->idxs[constridx] >= 0 )
+         lsSolverMakeSat(solver, constridx);
    }
 }
 
@@ -620,6 +632,7 @@ SCIP_RETCODE lsSolverCreate(
    solver->nsampled = 0;
    solver->nsols = 0;
    solver->nunsat = 0;
+   solver->nsat = 0;
 
    /* allocate incumbent assignment */
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &solver->incumbentassignment, nvars) );
@@ -627,9 +640,10 @@ SCIP_RETCODE lsSolverCreate(
    /* allocate per-constraint parallel arrays */
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &solver->act, nconss) );
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &solver->unsatidxs, nconss) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &solver->satidxs, nconss) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &solver->idxs, nconss) );
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &solver->consnmoves, nconss) );
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &solver->weight, nconss) );
-   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &solver->unsatidx, nconss) );
 
    /* allocate per-variable tabu arrays */
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &solver->allowincstep, nvars) );
@@ -710,7 +724,8 @@ SCIP_RETCODE lsSolverCreate(
    for( i = 0; i < nconss; ++i )
    {
       solver->weight[i] = 1;
-      solver->unsatidx[i] = -1;
+      solver->satidxs[solver->nsat] = i;
+      solver->idxs[i] = -(++solver->nsat);
       lsSolverRecomputeConstraint(scip, solver, i);
       lsSolverUpdateConstraint(scip, solver, i);
    }
@@ -776,9 +791,10 @@ SCIP_RETCODE lsSolverFree(
    SCIPfreeBlockMemoryArray(scip, &solver->lastincstep, nvars);
    SCIPfreeBlockMemoryArray(scip, &solver->allowdecstep, nvars);
    SCIPfreeBlockMemoryArray(scip, &solver->allowincstep, nvars);
-   SCIPfreeBlockMemoryArray(scip, &solver->unsatidx, nconss);
    SCIPfreeBlockMemoryArray(scip, &solver->weight, nconss);
    SCIPfreeBlockMemoryArray(scip, &solver->consnmoves, nconss);
+   SCIPfreeBlockMemoryArray(scip, &solver->idxs, nconss);
+   SCIPfreeBlockMemoryArray(scip, &solver->satidxs, nconss);
    SCIPfreeBlockMemoryArray(scip, &solver->unsatidxs, nconss);
    SCIPfreeBlockMemoryArray(scip, &solver->act, nconss);
    SCIPfreeBlockMemoryArray(scip, &solver->incumbentassignment, nvars);
@@ -1042,7 +1058,7 @@ SCIP_Real getTightMove(
    /* get current activity */
    if( movevalue == value ) /*lint !e777*/
    {
-      if( solver->unsatidx[constridx] == -1 )
+      if( solver->idxs[constridx] < 0 )
          return movevalue;
 
       moveactivity = solver->act[constridx];
@@ -1254,7 +1270,7 @@ void lsSolverSmoothWeight(
    /* decrease constraint weights if feasible */
    for( i = 0; i < problem->nconss; ++i )
    {
-      if( solver->unsatidx[i] == -1 && solver->weight[i] > 0 )
+      if( solver->idxs[i] < 0 && solver->weight[i] > 0 )
          --solver->weight[i];
    }
 }
@@ -1285,7 +1301,7 @@ void collectConstraintNeighbors(
    /* move to nearest side if infeasible and farthest side if satisfied */
    cons = solver->problem->conss + constridx;
    tolhs = !SCIPisInfinity(scip, -cons->mhs)
-         && SCIPisLE(scip, solver->act[constridx], cons->mhs) == (solver->unsatidx[constridx] >= 0);
+         && SCIPisLE(scip, solver->act[constridx], cons->mhs) == (solver->idxs[constridx] >= 0);
 
    for( i = 0; i < cons->ncoeffs; ++i )
    {
@@ -1500,8 +1516,8 @@ SCIP_RETCODE lsSolverUnsatTightMove(
    {
       idx = SCIPrandomGetInt(heurdata->randnumgen, i, solver->nunsat - 1);
       SCIPswapInts(&solver->unsatidxs[i], &solver->unsatidxs[idx]);
-      solver->unsatidx[solver->unsatidxs[i]] = i;
-      solver->unsatidx[solver->unsatidxs[idx]] = idx;
+      solver->idxs[solver->unsatidxs[i]] = i;
+      solver->idxs[solver->unsatidxs[idx]] = idx;
    }
 
    /* collect shuffled range */
@@ -1536,7 +1552,6 @@ SCIP_RETCODE lsSolverSatTightMove(
    SCIP_Bool*            result              /**< is move applied? */
    )
 {
-   LS_PROBLEM* problem;
    int bestvaridx;
    SCIP_Real bestvalue;
    int constridx;
@@ -1548,25 +1563,21 @@ SCIP_RETCODE lsSolverSatTightMove(
    assert(result != NULL);
 
    *result = FALSE;
-   problem = solver->problem;
-   assert(problem->nconss > 0);
    solver->neighborsize = 0;
 
-   if( !solver->optimality )
+   if( !solver->optimality || solver->nsat == 0 )
       return SCIP_OKAY;
 
-   /* sample SAT constraints (skip duplicates, unsat, and cutoff; matching Local's sampleSet) */
+   /* sample satisfied constraints from satisfied set and skip duplicates */
    solver->nsampled = 0;
    for( i = 0; i < heurdata->samplesat; ++i )
    {
-      constridx = SCIPrandomGetInt(heurdata->randnumgen, 0, problem->nconss - 1);
+      constridx = solver->satidxs[SCIPrandomGetInt(heurdata->randnumgen, 0, solver->nsat - 1)];
+      assert(constridx >= 0);
+      assert(constridx < solver->problem->nconss);
 
       /* skip already sampled */
       if( solver->sampledconstrs[constridx] )
-         continue;
-
-      /* skip UNSAT */
-      if( solver->unsatidx[constridx] >= 0 )
          continue;
 
       /* mark as sampled */
