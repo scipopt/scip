@@ -137,8 +137,8 @@ struct SCIP_HeurData
 struct LS_IdxCoeff
 {
    int                   idx;                /**< variable or constraint index */
-   SCIP_Real             coeff;              /**< normalized coefficient */
    int                   pos;                /**< position in the other direction's array */
+   SCIP_Real             coeff;              /**< normalized coefficient */
 };
 typedef struct LS_IdxCoeff LS_IDXCOEFF;
 
