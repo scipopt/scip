@@ -133,6 +133,7 @@ struct SCIP_HeurData
    SCIP_Longint          maxeffort;          /**< absolute effort budget */
 };
 
+/**@todo split into simple data arrays */
 /** index-coefficient pair for cross-references */
 struct LS_IdxCoeff
 {
@@ -154,7 +155,7 @@ struct LS_Var
 };
 typedef struct LS_Var LS_VAR;
 
-/** constraint structure (static model data, normalized) */
+/** constraint structure (static model data) */
 struct LS_Constraint
 {
    SCIP_Real             lhs;                /**< normalized left hand side, -infinity if single */
@@ -529,6 +530,7 @@ void lsSolverRecomputeObjective(
 
    for( i = 0; i < problem->nobjvars; ++i )
    {
+      /**@todo use quad precision if necessary */
       solver->incumbentobjective += problem->vars[problem->objvaridxs[i]].obj
             * solver->incumbentassignment[problem->objvaridxs[i]];
    }
@@ -561,7 +563,10 @@ void lsSolverRecomputeConstraint(
    solver->act[constridx] = 0.0;
 
    for( i = 0; i < cons->ncoeffs; ++i )
+   {
+      /**@todo use quad precision if necessary */
       solver->act[constridx] += cons->coeffs[i].coeff * solver->incumbentassignment[cons->coeffs[i].idx];
+   }
 
    solver->consnmoves[constridx] = 0;
 }
@@ -1572,6 +1577,7 @@ SCIP_RETCODE lsSolverSatTightMove(
    solver->nsampled = 0;
    for( i = 0; i < heurdata->samplesat; ++i )
    {
+      /**@todo sample without replacement like unsat */
       constridx = solver->satidxs[SCIPrandomGetInt(heurdata->randnumgen, 0, solver->nsat - 1)];
       assert(constridx >= 0);
       assert(constridx < solver->problem->nconss);
