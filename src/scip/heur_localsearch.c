@@ -213,7 +213,6 @@ struct LS_Solver
    SCIP_Bool*            scoretable;         /**< per-variable binary dedup flag */
    int*                  scoreidxs;          /**< stack of marked score indices */
    int                   nscoreidxs;         /**< number of marked score entries */
-   int*                  tempunsatidxs;      /**< temp copy for partial shuffle */
    SCIP_Bool*            sampledconstrs;     /**< per-constraint dedup flag for sat sampling */
    int*                  sampledidxs;        /**< stack of sampled constraint indices */
    int                   nsampled;           /**< number of sampled constraints */
@@ -645,7 +644,6 @@ SCIP_RETCODE lsSolverCreate(
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &solver->scoretable, nvars) );
    BMSclearMemoryArray(solver->scoretable, nvars);
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &solver->scoreidxs, problem->nbinvars) );
-   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &solver->tempunsatidxs, nconss) );
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &solver->sampledconstrs, nconss) );
    BMSclearMemoryArray(solver->sampledconstrs, nconss);
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &solver->sampledidxs, nconss) );
@@ -770,7 +768,6 @@ SCIP_RETCODE lsSolverFree(
    }
    SCIPfreeBlockMemoryArray(scip, &solver->sampledidxs, nconss);
    SCIPfreeBlockMemoryArray(scip, &solver->sampledconstrs, nconss);
-   SCIPfreeBlockMemoryArray(scip, &solver->tempunsatidxs, nconss);
    SCIPfreeBlockMemoryArray(scip, &solver->scoreidxs, problem->nbinvars);
    SCIPfreeBlockMemoryArray(scip, &solver->scoretable, nvars);
    SCIPfreeBlockMemoryArray(scip, &solver->neighborvalues, nnonzeros);
@@ -1370,59 +1367,30 @@ void collectObjectiveNeighbors(
    solver->effort += problem->nobjvars;
 }
 
-/** partial Fisher-Yates shuffle to subsample neighbors */
-static
-void subsampleNeighbors(
-   LS_SOLVER*            solver,             /**< solver */
-   SCIP_HEURDATA*        heurdata,           /**< heuristic data */
-   int                   budget              /**< max neighbors to keep */
-   )
-{
-   int randidx;
-   int tmpvar;
-   SCIP_Real tmpvalue;
-   int i;
-
-   assert(solver != NULL);
-   assert(heurdata != NULL);
-
-   if( solver->neighborsize <= budget )
-      return;
-
-   for( i = 0; i < budget; ++i )
-   {
-      randidx = SCIPrandomGetInt(heurdata->randnumgen, 0, solver->neighborsize - 1 - i) + i;
-
-      tmpvar = solver->neighborvaridxs[randidx];
-      tmpvalue = solver->neighborvalues[randidx];
-      solver->neighborvaridxs[randidx] = solver->neighborvaridxs[i];
-      solver->neighborvalues[randidx] = solver->neighborvalues[i];
-      solver->neighborvaridxs[i] = tmpvar;
-      solver->neighborvalues[i] = tmpvalue;
-   }
-   solver->neighborsize = budget;
-}
-
 /** scores neighbors and selects the best move */
 static
 SCIP_Bool selectBestNeighbor(
    SCIP*                 scip,               /**< SCIP data structure */
    LS_SOLVER*            solver,             /**< solver */
+   SCIP_HEURDATA*        heurdata,           /**< heuristic data */
    SCIP_Longint          minscore,           /**< minimum acceptable score */
+   int                   budget,             /**< max neighbors to score */
    int*                  bestvaridx,         /**< pointer to store best variable */
    SCIP_Real*            bestvalue           /**< pointer to store best move value */
    )
 {
    LS_PROBLEM* problem;
+   SCIP_Real movevalue;
    SCIP_Longint bestscore;
    SCIP_Longint bestsubscore;
-   int varidx;
-   SCIP_Real movevalue;
    SCIP_Longint score;
+   int nsample;
+   int idx;
    int i;
 
    assert(scip != NULL);
    assert(solver != NULL);
+   assert(heurdata != NULL);
    assert(bestvaridx != NULL);
    assert(bestvalue != NULL);
 
@@ -1432,33 +1400,54 @@ SCIP_Bool selectBestNeighbor(
    *bestvaridx = -1;
    *bestvalue = 0.0;
 
-   for( i = 0; i < solver->neighborsize; ++i )
+   /* select smaller side */
+   nsample = solver->neighborsize - budget;
+   if( nsample > budget )
+      nsample = budget;
+   else if( nsample < 0 )
+      nsample = 0;
+
+   /* partial Fisher-Yates sampling */
+   for( i = 0; i < nsample; ++i )
    {
-      varidx = solver->neighborvaridxs[i];
+      idx = SCIPrandomGetInt(heurdata->randnumgen, i, solver->neighborsize - 1);
+      SCIPswapInts(&solver->neighborvaridxs[i], &solver->neighborvaridxs[idx]);
+      SCIPswapReals(&solver->neighborvalues[i], &solver->neighborvalues[idx]);
+   }
+
+   /* score shuffled range */
+   if( nsample == budget )
+      i = 0;
+   else
+      nsample = solver->neighborsize;
+   while( i < nsample )
+   {
+      idx = solver->neighborvaridxs[i];
       movevalue = solver->neighborvalues[i];
+      ++i;
 
       /* dedup binaries */
-      if( varidx < problem->nbinvars )
+      if( idx < problem->nbinvars )
       {
-         if( solver->scoretable[varidx] )
+         if( solver->scoretable[idx] )
             continue;
-         solver->scoretable[varidx] = TRUE;
-         solver->scoreidxs[solver->nscoreidxs++] = varidx;
+         solver->scoretable[idx] = TRUE;
+         solver->scoreidxs[solver->nscoreidxs++] = idx;
       }
 
-      score = getTightScore(scip, solver, varidx, movevalue);
+      score = getTightScore(scip, solver, idx, movevalue);
 
       if( score > bestscore
-         || (score == bestscore && solver->subscore > bestsubscore) )
+         || ( score == bestscore && solver->subscore > bestsubscore ) )
       {
          bestscore = score;
          bestsubscore = solver->subscore;
-         *bestvaridx = varidx;
+         *bestvaridx = idx;
          *bestvalue = movevalue;
       }
    }
 
-   return (*bestvaridx >= 0);
+   return *bestvaridx >= 0;
 }
 
 /** cleans up the score table */
@@ -1485,12 +1474,10 @@ SCIP_RETCODE lsSolverUnsatTightMove(
    SCIP_Bool*            result              /**< is move applied? */
    )
 {
-   int nsample;
-   int budget;
-   int bestvaridx;
    SCIP_Real bestvalue;
-   int randidx;
-   int tmp;
+   int bestvaridx;
+   int nsample;
+   int idx;
    int i;
 
    assert(scip != NULL);
@@ -1501,44 +1488,37 @@ SCIP_RETCODE lsSolverUnsatTightMove(
    *result = FALSE;
    solver->neighborsize = 0;
 
-   /* sample unsat constraints */
-   if( solver->nunsat > 0 )
+   /* select smaller side */
+   nsample = solver->nunsat - heurdata->sampleunsat;
+   if( nsample > heurdata->sampleunsat )
+      nsample = heurdata->sampleunsat;
+   else if( nsample < 0 )
+      nsample = 0;
+
+   /* partial Fisher-Yates sampling */
+   for( i = 0; i < nsample; ++i )
    {
-      nsample = MIN(heurdata->sampleunsat, solver->nunsat);
-
-      if( nsample < solver->nunsat )
-      {
-         /* partial Fisher-Yates shuffle on temp copy */
-         BMScopyMemoryArray(solver->tempunsatidxs, solver->unsatidxs, solver->nunsat);
-         for( i = 0; i < nsample; ++i )
-         {
-            randidx = SCIPrandomGetInt(heurdata->randnumgen, 0, solver->nunsat - 1 - i) + i;
-            tmp = solver->tempunsatidxs[i];
-
-            solver->tempunsatidxs[i] = solver->tempunsatidxs[randidx];
-            solver->tempunsatidxs[randidx] = tmp;
-         }
-
-         for( i = 0; i < nsample; ++i )
-            collectConstraintNeighbors(scip, solver, solver->tempunsatidxs[i]);
-      }
-      else
-      {
-         for( i = 0; i < solver->nunsat; ++i )
-            collectConstraintNeighbors(scip, solver, solver->unsatidxs[i]);
-      }
+      idx = SCIPrandomGetInt(heurdata->randnumgen, i, solver->nunsat - 1);
+      SCIPswapInts(&solver->unsatidxs[i], &solver->unsatidxs[idx]);
+      solver->unsatidx[solver->unsatidxs[i]] = i;
+      solver->unsatidx[solver->unsatidxs[idx]] = idx;
    }
+
+   /* collect shuffled range */
+   if( nsample == heurdata->sampleunsat )
+      i = 0;
+   else
+      nsample = solver->nunsat;
+   while( i < nsample )
+      collectConstraintNeighbors(scip, solver, solver->unsatidxs[i++]);
 
    /* collect objective terms when the objective constraint is violated */
    if( solver->optimality && solver->objunsat )
       collectObjectiveNeighbors(scip, solver, FALSE);
 
-   /* subsample to budget */
-   budget = solver->optimality ? heurdata->bmsunsatfeas : heurdata->bmsunsatinfeas;
-   subsampleNeighbors(solver, heurdata, budget);
-
-   /* score and select */
-   if( selectBestNeighbor(scip, solver, (SCIP_Longint)0, &bestvaridx, &bestvalue) )
+   /* score and select within budget */
+   if( selectBestNeighbor(scip, solver, heurdata, (SCIP_Longint)0,
+      solver->optimality ? heurdata->bmsunsatfeas : heurdata->bmsunsatinfeas, &bestvaridx, &bestvalue) )
    {
       lsSolverApplyMove(scip, solver, heurdata, bestvaridx, bestvalue);
       *result = TRUE;
@@ -1601,11 +1581,8 @@ SCIP_RETCODE lsSolverSatTightMove(
       solver->sampledconstrs[solver->sampledidxs[i]] = FALSE;
    solver->nsampled = 0;
 
-   /* subsample to budget */
-   subsampleNeighbors(solver, heurdata, heurdata->bmssat);
-
-   /* score and select */
-   if( selectBestNeighbor(scip, solver, (SCIP_Longint)0, &bestvaridx, &bestvalue) )
+   /* score and select within budget */
+   if( selectBestNeighbor(scip, solver, heurdata, (SCIP_Longint)0, heurdata->bmssat, &bestvaridx, &bestvalue) )
    {
       lsSolverApplyMove(scip, solver, heurdata, bestvaridx, bestvalue);
       *result = TRUE;
@@ -1682,7 +1659,7 @@ SCIP_RETCODE lsSolverFlipMove(
       score = getTightScore(scip, solver, varidx, movevalue);
 
       if( score > bestscore
-         || (score == bestscore && solver->subscore > bestsubscore) )
+         || ( score == bestscore && solver->subscore > bestsubscore ) )
       {
          bestscore = score;
          bestsubscore = solver->subscore;
@@ -1759,11 +1736,8 @@ SCIP_RETCODE lsSolverRandomTightMove(
    if( solver->optimality && solver->objunsat )
       collectObjectiveNeighbors(scip, solver, TRUE);
 
-   /* subsample */
-   subsampleNeighbors(solver, heurdata, heurdata->bmsrandom);
-
-   /* score ALL (accept negative scores) */
-   if( selectBestNeighbor(scip, solver, -SCIP_LONGINT_MAX, &bestvaridx, &bestvalue) )
+   /* score and select within budget accepting negative scores */
+   if( selectBestNeighbor(scip, solver, heurdata, -SCIP_LONGINT_MAX, heurdata->bmsrandom, &bestvaridx, &bestvalue) )
       lsSolverApplyMove(scip, solver, heurdata, bestvaridx, bestvalue);
 
    return SCIP_OKAY;
