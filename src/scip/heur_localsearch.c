@@ -404,7 +404,7 @@ SCIP_RETCODE lsProblemAddConstraint(
    return SCIP_OKAY;
 }
 
-/** allocates and fills variable cross-references and builds the binary index */
+/** allocates and fills variable cross-references */
 static
 SCIP_RETCODE lsProblemFillReferences(
    SCIP*                 scip,               /**< SCIP data structure */
