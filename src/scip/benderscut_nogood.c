@@ -60,7 +60,7 @@
 
 
 #define SCIP_DEFAULT_ADDCUTS             FALSE  /** Should cuts be generated, instead of constraints */
-#define SCIP_DEFAULT_ZEROSOLVARS         FALSE  /** should variables with solution value 0.0 be added to the cut */
+#define SCIP_DEFAULT_ZEROSOLVARS         TRUE   /** should variables with solution value 0.0 be added to the cut */
 
 /*
  * Data structures
