@@ -3628,9 +3628,11 @@ SCIP_RETCODE performNonconvexCutStrengthening(
    for( i = 0; i < benders->nsubproblems; i++ )
       totalsubprobnodes += benders->solvestat[i]->nodes;
 
-   /* the DFBS algorithm is restricted to use less than 5% of the total subproblem solving nodes. */
+   /* the DFBS algorithm is restricted to use less than 5% of the total subproblem solving nodes. If the subproblem is
+    * NULL, this check is meaningless.
+    */
    SCIPsetDebugMsg(set, "dfbsnodes %lld totalsubprobnodes %lld\n", benders->dfbsdata->totalnodes, totalsubprobnodes);
-   if( benders->dfbsdata->totalnodes > 0.05*totalsubprobnodes )
+   if( subproblem != NULL && benders->dfbsdata->totalnodes > 0.05*totalsubprobnodes )
       return SCIP_OKAY;
 
    /* setting the objective value. If the subproblem was infeasible, then it is set to infinity, otherwise the objective
@@ -3658,8 +3660,16 @@ SCIP_RETCODE performNonconvexCutStrengthening(
       SCIPrelDiff(objval, SCIPbendersGetAuxiliaryVarVal(benders, set, sol, probnumber)) <= 0.1 )
       return SCIP_OKAY;
 
-   submastervars = SCIPbendersGetSubproblemMasterVars(benders, probnumber);
-   nsubmastervars = SCIPbendersGetNSubproblemMasterVars(benders, probnumber);
+   if (subproblem != NULL)
+   {
+      submastervars = SCIPbendersGetSubproblemMasterVars(benders, probnumber);
+      nsubmastervars = SCIPbendersGetNSubproblemMasterVars(benders, probnumber);
+   }
+   else
+   {
+      submastervars = SCIPgetVars(scip);
+      nsubmastervars = SCIPgetNVars(scip);
+   }
 
    /* creating the arrays for performing the DFBS */
    SCIP_CALL( SCIPallocBufferArray(scip, &candidates, nsubmastervars) );
