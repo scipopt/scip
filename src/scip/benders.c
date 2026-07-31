@@ -2967,8 +2967,6 @@ SCIP_RETCODE SCIPbendersDeactivate(
 
       if( benders->dfbsdata != NULL )
       {
-         printf("DFBS -- time: %g calls: %d\n", SCIPgetClockTime(set->scip, benders->dfbsdata->clock),
-            benders->dfbsdata->numcalls);
          SCIP_CALL( SCIPfreeClock(set->scip, &(benders->dfbsdata->clock)) );
          BMSfreeMemory(&(benders->dfbsdata));
       }
@@ -3740,19 +3738,6 @@ SCIP_RETCODE performNonconvexCutStrengthening(
       SCIP_Bool evalkeeplist = FALSE;
       int numremove;
 
-#ifdef SCIP_DEBUG
-      printf("Test solution: [");
-      for( i = 0; i < midpoint; i++ )
-         printf("%d ", candidates[i]);
-      printf("] + Keep: [");
-      for( i = 0; i < numkeep; i++ )
-         printf("%d ", keep[i]);
-      printf("] -- Reserve: [");
-      for( i = midpoint; i < numcands; i++ )
-         printf("%d ", candidates[i]);
-      printf("]\n");
-#endif
-
       /* solving the Benders' decomposition subproblem to check whether the test solution achieves the same result as
        * the original solution. */
       SCIP_CALL( execCutStrengtheningSubproblemSolve(benders, set, testsol, probnumber, type, objval, infeasible,
@@ -3905,19 +3890,6 @@ SCIP_RETCODE performNonconvexCutStrengthening(
     * and calling the convex relaxation
     */
    benders->dfbsdata->totalnodes += 100*iterations + nodesprocessed;
-
-#ifdef SCIP_DEBUG
-   printf("Test solution: [");
-   for( i = 0; i < midpoint; i++ )
-      printf("%d ", candidates[i]);
-   printf("] + Keep: [");
-   for( i = 0; i < numkeep; i++ )
-      printf("%d ", keep[i]);
-   printf("] -- Reserve: [");
-   for( i = midpoint; i < numcands; i++ )
-      printf("%d ", candidates[i]);
-   printf("]\n");
-#endif
 
    /* creating the new solution from the keep list and the remaining candidates list.
     * NOTE: the memory allocated for the solution needs to be freed in the calling method
