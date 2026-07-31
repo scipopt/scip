@@ -858,12 +858,17 @@ SCIP_RETCODE addAuxiliaryVariablesToMaster(
       benders->auxiliaryvars[i] = auxiliaryvar;
    }
 
-   //if( !shareauxvars && allsubprobintegralobj )
-   //{
-      //SCIP_Bool infeasible;
-      //SCIP_CALL( SCIPchgVarImplType(scip, benders->masterauxvar, SCIP_IMPLINTTYPE_WEAK, &infeasible) );
-      //assert(!infeasible);
-   //}
+   /* the following code is disabled since it is not possible to change the implied variable type in the INITPRE stage.
+    * There is an open issue to correct this behaviour. This issue will be addressed at a later stage.
+    */
+#ifdef SCIP_DISABLED_CODE
+   if( !shareauxvars && allsubprobintegralobj )
+   {
+      SCIP_Bool infeasible;
+      SCIP_CALL( SCIPchgVarImplType(scip, benders->masterauxvar, SCIP_IMPLINTTYPE_WEAK, &infeasible) );
+      assert(!infeasible);
+   }
+#endif
 
    SCIPfreeBlockMemory(scip, &vardata);
 
