@@ -3414,11 +3414,7 @@ SCIP_RETCODE execCutStrengtheningSubproblemSolve(
    SCIP_CALL( SCIPbendersFreeSubproblem(benders, set, probnumber) );
 
    int nsolveloops = 2;
-   /* solving the subproblem with the test solution
-    * TODO: this is using the internal solve method, which is only called from solveBendersSubproblems. It is not
-    * clear whether this will work as intended. Need to pay attention to any data that is written during the solve
-    * method.
-    */
+   /* solving the subproblem with the test solution */
    for( l = 0; l < nsolveloops; l++ )
    {
       SCIP_BENDERSSOLVELOOP solveloop;    /* identifies what problem type is solve in this solve loop */
@@ -3639,9 +3635,7 @@ SCIP_RETCODE performNonconvexCutStrengthening(
       return SCIP_OKAY;
 
    /* setting the objective value. If the subproblem was infeasible, then it is set to infinity, otherwise the objective
-   * value is set to the subproblem solve objective
-    *
-    * TODO: check that this is a correct check. The optimality is actually checked in the benders cut methods.
+    * value is set to the subproblem solve objective
     */
    if( substatus == SCIP_BENDERSSUBSTATUS_AUXVIOL )
    {
@@ -3658,7 +3652,7 @@ SCIP_RETCODE performNonconvexCutStrengthening(
 
    /* if the gap between the auxiliary variable value and the subproblem objective is less than 0.1, then we abort the
     * cut strengthening
-   */
+    */
    if( substatus == SCIP_BENDERSSUBSTATUS_AUXVIOL &&
       SCIPrelDiff(objval, SCIPbendersGetAuxiliaryVarVal(benders, set, sol, probnumber)) <= 0.1 )
       return SCIP_OKAY;
@@ -3697,6 +3691,7 @@ SCIP_RETCODE performNonconvexCutStrengthening(
    }
 
    SCIP_CALL( SCIPstartClock(scip, benders->dfbsdata->clock) );
+
    /* initialising the keep list */
    SCIP_CALL( SCIPallocBufferArray(scip, &keep, numcands) );
    numkeep = 0;
@@ -3739,7 +3734,9 @@ SCIP_RETCODE performNonconvexCutStrengthening(
       int numremove;
 
       /* solving the Benders' decomposition subproblem to check whether the test solution achieves the same result as
-       * the original solution. */
+       * the original solution. If the test solution achieves the same result as the original solution, then the success
+       * flag is set to TRUE. The value of the success flag is used to determine the next steps in the algorithm.
+       */
       SCIP_CALL( execCutStrengtheningSubproblemSolve(benders, set, testsol, probnumber, type, objval, infeasible,
             &solved, &success) );
       nodesprocessed += subproblem != NULL ? SCIPgetNNodes(subproblem) : 100;
@@ -3754,10 +3751,10 @@ SCIP_RETCODE performNonconvexCutStrengthening(
          break;
 
       /* keep list test.
-       * If the subproblem solve is not successful, then that implies that there will be an update to the partition. In
+       * If success == FALSE, then that implies that there will be an update to the partition. In
        * this case, if the remaining set of variables contains only one variable, then this implies that this variable
        * is needed in the final test solution.
-       * If the subproblem solve is successful, since all previous solves up to this point were not, then if the
+       * If success == TRUE, since all previous solves up to this point resulted in success == FALSE, then if the
        * non-discarded partition contains only a single variable, then this must be part of the final test soluiton.
        */
       if( success && partitionsize == 1 )
@@ -3784,7 +3781,8 @@ SCIP_RETCODE performNonconvexCutStrengthening(
       }
 
       /* evaluating the current keep list. If the keep list provides a sufficient solution, then the algorithm is
-       * complete. If not, the remaining candidates are split forming the new test and spare sets.
+       * complete. If not, the remaining candidates are split forming the new test and spare sets. The trigger for
+       * evaluating the keep list is given above when evaluating success and the partition size.
        */
       if( evalkeeplist )
       {
@@ -3807,13 +3805,11 @@ SCIP_RETCODE performNonconvexCutStrengthening(
             break;
          }
 
-         /* the candidate list and partition needs to be updated to remove the single variable partition. */
-
-         /* the candidates is reduced back down to the set S. The partition size is equivalent to T1. The midpoint is
+         /* the candidate list and partition needs to be updated to remove the single variable partition.
+          * the candidates is reduced back down to the set S. The partition size is equivalent to T1. The midpoint is
           * the split between T1 and T2. Reducing the numcands effectively removes T1 and T2 from further consideration.  */
          numcands -= numremove;
 
-         /* TODO check the validity of this part. It is different to the algorithm */
          if( numcands == 1 )
          {
             midpoint = numcands;
@@ -3898,7 +3894,7 @@ SCIP_RETCODE performNonconvexCutStrengthening(
    SCIP_CALL( setTestSolutionValues(scip, (*newsol), submastervars, keep, numkeep, 1.0) );
    SCIP_CALL( setTestSolutionValues(scip, (*newsol), submastervars, candidates, numcands, 1.0) );
 
-   /* rerunning the solve, to put the Benders' subproblem into a state that is necessary for the cut strengthening
+   /* rerunning the solve, to put the Benders' subproblem into a state that is necessary for the cut generation
     * methods
     */
    SCIP_CALL( execCutStrengtheningSubproblemSolve(benders, set, (*newsol), probnumber, type, objval, infeasible,
@@ -3906,7 +3902,7 @@ SCIP_RETCODE performNonconvexCutStrengthening(
    assert(success);
 
    /* if the subproblem was not successfully solved, then we don't use the new solution. The solution is freed, and the
-    * calling function will use the initial solution
+    * calling function will use the initial solution.
     */
    if( !solved )
    {
