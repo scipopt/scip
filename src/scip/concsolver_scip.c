@@ -1066,9 +1066,10 @@ SCIP_DECL_CONCSOLVERSYNCWRITE(concsolverScipSyncWrite)
 
    /* when the solution pool is enabled new incumbents are shared immediately through the pool, so the
     * synchronization data carries only bound changes; in the regular protocol the best
-    * solutions are collected into the synchronization data here
+    * solutions are collected into the synchronization data here. With maxsharedsols set to zero no
+    * solutions are shared at all and the synchronization exchanges only bounds and status.
     */
-   if( !SCIPsyncstoreSolPoolEnabled(syncstore) )
+   if( !SCIPsyncstoreSolPoolEnabled(syncstore) && maxsharedsols > 0 )
    {
       /* consider at most maxcandsols many solutions, and since the solution array is sorted, consider best solutions */
       nsols = SCIPgetNSols(data->solverscip);

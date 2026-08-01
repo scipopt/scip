@@ -2890,7 +2890,7 @@ SCIP_RETCODE SCIPsetCreate(
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddIntParam(*set, messagehdlr, blkmem,
          "concurrent/sync/maxnsols",
-         "maximum number of solutions that will be shared in a single synchronization",
+         "maximum number of solutions that will be shared in a single synchronization, zero shares none",
          &(*set)->concurrent_maxnsols, FALSE, SCIP_DEFAULT_CONCURRENT_MAXNSOLS, 0, 1000,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddIntParam(*set, messagehdlr, blkmem,
