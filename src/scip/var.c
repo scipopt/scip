@@ -4267,12 +4267,7 @@ SCIP_RETCODE SCIPvarAddLocks(
          assert(!lockvar->donotaggr);
 
          if( lockvar->data.aggregate.scalar < 0.0 )
-         {
-            int tmp = addnlocksup;
-
-            addnlocksup = addnlocksdown;
-            addnlocksdown = tmp;
-         }
+            SCIPswapInts(&addnlocksup, &addnlocksdown);
 
          lockvar = lockvar->data.aggregate.var;
          break;
@@ -4305,14 +4300,11 @@ SCIP_RETCODE SCIPvarAddLocks(
       }
       case SCIP_VARSTATUS_NEGATED:
       {
-         int tmp = addnlocksup;
-
          assert(lockvar->negatedvar != NULL);
          assert(SCIPvarGetStatus(lockvar->negatedvar) != SCIP_VARSTATUS_NEGATED);
          assert(lockvar->negatedvar->negatedvar == lockvar);
 
-         addnlocksup = addnlocksdown;
-         addnlocksdown = tmp;
+         SCIPswapInts(&addnlocksup, &addnlocksdown);
 
          lockvar = lockvar->negatedvar;
          break;
