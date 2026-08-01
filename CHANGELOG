@@ -63,18 +63,18 @@ Interface changes
 - `iis/greedy/detectcomponents`: should the deletion filter detect and delete disconnected components
 - `iis/greedy/componentminsize`: number of constraints a component must have at least to be detected
 - `heuristics/feasjump/weightupdatedecay`: decay factor for the weight update
-- `heuristics/feasjump/maxeffort`: maximum effort spent in feasibility jump
-- `heuristics/feasjump/verbosity`: verbosity level of the feasibility jump solver
-- `heuristics/feasjump/onlywithoutsol`: should feasibility jump be called only if no solution exists?
-- `heuristics/feasjump/beforepresol`: should the heuristic be called before presolving?
-- `heuristics/feasjump/useinitialsol`: should the feasibility jump use the best known solution as initialization?
-- `heuristics/feasjump/iterations`: number of iterations to check if the heuristic reduces the total number of violated constraints
-- `heuristics/feasjump/mindecrease`: minimum percentage decrease for the number of violated constraints
-- `heuristics/feasjump/maxsols`: maximum number of solutions to find
-- `heuristics/feasjump/samplesize`: number of candidates to sample in tournament selection
 - `heuristics/feasjump/randprobgood`: probability of random selection from good variables
 - `heuristics/feasjump/randprobviol`: probability of random selection from violated constraint
-- `heuristics/feasjump/callbackeffort`: effort between callbacks
+- `heuristics/feasjump/samplesize`: number of candidates to sample in tournament selection
+- `heuristics/feasjump/verbosity`: verbosity level of the feasibility jump solver
+- `heuristics/feasjump/maxsols`: maximum number of solutions to find (-1: unlimited)
+- `heuristics/feasjump/mindecreaserel`: minimum relative decrease to reset the effort budget
+- `heuristics/feasjump/maxeffortfac`: maximum effort factor per nonzero without improvement (-1: unlimited)
+- `heuristics/feasjump/recomputefreq`: activity recomputation frequency (-1: off, 0: near boundary only)
+- `heuristics/feasjump/useinitialsol`: should best known solution be used?
+- `heuristics/feasjump/onlymainscip`: should run in subscip be skipped?
+- `heuristics/feasjump/onlybeforenode`: should run before presolving be skipped?
+- `heuristics/feasjump/onlywithoutsol`: should run with solution be skipped?
 - `estimation/checkpoint/depthlim`: depth below which checkpoint is updated
 - `symmetries/enabled`: whether symmetry handling in enabled
 - `symmetries/tryaddtiming`: whether symmetries are computed before or at the end of presolving

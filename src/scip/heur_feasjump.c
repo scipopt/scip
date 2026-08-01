@@ -39,36 +39,34 @@
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 #include <assert.h>
+#include <limits.h>
 #include <string.h>
 #include <math.h>
 
 #include "blockmemshell/memory.h"
 #include "scip/heur_feasjump.h"
-#include "scip/pub_event.h"
+#include "scip/pub_cons.h"
 #include "scip/pub_heur.h"
 #include "scip/pub_lp.h"
 #include "scip/pub_message.h"
 #include "scip/pub_misc.h"
-#include "scip/pub_sol.h"
 #include "scip/pub_var.h"
-#include "scip/pub_cons.h"
-#include "scip/scip_event.h"
+#include "scip/scip_cons.h"
+#include "scip/scip_copy.h"
 #include "scip/scip_general.h"
 #include "scip/scip_heur.h"
-#include "scip/scip_cons.h"
 #include "scip/scip_lp.h"
 #include "scip/scip_mem.h"
 #include "scip/scip_message.h"
 #include "scip/scip_numerics.h"
 #include "scip/scip_param.h"
 #include "scip/scip_prob.h"
-#include "scip/scip_probing.h"
 #include "scip/scip_randnumgen.h"
 #include "scip/scip_sol.h"
 #include "scip/scip_solvingstats.h"
+#include "scip/scip_timing.h"
 #include "scip/scip_tree.h"
 #include "scip/scip_var.h"
-#include "scip/scip_timing.h"
 
 #define HEUR_NAME             "feasjump"
 #define HEUR_DESC             "feasibility jump"
@@ -78,33 +76,26 @@
 #define HEUR_FREQOFS          0
 #define HEUR_MAXDEPTH         -1
 #define HEUR_TIMING           SCIP_HEURTIMING_BEFOREPRESOL | SCIP_HEURTIMING_BEFORENODE
-#define HEUR_USESSUBSCIP      FALSE  /**< does the heuristic use a secondary SCIP instance? */
+#define HEUR_USESSUBSCIP      FALSE
 
 #define DEFAULT_RANDSEED       29        /**< default random seed */
 #define DEFAULT_WEIGHTDECAY    1.0       /**< decay factor for the weight update */
-#define DEFAULT_MAXEFFORT      50000000  /**< maximum effort spend in feasibility jump */
-#define DEFAULT_VERBOSITY      0         /**< verbosity level of the feasibility jump solver */
-#define DEFAULT_ONLYWITHOUTSOL FALSE     /**< should the feasibility jump be called only if no solution exists? */
-#define DEFAULT_USEINITIALSOL  FALSE     /**< should the feasibility jump use the best known solution as
-                                          *   initialization? */
-#define DEFAULT_ITERATIONS     1000      /**< number of iterations to check if the heuristic reduces the total
-                                          *   number of violated constraints */
-#define DEFAULT_MINPERCENTDECREASE   10  /**< minimum percentage decrease for the number of violated constraints */
-#define DEFAULT_MAXSOLS        1         /**< maximum number of solutions to find */
-#define DEFAULT_BEFORE_PRESOL  FALSE     /**< should the heuristic be called before presolving? */
-#define DEFAULT_SAMPLESIZE     25        /**< number of candidates to sample in tournament selection */
 #define DEFAULT_RANDPROBGOOD   0.001     /**< probability of random selection from good variables */
 #define DEFAULT_RANDPROBVIOL   0.01      /**< probability of random selection from violated constraint */
-#define DEFAULT_CALLBACKEFFORT 500000    /**< effort between callbacks */
+#define DEFAULT_SAMPLESIZE     25        /**< number of candidates to sample in tournament selection */
+#define DEFAULT_VERBOSITY      0         /**< verbosity level of the feasibility jump solver */
+#define DEFAULT_MAXSOLS        1         /**< maximum number of solutions to find (-1: unlimited) */
+#define DEFAULT_MINDECREASEREL 0.1       /**< minimum relative decrease to reset the effort budget */
+#define DEFAULT_MAXEFFORTFAC   128       /**< maximum effort factor per nonzero without improvement (-1: unlimited) */
+#define DEFAULT_RECOMPUTEFREQ  0         /**< activity recomputation frequency (-1: off, 0: near boundary only) */
+#define DEFAULT_USEINITIALSOL  FALSE     /**< should best known solution be used? */
+#define DEFAULT_ONLYMAINSCIP   FALSE     /**< should run in subscip be skipped? */
+#define DEFAULT_ONLYBEFORENODE TRUE      /**< should run before presolving be skipped? */
+#define DEFAULT_ONLYWITHOUTSOL FALSE     /**< should run with solution be skipped? */
 
-/* row types */
-enum FJ_Rowtype
-{
-   FJ_EQUAL = 0,
-   FJ_LTE   = 1,
-   FJ_GTE   = 2
-};
-typedef enum FJ_Rowtype FJ_ROWTYPE;
+/*
+ * Data structures
+ */
 
 /* variable types */
 enum FJ_Vartype
@@ -131,21 +122,16 @@ struct FJ_Var
    SCIP_Real             objcoeff;           /**< objective coefficient */
    FJ_IDXCOEFF*          coeffs;             /**< coefficients in constraints */
    int                   ncoeffs;            /**< number of coefficients */
-   int                   coeffssize;         /**< size of coeffs array */
 };
 typedef struct FJ_Var FJ_VAR;
 
 /* constraint structure */
 struct FJ_Constraint
 {
-   FJ_ROWTYPE            sense;              /**< constraint sense */
-   SCIP_Real             rhs;                /**< right hand side */
+   SCIP_Real             lhs;                /**< left hand side, -infinity if single */
+   SCIP_Real             rhs;                /**< right hand side, infinity if inactive */
    FJ_IDXCOEFF*          coeffs;             /**< coefficients */
    int                   ncoeffs;            /**< number of coefficients */
-   int                   coeffssize;         /**< size of coeffs array */
-   SCIP_Real             weight;             /**< constraint weight */
-   SCIP_Real             incumbentlhs;       /**< LHS value at incumbent */
-   int                   violatedidx;        /**< index in violated constraints list, -1 if satisfied */
 };
 typedef struct FJ_Constraint FJ_CONSTRAINT;
 
@@ -168,19 +154,14 @@ typedef struct FJ_ShiftBuffer FJ_SHIFTBUFFER;
 /* feasibility jump problem data */
 struct FJ_Problem
 {
-   SCIP*                 scip;               /**< SCIP data structure */
    FJ_VAR*               vars;               /**< variables */
    int                   nvars;              /**< number of variables */
-   int                   varssize;           /**< size of vars array */
    FJ_CONSTRAINT*        constraints;        /**< constraints */
    int                   nconstraints;       /**< number of constraints */
    int                   constraintssize;    /**< size of constraints array */
-   SCIP_Real*            incumbentassignment;/**< incumbent assignment */
-   int*                  violatedconstraints;/**< violated constraints indices */
-   int                   nviolated;          /**< number of violated constraints */
-   int                   violatedsize;       /**< size of violated array */
    int                   nnonzeros;          /**< number of nonzeros */
-   SCIP_Real             incumbentobjective; /**< incumbent objective value */
+   SCIP_Bool             feasibility;        /**< problem without objective? */
+   SCIP_Real             locallowerbound;    /**< local lower bound */
 };
 typedef struct FJ_Problem FJ_PROBLEM;
 
@@ -201,26 +182,19 @@ struct FJ_Solver
    int                   ngoodvars;          /**< number of good variables */
    int                   goodvarssize;       /**< size of good vars array */
    int*                  goodvarssetidx;     /**< mapping from variable to index in goodvarsset */
-   SCIP_RANDNUMGEN*      randnumgen;         /**< random number generator */
-   SCIP_Real             bestobjective;      /**< best objective value found */
+   SCIP_Real*            incumbentassignment;/**< incumbent assignment */
+   SCIP_Real*            act;                /**< per-constraint current activity */
+   int*                  unsatidxs;          /**< violated constraint indices */
+   int                   nunsat;             /**< number of violated constraints */
+   int                   unsatidxssize;      /**< size of violated array */
+   int*                  consnmoves;         /**< per-constraint moves since the last exact activity recomputation */
+   SCIP_Real*            weight;             /**< per-constraint penalty weight */
+   int*                  unsatidx;           /**< per-constraint position in unsatidxs, -1 if satisfied */
    SCIP_Real             objectiveweight;    /**< weight for objective function */
-   int                   bestviolationscore; /**< best violation score */
-   int                   effortatlastcallback;/**< effort at last callback */
-   int                   effortatlastimprovement;/**< effort at last improvement */
-   int                   totaleffort;        /**< total effort */
-   int                   violationsdecrease; /**< decrease in violations */
-   int                   prevviolations;     /**< previous number of violations */
-   int                   percentdecrease;    /**< percent decrease in violations */
-   int                   iterations;         /**< iteration count */
-   SCIP_Real             weightupdatedecay;  /**< weight update decay */
-   SCIP_Real             weightupdateincrement;/**< weight update increment */
-   int                   nbumps;             /**< number of weight bumps */
-   int                   verbosity;          /**< verbosity level */
-   int                   checkiterations;    /**< number of iterations to check progress */
-   int                   samplesize;         /**< number of candidates to sample in tournament selection */
-   SCIP_Real             randprobgood;       /**< probability of random selection from good variables */
-   SCIP_Real             randprobviol;       /**< probability of random selection from violated constraint */
-   int                   callbackeffort;     /**< effort between callbacks */
+   SCIP_Real             weightupdateincrement; /**< weight update increment */
+   int                   nsols;              /**< number of solutions found */
+   int                   previolations;      /**< number of violations at last improvement */
+   SCIP_Longint          effort;             /**< effort spent since last improvement */
 };
 typedef struct FJ_Solver FJ_SOLVER;
 
@@ -229,20 +203,19 @@ struct SCIP_HeurData
 {
    SCIP_RANDNUMGEN*      randnumgen;         /**< random number generator */
    SCIP_Real             weightupdatedecay;  /**< decay factor for the weight update */
-   int                   maxeffort;          /**< max effort in feasibility jump */
-   int                   verbosity;          /**< verbosity level of the feasibility jump solver */
-   SCIP_Bool             onlywithoutsol;     /**< should the heuristic only be called, if no primal solution exists? */
-   SCIP_Bool             useinitialsol;      /**< should the heuristic use the best known solution as initialization? */
-   SCIP_Bool             beforepresol;       /**< should the heuristic be called before presolving? */
-   int                   iterations;         /**< number of iterations to check if the heuristic reduces the
-                                              *   total number of violated constraints */
-   int                   mindecrease;        /**< minimum percentage decrease for the number of violated
-                                              *   constraints */
-   int                   maxsols;            /**< maximum number of solutions to find */
-   int                   samplesize;         /**< number of candidates to sample in tournament selection */
    SCIP_Real             randprobgood;       /**< probability of random selection from good variables */
    SCIP_Real             randprobviol;       /**< probability of random selection from violated constraint */
-   int                   callbackeffort;     /**< effort between callbacks */
+   int                   samplesize;         /**< number of candidates to sample in tournament selection */
+   int                   verbosity;          /**< verbosity level of the feasibility jump solver */
+   int                   maxsols;            /**< maximum number of solutions to find (-1: unlimited) */
+   SCIP_Real             mindecreaserel;     /**< minimum relative decrease to reset the effort budget */
+   int                   maxeffortfac;       /**< maximum effort factor per nonzero without improvement (-1: unlimited) */
+   int                   recomputefreq;      /**< activity recomputation frequency (-1: off, 0: near boundary only) */
+   SCIP_Bool             useinitialsol;      /**< should best known solution be used? */
+   SCIP_Bool             onlymainscip;       /**< should run in subscip be skipped? */
+   SCIP_Bool             onlybeforenode;     /**< should run before presolving be skipped? */
+   SCIP_Bool             onlywithoutsol;     /**< should run with solution be skipped? */
+   SCIP_Longint          maxeffort;          /**< absolute effort budget without improvement (maxeffortfac * nnonzeros) */
 };
 
 
@@ -253,20 +226,21 @@ struct SCIP_HeurData
 /** computes the constraint's contribution to the feasibility score */
 static
 SCIP_Real fjConstraintScore(
+   SCIP*                 scip,               /**< SCIP data structure */
    FJ_CONSTRAINT*        constraint,         /**< constraint */
-   SCIP_Real             lhs                 /**< LHS value */
+   SCIP_Real             act                 /**< activity */
    )
 {
+   assert(scip != NULL);
    assert(constraint != NULL);
 
-   lhs -= constraint->rhs;
+   if( !SCIPisInfinity(scip, constraint->rhs) && act >= constraint->rhs )
+      return constraint->rhs - act;
 
-   if( constraint->sense == FJ_EQUAL )
-      return -REALABS(lhs);
-   else if( constraint->sense == FJ_LTE )
-      return -MAX(lhs, 0.0);
-   else
-      return MIN(lhs, 0.0);
+   if( !SCIPisInfinity(scip, -constraint->lhs) && act <= constraint->lhs )
+      return act - constraint->lhs;
+
+   return 0.0;
 }
 
 /** creates a problem */
@@ -282,19 +256,14 @@ SCIP_RETCODE fjProblemCreate(
    assert(problem != NULL);
 
    SCIP_CALL( SCIPallocBlockMemory(scip, &prob) );
-   prob->scip = scip;
    prob->vars = NULL;
    prob->nvars = 0;
-   prob->varssize = 0;
    prob->constraints = NULL;
    prob->nconstraints = 0;
    prob->constraintssize = 0;
-   prob->incumbentassignment = NULL;
-   prob->violatedconstraints = NULL;
-   prob->nviolated = 0;
-   prob->violatedsize = 0;
    prob->nnonzeros = 0;
-   prob->incumbentobjective = 0.0;
+   prob->feasibility = TRUE;
+   prob->locallowerbound = 0.0;
 
    *problem = prob;
 
@@ -317,12 +286,6 @@ SCIP_RETCODE fjProblemFree(
    prob = *problem;
    assert(prob != NULL);
 
-   if( prob->violatedconstraints != NULL )
-      SCIPfreeBlockMemoryArray(scip, &prob->violatedconstraints, prob->violatedsize);
-
-   if( prob->incumbentassignment != NULL )
-      SCIPfreeBlockMemoryArray(scip, &prob->incumbentassignment, prob->nvars);
-
    /* free constraint data */
    if( prob->constraints != NULL )
    {
@@ -330,7 +293,7 @@ SCIP_RETCODE fjProblemFree(
       {
          if( prob->constraints[i].coeffs != NULL )
          {
-            SCIPfreeBlockMemoryArray(scip, &prob->constraints[i].coeffs, prob->constraints[i].coeffssize);
+            SCIPfreeBlockMemoryArray(scip, &prob->constraints[i].coeffs, prob->constraints[i].ncoeffs);
          }
       }
       SCIPfreeBlockMemoryArray(scip, &prob->constraints, prob->constraintssize);
@@ -343,10 +306,10 @@ SCIP_RETCODE fjProblemFree(
       {
          if( prob->vars[i].coeffs != NULL )
          {
-            SCIPfreeBlockMemoryArray(scip, &prob->vars[i].coeffs, prob->vars[i].coeffssize);
+            SCIPfreeBlockMemoryArray(scip, &prob->vars[i].coeffs, prob->vars[i].ncoeffs);
          }
       }
-      SCIPfreeBlockMemoryArray(scip, &prob->vars, prob->varssize);
+      SCIPfreeBlockMemoryArray(scip, &prob->vars, prob->nvars);
    }
 
    SCIPfreeBlockMemory(scip, problem);
@@ -370,25 +333,17 @@ SCIP_RETCODE fjProblemAddVar(
 
    assert(scip != NULL);
    assert(problem != NULL);
+   assert(problem->vars != NULL);
    assert(idx != NULL);
 
-   /* ensure capacity */
-   if( problem->nvars >= problem->varssize )
-   {
-      int newsize = SCIPcalcMemGrowSize(scip, problem->nvars + 1);
-      SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &problem->vars, problem->varssize, newsize) );
-      problem->varssize = newsize;
-   }
-
    *idx = problem->nvars;
-   var = &problem->vars[problem->nvars];
+   var = problem->vars + problem->nvars;
    var->vartype = vartype;
    var->lb = lb;
    var->ub = ub;
    var->objcoeff = objcoeff;
    var->coeffs = NULL;
    var->ncoeffs = 0;
-   var->coeffssize = 0;
 
    problem->nvars++;
 
@@ -400,157 +355,133 @@ static
 SCIP_RETCODE fjProblemAddConstraint(
    SCIP*                 scip,               /**< SCIP data structure */
    FJ_PROBLEM*           problem,            /**< problem */
-   FJ_ROWTYPE            sense,              /**< constraint sense */
+   SCIP_Real*            consvals,           /**< coefficient values */
+   int*                  consinds,           /**< variable indices */
+   int                   consnvars,          /**< number of variables */
+   SCIP_Real             constant,           /**< row activity constant */
+   SCIP_Real             lhs,                /**< left hand side */
    SCIP_Real             rhs,                /**< right hand side */
-   int                   ncoeffs,            /**< number of coefficients */
-   int*                  rowinds,            /**< variable indices */
-   SCIP_Real*            rowcoeffs,          /**< coefficients */
-   int*                  idx                 /**< pointer to store constraint index */
+   SCIP_Bool             normalize,          /**< should be normalized? */
+   SCIP_Bool*            success             /**< is addition successful? */
    )
 {
    FJ_CONSTRAINT* constraint;
+   SCIP_Real abslhs;
+   SCIP_Real absrhs;
    SCIP_Real scalar;
    int i;
 
    assert(scip != NULL);
    assert(problem != NULL);
-   assert(rowinds != NULL || ncoeffs == 0);
-   assert(rowcoeffs != NULL || ncoeffs == 0);
+   assert(problem->constraints != NULL);
+   assert(consvals != NULL);
+   assert(consinds != NULL);
+   assert(consnvars >= 1);
+   assert(success != NULL);
 
-   scalar = MAX3(rhs, -rhs, 1.0);
-
-   /* check if constraint is trivially satisfied or infeasible */
-   if( ncoeffs == 0 )
+   /* normalize the sides so that right hand side is single or non-negative */
+   if( normalize )
    {
-      SCIP_Bool ok;
-      if( sense == FJ_LTE )
-         ok = !SCIPisFeasNegative(scip, rhs / scalar);
-      else if( sense == FJ_GTE )
-         ok = !SCIPisFeasPositive(scip, rhs / scalar);
-      else
-         ok = SCIPisFeasZero(scip, rhs / scalar);
+      assert(!SCIPisInfinity(scip, -lhs) || !SCIPisInfinity(scip, rhs));
+      abslhs = REALABS(lhs);
+      absrhs = REALABS(rhs);
+      scalar = MIN(abslhs, absrhs);
+      if( scalar < 1.0 )
+         scalar = 1.0;
 
-      if( idx != NULL )
-         *idx = ok ? INT_MAX : INT_MIN;
+      if( SCIPisInfinity(scip, rhs) || ( !SCIPisInfinity(scip, -lhs) && rhs < 0.0 ) )
+      {
+         SCIPswapReals(&lhs, &rhs);
+         scalar *= -1.0;
+      }
+   }
+   else
+      scalar = 1.0;
+
+   lhs = !SCIPisInfinity(scip, scalar > 0.0 ? -lhs : lhs) ? (lhs - constant) / scalar : -SCIPinfinity(scip);
+   rhs = (rhs - constant) / scalar;
+
+   /* terminate if a normalized side exceeds infinity threshold */
+   if( SCIPisInfinity(scip, lhs) || SCIPisInfinity(scip, -rhs) )
+   {
+      *success = FALSE;
+
       return SCIP_OKAY;
    }
+   assert(lhs <= rhs);
 
-   /* ensure capacity */
-   if( problem->nconstraints >= problem->constraintssize )
+   *success = TRUE;
+
+   constraint = problem->constraints + problem->nconstraints;
+   constraint->lhs = lhs;
+   constraint->rhs = rhs;
+   constraint->ncoeffs = consnvars;
+
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &constraint->coeffs, consnvars) );
+
+   /* store the normalized coefficients */
+   for( i = 0; i < consnvars; ++i )
    {
-      int newsize = SCIPcalcMemGrowSize(scip, problem->nconstraints + 1);
-      SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &problem->constraints, problem->constraintssize, newsize) );
-      problem->constraintssize = newsize;
+      constraint->coeffs[i].idx = consinds[i];
+      constraint->coeffs[i].coeff = consvals[i] / scalar;
    }
 
-   if( idx != NULL )
-      *idx = problem->nconstraints;
-
-   constraint = &problem->constraints[problem->nconstraints];
-   constraint->sense = sense;
-   constraint->rhs = rhs / scalar;
-   constraint->ncoeffs = 0;
-   constraint->coeffssize = ncoeffs;
-   constraint->weight = 1.0;
-   constraint->incumbentlhs = 0.0;
-   constraint->violatedidx = -1;
-
-   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &constraint->coeffs, constraint->coeffssize) );
-
-   /* add coefficients and update variable structures */
-   for( i = 0; i < ncoeffs; ++i )
-   {
-      FJ_VAR* var;
-
-      constraint->coeffs[constraint->ncoeffs].idx = rowinds[i];
-      constraint->coeffs[constraint->ncoeffs].coeff = rowcoeffs[i] / scalar;
-      constraint->ncoeffs++;
-
-      var = &problem->vars[rowinds[i]];
-      if( var->ncoeffs >= var->coeffssize )
-      {
-         int newsize = SCIPcalcMemGrowSize(scip, var->ncoeffs + 1);
-         SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &var->coeffs, var->coeffssize, newsize) );
-         var->coeffssize = newsize;
-      }
-      var->coeffs[var->ncoeffs].idx = problem->nconstraints;
-      var->coeffs[var->ncoeffs].coeff = rowcoeffs[i] / scalar;
-      var->ncoeffs++;
-   }
-
-   problem->nnonzeros += constraint->ncoeffs;
+   problem->nnonzeros += consnvars;
    problem->nconstraints++;
 
    return SCIP_OKAY;
 }
 
-/** resets the incumbent solution */
+/** allocates and fills variable cross-references */
 static
-SCIP_RETCODE fjProblemResetIncumbent(
+SCIP_RETCODE fjProblemFillReferences(
    SCIP*                 scip,               /**< SCIP data structure */
    FJ_PROBLEM*           problem,            /**< problem */
-   SCIP_Real*            initialvalues       /**< initial values, or NULL */
+   int*                  nvarcoeffs          /**< number of coefficients per variable */
    )
 {
+   FJ_VAR* var;
+   FJ_CONSTRAINT* constraint;
+   int varidx;
    int i;
    int j;
 
    assert(scip != NULL);
    assert(problem != NULL);
+   assert(nvarcoeffs != NULL);
 
-   /* allocate arrays if needed */
-   if( problem->incumbentassignment == NULL )
-   {
-      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &problem->incumbentassignment, problem->nvars) );
-   }
-   if( problem->violatedconstraints == NULL )
-   {
-      problem->violatedsize = SCIPcalcMemGrowSize(scip, problem->nconstraints);
-      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &problem->violatedconstraints, problem->violatedsize) );
-   }
-
-   /* set initial values */
-   if( initialvalues != NULL )
-   {
-      for( i = 0; i < problem->nvars; ++i )
-         problem->incumbentassignment[i] = initialvalues[i];
-   }
-   else
-   {
-      for( i = 0; i < problem->nvars; ++i )
-         problem->incumbentassignment[i] = !SCIPisInfinity(scip, -problem->vars[i].lb) ? problem->vars[i].lb
-               : !SCIPisInfinity(scip, problem->vars[i].ub) ? problem->vars[i].ub : 0.0;
-   }
-
-   /* reset incumbent objective */
-   problem->incumbentobjective = 0.0;
+   /* allocate the variable coefficients */
    for( i = 0; i < problem->nvars; ++i )
-      problem->incumbentobjective += problem->vars[i].objcoeff * problem->incumbentassignment[i];
+   {
+      assert(problem->vars[i].coeffs == NULL);
+      assert(problem->vars[i].ncoeffs == 0);
 
-   /* reset constraint LHSs and violated constraints list */
-   problem->nviolated = 0;
+      if( nvarcoeffs[i] > 0 )
+      {
+         SCIP_CALL( SCIPallocBlockMemoryArray(scip, &problem->vars[i].coeffs, nvarcoeffs[i]) );
+      }
+   }
+
+   /* fill the variable cross-references from the constraints */
    for( i = 0; i < problem->nconstraints; ++i )
    {
-      FJ_CONSTRAINT* constraint = &problem->constraints[i];
-      constraint->incumbentlhs = 0.0;
+      constraint = problem->constraints + i;
 
       for( j = 0; j < constraint->ncoeffs; ++j )
       {
-         int varidx = constraint->coeffs[j].idx;
-         constraint->incumbentlhs += constraint->coeffs[j].coeff * problem->incumbentassignment[varidx];
-      }
-
-      if( SCIPisFeasNegative(scip, fjConstraintScore(constraint, constraint->incumbentlhs)) )
-      {
-         constraint->violatedidx = problem->nviolated;
-         problem->violatedconstraints[problem->nviolated] = i;
-         problem->nviolated++;
-      }
-      else
-      {
-         constraint->violatedidx = -1;
+         varidx = constraint->coeffs[j].idx;
+         var = problem->vars + varidx;
+         assert(var->ncoeffs < nvarcoeffs[varidx]);
+         var->coeffs[var->ncoeffs].idx = i;
+         var->coeffs[var->ncoeffs].coeff = constraint->coeffs[j].coeff;
+         var->ncoeffs++;
       }
    }
+
+#ifndef NDEBUG
+   for( i = 0; i < problem->nvars; ++i )
+      assert(problem->vars[i].ncoeffs == nvarcoeffs[i]);
+#endif
 
    return SCIP_OKAY;
 }
@@ -580,6 +511,216 @@ SCIP_DECL_SORTPTRCOMP(fjShiftBufferComp)
       return 0;
 }
 
+/** recomputes a constraint's incumbent activity exactly from its coefficients and resets its move counter */
+static
+void fjSolverRecomputeConstraint(
+   FJ_SOLVER*            solver,             /**< solver */
+   int                   constridx           /**< constraint index */
+   )
+{
+   FJ_CONSTRAINT* constraint;
+   int i;
+
+   assert(solver != NULL);
+   assert(constridx >= 0 && constridx < solver->problem->nconstraints);
+
+   constraint = solver->problem->constraints + constridx;
+   solver->act[constridx] = 0.0;
+
+   for( i = 0; i < constraint->ncoeffs; ++i )
+      solver->act[constridx] += constraint->coeffs[i].coeff * solver->incumbentassignment[constraint->coeffs[i].idx];
+
+   solver->consnmoves[constridx] = 0;
+}
+
+/** creates a solver */
+static
+SCIP_RETCODE fjSolverCreate(
+   SCIP*                 scip,               /**< SCIP data structure */
+   FJ_SOLVER**           solver,             /**< pointer to solver */
+   FJ_PROBLEM*           problem             /**< problem */
+   )
+{
+   FJ_SOLVER* solv;
+   int i;
+
+   assert(scip != NULL);
+   assert(solver != NULL);
+   assert(problem != NULL);
+
+   SCIP_CALL( SCIPallocBlockMemory(scip, &solv) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &solv->jumpmoves, problem->nvars) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &solv->goodvarsset, problem->nvars) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &solv->goodvarssetidx, problem->nvars) );
+
+   solv->problem = problem;
+
+   for( i = 0; i < problem->nvars; ++i )
+   {
+      solv->jumpmoves[i].value = 0.0;
+      solv->jumpmoves[i].score = -INFINITY;
+   }
+
+   solv->shiftbuffer = NULL;
+   solv->shiftbuffersize = 0;
+   solv->nshiftbuffer = 0;
+   solv->ngoodvars = 0;
+   solv->goodvarssize = problem->nvars;
+
+   for( i = 0; i < problem->nvars; ++i )
+      solv->goodvarssetidx[i] = -1;
+
+   solv->incumbentassignment = NULL;
+   solv->act = NULL;
+   solv->unsatidxs = NULL;
+   solv->nunsat = 0;
+   solv->unsatidxssize = 0;
+   solv->consnmoves = NULL;
+   solv->weight = NULL;
+   solv->unsatidx = NULL;
+   solv->objectiveweight = 0.0;
+   solv->weightupdateincrement = 1.0;
+   solv->nsols = 0;
+   solv->previolations = 0;
+   solv->effort = 0;
+   *solver = solv;
+
+   return SCIP_OKAY;
+}
+
+/** resets the incumbent solution */
+static
+SCIP_RETCODE fjSolverResetIncumbent(
+   SCIP*                 scip,               /**< SCIP data structure */
+   FJ_SOLVER*            solver,             /**< solver */
+   SCIP_Real*            initialvalues       /**< initial values, or NULL */
+   )
+{
+   FJ_PROBLEM* problem;
+   FJ_CONSTRAINT* constraint;
+   int i;
+
+   assert(scip != NULL);
+   assert(solver != NULL);
+
+   problem = solver->problem;
+
+   /* allocate arrays if needed */
+   if( solver->incumbentassignment == NULL )
+   {
+      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &solver->incumbentassignment, problem->nvars) );
+   }
+   if( solver->act == NULL )
+   {
+      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &solver->act, problem->nconstraints) );
+   }
+   if( solver->unsatidxs == NULL )
+   {
+      solver->unsatidxssize = SCIPcalcMemGrowSize(scip, problem->nconstraints);
+      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &solver->unsatidxs, solver->unsatidxssize) );
+   }
+   if( solver->consnmoves == NULL )
+   {
+      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &solver->consnmoves, problem->nconstraints) );
+   }
+   if( solver->weight == NULL )
+   {
+      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &solver->weight, problem->nconstraints) );
+
+      /* the penalty weights persist across resets, so initialize them only on the first allocation */
+      for( i = 0; i < problem->nconstraints; ++i )
+         solver->weight[i] = 1.0;
+   }
+   if( solver->unsatidx == NULL )
+   {
+      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &solver->unsatidx, problem->nconstraints) );
+   }
+
+   /* set initial values */
+   if( initialvalues != NULL )
+   {
+      for( i = 0; i < problem->nvars; ++i )
+         solver->incumbentassignment[i] = initialvalues[i];
+   }
+   else
+   {
+      for( i = 0; i < problem->nvars; ++i )
+         solver->incumbentassignment[i] = !SCIPisInfinity(scip, -problem->vars[i].lb) ? problem->vars[i].lb
+               : !SCIPisInfinity(scip, problem->vars[i].ub) ? problem->vars[i].ub : 0.0;
+   }
+
+   /* reset constraint activities and violated constraints list; the checked violation is doubled to classify within
+    * half the feasibility tolerance, a margin for the normalization deviation
+    */
+   solver->nunsat = 0;
+   for( i = 0; i < problem->nconstraints; ++i )
+   {
+      constraint = problem->constraints + i;
+
+      fjSolverRecomputeConstraint(solver, i);
+
+      if( SCIPisFeasNegative(scip, 2.0 * fjConstraintScore(scip, constraint, solver->act[i])) )
+      {
+         solver->unsatidx[i] = solver->nunsat;
+         solver->unsatidxs[solver->nunsat] = i;
+         solver->nunsat++;
+      }
+      else
+      {
+         solver->unsatidx[i] = -1;
+      }
+   }
+
+   return SCIP_OKAY;
+}
+
+/** frees a solver */
+static
+SCIP_RETCODE fjSolverFree(
+   SCIP*                 scip,               /**< SCIP data structure */
+   FJ_SOLVER**           solver              /**< pointer to solver */
+   )
+{
+   FJ_SOLVER* solv;
+   int i;
+
+   assert(scip != NULL);
+   assert(solver != NULL);
+
+   solv = *solver;
+   assert(solv != NULL);
+
+   if( solv->shiftbuffer != NULL )
+   {
+      for( i = solv->shiftbuffersize - 1; i >= 0; --i )
+         SCIPfreeBlockMemory(scip, solv->shiftbuffer + i); /*lint !e866*/
+      SCIPfreeBlockMemoryArray(scip, &solv->shiftbuffer, solv->shiftbuffersize);
+   }
+   if( solv->unsatidx != NULL )
+      SCIPfreeBlockMemoryArray(scip, &solv->unsatidx, solv->problem->nconstraints);
+   if( solv->weight != NULL )
+      SCIPfreeBlockMemoryArray(scip, &solv->weight, solv->problem->nconstraints);
+   if( solv->consnmoves != NULL )
+      SCIPfreeBlockMemoryArray(scip, &solv->consnmoves, solv->problem->nconstraints);
+   if( solv->unsatidxs != NULL )
+      SCIPfreeBlockMemoryArray(scip, &solv->unsatidxs, solv->unsatidxssize);
+   if( solv->act != NULL )
+      SCIPfreeBlockMemoryArray(scip, &solv->act, solv->problem->nconstraints);
+   if( solv->incumbentassignment != NULL )
+      SCIPfreeBlockMemoryArray(scip, &solv->incumbentassignment, solv->problem->nvars);
+   SCIPfreeBlockMemoryArray(scip, &solv->goodvarssetidx, solv->problem->nvars);
+   SCIPfreeBlockMemoryArray(scip, &solv->goodvarsset, solv->goodvarssize);
+   SCIPfreeBlockMemoryArray(scip, &solv->jumpmoves, solv->problem->nvars);
+   SCIPfreeBlockMemory(scip, solver);
+
+   return SCIP_OKAY;
+}
+
+
+/*
+ * Core operations
+ */
+
 /** updates the jump move value for a variable */
 static
 SCIP_RETCODE fjSolverUpdateJumpValue(
@@ -590,7 +731,8 @@ SCIP_RETCODE fjSolverUpdateJumpValue(
 {
    FJ_PROBLEM* problem;
    FJ_VAR* var;
-   SCIP_Real varincumbent;
+   FJ_CONSTRAINT* constraint;
+   SCIP_Real value;
    SCIP_Real bestscore;
    SCIP_Real bestvalue;
    SCIP_Real currentscore;
@@ -598,16 +740,24 @@ SCIP_RETCODE fjSolverUpdateJumpValue(
    SCIP_Real currentslope;
    SCIP_Real currentvaluestore;
    SCIP_Real currentslopestore;
+   SCIP_Real residual;
+   SCIP_Real validrangelb;
+   SCIP_Real validrangeub;
+   SCIP_Real coeff;
    int currentindexstore;
+   int cstridx;
+   int oldsize;
+   int newsize;
    int i;
+   int k;
 
    assert(scip != NULL);
    assert(solver != NULL);
    assert(varidx >= 0 && varidx < solver->problem->nvars);
 
    problem = solver->problem;
-   var = &problem->vars[varidx];
-   varincumbent = problem->incumbentassignment[varidx];
+   var = problem->vars + varidx;
+   value = solver->incumbentassignment[varidx];
 
    solver->nshiftbuffer = 0;
    currentvalue = var->lb;
@@ -616,159 +766,130 @@ SCIP_RETCODE fjSolverUpdateJumpValue(
    /* compute shift buffer */
    for( i = 0; i < var->ncoeffs; ++i )
    {
-      FJ_CONSTRAINT* constraint;
-      SCIP_Real bounds[2];
-      SCIP_Real residualincumbent;
-      SCIP_Real validrangelb;
-      SCIP_Real validrangeub;
-      SCIP_Real cellcoeff = var->coeffs[i].coeff;
-      int cstridx = var->coeffs[i].idx;
+      coeff = var->coeffs[i].coeff;
+      cstridx = var->coeffs[i].idx;
+      constraint = problem->constraints + cstridx;
 
-      constraint = &problem->constraints[cstridx];
+      /* skip scoring of inactive objective constraint */
+      if( SCIPisInfinity(scip, constraint->rhs) )
+         continue;
 
-      /* determine bounds based on constraint sense */
-      if( constraint->sense == FJ_LTE )
+      assert(coeff != 0.0); /*lint !e777*/
+      residual = solver->act[cstridx] - coeff * value;
+
+      if( coeff >= 0.0 )
       {
-         bounds[0] = -SCIPinfinity(scip);
-         bounds[1] = constraint->rhs;
-      }
-      else if( constraint->sense == FJ_GTE )
-      {
-         bounds[0] = constraint->rhs;
-         bounds[1] = SCIPinfinity(scip);
+         if( !SCIPisInfinity(scip, -constraint->lhs) )
+         {
+            validrangelb = (constraint->lhs - residual) / coeff;
+
+            if( var->vartype == FJ_INTEGER )
+               validrangelb = round(validrangelb);
+
+            if( SCIPisFeasNegative(scip, 2.0 * (validrangelb * coeff + residual - constraint->lhs)) )
+            {
+               validrangelb = var->vartype == FJ_INTEGER ? validrangelb + 1.0
+                     : nextafter(validrangelb, (SCIP_Real)INFINITY);
+            }
+         }
+         else
+            validrangelb = constraint->lhs;
+
+         if( !SCIPisInfinity(scip, constraint->rhs) )
+         {
+            validrangeub = (constraint->rhs - residual) / coeff;
+
+            if( var->vartype == FJ_INTEGER )
+               validrangeub = round(validrangeub);
+
+            if( SCIPisFeasPositive(scip, 2.0 * (validrangeub * coeff + residual - constraint->rhs)) )
+            {
+               validrangeub = var->vartype == FJ_INTEGER ? validrangeub - 1.0
+                     : nextafter(validrangeub, -(SCIP_Real)INFINITY);
+            }
+         }
+         else
+            validrangeub = constraint->rhs;
       }
       else
       {
-         bounds[0] = constraint->rhs;
-         bounds[1] = constraint->rhs;
-      }
-
-      assert(cellcoeff != 0.0); /*lint !e777*/
-      residualincumbent = constraint->incumbentlhs - cellcoeff * varincumbent;
-
-      if( cellcoeff >= 0.0 )
-      {
-         if( !SCIPisInfinity(scip, -bounds[0]) )
+         if( !SCIPisInfinity(scip, constraint->rhs) )
          {
-            validrangelb = (bounds[0] - residualincumbent) / cellcoeff;
+            validrangelb = (constraint->rhs - residual) / coeff;
+
             if( var->vartype == FJ_INTEGER )
-            {
                validrangelb = round(validrangelb);
-               if( SCIPisFeasNegative(scip, validrangelb * cellcoeff + residualincumbent - bounds[0]) )
-                  validrangelb += 1.0;
-            }
-            else
-            {
-               if( SCIPisFeasNegative(scip, validrangelb * cellcoeff + residualincumbent - bounds[0]) )
-                  validrangelb = nextafter(validrangelb, (SCIP_Real)INFINITY);
-            }
-         }
-         else
-            validrangelb = bounds[0];
 
-         if( !SCIPisInfinity(scip, bounds[1]) )
-         {
-            validrangeub = (bounds[1] - residualincumbent) / cellcoeff;
-            if( var->vartype == FJ_INTEGER )
+            if( SCIPisFeasPositive(scip, 2.0 * (validrangelb * coeff + residual - constraint->rhs)) )
             {
-               validrangeub = round(validrangeub);
-               if( SCIPisFeasPositive(scip, validrangeub * cellcoeff + residualincumbent - bounds[1]) )
-                  validrangeub -= 1.0;
-            }
-            else
-            {
-               if( SCIPisFeasPositive(scip, validrangeub * cellcoeff + residualincumbent - bounds[1]) )
-                  validrangeub = nextafter(validrangeub, -(SCIP_Real)INFINITY);
+               validrangelb = var->vartype == FJ_INTEGER ? validrangelb + 1.0
+                     : nextafter(validrangelb, (SCIP_Real)INFINITY);
             }
          }
          else
-            validrangeub = bounds[1];
-      }
-      else
-      {
-         if( !SCIPisInfinity(scip, bounds[1]) )
-         {
-            validrangelb = (bounds[1] - residualincumbent) / cellcoeff;
-            if( var->vartype == FJ_INTEGER )
-            {
-               validrangelb = round(validrangelb);
-               if( SCIPisFeasPositive(scip, validrangelb * cellcoeff + residualincumbent - bounds[1]) )
-                  validrangelb += 1.0;
-            }
-            else
-            {
-               if( SCIPisFeasPositive(scip, validrangelb * cellcoeff + residualincumbent - bounds[1]) )
-                  validrangelb = nextafter(validrangelb, (SCIP_Real)INFINITY);
-            }
-         }
-         else
-            validrangelb = -bounds[1];
+            validrangelb = -constraint->rhs;
 
-         if( !SCIPisInfinity(scip, -bounds[0]) )
+         if( !SCIPisInfinity(scip, -constraint->lhs) )
          {
-            validrangeub = (bounds[0] - residualincumbent) / cellcoeff;
+            validrangeub = (constraint->lhs - residual) / coeff;
+
             if( var->vartype == FJ_INTEGER )
-            {
                validrangeub = round(validrangeub);
-               if( SCIPisFeasNegative(scip, validrangeub * cellcoeff + residualincumbent - bounds[0]) )
-                  validrangeub -= 1.0;
-            }
-            else
+
+            if( SCIPisFeasNegative(scip, 2.0 * (validrangeub * coeff + residual - constraint->lhs)) )
             {
-               if( SCIPisFeasNegative(scip, validrangeub * cellcoeff + residualincumbent - bounds[0]) )
-                  validrangeub = nextafter(validrangeub, -(SCIP_Real)INFINITY);
+               validrangeub = var->vartype == FJ_INTEGER ? validrangeub - 1.0
+                     : nextafter(validrangeub, -(SCIP_Real)INFINITY);
             }
          }
          else
-            validrangeub = -bounds[0];
+            validrangeub = -constraint->lhs;
       }
 
-      SCIPdebugMsg(scip, "cstridx=%d coeff=%g weight=%g residual=%g range=[%g,%g]\n", cstridx, cellcoeff,
-         constraint->weight, residualincumbent, validrangelb, validrangeub);
+      SCIPdebugMsg(scip, "cstridx=%d coeff=%g weight=%g residual=%g range=[%g,%g]\n", cstridx, coeff,
+         solver->weight[cstridx], residual, validrangelb, validrangeub);
 
       if( validrangelb > currentvalue )
       {
-         currentslope -= constraint->weight;
+         currentslope -= solver->weight[cstridx];
          if( validrangelb < var->ub )
          {
             /* ensure capacity */
             if( solver->nshiftbuffer >= solver->shiftbuffersize )
             {
-               int oldsize = solver->shiftbuffersize;
-               int newsize = SCIPcalcMemGrowSize(scip, solver->nshiftbuffer + 1);
-               int k;
+               oldsize = solver->shiftbuffersize;
+               newsize = SCIPcalcMemGrowSize(scip, solver->nshiftbuffer + 1);
                SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &solver->shiftbuffer, oldsize, newsize) );
                for( k = oldsize; k < newsize; ++k )
                {
-                  SCIP_CALL( SCIPallocBlockMemory(scip, &solver->shiftbuffer[k]) ); /*lint !e866*/
+                  SCIP_CALL( SCIPallocBlockMemory(scip, solver->shiftbuffer + k) ); /*lint !e866*/
                }
                solver->shiftbuffersize = newsize;
             }
             solver->shiftbuffer[solver->nshiftbuffer]->value = validrangelb;
-            solver->shiftbuffer[solver->nshiftbuffer]->weight = constraint->weight;
+            solver->shiftbuffer[solver->nshiftbuffer]->weight = solver->weight[cstridx];
             solver->nshiftbuffer++;
          }
       }
 
       if( validrangeub <= currentvalue )
-         currentslope += constraint->weight;
+         currentslope += solver->weight[cstridx];
       else if( validrangeub < var->ub )
       {
          /* ensure capacity */
          if( solver->nshiftbuffer >= solver->shiftbuffersize )
          {
-            int oldsize = solver->shiftbuffersize;
-            int newsize = SCIPcalcMemGrowSize(scip, solver->nshiftbuffer + 1);
-            int k;
+            oldsize = solver->shiftbuffersize;
+            newsize = SCIPcalcMemGrowSize(scip, solver->nshiftbuffer + 1);
             SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &solver->shiftbuffer, oldsize, newsize) );
             for( k = oldsize; k < newsize; ++k )
             {
-               SCIP_CALL( SCIPallocBlockMemory(scip, &solver->shiftbuffer[k]) ); /*lint !e866*/
+               SCIP_CALL( SCIPallocBlockMemory(scip, solver->shiftbuffer + k) ); /*lint !e866*/
             }
             solver->shiftbuffersize = newsize;
          }
          solver->shiftbuffer[solver->nshiftbuffer]->value = validrangeub;
-         solver->shiftbuffer[solver->nshiftbuffer]->weight = constraint->weight;
+         solver->shiftbuffer[solver->nshiftbuffer]->weight = solver->weight[cstridx];
          solver->nshiftbuffer++;
       }
    }
@@ -776,13 +897,12 @@ SCIP_RETCODE fjSolverUpdateJumpValue(
    /* add bounds to shift buffer */
    if( solver->nshiftbuffer + 2 >= solver->shiftbuffersize )
    {
-      int oldsize = solver->shiftbuffersize;
-      int newsize = SCIPcalcMemGrowSize(scip, solver->nshiftbuffer + 2);
-      int k;
+      oldsize = solver->shiftbuffersize;
+      newsize = SCIPcalcMemGrowSize(scip, solver->nshiftbuffer + 2);
       SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &solver->shiftbuffer, oldsize, newsize) );
       for( k = oldsize; k < newsize; ++k )
       {
-         SCIP_CALL( SCIPallocBlockMemory(scip, &solver->shiftbuffer[k]) ); /*lint !e866*/
+         SCIP_CALL( SCIPallocBlockMemory(scip, solver->shiftbuffer + k) ); /*lint !e866*/
       }
       solver->shiftbuffersize = newsize;
    }
@@ -819,7 +939,7 @@ SCIP_RETCODE fjSolverUpdateJumpValue(
    bestvalue = currentvalue;
 
    /* force significant shift */
-   if( SCIPisEQ(scip, currentvalue, varincumbent) )
+   if( SCIPisEQ(scip, currentvalue, value) )
    {
       SCIPdebugMsg(scip, "min at incumbent, forcing shift\n");
 
@@ -829,7 +949,7 @@ SCIP_RETCODE fjSolverUpdateJumpValue(
       currentslopestore = currentslope;
       currentindexstore = i;
 
-      if( SCIPisGT(scip, solver->shiftbuffer[solver->nshiftbuffer - 1]->value, varincumbent) )
+      if( SCIPisGT(scip, solver->shiftbuffer[solver->nshiftbuffer - 1]->value, value) )
       {
          do
          {
@@ -840,7 +960,7 @@ SCIP_RETCODE fjSolverUpdateJumpValue(
 
             SCIPdebugMsg(scip, "right i=%d value=%g slope=%g score=%g\n", i, currentvalue, currentslope, currentscore);
          }
-         while( SCIPisLE(scip, currentvalue, varincumbent) );
+         while( SCIPisLE(scip, currentvalue, value) );
 
          bestscore = currentscore;
          bestvalue = currentvalue;
@@ -851,7 +971,7 @@ SCIP_RETCODE fjSolverUpdateJumpValue(
       currentslope = currentslopestore;
       i = currentindexstore;
 
-      if( SCIPisLT(scip, solver->shiftbuffer[0]->value, varincumbent) )
+      if( SCIPisLT(scip, solver->shiftbuffer[0]->value, value) )
       {
          do
          {
@@ -862,7 +982,7 @@ SCIP_RETCODE fjSolverUpdateJumpValue(
 
             SCIPdebugMsg(scip, "left i=%d value=%g slope=%g score=%g\n", i, currentvalue, currentslope, currentscore);
          }
-         while( SCIPisGE(scip, currentvalue, varincumbent) );
+         while( SCIPisGE(scip, currentvalue, value) );
 
          if( bestscore > currentscore )
             bestvalue = currentvalue;
@@ -885,6 +1005,10 @@ SCIP_RETCODE fjSolverUpdateGoodMoves(
    )
 {
    SCIP_Bool anygoodmoves;
+   int newsize;
+   int lastsetidx;
+   int lastvaridx;
+   int thissetidx;
 
    assert(scip != NULL);
    assert(solver != NULL);
@@ -897,7 +1021,7 @@ SCIP_RETCODE fjSolverUpdateGoodMoves(
       /* became good, add to good set */
       if( solver->ngoodvars >= solver->goodvarssize )
       {
-         int newsize = SCIPcalcMemGrowSize(scip, solver->ngoodvars + 1);
+         newsize = SCIPcalcMemGrowSize(scip, solver->ngoodvars + 1);
          SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &solver->goodvarsset, solver->goodvarssize, newsize) );
          solver->goodvarssize = newsize;
       }
@@ -908,9 +1032,9 @@ SCIP_RETCODE fjSolverUpdateGoodMoves(
    else if( !anygoodmoves && solver->goodvarssetidx[varidx] != -1 )
    {
       /* became bad, remove from good set */
-      int lastsetidx = solver->ngoodvars - 1;
-      int lastvaridx = solver->goodvarsset[lastsetidx];
-      int thissetidx = solver->goodvarssetidx[varidx];
+      lastsetidx = solver->ngoodvars - 1;
+      lastvaridx = solver->goodvarsset[lastsetidx];
+      thissetidx = solver->goodvarssetidx[varidx];
 
       solver->goodvarsset[thissetidx] = lastvaridx;
       solver->goodvarssetidx[lastvaridx] = thissetidx;
@@ -923,86 +1047,125 @@ SCIP_RETCODE fjSolverUpdateGoodMoves(
 
 /** sets a variable value and updates violated constraints */
 static
-SCIP_RETCODE fjProblemSetValue(
+SCIP_RETCODE fjSolverSetValue(
    SCIP*                 scip,               /**< SCIP data structure */
-   FJ_PROBLEM*           problem,            /**< problem */
-   FJ_SOLVER*            solver,             /**< solver (for move updates) */
+   FJ_SOLVER*            solver,             /**< solver */
+   SCIP_HEURDATA*        heurdata,           /**< heuristic data */
    int                   varidx,             /**< variable index */
    SCIP_Real             newvalue,           /**< new value */
-   int*                  effort              /**< pointer to effort counter */
+   SCIP_Longint*         effort              /**< pointer to effort counter */
    )
 {
+   FJ_PROBLEM* problem;
+   FJ_CONSTRAINT* constraint;
+   FJ_MOVE* move;
    SCIP_Real oldvalue;
    SCIP_Real delta;
+   SCIP_Real coeff;
+   SCIP_Real oldact;
+   SCIP_Real newact;
+   SCIP_Real newscore;
+   SCIP_Real otherincumbent;
+   SCIP_Real othercoeff;
+   SCIP_Real oldcandidateact;
+   SCIP_Real oldscoreterm;
+   SCIP_Real newcandidateact;
+   SCIP_Real newscoreterm;
+   SCIP_Bool recompute;
+   int cstridx;
+   int lastunsatidx;
+   int lastconstraintidx;
+   int thisunsatidx;
+   int otheridx;
    int i;
    int j;
 
    assert(scip != NULL);
-   assert(problem != NULL);
-   assert(varidx >= 0 && varidx < problem->nvars);
+   assert(solver != NULL);
    assert(effort != NULL);
 
-   oldvalue = problem->incumbentassignment[varidx];
+   problem = solver->problem;
+   assert(varidx >= 0 && varidx < problem->nvars);
+   oldvalue = solver->incumbentassignment[varidx];
    delta = newvalue - oldvalue;
-   problem->incumbentassignment[varidx] = newvalue;
-   problem->incumbentobjective += problem->vars[varidx].objcoeff * delta;
+   solver->incumbentassignment[varidx] = newvalue;
+   newscore = SCIP_INVALID;
 
-   /* update LHSs of all involved constraints */
+   /* update activities of all involved constraints */
    for( i = 0; i < problem->vars[varidx].ncoeffs; ++i )
    {
-      int cstridx = problem->vars[varidx].coeffs[i].idx;
-      SCIP_Real coeff = problem->vars[varidx].coeffs[i].coeff;
-      FJ_CONSTRAINT* constraint = &problem->constraints[cstridx];
-      SCIP_Real oldlhs = constraint->incumbentlhs;
-      SCIP_Real newlhs = oldlhs + coeff * delta;
-      SCIP_Real newcost;
+      cstridx = problem->vars[varidx].coeffs[i].idx;
+      coeff = problem->vars[varidx].coeffs[i].coeff;
+      constraint = problem->constraints + cstridx;
+      oldact = solver->act[cstridx];
+      ++solver->consnmoves[cstridx];
+      recompute = heurdata->recomputefreq > 0 && solver->consnmoves[cstridx] >= heurdata->recomputefreq;
 
-      constraint->incumbentlhs = newlhs;
-      newcost = fjConstraintScore(constraint, newlhs);
+      if( !recompute )
+      {
+         solver->act[cstridx] = oldact + coeff * delta;
+         newscore = fjConstraintScore(scip, constraint, solver->act[cstridx]);
+         ++(*effort);
 
-      /* add/remove from violated constraints list */
-      if( constraint->violatedidx == -1 && SCIPisFeasNegative(scip, newcost) )
+         if( heurdata->recomputefreq >= 0 && newscore < 0.0 && !SCIPisFeasNegative(scip, newscore) )
+            recompute = TRUE;
+      }
+
+      if( recompute )
+      {
+         fjSolverRecomputeConstraint(solver, cstridx);
+         newscore = fjConstraintScore(scip, constraint, solver->act[cstridx]);
+         *effort += constraint->ncoeffs;
+      }
+
+      assert(newscore <= 0.0);
+
+      /* skip scoring of inactive objective constraint */
+      if( SCIPisInfinity(scip, constraint->rhs) )
+         continue;
+
+      newact = solver->act[cstridx];
+
+      /* update the violated constraint list */
+      if( solver->unsatidx[cstridx] == -1 && SCIPisFeasNegative(scip, 2.0 * newscore) )
       {
          /* became violated */
-         constraint->violatedidx = problem->nviolated;
-         problem->violatedconstraints[problem->nviolated] = cstridx;
-         problem->nviolated++;
+         solver->unsatidx[cstridx] = solver->nunsat;
+         solver->unsatidxs[solver->nunsat] = cstridx;
+         solver->nunsat++;
       }
-      if( constraint->violatedidx != -1 && !SCIPisFeasNegative(scip, newcost) )
+      if( solver->unsatidx[cstridx] != -1 && !SCIPisFeasNegative(scip, 2.0 * newscore) )
       {
          /* became satisfied */
-         int lastviolatedidx = problem->nviolated - 1;
-         int lastconstraintidx = problem->violatedconstraints[lastviolatedidx];
-         int thisviolatedidx = constraint->violatedidx;
+         lastunsatidx = solver->nunsat - 1;
+         lastconstraintidx = solver->unsatidxs[lastunsatidx];
+         thisunsatidx = solver->unsatidx[cstridx];
 
-         problem->violatedconstraints[thisviolatedidx] = lastconstraintidx;
-         problem->constraints[lastconstraintidx].violatedidx = thisviolatedidx;
-         constraint->violatedidx = -1;
-         problem->nviolated--;
+         solver->unsatidxs[thisunsatidx] = lastconstraintidx;
+         solver->unsatidx[lastconstraintidx] = thisunsatidx;
+         solver->unsatidx[cstridx] = -1;
+         solver->nunsat--;
       }
 
       /* update moves for other variables in this constraint */
-      if( solver != NULL )
+      *effort += constraint->ncoeffs;
+      for( j = 0; j < constraint->ncoeffs; ++j )
       {
-         *effort += constraint->ncoeffs;
-         for( j = 0; j < constraint->ncoeffs; ++j )
+         otheridx = constraint->coeffs[j].idx;
+         if( otheridx != varidx )
          {
-            int otheridx = constraint->coeffs[j].idx;
-            if( otheridx != varidx )
-            {
-               FJ_MOVE* move = &solver->jumpmoves[otheridx];
-               SCIP_Real otherincumbent = problem->incumbentassignment[otheridx];
-               SCIP_Real othercoeff = constraint->coeffs[j].coeff;
-               SCIP_Real oldmodifiedlhs = oldlhs + othercoeff * (move->value - otherincumbent);
-               SCIP_Real oldscoreterm = constraint->weight * (fjConstraintScore(constraint, oldmodifiedlhs)
-                     - fjConstraintScore(constraint, oldlhs));
-               SCIP_Real newmodifiedlhs = newlhs + othercoeff * (move->value - otherincumbent);
-               SCIP_Real newscoreterm = constraint->weight * (fjConstraintScore(constraint, newmodifiedlhs)
-                     - fjConstraintScore(constraint, newlhs));
+            move = solver->jumpmoves + otheridx;
+            otherincumbent = solver->incumbentassignment[otheridx];
+            othercoeff = constraint->coeffs[j].coeff;
+            oldcandidateact = oldact + othercoeff * (move->value - otherincumbent);
+            oldscoreterm = solver->weight[cstridx] * (fjConstraintScore(scip, constraint, oldcandidateact)
+                  - fjConstraintScore(scip, constraint, oldact));
+            newcandidateact = newact + othercoeff * (move->value - otherincumbent);
+            newscoreterm = solver->weight[cstridx] * (fjConstraintScore(scip, constraint, newcandidateact)
+                  - fjConstraintScore(scip, constraint, newact));
 
-               move->score += newscoreterm - oldscoreterm;
-               SCIP_CALL( fjSolverUpdateGoodMoves(scip, solver, otheridx) );
-            }
+            move->score += newscoreterm - oldscoreterm;
+            SCIP_CALL( fjSolverUpdateGoodMoves(scip, solver, otheridx) );
          }
       }
    }
@@ -1021,6 +1184,10 @@ SCIP_RETCODE fjSolverResetMoves(
    FJ_PROBLEM* problem;
    FJ_VAR* var;
    FJ_MOVE* move;
+   FJ_CONSTRAINT* constraint;
+   SCIP_Real coeff;
+   SCIP_Real candidateact;
+   int cstridx;
    int i;
 
    assert(scip != NULL);
@@ -1028,318 +1195,31 @@ SCIP_RETCODE fjSolverResetMoves(
    assert(varidx >= 0 && varidx < solver->problem->nvars);
 
    problem = solver->problem;
-   var = &problem->vars[varidx];
-   move = &solver->jumpmoves[varidx];
+   var = problem->vars + varidx;
+   move = solver->jumpmoves + varidx;
 
-   solver->totaleffort += var->ncoeffs;
+   solver->effort += var->ncoeffs;
    SCIP_CALL( fjSolverUpdateJumpValue(scip, solver, varidx) );
 
-   move->score = solver->objectiveweight * var->objcoeff * (problem->incumbentassignment[varidx] - move->value);
+   move->score = solver->objectiveweight * var->objcoeff * (solver->incumbentassignment[varidx] - move->value);
 
    for( i = 0; i < var->ncoeffs; ++i )
    {
-      int cstridx = var->coeffs[i].idx;
-      SCIP_Real cellcoeff = var->coeffs[i].coeff;
-      FJ_CONSTRAINT* constraint = &problem->constraints[cstridx];
-      SCIP_Real candidatelhs = constraint->incumbentlhs + cellcoeff * (move->value
-            - problem->incumbentassignment[varidx]);
+      cstridx = var->coeffs[i].idx;
+      coeff = var->coeffs[i].coeff;
+      constraint = problem->constraints + cstridx;
 
-      move->score += constraint->weight * (fjConstraintScore(constraint, candidatelhs)
-            - fjConstraintScore(constraint, constraint->incumbentlhs));
+      /* skip scoring of inactive objective constraint */
+      if( SCIPisInfinity(scip, constraint->rhs) )
+         continue;
+
+      candidateact = solver->act[cstridx] + coeff * (move->value - solver->incumbentassignment[varidx]);
+
+      move->score += solver->weight[cstridx] * (fjConstraintScore(scip, constraint, candidateact)
+            - fjConstraintScore(scip, constraint, solver->act[cstridx]));
    }
 
    SCIP_CALL( fjSolverUpdateGoodMoves(scip, solver, varidx) );
-
-   return SCIP_OKAY;
-}
-
-/** updates weights at local minimum */
-static
-SCIP_RETCODE fjSolverUpdateWeights(
-   SCIP*                 scip,               /**< SCIP data structure */
-   FJ_SOLVER*            solver              /**< solver */
-   )
-{
-   FJ_PROBLEM* problem;
-   int i;
-   int j;
-
-   assert(scip != NULL);
-   assert(solver != NULL);
-
-   problem = solver->problem;
-
-   if( solver->verbosity >= 2 )
-      SCIPinfoMessage(scip, NULL, "Feasibility Jump: Reached a local minimum.\n");
-
-   solver->nbumps++;
-
-   if( problem->nviolated == 0 )
-   {
-      solver->objectiveweight += solver->weightupdateincrement;
-      solver->totaleffort += problem->nvars;
-
-      for( i = 0; i < problem->nvars; ++i )
-      {
-         FJ_MOVE* move = &solver->jumpmoves[i];
-         move->score += solver->weightupdateincrement * problem->vars[i].objcoeff
-               * (problem->incumbentassignment[i] - move->value);
-      }
-   }
-   else
-   {
-      for( i = 0; i < problem->nviolated; ++i )
-      {
-         int cstridx = problem->violatedconstraints[i];
-         FJ_CONSTRAINT* constraint = &problem->constraints[cstridx];
-
-         constraint->weight += solver->weightupdateincrement;
-         solver->totaleffort += constraint->ncoeffs;
-
-         for( j = 0; j < constraint->ncoeffs; ++j )
-         {
-            int cellidx = constraint->coeffs[j].idx;
-            SCIP_Real cellcoeff = constraint->coeffs[j].coeff;
-            FJ_MOVE* move = &solver->jumpmoves[cellidx];
-            SCIP_Real candidatelhs = constraint->incumbentlhs + cellcoeff * (move->value
-                  - problem->incumbentassignment[cellidx]);
-            SCIP_Real diff = solver->weightupdateincrement * (fjConstraintScore(constraint, candidatelhs)
-                  - fjConstraintScore(constraint, constraint->incumbentlhs));
-
-            move->score += diff;
-
-            SCIP_CALL( fjSolverUpdateGoodMoves(scip, solver, cellidx) );
-         }
-      }
-   }
-
-   solver->weightupdateincrement /= solver->weightupdatedecay;
-
-   return SCIP_OKAY;
-}
-
-/** selects a variable to modify */
-static
-SCIP_RETCODE fjSolverSelectVariable(
-   SCIP*                 scip,               /**< SCIP data structure */
-   FJ_SOLVER*            solver,             /**< solver */
-   int*                  varidx              /**< pointer to store selected variable */
-   )
-{
-   FJ_PROBLEM* problem;
-   int i;
-
-   assert(scip != NULL);
-   assert(solver != NULL);
-   assert(varidx != NULL);
-
-   problem = solver->problem;
-
-   if( solver->ngoodvars > 0 )
-   {
-      SCIP_Real randval = SCIPrandomGetReal(solver->randnumgen, 0.0, 1.0);
-
-      if( randval < solver->randprobgood )
-      {
-         int randomidx = SCIPrandomGetInt(solver->randnumgen, 0, solver->ngoodvars - 1);
-         *varidx = solver->goodvarsset[randomidx];
-         return SCIP_OKAY;
-      }
-      else
-      {
-         int samplesize = MIN(solver->samplesize, solver->ngoodvars);
-         SCIP_Real bestscore = -INFINITY;
-         int bestvar = -1;
-
-         solver->totaleffort += samplesize;
-
-         for( i = 0; i < samplesize; ++i )
-         {
-            int setidx = SCIPrandomGetInt(solver->randnumgen, 0, solver->ngoodvars - 1);
-            int candidatevar = solver->goodvarsset[setidx];
-            SCIP_Real score = solver->jumpmoves[candidatevar].score;
-
-            if( score > bestscore )
-            {
-               bestscore = score;
-               bestvar = candidatevar;
-            }
-         }
-
-         assert(bestvar >= 0);
-         *varidx = bestvar;
-         return SCIP_OKAY;
-      }
-   }
-
-   /* local minimum, update weights */
-   SCIP_CALL( fjSolverUpdateWeights(scip, solver) );
-
-   if( problem->nviolated > 0 )
-   {
-      int cstridx = problem->violatedconstraints[SCIPrandomGetInt(solver->randnumgen, 0, problem->nviolated - 1)];
-      FJ_CONSTRAINT* constraint = &problem->constraints[cstridx];
-      SCIP_Real randval = SCIPrandomGetReal(solver->randnumgen, 0.0, 1.0);
-
-      if( randval < solver->randprobviol )
-      {
-         int randomidx = SCIPrandomGetInt(solver->randnumgen, 0, constraint->ncoeffs - 1);
-         *varidx = constraint->coeffs[randomidx].idx;
-         return SCIP_OKAY;
-      }
-      else
-      {
-         SCIP_Real bestscore = -INFINITY;
-         int bestvar = -1;
-
-         for( i = 0; i < constraint->ncoeffs; ++i )
-         {
-            int cellidx = constraint->coeffs[i].idx;
-            SCIP_Real score = solver->jumpmoves[cellidx].score;
-
-            if( score > bestscore )
-            {
-               bestscore = score;
-               bestvar = cellidx;
-            }
-         }
-
-         assert(bestvar >= 0);
-         *varidx = bestvar;
-         return SCIP_OKAY;
-      }
-   }
-
-   /* fallback to random choice */
-   *varidx = SCIPrandomGetInt(solver->randnumgen, 0, problem->nvars - 1);
-
-   return SCIP_OKAY;
-}
-
-/** performs a variable move */
-static
-SCIP_RETCODE fjSolverDoVariableMove(
-   SCIP*                 scip,               /**< SCIP data structure */
-   FJ_SOLVER*            solver,             /**< solver */
-   int                   varidx              /**< variable index */
-   )
-{
-   SCIP_Real newvalue;
-   int effort = 0;
-
-   assert(scip != NULL);
-   assert(solver != NULL);
-   assert(varidx >= 0 && varidx < solver->problem->nvars);
-
-   newvalue = solver->jumpmoves[varidx].value;
-
-   SCIP_CALL( fjProblemSetValue(scip, solver->problem, solver, varidx, newvalue, &effort) );
-   solver->totaleffort += effort;
-
-   SCIP_CALL( fjSolverResetMoves(scip, solver, varidx) );
-
-   return SCIP_OKAY;
-}
-
-/** creates a solver */
-static
-SCIP_RETCODE fjSolverCreate(
-   SCIP*                 scip,               /**< SCIP data structure */
-   FJ_SOLVER**           solver,             /**< pointer to solver */
-   FJ_PROBLEM*           problem,            /**< problem */
-   SCIP_RANDNUMGEN*      randnumgen,         /**< random number generator */
-   int                   verbosity,          /**< verbosity level */
-   SCIP_Real             weightupdatedecay,  /**< weight update decay */
-   SCIP_Real             bestobjective,      /**< best objective value */
-   int                   checkiterations,    /**< iterations to check progress */
-   int                   samplesize,         /**< number of candidates to sample in tournament selection */
-   SCIP_Real             randprobgood,       /**< probability of random selection from good variables */
-   SCIP_Real             randprobviol,       /**< probability of random selection from violated constraint */
-   int                   callbackeffort      /**< effort between callbacks */
-   )
-{
-   FJ_SOLVER* solv;
-   int i;
-
-   assert(scip != NULL);
-   assert(solver != NULL);
-   assert(problem != NULL);
-
-   SCIP_CALL( SCIPallocBlockMemory(scip, &solv) );
-   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &solv->jumpmoves, problem->nvars) );
-   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &solv->goodvarsset, problem->nvars) );
-   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &solv->goodvarssetidx, problem->nvars) );
-
-   solv->problem = problem;
-   solv->verbosity = verbosity;
-   solv->weightupdatedecay = weightupdatedecay;
-   solv->bestobjective = bestobjective;
-   solv->checkiterations = checkiterations;
-   solv->samplesize = samplesize;
-   solv->randprobgood = randprobgood;
-   solv->randprobviol = randprobviol;
-   solv->callbackeffort = callbackeffort;
-
-   for( i = 0; i < problem->nvars; ++i )
-   {
-      solv->jumpmoves[i].value = 0.0;
-      solv->jumpmoves[i].score = -INFINITY;
-   }
-
-   solv->shiftbuffer = NULL;
-   solv->shiftbuffersize = 0;
-   solv->nshiftbuffer = 0;
-   solv->ngoodvars = 0;
-   solv->goodvarssize = problem->nvars;
-
-   for( i = 0; i < problem->nvars; ++i )
-      solv->goodvarssetidx[i] = -1;
-
-   solv->randnumgen = randnumgen;
-   solv->objectiveweight = 0.0;
-   solv->bestviolationscore = INT_MAX;
-   solv->effortatlastcallback = 0;
-   solv->effortatlastimprovement = 0;
-   solv->totaleffort = 0;
-   solv->violationsdecrease = INT_MAX;
-   solv->prevviolations = INT_MAX;
-   solv->percentdecrease = 100;
-   solv->iterations = 0;
-   solv->weightupdateincrement = 1.0;
-   solv->nbumps = 0;
-   *solver = solv;
-
-   return SCIP_OKAY;
-}
-
-/** frees a solver */
-static
-SCIP_RETCODE fjSolverFree(
-   SCIP*                 scip,               /**< SCIP data structure */
-   FJ_SOLVER**           solver              /**< pointer to solver */
-   )
-{
-   FJ_SOLVER* solv;
-
-   assert(scip != NULL);
-   assert(solver != NULL);
-
-   solv = *solver;
-   assert(solv != NULL);
-
-   if( solv->shiftbuffer != NULL )
-   {
-      int i;
-      for( i = solv->shiftbuffersize - 1; i >= 0; --i )
-      {
-         SCIPfreeBlockMemory(scip, &solv->shiftbuffer[i]); /*lint !e866*/
-      }
-      SCIPfreeBlockMemoryArray(scip, &solv->shiftbuffer, solv->shiftbuffersize);
-   }
-   SCIPfreeBlockMemoryArray(scip, &solv->goodvarssetidx, solv->problem->nvars);
-   SCIPfreeBlockMemoryArray(scip, &solv->goodvarsset, solv->goodvarssize);
-   SCIPfreeBlockMemoryArray(scip, &solv->jumpmoves, solv->problem->nvars);
-   SCIPfreeBlockMemory(scip, solver);
 
    return SCIP_OKAY;
 }
@@ -1357,9 +1237,7 @@ SCIP_RETCODE fjSolverInit(
    assert(scip != NULL);
    assert(solver != NULL);
 
-   SCIP_CALL( fjProblemResetIncumbent(scip, solver->problem, initialvalues) );
-
-   solver->totaleffort += solver->problem->nnonzeros;
+   SCIP_CALL( fjSolverResetIncumbent(scip, solver, initialvalues) );
 
    /* reset variable scores */
    solver->ngoodvars = 0;
@@ -1368,61 +1246,294 @@ SCIP_RETCODE fjSolverInit(
       SCIP_CALL( fjSolverResetMoves(scip, solver, i) );
    }
 
+   /* force objective violation to submit better initial */
+   solver->previolations = MAX(solver->nunsat, 1);
+   solver->effort = 0;
+
    return SCIP_OKAY;
 }
 
 
 /*
- * Local methods for heuristic
+ * Weight management
  */
 
-/** adds a row to the feasibility jump solver */
+/** updates weights at local minimum */
 static
-SCIP_RETCODE addRowInFeasjumpSolver(
+SCIP_RETCODE fjSolverUpdateWeights(
    SCIP*                 scip,               /**< SCIP data structure */
-   FJ_PROBLEM*           problem,            /**< problem */
-   SCIP_Real*            consvals,           /**< array with coefficients of the row */
-   int*                  consinds,           /**< array with column indices of the row */
-   int                   consnvars,          /**< number of variables in the row */
-   SCIP_Real             lhs,                /**< left hand side of the row */
-   SCIP_Real             rhs                 /**< right hand side of the row */
+   FJ_SOLVER*            solver,             /**< solver */
+   SCIP_HEURDATA*        heurdata            /**< heuristic data */
    )
 {
-   FJ_ROWTYPE rowtype;
-   SCIP_Real solverrhs;
-   int idx;
+   FJ_PROBLEM* problem;
+   FJ_CONSTRAINT* constraint;
+   FJ_MOVE* move;
+   SCIP_Real coeff;
+   SCIP_Real candidateact;
+   SCIP_Real diff;
+   int cstridx;
+   int varidx;
+   int i;
+   int j;
 
    assert(scip != NULL);
-   assert(problem != NULL);
+   assert(solver != NULL);
 
-   /* ranged row */
-   if( !SCIPisInfinity(scip, -lhs) && !SCIPisInfinity(scip, rhs) && !SCIPisEQ(scip, lhs, rhs) )
+   problem = solver->problem;
+
+   if( solver->nunsat == 0 )
    {
-      solverrhs = lhs;
-      SCIP_CALL( fjProblemAddConstraint(scip, problem, FJ_GTE, solverrhs, consnvars, consinds, consvals, &idx) );
-      solverrhs = rhs;
-      SCIP_CALL( fjProblemAddConstraint(scip, problem, FJ_LTE, solverrhs, consnvars, consinds, consvals, &idx) );
+      solver->objectiveweight += solver->weightupdateincrement;
+
+      for( i = 0; i < problem->nvars; ++i )
+      {
+         move = solver->jumpmoves + i;
+         move->score += solver->weightupdateincrement * problem->vars[i].objcoeff
+               * (solver->incumbentassignment[i] - move->value);
+      }
    }
    else
    {
-      if( SCIPisEQ(scip, rhs, lhs) )
+      for( i = 0; i < solver->nunsat; ++i )
       {
-         rowtype = FJ_EQUAL;
-         solverrhs = rhs;
+         cstridx = solver->unsatidxs[i];
+         constraint = problem->constraints + cstridx;
+
+         solver->weight[cstridx] += solver->weightupdateincrement;
+
+         for( j = 0; j < constraint->ncoeffs; ++j )
+         {
+            varidx = constraint->coeffs[j].idx;
+            coeff = constraint->coeffs[j].coeff;
+            move = solver->jumpmoves + varidx;
+            candidateact = solver->act[cstridx] + coeff * (move->value
+                  - solver->incumbentassignment[varidx]);
+            diff = solver->weightupdateincrement * (fjConstraintScore(scip, constraint, candidateact)
+                  - fjConstraintScore(scip, constraint, solver->act[cstridx]));
+
+            move->score += diff;
+
+            SCIP_CALL( fjSolverUpdateGoodMoves(scip, solver, varidx) );
+         }
       }
-      else if( SCIPisInfinity(scip, rhs) )
+   }
+
+   solver->weightupdateincrement /= heurdata->weightupdatedecay;
+
+   return SCIP_OKAY;
+}
+
+
+/*
+ * Move operators
+ */
+
+/** selects a variable to modify */
+static
+SCIP_RETCODE fjSolverSelectVariable(
+   SCIP*                 scip,               /**< SCIP data structure */
+   FJ_SOLVER*            solver,             /**< solver */
+   SCIP_HEURDATA*        heurdata,           /**< heuristic data */
+   int*                  varidx              /**< pointer to store selected variable */
+   )
+{
+   FJ_PROBLEM* problem;
+   FJ_CONSTRAINT* constraint;
+   SCIP_Real randval;
+   SCIP_Real bestscore;
+   SCIP_Real score;
+   int cstridx;
+   int randomidx;
+   int samplesize;
+   int bestvar;
+   int setidx;
+   int candidatevar;
+   int i;
+
+   assert(scip != NULL);
+   assert(solver != NULL);
+   assert(varidx != NULL);
+
+   problem = solver->problem;
+
+   if( solver->ngoodvars > 0 )
+   {
+      randval = SCIPrandomGetReal(heurdata->randnumgen, 0.0, 1.0);
+
+      if( randval < heurdata->randprobgood )
       {
-         rowtype = FJ_GTE;
-         solverrhs = lhs;
+         randomidx = SCIPrandomGetInt(heurdata->randnumgen, 0, solver->ngoodvars - 1);
+         *varidx = solver->goodvarsset[randomidx];
+         return SCIP_OKAY;
       }
       else
       {
-         assert(SCIPisInfinity(scip, -lhs));
-         rowtype = FJ_LTE;
-         solverrhs = rhs;
+         samplesize = MIN(heurdata->samplesize, solver->ngoodvars);
+         bestscore = -INFINITY;
+         bestvar = -1;
+
+         for( i = 0; i < samplesize; ++i )
+         {
+            setidx = SCIPrandomGetInt(heurdata->randnumgen, 0, solver->ngoodvars - 1);
+            candidatevar = solver->goodvarsset[setidx];
+            score = solver->jumpmoves[candidatevar].score;
+
+            if( score > bestscore )
+            {
+               bestscore = score;
+               bestvar = candidatevar;
+            }
+         }
+
+         assert(bestvar >= 0);
+         *varidx = bestvar;
+         return SCIP_OKAY;
       }
-      SCIP_CALL( fjProblemAddConstraint(scip, problem, rowtype, solverrhs, consnvars, consinds, consvals, &idx) );
    }
+
+   /* local minimum, update weights */
+   SCIP_CALL( fjSolverUpdateWeights(scip, solver, heurdata) );
+
+   if( solver->nunsat > 0 )
+   {
+      cstridx = solver->unsatidxs[SCIPrandomGetInt(heurdata->randnumgen, 0, solver->nunsat - 1)];
+      constraint = problem->constraints + cstridx;
+      randval = SCIPrandomGetReal(heurdata->randnumgen, 0.0, 1.0);
+
+      if( randval < heurdata->randprobviol )
+      {
+         randomidx = SCIPrandomGetInt(heurdata->randnumgen, 0, constraint->ncoeffs - 1);
+         *varidx = constraint->coeffs[randomidx].idx;
+         return SCIP_OKAY;
+      }
+      else
+      {
+         bestscore = -INFINITY;
+         bestvar = -1;
+
+         for( i = 0; i < constraint->ncoeffs; ++i )
+         {
+            candidatevar = constraint->coeffs[i].idx;
+            score = solver->jumpmoves[candidatevar].score;
+
+            if( score > bestscore )
+            {
+               bestscore = score;
+               bestvar = candidatevar;
+            }
+         }
+
+         assert(bestvar >= 0);
+         *varidx = bestvar;
+         return SCIP_OKAY;
+      }
+   }
+
+   /* fallback to random choice */
+   *varidx = SCIPrandomGetInt(heurdata->randnumgen, 0, problem->nvars - 1);
+
+   return SCIP_OKAY;
+}
+
+/** performs a variable move */
+static
+SCIP_RETCODE fjSolverDoVariableMove(
+   SCIP*                 scip,               /**< SCIP data structure */
+   FJ_SOLVER*            solver,             /**< solver */
+   SCIP_HEURDATA*        heurdata,           /**< heuristic data */
+   int                   varidx              /**< variable index */
+   )
+{
+   SCIP_Real newvalue;
+   SCIP_Longint effort = 0;
+
+   assert(scip != NULL);
+   assert(solver != NULL);
+   assert(varidx >= 0 && varidx < solver->problem->nvars);
+
+   newvalue = solver->jumpmoves[varidx].value;
+
+   SCIP_CALL( fjSolverSetValue(scip, solver, heurdata, varidx, newvalue, &effort) );
+   solver->effort += effort;
+
+   SCIP_CALL( fjSolverResetMoves(scip, solver, varidx) );
+
+   return SCIP_OKAY;
+}
+
+
+/*
+ * SCIP integration
+ */
+
+/** adds the objective cutoff constraint as the first constraint
+ *
+ *  The objective is folded into a single unnormalized constraint whose right hand side is the objective
+ *  target: the floored cutoff bound for an integral objective, the cutoff bound minus the minimal improvement otherwise,
+ *  or infinity without a cutoff bound so the side stays infinite until the first acceptance retightens it. An empty
+ *  objective adds no constraint and leaves the local lower bound at zero so the first feasible solution counts as
+ *  optimal; otherwise the local lower bound is stored for the optimality check.
+ */
+static
+SCIP_RETCODE addObjCutoff(
+   SCIP*                 scip,               /**< SCIP data structure */
+   FJ_PROBLEM*           problem,            /**< problem */
+   int*                  nvarcoeffs,         /**< number of coefficients per variable */
+   SCIP_Bool             global              /**< is problem global? */
+   )
+{
+   SCIP_Real* vals;
+   int* inds;
+   SCIP_Real cutoffbound;
+   SCIP_Real rhs;
+   SCIP_Bool success;
+   int objnnzs;
+   int i;
+
+   assert(scip != NULL);
+   assert(problem != NULL);
+   assert(problem->nconstraints == 0);
+
+   cutoffbound = SCIPgetCutoffbound(scip);
+
+   inds = NULL;
+   vals = NULL;
+   SCIP_CALL( SCIPallocBufferArray(scip, &inds, problem->nvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &vals, problem->nvars) );
+
+   /* collect the objective variables from the already extracted variable coefficients */
+   objnnzs = 0;
+   for( i = 0; i < problem->nvars; ++i )
+   {
+      if( SCIPisZero(scip, problem->vars[i].objcoeff) )
+         continue;
+
+      inds[objnnzs] = i;
+      vals[objnnzs] = problem->vars[i].objcoeff;
+      objnnzs++;
+      ++nvarcoeffs[i];
+   }
+
+   /* add the objective cutoff for a non-empty objective */
+   if( objnnzs > 0 )
+   {
+      problem->feasibility = FALSE;
+      problem->locallowerbound = global ? SCIPgetLowerbound(scip) : SCIPgetLocalLowerbound(scip);
+
+      if( SCIPisInfinity(scip, cutoffbound) )
+         rhs = SCIPinfinity(scip);
+      else if( SCIPisObjIntegral(scip) )
+         rhs = floor(cutoffbound); /*lint !e644*/
+      else
+         rhs = cutoffbound - SCIPcutoffbounddelta(scip);
+
+      SCIP_CALL( fjProblemAddConstraint(scip, problem, vals, inds, objnnzs, 0.0, -SCIPinfinity(scip), rhs, FALSE, &success) );
+      assert(success);
+   }
+
+   SCIPfreeBufferArray(scip, &vals);
+   SCIPfreeBufferArray(scip, &inds);
 
    return SCIP_OKAY;
 }
@@ -1438,12 +1549,24 @@ SCIP_RETCODE extractProblemDataBeforePresolve(
    SCIP_VAR** vars;
    SCIP_VAR** consvars;
    SCIP_CONS** conss;
+   SCIP_CONS* cons;
    SCIP_CONSHDLR* conshdlr;
    SCIP_Real* consvals;
    int* consinds;
+   int* nvarcoeffs;
+   FJ_VARTYPE vartype;
+   SCIP_Real constant;
+   SCIP_Real lhs;
+   SCIP_Real rhs;
+   SCIP_Real lb;
+   SCIP_Real ub;
+   SCIP_Real obj;
    int nvars;
    int nconss;
    int nlinconss;
+   int consnvars;
+   int requiredsize;
+   int idx;
    int i;
    int j;
 
@@ -1493,16 +1616,15 @@ SCIP_RETCODE extractProblemDataBeforePresolve(
    SCIP_CALL( SCIPallocBufferArray(scip, &consinds, nvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &consvals, nvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &consvars, nvars) );
+   SCIP_CALL( SCIPallocClearBufferArray(scip, &nvarcoeffs, nvars) );
+
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &problem->vars, nvars) );
+   problem->constraintssize = nconss + 1;
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &problem->constraints, problem->constraintssize) );
 
    /* create feasjump solver variables */
    for( j = 0; j < nvars; ++j )
    {
-      FJ_VARTYPE vartype;
-      SCIP_Real lb;
-      SCIP_Real ub;
-      SCIP_Real obj;
-      int idx;
-
       lb = SCIPvarGetLbLocal(vars[j]);
       ub = SCIPvarGetUbLocal(vars[j]);
       obj = SCIPvarGetObj(vars[j]);
@@ -1510,18 +1632,15 @@ SCIP_RETCODE extractProblemDataBeforePresolve(
       SCIP_CALL( fjProblemAddVar(scip, problem, vartype, lb, ub, obj, &idx) );
    }
 
+   /* add non-empty cutoff before the constraints */
+   SCIP_CALL( addObjCutoff(scip, problem, nvarcoeffs, TRUE) );
+
    /* create feasjump solver constraints */
    for( i = 0; i < nconss; ++i )
    {
-      SCIP_CONS* cons;
-      SCIP_Real lhs;
-      SCIP_Real rhs;
-      int consnvars;
-
       cons = conss[i];
 
       SCIP_CALL( SCIPgetConsNVars(scip, cons, &consnvars, success) );
-
       if( !(*success) )
          goto TERMINATE;
 
@@ -1529,45 +1648,48 @@ SCIP_RETCODE extractProblemDataBeforePresolve(
          continue;
 
       SCIP_CALL( SCIPgetConsVals(scip, cons, consvals, nvars, success) );
-
       if( !(*success) )
          goto TERMINATE;
 
       SCIP_CALL( SCIPgetConsVars(scip, cons, consvars, nvars, success) );
-
       if( !(*success) )
          goto TERMINATE;
 
       lhs = SCIPconsGetLhs(scip, cons, success);
-
       if( !(*success) )
          goto TERMINATE;
 
       rhs = SCIPconsGetRhs(scip, cons, success);
-
       if( !(*success) )
          goto TERMINATE;
 
-      SCIP_CALL( SCIPgetConsNVars(scip, cons, &consnvars, success) );
-      if( !(*success) )
-         goto TERMINATE;
+      constant = 0.0;
+      SCIP_CALL( SCIPgetProbvarLinearSum(scip, consvars, consvals, &consnvars, nvars, &constant, &requiredsize) );
+      assert(requiredsize <= nvars);
 
-      /* check for non-active vars */
+      if( consnvars == 0 )
+         continue;
+
       for( j = 0; j < consnvars; ++j )
       {
-         if( SCIPvarGetProbindex(consvars[j]) == -1 )
-         {
-            *success = FALSE;
-            goto TERMINATE;
-         }
+         assert(SCIPvarGetProbindex(consvars[j]) >= 0);
+         assert(SCIPvarGetProbindex(consvars[j]) < nvars);
          consinds[j] = SCIPvarGetProbindex(consvars[j]);
+         ++nvarcoeffs[consinds[j]];
       }
-      SCIP_CALL( addRowInFeasjumpSolver(scip, problem, consvals, consinds, consnvars, lhs, rhs) );
+
+      SCIP_CALL( fjProblemAddConstraint(scip, problem, consvals, consinds, consnvars, constant, lhs, rhs, TRUE, success) );
+      if( !(*success) )
+         goto TERMINATE;
    }
 
-   *success = TRUE;
+   SCIP_CALL( fjProblemFillReferences(scip, problem, nvarcoeffs) );
+
+   /* require constraint apart from objective */
+   *success = problem->feasibility || problem->nconstraints > 1;
 
 TERMINATE:
+   SCIPfreeBufferArray(scip, &nvarcoeffs);
    SCIPfreeBufferArray(scip, &consvars);
    SCIPfreeBufferArray(scip, &consvals);
    SCIPfreeBufferArray(scip, &consinds);
@@ -1583,32 +1705,47 @@ SCIP_RETCODE extractProblemData(
    SCIP_COL**            cols,               /**< LP columns */
    SCIP_ROW**            rows,               /**< LP rows */
    int                   ncols,              /**< number of LP columns */
-   int                   nrows               /**< number of LP rows */
+   int                   nrows,              /**< number of LP rows */
+   SCIP_Bool*            success             /**< was the problem successfully extracted? */
    )
 {
    SCIP_Real* vals;
    int* inds;
+   int* nvarcoeffs;
+   SCIP_COL* col;
+   SCIP_VAR* var;
+   SCIP_ROW* row;
+   SCIP_COL** rowcols;
+   SCIP_Real* rowvals;
+   FJ_VARTYPE vartype;
+   SCIP_Real lb;
+   SCIP_Real ub;
+   SCIP_Real obj;
+   SCIP_Real lhs;
+   SCIP_Real rhs;
+   SCIP_Real constant;
+   int idx;
+   int nnonz;
+   int nvals;
    int i;
    int j;
 
    assert(scip != NULL);
    assert(problem != NULL);
+   assert(success != NULL);
 
-   inds = NULL;
+   *success = TRUE;
    SCIP_CALL( SCIPallocBufferArray(scip, &inds, ncols) );
    SCIP_CALL( SCIPallocBufferArray(scip, &vals, ncols) );
+   SCIP_CALL( SCIPallocClearBufferArray(scip, &nvarcoeffs, ncols) );
+
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &problem->vars, ncols) );
+   problem->constraintssize = nrows + 1;
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &problem->constraints, problem->constraintssize) );
 
    /* add the columns */
    for( i = 0; i < ncols; ++i )
    {
-      SCIP_COL* col;
-      SCIP_VAR* var;
-      FJ_VARTYPE vartype;
-      SCIP_Real lb;
-      SCIP_Real ub;
-      SCIP_Real obj;
-      int idx;
-
       col = cols[i];
       var = SCIPcolGetVar(col);
       lb = SCIPcolGetLb(col);
@@ -1619,22 +1756,18 @@ SCIP_RETCODE extractProblemData(
       SCIP_CALL( fjProblemAddVar(scip, problem, vartype, lb, ub, obj, &idx) );
    }
 
+   /* add non-empty cutoff before the rows */
+   SCIP_CALL( addObjCutoff(scip, problem, nvarcoeffs, FALSE) );
+
    /* add the rows */
    for( i = 0; i < nrows; ++i )
    {
-      SCIP_ROW* row;
-      SCIP_COL** rowcols;
-      SCIP_Real* rowvals;
-      SCIP_Real lhs;
-      SCIP_Real rhs;
-      int nnonz;
-      int nvals;
-
       row = rows[i];
-      lhs = SCIProwGetLhs(row) - SCIProwGetConstant(row);
-      rhs = SCIProwGetRhs(row) - SCIProwGetConstant(row);
       rowcols = SCIProwGetCols(row);
       rowvals = SCIProwGetVals(row);
+      constant = SCIProwGetConstant(row);
+      lhs = SCIProwGetLhs(row);
+      rhs = SCIProwGetRhs(row);
       nnonz = SCIProwGetNNonz(row);
       nvals = 0;
 
@@ -1647,69 +1780,27 @@ SCIP_RETCODE extractProblemData(
             assert(inds[nvals] >= 0);
             assert(inds[nvals] < ncols);
             vals[nvals] = rowvals[j];
-            assert(vals[nvals] != 0.0);
+            assert(vals[nvals] != 0.0); /*lint !e777*/
+            ++nvarcoeffs[inds[nvals]];
             ++nvals;
          }
       }
-      SCIP_CALL( addRowInFeasjumpSolver(scip, problem, vals, inds, nvals, lhs, rhs) );
-   }
 
-   SCIPfreeBufferArray(scip, &vals);
-   SCIPfreeBufferArray(scip, &inds);
-
-   return SCIP_OKAY;
-}
-
-/** adds objective cutoff constraint */
-static
-SCIP_RETCODE addObjCutoff(
-   SCIP*                 scip,               /**< SCIP data structure */
-   FJ_PROBLEM*           problem,            /**< problem */
-   SCIP_COL**            cols,               /**< LP columns */
-   int                   ncols               /**< number of LP columns */
-   )
-{
-   SCIP_Real* vals;
-   int* inds;
-   SCIP_Real rhs;
-   int nnonz;
-   int objnnzs;
-   int i;
-   int idx;
-
-   assert(scip != NULL);
-   assert(problem != NULL);
-
-   nnonz = ncols;
-
-   inds = NULL;
-   vals = NULL;
-   SCIP_CALL( SCIPallocBufferArray(scip, &inds, nnonz) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &vals, nnonz) );
-
-   objnnzs = 0;
-   for( i = 0; i < ncols; ++i )
-   {
-      SCIP_COL* col;
-      SCIP_Real obj;
-
-      col = cols[i];
-      obj = SCIPcolGetObj(col);
-
-      if( SCIPisZero(scip, obj) )
+      if( nvals == 0 )
          continue;
 
-      inds[objnnzs] = SCIPcolGetLPPos(col);
-      assert(inds[objnnzs] < ncols);
-
-      vals[objnnzs] = obj;
-      objnnzs++;
+      SCIP_CALL( fjProblemAddConstraint(scip, problem, vals, inds, nvals, constant, lhs, rhs, TRUE, success) );
+      if( !(*success) )
+         goto TERMINATE;
    }
 
-   assert(!SCIPisInfinity(scip, SCIPgetCutoffbound(scip)));
-   rhs = SCIPgetCutoffbound(scip) - SCIPcutoffbounddelta(scip);
-   SCIP_CALL( fjProblemAddConstraint(scip, problem, FJ_LTE, rhs, objnnzs, inds, vals, &idx) );
+   SCIP_CALL( fjProblemFillReferences(scip, problem, nvarcoeffs) );
 
+   /* require constraint apart from objective */
+   *success = problem->feasibility || problem->nconstraints > 1;
+
+TERMINATE:
+   SCIPfreeBufferArray(scip, &nvarcoeffs);
    SCIPfreeBufferArray(scip, &vals);
    SCIPfreeBufferArray(scip, &inds);
 
@@ -1723,25 +1814,26 @@ SCIP_RETCODE checkIncumbentSol(
    SCIP_HEUR*            heur,               /**< heuristic pointer */
    SCIP_HEURTIMING       heurtiming,         /**< heuristic timing mask */
    SCIP_Real*            incumbent,          /**< incumbent solution */
-   SCIP_RESULT*          result              /**< pointer to store the result of the heuristic call */
+   SCIP_Bool*            stored              /**< pointer to store whether the solution was accepted */
    )
 {
    SCIP_SOL* sol;
-   SCIP_Bool stored;
+   SCIP_VAR** vars;
+   SCIP_COL** cols;
+   SCIP_VAR* var;
+   int nvars;
+   int ncols;
    int i;
 
    assert(scip != NULL);
    assert(heur != NULL);
    assert(incumbent != NULL);
-   assert(result != NULL);
+   assert(stored != NULL);
 
    SCIP_CALL( SCIPcreateSol(scip, &sol, heur) );
 
    if( heurtiming == SCIP_HEURTIMING_BEFOREPRESOL )
    {
-      SCIP_VAR** vars;
-      int nvars;
-
       vars = SCIPgetVars(scip);
       nvars = SCIPgetNVars(scip);
 
@@ -1752,118 +1844,112 @@ SCIP_RETCODE checkIncumbentSol(
    }
    else
    {
-      SCIP_COL** cols;
-      int ncols;
-
       SCIP_CALL( SCIPgetLPColsData(scip, &cols, &ncols) );
 
       for( i = 0; i < ncols; ++i )
       {
-         SCIP_VAR* var;
-
          var = SCIPcolGetVar(cols[i]);
          SCIP_CALL( SCIPsetSolVal(scip, sol, var, incumbent[i]) );
       }
    }
 
-   SCIP_CALL( SCIPtrySol(scip, sol, FALSE, FALSE, FALSE, FALSE, TRUE, &stored) );
-
-   if( stored )
-   {
-      SCIPdebugMsg(scip, "Feasjump found feasible solution\n");
-      *result = SCIP_FOUNDSOL;
-   }
-
-   SCIP_CALL( SCIPfreeSol(scip, &sol) );
+   SCIP_CALL( SCIPtrySolFree(scip, &sol, FALSE, FALSE, FALSE, FALSE, TRUE, stored) );
 
    return SCIP_OKAY;
 }
 
-/** checks termination conditions and performs callback checks */
+/** reports a solution and checks the termination conditions once per iteration */
 static
 SCIP_RETCODE fjCheckTermination(
    SCIP*                 scip,               /**< SCIP data structure */
    FJ_SOLVER*            solver,             /**< solver */
-   FJ_PROBLEM*           problem,            /**< problem */
    SCIP_HEURDATA*        heurdata,           /**< heuristic data */
    SCIP_HEUR*            heur,               /**< heuristic */
    SCIP_HEURTIMING       heurtiming,         /**< heuristic timing */
-   SCIP_Real*            solution,           /**< solution to report, or NULL */
-   int*                  nsols,              /**< pointer to number of solutions found so far */
-   SCIP_RESULT*          result,             /**< pointer to store result */
-   SCIP_Real             starttime,          /**< start time */
    SCIP_Bool*            terminate           /**< pointer to store whether to terminate */
    )
 {
+   FJ_PROBLEM* problem;
+   FJ_CONSTRAINT* objcutoff;
+   SCIP_Real objective;
+   SCIP_Bool stored;
+   int i;
+
    assert(scip != NULL);
    assert(solver != NULL);
-   assert(problem != NULL);
    assert(heurdata != NULL);
    assert(heur != NULL);
-   assert(nsols != NULL);
-   assert(result != NULL);
    assert(terminate != NULL);
 
-   *terminate = FALSE;
-
-   /* check if callback should be performed */
-   if( solution != NULL || solver->totaleffort - solver->effortatlastcallback > solver->callbackeffort )
+   /* check the effort budget without a significant improvement */
+   if( solver->nunsat >= solver->previolations * (1.0 - heurdata->mindecreaserel) )
+      *terminate = heurdata->maxeffort >= 0 && solver->effort >= heurdata->maxeffort;
+   /* report a feasible solution and reset the effort state */
+   else
    {
-      SCIP_Bool quitnumsol;
-      SCIP_Bool quiteffort;
-      SCIP_Bool quitnoimprove;
-      int nfoundsols = *nsols;
-
-      if( heurdata->verbosity >= 2 )
-         SCIPinfoMessage(scip, NULL, "Feasibility Jump: calling user termination.\n");
-
-      solver->effortatlastcallback = solver->totaleffort;
-
-      /* if we received a solution, check and report it */
-      if( solution != NULL )
+      if( solver->nunsat == 0 )
       {
-         SCIP_CALL( checkIncumbentSol(scip, heur, heurtiming, solution, result) );
-         if( *result == SCIP_FOUNDSOL )
-            nfoundsols++;
-         /* if the heuristic returns a solution that is not feasible we have to stop */
-         else
+         SCIP_CALL( checkIncumbentSol(scip, heur, heurtiming, solver->incumbentassignment, &stored) );
+         problem = solver->problem;
+         objective = !problem->feasibility ? solver->act[0] : 0.0;
+
+         /* terminate when rejected */
+         if( !stored )
+         {
+            if( heurdata->verbosity >= 1 )
+               SCIPinfoMessage(scip, NULL, "Feasibility jump: rejected objective %g\n", objective);
+
             *terminate = TRUE;
-      }
 
-      /* check termination conditions */
-      if( !(*terminate) )
-      {
-         quitnumsol = (nfoundsols >= heurdata->maxsols);
-         if( quitnumsol )
-         {
-            SCIPdebugMsg(scip, "quitting because number of solutions %d >= %d.\n", nfoundsols, heurdata->maxsols);
+            return SCIP_OKAY;
          }
 
-         quiteffort = (solver->totaleffort - solver->effortatlastimprovement > heurdata->maxeffort);
-         if( quiteffort )
+         if( heurdata->verbosity >= 1 )
+            SCIPinfoMessage(scip, NULL, "Feasibility jump: accepted objective %g\n", objective);
+
+         ++solver->nsols;
+
+         if( (heurdata->maxsols >= 0 && solver->nsols >= heurdata->maxsols)
+            || SCIPisInfinity(scip, -objective)
+            || SCIPisLE(scip, objective, problem->locallowerbound) )
          {
-            SCIPdebugMsg(scip, "quitting because effort %d > %d.\n",
-               solver->totaleffort - solver->effortatlastimprovement, heurdata->maxeffort);
+            *terminate = TRUE;
+
+            return SCIP_OKAY;
          }
 
-         quitnoimprove = (solver->percentdecrease < heurdata->mindecrease);
-         if( quitnoimprove )
+         objcutoff = problem->constraints;
+         assert(SCIPisInfinity(scip, -objcutoff->lhs));
+         objcutoff->rhs = SCIPisObjIntegral(scip)
+               ? floor(SCIPgetCutoffbound(scip)) : SCIPgetCutoffbound(scip) - SCIPcutoffbounddelta(scip);
+
+         /* the activity drifted while the cutoff was inactive, so recompute it exactly before reclassifying */
+         fjSolverRecomputeConstraint(solver, 0);
+
+         /* the tightened cutoff makes the incumbent violate it, so improvement re-enters as a violation */
+         if( solver->unsatidx[0] == -1 && SCIPisFeasNegative(scip, 2.0 * fjConstraintScore(scip, objcutoff,
+                  solver->act[0])) )
          {
-            SCIPdebugMsg(scip, "percentage decrease of violated constraints (%d) "
-               "is smaller than the minimum of %d percent decrease.\n", solver->percentdecrease,
-               heurdata->mindecrease);
+            solver->unsatidx[0] = solver->nunsat;
+            solver->unsatidxs[solver->nunsat] = 0;
+            solver->nunsat++;
+
+            /* refresh the moves of the objective variables against the tightened cutoff */
+            for( i = 0; i < objcutoff->ncoeffs; ++i )
+            {
+               SCIP_CALL( fjSolverResetMoves(scip, solver, objcutoff->coeffs[i].idx) );
+            }
          }
-
-         *terminate = quitnumsol || quiteffort || quitnoimprove;
       }
 
-      if( *terminate )
-      {
-         SCIP_Real time = SCIPgetSolvingTime(scip) - starttime;
-         SCIPdebugMsg(scip, "effort rate: %g Mops/sec\n", solver->totaleffort / (1e+6 * time));
-         if( heurdata->verbosity >= 2 )
-            SCIPinfoMessage(scip, NULL, "Feasibility Jump: quitting.\n");
-      }
+      *terminate = FALSE;
+
+      /* reset the effort budget using the retightened violation count so the baseline follows the objective cutoff
+       * that the next better solution has to re-satisfy
+       */
+      assert(solver->nunsat > 0);
+      solver->previolations = solver->nunsat;
+      solver->effort = 0;
    }
 
    return SCIP_OKAY;
@@ -1883,14 +1969,14 @@ SCIP_RETCODE runFeasjump(
    FJ_SOLVER* solver;
    SCIP_COL** cols;
    SCIP_ROW** rows;
-   SCIP_Real starttime;
+   SCIP_Real* initial;
+   SCIP_SOL* bestsol;
    SCIP_Bool success;
    SCIP_Bool terminate;
    int ncols;
    int nrows;
-   int nsols;
-   int step;
    int varidx;
+   int i;
 
    assert(scip != NULL);
    assert(heur != NULL);
@@ -1904,45 +1990,31 @@ SCIP_RETCODE runFeasjump(
    if( heurtiming == SCIP_HEURTIMING_BEFOREPRESOL )
    {
       SCIP_CALL( extractProblemDataBeforePresolve(scip, problem, &success) );
-
-      if( !success )
-      {
-         SCIP_CALL( fjProblemFree(scip, &problem) );
-         return SCIP_OKAY;
-      }
    }
    else
    {
       SCIP_CALL( SCIPgetLPColsData(scip, &cols, &ncols) );
       SCIP_CALL( SCIPgetLPRowsData(scip, &rows, &nrows) );
-      SCIP_CALL( extractProblemData(scip, problem, cols, rows, ncols, nrows) );
-
-      /* add objective cutoff */
-      if( SCIPgetBestSol(scip) != NULL )
-      {
-         SCIP_CALL( addObjCutoff(scip, problem, cols, ncols) );
-      }
+      SCIP_CALL( extractProblemData(scip, problem, cols, rows, ncols, nrows, &success) );
    }
 
-   if( problem->nvars == 0 || problem->nconstraints == 0 )
+   if( !success || problem->nvars == 0 || problem->nconstraints == 0 )
    {
       SCIP_CALL( fjProblemFree(scip, &problem) );
       return SCIP_OKAY;
    }
 
-   SCIP_CALL( fjSolverCreate(scip, &solver, problem, heurdata->randnumgen, heurdata->verbosity,
-         heurdata->weightupdatedecay, SCIPinfinity(scip), heurdata->iterations, heurdata->samplesize,
-         heurdata->randprobgood, heurdata->randprobviol, heurdata->callbackeffort) );
+   /* set effort budget */
+   heurdata->maxeffort = heurdata->maxeffortfac >= 0
+         ? heurdata->maxeffortfac * (SCIP_Longint)problem->nnonzeros : (SCIP_Longint)-1;
 
-   starttime = SCIPgetSolvingTime(scip);
-   nsols = 0;
+   SCIP_CALL( fjSolverCreate(scip, &solver, problem) );
 
    /* initialize with best solution if requested */
    if( SCIPgetBestSol(scip) != NULL && heurdata->useinitialsol && heurtiming != SCIP_HEURTIMING_BEFOREPRESOL )
    {
-      SCIP_Real* initial = NULL;
-      SCIP_SOL* bestsol = SCIPgetBestSol(scip);
-      int i;
+      initial = NULL;
+      bestsol = SCIPgetBestSol(scip);
 
       SCIP_CALL( SCIPgetLPColsData(scip, &cols, &ncols) );
       SCIP_CALL( SCIPallocBufferArray(scip, &initial, ncols) );
@@ -1960,75 +2032,26 @@ SCIP_RETCODE runFeasjump(
       SCIP_CALL( fjSolverInit(scip, solver, NULL) );
    }
 
-   if( heurdata->verbosity >= 1 )
-   {
-      SCIPinfoMessage(scip, NULL, "Feasibility Jump: starting solve. weightUpdateDecay=%g\n",
-         heurdata->weightupdatedecay);
-   }
-
    /* main loop */
-   step = 0;
    terminate = FALSE;
 
    while( !terminate && !SCIPisStopped(scip) )
    {
-      SCIP_Real* solution = NULL;
-
-      /* periodic output */
-      if( step % 100000 == 0 && heurdata->verbosity >= 1 )
-      {
-         SCIPinfoMessage(scip, NULL, "Feasibility Jump: step %d viol %d good %d bumps %d\n",
-            step, problem->nviolated, solver->ngoodvars, solver->nbumps);
-      }
-
       /* select and perform move */
-      SCIP_CALL( fjSolverSelectVariable(scip, solver, &varidx) );
-      SCIP_CALL( fjSolverDoVariableMove(scip, solver, varidx) );
+      SCIP_CALL( fjSolverSelectVariable(scip, solver, heurdata, &varidx) );
+      SCIP_CALL( fjSolverDoVariableMove(scip, solver, heurdata, varidx) );
 
-      /* check for improvement */
-      if( problem->nviolated < solver->bestviolationscore )
-      {
-         solver->effortatlastimprovement = solver->totaleffort;
-         solver->bestviolationscore = problem->nviolated;
-      }
+      SCIPdebugMsg(scip, "varidx=%d value=%g nunsat=%d good=%d effort=%" SCIP_LONGINT_FORMAT " obj=%g\n", varidx,
+         solver->incumbentassignment[varidx], solver->nunsat, solver->ngoodvars, solver->effort,
+         !problem->feasibility ? solver->act[0] : 0.0);
 
-      /* check for solution */
-      if( problem->nviolated == 0 && problem->incumbentobjective < solver->bestobjective )
-      {
-         solver->effortatlastimprovement = solver->totaleffort;
-         solver->bestobjective = problem->incumbentobjective;
-         solver->percentdecrease = 100;
-         solution = problem->incumbentassignment;
-      }
-
-      /* check progress periodically */
-      if( step == 0 )
-         solver->prevviolations = problem->nviolated;
-      else if( step % heurdata->iterations == 0 )
-      {
-         if( heurdata->verbosity >= 1 )
-            SCIPinfoMessage(scip, NULL, "Feasibility Jump: viol %d prev viol %d \n",
-               problem->nviolated, solver->prevviolations);
-
-         solver->violationsdecrease = solver->prevviolations - problem->nviolated;
-         if( solver->prevviolations == 0 )
-            solver->percentdecrease = 100;
-         else
-            solver->percentdecrease = (100 * solver->violationsdecrease) / solver->prevviolations;
-
-         solver->prevviolations = problem->nviolated;
-      }
-
-      SCIPdebugMsg(scip, "step=%d varidx=%d value=%g viol=%d good=%d effort=%d obj=%g\n", step, varidx,
-         problem->incumbentassignment[varidx], problem->nviolated, solver->ngoodvars, solver->totaleffort,
-         problem->incumbentobjective);
-
-      /* check termination conditions */
-      SCIP_CALL( fjCheckTermination(scip, solver, problem, heurdata, heur, heurtiming, solution, &nsols, result,
-            starttime, &terminate) );
-
-      ++step;
+      /* report the solution and check the termination conditions */
+      SCIP_CALL( fjCheckTermination(scip, solver, heurdata, heur, heurtiming, &terminate) );
    }
+
+   /* report found solution */
+   if( solver->nsols > 0 )
+      *result = SCIP_FOUNDSOL;
 
    SCIP_CALL( fjSolverFree(scip, &solver) );
    SCIP_CALL( fjProblemFree(scip, &problem) );
@@ -2049,7 +2072,6 @@ SCIP_DECL_HEURCOPY(heurCopyFeasjump)
    assert(heur != NULL);
    assert(strcmp(SCIPheurGetName(heur), HEUR_NAME) == 0);
 
-   /* call inclusion method of primal heuristic */
    SCIP_CALL( SCIPincludeHeurFeasjump(scip) );
 
    return SCIP_OKAY;
@@ -2064,7 +2086,6 @@ SCIP_DECL_HEURFREE(heurFreeFeasjump)
    heurdata = SCIPheurGetData(heur);
    assert(heurdata != NULL);
 
-   /* free heuristic data */
    SCIPfreeBlockMemory(scip, &heurdata);
    SCIPheurSetData(heur, NULL);
 
@@ -2080,7 +2101,6 @@ SCIP_DECL_HEURINIT(heurInitFeasjump)
    heurdata = SCIPheurGetData(heur);
    assert(heurdata != NULL);
 
-   /* create random number generator */
    SCIP_CALL( SCIPcreateRandom(scip, &heurdata->randnumgen, DEFAULT_RANDSEED, TRUE) );
 
    return SCIP_OKAY;
@@ -2095,7 +2115,6 @@ SCIP_DECL_HEUREXIT(heurExitFeasjump)
    heurdata = SCIPheurGetData(heur);
    assert(heurdata != NULL);
 
-   /* free random number generator */
    SCIPfreeRandom(scip, &heurdata->randnumgen);
 
    return SCIP_OKAY;
@@ -2108,25 +2127,20 @@ SCIP_DECL_HEUREXEC(heurExecFeasjump)
    SCIP_HEURDATA* heurdata;
    SCIP_Bool cutoff;
 
-   heurdata = SCIPheurGetData(heur);
-
    assert(result != NULL);
+   *result = SCIP_DIDNOTRUN;
+   heurdata = SCIPheurGetData(heur);
    assert(heurdata != NULL);
 
-   *result = SCIP_DIDNOTRUN;
+   if( ( heurdata->onlymainscip && SCIPgetSubscipDepth(scip) > 0 )
+      || ( heurdata->onlybeforenode && heurtiming == SCIP_HEURTIMING_BEFOREPRESOL )
+      || ( heurdata->onlywithoutsol && SCIPgetNSols(scip) > 0 ) )
+      return SCIP_OKAY;
 
    SCIPdebugMsg(scip, "Executing Feasjump\n");
 
-   if( !heurdata->beforepresol && heurtiming == SCIP_HEURTIMING_BEFOREPRESOL )
-      return SCIP_OKAY;
-
    if( heurtiming == SCIP_HEURTIMING_BEFORENODE )
    {
-      /* stop execution method if we call the heuristic only when no primal feasible solution is found yet */
-      if( SCIPgetBestSol(scip) != NULL && heurdata->onlywithoutsol )
-         return SCIP_OKAY;
-
-      /* stop if there is no LP available */
       if( !SCIPhasCurrentNodeLP(scip) )
          return SCIP_OKAY;
 
@@ -2134,7 +2148,6 @@ SCIP_DECL_HEUREXEC(heurExecFeasjump)
       {
          SCIP_CALL( SCIPconstructLP(scip, &cutoff) );
 
-         /* manually cut off the node if the LP construction detected infeasibility */
          if( cutoff )
          {
             SCIP_CALL( SCIPcutoffNode(scip, SCIPgetCurrentNode(scip)) );
@@ -2165,23 +2178,9 @@ SCIP_RETCODE SCIPincludeHeurFeasjump(
 
    heurdata = NULL;
 
-   /* create Feasjump primal heuristic data */
    SCIP_CALL( SCIPallocBlockMemory(scip, &heurdata) );
    assert(heurdata != NULL);
 
-   heurdata->onlywithoutsol = DEFAULT_ONLYWITHOUTSOL;
-   heurdata->weightupdatedecay = DEFAULT_WEIGHTDECAY;
-   heurdata->maxeffort = DEFAULT_MAXEFFORT;
-   heurdata->verbosity = DEFAULT_VERBOSITY;
-   heurdata->useinitialsol = DEFAULT_USEINITIALSOL;
-   heurdata->beforepresol = DEFAULT_BEFORE_PRESOL;
-   heurdata->iterations = DEFAULT_ITERATIONS;
-   heurdata->mindecrease = DEFAULT_MINPERCENTDECREASE;
-   heurdata->maxsols = DEFAULT_MAXSOLS;
-   heurdata->samplesize = DEFAULT_SAMPLESIZE;
-   heurdata->randprobgood = DEFAULT_RANDPROBGOOD;
-   heurdata->randprobviol = DEFAULT_RANDPROBVIOL;
-   heurdata->callbackeffort = DEFAULT_CALLBACKEFFORT;
    heurdata->randnumgen = NULL;
 
    /* include primal heuristic */
@@ -2191,53 +2190,16 @@ SCIP_RETCODE SCIPincludeHeurFeasjump(
 
    assert(heur != NULL);
 
-   /* set non-NULL pointers to callback methods */
    SCIP_CALL( SCIPsetHeurCopy(scip, heur, heurCopyFeasjump) );
    SCIP_CALL( SCIPsetHeurFree(scip, heur, heurFreeFeasjump) );
    SCIP_CALL( SCIPsetHeurInit(scip, heur, heurInitFeasjump) );
    SCIP_CALL( SCIPsetHeurExit(scip, heur, heurExitFeasjump) );
 
-   /* add feasjump primal heuristic parameters */
+   /* add heuristic parameters */
    SCIP_CALL( SCIPaddRealParam(scip,
          "heuristics/" HEUR_NAME "/weightupdatedecay",
          "decay factor for the weight update",
          &heurdata->weightupdatedecay, FALSE, DEFAULT_WEIGHTDECAY, 0.0, SCIP_REAL_MAX, NULL, NULL) );
-   SCIP_CALL( SCIPaddIntParam(scip,
-         "heuristics/" HEUR_NAME "/maxeffort",
-         "maximum effort spent in feasibility jump",
-         &heurdata->maxeffort, FALSE, DEFAULT_MAXEFFORT, 0, INT_MAX, NULL, NULL) );
-   SCIP_CALL( SCIPaddIntParam(scip,
-         "heuristics/" HEUR_NAME "/verbosity",
-         "verbosity level of the feasibility jump solver",
-         &heurdata->verbosity, FALSE, DEFAULT_VERBOSITY, 0, INT_MAX, NULL, NULL) );
-   SCIP_CALL( SCIPaddBoolParam(scip,
-         "heuristics/" HEUR_NAME "/onlywithoutsol",
-         "should feasibility jump be called only if no solution exists?",
-         &heurdata->onlywithoutsol, FALSE, DEFAULT_ONLYWITHOUTSOL, NULL, NULL) );
-   SCIP_CALL( SCIPaddBoolParam(scip,
-         "heuristics/" HEUR_NAME "/beforepresol",
-         "should the heuristic be called before presolving?",
-         &heurdata->beforepresol, FALSE, DEFAULT_BEFORE_PRESOL, NULL, NULL) );
-   SCIP_CALL( SCIPaddBoolParam(scip,
-         "heuristics/" HEUR_NAME "/useinitialsol",
-         "should the feasibility jump use the best known solution as initialization?",
-         &heurdata->useinitialsol, FALSE, DEFAULT_USEINITIALSOL, NULL, NULL) );
-   SCIP_CALL( SCIPaddIntParam(scip,
-         "heuristics/" HEUR_NAME "/iterations",
-         "number of iterations to check if the heuristic reduces the total number of violated constraints",
-         &heurdata->iterations, FALSE, DEFAULT_ITERATIONS, 1, INT_MAX, NULL, NULL) );
-   SCIP_CALL( SCIPaddIntParam(scip,
-         "heuristics/" HEUR_NAME "/mindecrease",
-         "minimum percentage decrease for the number of violated constraints",
-         &heurdata->mindecrease, FALSE, DEFAULT_MINPERCENTDECREASE, 0, 100, NULL, NULL) );
-   SCIP_CALL( SCIPaddIntParam(scip,
-         "heuristics/" HEUR_NAME "/maxsols",
-         "maximum number of solutions to find",
-         &heurdata->maxsols, FALSE, DEFAULT_MAXSOLS, 1, INT_MAX, NULL, NULL) );
-   SCIP_CALL( SCIPaddIntParam(scip,
-         "heuristics/" HEUR_NAME "/samplesize",
-         "number of candidates to sample in tournament selection",
-         &heurdata->samplesize, FALSE, DEFAULT_SAMPLESIZE, 1, INT_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddRealParam(scip,
          "heuristics/" HEUR_NAME "/randprobgood",
          "probability of random selection from good variables",
@@ -2247,9 +2209,45 @@ SCIP_RETCODE SCIPincludeHeurFeasjump(
          "probability of random selection from violated constraint",
          &heurdata->randprobviol, FALSE, DEFAULT_RANDPROBVIOL, 0.0, 1.0, NULL, NULL) );
    SCIP_CALL( SCIPaddIntParam(scip,
-         "heuristics/" HEUR_NAME "/callbackeffort",
-         "effort between callbacks",
-         &heurdata->callbackeffort, FALSE, DEFAULT_CALLBACKEFFORT, 1, INT_MAX, NULL, NULL) );
+         "heuristics/" HEUR_NAME "/samplesize",
+         "number of candidates to sample in tournament selection",
+         &heurdata->samplesize, FALSE, DEFAULT_SAMPLESIZE, 1, INT_MAX, NULL, NULL) );
+   SCIP_CALL( SCIPaddIntParam(scip,
+         "heuristics/" HEUR_NAME "/verbosity",
+         "verbosity level of the feasibility jump solver",
+         &heurdata->verbosity, FALSE, DEFAULT_VERBOSITY, 0, INT_MAX, NULL, NULL) );
+   SCIP_CALL( SCIPaddIntParam(scip,
+         "heuristics/" HEUR_NAME "/maxsols",
+         "maximum number of solutions to find (-1: unlimited)",
+         &heurdata->maxsols, FALSE, DEFAULT_MAXSOLS, -1, INT_MAX, NULL, NULL) );
+   SCIP_CALL( SCIPaddRealParam(scip,
+         "heuristics/" HEUR_NAME "/mindecreaserel",
+         "minimum relative decrease to reset the effort budget",
+         &heurdata->mindecreaserel, FALSE, DEFAULT_MINDECREASEREL, 0.0, 1.0, NULL, NULL) );
+   SCIP_CALL( SCIPaddIntParam(scip,
+         "heuristics/" HEUR_NAME "/maxeffortfac",
+         "maximum effort factor per nonzero without improvement (-1: unlimited)",
+         &heurdata->maxeffortfac, FALSE, DEFAULT_MAXEFFORTFAC, -1, INT_MAX, NULL, NULL) );
+   SCIP_CALL( SCIPaddIntParam(scip,
+         "heuristics/" HEUR_NAME "/recomputefreq",
+         "activity recomputation frequency (-1: off, 0: near boundary only)",
+         &heurdata->recomputefreq, FALSE, DEFAULT_RECOMPUTEFREQ, -1, INT_MAX, NULL, NULL) );
+   SCIP_CALL( SCIPaddBoolParam(scip,
+         "heuristics/" HEUR_NAME "/useinitialsol",
+         "should best known solution be used?",
+         &heurdata->useinitialsol, FALSE, DEFAULT_USEINITIALSOL, NULL, NULL) );
+   SCIP_CALL( SCIPaddBoolParam(scip,
+         "heuristics/" HEUR_NAME "/onlymainscip",
+         "should run in subscip be skipped?",
+         &heurdata->onlymainscip, FALSE, DEFAULT_ONLYMAINSCIP, NULL, NULL) );
+   SCIP_CALL( SCIPaddBoolParam(scip,
+         "heuristics/" HEUR_NAME "/onlybeforenode",
+         "should run before presolving be skipped?",
+         &heurdata->onlybeforenode, FALSE, DEFAULT_ONLYBEFORENODE, NULL, NULL) );
+   SCIP_CALL( SCIPaddBoolParam(scip,
+         "heuristics/" HEUR_NAME "/onlywithoutsol",
+         "should run with solution be skipped?",
+         &heurdata->onlywithoutsol, FALSE, DEFAULT_ONLYWITHOUTSOL, NULL, NULL) );
 
    return SCIP_OKAY;
 }
