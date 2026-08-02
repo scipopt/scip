@@ -182,7 +182,7 @@ struct LS_Solver
    int*                  sampledidxs;        /**< stack of sampled constraint indices */
    int                   nsampled;           /**< number of sampled constraints */
    SCIP_Real*            liftbound;          /**< per obj-var: feasible bound in improving direction */
-   SCIP_Bool*            liftvalid;          /**< are liftbounds valid */
+   int*                  liftidxs;           /**< per obj-var: lift coefficient position, -1 if free */
    SCIP_Longint          subscore;           /**< secondary score (set by tightScore) */
    int                   nsols;              /**< number of solutions */
    int                   previolations;      /**< violation count at last improvement */
@@ -584,12 +584,12 @@ SCIP_RETCODE lsSolverCreate(
    if( nobjvars > 0 )
    {
       SCIP_CALL( SCIPallocBlockMemoryArray(scip, &solver->liftbound, nobjvars) );
-      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &solver->liftvalid, nobjvars) );
+      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &solver->liftidxs, nobjvars) );
    }
    else
    {
       solver->liftbound = NULL;
-      solver->liftvalid = NULL;
+      solver->liftidxs = NULL;
    }
 
    /* initialize bound solution */
@@ -701,7 +701,7 @@ SCIP_RETCODE lsSolverFree(
 
    if( nobjvars > 0 )
    {
-      SCIPfreeBlockMemoryArray(scip, &solver->liftvalid, nobjvars);
+      SCIPfreeBlockMemoryArray(scip, &solver->liftidxs, nobjvars);
       SCIPfreeBlockMemoryArray(scip, &solver->liftbound, nobjvars);
    }
    SCIPfreeBlockMemoryArray(scip, &solver->sampledidxs, nconss);
@@ -819,9 +819,9 @@ void lsSolverApplyMove(
    }
 }
 
-/** computes tight move value for an objective term */
+/** computes break move value for an objective term */
 static
-SCIP_Real getTargetMove(
+SCIP_Real getBreakMove(
    SCIP*                 scip,               /**< SCIP data structure */
    LS_SOLVER*            solver,             /**< solver */
    int                   termidx             /**< term index within the objective */
@@ -829,19 +829,29 @@ SCIP_Real getTargetMove(
 {
    LS_PROBLEM* problem;
    LS_VAR* var;
+   LS_CONSTRAINT* liftcons;
    SCIP_Real value;
-   SCIP_Real residual;
    SCIP_Real coeff;
+   SCIP_Real residual;
    SCIP_Real movevalue;
+   SCIP_Real liftcoeff;
+   SCIP_Real liftresidual;
+   SCIP_Real liftvalue;
    SCIP_Bool decrease;
+   SCIP_Bool lifttolhs;
    int varidx;
+   int liftidx;
 
    assert(scip != NULL);
    assert(solver != NULL);
    assert(!SCIPisInfinity(scip, solver->objtarget));
 
    problem = solver->problem;
+   assert(termidx >= 0);
+   assert(termidx < problem->nobjvars);
    varidx = problem->objvaridxs[termidx];
+   assert(varidx >= 0);
+   assert(varidx < problem->nvars);
    var = problem->vars + varidx;
    coeff = var->obj;
    assert(coeff != 0.0); /*lint !e777*/
@@ -849,6 +859,20 @@ SCIP_Real getTargetMove(
    residual = solver->incumbentobjective - value * coeff;
    movevalue = (solver->objtarget - residual) / coeff;
    decrease = coeff >= 0.0;
+   liftidx = solver->liftidxs[termidx];
+   assert(liftidx >= 0);
+   assert(liftidx < var->ncoeffs);
+   liftcons = problem->conss + var->coeffs[liftidx].idx;
+   liftcoeff = var->coeffs[liftidx].coeff;
+   assert(liftcoeff != 0.0); /*lint !e777*/
+   liftresidual = solver->act[var->coeffs[liftidx].idx] - value * liftcoeff;
+   lifttolhs = decrease == (liftcoeff >= 0.0);
+   assert(!lifttolhs || !SCIPisInfinity(scip, -liftcons->lhs));
+   liftvalue = ((lifttolhs ? liftcons->lhs - SCIPfeastol(scip) : liftcons->rhs + SCIPfeastol(scip)) - liftresidual) / liftcoeff;
+
+   /* better and breaking */
+   if( decrease ? movevalue > liftvalue : movevalue < liftvalue )
+      movevalue = liftvalue;
 
    /* bound and round */
    if( movevalue < var->lb )
@@ -858,15 +882,25 @@ SCIP_Real getTargetMove(
    else if( varidx < problem->nintvars )
       movevalue = round(movevalue);
 
-   /* at best bound or objective target reached */
-   if( (decrease ? movevalue == var->lb : movevalue == var->ub) /*lint !e777*/
-      || ( movevalue != value && SCIPisLE(scip, movevalue * coeff + residual, solver->objtarget) ) ) /*lint !e777*/
-      return movevalue;
+   /* improve a step if target unreached */
+   if( decrease ? movevalue != var->lb : movevalue != var->ub ) /*lint !e777*/
+   {
+      if( movevalue == value || SCIPisGT(scip, movevalue * coeff + residual, solver->objtarget) /*lint !e777*/
+         || ( lifttolhs ? !SCIPisFeasNegative(scip, 2.0 * (movevalue * liftcoeff + liftresidual - liftcons->lhs))
+                        : !SCIPisFeasPositive(scip, 2.0 * (movevalue * liftcoeff + liftresidual - liftcons->rhs)) ) )
+         return varidx < problem->nintvars
+               ? movevalue + (decrease ? -1.0 : 1.0)
+               : nextafter(movevalue, decrease ? -(SCIP_Real)INFINITY : (SCIP_Real)INFINITY);
+   }
+   /* only move if lift is broken */
+   else
+   {
+      if( lifttolhs ? !SCIPisFeasNegative(scip, 2.0 * (movevalue * liftcoeff + liftresidual - liftcons->lhs))
+                    : !SCIPisFeasPositive(scip, 2.0 * (movevalue * liftcoeff + liftresidual - liftcons->rhs)) )
+         return value;
+   }
 
-   /* improve a step */
-   return varidx < problem->nintvars
-         ? movevalue + (decrease ? -1.0 : 1.0)
-         : nextafter(movevalue, decrease ? -(SCIP_Real)INFINITY : (SCIP_Real)INFINITY);
+   return movevalue;
 }
 
 /** computes tight move value for a constraint term to the selected side */
@@ -897,8 +931,12 @@ SCIP_Real getTightMove(
 
    problem = solver->problem;
    cons = problem->conss + constridx;
+   assert(termidx >= 0);
+   assert(termidx < cons->ncoeffs);
    assert(!tolhs || !SCIPisInfinity(scip, -cons->lhs));
    varidx = cons->coeffs[termidx].idx;
+   assert(varidx >= 0);
+   assert(varidx < problem->nvars);
    var = problem->vars + varidx;
    coeff = cons->coeffs[termidx].coeff;
    assert(coeff != 0.0); /*lint !e777*/
@@ -1212,9 +1250,13 @@ void collectObjectiveNeighbors(
 
    for( i = 0; i < problem->nobjvars; ++i )
    {
+      /* skip free variable */
+      if( solver->liftidxs[i] == -1 )
+         continue;
+
       varidx = problem->objvaridxs[i];
       value = solver->incumbentassignment[varidx];
-      movevalue = getTargetMove(scip, solver, i);
+      movevalue = getBreakMove(scip, solver, i);
 
       /* tabu check */
       if( softtabu )
@@ -1701,15 +1743,16 @@ SCIP_RETCODE lsSolverLiftMove(
       value = solver->incumbentassignment[varidx];
 
       /* validate lift bound */
-      if( !solver->iskeepfeas || !solver->liftvalid[i] )
+      if( !solver->iskeepfeas || solver->liftidxs[i] == -1 )
       {
+         solver->liftidxs[i] = -1;
+
          if( objcoeff >= 0.0 )
          {
             /* at best bound */
             if( SCIPisGE(scip, var->lb, value) )
             {
                solver->liftbound[i] = value;
-               solver->liftvalid[i] = TRUE;
                continue;
             }
 
@@ -1728,6 +1771,9 @@ SCIP_RETCODE lsSolverLiftMove(
 
                if( solver->liftbound[i] < movevalue )
                {
+                  if( SCIPisLT(scip, solver->liftbound[i], movevalue) )
+                     solver->liftidxs[i] = j;
+
                   /* lift is blocked */
                   if( SCIPisGE(scip, movevalue, value) )
                   {
@@ -1745,7 +1791,6 @@ SCIP_RETCODE lsSolverLiftMove(
             if( SCIPisLE(scip, var->ub, value) )
             {
                solver->liftbound[i] = value;
-               solver->liftvalid[i] = TRUE;
                continue;
             }
 
@@ -1764,6 +1809,9 @@ SCIP_RETCODE lsSolverLiftMove(
 
                if( solver->liftbound[i] > movevalue )
                {
+                  if( SCIPisGT(scip, solver->liftbound[i], movevalue) )
+                     solver->liftidxs[i] = j;
+
                   /* lift is blocked */
                   if( SCIPisLE(scip, movevalue, value) )
                   {
@@ -1776,7 +1824,6 @@ SCIP_RETCODE lsSolverLiftMove(
             }
          }
 
-         solver->liftvalid[i] = TRUE;
          solver->effort += j;
       }
 
@@ -1823,7 +1870,7 @@ SCIP_RETCODE lsSolverLiftMove(
                objpos = problem->vars[varidx].objidx;
 
                if( objpos >= 0 )
-                  solver->liftvalid[objpos] = FALSE;
+                  solver->liftidxs[objpos] = -1;
             }
          }
       }
