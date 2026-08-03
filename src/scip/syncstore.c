@@ -488,9 +488,9 @@ void SCIPsyncstoreUpdateBestMinObj(
    SCIP_CALL_ABORT( SCIPtpiReleaseLock(syncstore->lock) );
 }
 
-/** updates the minimization-normalized best global dual bound; must only be called when the solution
- *  pool is enabled, where the concurrent solvers report their dual bound immediately while solving so
- *  that SCIPgetConcurrentDualbound stays up to date.
+/** updates the minimization-normalized best global dual bound; must only be called in opportunistic mode,
+ *  where the concurrent solvers report their dual bound immediately while solving so that
+ *  SCIPgetConcurrentDualbound stays up to date.
  */
 void SCIPsyncstoreUpdateBestDualbound(
    SCIP_SYNCSTORE*       syncstore,          /**< the synchronization store */
@@ -499,7 +499,7 @@ void SCIPsyncstoreUpdateBestDualbound(
 {
    assert(syncstore != NULL);
    assert(syncstore->initialized);
-   assert(syncstore->usesolpool);
+   assert(syncstore->mode == SCIP_PARA_OPPORTUNISTIC);
 
    SCIP_CALL_ABORT( SCIPtpiAcquireLock(syncstore->lock) );
 
@@ -680,10 +680,10 @@ SCIP_Real SCIPsyncstoreGetLastUpperbound(
    assert(syncstore != NULL);
    assert(syncstore->initialized);
 
-   /* when the solution pool is enabled lastsync is not advanced during solving; report the immediately-tracked global
-    * primal bound (bestminobj), which the getter then converts to the caller's objective space and sense
+   /* in opportunistic mode lastsync is not advanced during solving; report the immediately-tracked
+    * global primal bound (bestminobj), which the getter then converts to the caller's objective space and sense
     */
-   if( syncstore->usesolpool )
+   if( syncstore->mode == SCIP_PARA_OPPORTUNISTIC )
       return syncstore->bestminobj < SCIP_REAL_MAX ? syncstore->bestminobj : SCIPinfinity(syncstore->mainscip);
 
    return syncstore->lastsync == NULL ? SCIPinfinity(syncstore->mainscip) : syncstore->lastsync->bestupperbound;
@@ -697,10 +697,10 @@ SCIP_Real SCIPsyncstoreGetLastLowerbound(
    assert(syncstore != NULL);
    assert(syncstore->initialized);
 
-   /* when the solution pool is enabled lastsync is not advanced during solving; report the immediately-tracked global
-    * dual bound, which the getter then converts to the caller's objective space and sense
+   /* in opportunistic mode lastsync is not advanced during solving; report the immediately-tracked
+    * global dual bound, which the getter then converts to the caller's objective space and sense
     */
-   if( syncstore->usesolpool )
+   if( syncstore->mode == SCIP_PARA_OPPORTUNISTIC )
       return syncstore->bestdualbound > -SCIP_REAL_MAX ? syncstore->bestdualbound : -SCIPinfinity(syncstore->mainscip);
 
    return syncstore->lastsync == NULL ? -SCIPinfinity(syncstore->mainscip) : syncstore->lastsync->bestlowerbound;
@@ -1012,13 +1012,17 @@ SCIP_RETCODE SCIPsyncstoreFinishSync(
       }
    }
 
-   if( (*syncdata)->syncedcount == syncstore->nsolvers )
+   /* in opportunistic mode syncedcount may never reach nsolvers, so every writer checks the limits */
+   if( (*syncdata)->syncedcount == syncstore->nsolvers || syncstore->mode == SCIP_PARA_OPPORTUNISTIC )
    {
       if( (*syncdata)->status != SCIP_STATUS_UNKNOWN ||
          (SCIPgetConcurrentGap(syncstore->mainscip) <= syncstore->limit_gap) ||
          (SCIPgetNLimSolsFound(syncstore->mainscip) > 0 && REALABS(SCIPgetConcurrentPrimalbound(syncstore->mainscip) - SCIPgetConcurrentDualbound(syncstore->mainscip)) <= syncstore->limit_absgap) )
          SCIPsyncstoreSetSolveIsStopped(syncstore, TRUE);
+   }
 
+   if( (*syncdata)->syncedcount == syncstore->nsolvers )
+   {
       syncstore->lastsync = *syncdata;
       printline = TRUE;
 
@@ -1055,8 +1059,8 @@ int SCIPsyncstoreGetWinner(
    assert(syncstore != NULL);
    assert(syncstore->initialized);
 
-   /* when the solution pool is enabled read the winner directly in the syncstore */
-   if( syncstore->usesolpool )
+   /* in opportunistic mode lastsync is not reliably advanced, so read the winner directly in the syncstore */
+   if( syncstore->mode == SCIP_PARA_OPPORTUNISTIC )
       return syncstore->winnerstatus == SCIP_STATUS_UNKNOWN ? -1 : syncstore->winnerid;
 
    if( syncstore->lastsync == NULL || syncstore->lastsync->status == SCIP_STATUS_UNKNOWN )

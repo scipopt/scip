@@ -331,9 +331,9 @@ SCIP_Real SCIPgetConcurrentDualbound(
    syncstore = SCIPgetSyncstore(scip);
    assert(syncstore != NULL);
 
-   /* when the solution pool is enabled the tracked bound lives in the main SCIP's objective space, so convert it
+   /* in opportunistic mode the tracked bound lives in the main SCIP's objective space, so convert it
     * there; correct even when queried from a worker whose presolve scaled the objective differently */
-   if( SCIPsyncstoreSolPoolEnabled(syncstore) )
+   if( SCIPsyncstoreGetMode(syncstore) == SCIP_PARA_OPPORTUNISTIC )
       scip = SCIPsyncstoreGetMainScip(syncstore);
 
    return SCIPprobExternObjval(scip->transprob, scip->origprob, scip->set, SCIPsyncstoreGetLastLowerbound(syncstore));
@@ -353,9 +353,9 @@ SCIP_Real SCIPgetConcurrentPrimalbound(
    syncstore = SCIPgetSyncstore(scip);
    assert(syncstore != NULL);
 
-   /* when the solution pool is enabled the tracked bound lives in the main SCIP's objective space, so convert it
+   /* in opportunistic mode the tracked bound lives in the main SCIP's objective space, so convert it
     * there; correct even when queried from a worker whose presolve scaled the objective differently */
-   if( SCIPsyncstoreSolPoolEnabled(syncstore) )
+   if( SCIPsyncstoreGetMode(syncstore) == SCIP_PARA_OPPORTUNISTIC )
       scip = SCIPsyncstoreGetMainScip(syncstore);
 
    return SCIPprobExternObjval(scip->transprob, scip->origprob, scip->set, SCIPsyncstoreGetLastUpperbound(syncstore));

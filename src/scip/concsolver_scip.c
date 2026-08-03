@@ -144,19 +144,17 @@ SCIP_DECL_EVENTINIT(eventInitSync)
       SCIP_CALL( SCIPcatchEvent(scip, SCIP_EVENTTYPE_SYNC, eventhdlr, NULL, &eventhdlrdata->filterpos) );
    }
 
-   /* in opportunistic mode new incumbent solutions are published in the solution pool
-    * immediately instead of waiting for the next synchronization point; the event is also
-    * caught when incumbents should be printed, which is supported in both parallel modes
+   /* in opportunistic mode the event tracks the global primal bound and, with the solution pool enabled,
+    * publishes the incumbent itself immediately instead of waiting for the next synchronization point;
+    * the event is also caught when incumbents should be printed, which works in both parallel modes
     */
    if( eventhdlrdata->filterpossol < 0 && SCIPsyncstoreIsInitialized(syncstore) )
    {
-      SCIP_Bool solpool;
       SCIP_Bool printincumbents;
 
-      SCIP_CALL( SCIPgetBoolParam(scip, "concurrent/solpool", &solpool) );
       SCIP_CALL( SCIPgetBoolParam(scip, "concurrent/printincumbents", &printincumbents) );
 
-      if( (SCIPsyncstoreGetMode(syncstore) == SCIP_PARA_OPPORTUNISTIC && solpool) || printincumbents )
+      if( SCIPsyncstoreGetMode(syncstore) == SCIP_PARA_OPPORTUNISTIC || printincumbents )
       {
          SCIP_CALL( SCIPcatchEvent(scip, SCIP_EVENTTYPE_BESTSOLFOUND, eventhdlr, NULL, &eventhdlrdata->filterpossol) );
       }
@@ -1054,9 +1052,9 @@ SCIP_DECL_CONCSOLVERSYNCWRITE(concsolverScipSyncWrite)
    SCIPsyncdataSetLowerbound(syncdata, SCIPgetDualbound(data->solverscip));
    SCIPsyncdataSetUpperbound(syncdata, SCIPgetPrimalbound(data->solverscip));
 
-   /* push the finalized dual bound into bestdualbound; the sync heuristic samples it per node and
-    * misses the terminal bound that this sync write (incl. the post-solve one) sees finalized */
-   if( SCIPsyncstoreSolPoolEnabled(syncstore) )
+   /* push the finalized dual bound into bestdualbound; the sync heuristic samples it per node, but only
+    * when the solution pool is enabled, and misses the terminal bound that this write sees finalized */
+   if( SCIPsyncstoreGetMode(syncstore) == SCIP_PARA_OPPORTUNISTIC )
       SCIPsyncstoreUpdateBestDualbound(syncstore, SCIPgetDualbound(data->solverscip));
 
    SCIPdebugMessage("syncing in concurrent solver %s\n", SCIPconcsolverGetName(concsolver));

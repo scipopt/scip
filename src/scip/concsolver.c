@@ -426,12 +426,12 @@ SCIP_RETCODE SCIPconcsolverSync(
          SCIP_CALL( SCIPconcsolverStop(set->concsolvers[c]) );
       }
    }
-   else if( !SCIPsyncstoreSolPoolEnabled(syncstore) &&
+   else if( SCIPsyncstoreGetMode(syncstore) == SCIP_PARA_DETERMINISTIC &&
       SCIPsyncdataGetNSynced(syncdata) == SCIPsyncstoreGetNSolvers(syncstore) - 1 )
    {
       /* if this is the last concurrent solver that is synchronizing for this synchronization data
        * it will adjust the synchronization frequency using the progress on the gap;
-       * when the solution pool is enabled the frequency stays fixed, since writers are not throttled by
+       * in opportunistic mode the frequency stays fixed, since writers are not throttled by
        * readers and the previous synchronization data may not have been written by all solvers
        */
       SCIP_Bool lbok;
@@ -507,13 +507,11 @@ SCIP_RETCODE SCIPconcsolverSync(
 
    concsolver->syncdelay += concsolver->timesincelastsync;
 
-   /* when the solution pool is enabled solutions are exchanged immediately through the pool and the cutoff
-    * bound through the immediate communication; synchronization data is read non-blocking and
-    * carries only the global bound changes: only synchronizations that have already been written
-    * by all solvers are consumed, overwritten ones are skipped as lost, and the solver never
-    * waits in the barrier of SCIPsyncstoreEnsureAllSynced for slower solvers
+   /* in opportunistic mode the synchronization data is read non-blocking: only synchronizations that have
+    * already been written by all solvers are consumed, overwritten ones are skipped as lost, and the solver
+    * never waits in the barrier of SCIPsyncstoreEnsureAllSynced for slower solvers
     */
-   if( SCIPsyncstoreSolPoolEnabled(syncstore) )
+   if( SCIPsyncstoreGetMode(syncstore) == SCIP_PARA_OPPORTUNISTIC )
    {
       while( concsolver->nsyncsread < concsolver->nsyncs )
       {

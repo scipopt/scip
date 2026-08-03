@@ -338,9 +338,9 @@ SCIP* SCIPsyncstoreGetMainScip(
    SCIP_SYNCSTORE*       syncstore           /**< the synchronization store */
    );
 
-/** updates the minimization-normalized best global dual bound; must only be called when the solution
- *  pool is enabled, where the concurrent solvers report their dual bound immediately while solving so
- *  that SCIPgetConcurrentDualbound stays up to date.
+/** updates the minimization-normalized best global dual bound; must only be called in opportunistic mode,
+ *  where the concurrent solvers report their dual bound immediately while solving so that
+ *  SCIPgetConcurrentDualbound stays up to date.
  */
 SCIP_EXPORT
 void SCIPsyncstoreUpdateBestDualbound(
