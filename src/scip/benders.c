@@ -3718,6 +3718,9 @@ SCIP_RETCODE performNonconvexCutStrengthening(
    iterations = 0;
    do
    {
+      SCIP_Bool evalkeeplist = FALSE;
+      int numremove;
+
       iterations++;
       if( SCIPisStopped(scip) )
          break;
@@ -3727,9 +3730,6 @@ SCIP_RETCODE performNonconvexCutStrengthening(
        */
       if( nodesprocessed > nodebudget )
          break;
-
-      SCIP_Bool evalkeeplist = FALSE;
-      int numremove;
 
       /* solving the Benders' decomposition subproblem to check whether the test solution achieves the same result as
        * the original solution. If the test solution achieves the same result as the original solution, then the success
@@ -3804,8 +3804,11 @@ SCIP_RETCODE performNonconvexCutStrengthening(
          }
 
          /* the candidate list and partition needs to be updated to remove the single variable partition.
-          * the candidates is reduced back down to the set S. The partition size is equivalent to T1. The midpoint is
-          * the split between T1 and T2. Reducing the numcands effectively removes T1 and T2 from further consideration.  */
+          * the candidates is reduced back down to the set undecided variables. The partition size is equivalent to
+          * number of candidates. The midpoint is the split between the two candidates lists. Reducing the numcands
+          * effectively removes both of the candidate lists from further consideration. The algorithm then restarts to
+          * evaluate the undecided variables.
+          */
          numcands -= numremove;
 
          if( numcands == 1 )
