@@ -26,6 +26,7 @@
  * @ingroup DEFPLUGINS_HEUR
  * @brief  primal heuristic that adds solutions from synchronization
  * @author Leona Gottwald
+ * @author Gioni Mexi
  *
  * This heuristic takes solutions during synchronization and then adds them.
  */

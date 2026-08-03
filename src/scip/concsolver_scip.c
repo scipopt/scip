@@ -27,6 +27,7 @@
  * @brief  implementation of concurrent solver interface for SCIP
  * @author Leona Gottwald
  * @author Marc Pfetsch
+ * @author Gioni Mexi
  */
 
 /* activate the define below for a feasibility check of the solutions transferred to the main SCIP. */

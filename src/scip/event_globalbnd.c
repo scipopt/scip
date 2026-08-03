@@ -26,6 +26,7 @@
  * @ingroup DEFPLUGINS_EVENT
  * @brief  eventhandler for storing all global bound changes
  * @author Leona Gottwald
+ * @author Gioni Mexi
  *
  * the bound changes are stored so that they can be shared with other threads
  * in a concurrent solve.

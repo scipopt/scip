@@ -16,11 +16,17 @@ Features
 - separated batch size handling for addition filter, constraint deletion filter, and bound deletion filter in greedy IIS finder
 - added detection and deletion of disconnected components to greedy IIS finder
 - added new propagator for Euclidean distance constraints
+- in opportunistic concurrent solving, new incumbents are shared immediately through a solution pool and tightened
+  global variable bounds through a bound pool that is applied at every node, instead of only at the synchronization
+  points
 
 Performance improvements
 ------------------------
 
 - in opportunistic concurrent solving, signal early termination as soon as one solver reaches a terminal status, so the others stop at their next per-node check rather than running until their next sync point
+- in opportunistic concurrent solving, a solver no longer waits at a synchronization point until all other solvers
+  have synchronized, but only reads the synchronization data that is already complete, so that a slow solver does not
+  hold up the other solvers
 
 Interface changes
 -----------------
@@ -56,6 +62,9 @@ Interface changes
 - new methods SCIPtryAddSymmetryHandlingMethods(), SCIPpresolveSymmetryHandlingMethods() to call try-add and presolve routines of symmetry handlers
 - new methods SCIPsymhdlrCreate(), SCIPsymhdlrCopyInclude(), SCIPsymhdlrFree(), SCIPsymhdlrExit(), SCIPsymhdlrInit(), SCIPsymhdlrInitsol(), SCIPsymhdlrExitsol(), SCIPsymhdlrPresol(), SCIPsymhdlrProp(), SCIPsymhdlrResolvePropagation(), SCIPsymhdlrSepaLP(), SCIPsymhdlrSepaSol(), SCIPsymhdlrTryAdd(), SCIPsymhdlrSetSepa(), SCIPsymhdlrSetProp(), SCIPsymhdlrSetCopy(), SCIPsymhdlrSetFree(), SCIPsymhdlrSetInit(), SCIPsymhdlrSetExit(), SCIPsymhdlrSetInitsol(), SCIPsymhdlrSetExitsol(), SCIPsymhdlrSetPresol(), SCIPsymhdlrSetResprop(), SCIPaddSymhdlrComponent(), SCIPcreateSymmetryComponent(), SCIPsyminfoCompressPermInfo(), SCIPdisplaySymmetryGenerators() to execute callback methods of symmetry handlers
 - new method SCIPincludePropDistance()
+- new methods for the immediate sharing of incumbent solutions between the concurrent solvers in opportunistic mode: SCIPsyncstoreSolPoolEnabled(), SCIPsyncstoreGetMainScip(), SCIPsyncstoreUpdateBestMinObj(), SCIPsyncstoreUpdateBestDualbound(), SCIPsyncstoreGetBestMinObj(), SCIPsyncstoreGetNPoolSols(), SCIPsyncstoreGetPoolSol(), SCIPheurSyncEnableSolPool()
+- new methods for the immediate sharing of tightened global variable bounds between the concurrent solvers in opportunistic mode: SCIPsyncstoreAddBound(), SCIPsyncstoreGetBound(), SCIPsyncstoreGetBoundVersion(), SCIPpropSyncEnableBoundPool(), SCIPeventGlobalbndEnableBoundPool()
+- new methods SCIPsyncstoreTryLockCompleteSyncdata(), SCIPsyncstoreUnlockSyncdata() to read synchronization data without blocking on the other concurrent solvers
 
 ### New parameters
 
@@ -148,6 +157,8 @@ Interface changes
 - `propagating/distance/presoltiming`: timing mask of the presolving method of the distance propagator
 - `propagating/distance/priority`: priority of distance propagator
 - `propagating/distance/timingmask`: timing when distance propagator should be called
+- `concurrent/solpool`: whether new incumbents are shared between the concurrent solvers immediately through a solution pool instead of only at the synchronization points (only used in opportunistic mode)
+- `concurrent/racingportfolio`: whether the concurrent solvers are diversified with the built-in racing parameter portfolio (only used in opportunistic mode)
 
 ### Changed parameters
 
@@ -190,6 +201,11 @@ Interface changes
 - removed param `propagating/symmetry/usesimplesgncomp`
 - removed param `propagating/symmetry/symtiming`
 - removed param `propagating/symmetry/maxnnewivolus`
+- `parallel/mode`: the default is now the opportunistic mode
+- `parallel/maxnthreads`: the default was raised from 8 to 10
+- `concurrent/changechildsel`: the default is now FALSE
+- `concurrent/presolvebefore`: the default is now FALSE, so that every concurrent solver presolves with its own settings
+- `concurrent/symmetrybefore`: the default is now FALSE, so that symmetry is detected in the concurrent solvers
 
 ### Data structures
 

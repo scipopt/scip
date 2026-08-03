@@ -26,6 +26,7 @@
  * @ingroup PRIMALHEURISTICS
  * @brief  primal heuristic that adds solutions from synchronization
  * @author Leona Gottwald
+ * @author Gioni Mexi
  *
  * This heuristic takes solutions from somewhere else via the function SCIPheurSyncPassSol(). It
  * then tries to add this solution. It is used by the concurrent solvers, when solutions are
