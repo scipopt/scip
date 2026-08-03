@@ -372,7 +372,7 @@ SCIP_DECL_BENDERSCUTEXIT(benderscutExitNogood)
    SCIP_BENDERSCUTDATA* benderscutdata;
 
    assert( benderscut != NULL );
-   assert( strcmp(SCIPbenderscutGetName(benderscut), BENDERSCUT_NAME) == 0 );
+   SCIP_STRINGEQ( SCIPbenderscutGetName(benderscut), BENDERSCUT_NAME, SCIP_INVALIDCALL );
 
    /* free Benders' cut data */
    benderscutdata = SCIPbenderscutGetData(benderscut);

@@ -3430,8 +3430,8 @@ SCIP_RETCODE execCutStrengtheningSubproblemSolve(
 
       /* solving the subproblems for this round of enforcement/checking. */
       solinfeas = FALSE;
-      SCIPbendersExecSubproblemSolve(benders, set, testsol, probnumber, solveloop, TRUE, &objective, solved,
-         &solinfeas, type);
+      SCIP_CALL( SCIPbendersExecSubproblemSolve(benders, set, testsol, probnumber, solveloop, TRUE, &objective, solved,
+         &solinfeas, type) );
 
       /* checking the result of the test solution against the original solution. We check only against the objective
        * value, because an infeasible solution is always given an objective value of +infinity.
@@ -3874,11 +3874,8 @@ SCIP_RETCODE performNonconvexCutStrengthening(
       benders->dfbsdata->freq += 5;
    else if( numkeep + numcands > 0.75*initnumcands )
       benders->dfbsdata->freq++;
-   else if( numkeep + numcands < 0.25*initnumcands )
-   {
+   else if( numkeep + numcands < 0.25*initnumcands && benders->dfbsdata->freq > 5 )
       benders->dfbsdata->freq--;
-      benders->dfbsdata->freq = MAX(benders->dfbsdata->freq, 5);
-   }
 
    /* adding the number of nodes processed to the total nodes. 100 nodes is set as the cost of setting up the subproblem
     * and calling the convex relaxation
