@@ -355,7 +355,7 @@ SCIP_RETCODE setChildSelRule(
 
 /** temporarily fixes the parameters of a concurrent solver's SCIP that must keep their current
  *  values while emphasis or portfolio settings are applied, i.e., the limit, numerics, memory,
- *  and synchronization parameters; the returned buffer array must be released with
+ *  and synchronization parameters; the returned buffer array must be released by calling
  *  unfixProtectedParams()
  */
 static
