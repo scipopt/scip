@@ -1012,6 +1012,12 @@ SCIP_DECL_CONCSOLVERSTOP(concsolverScipStop)
    data = SCIPconcsolverGetData(concsolver);
    assert(data != NULL);
 
+   /* the winner stops the portfolio from its own thread, so a solver that is still transforming has no data
+    * structures to interrupt yet; it stops through the stopped flag of the syncstore instead
+    */
+   if( SCIPgetStage(data->solverscip) < SCIP_STAGE_TRANSFORMED )
+      return SCIP_OKAY;
+
    /* Interrupts both the LP solve and sets the user interrupt flag */
    SCIP_CALL( SCIPinterruptLP(data->solverscip, TRUE) );
 
