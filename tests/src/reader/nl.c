@@ -256,7 +256,8 @@ Test(readernl, dualsol, .description = "check whether solving a LP without preso
 
    setfile = fopen("nopresolve.set", "w");
    cr_assert_not_null(setfile);
-   fprintf(setfile, "presolving/maxrounds = 0\n");
+   fprintf(setfile, "emphasis:presolving:off\n");
+   fprintf(setfile, "emphasis:heuristics:off\n");
    fclose(setfile);
 
    /* run SCIP as if called by AMPL */
