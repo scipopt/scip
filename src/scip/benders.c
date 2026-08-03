@@ -657,9 +657,7 @@ SCIP_DECL_SORTPTRCOMP(benderssubcompdefault)
    else
    {
       /* prefer the harder problem (with more average iterations) */
-      SCIP_Longint avgiter1 = solvestat1->iterations/solvestat1->ncalls;
-      SCIP_Longint avgiter2 = solvestat2->iterations/solvestat2->ncalls;
-      SCIP_Longint avgiterdiff = avgiter2 - avgiter1;
+      SCIP_Longint avgiterdiff = solvestat2->iterations - solvestat1->iterations;
 
       if( avgiterdiff != 0 )
          return avgiterdiff;
