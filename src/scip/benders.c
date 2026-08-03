@@ -3522,7 +3522,7 @@ SCIP_RETCODE evaluateVariableKeepList(
  *  An overview of the DFBS algorithm
  *  1. set up a candidate list. This should be randomly sorted.
  *  2. set up a keep list. This is initially empty.
- *  3. initialise number of candidates and midpoint to ciel(numcands/2) (check this for boundary).
+ *  3. initialise number of candidates and midpoint to ceil(numcands/2) (check this for boundary).
  *     initialise partitionsize to midpoint.
  *
  *  4. while TRUE
@@ -3531,10 +3531,10 @@ SCIP_RETCODE evaluateVariableKeepList(
  *  7. if partitionsize == 1; then singleton partition submodule
  *  8. if subproblem result is correct
  *         1. set numcands to midpoint
- *         1. set midpoint to (midpoint - ciel((numcands - midpoint)/2))
+ *         1. set midpoint to (midpoint - ceil((numcands - midpoint)/2))
  *         2. set partitionsize to (midpoint - prevmidpoint)
  *     else (result not correct -> we can't say anything about the partitioning)
- *        1. set midpoint to (midpoint + ciel((numcands - midpoint)/2))
+ *        1. set midpoint to (midpoint + ceil((numcands - midpoint)/2))
  *        2. set partitionsize to (midpoint - prevmidpoint)
  *     endif
  *
@@ -3549,7 +3549,7 @@ SCIP_RETCODE evaluateVariableKeepList(
  *        1. use keep list; break
  *     endif
  *  4. set numcands to (midpoint - partitionsize)
- *  5. set midpoint to ciel(numcands/2)
+ *  5. set midpoint to ceil(numcands/2)
  *  6. set partitionsize to midpoint
  */
 static
@@ -3598,13 +3598,13 @@ SCIP_RETCODE performNonconvexCutStrengthening(
    if( SCIPisStopped(set->scip) )
       return SCIP_OKAY;
 
-   /* if Benders is a copy and scipSCIPs are turned off, then this indicates that we are in a LNS heuristic. As such,
+   /* if Benders is a copy and subSCIPs are turned off, then this indicates that we are in a LNS heuristic. As such,
     * the cut strengthening is not performed
     */
    if( benders->iscopy && set->subscipsoff )
       return SCIP_OKAY;
 
-   /* the cut strengthening is only called when there is an auxiliary variable violation of the subproblem is infeasible */
+   /* the cut strengthening is only called when there is an auxiliary variable violation or the subproblem is infeasible */
    if( substatus != SCIP_BENDERSSUBSTATUS_AUXVIOL && substatus != SCIP_BENDERSSUBSTATUS_INFEAS )
       return SCIP_OKAY;
 
@@ -3683,7 +3683,7 @@ SCIP_RETCODE performNonconvexCutStrengthening(
    }
    initnumcands = numcands;
 
-   /* we only execute the cut strengthening if the number of candidates is less than 0.9 of the total submastervars */
+   /* we only execute the cut strengthening if the number of candidates is between 20% and 90% of the total number of submastervars */
    if( numcands >= 0.9*nsubmastervars || numcands <= 0.2*nsubmastervars )
    {
       SCIPfreeBufferArray(scip, &candidates);
