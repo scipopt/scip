@@ -76,7 +76,7 @@
 #define SCIP_DEFAULT_MAXSLACKVARCOEF       1e+9  /** the maximal objective coefficient of the slack variables in the subproblem */
 #define SCIP_DEFAULT_CHECKCONSCONVEXITY    TRUE  /** should the constraints of the subproblem be checked for convexity? */
 #define SCIP_DEFAULT_NLPITERLIMIT         10000  /** iteration limit for NLP solver */
-#define SCIP_DEFAULT_IISCUTSTRENGTHEN     FALSE  /** should an IIS-type method be applied to find solutions that strengthen non-convex cuts? */
+#define SCIP_DEFAULT_IISCUTSTRENGTHEN     FALSE  /** should an IIS-type method be applied to find solutions that strengthen no-good-based cuts? */
 #define SCIP_DEFAULT_EARLYTERMMINNODES    10000  /** the number of nodes processed in the subproblem before early termination */
 #define SCIP_DEFAULT_EARLYTERMMINIMPROVE   0.01  /** the minimum improvement in the dual bound to terminate the subproblem solve early */
 
@@ -431,7 +431,6 @@ SCIP_DECL_EVENTEXEC(eventExecBendersUpperbound)
       && SCIPisGT(scip, SCIPgetDualbound(scip)*(int)SCIPgetObjsense(scip),
          eventhdlrdata->lowerbound*(1 + benders->earlytermminimp)) )
    {
-      printf("Early termination check: %p %lld %g\n", (void*)benders, benders->earlytermminnodes, benders->earlytermminimp);
       SCIP_CALL( SCIPinterruptSolve(scip) );
    }
 
@@ -1388,7 +1387,7 @@ SCIP_RETCODE doBendersCreate(
 
    (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "benders/%s/iiscutstrengthen", name);
    SCIP_CALL( SCIPsetAddBoolParam(set, messagehdlr, blkmem, paramname,
-         "should an IIS-type method be applied to find solutions that strengthen non-convex cuts?",
+         "should an IIS-type method be applied to find solutions that strengthen no-good-based cuts?",
          &(*benders)->iiscutstrengthen, FALSE,
          SCIP_DEFAULT_IISCUTSTRENGTHEN, NULL, NULL) ); /*lint !e740*/
 
