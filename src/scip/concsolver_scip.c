@@ -1059,12 +1059,12 @@ SCIP_DECL_CONCSOLVERSYNCWRITE(concsolverScipSyncWrite)
 
    SCIPdebugMessage("syncing in concurrent solver %s\n", SCIPconcsolverGetName(concsolver));
 
-   /* when the solution pool is enabled new incumbents are shared immediately through the pool, so the
-    * synchronization data carries only bound changes; in the regular protocol the best
-    * solutions are collected into the synchronization data here. With maxsharedsols set to zero no
-    * solutions are shared at all and the synchronization exchanges only bounds and status.
+   /* collect the best solutions into the synchronization data; this is the deterministic mode's solution
+    * channel, opportunistic mode instead shares new incumbents immediately through the solution pool, or
+    * not at all when it is disabled. With maxsharedsols set to zero the synchronization exchanges only
+    * bounds and status.
     */
-   if( !SCIPsyncstoreSolPoolEnabled(syncstore) && maxsharedsols > 0 )
+   if( SCIPsyncstoreGetMode(syncstore) == SCIP_PARA_DETERMINISTIC && maxsharedsols > 0 )
    {
       /* consider at most maxcandsols many solutions, and since the solution array is sorted, consider best solutions */
       nsols = SCIPgetNSols(data->solverscip);
@@ -1138,17 +1138,15 @@ SCIP_DECL_CONCSOLVERSYNCREAD(concsolverScipSyncRead)
 
    concsolverid = SCIPconcsolverGetIdx(concsolver);
 
-   /* get solutions from synchronization data; when the solution pool is enabled the solutions
-    * are exchanged through the pool already, so the synchronization data only carries bounds
-    */
-   if( SCIPsyncstoreSolPoolEnabled(syncstore) )
+   /* solutions are carried in the synchronization data in deterministic mode only */
+   if( SCIPsyncstoreGetMode(syncstore) == SCIP_PARA_DETERMINISTIC )
+      SCIPsyncdataGetSolutions(syncdata, &solvals, &concsolverids, &nsols);
+   else
    {
       solvals = NULL;
       concsolverids = NULL;
       nsols = 0;
    }
-   else
-      SCIPsyncdataGetSolutions(syncdata, &solvals, &concsolverids, &nsols);
 
    for( i = 0; i < nsols; ++i )
    {

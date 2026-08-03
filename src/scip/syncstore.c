@@ -170,8 +170,18 @@ SCIP_RETCODE SCIPsyncstoreInit(
    syncstore->lastsync = NULL;
    syncstore->nsolvers = SCIPgetNConcurrentSolvers(scip);
 
+   SCIP_CALL( SCIPgetIntParam(scip, "parallel/mode", &paramode) );
+   syncstore->mode = (SCIP_PARALLELMODE) paramode;
+
    syncstore->ninitvars = SCIPgetNVars(scip) + SCIPgetNFixedVars(scip);
    SCIP_CALL( SCIPgetIntParam(scip, "concurrent/sync/maxnsols", &syncstore->maxnsols) );
+
+   /* solutions are carried in the synchronization data in deterministic mode only, so no space is reserved
+    * for them otherwise; opportunistic mode shares them through the solution pool instead
+    */
+   if( syncstore->mode != SCIP_PARA_DETERMINISTIC )
+      syncstore->maxnsols = 0;
+
    SCIP_CALL( SCIPgetIntParam(scip, "concurrent/sync/maxnsyncdelay", &syncstore->maxnsyncdelay) );
    SCIP_CALL( SCIPgetRealParam(scip, "concurrent/sync/minsyncdelay", &syncstore->minsyncdelay) );
    SCIP_CALL( SCIPgetRealParam(scip, "concurrent/sync/freqinit", &syncstore->syncfreqinit) );
@@ -203,9 +213,6 @@ SCIP_RETCODE SCIPsyncstoreInit(
    syncstore->winnerid = -1;
    syncstore->winnerstatus = SCIP_STATUS_UNKNOWN;
    SCIP_CALL( SCIPgetBoolParam(scip, "concurrent/printincumbents", &syncstore->printincumbents) );
-
-   SCIP_CALL( SCIPgetIntParam(scip, "parallel/mode", &paramode) );
-   syncstore->mode = (SCIP_PARALLELMODE) paramode;
 
    /* the solution pool bypasses the synchronization-point barrier and is therefore only
     * available in opportunistic mode; deterministic mode keeps the regular protocol
