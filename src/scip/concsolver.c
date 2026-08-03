@@ -418,12 +418,20 @@ SCIP_RETCODE SCIPconcsolverSync(
 
    if( SCIPsyncdataGetStatus(syncdata) != SCIP_STATUS_UNKNOWN )
    {
-      int c;
-
-      /* The winner stops the whole portfolio */
-      for( c = 0; c < set->nconcsolvers; ++c )
+      if( SCIPsyncstoreGetMode(syncstore) == SCIP_PARA_OPPORTUNISTIC )
       {
-         SCIP_CALL( SCIPconcsolverStop(set->concsolvers[c]) );
+         int c;
+
+         /* the winner stops the whole portfolio */
+         for( c = 0; c < set->nconcsolvers; ++c )
+         {
+            SCIP_CALL( SCIPconcsolverStop(set->concsolvers[c]) );
+         }
+      }
+      else
+      {
+         /* in deterministic mode each solver stops itself once it reads the terminal status at its own synchronization point */
+         SCIP_CALL( SCIPconcsolverStop(concsolver) );
       }
    }
    else if( SCIPsyncstoreGetMode(syncstore) == SCIP_PARA_DETERMINISTIC &&

@@ -1064,6 +1064,37 @@ if(NOT ${TPI} STREQUAL "none")
                                DEPENDS scip-build
                            )
     endforeach()
+    #
+    # the tests above run the default opportunistic mode with all sharing enabled; additionally run the
+    # deterministic mode and the opportunistic mode with the sharing of solutions and global variable bounds
+    # switched off completely, so that none of these combinations hits an assert; a configuration is a tuple
+    # of its name and the settings that are applied before the solve
+    #
+    set(concurrentconfigs
+        "deterministic\;set parallel mode 1"
+        "opportunistic-noshare\;set parallel mode 0\nset concurrent solpool FALSE\nset concurrent commvarbnds FALSE"
+        )
+    set(concurrentinstances
+        "instances/MIP/egout.mps\;568.1007"
+        "instances/MIP/bell5.mps\;8966406.49"
+        )
+    foreach(instance ${concurrentinstances})
+       split_instance(instance)
+       foreach(config ${concurrentconfigs})
+          list(GET config 0 name)
+          list(GET config 1 settings)
+          configure_file(interactiveshell/concurrentsolve-settings.bat.in interactiveshell/concurrentsolve-${name}-${basename}.bat)
+          add_test(NAME MIP-concurrentsolve-${name}-${basename}
+                   COMMAND $<TARGET_FILE:scip> -b ${PROJECT_BINARY_DIR}/check/interactiveshell/concurrentsolve-${name}-${basename}.bat
+                  )
+          set_tests_properties(MIP-concurrentsolve-${name}-${basename}
+                               PROPERTIES
+                                  PASS_REGULAR_EXPRESSION "Validation         : Success"
+                                  FAIL_REGULAR_EXPRESSION "ERROR"
+                                  DEPENDS scip-build
+                              )
+       endforeach()
+    endforeach()
 endif()
 
 #
