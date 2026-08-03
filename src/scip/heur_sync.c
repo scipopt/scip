@@ -45,7 +45,6 @@
 #define HEUR_FREQ             -1
 #define HEUR_FREQOFS          0
 #define HEUR_MAXDEPTH         -1
-/* TODO: SCIP_HEURTIMING_BEFOREPRESOL removed (causes false OPTIMAL with presolvebefore=FALSE); fix properly */
 #define HEUR_TIMING           SCIP_HEURTIMING_DURINGLPLOOP | SCIP_HEURTIMING_BEFORENODE
 #define HEUR_USESSUBSCIP      FALSE  /**< does the heuristic use a secondary SCIP instance? */
 
@@ -135,7 +134,7 @@ SCIP_DECL_HEUREXEC(heurExecSync)
    SCIP_HEURDATA* heurdata;
    SCIP_SOL* newsol;
    SCIP_Bool stored;
-   SCIP_Real bestrecvdobj;
+   SCIP_Real bestrecvdobj = SCIPinfinity(scip);   /* best objective received from other solvers, used to tighten the objlimit below */
    int i;
 
    assert(heur != NULL);
@@ -156,9 +155,6 @@ SCIP_DECL_HEUREXEC(heurExecSync)
       SCIPheurSetFreq(heur, -1);
 
    SCIPdebugMessage("exec method of sync primal heuristic.\n");
-
-   /* best objective received from other solvers, used to tighten the objlimit below; initialized to infinity */
-   bestrecvdobj = SCIPinfinity(scip);
 
    *result = heurdata->nsols > 0 ? SCIP_DIDNOTFIND : SCIP_DIDNOTRUN;
    for( i = 0; i < heurdata->nsols; ++i )

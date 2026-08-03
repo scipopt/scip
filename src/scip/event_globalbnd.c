@@ -62,9 +62,10 @@
 /** event handler data */
 struct SCIP_EventhdlrData
 {
-   int                    filterpos;
-   SCIP_Bool              storebounds;
-   SCIP_BOUNDSTORE*       boundstore;
+   int                    filterpos;          /**< position of the variable added event in SCIP's event filter, or -1 */
+   SCIP_Bool              storebounds;        /**< currently collecting tightened global bounds? this is switched off
+                                               *   while the bounds received from the other solvers are applied */
+   SCIP_BOUNDSTORE*       boundstore;         /**< the collected bounds, NULL when the bound pool is used instead */
    SCIP_Bool              useboundpool;       /**< publish tightened global bounds immediately to the syncstore bound pool? */
 };
 
@@ -123,10 +124,12 @@ SCIP_DECL_EVENTINIT(eventInitGlobalbnd)
       vars = SCIPgetVars(scip);
 
       /* the full bound store is only filled (and later communicated through the synchronization data) when
-       * variable bounds are shared at the synchronization points; for the immediate bound pool alone the
-       * events still have to be caught, but no per-solver bound store is needed
+       * variable bounds are shared at the synchronization points; when the immediate bound pool is used
+       * instead the events still have to be caught, but no per-solver bound store is needed
        */
       SCIP_CALL( SCIPgetBoolParam(scip, "concurrent/commvarbnds", &eventhdlrdata->storebounds) );
+      eventhdlrdata->storebounds = eventhdlrdata->storebounds && !eventhdlrdata->useboundpool;
+
       if( eventhdlrdata->storebounds )
       {
          SCIP_CALL( SCIPboundstoreCreate(scip, &eventhdlrdata->boundstore, SCIPgetNOrigVars(scip)) );
@@ -224,9 +227,10 @@ SCIP_DECL_EVENTEXEC(eventExecGlobalbnd)
          boundtype = scalar < 0.0 ? SCIPboundtypeOpposite(boundtype) : boundtype;
          newbound = (newbound - constant) / scalar;
 
-         /* the bound store is NULL when only the immediate bound pool is used (commvarbnds off) */
-         if( eventhdlrdata->storebounds && eventhdlrdata->boundstore != NULL )
+         if( eventhdlrdata->storebounds )
          {
+            assert(eventhdlrdata->boundstore != NULL);
+
             SCIP_CALL( SCIPboundstoreAdd(scip, eventhdlrdata->boundstore, varidx, newbound, boundtype) );
          }
 
@@ -322,7 +326,8 @@ void SCIPeventGlobalbndEnableBoundStorage(
    eventhdlrdata = SCIPeventhdlrGetData(eventhdlr);
    assert(eventhdlrdata != NULL);
 
-   eventhdlrdata->storebounds = TRUE;
+   /* stays disabled when no bound store was created, i.e. when the bound pool is used instead */
+   eventhdlrdata->storebounds = eventhdlrdata->boundstore != NULL;
 }
 
 /** disables storing of bound changes */

@@ -616,13 +616,12 @@ struct SCIP_Set
    SCIP_Bool             concurrent_changeseeds;    /**< change the seeds in the different solvers? */
    SCIP_Bool             concurrent_changechildsel; /**< change the child selection rule in different solvers? */
    SCIP_Bool             concurrent_commvarbnds;    /**< should the concurrent solvers communicate global variable bound
-                                                     *   changes at the synchronization points? */
+                                                     *   changes? in opportunistic mode they are shared immediately through
+                                                     *   a bound pool and applied at every node, in deterministic mode they
+                                                     *   are exchanged at the synchronization points */
    SCIP_Bool             concurrent_solpool;        /**< should new incumbents be shared between the concurrent solvers
                                                      *   immediately through a solution pool instead of only at the
                                                      *   synchronization points? (only used in opportunistic mode) */
-   SCIP_Bool             concurrent_boundpool;      /**< should tightened global variable bounds be shared between the
-                                                     *   concurrent solvers immediately through a bound pool instead of
-                                                     *   only at the synchronization points? (only used in opportunistic mode) */
    SCIP_Bool             concurrent_printincumbents;/**< should a line be printed for every new globally best solution
                                                      *   found by a concurrent solver? */
    SCIP_Bool             concurrent_presolvebefore; /**< should the problem be presolved before it is copied to the concurrent solvers? */

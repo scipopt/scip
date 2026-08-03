@@ -72,6 +72,9 @@
 #define EVENTHDLR_NAME         "sync"
 #define EVENTHDLR_DESC         "event handler for synchronization of concurrent scip solvers"
 
+/** number of configurations in the built-in racing parameter portfolio */
+#define NRACINGCONFIGS 10
+
 /*
  * Data structures
  */
@@ -304,22 +307,14 @@ SCIP_RETCODE disableConflictingDualReductions(
    )
 {
    SCIP_Bool commvarbnds;
-   SCIP_Bool boundpool;
-   int paramode;
 
    SCIP_CALL( SCIPgetBoolParam(scip, "concurrent/commvarbnds", &commvarbnds) );
-   SCIP_CALL( SCIPgetBoolParam(scip, "concurrent/boundpool", &boundpool) );
-   SCIP_CALL( SCIPgetIntParam(scip, "parallel/mode", &paramode) );
-
-   /* the bound pool shares bounds only in opportunistic mode */
-   if( paramode != (int) SCIP_PARA_OPPORTUNISTIC )
-      boundpool = FALSE;
 
    /* sharing variable bounds carries the hazard that a strong dual reduction keeps only one optimal
     * solution, so combining conflicting ones from different solvers can cut off all optima; only when
     * no bounds are shared at all can every solver keep performing its own strong dual reductions
     */
-   if( !commvarbnds && !boundpool )
+   if( !commvarbnds )
       return SCIP_OKAY;
 
    SCIP_CALL( SCIPsetBoolParam(scip, "misc/allowstrongdualreds", FALSE) );
@@ -349,9 +344,6 @@ SCIP_RETCODE setChildSelRule(
 
    return SCIP_OKAY;
 }
-
-/** number of configurations in the built-in racing parameter portfolio */
-#define NRACINGCONFIGS 10
 
 /** temporarily fixes the parameters of a concurrent solver's SCIP that must keep their current
  *  values while emphasis or portfolio settings are applied, i.e., the limit, numerics, memory,
@@ -696,16 +688,17 @@ SCIP_RETCODE initConcsolver(
       SCIPheurSyncEnableSolPool(data->solverscip, heursync, concsolver, data->vars, data->nvars);
    }
 
-   /* enable immediate sharing of tightened global variable bounds: the global bound event handler
-    * publishes each tightening to the shared bound pool and the sync propagator drains and applies it at
-    * every node, so global bounds propagate between the solvers without waiting for a synchronization point
+   /* in opportunistic mode the tightened global variable bounds are shared immediately: the global bound
+    * event handler publishes each tightening to the shared bound pool and the sync propagator drains and
+    * applies it at every node, so global bounds propagate between the solvers without waiting for a
+    * synchronization point
     */
    {
-      SCIP_Bool useboundpool;
+      SCIP_Bool commvarbnds;
 
-      SCIP_CALL( SCIPgetBoolParam(scip, "concurrent/boundpool", &useboundpool) );
+      SCIP_CALL( SCIPgetBoolParam(scip, "concurrent/commvarbnds", &commvarbnds) );
 
-      if( useboundpool && paramode == (int) SCIP_PARA_OPPORTUNISTIC )
+      if( commvarbnds && paramode == (int) SCIP_PARA_OPPORTUNISTIC )
       {
          SCIP_PROP* propsync;
 
@@ -762,13 +755,17 @@ SCIP_DECL_CONCSOLVERCREATEINST(concsolverScipCreateInstance)
    else
    {
       SCIP_Bool racingportfolio;
+      int paramode;
 
       /* diversify the concurrent solvers with the built-in racing portfolio; settings files
-       * loaded below through concurrent/paramsetprefix may override the portfolio settings
+       * loaded below through concurrent/paramsetprefix may override the portfolio settings;
+       * the portfolio is applied in opportunistic mode only, since deterministic mode does not work
+       * well with settings that diversify the solvers 
        */
       SCIP_CALL( SCIPgetBoolParam(scip, "concurrent/racingportfolio", &racingportfolio) );
+      SCIP_CALL( SCIPgetIntParam(scip, "parallel/mode", &paramode) );
 
-      if( racingportfolio )
+      if( racingportfolio && paramode == (int) SCIP_PARA_OPPORTUNISTIC )
       {
          SCIP_PARAM** fixedparams;
          int config;

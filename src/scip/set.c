@@ -494,16 +494,15 @@
 /* Concurrent solvers */
 #define SCIP_DEFAULT_CONCURRENT_CHANGESEEDS     TRUE /**< should the concurrent solvers use different random seeds? */
 #define SCIP_DEFAULT_CONCURRENT_CHANGECHILDSEL  FALSE /**< should the concurrent solvers use different child selection rules? */
-#define SCIP_DEFAULT_CONCURRENT_COMMVARBNDS     FALSE /**< should the concurrent solvers communicate global variable bound
-                                                       *   changes at the synchronization points? */
+#define SCIP_DEFAULT_CONCURRENT_COMMVARBNDS     TRUE /**< should the concurrent solvers communicate global variable bound
+                                                      *   changes? in opportunistic mode they are shared immediately
+                                                      *   through a bound pool and applied at every node, in
+                                                      *   deterministic mode they are exchanged at the synchronization
+                                                      *   points */
 #define SCIP_DEFAULT_CONCURRENT_SOLPOOL         TRUE /**< should new incumbents be shared between the concurrent solvers
                                                       *   immediately through a solution pool instead of only at the
                                                       *   synchronization points? this also stops the solvers from
                                                       *   blocking on the synchronization barrier
-                                                      *   (only used in opportunistic mode) */
-#define SCIP_DEFAULT_CONCURRENT_BOUNDPOOL       TRUE /**< should tightened global variable bounds be shared between the
-                                                      *   concurrent solvers immediately through a bound pool, applied at
-                                                      *   every node, instead of only at the synchronization points?
                                                       *   (only used in opportunistic mode) */
 #define SCIP_DEFAULT_CONCURRENT_PRINTINCUMBENTS FALSE /**< should a line be printed for every new globally best solution
                                                        *   found by a concurrent solver? */
@@ -2835,18 +2834,13 @@ SCIP_RETCODE SCIPsetCreate(
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
          "concurrent/commvarbnds",
-         "should the concurrent solvers communicate global variable bound changes at the synchronization points?",
+         "should the concurrent solvers communicate global variable bound changes? in opportunistic mode the tightenings are shared immediately through a bound pool and applied at every node, in deterministic mode they are exchanged at the synchronization points",
          &(*set)->concurrent_commvarbnds, FALSE, SCIP_DEFAULT_CONCURRENT_COMMVARBNDS,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
          "concurrent/solpool",
          "should new incumbents be shared between the concurrent solvers immediately through a solution pool instead of only at the synchronization points? this also stops the solvers from blocking on the synchronization barrier (only used in opportunistic mode)",
          &(*set)->concurrent_solpool, FALSE, SCIP_DEFAULT_CONCURRENT_SOLPOOL,
-         NULL, NULL) );
-   SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
-         "concurrent/boundpool",
-         "should tightened global variable bounds be shared between the concurrent solvers immediately through a bound pool, applied at every node, instead of only at the synchronization points? (only used in opportunistic mode)",
-         &(*set)->concurrent_boundpool, FALSE, SCIP_DEFAULT_CONCURRENT_BOUNDPOOL,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
          "concurrent/printincumbents",
@@ -2915,7 +2909,7 @@ SCIP_RETCODE SCIPsetCreate(
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
          "concurrent/racingportfolio",
-         "should the concurrent solvers be diversified with the built-in racing parameter portfolio? concurrent solver i receives portfolio configuration i modulo the portfolio size; parameter setting files given via concurrent/paramsetprefix are loaded afterwards and override the portfolio settings",
+         "should the concurrent solvers be diversified with the built-in racing parameter portfolio? concurrent solver i receives portfolio configuration i modulo the portfolio size; parameter setting files given via concurrent/paramsetprefix are loaded afterwards and override the portfolio settings (only used in opportunistic mode)",
          &(*set)->concurrent_racingportfolio, FALSE, SCIP_DEFAULT_CONCURRENT_RACINGPORTFOLIO,
          NULL, NULL) );
 

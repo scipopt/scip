@@ -222,18 +222,29 @@ SCIP_RETCODE SCIPsyncstoreInit(
    syncstore->usesolpool = syncstore->usesolpool && syncstore->mode == SCIP_PARA_OPPORTUNISTIC;
    syncstore->npoolsols = 0;
 
-   /* like the solution pool, the bound pool bypasses the synchronization barrier and is therefore
-    * only available in opportunistic mode; it is sized for the communication variables and starts at
-    * the trivial bounds, so that the first tightening shared by any solver wins the comparison
+   /* the racing portfolio is tuned for the opportunistic mode only: its configurations make the solvers
+    * very diverse, which deterministic mode does not cope well currently
     */
-   SCIP_CALL( SCIPgetBoolParam(scip, "concurrent/boundpool", &syncstore->useboundpool) );
-
-   /* inform the user that the pool is unavailable in the chosen mode */
-   if( syncstore->useboundpool && syncstore->mode != SCIP_PARA_OPPORTUNISTIC )
+   if( syncstore->mode != SCIP_PARA_OPPORTUNISTIC )
    {
-      SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL,
-         "parameter <concurrent/boundpool> is only used in opportunistic parallel mode and will be ignored\n");
+      SCIP_Bool racingportfolio;
+
+      SCIP_CALL( SCIPgetBoolParam(scip, "concurrent/racingportfolio", &racingportfolio) );
+
+      if( racingportfolio )
+      {
+         SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL,
+            "parameter <concurrent/racingportfolio> is only used in opportunistic parallel mode and will be ignored\n");
+      }
    }
+
+   /* global variable bounds are shared through the bound pool, which like the solution pool bypasses the
+    * synchronization barrier and is therefore only available in opportunistic mode; deterministic mode
+    * exchanges the same bounds at the synchronization points instead; the pool is sized for the
+    * communication variables and starts at the trivial bounds, so that the first tightening shared by any
+    * solver wins the comparison
+    */
+   SCIP_CALL( SCIPgetBoolParam(scip, "concurrent/commvarbnds", &syncstore->useboundpool) );
 
    syncstore->useboundpool = syncstore->useboundpool && syncstore->mode == SCIP_PARA_OPPORTUNISTIC;
    syncstore->boundpoolversion = 0;
