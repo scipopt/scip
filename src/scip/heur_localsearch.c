@@ -950,6 +950,7 @@ SCIP_Real getBreakMove(
    assert(!SCIPisInfinity(scip, solver->objtarget));
 
    problem = solver->problem;
+
    assert(termidx >= 0);
    assert(termidx < problem->nobjvars);
    varidx = problem->objvaridxs[termidx];
@@ -958,16 +959,19 @@ SCIP_Real getBreakMove(
    var = problem->vars + varidx;
    coeff = var->obj;
    assert(coeff != 0.0); /*lint !e777*/
+
    value = solver->incumbentassignment[varidx];
    residual = solver->incumbentobjective - value * coeff;
    movevalue = (solver->objtarget - residual) / coeff;
    decrease = coeff >= 0.0;
+
    liftidx = solver->liftidxs[termidx];
    assert(liftidx >= 0);
    assert(liftidx < var->ncoeffs);
    liftcons = problem->conss + var->coeffs[liftidx].idx;
    liftcoeff = var->coeffs[liftidx].coeff;
    assert(liftcoeff != 0.0); /*lint !e777*/
+
    liftresidual = solver->act[var->coeffs[liftidx].idx] - value * liftcoeff;
    lifttolhs = decrease == (liftcoeff >= 0.0);
    assert(!lifttolhs || !SCIPisInfinity(scip, -liftcons->lhs));
@@ -1034,6 +1038,7 @@ SCIP_Real getTightMove(
 
    problem = solver->problem;
    cons = problem->conss + constridx;
+
    assert(termidx >= 0);
    assert(termidx < cons->ncoeffs);
    assert(!tolhs || !SCIPisInfinity(scip, -cons->lhs));
@@ -1043,6 +1048,7 @@ SCIP_Real getTightMove(
    var = problem->vars + varidx;
    coeff = cons->coeffs[termidx].coeff;
    assert(coeff != 0.0); /*lint !e777*/
+
    value = solver->incumbentassignment[varidx];
    residual = solver->act[constridx] - value * coeff;
    movevalue = ((tolhs ? cons->lhs : cons->rhs) - residual) / coeff;
