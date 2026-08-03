@@ -718,7 +718,9 @@ SCIP_RETCODE addAuxiliaryVariablesToMaster(
    char varname[SCIP_MAXSTRLEN];    /* the name of the auxiliary variable */
    char consname[SCIP_MAXSTRLEN];   /* the name of the auxiliary variable constraint */
    SCIP_Bool shareauxvars;
+#ifdef SCIP_DISABLED_CODE
    SCIP_Bool allsubprobintegralobj;
+#endif
    int i;
 
    /* this is a workaround for GCG. GCG expects that the variable has vardata when added. So a dummy vardata is created */
