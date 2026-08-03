@@ -77,6 +77,8 @@
 #define SCIP_DEFAULT_CHECKCONSCONVEXITY    TRUE  /** should the constraints of the subproblem be checked for convexity? */
 #define SCIP_DEFAULT_NLPITERLIMIT         10000  /** iteration limit for NLP solver */
 #define SCIP_DEFAULT_IISCUTSTRENGTHEN     FALSE  /** should an IIS-type method be applied to find solutions that strengthen non-convex cuts? */
+#define SCIP_DEFAULT_EARLYTERMMINNODES    10000  /** the number of nodes processed in the subproblem before early termination */
+#define SCIP_DEFAULT_EARLYTERMMINIMPROVE   0.01  /** the minimum improvement in the dual bound to terminate the subproblem solve early */
 
 #define BENDERS_MAXPSEUDOSOLS                 5  /** the maximum number of pseudo solutions checked before suggesting
                                                   *  merge candidates */
@@ -110,6 +112,7 @@ struct SCIP_EventhdlrData
    SCIP_Real             upperbound;         /**< an upper bound for the problem */
    SCIP_Real             lowerbound;         /**< an lower bound for the problem */
    SCIP_Bool             solvecip;           /**< is the event called from a MIP subproblem solve*/
+   SCIP_BENDERS*         benders;            /**< the Benders' decomposition data structure */
 };
 
 
@@ -119,7 +122,8 @@ struct SCIP_EventhdlrData
 static
 SCIP_RETCODE initEventhandlerData(
    SCIP*                 scip,               /**< the SCIP data structure */
-   SCIP_EVENTHDLRDATA*   eventhdlrdata       /**< the event handler data */
+   SCIP_EVENTHDLRDATA*   eventhdlrdata,      /**< the event handler data */
+   SCIP_BENDERS*         benders             /**< the Benders' decomposition data structure */
    )
 {
    assert(scip != NULL);
@@ -130,6 +134,7 @@ SCIP_RETCODE initEventhandlerData(
    eventhdlrdata->upperbound = -SCIPinfinity(scip);
    eventhdlrdata->lowerbound = SCIPinfinity(scip);
    eventhdlrdata->solvecip = FALSE;
+   eventhdlrdata->benders = benders;
 
    return SCIP_OKAY;
 }
@@ -193,7 +198,7 @@ SCIP_RETCODE exitEventhandler(
    eventhdlrdata = SCIPeventhdlrGetData(eventhdlr);
 
    /* reinitialise the event handler data */
-   SCIP_CALL( initEventhandlerData(scip, eventhdlrdata) );
+   SCIP_CALL( initEventhandlerData(scip, eventhdlrdata, eventhdlrdata->benders) );
 
    return SCIP_OKAY;
 }
@@ -397,6 +402,7 @@ SCIP_DECL_EVENTEXEC(eventExecBendersUpperbound)
 {  /*lint --e{715}*/
    SCIP_EVENTHDLRDATA* eventhdlrdata;
    SCIP_SOL* bestsol;
+   SCIP_BENDERS* benders;
 
    assert(scip != NULL);
    assert(eventhdlr != NULL);
@@ -417,9 +423,15 @@ SCIP_DECL_EVENTEXEC(eventExecBendersUpperbound)
       SCIP_CALL( SCIPinterruptSolve(scip) );
    }
 
-   if( SCIPgetNNodes(scip) > 10000 && !SCIPisInfinity(scip, SCIPgetDualbound(scip))
-      && SCIPisGT(scip, SCIPgetDualbound(scip)*(int)SCIPgetObjsense(scip), eventhdlrdata->lowerbound*1.01) )
+   benders = eventhdlrdata->benders;
+
+
+   if( benders != NULL && SCIPgetNNodes(scip) > benders->earlytermminnodes
+      && !SCIPisInfinity(scip, SCIPgetDualbound(scip))
+      && SCIPisGT(scip, SCIPgetDualbound(scip)*(int)SCIPgetObjsense(scip),
+         eventhdlrdata->lowerbound*(1 + benders->earlytermminimp)) )
    {
+      printf("Early termination check: %p %lld %g\n", (void*)benders, benders->earlytermminnodes, benders->earlytermminimp);
       SCIP_CALL( SCIPinterruptSolve(scip) );
    }
 
@@ -782,7 +794,9 @@ SCIP_RETCODE addAuxiliaryVariablesToMaster(
       }
    }
 
+#ifdef SCIP_DISABLED_CODE
    allsubprobintegralobj = TRUE;
+#endif
 
    for( i = 0; i < SCIPbendersGetNSubproblems(benders); i++ )
    {
@@ -817,7 +831,9 @@ SCIP_RETCODE addAuxiliaryVariablesToMaster(
          else
          {
             impltype = SCIP_IMPLINTTYPE_NONE;
+#ifdef SCIP_DISABLED_CODE
             allsubprobintegralobj = FALSE;
+#endif
          }
 
          (void) SCIPsnprintf(varname, SCIP_MAXSTRLEN, "%s_%d_%s", AUXILIARYVAR_NAME, i, SCIPbendersGetName(benders) );
@@ -1376,6 +1392,18 @@ SCIP_RETCODE doBendersCreate(
          &(*benders)->iiscutstrengthen, FALSE,
          SCIP_DEFAULT_IISCUTSTRENGTHEN, NULL, NULL) ); /*lint !e740*/
 
+   (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "benders/%s/earlytermminnodes", name);
+   SCIP_CALL( SCIPsetAddLongintParam(set, messagehdlr, blkmem, paramname,
+         "the number of nodes processed in the subproblem before early termination",
+         &(*benders)->earlytermminnodes, FALSE, SCIP_DEFAULT_EARLYTERMMINNODES,
+         0, INT_MAX, NULL, NULL) ); /*lint !e740*/
+
+   (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "benders/%s/earlytermminimprove", name);
+   SCIP_CALL( SCIPsetAddRealParam(set, messagehdlr, blkmem, paramname,
+         "the minimum improvement in the dual bound required to terminate the subproblem early",
+         &(*benders)->earlytermminimp, FALSE, SCIP_DEFAULT_EARLYTERMMINIMPROVE,
+         0.0, 1.0, NULL, NULL) ); /*lint !e740*/
+
    return SCIP_OKAY;
 }
 
@@ -1805,7 +1833,7 @@ SCIP_RETCODE initialiseLPSubproblem(
    /* include event handler into SCIP */
    SCIP_CALL( SCIPallocBlockMemory(subproblem, &eventhdlrdata) );
 
-   SCIP_CALL( initEventhandlerData(subproblem, eventhdlrdata) );
+   SCIP_CALL( initEventhandlerData(subproblem, eventhdlrdata, benders) );
 
    SCIP_CALL( SCIPincludeEventhdlrBasic(subproblem, &eventhdlr, NODEFOCUS_EVENTHDLR_NAME, NODEFOCUS_EVENTHDLR_DESC,
          eventExecBendersNodefocus, eventhdlrdata) );
@@ -2200,8 +2228,8 @@ SCIP_RETCODE createSubproblems(
                SCIP_CALL( SCIPallocBlockMemory(subproblem, &eventhdlrdata_mipnodefocus) );
                SCIP_CALL( SCIPallocBlockMemory(subproblem, &eventhdlrdata_upperbound) );
 
-               SCIP_CALL( initEventhandlerData(subproblem, eventhdlrdata_mipnodefocus) );
-               SCIP_CALL( initEventhandlerData(subproblem, eventhdlrdata_upperbound) );
+               SCIP_CALL( initEventhandlerData(subproblem, eventhdlrdata_mipnodefocus, benders) );
+               SCIP_CALL( initEventhandlerData(subproblem, eventhdlrdata_upperbound, benders) );
 
                /* include the first LP solved event handler into the subproblem */
                SCIP_CALL( SCIPincludeEventhdlrBasic(subproblem, &eventhdlr, MIPNODEFOCUS_EVENTHDLR_NAME,

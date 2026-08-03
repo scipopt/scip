@@ -181,6 +181,9 @@ Interface changes
 - `propagating/distance/priority`: priority of distance propagator
 - `propagating/distance/timingmask`: timing when distance propagator should be called
 - `benders/<benders>/iiscutstrengthen`: enables an IIS-type method to find stronger no-good-based cuts.
+- `benders/<benders>/earlytermminnodes`: the number of nodes processed in the subproblem before early termination
+- `benders/<benders>/earlytermminimp`: the minimum improvement in the dual bound required before early termination of
+  the subproblem.
 - `benders/<benders>/benderscut/nogood/zerosolvars`: should variables that have a zero solution value be included in the
   generated no-good cut. Default TRUE.
 - `benders/<benders>/benderscut/integer/zerosolvars`: should variables that have a zero solution value be included in the

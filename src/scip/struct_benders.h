@@ -123,6 +123,8 @@ struct SCIP_Benders
    SCIP_Bool             checkconsconvexity; /**< should the constraints of the subproblems be checked for convexity? */
    SCIP_NLPPARAM         nlpparam;           /**< parameters for NLP solves */
    SCIP_Bool             iiscutstrengthen;   /**< should an IIS-type method be applied to find solutions that strengthen non-convex cuts? */
+   SCIP_Longint          earlytermminnodes;  /**< the minimum number of nodes processed before early termination of the subproblem */
+   SCIP_Real             earlytermminimp;    /**< the minimum improvement in the dual bound required to terminate the subproblem early */
 
 
    /* information for heuristics */
