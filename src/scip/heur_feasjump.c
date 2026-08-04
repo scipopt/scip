@@ -31,8 +31,9 @@
  * Feasibility Jump repeatedly selects a variable and sets its value to minimize the weighted sum of constraint
  * violations. The weights are adjusted for constraints that remain violated in local minima.
  *
- * For more details see:
- *  Luteberget, Bjørnar, and Giorgio Sartor. "Feasibility Jump: an LP-free Lagrangian MIP heuristic."
+ * Based on:
+ *  Bjørnar Luteberget and Giorgio Sartor.
+ *  "Feasibility Jump: an LP-free Lagrangian MIP heuristic"
  *  Mathematical Programming Computation 15.2 (2023): 365-388.
  */
 
