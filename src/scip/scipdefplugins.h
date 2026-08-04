@@ -127,6 +127,7 @@
 #include "scip/heur_intshifting.h"
 #include "scip/heur_linesearchdiving.h"
 #include "scip/heur_localbranching.h"
+#include "scip/heur_localsearch.h"
 #include "scip/heur_locks.h"
 #include "scip/heur_lpface.h"
 #include "scip/heur_alns.h"

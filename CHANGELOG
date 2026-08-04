@@ -8,6 +8,7 @@ Features
 
 - added functionality to compute symmetries of entire symmetry detection graph rather than just the restriction to variable nodes
 - primal heuristic feasjump
+- primal heuristic localsearch
 - simpler restart control based on linear extrapolation since improvement checkpoint in tree size estimation
 - adds reader for decomposed problems to apply Benders' decomposition. The reader, extension `bdr`, lists the instance
   files for the master problem and subproblems. These instance files are then used to build up the Benders'
@@ -42,6 +43,7 @@ Interface changes
 - added SCIPiisfinderGetEnable() to check whether an iis finder is enabled
 - added SCIPiisfinderSetEnable() to set whether an iis finder is enabled
 - added SCIPincludeHeurFeasjump() to include feasibility jump primal heuristic
+- added SCIPincludeHeurLocalsearch() to include local search primal heuristic
 - added SCIPtightenVariableLowerAndUpperBounds() to tighten the variable bounds attached to a list of variables
 - added SCIPcreateBendersDefaultFromFiles() to add subproblems to the default Benders' decomposition plugin through
   instance files, instead of SCIP instances.
@@ -75,6 +77,26 @@ Interface changes
 - `heuristics/feasjump/onlymainscip`: should run in subscip be skipped?
 - `heuristics/feasjump/onlybeforenode`: should run before presolving be skipped?
 - `heuristics/feasjump/onlywithoutsol`: should run with solution be skipped?
+- `heuristics/localsearch/smoothprob`: smooth probability (out of 10000)
+- `heuristics/localsearch/tabubase`: minimum tabu tenure
+- `heuristics/localsearch/tabuvariation`: random tabu variation
+- `heuristics/localsearch/sampleunsat`: unsat constraints to sample
+- `heuristics/localsearch/bmsunsatinfeas`: max moves scored during infeasible phase
+- `heuristics/localsearch/bmsunsatfeas`: max moves scored during feasible phase
+- `heuristics/localsearch/samplesat`: sat constraints to sample
+- `heuristics/localsearch/bmssat`: max moves scored from sat constraints
+- `heuristics/localsearch/bmsflip`: binary flip candidates
+- `heuristics/localsearch/bmsrandom`: random move candidates
+- `heuristics/localsearch/verbosity`: verbosity level of the local search solver
+- `heuristics/localsearch/maxsols`: maximum number of solutions to find (-1: unlimited)
+- `heuristics/localsearch/mindecreaserel`: minimum relative decrease to reset the effort budget
+- `heuristics/localsearch/maxeffortfac`: maximum effort factor per nonzero without improvement (-1: unlimited)
+- `heuristics/localsearch/recomputefreq`: activity recomputation frequency (-1: off, 0: near boundary only)
+- `heuristics/localsearch/useinitialsol`: should best known solution be used?
+- `heuristics/localsearch/useterminalsol`: should previous terminal solution be used?
+- `heuristics/localsearch/onlymainscip`: should run in subscip be skipped?
+- `heuristics/localsearch/onlybeforenode`: should run before presolving be skipped?
+- `heuristics/localsearch/onlywithoutsol`: should run with solution be skipped?
 - `estimation/checkpoint/depthlim`: depth below which checkpoint is updated
 - `symmetries/enabled`: whether symmetry handling in enabled
 - `symmetries/tryaddtiming`: whether symmetries are computed before or at the end of presolving

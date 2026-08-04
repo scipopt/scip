@@ -132,6 +132,7 @@ set(scipsources
     scip/heur_intshifting.c
     scip/heur_linesearchdiving.c
     scip/heur_localbranching.c
+    scip/heur_localsearch.c
     scip/heur_lpface.c
     scip/heur_locks.c
     scip/heur_alns.c
@@ -663,6 +664,7 @@ set(scipheaders
     scip/heuristics.h
     scip/heur_linesearchdiving.h
     scip/heur_localbranching.h
+    scip/heur_localsearch.h
     scip/heur_locks.h
     scip/heur_alns.h
     scip/heur_lpface.h
