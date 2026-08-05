@@ -4780,9 +4780,13 @@ SCIP_RETCODE SCIPwriteLp(
    /* add real objoffset */
    else
    {
-      if( zeroobj || objoffset != 0.0 ) /*lint !e777*/
+      if( zeroobj || objoffset != 0.0 || (transformed && SCIPgetOrigObjoffset(scip) != 0.0) ) /*lint !e777*/
       {
-         obj = objoffset * objscale;
+         /* The transformed problem's objective offset does not include the original
+          * problem's objective constant (origprob->objoffset), which SCIP stores
+          * separately (see prob.c). Add it so the written transformed problem carries
+          * the full objective constant and round-trips to the same optimum. */
+         obj = objoffset * objscale + (transformed ? SCIPgetOrigObjoffset(scip) : 0.0);
 
          written = SCIPsnprintf(buffer, LP_MAX_PRINTLEN, " %+.15g", obj);
          if( written >= LP_MAX_PRINTLEN )
