@@ -79,6 +79,9 @@
 #define SCIP_DEFAULT_IISCUTSTRENGTHEN     FALSE  /** should an IIS-type method be applied to find solutions that strengthen no-good-based cuts? */
 #define SCIP_DEFAULT_EARLYTERMMINNODES    10000  /** the number of nodes processed in the subproblem before early termination */
 #define SCIP_DEFAULT_EARLYTERMMINIMPROVE   0.01  /** the minimum improvement in the dual bound to terminate the subproblem solve early */
+#define SCIP_DEFAULT_IISMAXNODES           5000  /** the maxmimum number of nodes processed by all subproblems in the IIS-type cut strengthening */
+#define SCIP_DEFAULT_IISFREQ                  5  /** the frequency at which the IIS-type cut strengthening is called. */
+#define SCIP_DEFAULT_IISOFFSET               20  /** the number of subproblem solve calls until the IIS-type cut strengthening is first executed. */
 
 #define BENDERS_MAXPSEUDOSOLS                 5  /** the maximum number of pseudo solutions checked before suggesting
                                                   *  merge candidates */
@@ -1256,6 +1259,10 @@ SCIP_RETCODE doBendersCreate(
    SCIP_CALL( SCIPclockCreate(&(*benders)->bendersclock, SCIP_CLOCKTYPE_DEFAULT) );
    (*benders)->nlpparam = SCIP_NLPPARAM_DEFAULT(set->scip);  /*lint !e446*/
 
+   /* allocating the memory for the DFBS cut strengthening algorithm */
+   SCIP_ALLOC( BMSallocMemory(&((*benders)->dfbsdata)) );
+   SCIP_CALL( SCIPcreateClock(set->scip, &((*benders)->dfbsdata->clock)) );
+
    /* add parameters */
    (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "benders/%s/priority", name);
    (void) SCIPsnprintf(paramdesc, SCIP_MAXSTRLEN, "priority of Benders' decomposition <%s>", name);
@@ -1403,6 +1410,24 @@ SCIP_RETCODE doBendersCreate(
          &(*benders)->earlytermminimp, FALSE, SCIP_DEFAULT_EARLYTERMMINIMPROVE,
          0.0, 1.0, NULL, NULL) ); /*lint !e740*/
 
+   (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "benders/%s/iismaxnodes", name);
+   SCIP_CALL( SCIPsetAddLongintParam(set, messagehdlr, blkmem, paramname,
+         "the maximum number of nodes processed by all subproblems in the IIS-type cut strengthening",
+         &(*benders)->dfbsdata->maxnodes, FALSE, SCIP_DEFAULT_IISMAXNODES,
+         0, INT_MAX, NULL, NULL) ); /*lint !e740*/
+
+   (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "benders/%s/iisfreq", name);
+   SCIP_CALL( SCIPsetAddIntParam(set, messagehdlr, blkmem, paramname,
+         "the frequency at which the IIS-type cut strengthening is called",
+         &(*benders)->dfbsdata->initfreq, FALSE,
+         SCIP_DEFAULT_IISFREQ, 0, INT_MAX, NULL, NULL) ); /*lint !e740*/
+
+   (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "benders/%s/iisoffset", name);
+   SCIP_CALL( SCIPsetAddIntParam(set, messagehdlr, blkmem, paramname,
+         "the number of subproblem solve calls until the IIS-type cut strengthening is first executed",
+         &(*benders)->dfbsdata->offset, FALSE,
+         SCIP_DEFAULT_IISOFFSET, 0, INT_MAX, NULL, NULL) ); /*lint !e740*/
+
    return SCIP_OKAY;
 }
 
@@ -1522,6 +1547,9 @@ SCIP_RETCODE SCIPbendersFree(
       SCIP_CALL( SCIPbenderscutFree(&((*benders)->benderscuts[i]), set) );
    }
    BMSfreeMemoryArrayNull(&(*benders)->benderscuts);
+
+   SCIP_CALL( SCIPfreeClock(set->scip, &((*benders)->dfbsdata->clock)) );
+   BMSfreeMemory(&((*benders)->dfbsdata));
 
    SCIPclockFree(&(*benders)->bendersclock);
    SCIPclockFree(&(*benders)->setuptime);
@@ -2954,13 +2982,9 @@ SCIP_RETCODE SCIPbendersActivate(
          assert(eventhdlr != NULL);
       }
 
-      /* allocating the memory for the DFBS cut strengthening algorithm */
-      SCIP_ALLOC( BMSallocMemory(&(benders->dfbsdata)) );
-      SCIP_CALL( SCIPcreateClock(set->scip, &(benders->dfbsdata->clock)) );
-      benders->dfbsdata->maxnodes = 5000;
+      /* initialising the DFBS data */
       benders->dfbsdata->numcalls = 0;
-      benders->dfbsdata->offset = 20;
-      benders->dfbsdata->freq = 5;
+      benders->dfbsdata->freq = benders->dfbsdata->initfreq;
       benders->dfbsdata->totalnodes = 0;
    }
 
@@ -2991,12 +3015,6 @@ SCIP_RETCODE SCIPbendersDeactivate(
       for( i = 0; i < nsubproblems; i++ )
          assert(benders->auxiliaryvars[i] == NULL);
 #endif
-
-      if( benders->dfbsdata != NULL )
-      {
-         SCIP_CALL( SCIPfreeClock(set->scip, &(benders->dfbsdata->clock)) );
-         BMSfreeMemory(&(benders->dfbsdata));
-      }
 
       /* if the subproblems were created by the Benders' decomposition core, then they need to be freed */
       if( benders->freesubprobs )
@@ -3641,7 +3659,7 @@ SCIP_RETCODE performNonconvexCutStrengthening(
       return SCIP_OKAY;
 
    /* the algorithm is only executed at a given frequency */
-   if( benders->dfbsdata->numcalls % benders->dfbsdata->freq != 0)
+   if( benders->dfbsdata->freq > 0 && benders->dfbsdata->numcalls % benders->dfbsdata->freq != 0)
       return SCIP_OKAY;
 
    /* if the original subproblem solve was too difficult, then the cut strengthening is not performed.
@@ -3903,10 +3921,10 @@ SCIP_RETCODE performNonconvexCutStrengthening(
     * is always at least 5.
     */
    if( numkeep + numcands == initnumcands )
-      benders->dfbsdata->freq += 5;
+      benders->dfbsdata->freq += MAX(benders->dfbsdata->initfreq, 1);
    else if( numkeep + numcands > 0.75*initnumcands )
       benders->dfbsdata->freq++;
-   else if( numkeep + numcands < 0.25*initnumcands && benders->dfbsdata->freq > 5 )
+   else if( numkeep + numcands < 0.25*initnumcands && benders->dfbsdata->freq > benders->dfbsdata->initfreq )
       benders->dfbsdata->freq--;
 
    /* adding the number of nodes processed to the total nodes. 100 nodes is set as the cost of setting up the subproblem

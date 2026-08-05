@@ -60,6 +60,7 @@ struct SCIP_BendersDFBSData
    SCIP_Longint          maxnodes;           /**< parameter for the maximum number of nodes processed in a DFBS iteration */
    int                   numcalls;           /**< counts the number of times the DFBS algorithm is called */
    int                   offset;             /**< the number of DFBS algorithm calls before being executed */
+   int                   initfreq;           /**< the initial number of DFBS algorithm calls between successive executions */
    int                   freq;               /**< the number of DFBS algorithm calls between successive executions */
    SCIP_Longint          totalnodes;         /**< the total number of nodes processed in the DFBS algorithm */
 };
