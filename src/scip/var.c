@@ -22984,7 +22984,6 @@ void SCIPvarsCountTypes(
    int*                  ncontvars           /**< pointer to store number of continuous variables or NULL if not needed */
    )
 {
-   assert(vars != NULL || nvars == 0);
    int binvars = 0;
    int binimplvars = 0;
    int intvars = 0;
@@ -22993,9 +22992,12 @@ void SCIPvarsCountTypes(
    int contimplvars = 0;
    int v;
 
+   assert(vars != NULL || nvars == 0);
+
    for( v = 0; v < nvars; ++v )
    {
       SCIP_Bool implied = SCIPvarIsImpliedIntegral(vars[v]);
+
       switch( SCIPvarGetType(vars[v]) )
       {
          case SCIP_VARTYPE_BINARY:
@@ -23021,6 +23023,7 @@ void SCIPvarsCountTypes(
             SCIPABORT();
       } /*lint !e788*/
    }
+
    if( nbinvars != NULL )
       *nbinvars = binvars;
    if( nintvars != NULL )
