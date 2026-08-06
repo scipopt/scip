@@ -3557,8 +3557,8 @@ SCIP_RETCODE evaluateVariableKeepList(
    return SCIP_OKAY;
 }
 
-/** performs cut strengthening for non-convex subproblem by performing a depth first binary search on the master problem
- *  solution.
+/** extracts an irreducible infeasible/inducing subset (IIS) of the master problem solution for a non-convex
+ *  subproblem by performing a depth first binary search on the master problem solution.
  *
  *  This cut strengthening approach requires that the linking master problem variables are all binary. The goal is to
  *  find a subset of the master problem variables that are set to 1 to achieve either infeasibility or the same objective
@@ -3597,8 +3597,7 @@ SCIP_RETCODE evaluateVariableKeepList(
  *  5. set midpoint to ceil(numcands/2)
  *  6. set partitionsize to midpoint
  */
-static
-SCIP_RETCODE performNonconvexCutStrengthening(
+SCIP_RETCODE extractIISMasterSolution(
    SCIP_BENDERS*         benders,            /**< Benders' decomposition */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_SOL*             sol,                /**< the initial CIP solution */
@@ -3664,7 +3663,7 @@ SCIP_RETCODE performNonconvexCutStrengthening(
    /* if the original subproblem solve was too difficult, then the cut strengthening is not performed.
     * "Too difficult" is defined as requiring more than 5000 nodes
     */
-   orignodes = subproblem != NULL ? SCIPgetNNodes(subproblem) : 100;
+   orignodes = subproblem != NULL ? SCIPgetNNodes(subproblem) : 4000;
    if( orignodes > 5000 )
       return SCIP_OKAY;
 
@@ -4432,7 +4431,7 @@ SCIP_RETCODE generateBendersCuts(
                && ((solveloop == SCIP_BENDERSSOLVELOOP_CIP && !convexsub)
                   || solveloop == SCIP_BENDERSSOLVELOOP_USERCIP) )
             {
-               SCIP_CALL( performNonconvexCutStrengthening(benders, set, sol, &nonconvexcutsol, i, type, substatus[i]) );
+               SCIP_CALL( extractIISMasterSolution(benders, set, sol, &nonconvexcutsol, i, type, substatus[i]) );
             }
 
             /* if a solution for generating a strengthened cut is not found, then we just set nonconvexcutsol to point
