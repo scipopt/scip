@@ -22475,7 +22475,7 @@ SCIP_Real SCIPvarGetAvgGMIScore(
          return SCIPvarGetAvgGMIScore(var->negatedvar, stat);
 
       default:
-      SCIPerrorMessage("unknown variable status\n");
+         SCIPerrorMessage("unknown variable status\n");
          SCIPABORT();
          return 0.0; /*lint !e527*/
    }
@@ -22519,7 +22519,7 @@ SCIP_RETCODE SCIPvarIncGMIeffSum(
          return SCIP_INVALIDDATA;
 
       default:
-      SCIPerrorMessage("unknown variable status\n");
+         SCIPerrorMessage("unknown variable status\n");
          SCIPABORT();
          return SCIP_INVALIDDATA; /*lint !e527*/
    }
@@ -22558,7 +22558,7 @@ SCIP_Real SCIPvarGetLastGMIScore(
          return SCIPvarGetLastGMIScore(var->negatedvar, stat);
 
       default:
-      SCIPerrorMessage("unknown variable status\n");
+         SCIPerrorMessage("unknown variable status\n");
          SCIPABORT();
          return 0.0; /*lint !e527*/
    }
@@ -22603,7 +22603,7 @@ SCIP_RETCODE SCIPvarSetLastGMIScore(
          return SCIP_INVALIDDATA;
 
       default:
-      SCIPerrorMessage("unknown variable status\n");
+         SCIPerrorMessage("unknown variable status\n");
          SCIPABORT();
          return SCIP_INVALIDDATA; /*lint !e527*/
    }
