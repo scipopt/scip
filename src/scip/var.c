@@ -14285,13 +14285,13 @@ SCIP_RETCODE SCIPvarAddHoleGlobal(
       if( SCIPsetIsPositive(set, var->data.aggregate.scalar) )
       {
          /* a > 0 -> change lower bound of y */
-         childnewleft = (left - var->data.aggregate.constant)/var->data.aggregate.scalar;
-         childnewright = (right - var->data.aggregate.constant)/var->data.aggregate.scalar;
+         childnewleft = (left - var->data.aggregate.constant) / var->data.aggregate.scalar;
+         childnewright = (right - var->data.aggregate.constant) / var->data.aggregate.scalar;
       }
       else if( SCIPsetIsNegative(set, var->data.aggregate.scalar) )
       {
-         childnewright = (left - var->data.aggregate.constant)/var->data.aggregate.scalar;
-         childnewleft = (right - var->data.aggregate.constant)/var->data.aggregate.scalar;
+         childnewright = (left - var->data.aggregate.constant) / var->data.aggregate.scalar;
+         childnewleft = (right - var->data.aggregate.constant) / var->data.aggregate.scalar;
       }
       else
       {
@@ -14524,13 +14524,13 @@ SCIP_RETCODE SCIPvarAddHoleLocal(
       if( SCIPsetIsPositive(set, var->data.aggregate.scalar) )
       {
          /* a > 0 -> change lower bound of y */
-         childnewleft = (left - var->data.aggregate.constant)/var->data.aggregate.scalar;
-         childnewright = (right - var->data.aggregate.constant)/var->data.aggregate.scalar;
+         childnewleft = (left - var->data.aggregate.constant) / var->data.aggregate.scalar;
+         childnewright = (right - var->data.aggregate.constant) / var->data.aggregate.scalar;
       }
       else if( SCIPsetIsNegative(set, var->data.aggregate.scalar) )
       {
-         childnewright = (left - var->data.aggregate.constant)/var->data.aggregate.scalar;
-         childnewleft = (right - var->data.aggregate.constant)/var->data.aggregate.scalar;
+         childnewright = (left - var->data.aggregate.constant) / var->data.aggregate.scalar;
+         childnewleft = (right - var->data.aggregate.constant) / var->data.aggregate.scalar;
       }
       else
       {
@@ -15771,15 +15771,15 @@ SCIP_RETCODE SCIPvarAddVlb(
       {
          /* a > 0 -> add variable lower bound */
          SCIP_CALL( SCIPvarAddVlb(var->data.aggregate.var, blkmem, set, stat, transprob, origprob, tree, reopt, lp,
-               cliquetable, branchcand, eventqueue, eventfilter, vlbvar, vlbcoef/var->data.aggregate.scalar,
-               (vlbconstant - var->data.aggregate.constant)/var->data.aggregate.scalar, transitive, infeasible, nbdchgs) );
+               cliquetable, branchcand, eventqueue, eventfilter, vlbvar, vlbcoef / var->data.aggregate.scalar,
+               (vlbconstant - var->data.aggregate.constant) / var->data.aggregate.scalar, transitive, infeasible, nbdchgs) );
       }
       else if( SCIPsetIsNegative(set, var->data.aggregate.scalar) )
       {
          /* a < 0 -> add variable upper bound */
          SCIP_CALL( SCIPvarAddVub(var->data.aggregate.var, blkmem, set, stat, transprob, origprob, tree, reopt, lp,
-               cliquetable, branchcand, eventqueue, eventfilter, vlbvar, vlbcoef/var->data.aggregate.scalar,
-               (vlbconstant - var->data.aggregate.constant)/var->data.aggregate.scalar, transitive, infeasible, nbdchgs) );
+               cliquetable, branchcand, eventqueue, eventfilter, vlbvar, vlbcoef / var->data.aggregate.scalar,
+               (vlbconstant - var->data.aggregate.constant) / var->data.aggregate.scalar, transitive, infeasible, nbdchgs) );
       }
       else
       {
@@ -16227,15 +16227,15 @@ SCIP_RETCODE SCIPvarAddVub(
       {
          /* a > 0 -> add variable upper bound */
          SCIP_CALL( SCIPvarAddVub(var->data.aggregate.var, blkmem, set, stat, transprob, origprob, tree, reopt, lp,
-               cliquetable, branchcand, eventqueue, eventfilter, vubvar, vubcoef/var->data.aggregate.scalar,
-               (vubconstant - var->data.aggregate.constant)/var->data.aggregate.scalar, transitive, infeasible, nbdchgs) );
+               cliquetable, branchcand, eventqueue, eventfilter, vubvar, vubcoef / var->data.aggregate.scalar,
+               (vubconstant - var->data.aggregate.constant) / var->data.aggregate.scalar, transitive, infeasible, nbdchgs) );
       }
       else if( SCIPsetIsNegative(set, var->data.aggregate.scalar) )
       {
          /* a < 0 -> add variable lower bound */
          SCIP_CALL( SCIPvarAddVlb(var->data.aggregate.var, blkmem, set, stat, transprob, origprob, tree, reopt, lp,
-               cliquetable, branchcand, eventqueue, eventfilter, vubvar, vubcoef/var->data.aggregate.scalar,
-               (vubconstant - var->data.aggregate.constant)/var->data.aggregate.scalar, transitive, infeasible, nbdchgs) );
+               cliquetable, branchcand, eventqueue, eventfilter, vubvar, vubcoef / var->data.aggregate.scalar,
+               (vubconstant - var->data.aggregate.constant) / var->data.aggregate.scalar, transitive, infeasible, nbdchgs) );
       }
       else
       {
@@ -19697,7 +19697,7 @@ SCIP_RETCODE SCIPvarSetRelaxSol(
    case SCIP_VARSTATUS_AGGREGATED: /* x = a*y + c  =>  y = (x-c)/a */
       assert(!SCIPsetIsZero(set, var->data.aggregate.scalar));
       SCIP_CALL( SCIPvarSetRelaxSol(var->data.aggregate.var, set, relaxation,
-            (solval - var->data.aggregate.constant)/var->data.aggregate.scalar, updateobj) );
+            (solval - var->data.aggregate.constant) / var->data.aggregate.scalar, updateobj) );
       break;
    case SCIP_VARSTATUS_MULTAGGR:
       SCIPerrorMessage("cannot set solution value for multiple aggregated variable\n");
@@ -19836,7 +19836,7 @@ SCIP_RETCODE SCIPvarSetNLPSol(
 
    case SCIP_VARSTATUS_AGGREGATED: /* x = a*y + c  =>  y = (x-c)/a */
       assert(!SCIPsetIsZero(set, var->data.aggregate.scalar));
-      SCIP_CALL( SCIPvarSetNLPSol(var->data.aggregate.var, set, (solval - var->data.aggregate.constant)/var->data.aggregate.scalar) );
+      SCIP_CALL( SCIPvarSetNLPSol(var->data.aggregate.var, set, (solval - var->data.aggregate.constant) / var->data.aggregate.scalar) );
       break;
 
    case SCIP_VARSTATUS_MULTAGGR:
@@ -20385,7 +20385,7 @@ SCIP_RETCODE SCIPvarUpdatePseudocost(
    case SCIP_VARSTATUS_AGGREGATED:
       assert(!SCIPsetIsZero(set, var->data.aggregate.scalar));
       SCIP_CALL( SCIPvarUpdatePseudocost(var->data.aggregate.var, set, stat,
-            solvaldelta/var->data.aggregate.scalar, objdelta, weight) );
+            solvaldelta / var->data.aggregate.scalar, objdelta, weight) );
       return SCIP_OKAY;
 
    case SCIP_VARSTATUS_MULTAGGR:
@@ -20450,7 +20450,7 @@ SCIP_RETCODE SCIPvarUpdateAncPseudocost(
    case SCIP_VARSTATUS_AGGREGATED:
       assert(!SCIPsetIsZero(set, var->data.aggregate.scalar));
       SCIP_CALL( SCIPvarUpdateAncPseudocost(var->data.aggregate.var, set, stat,
-            solvaldelta/var->data.aggregate.scalar, objdelta, weight) );
+            solvaldelta / var->data.aggregate.scalar, objdelta, weight) );
       return SCIP_OKAY;
 
    case SCIP_VARSTATUS_MULTAGGR:
@@ -21190,7 +21190,7 @@ SCIP_RETCODE SCIPvarIncVSIDS(
       return SCIP_INVALIDDATA;
 
    case SCIP_VARSTATUS_AGGREGATED:
-      value = (value - var->data.aggregate.constant)/var->data.aggregate.scalar;
+      value = (value - var->data.aggregate.constant) / var->data.aggregate.scalar;
 
       if( var->data.aggregate.scalar > 0.0 )
       {
@@ -21321,7 +21321,7 @@ SCIP_RETCODE SCIPvarIncNActiveConflicts(
       return SCIP_INVALIDDATA;
 
    case SCIP_VARSTATUS_AGGREGATED:
-      value = (value - var->data.aggregate.constant)/var->data.aggregate.scalar;
+      value = (value - var->data.aggregate.constant) / var->data.aggregate.scalar;
 
       if( var->data.aggregate.scalar > 0.0 )
       {
@@ -21584,7 +21584,7 @@ SCIP_RETCODE SCIPvarIncNBranchings(
       return SCIP_INVALIDDATA;
 
    case SCIP_VARSTATUS_AGGREGATED:
-      value = (value - var->data.aggregate.constant)/var->data.aggregate.scalar;
+      value = (value - var->data.aggregate.constant) / var->data.aggregate.scalar;
 
       if( var->data.aggregate.scalar > 0.0 )
       {
@@ -21668,7 +21668,7 @@ SCIP_RETCODE SCIPvarIncInferenceSum(
       return SCIP_INVALIDDATA;
 
    case SCIP_VARSTATUS_AGGREGATED:
-      value = (value - var->data.aggregate.constant)/var->data.aggregate.scalar;
+      value = (value - var->data.aggregate.constant) / var->data.aggregate.scalar;
 
       if( var->data.aggregate.scalar > 0.0 )
       {
@@ -21752,7 +21752,7 @@ SCIP_RETCODE SCIPvarIncCutoffSum(
       return SCIP_INVALIDDATA;
 
    case SCIP_VARSTATUS_AGGREGATED:
-      value = (value - var->data.aggregate.constant)/var->data.aggregate.scalar;
+      value = (value - var->data.aggregate.constant) / var->data.aggregate.scalar;
 
       if( var->data.aggregate.scalar > 0.0 )
       {
