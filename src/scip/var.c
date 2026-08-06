@@ -18366,9 +18366,7 @@ SCIP_RETCODE SCIPvarGetOrigvarSum(
 
    while( !SCIPvarIsOriginal(*var) )
    {
-      /* if the variable has no parent variables, it was generated during solving and has no corresponding original
-       * var
-       */
+      /* if the variable has no parents, it was generated during solving and has no corresponding original var */
       if( (*var)->nparentvars == 0 )
       {
          /* negated variables do not need to have a parent variables, and negated variables can exist in original
@@ -18383,9 +18381,6 @@ SCIP_RETCODE SCIPvarGetOrigvarSum(
 
             continue;
          }
-         /* if the variables does not have any parent the variables was created during solving and has no original
-          * counterpart
-          */
          else
          {
             *var = NULL;
@@ -18455,9 +18450,7 @@ SCIP_RETCODE SCIPvarGetOrigvarSumExact(
 
    while( !SCIPvarIsOriginal(*var) )
    {
-      /* if the variable has no parent variables, it was generated during solving and has no corresponding original
-       * var
-       */
+      /* if the variable has no parents, it was generated during solving and has no corresponding original var */
       if( (*var)->nparentvars == 0 )
       {
          /* negated variables do not need to have a parent variables, and negated variables can exist in original
@@ -18472,9 +18465,6 @@ SCIP_RETCODE SCIPvarGetOrigvarSumExact(
 
             continue;
          }
-         /* if the variables does not have any parent the variables was created during solving and has no original
-          * counterpart
-          */
          else
          {
             *var = NULL;
