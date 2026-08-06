@@ -18768,16 +18768,10 @@ SCIP_Real SCIPvarGetLPSol_rec(
       assert(var->data.aggregate.var != NULL);
       lpsolval = SCIPvarGetLPSol(var->data.aggregate.var);
 
-      /* a correct implementation would need to check the value of var->data.aggregate.var for infinity and return the
-       * corresponding infinity value instead of performing an arithmetical transformation (compare method
-       * SCIPvarGetLbLP()); however, we do not want to introduce a SCIP or SCIP_SET pointer to this method, since it is
-       * (or is called by) a public interface method; instead, we only assert that values are finite
-       * w.r.t. SCIP_DEFAULT_INFINITY, which seems to be true in our regression tests; note that this may yield false
-       * positives and negatives if the parameter <numerics/infinity> is modified by the user
+      /* In the following test we use SCIP_DEFAULT_INFINITY, because we do not want to introduce a SCIP or SCIP_SET
+       * pointer to this method, since it is (or is called by) a public interface method. Note that
+       * this may yield inconsistent values if the parameter <numerics/infinity> is modified by the user.
        */
-//       assert(lpsolval > -SCIP_DEFAULT_INFINITY);
-//       assert(lpsolval < +SCIP_DEFAULT_INFINITY);
-
       if( lpsolval >= SCIP_DEFAULT_INFINITY )
          return (var->data.aggregate.scalar > 0) ? SCIP_DEFAULT_INFINITY : -SCIP_DEFAULT_INFINITY;
       else if( lpsolval <= -SCIP_DEFAULT_INFINITY )
