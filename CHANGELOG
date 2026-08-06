@@ -68,6 +68,7 @@ Interface changes
 - new methods SCIPtryAddSymmetryHandlingMethods(), SCIPpresolveSymmetryHandlingMethods() to call try-add and presolve routines of symmetry handlers
 - new methods SCIPsymhdlrCreate(), SCIPsymhdlrCopyInclude(), SCIPsymhdlrFree(), SCIPsymhdlrExit(), SCIPsymhdlrInit(), SCIPsymhdlrInitsol(), SCIPsymhdlrExitsol(), SCIPsymhdlrPresol(), SCIPsymhdlrProp(), SCIPsymhdlrResolvePropagation(), SCIPsymhdlrSepaLP(), SCIPsymhdlrSepaSol(), SCIPsymhdlrTryAdd(), SCIPsymhdlrSetSepa(), SCIPsymhdlrSetProp(), SCIPsymhdlrSetCopy(), SCIPsymhdlrSetFree(), SCIPsymhdlrSetInit(), SCIPsymhdlrSetExit(), SCIPsymhdlrSetInitsol(), SCIPsymhdlrSetExitsol(), SCIPsymhdlrSetPresol(), SCIPsymhdlrSetResprop(), SCIPaddSymhdlrComponent(), SCIPcreateSymmetryComponent(), SCIPsyminfoCompressPermInfo(), SCIPdisplaySymmetryGenerators() to execute callback methods of symmetry handlers
 - new method SCIPincludePropDistance()
+- new method SCIPextractBendersIISMasterSolution() can be called to identify an irreducible master solution that achieves the same subproblem result, i.e. infeasible or feasible with the same objective.
 
 ### New parameters
 
