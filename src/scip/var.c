@@ -1723,9 +1723,9 @@ void SCIPdomchgAddCurrentCertificateIndex(
 
    change = &(domchg->domchgdyn.boundchgs[domchg->domchgdyn.nboundchgs - 1]);
 
-   #ifndef NDEBUG
-      assert(SCIPcertificateEnsureLastBoundInfoConsistent(certificate, change->var, (SCIP_BOUNDTYPE) change->boundtype, change->newbound, FALSE));
-   #endif
+#ifndef NDEBUG
+   assert(SCIPcertificateEnsureLastBoundInfoConsistent(certificate, change->var, (SCIP_BOUNDTYPE) change->boundtype, change->newbound, FALSE));
+#endif
 
    change->certificateindex = SCIPcertificateGetCurrentIndex(certificate) - 1;
 }
