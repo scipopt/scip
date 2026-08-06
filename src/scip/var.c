@@ -2671,7 +2671,8 @@ SCIP_RETCODE SCIPvarAddExactData(
    {
       if( (SCIP_VARTYPE)var->vartype == SCIP_VARTYPE_BINARY )
       {
-         SCIPerrorMessage("invalid bounds [%.2g,%.2g] for binary variable <%s>\n", var->data.original.origdom.lb, var->data.original.origdom.ub, var->name);
+         SCIPerrorMessage("invalid bounds [%.2g,%.2g] for binary variable <%s>\n", var->data.original.origdom.lb,
+            var->data.original.origdom.ub, var->name);
          return SCIP_INVALIDDATA;
       }
    }
@@ -2723,7 +2724,8 @@ SCIP_RETCODE SCIPvarCopyExactData(
    if( sourcevar->exactdata->multaggr.scalars != NULL )
    {
       SCIP_CALL( SCIPrationalCopyBlock(blkmem, &targetvar->exactdata->aggregate.constant, sourcevar->exactdata->multaggr.constant) );
-      SCIP_CALL( SCIPrationalCopyBlockArray(blkmem, &targetvar->exactdata->multaggr.scalars, sourcevar->exactdata->multaggr.scalars, sourcevar->data.multaggr.nvars) );
+      SCIP_CALL( SCIPrationalCopyBlockArray(blkmem, &targetvar->exactdata->multaggr.scalars,
+            sourcevar->exactdata->multaggr.scalars, sourcevar->data.multaggr.nvars) );
    }
    else
    {
@@ -6031,14 +6033,16 @@ SCIP_RETCODE SCIPvarFlattenAggregationGraph(
 
    if( !set->exact_enable )
    {
-      SCIP_CALL( SCIPvarGetActiveRepresentatives(set, var->data.multaggr.vars, var->data.multaggr.scalars, &nmultvars, multvarssize, &multconstant, &multrequiredsize) );
+      SCIP_CALL( SCIPvarGetActiveRepresentatives(set, var->data.multaggr.vars, var->data.multaggr.scalars, &nmultvars,
+            multvarssize, &multconstant, &multrequiredsize) );
 
       if( multrequiredsize > multvarssize )
       {
          SCIP_ALLOC( BMSreallocBlockMemoryArray(blkmem, &(var->data.multaggr.vars), multvarssize, multrequiredsize) );
          SCIP_ALLOC( BMSreallocBlockMemoryArray(blkmem, &(var->data.multaggr.scalars), multvarssize, multrequiredsize) );
          multvarssize = multrequiredsize;
-         SCIP_CALL( SCIPvarGetActiveRepresentatives(set, var->data.multaggr.vars, var->data.multaggr.scalars, &nmultvars, multvarssize, &multconstant, &multrequiredsize) );
+         SCIP_CALL( SCIPvarGetActiveRepresentatives(set, var->data.multaggr.vars, var->data.multaggr.scalars, &nmultvars,
+               multvarssize, &multconstant, &multrequiredsize) );
 
          assert( multrequiredsize <= multvarssize );
       }
@@ -9525,8 +9529,7 @@ SCIP_RETCODE SCIPvarChgObjExact(
 
             SCIPrationalMultReal(tmp, newobj, (SCIP_Real) prob->objsense/prob->objscale);
 
-            SCIP_CALL( SCIPvarChgObjExact(var->data.original.transvar, blkmem, set, prob, primal, lp, eventqueue,
-                  tmp) );
+            SCIP_CALL( SCIPvarChgObjExact(var->data.original.transvar, blkmem, set, prob, primal, lp, eventqueue, tmp) );
          }
          else
             assert(set->stage == SCIP_STAGE_PROBLEM);
@@ -10351,7 +10354,8 @@ SCIP_RETCODE varEventGlbChangedExact(
 
       SCIPrationalDebugMessage("issue exact GLBCHANGED event for variable <%s>: %q -> %q\n", var->name, oldbound, newbound);
 
-      SCIP_CALL( SCIPeventCreateGlbChanged(&event, blkmem, var, SCIPrationalRoundReal(oldbound, SCIP_R_ROUND_DOWNWARDS), SCIPrationalRoundReal(newbound, SCIP_R_ROUND_DOWNWARDS)) );
+      SCIP_CALL( SCIPeventCreateGlbChanged(&event, blkmem, var, SCIPrationalRoundReal(oldbound, SCIP_R_ROUND_DOWNWARDS),
+            SCIPrationalRoundReal(newbound, SCIP_R_ROUND_DOWNWARDS)) );
       SCIP_CALL( SCIPeventAddExactBdChg(event, blkmem, oldbound, newbound) );
       SCIP_CALL( SCIPeventqueueAdd(eventqueue, blkmem, set, NULL, lp, branchcand, NULL, &event) );
    }
@@ -10428,7 +10432,8 @@ SCIP_RETCODE varEventGubChangedExact(
 
       SCIPsetDebugMsg(set, "issue GUBCHANGED event for variable <%s>: %g -> %g\n", var->name, SCIPrationalGetReal(oldbound), SCIPrationalGetReal(newbound));
 
-      SCIP_CALL( SCIPeventCreateGubChanged(&event, blkmem, var, SCIPrationalRoundReal(oldbound, SCIP_R_ROUND_UPWARDS), SCIPrationalRoundReal(newbound, SCIP_R_ROUND_UPWARDS)) );
+      SCIP_CALL( SCIPeventCreateGubChanged(&event, blkmem, var, SCIPrationalRoundReal(oldbound, SCIP_R_ROUND_UPWARDS),
+            SCIPrationalRoundReal(newbound, SCIP_R_ROUND_UPWARDS)) );
       SCIP_CALL( SCIPeventAddExactBdChg(event, blkmem, oldbound, newbound) );
       SCIP_CALL( SCIPeventqueueAdd(eventqueue, blkmem, set, NULL, lp, branchcand, NULL, &event) );
    }
@@ -11952,7 +11957,8 @@ SCIP_RETCODE varEventLbChangedExact(
 
       SCIPrationalDebugMessage("issue exact LBCHANGED event for variable <%s>: %q -> %q\n", var->name, oldbound, newbound);
 
-      SCIP_CALL( SCIPeventCreateLbChanged(&event, blkmem, var, SCIPrationalRoundReal(oldbound, SCIP_R_ROUND_DOWNWARDS), SCIPrationalRoundReal(newbound, SCIP_R_ROUND_DOWNWARDS)) );
+      SCIP_CALL( SCIPeventCreateLbChanged(&event, blkmem, var, SCIPrationalRoundReal(oldbound, SCIP_R_ROUND_DOWNWARDS),
+            SCIPrationalRoundReal(newbound, SCIP_R_ROUND_DOWNWARDS)) );
       SCIP_CALL( SCIPeventAddExactBdChg(event, blkmem, oldbound, newbound) );
       SCIP_CALL( SCIPeventqueueAdd(eventqueue, blkmem, set, NULL, lp->fplp, branchcand, NULL, &event) );
    }
@@ -12028,7 +12034,8 @@ SCIP_RETCODE varEventUbChangedExact(
 
       SCIPsetDebugMsg(set, "issue UBCHANGED event for variable <%s>: %g -> %g\n", var->name, SCIPrationalGetReal(oldbound), SCIPrationalGetReal(newbound));
 
-      SCIP_CALL( SCIPeventCreateUbChanged(&event, blkmem, var, SCIPrationalRoundReal(oldbound, SCIP_R_ROUND_UPWARDS), SCIPrationalRoundReal(newbound, SCIP_R_ROUND_UPWARDS)) );
+      SCIP_CALL( SCIPeventCreateUbChanged(&event, blkmem, var, SCIPrationalRoundReal(oldbound, SCIP_R_ROUND_UPWARDS),
+            SCIPrationalRoundReal(newbound, SCIP_R_ROUND_UPWARDS)) );
       SCIP_CALL( SCIPeventAddExactBdChg(event, blkmem, oldbound, newbound) );
       SCIP_CALL( SCIPeventqueueAdd(eventqueue, blkmem, set, NULL, lp->fplp, branchcand, NULL, &event) );
    }
@@ -15245,7 +15252,8 @@ SCIP_RETCODE varAddTransitiveImplic(
              *       have to explicitly check that the active variable has not a variable status
              *       SCIP_VARSTATUS_AGGREGATED or SCIP_VARSTATUS_NEGATED;
              */
-            if( SCIPvarIsActive(vlbvars[i]) && SCIPvarGetStatus(vlbvars[i]) != SCIP_VARSTATUS_AGGREGATED && SCIPvarGetStatus(vlbvars[i]) != SCIP_VARSTATUS_NEGATED )
+            if( SCIPvarIsActive(vlbvars[i]) && SCIPvarGetStatus(vlbvars[i]) != SCIP_VARSTATUS_AGGREGATED
+               && SCIPvarGetStatus(vlbvars[i]) != SCIP_VARSTATUS_NEGATED )
             {
                SCIP_Real vbimplbound;
 
@@ -15315,7 +15323,8 @@ SCIP_RETCODE varAddTransitiveImplic(
              *       have to explicitly check that the active variable has not a variable status
              *       SCIP_VARSTATUS_AGGREGATED or SCIP_VARSTATUS_NEGATED;
              */
-            if( SCIPvarIsActive(vubvars[i]) && SCIPvarGetStatus(vubvars[i]) != SCIP_VARSTATUS_AGGREGATED && SCIPvarGetStatus(vubvars[i]) != SCIP_VARSTATUS_NEGATED )
+            if( SCIPvarIsActive(vubvars[i]) && SCIPvarGetStatus(vubvars[i]) != SCIP_VARSTATUS_AGGREGATED
+               && SCIPvarGetStatus(vubvars[i]) != SCIP_VARSTATUS_NEGATED )
             {
                SCIP_Real vbimplbound;
 
