@@ -77,9 +77,9 @@
 #define SCIP_DEFAULT_CHECKCONSCONVEXITY    TRUE  /** should the constraints of the subproblem be checked for convexity? */
 #define SCIP_DEFAULT_NLPITERLIMIT         10000  /** iteration limit for NLP solver */
 #define SCIP_DEFAULT_IISCUTSTRENGTHEN     FALSE  /** should an IIS-type method be applied to find solutions that strengthen no-good-based cuts? */
-#define SCIP_DEFAULT_EARLYTERMMINNODES    10000  /** the number of nodes processed in the subproblem before early termination */
+#define SCIP_DEFAULT_EARLYTERMMINNODES  10000LL  /** the number of nodes processed in the subproblem before early termination */
 #define SCIP_DEFAULT_EARLYTERMMINIMPROVE   0.01  /** the minimum improvement in the dual bound to terminate the subproblem solve early */
-#define SCIP_DEFAULT_IISMAXNODES           5000  /** the maxmimum number of nodes processed by all subproblems in the IIS-type cut strengthening */
+#define SCIP_DEFAULT_IISMAXNODES         5000LL  /** the maxmimum number of nodes processed by all subproblems in the IIS-type cut strengthening */
 #define SCIP_DEFAULT_IISFREQ                  5  /** the frequency at which the IIS-type cut strengthening is called. */
 #define SCIP_DEFAULT_IISOFFSET               20  /** the number of subproblem solve calls until the IIS-type cut strengthening is first executed. */
 
@@ -674,7 +674,7 @@ SCIP_DECL_SORTPTRCOMP(benderssubcompdefault)
       SCIP_Longint avgiterdiff = solvestat2->iterations - solvestat1->iterations;
 
       if( avgiterdiff != 0 )
-         return avgiterdiff;
+         return avgiterdiff > 0 ? 1 : -1;
 
       return solvestat1->idx - solvestat2->idx;
    }
@@ -1402,7 +1402,7 @@ SCIP_RETCODE doBendersCreate(
    SCIP_CALL( SCIPsetAddLongintParam(set, messagehdlr, blkmem, paramname,
          "the number of nodes processed in the subproblem before early termination",
          &(*benders)->earlytermminnodes, FALSE, SCIP_DEFAULT_EARLYTERMMINNODES,
-         0, INT_MAX, NULL, NULL) ); /*lint !e740*/
+         0LL, SCIP_LONGINT_MAX, NULL, NULL) ); /*lint !e740*/
 
    (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "benders/%s/earlytermminimprove", name);
    SCIP_CALL( SCIPsetAddRealParam(set, messagehdlr, blkmem, paramname,
@@ -1414,7 +1414,7 @@ SCIP_RETCODE doBendersCreate(
    SCIP_CALL( SCIPsetAddLongintParam(set, messagehdlr, blkmem, paramname,
          "the maximum number of nodes processed by all subproblems in the IIS-type cut strengthening",
          &(*benders)->dfbsdata->maxnodes, FALSE, SCIP_DEFAULT_IISMAXNODES,
-         0, INT_MAX, NULL, NULL) ); /*lint !e740*/
+         0LL, SCIP_LONGINT_MAX, NULL, NULL) ); /*lint !e740*/
 
    (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "benders/%s/iisfreq", name);
    SCIP_CALL( SCIPsetAddIntParam(set, messagehdlr, blkmem, paramname,
@@ -3605,8 +3605,7 @@ SCIP_RETCODE performNonconvexCutStrengthening(
    SCIP_SOL**            newsol,             /**< the CIP solution corresponding to the reduced master solution */
    int                   probnumber,         /**< the number of the subproblem for which the cut is generated */
    SCIP_BENDERSENFOTYPE  type,               /**< the type of solution being enforced */
-   SCIP_BENDERSSUBSTATUS substatus,          /**< the status of the subproblem solve */
-   SCIP_Bool             checkint            /**< are the subproblems called during a check/enforce of integer sols? */
+   SCIP_BENDERSSUBSTATUS substatus           /**< the status of the subproblem solve */
    )
 {
    SCIP* scip;
@@ -3629,8 +3628,8 @@ SCIP_RETCODE performNonconvexCutStrengthening(
    int iterations;
    int i;
 
-   SCIP_Longint orignodes = 0;
-   SCIP_Longint nodebudget = 0;
+   SCIP_Longint orignodes;
+   SCIP_Longint nodebudget;
    SCIP_Longint nodesprocessed = 0;
    SCIP_Longint totalsubprobnodes = 0;
 
@@ -3728,7 +3727,9 @@ SCIP_RETCODE performNonconvexCutStrengthening(
    }
    initnumcands = numcands;
 
-   /* we only execute the cut strengthening if the number of candidates is between 20% and 90% of the total number of submastervars */
+   /* we only execute the cut strengthening if the number of candidates is between 20% and 90% of the total number of submastervars
+    * NOTE: it is important to ensure that numcands > 0 for operations later in the code
+    */
    if( numcands >= 0.9*nsubmastervars || numcands <= 0.2*nsubmastervars )
    {
       SCIPfreeBufferArray(scip, &candidates);
@@ -3746,7 +3747,7 @@ SCIP_RETCODE performNonconvexCutStrengthening(
    SCIPrandomPermuteIntArray(randnumgen, candidates, 0, numcands);
    SCIPfreeRandom(scip, &randnumgen);
 
-   midpoint = SCIPceil(scip, numcands/2);
+   midpoint = (int)SCIPceil(scip, (SCIP_Real)numcands/2);
    partitionsize = midpoint;
 
    /* creating an empty solution */
@@ -3758,7 +3759,7 @@ SCIP_RETCODE performNonconvexCutStrengthening(
    SCIP_CALL( setTestSolutionValues(scip, testsol, submastervars, candidates, midpoint, 1.0) );
 
    /* computing the total number of nodes to be used by the subproblem in the DFBS algorithm. */
-   nodebudget = orignodes*SCIPceil(scip, LOG2(numcands))*0.5;
+   nodebudget = (SCIP_Longint)(orignodes*SCIPceil(scip, LOG2((SCIP_Real)numcands))*0.5);
    nodebudget = MAX(nodebudget, 1000);
    nodebudget = MIN(nodebudget, benders->dfbsdata->maxnodes);
 
@@ -3766,7 +3767,7 @@ SCIP_RETCODE performNonconvexCutStrengthening(
    do
    {
       SCIP_Bool evalkeeplist = FALSE;
-      int numremove;
+      int numremove = 0;
 
       iterations++;
       if( SCIPisStopped(scip) )
@@ -3833,6 +3834,8 @@ SCIP_RETCODE performNonconvexCutStrengthening(
       {
          SCIP_Bool keeplistsuccess = FALSE;
 
+         assert(numremove > 0);
+
          SCIP_CALL( evaluateVariableKeepList(benders, set, submastervars, keep, numkeep, probnumber, type,
                objval, infeasible, &solved, &keeplistsuccess) );
          nodesprocessed += subproblem != NULL ? SCIPgetNNodes(subproblem) : 100;
@@ -3865,7 +3868,7 @@ SCIP_RETCODE performNonconvexCutStrengthening(
          else
          {
             /* performing a split of the remaining candidates. */
-            midpoint = SCIPceil(scip, numcands/2);
+            midpoint = (int)SCIPceil(scip, (SCIP_Real)numcands/2);
          }
 
          partitionsize = midpoint;
@@ -3890,9 +3893,9 @@ SCIP_RETCODE performNonconvexCutStrengthening(
 #endif
          int prevnumcands = numcands;
          numcands = midpoint;
-         midpoint = midpoint - partitionsize + SCIPceil(scip, partitionsize/2);
+         midpoint = midpoint - partitionsize + (int)SCIPceil(scip, (SCIP_Real)partitionsize/2);
          assert(prevmidpoint >= midpoint);
-         partitionsize = SCIPceil(scip, partitionsize/2);
+         partitionsize = (int)SCIPceil(scip, (SCIP_Real)partitionsize/2);
 
          /* setting the variables in the right partition to zero */
          SCIP_CALL( setTestSolutionValues(scip, testsol, submastervars, &(candidates[midpoint]),
@@ -3900,8 +3903,14 @@ SCIP_RETCODE performNonconvexCutStrengthening(
       }
       else
       {
+         int step;
          int prevmidpoint = midpoint;
-         midpoint = MIN(numcands, midpoint + SCIPceil(scip, (numcands - midpoint)/2));
+
+         assert(midpoint <= numcands);
+
+         step = (numcands - midpoint + 1)/2;
+         midpoint += step;
+
          assert(prevmidpoint <= midpoint);
          partitionsize = midpoint - prevmidpoint;
 
@@ -3909,7 +3918,7 @@ SCIP_RETCODE performNonconvexCutStrengthening(
          SCIP_CALL( setTestSolutionValues(scip, testsol, submastervars, &(candidates[prevmidpoint]), partitionsize, 1.0) );
       }
 
-   } while (TRUE);
+   } while( TRUE ); /*lint !e506*/
 
    SCIPsetDebugMsg(set, "DFBS -- Number of nodes processed: %lld %lld\n", nodesprocessed, nodebudget);
    SCIPsetDebugMsg(set, "DFBS -- Numkeep %d Numcands %d\n", numkeep, numcands);
@@ -3930,7 +3939,7 @@ SCIP_RETCODE performNonconvexCutStrengthening(
    /* adding the number of nodes processed to the total nodes. 100 nodes is set as the cost of setting up the subproblem
     * and calling the convex relaxation
     */
-   benders->dfbsdata->totalnodes += 100*iterations + nodesprocessed;
+   benders->dfbsdata->totalnodes += 100LL * iterations + nodesprocessed;
 
    /* creating the new solution from the keep list and the remaining candidates list.
     * NOTE: the memory allocated for the solution needs to be freed in the calling method
@@ -3958,7 +3967,7 @@ SCIP_RETCODE performNonconvexCutStrengthening(
    SCIPfreeBufferArray(scip, &keep);
    SCIPfreeBufferArray(scip, &candidates);
 
-   SCIPfreeSol(scip, &testsol);
+   SCIP_CALL( SCIPfreeSol(scip, &testsol) );
 
    SCIP_CALL( SCIPstopClock(scip, benders->dfbsdata->clock) );
 
@@ -4073,8 +4082,8 @@ SCIP_RETCODE updateSubproblemStatQueue(
       {
          if( !subproblemIsActive(benders, solveidx[i]) || subproblem == NULL )
          {
-            solvestat->iterations = solvestat->ncalls + 1;
-            solvestat->nodes = solvestat->ncalls * 100;
+            solvestat->iterations = solvestat->ncalls + 1LL;
+            solvestat->nodes = solvestat->ncalls * 100LL;
          }
          else
          {
@@ -4423,8 +4432,7 @@ SCIP_RETCODE generateBendersCuts(
                && ((solveloop == SCIP_BENDERSSOLVELOOP_CIP && !convexsub)
                   || solveloop == SCIP_BENDERSSOLVELOOP_USERCIP) )
             {
-               SCIP_CALL( performNonconvexCutStrengthening(benders, set, sol, &nonconvexcutsol, i, type, substatus[i],
-                     checkint) );
+               SCIP_CALL( performNonconvexCutStrengthening(benders, set, sol, &nonconvexcutsol, i, type, substatus[i]) );
             }
 
             /* if a solution for generating a strengthened cut is not found, then we just set nonconvexcutsol to point
@@ -5278,8 +5286,8 @@ SCIP_RETCODE SCIPbendersExecSubproblemSolve(
       else
       {
          SCIP_SOL* bestsol;
-         int bestsollimit;
-         SCIP_Longint stalllimit;
+         int bestsollimit = -2;
+         SCIP_Longint stalllimit = -2;
 
          /* if we are calling the solve for the check, then we don't need to exact solution, but a good solution. As
           * such, we impose a best solution limits. This limit is not applied if an enhancement is being performed,
@@ -5290,13 +5298,18 @@ SCIP_RETCODE SCIPbendersExecSubproblemSolve(
             SCIP_CALL( SCIPgetIntParam(subproblem, "limits/bestsol", &bestsollimit) );
             SCIP_CALL( SCIPgetLongintParam(subproblem, "limits/stallnodes", &stalllimit) );
             SCIP_CALL( SCIPsetIntParam(subproblem, "limits/bestsol", 3) );
-            SCIP_CALL( SCIPsetLongintParam(subproblem, "limits/stallnodes", 1000) );
+            SCIP_CALL( SCIPsetLongintParam(subproblem, "limits/stallnodes", 1000LL) );
          }
 
          SCIP_CALL( SCIPbendersSolveSubproblemCIP(set->scip, benders, probnumber, &solvestatus, FALSE) );
 
          if( type == SCIP_BENDERSENFOTYPE_CHECK )
          {
+            /* the bestsollimit and stalllimit should have been set in the previous if statement. The asserts are here
+             * to ensure that this doesn't change
+             */
+            assert(bestsollimit >= -1);
+            assert(stalllimit >= -1);
             SCIP_CALL( SCIPsetIntParam(subproblem, "limits/bestsol", bestsollimit) );
             SCIP_CALL( SCIPsetLongintParam(subproblem, "limits/stallnodes", stalllimit) );
          }
