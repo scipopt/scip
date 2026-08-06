@@ -25212,8 +25212,8 @@ SCIP_Longint SCIPvarGetLbCertificateIndexLocal(
    )
 {
    assert(var->exactdata != NULL);
-   assert(var->exactdata->locdom.lbcertificateidx != -1);
-   assert(var->exactdata->locdom.lbcertificateidx <= SCIPcertificateGetCurrentIndex(SCIPgetCertificate(var->scip)) && var->exactdata->locdom.lbcertificateidx >= 0);
+   assert(var->exactdata->locdom.lbcertificateidx >= 0);
+   assert(var->exactdata->locdom.lbcertificateidx <= SCIPcertificateGetCurrentIndex(SCIPgetCertificate(var->scip)));
 
    return var->exactdata->locdom.lbcertificateidx;
 }
@@ -25224,8 +25224,8 @@ SCIP_Longint SCIPvarGetUbCertificateIndexLocal(
    )
 {
    assert(var->exactdata != NULL);
-   assert(var->exactdata->locdom.ubcertificateidx != -1);
-   assert(var->exactdata->locdom.ubcertificateidx <= SCIPcertificateGetCurrentIndex(SCIPgetCertificate(var->scip)) && var->exactdata->locdom.ubcertificateidx >= 0);
+   assert(var->exactdata->locdom.ubcertificateidx >= 0);
+   assert(var->exactdata->locdom.ubcertificateidx <= SCIPcertificateGetCurrentIndex(SCIPgetCertificate(var->scip)));
 
    return var->exactdata->locdom.ubcertificateidx;
 }
@@ -25236,8 +25236,8 @@ SCIP_Longint SCIPvarGetLbCertificateIndexGlobal(
    )
 {
    assert(var->exactdata != NULL);
-   assert(var->exactdata->glbdom.lbcertificateidx != -1);
-   assert(var->exactdata->glbdom.lbcertificateidx <= SCIPcertificateGetCurrentIndex(SCIPgetCertificate(var->scip)) && var->exactdata->glbdom.lbcertificateidx >= 0);
+   assert(var->exactdata->glbdom.lbcertificateidx >= 0);
+   assert(var->exactdata->glbdom.lbcertificateidx <= SCIPcertificateGetCurrentIndex(SCIPgetCertificate(var->scip)));
 
    return var->exactdata->glbdom.lbcertificateidx;
 }
@@ -25248,8 +25248,8 @@ SCIP_Longint SCIPvarGetUbCertificateIndexGlobal(
    )
 {
    assert(var->exactdata != NULL);
-   assert(var->exactdata->glbdom.ubcertificateidx != -1);
-   assert(var->exactdata->glbdom.ubcertificateidx <= SCIPcertificateGetCurrentIndex(SCIPgetCertificate(var->scip)) && var->exactdata->glbdom.ubcertificateidx >= 0);
+   assert(var->exactdata->glbdom.ubcertificateidx >= 0);
+   assert(var->exactdata->glbdom.ubcertificateidx <= SCIPcertificateGetCurrentIndex(SCIPgetCertificate(var->scip)));
 
    return var->exactdata->glbdom.ubcertificateidx;
 }
