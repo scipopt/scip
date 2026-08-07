@@ -13673,7 +13673,7 @@ SCIP_Real SCIPvarGetMultaggrLbLocal(
 }
 
 /** for a multi-aggregated variable, gives the exact local lower bound computed by adding the local bounds from all
- *  aggregation variables this lower bound may be tighter than the one given by SCIPvarGetLbLocal, since the latter is
+ *  aggregation variables; this lower bound may be tighter than the one given by SCIPvarGetLbLocal, since the latter is
  *  not updated if bounds of aggregation variables are changing
  *
  *  calling this function for a non-multi-aggregated variable is not allowed
