@@ -12180,7 +12180,7 @@ SCIP_RETCODE varProcessChgLbLocal(
                SCIPintervalSet(&parentboundinterval, newbound);
                SCIPintervalMulScalar(SCIP_INTERVAL_INFINITY, &parentboundinterval, parentboundinterval, scalar);
                SCIPintervalAddScalar(SCIP_INTERVAL_INFINITY, &parentboundinterval, parentboundinterval, constant);
-               parentnewbound = scalar > 0 ? parentboundinterval.inf : parentboundinterval.sup;
+               parentnewbound = scalar > 0.0 ? parentboundinterval.inf : parentboundinterval.sup;
             }
 
             if( scalar > 0.0 )
@@ -12373,7 +12373,7 @@ SCIP_RETCODE varProcessChgUbLocal(
                SCIPintervalSet(&parentboundinterval, newbound);
                SCIPintervalMulScalar(SCIP_INTERVAL_INFINITY, &parentboundinterval, parentboundinterval, scalar);
                SCIPintervalAddScalar(SCIP_INTERVAL_INFINITY, &parentboundinterval, parentboundinterval, constant);
-               parentnewbound = scalar > 0 ? parentboundinterval.sup : parentboundinterval.inf;
+               parentnewbound = scalar > 0.0 ? parentboundinterval.sup : parentboundinterval.inf;
             }
 
             if( scalar > 0.0 )
