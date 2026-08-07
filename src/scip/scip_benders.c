@@ -1036,7 +1036,7 @@ SCIP_RETCODE SCIPextractBendersIISMasterSolution(
    SCIP_CALL( SCIPcheckStage(scip, "SCIPextractBendersIISMasterSolution",
          FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
 
-   SCIP_CALL( extractIISMasterSolution(benders, scip->set, sol, newsol, probnumber, type, substatus) );
+   SCIP_CALL( SCIPbendersExtractIISMasterSolution(benders, scip->set, sol, newsol, probnumber, type, substatus) );
 
    return SCIP_OKAY;
 }
