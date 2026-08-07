@@ -11,6 +11,7 @@ Fixed bugs
 - fixed that check/check.sh did not reset EXECNAME before calling tmpfile configuration script
 - fixed that registering branching candidates in the estimate callback of a nlhdlr was not accounted in the nlhdlr statistics
 - fixed bug with locking/unlocking aggregated variables in cons_orbisack/orbitope_full/orbitope_pp/symresack
+- fixed invalid memory access when calling SCIPgetStatus() in INIT stage
 
 Build systems
 -------------
