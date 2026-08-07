@@ -53,6 +53,19 @@ struct SCIP_BenderscutCut
 };
 typedef struct SCIP_BenderscutCut SCIP_BENDERSCUTCUT;
 
+/** parameters and statistics for the DFBS cut strengthening */
+struct SCIP_BendersDFBSData
+{
+   SCIP_CLOCK*           clock;              /**< temporary for testing */
+   SCIP_Longint          maxnodes;           /**< parameter for the maximum number of nodes processed in a DFBS iteration */
+   int                   numcalls;           /**< counts the number of times the DFBS algorithm is called */
+   int                   offset;             /**< the number of DFBS algorithm calls before being executed */
+   int                   initfreq;           /**< the initial number of DFBS algorithm calls between successive executions */
+   int                   freq;               /**< the number of DFBS algorithm calls between successive executions */
+   SCIP_Longint          totalnodes;         /**< the total number of nodes processed in the DFBS algorithm */
+};
+typedef struct SCIP_BendersDFBSData SCIP_BENDERSDFBSDATA;
+
 /** Benders' decomposition data */
 struct SCIP_Benders
 {
@@ -110,6 +123,10 @@ struct SCIP_Benders
    SCIP_Real             maxslackvarcoef;    /**< the maximal objective coefficient of the slack variables in the subproblem */
    SCIP_Bool             checkconsconvexity; /**< should the constraints of the subproblems be checked for convexity? */
    SCIP_NLPPARAM         nlpparam;           /**< parameters for NLP solves */
+   SCIP_Bool             iiscutstrengthen;   /**< should an IIS-type method be applied to find solutions that strengthen no-good-based cuts? */
+   SCIP_Longint          earlytermminnodes;  /**< the minimum number of nodes processed before early termination of the subproblem */
+   SCIP_Real             earlytermminimp;    /**< the minimum improvement in the dual bound required to terminate the subproblem early */
+
 
    /* information for heuristics */
    SCIP*                 sourcescip;         /**< the source scip from when the Benders' was copied */
@@ -187,6 +204,8 @@ struct SCIP_Benders
    SCIP_BENDERSCUTCUT**  storedcuts;         /**< array to store the data required to form a cut/constraint */
    int                   storedcutssize;     /**< the size of the added cuts array */
    int                   nstoredcuts;        /**< the number of the added cuts */
+
+   SCIP_BENDERSDFBSDATA* dfbsdata;           /**< data for the DFBS cut strengthening */
 };
 
 /** statistics for solving the subproblems. Used for prioritising the solving of the subproblem */
@@ -195,6 +214,8 @@ struct SCIP_SubproblemSolveStat
    int                   idx;                /**< the index of the subproblem */
    int                   ncalls;             /**< the number of times this subproblems has been solved */
    SCIP_Real             avgiter;            /**< the average number of LP/NLP iterations performed */
+   SCIP_Longint          iterations;         /**< the number of LP/NLP iterations performed */
+   SCIP_Longint          nodes;              /**< the number of nodes processed */
 };
 
 /** parameters that are set to solve the subproblem. This will be changed from what the user inputs, so they are stored

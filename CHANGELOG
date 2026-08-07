@@ -18,6 +18,16 @@ Features
 - added detection and deletion of disconnected components to greedy IIS finder
 - added new propagator for Euclidean distance constraints
 
+### Benders Decomposition
+- the no-good and integer optimality cuts for Benders' decomposition are generated per subproblem. Previously, only a
+  single no-good or integer optimality cut was generated in a Benders' decomposition iteration. This change makes the
+  resulting cuts smaller, since they are no longer completely dense w.r.t. to the linking variables.
+- adds cut strengthening for no-good and integer optimality cuts in Benders' decomposition. The cut strengthening finds
+  a master problem solution with a smaller support that still achieves infeasibility or the same optimal objective
+  value, respectively. The new solution is found using a depth-first binary search algorithm.
+- adds approximate solving of CIP subproblems in Benders' decomposition. If solving a subproblem requires more than 10,000 nodes, the subproblem will terminate when the dual bound exceeds the auxiliary variable
+  by 1%. If the subproblem terminates early, the dual bound is used in the generation of the integer optimality cuts.
+
 Performance improvements
 ------------------------
 
@@ -58,6 +68,7 @@ Interface changes
 - new methods SCIPtryAddSymmetryHandlingMethods(), SCIPpresolveSymmetryHandlingMethods() to call try-add and presolve routines of symmetry handlers
 - new methods SCIPsymhdlrCreate(), SCIPsymhdlrCopyInclude(), SCIPsymhdlrFree(), SCIPsymhdlrExit(), SCIPsymhdlrInit(), SCIPsymhdlrInitsol(), SCIPsymhdlrExitsol(), SCIPsymhdlrPresol(), SCIPsymhdlrProp(), SCIPsymhdlrResolvePropagation(), SCIPsymhdlrSepaLP(), SCIPsymhdlrSepaSol(), SCIPsymhdlrTryAdd(), SCIPsymhdlrSetSepa(), SCIPsymhdlrSetProp(), SCIPsymhdlrSetCopy(), SCIPsymhdlrSetFree(), SCIPsymhdlrSetInit(), SCIPsymhdlrSetExit(), SCIPsymhdlrSetInitsol(), SCIPsymhdlrSetExitsol(), SCIPsymhdlrSetPresol(), SCIPsymhdlrSetResprop(), SCIPaddSymhdlrComponent(), SCIPcreateSymmetryComponent(), SCIPsyminfoCompressPermInfo(), SCIPdisplaySymmetryGenerators() to execute callback methods of symmetry handlers
 - new method SCIPincludePropDistance()
+- new method SCIPextractBendersIISMasterSolution() can be called to identify an irreducible master solution that achieves the same subproblem result, i.e. infeasible or feasible with the same objective.
 
 ### New parameters
 
@@ -170,6 +181,14 @@ Interface changes
 - `propagating/distance/presoltiming`: timing mask of the presolving method of the distance propagator
 - `propagating/distance/priority`: priority of distance propagator
 - `propagating/distance/timingmask`: timing when distance propagator should be called
+- `benders/<benders>/iiscutstrengthen`: enables an IIS-type method to find stronger no-good-based cuts.
+- `benders/<benders>/earlytermminnodes`: the number of nodes processed in the subproblem before early termination
+- `benders/<benders>/earlytermminimp`: the minimum improvement in the dual bound required before early termination of
+  the subproblem.
+- `benders/<benders>/benderscut/nogood/zerosolvars`: should variables that have a zero solution value be included in the
+  generated no-good cut. Default TRUE.
+- `benders/<benders>/benderscut/integer/zerosolvars`: should variables that have a zero solution value be included in the
+  generated no-good cut. Default TRUE.
 
 ### Changed parameters
 
