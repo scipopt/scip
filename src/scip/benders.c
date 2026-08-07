@@ -4431,7 +4431,7 @@ SCIP_RETCODE generateBendersCuts(
                && ((solveloop == SCIP_BENDERSSOLVELOOP_CIP && !convexsub)
                   || solveloop == SCIP_BENDERSSOLVELOOP_USERCIP) )
             {
-               SCIP_CALL( extractIISMasterSolution(benders, set, sol, &nonconvexcutsol, i, type, substatus[i]) );
+               SCIP_CALL( SCIPbendersExtractIISMasterSolution(benders, set, sol, &nonconvexcutsol, i, type, substatus[i]) );
             }
 
             /* if a solution for generating a strengthened cut is not found, then we just set nonconvexcutsol to point
