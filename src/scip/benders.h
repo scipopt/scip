@@ -252,7 +252,7 @@ SCIP_RETCODE SCIPbendersComputeSubproblemLowerbound(
  *  find a subset of the master problem variables that are set to 1 to achieve either infeasibility or the same objective
  *  value. The cut strengthening is performed after the subproblem is solved with the full master problem solution.
  */
-SCIP_RETCODE extractIISMasterSolution(
+SCIP_RETCODE SCIPbendersExtractIISMasterSolution(
    SCIP_BENDERS*         benders,            /**< Benders' decomposition */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_SOL*             sol,                /**< the initial CIP solution */

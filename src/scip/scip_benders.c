@@ -1033,7 +1033,7 @@ SCIP_RETCODE SCIPextractBendersIISMasterSolution(
    assert(benders != NULL);
    assert(probnumber >= 0 && probnumber < SCIPgetBendersNSubproblems(scip, benders));
 
-   SCIP_CALL( SCIPcheckStage(scip, "SCIPextractBendersIISMast",
+   SCIP_CALL( SCIPcheckStage(scip, "SCIPextractBendersIISMasterSolution",
          FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
 
    SCIP_CALL( extractIISMasterSolution(benders, scip->set, sol, newsol, probnumber, type, substatus) );

@@ -3597,7 +3597,7 @@ SCIP_RETCODE evaluateVariableKeepList(
  *  5. set midpoint to ceil(numcands/2)
  *  6. set partitionsize to midpoint
  */
-SCIP_RETCODE extractIISMasterSolution(
+SCIP_RETCODE SCIPbendersExtractIISMasterSolution(
    SCIP_BENDERS*         benders,            /**< Benders' decomposition */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_SOL*             sol,                /**< the initial CIP solution */
