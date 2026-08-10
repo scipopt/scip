@@ -18024,7 +18024,7 @@ SCIP_RETCODE SCIPvarGetProbvarBinary(
             assert( (*var)->data.multaggr.vars != NULL );
             assert( (*var)->data.multaggr.scalars != NULL );
             assert( SCIPvarIsBinary((*var)->data.multaggr.vars[0]) );
-            assert(!EPSZ((*var)->data.multaggr.scalars[0], 1e-06));
+            assert( !SCIPsetIsSumZero(set, (*var)->data.multaggr.scalars[0]) );
 
             /* if not all variables were fully propagated, it might happen that a variable is multi-aggregated to
              * another variable which needs to be fixed
@@ -18034,9 +18034,10 @@ SCIP_RETCODE SCIPvarGetProbvarBinary(
              *
              * is this special case we need to return the muti-aggregation
              */
-            if( EPSEQ((*var)->data.multaggr.constant, -1.0, 1e-06) || (EPSEQ((*var)->data.multaggr.constant, 1.0, 1e-06) && EPSEQ((*var)->data.multaggr.scalars[0], 1.0, 1e-06)) )
+            if( SCIPsetIsSumEQ(set, (*var)->data.multaggr.constant, -1.0)
+               || (SCIPsetIsSumEQ(set, (*var)->data.multaggr.constant, 1.0) && SCIPsetIsSumEQ(set, (*var)->data.multaggr.scalars[0], 1.0)))
             {
-               assert(EPSEQ((*var)->data.multaggr.scalars[0], 1.0, 1e-06));
+               assert(SCIPsetIsSumEQ(set, (*var)->data.multaggr.scalars[0], 1.0));
             }
             else
             {
@@ -18045,7 +18046,7 @@ SCIP_RETCODE SCIPvarGetProbvarBinary(
                 *       fixed to zero, but this should be done by another enforcement; so not depending on the scalar,
                 *       we will return the aggregated variable;
                 */
-               if( !EPSEQ(REALABS((*var)->data.multaggr.scalars[0]), 1.0, 1e-06) )
+               if( !SCIPsetIsSumEQ(set, REALABS((*var)->data.multaggr.scalars[0]), 1.0) )
                {
                   active = TRUE;
                   break;
@@ -18055,31 +18056,31 @@ SCIP_RETCODE SCIPvarGetProbvarBinary(
                 *       aggregation variable needs to be fixed to one, but this should be done by another enforcement;
                 *       so if this is the case, we will return the aggregated variable
                 */
-               assert(EPSZ((*var)->data.multaggr.constant, 1e-06) || EPSEQ((*var)->data.multaggr.constant, 1.0, 1e-06)
-                  || EPSZ((*var)->data.multaggr.constant + (*var)->data.multaggr.scalars[0], 1e-06)
-                  || EPSEQ((*var)->data.multaggr.constant + (*var)->data.multaggr.scalars[0], 1.0, 1e-06));
+               assert(SCIPsetIsSumZero(set, (*var)->data.multaggr.constant) || SCIPsetIsSumEQ(set, (*var)->data.multaggr.constant, 1.0)
+                  || SCIPsetIsSumZero(set, (*var)->data.multaggr.constant + (*var)->data.multaggr.scalars[0])
+                  || SCIPsetIsSumEQ(set, (*var)->data.multaggr.constant + (*var)->data.multaggr.scalars[0], 1.0));
 
-               if( !EPSZ((*var)->data.multaggr.constant, 1e-06) && !EPSEQ((*var)->data.multaggr.constant, 1.0, 1e-06) )
+               if( !SCIPsetIsSumZero(set, (*var)->data.multaggr.constant) && !SCIPsetIsSumEQ(set, (*var)->data.multaggr.constant, 1.0) )
                {
                   active = TRUE;
                   break;
                }
 
-               assert(EPSEQ((*var)->data.multaggr.scalars[0], 1.0, 1e-06) || EPSEQ((*var)->data.multaggr.scalars[0], -1.0, 1e-06));
+               assert(SCIPsetIsSumEQ(set, (*var)->data.multaggr.scalars[0], 1.0) || SCIPsetIsSumEQ(set, (*var)->data.multaggr.scalars[0], -1.0));
 
-               if( EPSZ((*var)->data.multaggr.constant, 1e-06) )
+               if( SCIPsetIsSumZero(set, (*var)->data.multaggr.constant) )
                {
                   /* if the scalar is negative, either the aggregation variable is already fixed to zero or has at
                    * least one uplock (that hopefully will enforce this fixation to zero); can it happen that this
                    * variable itself is multi-aggregated again?
                    */
-                  assert(EPSEQ((*var)->data.multaggr.scalars[0], -1.0, 1e-06) ?
+                  assert(SCIPsetIsSumEQ(set, (*var)->data.multaggr.scalars[0], -1.0) ?
                      ((SCIPvarGetUbGlobal((*var)->data.multaggr.vars[0]) < 0.5) ||
                         SCIPvarGetNLocksUpType((*var)->data.multaggr.vars[0], SCIP_LOCKTYPE_MODEL) > 0) : TRUE);
                }
                else
                {
-                  assert(EPSEQ((*var)->data.multaggr.scalars[0], -1.0, 1e-06));
+                  assert(SCIPsetIsSumEQ(set, (*var)->data.multaggr.scalars[0], -1.0));
 #ifndef NDEBUG
                   constant += (*negated) != orignegated ? -1.0 : 1.0;
 #endif
@@ -18095,8 +18096,8 @@ SCIP_RETCODE SCIPvarGetProbvarBinary(
 
       case SCIP_VARSTATUS_AGGREGATED:  /* x = a'*x' + c'  =>  a*x + c == (a*a')*x' + (a*c' + c) */
          assert((*var)->data.aggregate.var != NULL);
-         assert(EPSEQ((*var)->data.aggregate.scalar, 1.0, 1e-06) || EPSEQ((*var)->data.aggregate.scalar, -1.0, 1e-06));
-         assert(EPSLE((*var)->data.aggregate.var->glbdom.ub - (*var)->data.aggregate.var->glbdom.lb, 1.0, 1e-06));
+         assert(SCIPsetIsSumEQ(set, (*var)->data.aggregate.scalar, 1.0) || SCIPsetIsSumEQ(set, (*var)->data.aggregate.scalar, -1.0));
+         assert(SCIPsetIsSumLE(set, (*var)->data.aggregate.var->glbdom.ub - (*var)->data.aggregate.var->glbdom.lb, 1.0));
 #ifndef NDEBUG
          constant += (*negated) != orignegated ? -(*var)->data.aggregate.constant : (*var)->data.aggregate.constant;
 #endif
@@ -18125,8 +18126,8 @@ SCIP_RETCODE SCIPvarGetProbvarBinary(
    if( active )
    {
       assert(SCIPvarIsBinary(*var));
-      assert(EPSZ(constant, 1e-06) || EPSEQ(constant, 1.0, 1e-06));
-      assert(EPSZ(constant, 1e-06) == ((*negated) == orignegated));
+      assert(SCIPsetIsSumZero(set, constant) || SCIPsetIsSumEQ(set, constant, 1.0));
+      assert(SCIPsetIsSumZero(set, constant) == ((*negated) == orignegated));
 
       return SCIP_OKAY;
    }
