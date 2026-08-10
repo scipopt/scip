@@ -416,11 +416,11 @@ SCIP_RETCODE applyRacingSettings(
 
    switch( config )
    {
-   /* default settings; differs from a sequential SCIP only by the racing seed (config 4 also lands here) */
+   /* default settings; differs from a sequential SCIP only by the racing seed */
    case 0:
    case 1:
       break;
-   /* feasibility emphasis; configs 1 and 2 differ only by the racing seed */
+   /* feasibility emphasis; configs 2 and 3 differ only by the racing seed */
    case 2:
    case 3:
       SCIP_CALL( SCIPsetEmphasis(solverscip, SCIP_PARAMEMPHASIS_FEASIBILITY, TRUE) );
