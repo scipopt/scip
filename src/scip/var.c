@@ -1460,7 +1460,8 @@ SCIP_RETCODE SCIPdomchgFree(
 static
 SCIP_RETCODE domchgMakeDynamic(
    SCIP_DOMCHG**         domchg,             /**< pointer to domain change data */
-   BMS_BLKMEM*           blkmem              /**< block memory */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set                 /**< global SCIP settings */
    )
 {
    assert(domchg != NULL);
@@ -1500,9 +1501,11 @@ SCIP_RETCODE domchgMakeDynamic(
 #ifndef NDEBUG
    {
       int i;
-      for( i = 0; i < (int)(*domchg)->domchgbound.nboundchgs; ++i )
+      for( i = 0; i < (int)(*domchg)->domchgbound.nboundchgs; ++i )\
+      {
          assert(!SCIPvarIsIntegral((*domchg)->domchgbound.boundchgs[i].var)
-            || EPSISINT((*domchg)->domchgbound.boundchgs[i].newbound, 1e-06));
+            || SCIPsetIsIntegral(set, (*domchg)->domchgbound.boundchgs[i].newbound));
+      }
    }
 #endif
 
@@ -1836,7 +1839,7 @@ SCIP_RETCODE SCIPdomchgAddBoundchg(
    }
    else if( (*domchg)->domchgdyn.domchgtype != SCIP_DOMCHGTYPE_DYNAMIC ) /*lint !e641*/
    {
-      SCIP_CALL( domchgMakeDynamic(domchg, blkmem) );
+      SCIP_CALL( domchgMakeDynamic(domchg, blkmem, set) );
    }
    assert(*domchg != NULL && (*domchg)->domchgdyn.domchgtype == SCIP_DOMCHGTYPE_DYNAMIC); /*lint !e641*/
 
@@ -1928,7 +1931,7 @@ SCIP_RETCODE SCIPdomchgAddHolechg(
    }
    else if( (*domchg)->domchgdyn.domchgtype != SCIP_DOMCHGTYPE_DYNAMIC ) /*lint !e641*/
    {
-      SCIP_CALL( domchgMakeDynamic(domchg, blkmem) );
+      SCIP_CALL( domchgMakeDynamic(domchg, blkmem, set) );
    }
    assert(*domchg != NULL && (*domchg)->domchgdyn.domchgtype == SCIP_DOMCHGTYPE_DYNAMIC); /*lint !e641*/
 
