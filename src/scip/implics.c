@@ -2431,7 +2431,7 @@ SCIP_RETCODE SCIPcliquetableAdd(
    SCIP_CALL( SCIPsetDuplicateBufferArray(set, &clqvars, vars, size) );
 
    /* get active variables */
-   SCIP_CALL( SCIPvarsGetProbvarBinary(&clqvars, &clqvalues, nvars) );
+   SCIP_CALL( SCIPvarsGetProbvarBinary(set, &clqvars, &clqvalues, nvars) );
 
    /* remove all inactive vars */
    for( v = nvars - 1; v >= 0; --v )
@@ -2694,7 +2694,7 @@ SCIP_RETCODE cliqueCleanup(
          {
             needsorting = TRUE;
             SCIP_CALL( SCIPvarDelCliqueFromList(clique->vars[v], blkmem, clique->values[v], clique) );
-            SCIP_CALL( SCIPvarGetProbvarBinary(&(clique->vars[v]), &(clique->values[v])) );
+            SCIP_CALL( SCIPvarGetProbvarBinary(set, &(clique->vars[v]), &(clique->values[v])) );
             if( SCIPvarGetStatus(clique->vars[v]) == SCIP_VARSTATUS_NEGATED )
             {
                clique->vars[v] = SCIPvarGetNegationVar(clique->vars[v]);

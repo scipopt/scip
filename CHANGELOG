@@ -17,6 +17,7 @@ Features
 - separated batch size handling for addition filter, constraint deletion filter, and bound deletion filter in greedy IIS finder
 - added detection and deletion of disconnected components to greedy IIS finder
 - added new propagator for Euclidean distance constraints
+- several functions in var.c do not depend on fixed numbers anymore
 
 ### Benders Decomposition
 - the no-good and integer optimality cuts for Benders' decomposition are generated per subproblem. Previously, only a
@@ -46,6 +47,8 @@ Interface changes
 - SCIPsetCopyPlugins() receives a new argument to control whether symmetry handler plugins are copied to a sub-SCIP
 - new argument infersymcomp for SCIPnodeAddBoundinfer(), SCIPnodeAddBoundinferExact(), SCIPdomchgAddBoundchg() to set inference information in conflict analysis that arise from symmetry handling
 - new argument nsymprop for SCIPnodeGetNDomchg() to report number of symmetry-based reductions in domain changes
+- SCIPvarGetProbvarBinary() and SCIPvarsGetProbvarBinary() need a SCIP_SET* pointer and are therefore not public anymore;
+  use the public functions SCIPgetProbvarBinary() and SCIPgetProbvarBinary()
 
 ### New API functions
 
@@ -69,6 +72,7 @@ Interface changes
 - new methods SCIPsymhdlrCreate(), SCIPsymhdlrCopyInclude(), SCIPsymhdlrFree(), SCIPsymhdlrExit(), SCIPsymhdlrInit(), SCIPsymhdlrInitsol(), SCIPsymhdlrExitsol(), SCIPsymhdlrPresol(), SCIPsymhdlrProp(), SCIPsymhdlrResolvePropagation(), SCIPsymhdlrSepaLP(), SCIPsymhdlrSepaSol(), SCIPsymhdlrTryAdd(), SCIPsymhdlrSetSepa(), SCIPsymhdlrSetProp(), SCIPsymhdlrSetCopy(), SCIPsymhdlrSetFree(), SCIPsymhdlrSetInit(), SCIPsymhdlrSetExit(), SCIPsymhdlrSetInitsol(), SCIPsymhdlrSetExitsol(), SCIPsymhdlrSetPresol(), SCIPsymhdlrSetResprop(), SCIPaddSymhdlrComponent(), SCIPcreateSymmetryComponent(), SCIPsyminfoCompressPermInfo(), SCIPdisplaySymmetryGenerators() to execute callback methods of symmetry handlers
 - new method SCIPincludePropDistance()
 - new method SCIPextractBendersIISMasterSolution() can be called to identify an irreducible master solution that achieves the same subproblem result, i.e. infeasible or feasible with the same objective.
+- new method SCIPgetProbvarBinary() and SCIPgetProbvarsBinary()	as interfaces to SCIPvarGetProbvarBinary()/SCIPvarsGetProbvarBinary()
 
 ### New parameters
 

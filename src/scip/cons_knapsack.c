@@ -2113,14 +2113,14 @@ SCIP_RETCODE GUBsetCheck(
          /* get corresponding active problem variable */
          var1 = vars[gubset->gubconss[i]->gubvars[j]];
          var1negated = FALSE;
-         SCIP_CALL( SCIPvarGetProbvarBinary(&var1, &var1negated) );
+         SCIP_CALL( SCIPgetProbvarBinary(scip, &var1, &var1negated) );
 
          for( k = j+1; k < gubset->gubconss[i]->ngubvars; k++ )
          {
             /* get corresponding active problem variable */
             var2 = vars[gubset->gubconss[i]->gubvars[k]];
             var2negated = FALSE;
-            SCIP_CALL( SCIPvarGetProbvarBinary(&var2, &var2negated) );
+            SCIP_CALL( SCIPgetProbvarBinary(scip, &var2, &var2negated) );
 
             if( !SCIPvarsHaveCommonClique(var1, !var1negated, var2, !var2negated, TRUE) )
             {
@@ -2202,7 +2202,7 @@ SCIP_RETCODE GUBsetCalcCliquePartition(
    }
 
    /* get corresponding active problem variables */
-   SCIP_CALL( SCIPvarsGetProbvarBinary(&tmpvars, &tmpvalues, nvars) );
+   SCIP_CALL( SCIPgetProbvarsBinary(scip, &tmpvars, &tmpvalues, nvars) );
 
    /* ignore variables with LP value 1 (will be assigned to trivial GUBs at the end) and sort remaining variables
     * by nondecreasing number of cliques the variables are in
@@ -6824,7 +6824,7 @@ SCIP_RETCODE dualPresolving(
       negated = FALSE;
 
       /* get the active variable */
-      SCIP_CALL( SCIPvarGetProbvarBinary(&var, &negated) );
+      SCIP_CALL( SCIPgetProbvarBinary(scip, &var, &negated) );
       assert(SCIPvarIsActive(var));
 
       if( negated )
@@ -10029,7 +10029,7 @@ SCIP_RETCODE tightenWeightsLift(
       var = consdata->vars[i];
       weight = consdata->weights[i];
       value = TRUE;
-      SCIP_CALL( SCIPvarGetProbvarBinary(&var, &value) );
+      SCIP_CALL( SCIPgetProbvarBinary(scip, &var, &value) );
       varprobindex = SCIPvarGetProbindex(var);
       assert(0 <= varprobindex && varprobindex < nbinvars);
 

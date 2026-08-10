@@ -2813,7 +2813,7 @@ SCIP_RETCODE cliquePresolve(
          assert(var1 != NULL);
          negated = FALSE;
 
-         SCIP_CALL( SCIPvarGetProbvarBinary(&var1, &negated) );
+         SCIP_CALL( SCIPgetProbvarBinary(scip, &var1, &negated) );
          assert(var1 != NULL);
 
          if( negated )
@@ -2829,7 +2829,7 @@ SCIP_RETCODE cliquePresolve(
             assert(var2 != NULL);
 
             negated = FALSE;
-            SCIP_CALL( SCIPvarGetProbvarBinary(&var2, &negated) );
+            SCIP_CALL( SCIPgetProbvarBinary(scip, &var2, &negated) );
             assert(var2 != NULL);
 
             if( negated )
@@ -2900,7 +2900,7 @@ SCIP_RETCODE cliquePresolve(
    assert(var1 != NULL);
 
    negated = FALSE;
-   SCIP_CALL( SCIPvarGetProbvarBinary(&var1, &negated) );
+   SCIP_CALL( SCIPgetProbvarBinary(scip, &var1, &negated) );
    assert(var1 != NULL);
 
    /* it may appear that we have a fixed resultant */
@@ -2951,7 +2951,7 @@ SCIP_RETCODE cliquePresolve(
       assert(var2 != NULL);
 
       negated = FALSE;
-      SCIP_CALL( SCIPvarGetProbvarBinary(&var2, &negated) );
+      SCIP_CALL( SCIPgetProbvarBinary(scip, &var2, &negated) );
       assert(var2 != NULL);
 
       if( negated )
@@ -2993,7 +2993,7 @@ SCIP_RETCODE cliquePresolve(
             {
                var2 = vars[v2];
                negated = FALSE;
-               SCIP_CALL( SCIPvarGetProbvarBinary(&var2, &negated) );
+               SCIP_CALL( SCIPgetProbvarBinary(scip, &var2, &negated) );
 
                /* if the active representations of the resultant and an operand are different then we need to extract
                 * this as a clique constraint
@@ -3082,7 +3082,7 @@ SCIP_RETCODE cliquePresolve(
       assert(var1 != NULL);
 
       negated = FALSE;
-      SCIP_CALL( SCIPvarGetProbvarBinary(&var1, &negated) );
+      SCIP_CALL( SCIPgetProbvarBinary(scip, &var1, &negated) );
       assert(var1 != NULL);
 
       if( SCIPvarGetNegatedVar(var1) == NULL )
@@ -3125,7 +3125,7 @@ SCIP_RETCODE cliquePresolve(
       assert(var1 != NULL);
 
       negated = FALSE;
-      SCIP_CALL( SCIPvarGetProbvarBinary(&var1, &negated) );
+      SCIP_CALL( SCIPgetProbvarBinary(scip, &var1, &negated) );
       assert(var1 != NULL);
 
       if( negated )
@@ -3142,7 +3142,7 @@ SCIP_RETCODE cliquePresolve(
          assert(var2 != NULL);
 
          negated = FALSE;
-         SCIP_CALL( SCIPvarGetProbvarBinary(&var2, &negated) );
+         SCIP_CALL( SCIPgetProbvarBinary(scip, &var2, &negated) );
          assert(var2 != NULL);
 
          if( negated )
@@ -3215,7 +3215,7 @@ SCIP_RETCODE cliquePresolve(
       BMSclearMemoryArray(negations, nvars + 1);
 
       var1 = consdata->resvar;
-      SCIP_CALL( SCIPvarGetProbvarBinary(&var1, &negations[nvars]) );
+      SCIP_CALL( SCIPgetProbvarBinary(scip, &var1, &negations[nvars]) );
       assert(var1 != NULL);
       assert(SCIPvarGetStatus(var1) != SCIP_VARSTATUS_FIXED);
 
@@ -3227,7 +3227,7 @@ SCIP_RETCODE cliquePresolve(
          assert(vars != NULL);
 
          var1 = vars[v];
-         SCIP_CALL( SCIPvarGetProbvarBinary(&var1, &negations[v]) );
+         SCIP_CALL( SCIPgetProbvarBinary(scip, &var1, &negations[v]) );
          assert(var1 != NULL);
          assert(SCIPvarGetStatus(var1) != SCIP_VARSTATUS_FIXED);
 

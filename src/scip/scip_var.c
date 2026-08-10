@@ -2216,6 +2216,49 @@ SCIP_RETCODE SCIPgetNegatedVars(
    return SCIP_OKAY;
 }
 
+/** gets corresponding active, fixed, or multi-aggregated problem variables of binary variables and
+ *  updates the given negation status of each variable
+ */
+SCIP_RETCODE SCIPgetProbvarsBinary(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR***           vars,               /**< pointer to binary problem variables */
+   SCIP_Bool**           negatedarr,         /**< pointer to corresponding array to update the negation status */
+   int                   nvars               /**< number of variables and values in vars and negated array */
+   )
+{
+   assert(scip != NULL);
+   assert(nvars == 0 || vars != NULL);
+   assert(negatedarr != NULL);
+
+   SCIP_CALL( SCIPcheckStage(scip, "SCIPgetProbvarBinary", FALSE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE) );
+
+   /* get the active representative of the given variable */
+   SCIP_CALL( SCIPvarsGetProbvarBinary(scip->set, vars, negatedarr, nvars) );
+
+   return SCIP_OKAY;
+}
+
+/** gets corresponding active, fixed, or multi-aggregated problem variable of a binary variable and
+ *  updates the given negation status
+ */
+SCIP_RETCODE SCIPgetProbvarBinary(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR**            var,                /**< pointer to binary problem variable */
+   SCIP_Bool*            negated             /**< pointer to update the negation status */
+   )
+{
+   assert(scip != NULL);
+   assert(var != NULL);
+   assert(negated != NULL);
+
+   SCIP_CALL( SCIPcheckStage(scip, "SCIPgetProbvarBinary", FALSE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE) );
+
+   /* get the active representative of the given variable */
+   SCIP_CALL( SCIPvarGetProbvarBinary(scip->set, var, negated) );
+
+   return SCIP_OKAY;
+}
+
 /** gets a binary variable that is equal to the given binary variable, and that is either active, fixed, or
  *  multi-aggregated, or the negated variable of an active, fixed, or multi-aggregated variable
  *
@@ -2252,7 +2295,7 @@ SCIP_RETCODE SCIPgetBinvarRepresentative(
    /* get the active representative of the given variable */
    *repvar = var;
    *negated = FALSE;
-   SCIP_CALL( SCIPvarGetProbvarBinary(repvar, negated) );
+   SCIP_CALL( SCIPvarGetProbvarBinary(scip->set, repvar, negated) );
 
    /* negate the representative, if it corresponds to the negation of the given variable */
    if( *negated )
@@ -2304,14 +2347,16 @@ SCIP_RETCODE SCIPgetBinvarRepresentatives(
    /* get the active representative of the given variable */
    BMScopyMemoryArray(repvars, vars, nvars);
    BMSclearMemoryArray(negated, nvars);
-   SCIP_CALL( SCIPvarsGetProbvarBinary(&repvars, &negated, nvars) );
+   SCIP_CALL( SCIPvarsGetProbvarBinary(scip->set, &repvars, &negated, nvars) );
 
    /* negate the representatives, if they correspond to the negation of the given variables */
    for( v = nvars - 1; v >= 0; --v )
+   {
       if( negated[v] )
       {
          SCIP_CALL( SCIPgetNegatedVar(scip, repvars[v], &(repvars[v])) );
       }
+   }
 
    return SCIP_OKAY;
 }
@@ -9686,7 +9731,7 @@ SCIP_RETCODE SCIPtestCliquePartition(
 
          vari = vars[i];
          vali = TRUE;
-         SCIP_CALL( SCIPvarGetProbvarBinary(&vari, &vali) );
+         SCIP_CALL( SCIPvarGetProbvarBinary(scip->set, &vari, &vali) );
 
          for( j = i+1; j < nvars; ++j )
          {
@@ -9695,7 +9740,7 @@ SCIP_RETCODE SCIPtestCliquePartition(
 
             varj = vars[j];
             valj = TRUE;
-            SCIP_CALL( SCIPvarGetProbvarBinary(&varj, &valj) );
+            SCIP_CALL( SCIPvarGetProbvarBinary(scip->set, &varj, &valj) );
 
             assert( SCIPvarsHaveCommonClique(vari, vali, varj, valj, FALSE) );
          }
@@ -9763,7 +9808,7 @@ SCIP_RETCODE SCIPcalcCliquePartition(
       tmpvalues[i] = TRUE;
 
    /* get corresponding active problem variables */
-   SCIP_CALL( SCIPvarsGetProbvarBinary(&tmpvars, &tmpvalues, nvars) );
+   SCIP_CALL( SCIPvarsGetProbvarBinary(scip->set, &tmpvars, &tmpvalues, nvars) );
 
    /* call greedy clique algorithm for all component variables */
    SCIP_CALL( calcCliquePartitionGreedy(scip, tmpvars, tmpvalues, nvars, probtoidxmap, probtoidxmapsize, cliquepartition, ncliques) );

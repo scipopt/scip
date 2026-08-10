@@ -16965,7 +16965,7 @@ SCIP_RETCODE SCIPvarAddClique(
    *infeasible = FALSE;
 
    /* get corresponding active problem variable */
-   SCIP_CALL( SCIPvarGetProbvarBinary(&var, &value) );
+   SCIP_CALL( SCIPvarGetProbvarBinary(set, &var, &value) );
    assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN
       || SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE
       || SCIPvarGetStatus(var) == SCIP_VARSTATUS_FIXED
@@ -17102,6 +17102,7 @@ SCIP_RETCODE SCIPvarDelCliqueFromList(
 SCIP_RETCODE SCIPvarDelClique(
    SCIP_VAR*             var,                /**< problem variable  */
    BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_CLIQUETABLE*     cliquetable,        /**< clique table data structure */
    SCIP_Bool             value,              /**< value of the variable in the clique */
    SCIP_CLIQUE*          clique              /**< clique the variable should be removed from */
@@ -17111,7 +17112,7 @@ SCIP_RETCODE SCIPvarDelClique(
    assert(SCIPvarIsBinary(var));
 
    /* get corresponding active problem variable */
-   SCIP_CALL( SCIPvarGetProbvarBinary(&var, &value) );
+   SCIP_CALL( SCIPvarGetProbvarBinary(set, &var, &value) );
    assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN
       || SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE
       || SCIPvarGetStatus(var) == SCIP_VARSTATUS_FIXED
@@ -17946,6 +17947,7 @@ SCIP_VAR* SCIPvarGetProbvar(
  *  negation status of each variable
  */
 SCIP_RETCODE SCIPvarsGetProbvarBinary(
+   SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_VAR***           vars,               /**< pointer to binary problem variables */
    SCIP_Bool**           negatedarr,         /**< pointer to corresponding array to update the negation status */
    int                   nvars               /**< number of variables and values in vars and negated array */
@@ -17966,7 +17968,7 @@ SCIP_RETCODE SCIPvarsGetProbvarBinary(
       negated = &((*negatedarr)[v]);
 
       /* get problem variable */
-      SCIP_CALL( SCIPvarGetProbvarBinary(var, negated) );
+      SCIP_CALL( SCIPvarGetProbvarBinary(set, var, negated) );
    }
 
    return SCIP_OKAY;
@@ -17978,6 +17980,7 @@ SCIP_RETCODE SCIPvarsGetProbvarBinary(
  *  FALSE is used)
  */
 SCIP_RETCODE SCIPvarGetProbvarBinary(
+   SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_VAR**            var,                /**< pointer to binary problem variable */
    SCIP_Bool*            negated             /**< pointer to update the negation status */
    )
@@ -17990,6 +17993,7 @@ SCIP_RETCODE SCIPvarGetProbvarBinary(
 
    assert(var != NULL);
    assert(*var != NULL);
+   assert(set != NULL);
    assert(negated != NULL);
    assert(SCIPvarIsBinary(*var));
 

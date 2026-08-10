@@ -3711,7 +3711,7 @@ SCIP_RETCODE presolRoundIndicator(
 
       /* possibly get representation of indicator variable by active variable */
       var = consdata->binvar;
-      SCIP_CALL( SCIPvarGetProbvarBinary(&var, &negated) );
+      SCIP_CALL( SCIPgetProbvarBinary(scip, &var, &negated) );
       assert( var == consdata->binvar || SCIPvarIsActive(var) || SCIPvarIsNegated(var) );
 
       /* we can replace the binary variable by the active variable if it is not negated */
