@@ -521,8 +521,8 @@
 #define SCIP_DEFAULT_CONCURRENT_MINSYNCDELAY    10.0 /**< minimum delay before synchronization data is read */
 #define SCIP_DEFAULT_CONCURRENT_NBESTSOLS         10 /**< how many of the N best solutions should be considered for synchronization */
 #define SCIP_DEFAULT_CONCURRENT_PARAMSETPREFIX    "" /**< path prefix for parameter setting files of concurrent solvers */
-#define SCIP_DEFAULT_CONCURRENT_RACINGPORTFOLIO TRUE /**< should the concurrent solvers be diversified with the built-in
-                                                      *   racing parameter portfolio? concurrent solver i receives portfolio
+#define SCIP_DEFAULT_CONCURRENT_PARAMPORTFOLIO TRUE /**< should the concurrent solvers be diversified with the built-in
+                                                      *   parameter portfolio? concurrent solver i receives portfolio
                                                       *   configuration i modulo the portfolio size; parameter setting files
                                                       *   given via concurrent/paramsetprefix are loaded afterwards and
                                                       *   override the portfolio settings */
@@ -2908,9 +2908,9 @@ SCIP_RETCODE SCIPsetCreate(
          &(*set)->concurrent_paramsetprefix, FALSE, SCIP_DEFAULT_CONCURRENT_PARAMSETPREFIX,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
-         "concurrent/racingportfolio",
-         "should the concurrent solvers be diversified with the built-in racing parameter portfolio? concurrent solver i receives portfolio configuration i modulo the portfolio size; parameter setting files given via concurrent/paramsetprefix are loaded afterwards and override the portfolio settings (only used in opportunistic mode)",
-         &(*set)->concurrent_racingportfolio, FALSE, SCIP_DEFAULT_CONCURRENT_RACINGPORTFOLIO,
+         "concurrent/paramportfolio",
+         "should the concurrent solvers be diversified with the built-in parameter portfolio? concurrent solver i receives portfolio configuration i modulo the portfolio size; parameter setting files given via concurrent/paramsetprefix are loaded afterwards and override the portfolio settings (only used in opportunistic mode)",
+         &(*set)->concurrent_paramportfolio, FALSE, SCIP_DEFAULT_CONCURRENT_PARAMPORTFOLIO,
          NULL, NULL) );
 
    /* timing parameters */

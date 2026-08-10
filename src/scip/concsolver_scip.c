@@ -73,8 +73,8 @@
 #define EVENTHDLR_NAME         "sync"
 #define EVENTHDLR_DESC         "event handler for synchronization of concurrent scip solvers"
 
-/** number of configurations in the built-in racing parameter portfolio */
-#define NRACINGCONFIGS 10
+/** number of configurations in the built-in parameter portfolio */
+#define NPARAMPORTFOLIOCONFIGS 10
 
 /*
  * Data structures
@@ -404,15 +404,15 @@ SCIP_RETCODE unfixProtectedParams(
    return SCIP_OKAY;
 }
 
-/** applies one configuration of the built-in racing parameter portfolio to a concurrent solver's SCIP */
+/** applies one configuration of the built-in parameter portfolio to a concurrent solver's SCIP */
 static
-SCIP_RETCODE applyRacingSettings(
+SCIP_RETCODE applyParamPortfolioSettings(
    SCIP*                 solverscip,         /**< the concurrent solver's SCIP datastructure */
-   int                   config              /**< index of the racing configuration to apply */
+   int                   config              /**< index of the portfolio configuration to apply */
    )
 {
    assert(solverscip != NULL);
-   assert(config >= 0 && config < NRACINGCONFIGS);
+   assert(config >= 0 && config < NPARAMPORTFOLIOCONFIGS);
 
    switch( config )
    {
@@ -517,7 +517,7 @@ SCIP_RETCODE applyRacingSettings(
       break;
 
    default:
-      SCIPerrorMessage("invalid racing configuration index <%d>\n", config);
+      SCIPerrorMessage("invalid portfolio configuration index <%d>\n", config);
       return SCIP_INVALIDDATA;
    }
 
@@ -753,30 +753,30 @@ SCIP_DECL_CONCSOLVERCREATEINST(concsolverScipCreateInstance)
    }
    else
    {
-      SCIP_Bool racingportfolio;
+      SCIP_Bool paramportfolio;
       int paramode;
 
-      /* diversify the concurrent solvers with the built-in racing portfolio; settings files
+      /* diversify the concurrent solvers with the built-in parameter portfolio; settings files
        * loaded below through concurrent/paramsetprefix may override the portfolio settings;
        * the portfolio is applied in opportunistic mode only, since deterministic mode does not work
-       * well with settings that diversify the solvers 
+       * well with settings that diversify the solvers
        */
-      SCIP_CALL( SCIPgetBoolParam(scip, "concurrent/racingportfolio", &racingportfolio) );
+      SCIP_CALL( SCIPgetBoolParam(scip, "concurrent/paramportfolio", &paramportfolio) );
       SCIP_CALL( SCIPgetIntParam(scip, "parallel/mode", &paramode) );
 
-      if( racingportfolio && paramode == (int) SCIP_PARA_OPPORTUNISTIC )
+      if( paramportfolio && paramode == (int) SCIP_PARA_OPPORTUNISTIC )
       {
          SCIP_PARAM** fixedparams;
          int config;
          int nfixedparams;
 
-         config = SCIPconcsolverGetIdx(concsolver) % NRACINGCONFIGS;
+         config = SCIPconcsolverGetIdx(concsolver) % NPARAMPORTFOLIOCONFIGS;
 
-         SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "applying racing configuration <%d> to concurrent solver <%s>\n",
+         SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "applying portfolio configuration <%d> to concurrent solver <%s>\n",
             config, SCIPconcsolverGetName(concsolver));
 
          SCIP_CALL( fixProtectedParams(data->solverscip, &fixedparams, &nfixedparams) );
-         SCIP_CALL( applyRacingSettings(data->solverscip, config) );
+         SCIP_CALL( applyParamPortfolioSettings(data->solverscip, config) );
          SCIP_CALL( unfixProtectedParams(data->solverscip, &fixedparams, nfixedparams) );
       }
    }

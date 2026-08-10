@@ -158,7 +158,7 @@ Interface changes
 - `propagating/distance/priority`: priority of distance propagator
 - `propagating/distance/timingmask`: timing when distance propagator should be called
 - `concurrent/solpool`: whether new incumbents are shared between the concurrent solvers immediately through a solution pool instead of only at the synchronization points (only used in opportunistic mode)
-- `concurrent/racingportfolio`: whether the concurrent solvers are diversified with the built-in racing parameter portfolio (only used in opportunistic mode)
+- `concurrent/paramportfolio`: whether the concurrent solvers are diversified with the built-in parameter portfolio (only used in opportunistic mode)
 
 ### Changed parameters
 

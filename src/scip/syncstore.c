@@ -230,19 +230,19 @@ SCIP_RETCODE SCIPsyncstoreInit(
    syncstore->usesolpool = syncstore->usesolpool && syncstore->mode == SCIP_PARA_OPPORTUNISTIC;
    syncstore->npoolsols = 0;
 
-   /* the racing portfolio is tuned for the opportunistic mode only: its configurations make the solvers
+   /* the parameter portfolio is tuned for the opportunistic mode only: its configurations make the solvers
     * very diverse, which deterministic mode does not cope well currently
     */
    if( syncstore->mode != SCIP_PARA_OPPORTUNISTIC )
    {
-      SCIP_Bool racingportfolio;
+      SCIP_Bool paramportfolio;
 
-      SCIP_CALL( SCIPgetBoolParam(scip, "concurrent/racingportfolio", &racingportfolio) );
+      SCIP_CALL( SCIPgetBoolParam(scip, "concurrent/paramportfolio", &paramportfolio) );
 
-      if( racingportfolio )
+      if( paramportfolio )
       {
          SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL,
-            "parameter <concurrent/racingportfolio> is only used in opportunistic parallel mode and will be ignored\n");
+            "parameter <concurrent/paramportfolio> is only used in opportunistic parallel mode and will be ignored\n");
       }
    }
 
