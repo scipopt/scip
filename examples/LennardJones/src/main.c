@@ -45,7 +45,8 @@
 static SCIP_RETCODE setupProblem(
    SCIP*                 scip,               /**< SCIP data structure */
    int                   nparticles,         /**< number of particles */
-   SCIP_Bool             distvars            /**< whether to introduce extra explicit variables and constraints for squared distance of particles */
+   SCIP_Bool             distvars            /**< whether to introduce extra explicit variables and constraints for
+                                              *   squared distance of particles */
    )
 {
    char name[SCIP_MAXSTRLEN];
@@ -91,12 +92,14 @@ static SCIP_RETCODE setupProblem(
          if( distvars )
          {
             (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "r_%d_%d", i, j);
-            SCIP_CALL( SCIPcreateVarBasic(scip, &r[i * nparticles + j], name, 0.0, SCIPinfinity(scip), 0.0, SCIP_VARTYPE_CONTINUOUS) );
+            SCIP_CALL( SCIPcreateVarBasic(scip, &r[i * nparticles + j], name, 0.0, SCIPinfinity(scip), 0.0,
+               SCIP_VARTYPE_CONTINUOUS) );
             SCIP_CALL( SCIPaddVar(scip, r[i * nparticles + j]) );
          }
 
          (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "p_%d_%d", i, j);
-         SCIP_CALL( SCIPcreateVarBasic(scip, &p[i * nparticles + j], name, -SCIPinfinity(scip), SCIPinfinity(scip), 4.0, SCIP_VARTYPE_CONTINUOUS) );
+         SCIP_CALL( SCIPcreateVarBasic(scip, &p[i * nparticles + j], name, -SCIPinfinity(scip), SCIPinfinity(scip), 4.0,
+            SCIP_VARTYPE_CONTINUOUS) );
          SCIP_CALL( SCIPaddVar(scip, p[i * nparticles + j]) );
       }
    }
@@ -172,7 +175,8 @@ static SCIP_RETCODE setupProblem(
             SCIP_Real minusone = -1.0;
 
             (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "dist_%d_%d", i, j);
-            SCIP_CALL( SCIPcreateConsBasicQuadraticNonlinear(scip, &cons, name, 1, &r[i * nparticles + j], &minusone, 9, quadvars1, quadvars2, quadcoefs, 0.0, 0.0) );
+            SCIP_CALL( SCIPcreateConsBasicQuadraticNonlinear(scip, &cons, name, 1, &r[i * nparticles + j], &minusone, 9,
+               quadvars1, quadvars2, quadcoefs, 0.0, 0.0) );
             SCIP_CALL( SCIPaddCons(scip, cons) );
             SCIP_CALL( SCIPreleaseCons(scip, &cons) );
 
@@ -180,7 +184,8 @@ static SCIP_RETCODE setupProblem(
          }
          else
          {
-            SCIP_CALL( SCIPcreateExprQuadratic(scip, &distexpr, 0, NULL, NULL, 9, quadvars1, quadvars2, quadcoefs, NULL, NULL) );
+            SCIP_CALL( SCIPcreateExprQuadratic(scip, &distexpr, 0, NULL, NULL, 9, quadvars1, quadvars2, quadcoefs, NULL,
+               NULL) );
          }
 
          /* p[i,j] >= r[i,j]^-6 - r[i,j]^-3 */
@@ -239,7 +244,8 @@ static SCIP_RETCODE setupProblem(
  */
 static SCIP_RETCODE runLJ(
    int                   nparticles,         /**< number of particles */
-   SCIP_Bool             distvars,           /**< whether to introduce extra explicit variables and constraints for squared distance of particles */
+   SCIP_Bool             distvars,           /**< whether to introduce extra explicit variables and constraints for
+                                              *   squared distance of particles */
    const char*           setfile             /**< name of settings file to attempt reading */
    )
 {

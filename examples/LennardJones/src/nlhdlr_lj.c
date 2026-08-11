@@ -316,7 +316,8 @@ SCIP_DECL_NLHDLRDETECT(nlhdlrDetectLJ)
    int i;
 
    /* if no under- or overestimators and no activity are needed, then do nothing */
-   if( (*enforcing & (SCIP_NLHDLR_METHOD_SEPABOTH | SCIP_NLHDLR_METHOD_ACTIVITY)) == (SCIP_NLHDLR_METHOD_SEPABOTH | SCIP_NLHDLR_METHOD_ACTIVITY) )
+   if( (*enforcing & (SCIP_NLHDLR_METHOD_SEPABOTH | SCIP_NLHDLR_METHOD_ACTIVITY)) ==
+      (SCIP_NLHDLR_METHOD_SEPABOTH | SCIP_NLHDLR_METHOD_ACTIVITY) )
       return SCIP_OKAY;
 
    /* look for an expression r^(-6) - r^(-3) - p */
@@ -589,7 +590,8 @@ SCIP_DECL_NLHDLRESTIMATE(nlhdlrEstimateLJ)
    SCIPdebugMsg(scip, "-> %g * r %+g\n", slope, constant);
 
    /* cuts are globally valid if generated left at RMININUM, or if the function is convex w.r.t. global bounds */
-   SCIP_CALL( SCIPcreateRowprep(scip, &rowprep, overestimate ? SCIP_SIDETYPE_LEFT : SCIP_SIDETYPE_RIGHT, (rval > RMINIMUM) && (SCIPvarGetUbGlobal(rvar) > RINFLECT)) );
+   SCIP_CALL( SCIPcreateRowprep(scip, &rowprep, overestimate ? SCIP_SIDETYPE_LEFT : SCIP_SIDETYPE_RIGHT,
+      (rval > RMINIMUM) && (SCIPvarGetUbGlobal(rvar) > RINFLECT)) );
    SCIP_CALL( SCIPaddRowprepTerm(scip, rowprep, rvar, slope * nlhdlrexprdata->rcoef) );
    SCIProwprepAddConstant(rowprep, constant * nlhdlrexprdata->rcoef);
    SCIP_CALL( SCIPaddRowprepTerm(scip, rowprep, SCIPgetExprAuxVarNonlinear(nlhdlrexprdata->p), nlhdlrexprdata->pcoef) );
@@ -726,7 +728,8 @@ SCIP_DECL_NLHDLRREVERSEPROP(nlhdlrReversepropLJ)
     */
    r = SCIPexprGetActivity(nlhdlrexprdata->r);
    SCIPintervalPowerScalar(SCIP_INTERVAL_INFINITY, &z, r, -3.0);
-   SCIPintervalSolveUnivariateQuadExpression(SCIP_INTERVAL_INFINITY, &z, (SCIP_INTERVAL){1.0, 1.0}, (SCIP_INTERVAL){-1.0, -1.0}, fr, z);
+   SCIPintervalSolveUnivariateQuadExpression(SCIP_INTERVAL_INFINITY, &z, (SCIP_INTERVAL){1.0, 1.0},
+      (SCIP_INTERVAL){-1.0, -1.0}, fr, z);
    if( SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, z) )
    {
       *infeasible = TRUE;
