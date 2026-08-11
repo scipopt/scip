@@ -98,7 +98,7 @@ static SCIP_RETCODE setupProblem(
          }
 
          (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "p_%d_%d", i, j);
-         SCIP_CALL( SCIPcreateVarBasic(scip, &p[i * nparticles + j], name, -SCIPinfinity(scip), SCIPinfinity(scip), 4.0,
+         SCIP_CALL( SCIPcreateVarBasic(scip, &p[i * nparticles + j], name, -0.25, SCIPinfinity(scip), 4.0,
             SCIP_VARTYPE_CONTINUOUS) );
          SCIP_CALL( SCIPaddVar(scip, p[i * nparticles + j]) );
       }
