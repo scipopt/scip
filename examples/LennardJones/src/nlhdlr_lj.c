@@ -338,7 +338,7 @@ SCIP_DECL_NLHDLRDETECT(nlhdlrDetectLJ)
 
       coef = SCIPgetCoefsExprSum(expr)[i];
 
-      if( SCIPisExprPower(scip, child) && SCIPgetExponentExprPow(child) == -6.0 && !six )
+      if( !six && SCIPisExprPower(scip, child) && SCIPgetExponentExprPow(child) == -6.0 )
       {
          /* our first r^(-6) */
          if( coef == 1.0 && !doabove )
@@ -357,7 +357,7 @@ SCIP_DECL_NLHDLRDETECT(nlhdlrDetectLJ)
          continue;
       }
 
-      if( SCIPisExprPower(scip, child) && SCIPgetExponentExprPow(child) == -3.0 && !three )
+      if( !three && SCIPisExprPower(scip, child) && SCIPgetExponentExprPow(child) == -3.0 )
       {
          /* our first -r^(-3) */
          if( coef == -1.0 && !doabove )
