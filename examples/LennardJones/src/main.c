@@ -316,7 +316,7 @@ int main(
 
    if( argc <= 1 )
    {
-      printf("usage: %s NPARTICLES <setfile> <\n", argv[0]);
+      printf("usage: %s NPARTICLES <setfile>\n", argv[0]);
       return EXIT_SUCCESS;
    }
 
