@@ -3311,7 +3311,8 @@ SCIP_RETCODE SCIPsolveConcurrent(
          goto TERMINATE;
       }
       nthreads = MIN(nthreads, maxnthreads);
-      SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "Using %d threads for concurrent solve.\n", nthreads);
+      SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "Using %d threads for concurrent solve in %s mode.\n", nthreads,
+         scip->set->parallel_mode == (int) SCIP_PARA_OPPORTUNISTIC ? "opportunistic" : "deterministic");
 
       /* now set up nthreads many concurrent solvers that will be used for the concurrent solve
        * using the preferred priorities of each concurrent solver

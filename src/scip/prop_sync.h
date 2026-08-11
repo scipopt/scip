@@ -27,6 +27,7 @@
  * @brief  propagator for applying global bound changes that were communicated by other
  *         concurrent solvers
  * @author Leona Gottwald
+ * @author Gioni Mexi
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -35,6 +36,7 @@
 #define __SCIP_PROP_SYNC_H__
 
 #include "scip/def.h"
+#include "scip/type_concsolver.h"
 #include "scip/type_lp.h"
 #include "scip/type_prop.h"
 #include "scip/type_retcode.h"
@@ -52,6 +54,18 @@ extern "C" {
 SCIP_EXPORT
 SCIP_RETCODE SCIPincludePropSync(
    SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/** enables the bound-pool drain in the sync propagator; it then runs at every node and applies the
+ *  tightened global variable bounds published immediately by the other concurrent solvers
+ */
+SCIP_EXPORT
+void SCIPpropSyncEnableBoundPool(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_PROP*            prop,               /**< the sync propagator */
+   SCIP_CONCSOLVER*      concsolver,         /**< the concurrent solver this SCIP instance belongs to */
+   SCIP_VAR**            vars,               /**< variables of this SCIP in the communication variable order */
+   int                   nvars               /**< number of variables */
    );
 
 /**@addtogroup PROPAGATORS

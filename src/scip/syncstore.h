@@ -27,6 +27,7 @@
  * @brief  the function declarations for the synchronization store
  * @author Leona Gottwald
  * @author Stephen J. Maher
+ * @author Gioni Mexi
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -38,6 +39,7 @@
 #include "scip/type_syncstore.h"
 #include "scip/type_scip.h"
 #include "scip/type_retcode.h"
+#include "scip/type_lp.h"
 
 /** creates and captures a new synchronization store */
 SCIP_EXPORT
@@ -82,6 +84,23 @@ SCIP_EXPORT
 void SCIPsyncstoreSetSolveIsStopped(
    SCIP_SYNCSTORE*       syncstore,          /**< the synchronization store */
    SCIP_Bool             stopped             /**< flag if the solve is stopped */
+   );
+
+/** updates the minimization-normalized objective value of the best solution found by any concurrent
+ *  solver; if the solution pool is enabled and solution values are passed, an improving solution is
+ *  also published in the pool, and *published returns whether it was added. Minimization-normalized
+ *  values live in the transformed problem's objective space, which is always a minimization problem.
+ */
+SCIP_EXPORT
+void SCIPsyncstoreUpdateBestMinObj(
+   SCIP_SYNCSTORE*       syncstore,          /**< the synchronization store */
+   SCIP_Real             minobj,             /**< objective value in minimization-normalized original objective space */
+   const char*           solvername,         /**< name of the concurrent solver that found the solution */
+   int                   ownerid,            /**< index of the concurrent solver that found the solution */
+   SCIP_Real*            solvals,            /**< solution values in the communication variable order, or NULL to
+                                              *   only communicate the objective value */
+   int                   nsolvals,           /**< number of solution values */
+   SCIP_Bool*            published           /**< pointer to return whether the solution was added to the pool, or NULL */
    );
 
 /** gets the upperbound from the last synchronization */
@@ -298,6 +317,116 @@ SCIP_Bool SCIPsyncstoreIsInitialized(
 SCIP_EXPORT
 SCIP_PARALLELMODE SCIPsyncstoreGetMode(
    SCIP_SYNCSTORE*       syncstore           /**< the synchronization store */
+   );
+
+/*
+ * The following methods implement the immediate sharing of incumbent solutions and global variable
+ * bounds between the concurrent solvers, bypassing the synchronization points. They are only used
+ * in opportunistic mode, when the solution pool respectively the bound pool is enabled.
+ */
+
+/** returns whether the solution pool is enabled for immediate solution sharing */
+SCIP_EXPORT
+SCIP_Bool SCIPsyncstoreSolPoolEnabled(
+   SCIP_SYNCSTORE*       syncstore           /**< the synchronization store */
+   );
+
+/** returns the main SCIP that initialized the synchronization store; the bounds reported
+ *  when the solution pool is enabled live in this SCIP's objective space, so it is used to convert them
+ */
+SCIP_EXPORT
+SCIP* SCIPsyncstoreGetMainScip(
+   SCIP_SYNCSTORE*       syncstore           /**< the synchronization store */
+   );
+
+/** updates the minimization-normalized best global dual bound; must only be called in opportunistic mode,
+ *  where the concurrent solvers report their dual bound immediately while solving so that
+ *  SCIPgetConcurrentDualbound stays up to date.
+ */
+SCIP_EXPORT
+void SCIPsyncstoreUpdateBestDualbound(
+   SCIP_SYNCSTORE*       syncstore,          /**< the synchronization store */
+   SCIP_Real             dualbound           /**< dual bound in minimization-normalized original objective space */
+   );
+
+/** gets the minimization-normalized objective value of the best solution found by any
+ *  concurrent solver, or SCIP_REAL_MAX if no solution was registered yet
+ */
+SCIP_EXPORT
+SCIP_Real SCIPsyncstoreGetBestMinObj(
+   SCIP_SYNCSTORE*       syncstore           /**< the synchronization store */
+   );
+
+/** gets the current number of solutions in the solution pool; must only be called when the
+ *  solution pool is enabled; reads the counter without locking, so it may lag behind
+ *  concurrent pushes, which is fine for its use as a cheap size hint that is polled at every node
+ */
+SCIP_EXPORT
+int SCIPsyncstoreGetNPoolSols(
+   SCIP_SYNCSTORE*       syncstore           /**< the synchronization store */
+   );
+
+/** gets the solution with the given index from the solution pool; must only be called when the
+ *  solution pool is enabled; entries are immutable once published, so the returned values can be
+ *  read without holding any lock
+ */
+SCIP_EXPORT
+void SCIPsyncstoreGetPoolSol(
+   SCIP_SYNCSTORE*       syncstore,          /**< the synchronization store */
+   int                   idx,                /**< index of the pooled solution, must be smaller than the size hint */
+   SCIP_Real**           solvals,            /**< pointer to return the solution values in communication variable order */
+   int*                  nsolvals,           /**< pointer to return the number of solution values */
+   int*                  ownerid             /**< pointer to return the index of the contributing concurrent solver */
+   );
+
+/** records a tightened global variable bound on the shared bound pool for immediate sharing; the
+ *  pool keeps, per communication variable, the tightest bound contributed by any concurrent solver
+ */
+SCIP_EXPORT
+void SCIPsyncstoreAddBound(
+   SCIP_SYNCSTORE*       syncstore,          /**< the synchronization store */
+   int                   varidx,             /**< communication variable index of the bound */
+   SCIP_Real             newbound,           /**< the variable's new global bound in communication space */
+   SCIP_BOUNDTYPE        boundtype           /**< whether the new bound is a lower or an upper bound */
+   );
+
+/** gets the change counter of the shared bound pool; read without locking, so it may momentarily lag
+ *  a concurrent update, which is fine for its use as a cheap hint that gates the per-node drain
+ */
+SCIP_EXPORT
+int SCIPsyncstoreGetBoundVersion(
+   SCIP_SYNCSTORE*       syncstore           /**< the synchronization store */
+   );
+
+/** gets the tightest shared global bounds of a communication variable from the bound pool */
+SCIP_EXPORT
+void SCIPsyncstoreGetBound(
+   SCIP_SYNCSTORE*       syncstore,          /**< the synchronization store */
+   int                   varidx,             /**< communication variable index */
+   SCIP_Real*            lb,                 /**< pointer to return the tightest shared lower bound, or -infinity */
+   SCIP_Real*            ub                  /**< pointer to return the tightest shared upper bound, or +infinity */
+   );
+
+/** Tries to acquire the synchronization data with the given number for non-blocking reading.
+ *  On success the synchronization data is returned in locked state and must be released with
+ *  SCIPsyncstoreUnlockSyncdata after reading. If the data is not ready, NULL is returned and
+ *  lost indicates why: if the slot was overwritten by a newer synchronization the data is
+ *  lost and the reader should skip this number, otherwise the synchronization has not been
+ *  written by all solvers yet and the reader should retry later. This method never blocks the caller.
+ */
+SCIP_EXPORT
+SCIP_RETCODE SCIPsyncstoreTryLockCompleteSyncdata(
+   SCIP_SYNCSTORE*       syncstore,          /**< the synchronization store */
+   SCIP_Longint          syncnum,            /**< the number of the synchronization to read */
+   SCIP_SYNCDATA**       syncdata,           /**< pointer to return the locked synchronization data, or NULL */
+   SCIP_Bool*            lost                /**< pointer to return whether the data was overwritten and is lost */
+   );
+
+/** releases the lock of a synchronization data acquired with SCIPsyncstoreTryLockCompleteSyncdata */
+SCIP_EXPORT
+SCIP_RETCODE SCIPsyncstoreUnlockSyncdata(
+   SCIP_SYNCSTORE*       syncstore,          /**< the synchronization store */
+   SCIP_SYNCDATA*        syncdata            /**< the synchronization data to unlock */
    );
 
 #endif

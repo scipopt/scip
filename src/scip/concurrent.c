@@ -26,6 +26,7 @@
  * @ingroup PARALLEL
  * @brief  helper functions for concurrent SCIP solvers
  * @author Leona Gottwald
+ * @author Gioni Mexi
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -113,6 +114,9 @@ SCIP_RETCODE SCIPcreateConcurrent(
    scip->concurrent->eventglobalbnd = NULL;
    assert(SCIPfindEventhdlr(scip, "globalbnd") == NULL);
 
+   /* the global bound change event handler detects and publishes the tightenings, both for the immediate
+    * bound pool and for the exchange at the synchronization points
+    */
    if( scip->set->concurrent_commvarbnds )
    {
       SCIP_CALL( SCIPincludeEventHdlrGlobalbnd(scip) );
@@ -314,7 +318,9 @@ SCIP_Longint SCIPgetConcurrentMemTotal(
    }
 }
 
-/** gets the dualbound in the last synchronization */
+/** gets the global dual bound of the concurrent solve; when the solution pool is enabled this is the
+ *  immediately-tracked value, otherwise it is the bound from the last synchronization
+ */
 SCIP_Real SCIPgetConcurrentDualbound(
    SCIP*                 scip                /**< SCIP data structure */
    )
@@ -326,10 +332,17 @@ SCIP_Real SCIPgetConcurrentDualbound(
    syncstore = SCIPgetSyncstore(scip);
    assert(syncstore != NULL);
 
+   /* in opportunistic mode the tracked bound lives in the main SCIP's objective space, so convert it
+    * there; correct even when queried from a worker whose presolve scaled the objective differently */
+   if( SCIPsyncstoreGetMode(syncstore) == SCIP_PARA_OPPORTUNISTIC )
+      scip = SCIPsyncstoreGetMainScip(syncstore);
+
    return SCIPprobExternObjval(scip->transprob, scip->origprob, scip->set, SCIPsyncstoreGetLastLowerbound(syncstore));
 }
 
-/** gets the primalbound in the last synchronization */
+/** gets the global primal bound of the concurrent solve; when the solution pool is enabled this is the
+ *  immediately-tracked value, otherwise it is the bound from the last synchronization
+ */
 SCIP_Real SCIPgetConcurrentPrimalbound(
    SCIP*                 scip                /**< SCIP data structure */
    )
@@ -340,6 +353,11 @@ SCIP_Real SCIPgetConcurrentPrimalbound(
 
    syncstore = SCIPgetSyncstore(scip);
    assert(syncstore != NULL);
+
+   /* in opportunistic mode the tracked bound lives in the main SCIP's objective space, so convert it
+    * there; correct even when queried from a worker whose presolve scaled the objective differently */
+   if( SCIPsyncstoreGetMode(syncstore) == SCIP_PARA_OPPORTUNISTIC )
+      scip = SCIPsyncstoreGetMainScip(syncstore);
 
    return SCIPprobExternObjval(scip->transprob, scip->origprob, scip->set, SCIPsyncstoreGetLastUpperbound(syncstore));
 }
@@ -564,6 +582,30 @@ SCIP_RETCODE SCIPconcurrentSolve(
    if( idx < 0 || idx >= nconcsolvers )
       idx = 0;
 
+   /* transfer the solutions of all concurrent solvers; the best solution is not necessarily
+    * owned by the winner, e.g. when the winner proved optimality of a bound that was communicated
+    * by another solver but never received the corresponding solution itself
+    */
+   for( i = 0; i < nconcsolvers; ++i )
+   {
+      if( i != idx )
+      {
+         SCIP_STAGE stage;
+
+         stage = scip->set->stage;
+         SCIP_CALL( SCIPconcsolverGetSolvingData(concsolvers[i], scip) );
+
+         /* copying the solving statistics may bump the main SCIP into the solved stage, in which
+          * the solutions of the solvers that are copied afterwards could no longer be created;
+          * roll the stage back so that the winner's copy below determines the final stage
+          */
+         scip->set->stage = stage;
+      }
+   }
+
+   /* transfer the solutions of the winner last so that the solving statistics and status
+    * in the main SCIP are the ones copied from the winner
+    */
    SCIP_CALL( SCIPconcsolverGetSolvingData(concsolvers[idx], scip) );
 
    for( i = nconcsolvers - 1; i >= 0; i-- )
@@ -815,10 +857,20 @@ SCIP_RETCODE SCIPcopyConcurrentSolvingStats(
    target->stat->previousdualrefgap = source->stat->previousdualrefgap;
    target->stat->previousprimalrefgap = source->stat->previousprimalrefgap;
    target->stat->previntegralevaltime = source->stat->previntegralevaltime;
-   target->stat->lastlowerbound = source->stat->lastdualbound;
-   target->stat->lastupperbound = source->stat->lastprimalbound;
-   target->stat->lastdualbound = SCIPprobExternObjval(target->transprob, target->origprob, target->set, target->stat->lastlowerbound);
-   target->stat->lastprimalbound = SCIPprobExternObjval(target->transprob, target->origprob, target->set, target->stat->lastupperbound);
+   /* the dual and primal bound bookkeeping is only adopted if the source solver ever updated it;
+    * copying the SCIP_UNKNOWN markers of a solver that found neither bound would corrupt later
+    * primal-dual integral updates in the target
+    */
+   if( source->stat->lastdualbound != SCIP_UNKNOWN ) /*lint !e777*/
+   {
+      target->stat->lastlowerbound = source->stat->lastdualbound;
+      target->stat->lastdualbound = SCIPprobExternObjval(target->transprob, target->origprob, target->set, target->stat->lastlowerbound);
+   }
+   if( source->stat->lastprimalbound != SCIP_UNKNOWN ) /*lint !e777*/
+   {
+      target->stat->lastupperbound = source->stat->lastprimalbound;
+      target->stat->lastprimalbound = SCIPprobExternObjval(target->transprob, target->origprob, target->set, target->stat->lastupperbound);
+   }
    target->stat->rootlpbestestimate = source->stat->rootlpbestestimate;
    target->stat->referencebound = source->stat->referencebound;
 

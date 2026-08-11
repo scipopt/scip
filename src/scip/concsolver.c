@@ -26,6 +26,7 @@
  * @ingroup OTHER_CFILES
  * @brief  methods for concurrent solvers
  * @author Leona Gottwald
+ * @author Gioni Mexi
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -233,6 +234,7 @@ SCIP_RETCODE SCIPconcsolverCreateInstance(
 
    /* initialize synchronization fields */
    (*concsolver)->nsyncs = 0;
+   (*concsolver)->nsyncsread = 0;
    (*concsolver)->syncdelay = 0.0;
    (*concsolver)->timesincelastsync = 0.0;
 
@@ -417,12 +419,29 @@ SCIP_RETCODE SCIPconcsolverSync(
 
    if( SCIPsyncdataGetStatus(syncdata) != SCIP_STATUS_UNKNOWN )
    {
-      SCIP_CALL( SCIPconcsolverStop(concsolver) );
+      if( SCIPsyncstoreGetMode(syncstore) == SCIP_PARA_OPPORTUNISTIC )
+      {
+         int c;
+
+         /* the winner stops the whole portfolio */
+         for( c = 0; c < set->nconcsolvers; ++c )
+         {
+            SCIP_CALL( SCIPconcsolverStop(set->concsolvers[c]) );
+         }
+      }
+      else
+      {
+         /* in deterministic mode each solver stops itself once it reads the terminal status at its own synchronization point */
+         SCIP_CALL( SCIPconcsolverStop(concsolver) );
+      }
    }
-   else if( SCIPsyncdataGetNSynced(syncdata) == SCIPsyncstoreGetNSolvers(syncstore) - 1 )
+   else if( SCIPsyncstoreGetMode(syncstore) == SCIP_PARA_DETERMINISTIC &&
+      SCIPsyncdataGetNSynced(syncdata) == SCIPsyncstoreGetNSolvers(syncstore) - 1 )
    {
       /* if this is the last concurrent solver that is synchronizing for this synchronization data
-       * it will adjust the synchronization frequency using the progress on the gap
+       * it will adjust the synchronization frequency using the progress on the gap;
+       * in opportunistic mode the frequency stays fixed, since writers are not throttled by
+       * readers and the previous synchronization data may not have been written by all solvers
        */
       SCIP_Bool lbok;
       SCIP_Bool ubok;
@@ -497,20 +516,58 @@ SCIP_RETCODE SCIPconcsolverSync(
 
    concsolver->syncdelay += concsolver->timesincelastsync;
 
-   syncdata = SCIPsyncstoreGetNextSyncdata(syncstore, concsolver->syncdata, concsolver->syncfreq, concsolver->nsyncs, &concsolver->syncdelay);
-
-   while( syncdata != NULL )
+   /* in opportunistic mode the synchronization data is read non-blocking: only synchronizations that have
+    * already been written by all solvers are consumed, overwritten ones are skipped as lost, and the solver
+    * never waits in the barrier of SCIPsyncstoreEnsureAllSynced for slower solvers
+    */
+   if( SCIPsyncstoreGetMode(syncstore) == SCIP_PARA_OPPORTUNISTIC )
    {
-      SCIP_CALL( SCIPsyncstoreEnsureAllSynced(syncstore, syncdata) );
-      concsolver->syncdata = syncdata;
-      SCIP_CALL( concsolvertype->concsolversyncread(concsolver, syncstore, syncdata, &nsols, &ntighterbnds, &ntighterintbnds) );
-      concsolver->ntighterbnds += ntighterbnds;
-      concsolver->ntighterintbnds += ntighterintbnds;
-      concsolver->nsolsrecvd += nsols;
-      SCIPdebugMessage("syncfreq before reading the next syncdata is %g\n", concsolver->syncfreq);
-      concsolver->syncfreq = SCIPsyncdataGetSyncFreq(concsolver->syncdata);
-      SCIPdebugMessage("syncfreq after reading the next syncdata is %g\n", concsolver->syncfreq);
+      while( concsolver->nsyncsread < concsolver->nsyncs )
+      {
+         SCIP_RETCODE retcode;
+         SCIP_Bool lost;
+
+         SCIP_CALL( SCIPsyncstoreTryLockCompleteSyncdata(syncstore, concsolver->nsyncsread, &syncdata, &lost) );
+
+         if( syncdata == NULL )
+         {
+            if( !lost )
+               break;
+
+            /* the slot was recycled by faster solvers; the bound changes of this
+             * synchronization are lost, which is acceptable in opportunistic mode
+             */
+            ++concsolver->nsyncsread;
+            continue;
+         }
+
+         retcode = concsolvertype->concsolversyncread(concsolver, syncstore, syncdata, &nsols, &ntighterbnds, &ntighterintbnds);
+         SCIP_CALL( SCIPsyncstoreUnlockSyncdata(syncstore, syncdata) );
+         SCIP_CALL( retcode );
+
+         concsolver->ntighterbnds += ntighterbnds;
+         concsolver->ntighterintbnds += ntighterintbnds;
+         concsolver->nsolsrecvd += nsols;
+         ++concsolver->nsyncsread;
+      }
+   }
+   else
+   {
       syncdata = SCIPsyncstoreGetNextSyncdata(syncstore, concsolver->syncdata, concsolver->syncfreq, concsolver->nsyncs, &concsolver->syncdelay);
+
+      while( syncdata != NULL )
+      {
+         SCIP_CALL( SCIPsyncstoreEnsureAllSynced(syncstore, syncdata) );
+         concsolver->syncdata = syncdata;
+         SCIP_CALL( concsolvertype->concsolversyncread(concsolver, syncstore, syncdata, &nsols, &ntighterbnds, &ntighterintbnds) );
+         concsolver->ntighterbnds += ntighterbnds;
+         concsolver->ntighterintbnds += ntighterintbnds;
+         concsolver->nsolsrecvd += nsols;
+         SCIPdebugMessage("syncfreq before reading the next syncdata is %g\n", concsolver->syncfreq);
+         concsolver->syncfreq = SCIPsyncdataGetSyncFreq(concsolver->syncdata);
+         SCIPdebugMessage("syncfreq after reading the next syncdata is %g\n", concsolver->syncfreq);
+         syncdata = SCIPsyncstoreGetNextSyncdata(syncstore, concsolver->syncdata, concsolver->syncfreq, concsolver->nsyncs, &concsolver->syncdelay);
+      }
    }
 
    SCIP_CALL( SCIPstopClock(set->scip, concsolver->totalsynctime) );
@@ -601,6 +658,20 @@ SCIP_Longint SCIPconcsolverGetNSolsRecvd(
    return concsolver->nsolsrecvd;
 }
 
+/** adds to the number of solutions the concurrent solver received from the other solvers; used
+ *  when the solution pool is enabled, where solutions are drained from the pool instead of read at the synchronization points
+ */
+void SCIPconcsolverAddNSolsRecvd(
+   SCIP_CONCSOLVER*      concsolver,         /**< concurrent solver */
+   SCIP_Longint          nsols               /**< number of received solutions to add */
+   )
+{
+   assert(concsolver != NULL);
+   assert(nsols >= 0);
+
+   concsolver->nsolsrecvd += nsols;
+}
+
 /** gets the number of solutions the concurrent solver shared during synchronization */
 SCIP_Longint SCIPconcsolverGetNSolsShared(
    SCIP_CONCSOLVER*      concsolver          /**< concurrent solver */
@@ -609,6 +680,38 @@ SCIP_Longint SCIPconcsolverGetNSolsShared(
    assert(concsolver != NULL);
 
    return concsolver->nsolsshared;
+}
+
+/** adds to the number of solutions the concurrent solver shared with the other solvers; used
+ *  when the solution pool is enabled, where solutions are shared immediately instead of at the synchronization points
+ */
+void SCIPconcsolverAddNSolsShared(
+   SCIP_CONCSOLVER*      concsolver,         /**< concurrent solver */
+   SCIP_Longint          nsols               /**< number of shared solutions to add */
+   )
+{
+   assert(concsolver != NULL);
+   assert(nsols >= 0);
+
+   concsolver->nsolsshared += nsols;
+}
+
+/** adds to the number of tighter global variable bounds the solver received from the other solvers;
+ *  used in opportunistic mode where bounds are drained from the shared bound pool instead of read at the
+ *  synchronization points
+ */
+void SCIPconcsolverAddNTighterBnds(
+   SCIP_CONCSOLVER*      concsolver,         /**< concurrent solver */
+   SCIP_Longint          nbnds,              /**< number of received tighter bounds to add */
+   SCIP_Longint          nintbnds            /**< number of received tighter integer bounds to add */
+   )
+{
+   assert(concsolver != NULL);
+   assert(nbnds >= 0);
+   assert(nintbnds >= 0);
+
+   concsolver->ntighterbnds += nbnds;
+   concsolver->ntighterintbnds += nintbnds;
 }
 
 /** gets the number of tighter global variable bounds the solver received */

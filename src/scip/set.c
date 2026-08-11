@@ -486,17 +486,28 @@
                                                  *   during a restart (0.0: all cuts are converted) */
 
 /* Parallel */
-#define SCIP_DEFAULT_PARALLEL_MODE               1     /**< the mode for the parallel implementation. Either 0: opportunistic or
+#define SCIP_DEFAULT_PARALLEL_MODE               0     /**< the mode for the parallel implementation. Either 0: opportunistic or
                                                         *   1: deterministic */
 #define SCIP_DEFAULT_PARALLEL_MINNTHREADS        1     /**< the minimum number of threads used in parallel code */
-#define SCIP_DEFAULT_PARALLEL_MAXNTHREADS        8     /**< the maximum number of threads used in parallel code */
+#define SCIP_DEFAULT_PARALLEL_MAXNTHREADS       10     /**< the maximum number of threads used in parallel code */
 
 /* Concurrent solvers */
 #define SCIP_DEFAULT_CONCURRENT_CHANGESEEDS     TRUE /**< should the concurrent solvers use different random seeds? */
-#define SCIP_DEFAULT_CONCURRENT_CHANGECHILDSEL  TRUE /**< should the concurrent solvers use different child selection rules? */
-#define SCIP_DEFAULT_CONCURRENT_COMMVARBNDS     TRUE /**< should the concurrent solvers communicate variable bounds? */
-#define SCIP_DEFAULT_CONCURRENT_PRESOLVEBEFORE  TRUE /**< should the problem be presolved before it is copied to the concurrent solvers? */
-#define SCIP_DEFAULT_CONCURRENT_SYMMETRYBEFORE  TRUE /**< should symmetry be computed before concurrent solving? */
+#define SCIP_DEFAULT_CONCURRENT_CHANGECHILDSEL  FALSE /**< should the concurrent solvers use different child selection rules? */
+#define SCIP_DEFAULT_CONCURRENT_COMMVARBNDS     TRUE /**< should the concurrent solvers communicate global variable bound
+                                                      *   changes? in opportunistic mode they are shared immediately
+                                                      *   through a bound pool and applied at every node, in
+                                                      *   deterministic mode they are exchanged at the synchronization
+                                                      *   points */
+#define SCIP_DEFAULT_CONCURRENT_SOLPOOL         TRUE /**< should new incumbents be shared between the concurrent solvers
+                                                      *   immediately through a solution pool instead of only at the
+                                                      *   synchronization points? this also stops the solvers from
+                                                      *   blocking on the synchronization barrier
+                                                      *   (only used in opportunistic mode) */
+#define SCIP_DEFAULT_CONCURRENT_PRINTINCUMBENTS FALSE /**< should a line be printed for every new globally best solution
+                                                       *   found by a concurrent solver? */
+#define SCIP_DEFAULT_CONCURRENT_PRESOLVEBEFORE  FALSE /**< should the problem be presolved before it is copied to the concurrent solvers? */
+#define SCIP_DEFAULT_CONCURRENT_SYMMETRYBEFORE  FALSE /**< should symmetry be computed before concurrent solving? */
 #define SCIP_DEFAULT_CONCURRENT_INITSEED     5131912 /**< the seed used to initialize the random seeds for the concurrent solvers */
 #define SCIP_DEFAULT_CONCURRENT_FREQINIT        10.0 /**< initial frequency of synchronization with other threads
                                                       *   (fraction of time required for solving the root LP) */
@@ -510,6 +521,11 @@
 #define SCIP_DEFAULT_CONCURRENT_MINSYNCDELAY    10.0 /**< minimum delay before synchronization data is read */
 #define SCIP_DEFAULT_CONCURRENT_NBESTSOLS         10 /**< how many of the N best solutions should be considered for synchronization */
 #define SCIP_DEFAULT_CONCURRENT_PARAMSETPREFIX    "" /**< path prefix for parameter setting files of concurrent solvers */
+#define SCIP_DEFAULT_CONCURRENT_PARAMPORTFOLIO TRUE /**< should the concurrent solvers be diversified with the built-in
+                                                      *   parameter portfolio? concurrent solver i receives portfolio
+                                                      *   configuration i modulo the portfolio size; parameter setting files
+                                                      *   given via concurrent/paramsetprefix are loaded afterwards and
+                                                      *   override the portfolio settings */
 
 
 /* Timing */
@@ -2818,8 +2834,18 @@ SCIP_RETCODE SCIPsetCreate(
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
          "concurrent/commvarbnds",
-         "should the concurrent solvers communicate global variable bound changes?",
+         "should the concurrent solvers communicate global variable bound changes? in opportunistic mode the tightenings are shared immediately through a bound pool and applied at every node, in deterministic mode they are exchanged at the synchronization points",
          &(*set)->concurrent_commvarbnds, FALSE, SCIP_DEFAULT_CONCURRENT_COMMVARBNDS,
+         NULL, NULL) );
+   SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
+         "concurrent/solpool",
+         "should new incumbents be shared between the concurrent solvers immediately through a solution pool instead of only at the synchronization points? this also stops the solvers from blocking on the synchronization barrier (only used in opportunistic mode)",
+         &(*set)->concurrent_solpool, FALSE, SCIP_DEFAULT_CONCURRENT_SOLPOOL,
+         NULL, NULL) );
+   SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
+         "concurrent/printincumbents",
+         "should a line be printed for every new globally best solution found by a concurrent solver?",
+         &(*set)->concurrent_printincumbents, FALSE, SCIP_DEFAULT_CONCURRENT_PRINTINCUMBENTS,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
          "concurrent/presolvebefore",
@@ -2858,7 +2884,7 @@ SCIP_RETCODE SCIPsetCreate(
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddIntParam(*set, messagehdlr, blkmem,
          "concurrent/sync/maxnsols",
-         "maximum number of solutions that will be shared in a single synchronization",
+         "maximum number of solutions that will be shared in a single synchronization, zero shares none (only used in deterministic mode, opportunistic mode shares solutions through the solution pool)",
          &(*set)->concurrent_maxnsols, FALSE, SCIP_DEFAULT_CONCURRENT_MAXNSOLS, 0, 1000,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddIntParam(*set, messagehdlr, blkmem,
@@ -2880,6 +2906,11 @@ SCIP_RETCODE SCIPsetCreate(
          "concurrent/paramsetprefix",
          "path prefix for parameter setting files of concurrent solvers",
          &(*set)->concurrent_paramsetprefix, FALSE, SCIP_DEFAULT_CONCURRENT_PARAMSETPREFIX,
+         NULL, NULL) );
+   SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
+         "concurrent/paramportfolio",
+         "should the concurrent solvers be diversified with the built-in parameter portfolio? concurrent solver i receives portfolio configuration i modulo the portfolio size; parameter setting files given via concurrent/paramsetprefix are loaded afterwards and override the portfolio settings (only used in opportunistic mode)",
+         &(*set)->concurrent_paramportfolio, FALSE, SCIP_DEFAULT_CONCURRENT_PARAMPORTFOLIO,
          NULL, NULL) );
 
    /* timing parameters */

@@ -1,0 +1,6 @@
+set parallel maxnthreads 2
+${settings}
+read ${CMAKE_CURRENT_SOURCE_DIR}/${path}
+concurrentopt
+validatesolve ${optval} ${optval}
+quit
