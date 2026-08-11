@@ -25,6 +25,15 @@
 /**@file   nlhdlr_lj.c
  * @brief  Lennard-Jones potential nonlinear handler
  * @author Stefan Vigerske
+ *
+ * The nonlinear handler improves the handling of the Lennard-Jones potential function in SCIP.
+ * It detects an expression of the form r^{-6} - a r^{-3} + b p for some coefficients a in {-1,1} and b != 0
+ * and provides tight linear underestimators (a > 0) or overestimators (a < 0) for this expression.
+ * Since r^{-6} - r^{-3} is convex for r <= 3.5^(1/3), concave for r >= 3.5^(1/3), and has a minimum at 2^(1/3),
+ * linear underestimators for this function are given by tangents at r <= 2^(1/3)
+ * and a secant between a point in [2^(1/3), 3.5^(1/3)] and an upper bound on r.
+ * In addition, interval evaluation and domain propagation (reverse interval evaluation) are provided.
+ * The SCIP documentation for this example provides more details.
  */
 
 #include "nlhdlr_lj.h"
