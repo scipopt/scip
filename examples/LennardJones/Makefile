@@ -77,7 +77,7 @@ MAINFILE	=	$(BINDIR)/$(MAIN)
 MAINSHORTLINK	=	$(BINDIR)/$(MAINNAME)
 MAINOBJFILES	=	$(addprefix $(OBJDIR)/,$(MAINOBJ))
 
-TESTSETDIR	=	testset
+CLUSTERMAINFILE =	$(dir $(realpath $(firstword $(MAKEFILE_LIST))))$(MAINFILE)
 
 #-----------------------------------------------------------------------------
 # Rules
@@ -124,9 +124,6 @@ $(OBJDIR):
 $(BINDIR):
 		@-mkdir -p $(BINDIR)
 
-$(TESTSETDIR):
-		@-mkdir -p check/$(TESTSETDIR)
-
 .PHONY: clean
 clean:		$(OBJDIR)
 ifneq ($(OBJDIR),)
@@ -136,7 +133,7 @@ endif
 		-rm -f $(MAINFILE)
 
 .PHONY: test
-test:           $(MAINFILE) $(TESTSETDIR)
+test:           $(MAINFILE)
 		@-(cd check && ln -fs ../$(SCIPDIR)/check/check.sh);
 		@-(cd check && ln -fs ../$(SCIPDIR)/check/evaluate.sh);
 		@-(cd check && ln -fs ../$(SCIPDIR)/check/evalcheck.sh);
@@ -148,10 +145,36 @@ test:           $(MAINFILE) $(TESTSETDIR)
 		@-(cd check && ln -fs ../$(SCIPDIR)/check/configuration_logfiles.sh);
 		@-(cd check && ln -fs ../$(SCIPDIR)/check/prepare_execname.sh);
 		@-(cd check && ln -fs ../$(SCIPDIR)/check/run.sh);
+		@-(cd check && ln -fs ../$(SCIPDIR)/check/allcmpres.sh);
+		@-(cd check && ln -fs ../$(SCIPDIR)/check/cmpres.awk);
 		cd check; \
 		$(SHELL) ./check.sh $(TEST) $(EXECUTABLE) $(SETTINGS) $(BINID) $(OUTPUTDIR) $(TIME) $(NODES) $(MEM) $(THREADS) $(FEASTOL) $(DISPFREQ) \
 		$(CONTINUE) $(LOCK) "example" $(LPS) $(DEBUGTOOL) $(CLIENTTMPDIR) false $(OPTCOMMAND) $(SETCUTOFF) $(MAXJOBS) $(VISUALIZE) $(PERMUTE) \
 		$(SEEDS) $(GLBSEEDSHIFT) $(STARTPERM) $(PYTHON) $(EMPHBENCHMARK) $(CLOCKTYPE) $(WITHCERTIFICATE) $(KEEPSOL);
+
+OPTHOST := $(shell uname -n | sed 's/\(.zib.de\)//g' | tr -cd '[:alpha:]')
+-include $(SCIPDIR)/make/local/make.$(OPTHOST)
+
+.PHONY: testcluster
+testcluster:    $(MAINFILE)
+		@-(cd check && ln -fs ../$(SCIPDIR)/check/check_cluster.sh);
+		@-(cd check && ln -fs ../$(SCIPDIR)/check/evaluate.sh);
+		@-(cd check && ln -fs ../$(SCIPDIR)/check/configuration_logfiles.sh);
+		@-(cd check && ln -fs ../$(SCIPDIR)/check/configuration_set.sh);
+		@-(cd check && ln -fs ../$(SCIPDIR)/check/configuration_solufile.sh);
+		@-(cd check && ln -fs ../$(SCIPDIR)/check/configuration_cluster.sh);
+		@-(cd check && ln -fs ../$(SCIPDIR)/check/run.sh);
+		@-(cd check && ln -fs ../$(SCIPDIR)/check/evalcheck_cluster.sh);
+		@-(cd check && ln -fs ../$(SCIPDIR)/check/check.awk);
+		@-(cd check && ln -fs ../$(SCIPDIR)/check/allcmpres.sh);
+		@-(cd check && ln -fs ../$(SCIPDIR)/check/cmpres.awk);
+		cd check; \
+		$(SHELL) ./check_cluster.sh $(TEST) $(CLUSTERMAINFILE) $(SETTINGS) \
+		$(notdir $(MAINFILE)) $(OUTPUTDIR) $(TIME) $(NODES) $(MEM) \
+		$(THREADS) $(FEASTOL) $(LPS) $(DISPFREQ) $(CONTINUE) \
+		$(QUEUETYPE) $(QUEUE) $(PPN) $(CLIENTTMPDIR) \
+		$(NOWAITCLUSTER) $(EXCLUSIVE) $(PERMUTE) $(SEEDS) $(GLBSEEDSHIFT) $(STARTPERM) $(DEBUGTOOL) \
+		$(REOPT) $(OPTCOMMAND) $(SETCUTOFF) $(VISUALIZE) $(CLUSTERNODES) $(EXCLUDENODES) $(SLURMACCOUNT) $(PYTHON) $(EMPHBENCHMARK) $(CLOCKTYPE) $(WITHCERTIFICATE) $(KEEPSOL);
 
 .PHONY: tags
 tags:
