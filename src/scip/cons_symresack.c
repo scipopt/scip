@@ -1820,8 +1820,25 @@ SCIP_RETCODE replaceAggregatedVarsSymresack(
       assert( SCIPvarIsActive(var) || SCIPvarGetStatus(var) == SCIP_VARSTATUS_NEGATED || SCIPvarGetStatus(var) == SCIP_VARSTATUS_FIXED );
       if ( var != vars[i] )
       {
+         if ( consdata->perm[i] > i )
+         {
+            SCIP_CALL( SCIPunlockVarCons(scip, vars[i], cons, TRUE, FALSE) );
+         }
+         else
+         {
+            SCIP_CALL( SCIPunlockVarCons(scip, vars[i], cons, FALSE, TRUE) );
+         }
          SCIP_CALL( SCIPreleaseVar(scip, &vars[i]) );
+
          vars[i] = var;
+         if ( consdata->perm[i] > i )
+         {
+            SCIP_CALL( SCIPlockVarCons(scip, vars[i], cons, TRUE, FALSE) );
+         }
+         else
+         {
+            SCIP_CALL( SCIPlockVarCons(scip, vars[i], cons, FALSE, TRUE) );
+         }
          SCIP_CALL( SCIPcaptureVar(scip, var) );
       }
    }

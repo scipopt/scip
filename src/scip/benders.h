@@ -184,6 +184,7 @@ SCIP_RETCODE SCIPbendersExecSubproblemSolve(
    int                   probnumber,         /**< the subproblem number */
    SCIP_BENDERSSOLVELOOP solveloop,          /**< the solve loop iteration. The first iter is for LP, the second for IP */
    SCIP_Bool             enhancement,        /**< is the solve performed as part of an enhancement? */
+   SCIP_Real*            objective,          /**< the optimal objective value from solving the subproblem */
    SCIP_Bool*            solved,             /**< flag to indicate whether the subproblem was solved */
    SCIP_Bool*            infeasible,         /**< returns whether the current subproblem is infeasible */
    SCIP_BENDERSENFOTYPE  type                /**< the enforcement type calling this function */
@@ -242,6 +243,23 @@ SCIP_RETCODE SCIPbendersComputeSubproblemLowerbound(
    int                   probnumber,         /**< the subproblem to be evaluated */
    SCIP_Real*            lowerbound,         /**< the lowerbound for the subproblem */
    SCIP_Bool*            infeasible          /**< was the subproblem found to be infeasible? */
+   );
+
+/** extracts an irreducible infeasible/inducing subset (IIS) of the master problem solution for a non-convex
+ *  subproblem by performing a depth first binary search on the master problem solution.
+ *
+ *  This cut strengthening approach requires that the linking master problem variables are all binary. The goal is to
+ *  find a subset of the master problem variables that are set to 1 to achieve either infeasibility or the same objective
+ *  value. The cut strengthening is performed after the subproblem is solved with the full master problem solution.
+ */
+SCIP_RETCODE SCIPbendersExtractIISMasterSolution(
+   SCIP_BENDERS*         benders,            /**< Benders' decomposition */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_SOL*             sol,                /**< the initial CIP solution */
+   SCIP_SOL**            newsol,             /**< the CIP solution corresponding to the reduced master solution */
+   int                   probnumber,         /**< the number of the subproblem for which the cut is generated */
+   SCIP_BENDERSENFOTYPE  type,               /**< the type of solution being enforced */
+   SCIP_BENDERSSUBSTATUS substatus           /**< the status of the subproblem solve */
    );
 
 /** merges a subproblem into the master problem. This process just adds a copy of the subproblem variables and

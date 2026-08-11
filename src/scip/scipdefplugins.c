@@ -190,6 +190,7 @@ SCIP_RETCODE SCIPincludeDefaultPlugins(
    SCIP_CALL( SCIPincludeHeurFarkasdiving(scip) );
    SCIP_CALL( SCIPincludeHeurFeasjump(scip) );
    SCIP_CALL( SCIPincludeHeurFeaspump(scip) );
+   SCIP_CALL( SCIPincludeHeurLocalsearch(scip) );
    SCIP_CALL( SCIPincludeHeurConflictdiving(scip) );
    SCIP_CALL( SCIPincludeHeurCoefdiving(scip) );
    SCIP_CALL( SCIPincludeHeurPscostdiving(scip) );

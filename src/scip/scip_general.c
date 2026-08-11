@@ -576,7 +576,15 @@ SCIP_STATUS SCIPgetStatus(
    SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPgetStatus", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
 
    assert(scip != NULL);
-   assert(scip->stat != NULL);
+
+   /* during the INIT stage, stat does not yet exist */
+   if( scip->stat == NULL )
+   {
+      assert(scip->set != NULL);
+      assert(scip->set->stage == SCIP_STAGE_INIT);
+      return SCIP_STATUS_UNKNOWN;
+   }
+
    assert(scip->stat->status == SCIP_STATUS_UNKNOWN || (scip->set->stage != SCIP_STAGE_INIT && scip->set->stage != SCIP_STAGE_FREE));
 
    return scip->stat->status;

@@ -31,8 +31,9 @@
  * Feasibility Jump repeatedly selects a variable and sets its value to minimize the weighted sum of constraint
  * violations. The weights are adjusted for constraints that remain violated in local minima.
  *
- * For more details see:
- *  Luteberget, Bjørnar, and Giorgio Sartor. "Feasibility Jump: an LP-free Lagrangian MIP heuristic."
+ * Based on:
+ *  Bjørnar Luteberget and Giorgio Sartor.
+ *  "Feasibility Jump: an LP-free Lagrangian MIP heuristic"
  *  Mathematical Programming Computation 15.2 (2023): 365-388.
  */
 
@@ -626,10 +627,11 @@ SCIP_RETCODE fjSolverResetIncumbent(
    if( solver->weight == NULL )
    {
       SCIP_CALL( SCIPallocBlockMemoryArray(scip, &solver->weight, problem->nconstraints) );
-
-      /* the penalty weights persist across resets, so initialize them only on the first allocation */
-      for( i = 0; i < problem->nconstraints; ++i )
-         solver->weight[i] = 1.0;
+      i = 0;
+      if( !problem->feasibility )
+         solver->weight[i++] = 0.5;
+      while( i < problem->nconstraints )
+         solver->weight[i++] = 1.0;
    }
    if( solver->unsatidx == NULL )
    {
