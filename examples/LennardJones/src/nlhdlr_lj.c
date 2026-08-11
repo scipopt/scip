@@ -110,12 +110,12 @@ SCIP_DECL_NEWTONEVAL(rootfuncderiv)
 /** Compute underestimator for r^(-6) - r^(-3). */
 static
 SCIP_Bool underestimator(
-   SCIP*                 scip,
-   SCIP_Real*            slope,
-   SCIP_Real*            constant,
-   SCIP_Real             rval,
-   SCIP_Real             rlb,
-   SCIP_Real             rub
+   SCIP*                 scip,               /**< SCIP datastructure */
+   SCIP_Real*            slope,              /**< buffer to store slope of underestimator */
+   SCIP_Real*            constant,           /**< buffer to store constant part of underestimator */
+   SCIP_Real             rval,               /**< reference value where to compute underestimator */
+   SCIP_Real             rlb,                /**< lower bound for r */
+   SCIP_Real             rub                 /**< upper bound for r */
 )
 {
    SCIP_Real r;
@@ -181,8 +181,8 @@ SCIP_Bool underestimator(
 /** Compute interval for r^(-6) - r^(-3). */
 static
 void range(
-   SCIP_INTERVAL*        resultant,
-   SCIP_INTERVAL         r
+   SCIP_INTERVAL*        resultant,          /**< buffer to store computed ranged */
+   SCIP_INTERVAL         r                   /**< interval for r */
 )
 {
    SCIP_ROUNDMODE origroundmode;
