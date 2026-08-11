@@ -40,7 +40,7 @@
  * # Example Application
  *
  * As an exemplary application from computational chemistry, consider the solution of the [Lennard-Jones Cluster problem](https://en.wikipedia.org/wiki/Lennard-Jones_potential).
- * Given a fixed number of particles, the task is to position them in space such that the sum of the Lennard-Jones potentials between pairs of particles is minimized.
+ * Given a fixed number of particles, the task is to position them in 3-dimensional space such that the sum of the Lennard-Jones potentials between pairs of particles is minimized.
  * The Lennard-Jones potential combines a repulsive and an attractive potential that depend on the Euclidean distance of two particles.
  * A widely used formula is \f[4\epsilon\left[\left(\frac{\sigma}{d}\right)^{12} - \left(\frac{\sigma}{d}\right)^{6}\right],\f]
  * where \f$d\f$ is the distance between the particles, and \f$\epsilon\f$, \f$\sigma>0\f$ are parameters.
@@ -54,7 +54,7 @@
  * & x^i \in [-9,9]^3 && i\in\{1,\ldots,N\}.
  * \end{aligned}
  * \f}
- * Bounding the particles' positions by the box \f$[-9,9]^3\f$ is an artificial constraint that is required to ensure convergence SCIP's algorithm.
+ * Bounding the particles' positions by the box \f$[-9,9]^3\f$ is an artificial constraint that is required to ensure convergence of SCIP's algorithm.
  *
  * # Nonlinear Handler Implementation
  *

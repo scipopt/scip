@@ -14,7 +14,7 @@ add_test(NAME examples-lj-build
         )
 #
 # avoid that several build jobs try to concurrently build the SCIP library
-# note that this ressource lock name is not the actual libscip target
+# note that this resource lock name is not the actual libscip target
 #
 set_tests_properties(examples-lj-build
                      PROPERTIES

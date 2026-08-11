@@ -120,7 +120,7 @@ SCIP_Bool underestimator(
 {
    SCIP_Real r;
 
-   /* too close or negative of zero */
+   /* too close to zero or negative */
    if( !SCIPisPositive(scip, rval) )
       return FALSE;
 
@@ -128,7 +128,7 @@ SCIP_Bool underestimator(
    {
       /* rub <= RINFLECT: function is convex on [rlb,rub]
        * rval <= RMINIMUM: function is convex at rval, and slope is negative
-       * underestimator is f(r) + f'(rval) (r - rval)
+       * underestimator is f(rval) + f'(rval) (r - rval)
        */
       *slope = -6.0 * pow(rval, -7.0) + 3.0 * pow(rval, -4.0);
       *constant = pow(rval, -6.0) - pow(rval, -3.0) - *slope * rval;
