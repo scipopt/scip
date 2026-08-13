@@ -153,7 +153,7 @@ void sassyhook(
    /* check whether permutation is identity */
    for (int j = 0; j < permlen; ++j)
    {
-      if ( (int) aut[j] != j )
+      if ( aut[j] != j )
          isIdentity = false;
    }
 
@@ -166,7 +166,7 @@ void sassyhook(
 
    /* store symmetry */
    for (int j = 0; j < permlen; ++j)
-      p[j] = (int) aut[j];
+      p[j] = aut[j];
 
    /* check whether we should allocate space for perms */
    if ( data->nmaxperms <= 0 )
