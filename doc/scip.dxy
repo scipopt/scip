@@ -936,6 +936,7 @@ INPUT                  = . \
                          ../examples/Binpacking/doc/xternal_binpacking.c \
                          ../examples/CallableLibrary/doc/xternal_callablelibrary.c \
                          ../examples/MIPSolver/doc/xternal_mipsolver.c \
+                         ../examples/LennardJones/doc/xternal_lj.c \
                          ../examples/Eventhdlr/doc/xternal_eventhdlr.c \
                          ../examples/Eventhdlr/src/ \
                          ../examples/GMI/src/ \

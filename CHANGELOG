@@ -326,6 +326,8 @@ Testing
 Miscellaneous
 -------------
 
+- added an example with a nonlinear handler for the potential function of the Lennard-Jones Cluster problem
+
 @section RN1004 SCIP 10.0.4
 ***************************
 
