@@ -903,6 +903,14 @@
  *  </td>
  *  </tr>
  *  <tr>
+ *  <td>
+ *  @subpage LJ_MAIN "Nonlinear Handler"
+ *  </td>
+ *  <td>
+ *  An example illustrating the use of a nonlinear handler to improve SCIP's handling of a nonlinearity that appears in Lennard-Jones Cluster Problems.
+ *  </td>
+ *  </tr>
+ *  <tr>
  *  <td colspan="2">
  *  <b>
  *  Branch-and-cut
