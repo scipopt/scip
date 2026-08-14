@@ -164,8 +164,8 @@ typedef struct SCIP_PropData SCIP_PROPDATA;       /**< locally defined propagato
  *  @note the counters state the changes since the last call including the changes of this presolving method during its
  *        last call
  *
- *  @note if the propagator uses dual information for presolving it is nesassary to check via calling SCIPallowWeakDualReds
- *        or SCIPallowStrongDualReds if dual reductions are allowed.
+ *  @note if the propagator uses dual information for presolving it is necessary to check via calling SCIPallowWeakDualReds()
+ *        or SCIPallowStrongDualReds() if dual reductions are allowed.
  *
  *  input/output:
  *  - nfixedvars      : pointer to total number of variables fixed of all presolvers
@@ -214,7 +214,7 @@ typedef struct SCIP_PropData SCIP_PROPDATA;       /**< locally defined propagato
  *  - SCIP_DELAYED    : the propagator was skipped, but should be called again
  *  - SCIP_DELAYNODE  : the current node should be postponed (return value only valid for BEFORELP propagation)
  */
-#define SCIP_DECL_PROPEXEC(x) SCIP_RETCODE x (SCIP* scip, SCIP_PROP* prop,  SCIP_PROPTIMING proptiming, SCIP_RESULT* result)
+#define SCIP_DECL_PROPEXEC(x) SCIP_RETCODE x (SCIP* scip, SCIP_PROP* prop, SCIP_PROPTIMING proptiming, SCIP_RESULT* result)
 
 
 /** propagation conflict resolving method of propagator
@@ -234,8 +234,8 @@ typedef struct SCIP_PropData SCIP_PROPDATA;       /**< locally defined propagato
  *
  *  See the description of the propagation conflict resolving method of constraint handlers for further details.
  *
- *  @note if the propagtor uses dual information it is nesassary to check via calling SCIPallowWeakDualReds and
- *        SCIPallowStrongDualReds if dual reductions and propgation with the current cutoff bound, resp., are allowed.
+ *  @note if the propagtor uses dual information it is necessary to check via calling SCIPallowWeakDualReds and
+ *        SCIPallowStrongDualReds if dual reductions and propagation with the current cutoff bound, resp., are allowed.
  *
  *  input:
  *  - scip            : SCIP main data structure
