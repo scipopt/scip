@@ -582,6 +582,24 @@ SCIP_RETCODE SCIPconcurrentSolve(
    if( idx < 0 || idx >= nconcsolvers )
       idx = 0;
 
+   /* an infeasible winner while the pool holds a solution shows optimality; prefer the solver owning it */
+   if( SCIPsyncstoreGetWinnerStatus(syncstore) == SCIP_STATUS_INFEASIBLE && SCIPsyncstoreSolPoolEnabled(syncstore) )
+   {
+      int npoolsols;
+
+      npoolsols = SCIPsyncstoreGetNPoolSols(syncstore);
+      if( npoolsols > 0 )
+      {
+         SCIP_Real* solvals;
+         int nsolvals;
+         int ownerid;
+
+         SCIPsyncstoreGetPoolSol(syncstore, npoolsols - 1, &solvals, &nsolvals, &ownerid);
+         if( ownerid >= 0 && ownerid < nconcsolvers )
+            idx = ownerid;
+      }
+   }
+
    /* transfer the solutions of all concurrent solvers; the best solution is not necessarily
     * owned by the winner, e.g. when the winner proved optimality of a bound that was communicated
     * by another solver but never received the corresponding solution itself

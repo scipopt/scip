@@ -1077,6 +1077,23 @@ int SCIPsyncstoreGetWinner(
    return syncstore->lastsync->winner;
 }
 
+/** gets the terminal status of the winning solver, or SCIP_STATUS_UNKNOWN if solve is not stopped yet */
+SCIP_STATUS SCIPsyncstoreGetWinnerStatus(
+   SCIP_SYNCSTORE*       syncstore           /**< the synchronization store */
+   )
+{
+   assert(syncstore != NULL);
+   assert(syncstore->initialized);
+
+   if( syncstore->mode == SCIP_PARA_OPPORTUNISTIC )
+      return syncstore->winnerstatus;
+
+   if( syncstore->lastsync == NULL )
+      return SCIP_STATUS_UNKNOWN;
+
+   return syncstore->lastsync->status;
+}
+
 /** how many solvers have already finished synchronizing on this synchronization data */
 int SCIPsyncdataGetNSynced(
    SCIP_SYNCDATA*        syncdata            /**< the synchronization data */

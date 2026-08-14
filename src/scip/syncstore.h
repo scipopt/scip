@@ -198,6 +198,12 @@ int SCIPsyncstoreGetWinner(
    SCIP_SYNCSTORE*       syncstore           /**< the synchronization store */
    );
 
+/** gets the terminal status of the winning solver, or SCIP_STATUS_UNKNOWN if solve is not stopped yet */
+SCIP_EXPORT
+SCIP_STATUS SCIPsyncstoreGetWinnerStatus(
+   SCIP_SYNCSTORE*       syncstore           /**< the synchronization store */
+   );
+
 /** how many solvers have already finished synchronizing on this synchronization data */
 SCIP_EXPORT
 int SCIPsyncdataGetNSynced(
