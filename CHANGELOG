@@ -77,6 +77,7 @@ Interface changes
 - new methods for the immediate sharing of incumbent solutions between the concurrent solvers in opportunistic mode: SCIPsyncstoreSolPoolEnabled(), SCIPsyncstoreGetMainScip(), SCIPsyncstoreUpdateBestMinObj(), SCIPsyncstoreUpdateBestDualbound(), SCIPsyncstoreGetBestMinObj(), SCIPsyncstoreGetNPoolSols(), SCIPsyncstoreGetPoolSol(), SCIPheurSyncEnableSolPool()
 - new methods for the immediate sharing of tightened global variable bounds between the concurrent solvers in opportunistic mode: SCIPsyncstoreAddBound(), SCIPsyncstoreGetBound(), SCIPsyncstoreGetBoundVersion(), SCIPpropSyncEnableBoundPool(), SCIPeventGlobalbndEnableBoundPool()
 - new methods SCIPsyncstoreTryLockCompleteSyncdata(), SCIPsyncstoreUnlockSyncdata() to read synchronization data without blocking on the other concurrent solvers
+- new method SCIPsyncstoreGetWinnerStatus() to get the terminal status of the winning concurrent solver
 - new method SCIPextractBendersIISMasterSolution() can be called to identify an irreducible master solution that achieves the same subproblem result, i.e. infeasible or feasible with the same objective.
 
 ### New parameters
