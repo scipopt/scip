@@ -48,7 +48,7 @@ Interface changes
 - new argument infersymcomp for SCIPnodeAddBoundinfer(), SCIPnodeAddBoundinferExact(), SCIPdomchgAddBoundchg() to set inference information in conflict analysis that arise from symmetry handling
 - new argument nsymprop for SCIPnodeGetNDomchg() to report number of symmetry-based reductions in domain changes
 - SCIPvarGetProbvarBinary() and SCIPvarsGetProbvarBinary() need a SCIP_SET* pointer and are therefore not public anymore;
-  use the public functions SCIPgetProbvarBinary() and SCIPgetProbvarBinary()
+  use the public functions SCIPgetProbvarBinary() and SCIPgetProbvarsBinary()
 
 ### New API functions
 

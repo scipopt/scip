@@ -1501,7 +1501,7 @@ SCIP_RETCODE domchgMakeDynamic(
 #ifndef NDEBUG
    {
       int i;
-      for( i = 0; i < (int)(*domchg)->domchgbound.nboundchgs; ++i )\
+      for( i = 0; i < (int)(*domchg)->domchgbound.nboundchgs; ++i )
       {
          assert(!SCIPvarIsIntegral((*domchg)->domchgbound.boundchgs[i].var)
             || SCIPsetIsIntegral(set, (*domchg)->domchgbound.boundchgs[i].newbound));

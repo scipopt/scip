@@ -2230,7 +2230,7 @@ SCIP_RETCODE SCIPgetProbvarsBinary(
    assert(nvars == 0 || vars != NULL);
    assert(negatedarr != NULL);
 
-   SCIP_CALL( SCIPcheckStage(scip, "SCIPgetProbvarBinary", FALSE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE) );
+   SCIP_CALL( SCIPcheckStage(scip, "SCIPgetProbvarsBinary", FALSE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE) );
 
    /* get the active representative of the given variable */
    SCIP_CALL( SCIPvarsGetProbvarBinary(scip->set, vars, negatedarr, nvars) );
