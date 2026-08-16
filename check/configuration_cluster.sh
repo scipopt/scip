@@ -121,6 +121,20 @@ then
     CONSTRAINT="EPYC7773X"
     CLUSTERQUEUE="high-mem"
     TARGETFREQ=1900000
+elif test "${CLUSTERQUEUE}" = "small"
+then
+    if [ "${DEBUGTOOL}" == "rr" ] || [ "${DEBUGTOOL}" == "perf" ]
+    then
+        # exclude nodes that don't have access to hardware performance counters enabled
+        test "${EXCLUDENODES}" = "none" && EXCLUDENODES=""
+        EXCLUDENODES="htc-cmp[220-229]${EXCLUDENODES:+,${EXCLUDENODES}}"
+    fi
+    if [ "${DEBUGTOOL}" == "rr" ]
+    then
+        # rr does not run reliably on AMD Zen CPUs (https://github.com/rr-debugger/rr/wiki/Zen)
+        # an easy way to exclude such nodes is to run on Intel CPUs only
+        CONSTRAINT="Intel"
+    fi
 fi
 
 # check if the slurm blades should be used exclusively
