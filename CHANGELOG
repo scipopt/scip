@@ -81,6 +81,9 @@ Interface changes
 
 ### New parameters
 
+- `branching/relpscost/sbiterquotrestart`: factor for the strong branching LP iteration budget as long as at most `sbiterrestarts` restarts have been performed
+- `branching/relpscost/sbiterrestarts`: maximal number of performed restarts for which the strong branching LP iteration budget is scaled by `sbiterquotrestart` (-1: no scaling)
+- `branching/relpscost/maxinititer`: maximal iteration limit for strong branching initializations of pseudo cost entries if it is computed automatically (`inititer` = 0)
 - `estimation/restarts/restartgrowth`: factor by which the number of successive tree size estimations required to trigger a restart grows with each restart already performed (1.0: no growth)
 - `iis/<iisfinder>/enable`: whether to enable the iis finder of name <iisfinder>, e.g., greedy
 - `iis/greedy/detectcomponents`: should the deletion filter detect and delete disconnected components
