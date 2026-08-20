@@ -81,6 +81,7 @@ Interface changes
 
 ### New parameters
 
+- `estimation/restarts/restartgrowth`: factor by which the number of successive tree size estimations required to trigger a restart grows with each restart already performed (1.0: no growth)
 - `iis/<iisfinder>/enable`: whether to enable the iis finder of name <iisfinder>, e.g., greedy
 - `iis/greedy/detectcomponents`: should the deletion filter detect and delete disconnected components
 - `iis/greedy/componentminsize`: number of constraints a component must have at least to be detected
@@ -205,6 +206,7 @@ Interface changes
 
 - numeric tolerance parameters (epsilon, sumepsilon, feastol, dualfeastol) are now checked for consistency, altogether before solving and individually when changed during solving, rejecting invalid combinations with an error
 - `estimation/method`: use default setting `p` to apply linear check(p)oint extrapolation in tree size estimation
+- changed default of `estimation/restarts/restartlimit` to -1, so that the number of restarts triggered by tree size estimation is no longer capped at one, but limited by the new parameter `estimation/restarts/restartgrowth` instead
 - replaced param `propagating/symmetry/nautymaxlevel` by `symmetries/nautymaxlevel`
 - removed param `misc/usesymmetry`
 - removed param `propagating/symmetry/maxgenerators`
