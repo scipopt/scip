@@ -145,20 +145,12 @@ SCIP_DECL_EVENTINIT(eventInitSync)
       SCIP_CALL( SCIPcatchEvent(scip, SCIP_EVENTTYPE_SYNC, eventhdlr, NULL, &eventhdlrdata->filterpos) );
    }
 
-   /* in opportunistic mode the event tracks the global primal bound and, with the solution pool enabled,
-    * publishes the incumbent itself immediately instead of waiting for the next synchronization point;
-    * the event is also caught when incumbents should be printed, which works in both parallel modes
+   /* in opportunistic mode the event tracks the global primal bound and publishes the incumbent into
+    * the main SCIP immediately, instead of waiting for the next synchronization point
     */
-   if( eventhdlrdata->filterpossol < 0 && SCIPsyncstoreIsInitialized(syncstore) )
+   if( eventhdlrdata->filterpossol < 0 && SCIPsyncstoreIsInitialized(syncstore) && SCIPsyncstoreGetMode(syncstore) == SCIP_PARA_OPPORTUNISTIC )
    {
-      SCIP_Bool printincumbents;
-
-      SCIP_CALL( SCIPgetBoolParam(scip, "concurrent/printincumbents", &printincumbents) );
-
-      if( SCIPsyncstoreGetMode(syncstore) == SCIP_PARA_OPPORTUNISTIC || printincumbents )
-      {
-         SCIP_CALL( SCIPcatchEvent(scip, SCIP_EVENTTYPE_BESTSOLFOUND, eventhdlr, NULL, &eventhdlrdata->filterpossol) );
-      }
+      SCIP_CALL( SCIPcatchEvent(scip, SCIP_EVENTTYPE_BESTSOLFOUND, eventhdlr, NULL, &eventhdlrdata->filterpossol) );
    }
 
    return SCIP_OKAY;
@@ -227,23 +219,16 @@ SCIP_DECL_EVENTEXEC(eventExecSync)
        * the global best objective only decreases, so a solution filtered out here can never be
        * the one that wins the locked comparison inside SCIPsyncstoreUpdateBestMinObj
        */
-      if( SCIPsyncstoreSolPoolEnabled(syncstore) )
+      if( minobj < SCIPsyncstoreGetBestMinObj(syncstore) )
       {
-         SCIP_Real bestminobj;
+         SCIP_CONCSOLVERDATA* data;
 
-         bestminobj = SCIPsyncstoreGetBestMinObj(syncstore);
+         data = SCIPconcsolverGetData(eventhdlrdata->concsolver);
+         assert(data != NULL);
 
-         if( minobj < bestminobj )
-         {
-            SCIP_CONCSOLVERDATA* data;
-
-            data = SCIPconcsolverGetData(eventhdlrdata->concsolver);
-            assert(data != NULL);
-
-            SCIP_CALL( SCIPallocBufferArray(scip, &solvals, data->nvars) );
-            SCIP_CALL( SCIPgetSolVals(scip, sol, data->nvars, data->vars, solvals) );
-            nsolvals = data->nvars;
-         }
+         SCIP_CALL( SCIPallocBufferArray(scip, &solvals, data->nvars) );
+         SCIP_CALL( SCIPgetSolVals(scip, sol, data->nvars, data->vars, solvals) );
+         nsolvals = data->nvars;
       }
 
       SCIPsyncstoreUpdateBestMinObj(syncstore, minobj, SCIPconcsolverGetName(eventhdlrdata->concsolver),
