@@ -1,3 +1,4 @@
+set heur localsearch freq -1
 set parallel maxnthreads 2
 ${settings}
 read ${CMAKE_CURRENT_SOURCE_DIR}/${path}
