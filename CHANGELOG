@@ -38,6 +38,8 @@ Performance improvements
 - in opportunistic concurrent solving, a solver no longer waits at a synchronization point until all other solvers
   have synchronized, but only reads the synchronization data that is already complete, so that a slow solver does not
   hold up the other solvers
+- restarts based on tree size estimation are no longer capped at one; each additional restart becomes harder to trigger than the last
+- spend a smaller part of the LP iterations on strong branching as long as only few restarts have been performed
 
 Interface changes
 -----------------
