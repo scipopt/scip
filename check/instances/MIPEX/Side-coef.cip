@@ -4,6 +4,7 @@ STATISTICS
   Constraints      : 0 initial, 7 maximal
 OBJECTIVE
   Sense            : minimize
+  Offset           : +1
 VARIABLES
   [binary] <x0>: obj=0, original bounds=[0,1]
   [binary] <x1>: obj=0, original bounds=[0,1]
