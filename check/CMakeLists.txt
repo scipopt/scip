@@ -293,7 +293,7 @@ set(instances_MIP
     "instances/MIP/lseu.mps\;1120"
     "instances/MIP/MANN_a9.clq.lp\;16"
     "instances/MIP/misc03.mps\;3360"
-    "instances/MIP/Negated.cip\;1"
+    "instances/MIP/Negated.cip\;2"
     "instances/MIP/p0033.osil\;3089"
     "instances/MIP/p0548.mps\;8691"
     "instances/MIP/piperout-impl.cip\;0"
@@ -349,7 +349,7 @@ if(SCIP_WITH_EXACTSOLVE)
         "instances/MIP/enigma.mps\;0"
         "instances/MIPEX/flugpl_rational.mps\;1201500"
         "instances/MIP/Side.lp\;2"
-        "instances/MIPEX/Side-coef.cip\;2"
+        "instances/MIPEX/Side-coef.cip\;3"
         "instances/MIPEX/Side-coeftest.lp\;2"
         "instances/MIP/stein27_inf.lp\;+infinity"
         "instances/PseudoBoolean/normalized-t2001.13queen13.1111218308.opb\;+infinity"
@@ -939,7 +939,7 @@ foreach(instance ${instances_MIP_write})
 endforeach(instance)
 
 #
-# test writing and reading from and to different file extensions for MIP (only without original objective offset)
+# test writing and reading from and to different file extensions for MIP
 #
 foreach(instance ${instances_MIP})
     split_instance(instance)

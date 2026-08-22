@@ -286,6 +286,7 @@ Fixed bugs
 ----------
 
 - fixed that parameter changes were printed to the log when parsing emphasis settings via an "emphasis:" line in a settings file (other parameter settings are not printed)
+- include original objective offset when writing transformed problem
 
 Interface changes
 -----------------
