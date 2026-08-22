@@ -14,6 +14,7 @@ Fixed bugs
 - fixed bug with locking/unlocking aggregated variables in cons_orbisack/orbitope_full/orbitope_pp/symresack
 - fixed invalid memory access when calling SCIPgetStatus() in INIT stage
 - fixed that copying relaxation-only variable in SCIPgetVarCopy() was not rejected as intended
+- apply consistent epsilon tolerances to SCIPselectWeighted*() for stable critical item
 
 Build systems
 -------------
