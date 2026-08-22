@@ -803,7 +803,7 @@ SCIP_Bool SORTTPL_NAME(SCIPsortedvecFind, SORTTPL_NAMEEXT)
    while( FALSE )
 
 #ifndef NDEBUG
-/** verifies that the partial sorting and especially the median element satisfy all properties */
+/** verifies that the partial sorting and especially the critical item satisfy all properties */
 static
 void SORTTPL_NAME(sorttpl_checkWeightedSelection, SORTTPL_NAMEEXT)
 (
@@ -811,51 +811,35 @@ void SORTTPL_NAME(sorttpl_checkWeightedSelection, SORTTPL_NAMEEXT)
    SORTTPL_HASPTRCOMPPAR( SCIP_DECL_SORTPTRCOMP((*ptrcomp)) )  /**< data element comparator */
    SORTTPL_HASINDCOMPPAR( SCIP_DECL_SORTINDCOMP((*indcomp)) )  /**< data element comparator */
    SORTTPL_HASINDCOMPPAR( void*                  dataptr    )  /**< pointer to data field that is given to the external compare method */
-   SCIP_Real*            weights,            /**< (optional), nonnegative weights array for weighted median, or NULL (all weights are equal to 1) */
-   SCIP_Real             capacity,           /**< the maximum capacity that is exceeded by the median */
+   SCIP_Real*            weights,            /**< (optional), nonnegative weights array for the critical item, or NULL (all weights are equal to one) */
+   SCIP_Real             capacity,           /**< the maximum capacity that is exceeded by the critical item */
    int                   len,                /**< length of arrays */
-   int                   medianpos           /**< the position of the weighted median */
+   int                   medianpos           /**< the index of the critical item */
    )
 {
+   SCIP_Real weightsum = -capacity;
    int i;
-   SCIP_Real QUAD(weightsum);
-   QUAD_ASSIGN(weightsum, -capacity);
 
    for( i = 0; i < len; i++ )
    {
-      if ( weights != NULL )
-      {
-         SCIPquadprecSumQD(weightsum, weightsum, weights[i]);
-      }
-      else
-      {
-         SCIPquadprecSumQD(weightsum, weightsum, 1.0);
-      }
+      weightsum += weights != NULL ? weights[i] : 1.0;
 
-      /* check that the weight sum exceeds the capacity at the median element */
-      if( i == medianpos )
-      {
-         assert(QUAD_TO_DBL(weightsum) >  -SCIP_DEFAULT_EPSILON);
-      }
-      else if( i < medianpos )
-      {
-         /* check that the partial sorting is correct w.r.t. the median element and that capacity is not exceeded */
-         assert(medianpos == len || ! SORTTPL_ISBETTER(key[medianpos], key[i]));
-
-         assert(QUAD_TO_DBL(weightsum) <= SCIP_DEFAULT_EPSILON );
-      }
-      else
-      {
-         assert(!SORTTPL_ISBETTER(key[i], key[medianpos]));
-      }
+      /* check that the weight sum exceeds the capacity at the critical item
+       * and that the partial sorting is correct
+       */
+      assert(i < medianpos || (weightsum > 0.0 && !SORTTPL_ISBETTER(key[i], key[medianpos])));
+      assert(i >= medianpos || (weightsum <= 2.0 * SCIP_DEFAULT_EPSILON
+            && (medianpos == len || !SORTTPL_ISBETTER(key[medianpos], key[i]))));
    }
 }
 #endif
 
-/** partially sorts a given keys array around the weighted median w.r.t. the \p capacity and permutes the additional 'field' arrays
- *  in the same way
+/** partially sorts a given keys array around the critical item w.r.t. the \p capacity and permutes the
+ *  additional 'field' arrays in the same way
  *
- *  If no weights-array is passed, the algorithm assumes weights equal to 1.
+ *  The critical item is the first element whose cumulative weight strictly exceeds the capacity.
+ *
+ *  If no weights-array is passed, the algorithm assumes weights equal to one.
  */
 void SORTTPL_NAME(SCIPselectWeighted, SORTTPL_NAMEEXT)
 (
@@ -869,10 +853,10 @@ void SORTTPL_NAME(SCIPselectWeighted, SORTTPL_NAMEEXT)
    SORTTPL_HASPTRCOMPPAR( SCIP_DECL_SORTPTRCOMP((*ptrcomp)) )  /**< data element comparator */
    SORTTPL_HASINDCOMPPAR( SCIP_DECL_SORTINDCOMP((*indcomp)) )  /**< data element comparator */
    SORTTPL_HASINDCOMPPAR( void*                  dataptr    )  /**< pointer to data field that is given to the external compare method */
-   SCIP_Real*            weights,            /**< (optional), nonnegative weights array for weighted median, or NULL (all weights are equal to 1) */
-   SCIP_Real             capacity,           /**< the maximum capacity that is exceeded by the median */
+   SCIP_Real*            weights,            /**< (optional), nonnegative weights array for the critical item, or NULL (all weights are equal to one) */
+   SCIP_Real             capacity,           /**< the maximum capacity that is exceeded by the critical item */
    int                   len,                /**< length of arrays */
-   int*                  medianpos           /**< pointer to store the index of the weighted median, or NULL, if not needed */
+   int*                  medianpos           /**< pointer to store the index of the critical item, or NULL, if not needed */
    )
 {
    int hi;
@@ -886,7 +870,7 @@ void SORTTPL_NAME(SCIPselectWeighted, SORTTPL_NAMEEXT)
    hi = len - 1;
    residualcapacity = capacity;
 
-   /* compute the total weight and stop if all items fit */
+   /* compute the total weight and stop if the full set does not exceed the capacity */
    if( weights != NULL )
    {
       for( j = 0; j < len; ++j )
@@ -895,7 +879,7 @@ void SORTTPL_NAME(SCIPselectWeighted, SORTTPL_NAMEEXT)
    else
       totalweightsum = len;
 
-   if( totalweightsum <= capacity )
+   if( totalweightsum <= capacity + SCIP_DEFAULT_EPSILON )
    {
       localmedianpos = len;
 
@@ -913,7 +897,7 @@ void SORTTPL_NAME(SCIPselectWeighted, SORTTPL_NAMEEXT)
       SCIP_Real pivotweight;
       SORTTPL_KEYTYPE pivot;
 
-      /* guess a median as pivot */
+      /* guess a critical item as pivot */
       pivotindex = SORTTPL_NAME(sorttpl_selectPivotIndex, SORTTPL_NAMEEXT)
             (key,
                   SORTTPL_HASPTRCOMPPAR(ptrcomp)
@@ -982,23 +966,21 @@ void SORTTPL_NAME(SCIPselectWeighted, SORTTPL_NAMEEXT)
       }
 
       /* the weight in the better half of the array exceeds the capacity. Continue the search there */
-      if( betterweightsum > residualcapacity )
-      {
+      if( betterweightsum > residualcapacity + SCIP_DEFAULT_EPSILON )
          hi = bt - 1;
-      }
       else
       {
          SCIP_Real weightsum = betterweightsum;
 
-         /* loop through duplicates of pivot element and check if one is the weighted median */
+         /* loop through duplicates of pivot element and check if one is the critical item */
          for( p = bt; p <= wt; ++p )
          {
             assert(SORTTPL_CMP(key[p], pivot) == 0);
             pivotweight = weights != NULL ? weights[p] : 1.0;
             weightsum += pivotweight;
 
-            /* the element at index p is exactly the weighted median */
-            if( weightsum > residualcapacity )
+            /* the element at index p is the critical item */
+            if( weightsum > residualcapacity + SCIP_DEFAULT_EPSILON )
             {
                localmedianpos = p;
 
@@ -1032,18 +1014,18 @@ void SORTTPL_NAME(SCIPselectWeighted, SORTTPL_NAMEEXT)
    }
 
    /* it is impossible for lo or high to reach the end of the array. In this case, the item weights sum up to
-    * less than the capacity, which is handled at the top of this method.
+    * at most the capacity, which is handled at the top of this method.
     */
    assert(lo < len);
    assert(hi < len);
 
-   /* determine the median position among the remaining elements */
+   /* determine the critical item position among the remaining elements */
    for( j = lo; j <= MAX(lo, hi); ++j )
    {
       SCIP_Real weight = (weights != NULL ? weights[j] : 1.0);
 
-      /* we finally found the median element */
-      if( weight > residualcapacity )
+      /* we finally found the critical item */
+      if( weight > residualcapacity + SCIP_DEFAULT_EPSILON )
       {
          localmedianpos = j;
 
@@ -1103,7 +1085,7 @@ void SORTTPL_NAME(SCIPselect, SORTTPL_NAMEEXT)
 
    pos = -1;
 
-   /* call the general algorithm for the weighted median with weights equal to -1 (by passing NULL) */
+   /* call the general algorithm for the critical item with weights equal to one (by passing NULL) */
    SORTTPL_NAME(SCIPselectWeighted, SORTTPL_NAMEEXT)
    (key,
       SORTTPL_HASFIELD1PAR(field1)
@@ -1117,7 +1099,7 @@ void SORTTPL_NAME(SCIPselect, SORTTPL_NAMEEXT)
       SORTTPL_HASINDCOMPPAR(dataptr)
       NULL, capacity, len, &pos);
 
-   /* the weighted median position should be exactly at position k */
+   /* the critical item position should be exactly at position k */
    assert(pos == k);
 }
 
