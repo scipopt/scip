@@ -85,9 +85,15 @@
 #define DEFAULT_SBITERQUOT       0.5         /**< maximal fraction of strong branching LP iterations compared to normal iterations */
 #define DEFAULT_DYNAMICLOOKAHEADQUOT 0.6     /**< apply dynamic lookahead after this fraction maxlookahead is reached */
 #define DEFAULT_SBITEROFS        100000      /**< additional number of allowed strong branching LP iterations */
+#define DEFAULT_SBITERQUOTRESTART 0.25      /**< factor for the strong branching LP iteration budget as long as at most
+                                              *   sbiterrestarts restarts have been performed */
+#define DEFAULT_SBITERRESTARTS   2           /**< maximal number of performed restarts for which the strong branching LP
+                                              *   iteration budget is scaled by sbiterquotrestart (-1: no scaling) */
 #define DEFAULT_MAXLOOKAHEAD     9           /**< maximal number of further variables evaluated without better score */
 #define DEFAULT_INITCAND         100         /**< maximal number of candidates initialized with strong branching per node */
 #define DEFAULT_INITITER         0           /**< iteration limit for strong branching initialization of pseudo cost entries (0: auto) */
+#define DEFAULT_MAXINITITER      500         /**< maximal iteration limit for strong branching initialization of pseudo cost
+                                              *   entries if the limit is computed automatically (inititer = 0) */
 #define DEFAULT_MAXBDCHGS        5           /**< maximal number of bound tightenings before the node is reevaluated (-1: unlimited) */
 #define DEFAULT_MAXPROPROUNDS    -2          /**< maximum number of propagation rounds to be performed during strong branching
                                               *   before solving the LP (-1: no limit, -2: parameter settings) */
@@ -146,6 +152,8 @@ struct SCIP_BranchruleData
    SCIP_Real             minreliable;        /**< minimal value for minimum pseudo cost size to regard pseudo cost value as reliable */
    SCIP_Real             maxreliable;        /**< maximal value for minimum pseudo cost size to regard pseudo cost value as reliable */
    SCIP_Real             sbiterquot;         /**< maximal fraction of strong branching LP iterations compared to normal iterations */
+   SCIP_Real             sbiterquotrestart;  /**< factor for the strong branching LP iteration budget as long as at most
+                                              *   sbiterrestarts restarts have been performed */
    SCIP_Real             meandualgain;       /**< mean dual gain of all strong branchings */
    SCIP_Real             currmeandualgain;   /**< current mean dual gain in current node */
    SCIP_Real             maxmeangain;        /**< maximal dual gain of all strong branchings */
@@ -155,9 +163,13 @@ struct SCIP_BranchruleData
    SCIP_Real             nzerogains;         /**< number of zero dual gains */
    int                   currndualgains;     /**< number of dual gains used in the computation of the mean from current node */
    int                   sbiterofs;          /**< additional number of allowed strong branching LP iterations */
+   int                   sbiterrestarts;     /**< maximal number of performed restarts for which the strong branching LP
+                                              *   iteration budget is scaled by sbiterquotrestart (-1: no scaling) */
    int                   maxlookahead;       /**< maximal number of further variables evaluated without better score */
    int                   initcand;           /**< maximal number of candidates initialized with strong branching per node */
    int                   inititer;           /**< iteration limit for strong branching initialization of pseudo cost entries (0: auto) */
+   int                   maxinititer;        /**< maximal iteration limit for strong branching initialization of pseudo cost
+                                              *   entries if the limit is computed automatically (inititer = 0) */
    int                   maxbdchgs;          /**< maximal number of bound tightenings before the node is reevaluated (-1: unlimited) */
    int                   maxproprounds;      /**< maximum number of propagation rounds to be performed during strong branching
                                               *   before solving the LP (-1: no limit, -2: parameter settings) */
@@ -1379,7 +1391,18 @@ SCIP_RETCODE execRelpscost(
        * any more; also, if degeneracy is too high, don't run strong branching at this node
        */
       nlpiterationsquot = (SCIP_Longint)(branchruledata->sbiterquot * SCIPgetNNodeLPIterations(scip));
-      maxnsblpiterations = nlpiterationsquot + branchruledata->sbiterofs + SCIPgetNRootStrongbranchLPIterations(scip);
+      maxnsblpiterations = nlpiterationsquot + branchruledata->sbiterofs;
+
+      /* as long as only few restarts have been performed, spend a smaller part of the LP iterations on strong branching;
+       * the iterations spent at the root node are not counted against this budget
+       */
+      if( branchruledata->sbiterrestarts >= 0 && SCIPgetNRuns(scip) - 1 <= branchruledata->sbiterrestarts )
+      {
+         nlpiterationsquot = (SCIP_Longint)(branchruledata->sbiterquotrestart * nlpiterationsquot);
+         maxnsblpiterations = (SCIP_Longint)(branchruledata->sbiterquotrestart * maxnsblpiterations);
+      }
+
+      maxnsblpiterations += SCIPgetNRootStrongbranchLPIterations(scip);
       nsblpiterations = SCIPgetNStrongbranchLPIterations(scip);
       if( nsblpiterations > maxnsblpiterations || degeneracyfactor >= 10.0 )
          maxninitcands = 0;
@@ -1743,7 +1766,7 @@ SCIP_RETCODE execRelpscost(
          inititer = (int)(2*nlpiterations / nlps);
          inititer = (int)((SCIP_Real)inititer * (1.0 + 20.0/nodenum));
          inititer = MAX(inititer, 10);
-         inititer = MIN(inititer, 500);
+         inititer = MIN(inititer, branchruledata->maxinititer);
       }
 
       SCIPdebugMsg(scip, "strong branching (reliable=%g, %d/%d cands, %d uninit, maxcands=%d, maxlookahead=%g, maxbdchgs=%d, inititer=%d, iterations:%" SCIP_LONGINT_FORMAT "/%" SCIP_LONGINT_FORMAT ", basic:%u)\n",
@@ -2608,6 +2631,14 @@ SCIP_RETCODE SCIPincludeBranchruleRelpscost(
          "branching/relpscost/sbiterofs",
          "additional number of allowed strong branching LP iterations",
          &branchruledata->sbiterofs, FALSE, DEFAULT_SBITEROFS, 0, INT_MAX, NULL, NULL) );
+   SCIP_CALL( SCIPaddRealParam(scip,
+         "branching/relpscost/sbiterquotrestart",
+         "factor for the strong branching LP iteration budget as long as at most sbiterrestarts restarts have been performed",
+         &branchruledata->sbiterquotrestart, FALSE, DEFAULT_SBITERQUOTRESTART, 0.0, 1.0, NULL, NULL) );
+   SCIP_CALL( SCIPaddIntParam(scip,
+         "branching/relpscost/sbiterrestarts",
+         "maximal number of performed restarts for which the strong branching LP iteration budget is scaled by sbiterquotrestart (-1: no scaling)",
+         &branchruledata->sbiterrestarts, FALSE, DEFAULT_SBITERRESTARTS, -1, INT_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddIntParam(scip,
          "branching/relpscost/maxlookahead",
          "maximal number of further variables evaluated without better score",
@@ -2626,6 +2657,10 @@ SCIP_RETCODE SCIPincludeBranchruleRelpscost(
          "branching/relpscost/inititer",
          "iteration limit for strong branching initializations of pseudo cost entries (0: auto)",
          &branchruledata->inititer, FALSE, DEFAULT_INITITER, 0, INT_MAX, NULL, NULL) );
+   SCIP_CALL( SCIPaddIntParam(scip,
+         "branching/relpscost/maxinititer",
+         "maximal iteration limit for strong branching initializations of pseudo cost entries if it is computed automatically (inititer = 0)",
+         &branchruledata->maxinititer, FALSE, DEFAULT_MAXINITITER, 10, INT_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddIntParam(scip,
          "branching/relpscost/maxbdchgs",
          "maximal number of bound tightenings before the node is reevaluated (-1: unlimited)",
