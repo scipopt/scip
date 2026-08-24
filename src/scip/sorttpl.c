@@ -817,18 +817,20 @@ void SORTTPL_NAME(sorttpl_checkWeightedSelection, SORTTPL_NAMEEXT)
    int                   medianpos           /**< the index of the critical item */
    )
 {
-   SCIP_Real weightsum = -capacity;
+   SCIP_Real QUAD(weightsum);
    int i;
+
+   QUAD_ASSIGN(weightsum, 0.0);
 
    for( i = 0; i < len; i++ )
    {
-      weightsum += weights != NULL ? weights[i] : 1.0;
+      SCIPquadprecSumQD(weightsum, weightsum, weights != NULL ? weights[i] : 1.0);
 
       /* check that the weight sum exceeds the capacity at the critical item
        * and that the partial sorting is correct
        */
-      assert(i < medianpos || (weightsum > 0.0 && !SORTTPL_ISBETTER(key[i], key[medianpos])));
-      assert(i >= medianpos || (weightsum <= 2.0 * SCIP_DEFAULT_EPSILON
+      assert(i < medianpos || (QUAD_TO_DBL(weightsum) > capacity && !SORTTPL_ISBETTER(key[i], key[medianpos])));
+      assert(i >= medianpos || (QUAD_TO_DBL(weightsum) <= capacity + 2.0 * SCIP_DEFAULT_EPSILON
             && (medianpos == len || !SORTTPL_ISBETTER(key[medianpos], key[i]))));
    }
 }
@@ -863,23 +865,26 @@ void SORTTPL_NAME(SCIPselectWeighted, SORTTPL_NAMEEXT)
    int lo;
    int j;
    int localmedianpos = -1;
-   SCIP_Real totalweightsum = 0.0;
-   SCIP_Real residualcapacity;
+   SCIP_Real QUAD(totalweightsum);
+   SCIP_Real QUAD(residualcapacity);
 
    lo = 0;
    hi = len - 1;
-   residualcapacity = capacity;
+   QUAD_ASSIGN(residualcapacity, capacity);
 
    /* compute the total weight and stop if the full set does not exceed the capacity */
    if( weights != NULL )
    {
+      QUAD_ASSIGN(totalweightsum, 0.0);
       for( j = 0; j < len; ++j )
-         totalweightsum += weights[j];
+         SCIPquadprecSumQD(totalweightsum, totalweightsum, weights[j]);
    }
    else
-      totalweightsum = len;
+   {
+      QUAD_ASSIGN(totalweightsum, len);
+   }
 
-   if( totalweightsum <= capacity + SCIP_DEFAULT_EPSILON )
+   if( QUAD_TO_DBL(totalweightsum) <= capacity + SCIP_DEFAULT_EPSILON )
    {
       localmedianpos = len;
 
@@ -893,7 +898,7 @@ void SORTTPL_NAME(SCIPselectWeighted, SORTTPL_NAMEEXT)
       int wt;
       int p;
       int pivotindex;
-      SCIP_Real betterweightsum;
+      SCIP_Real QUAD(betterweightsum);
       SCIP_Real pivotweight;
       SORTTPL_KEYTYPE pivot;
 
@@ -952,35 +957,37 @@ void SORTTPL_NAME(SCIPselectWeighted, SORTTPL_NAMEEXT)
       if( weights != NULL )
       {
          /* collect weights of elements larger than the pivot  */
-         betterweightsum = 0.0;
+         QUAD_ASSIGN(betterweightsum, 0.0);
          for( i = lo; i < bt; ++i )
          {
             assert(SORTTPL_ISBETTER(key[i], pivot));
-            betterweightsum += weights[i];
+            SCIPquadprecSumQD(betterweightsum, betterweightsum, weights[i]);
          }
       }
       else
       {
          /* if all weights are equal to one, we directly know the larger and the equal weight sum */
-         betterweightsum = bt - lo;
+         QUAD_ASSIGN(betterweightsum, bt - lo);
       }
 
       /* the weight in the better half of the array exceeds the capacity. Continue the search there */
-      if( betterweightsum > residualcapacity + SCIP_DEFAULT_EPSILON )
+      if( QUAD_TO_DBL(betterweightsum) > QUAD_TO_DBL(residualcapacity) + SCIP_DEFAULT_EPSILON )
          hi = bt - 1;
       else
       {
-         SCIP_Real weightsum = betterweightsum;
+         SCIP_Real QUAD(weightsum);
+
+         QUAD_ASSIGN_Q(weightsum, betterweightsum);
 
          /* loop through duplicates of pivot element and check if one is the critical item */
          for( p = bt; p <= wt; ++p )
          {
             assert(SORTTPL_CMP(key[p], pivot) == 0);
             pivotweight = weights != NULL ? weights[p] : 1.0;
-            weightsum += pivotweight;
+            SCIPquadprecSumQD(weightsum, weightsum, pivotweight);
 
             /* the element at index p is the critical item */
-            if( weightsum > residualcapacity + SCIP_DEFAULT_EPSILON )
+            if( QUAD_TO_DBL(weightsum) > QUAD_TO_DBL(residualcapacity) + SCIP_DEFAULT_EPSILON )
             {
                localmedianpos = p;
 
@@ -989,7 +996,8 @@ void SORTTPL_NAME(SCIPselectWeighted, SORTTPL_NAMEEXT)
          }
 
          /* continue loop by searching the remaining elements [wt+1,...,hi] */
-         residualcapacity -= weightsum;
+         QUAD_SCALE(weightsum, -1.0);
+         SCIPquadprecSumQQ(residualcapacity, residualcapacity, weightsum);
          lo = wt + 1;
       }
    }
@@ -1025,14 +1033,14 @@ void SORTTPL_NAME(SCIPselectWeighted, SORTTPL_NAMEEXT)
       SCIP_Real weight = (weights != NULL ? weights[j] : 1.0);
 
       /* we finally found the critical item */
-      if( weight > residualcapacity + SCIP_DEFAULT_EPSILON )
+      if( weight > QUAD_TO_DBL(residualcapacity) + SCIP_DEFAULT_EPSILON )
       {
          localmedianpos = j;
 
          break;
       }
       else
-         residualcapacity -= weight;
+         SCIPquadprecSumQD(residualcapacity, residualcapacity, -weight);
    }
 
 CHECKANDRETURN:
