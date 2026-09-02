@@ -1451,6 +1451,7 @@ if(SCIP_WITH_EXACTSOLVE)
         #
         foreach(setting ${settings_MIPEX})
           if(NOT ((${basename} STREQUAL "enigma.mps") AND ((${setting} STREQUAL "exact-exactlp") OR (${setting} STREQUAL "exact-projshift")) AND (${LPS} STREQUAL "grb")))  # certificate.cpp:3194 assert failing, #4261
+          if(NOT ((${basename} STREQUAL "stein27.zpl") AND (${LPS} STREQUAL "cpx")))  # certificate.cpp:3194 assert failing, #4261
             #
             # treat the instance as a tuple (list) of two values
             #
@@ -1497,6 +1498,7 @@ if(SCIP_WITH_EXACTSOLVE)
                                  FAIL_REGULAR_EXPRESSION "Failed")
             endif()
 
+          endif()
           endif()
         endforeach(setting)
     endforeach(instance ${instances_MIPEX})

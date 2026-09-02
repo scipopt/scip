@@ -67,7 +67,10 @@ then
     CLSETTINGSLIST="${CLSETTINGSLIST} FeasibilityTol=${FEASTOL} IntFeasTol=${FEASTOL}"
 fi
 CLSETTINGSLIST="${CLSETTINGSLIST} TimeLimit=${TIMELIMIT} NodeLimit=${NODELIMIT} DisplayInterval=${DISPFREQ} MIPGap=0.0 Threads=${THREADS} Crossover=0 Method=2"
-# TODO write solution to ${CLIENTTMPDIR}/${USER}-tmpdir/${SOLBASENAME}.sol if KEEPSOL=1
+if test "${KEEPSOL}" = 1
+then
+    CLSETTINGSLIST="${CLSETTINGSLIST} ResultFile=${CLIENTTMPDIR}/${USER}-tmpdir/${SOLBASENAME}.sol"
+fi
 
 # parse settings from settings file via awk
 if test "${SETNAME}" != "default"
