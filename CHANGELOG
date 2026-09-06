@@ -78,6 +78,7 @@ Fixed bugs
 - fixed invalid memory access when calling SCIPgetStatus() in INIT stage
 - fixed that copying relaxation-only variable in SCIPgetVarCopy() was not rejected as intended
 - apply consistent arithmetic and tolerance to SCIPselectWeighted*() for stable critical item
+- correct random seed by matching release macro with debug function of SCIPsetInitializeRandomSeed()
 
 Build systems
 -------------
