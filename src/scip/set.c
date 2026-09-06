@@ -8113,5 +8113,5 @@ unsigned int SCIPsetInitializeRandomSeed(
 {
    assert(set != NULL);
 
-   return (unsigned int)(initialseedvalue + (unsigned) (1 + 6 * set->random_randomseedshiftmultiplier) * (unsigned) set->random_randomseedshift);
+   return (unsigned int)(initialseedvalue + (unsigned int)(1 + 6 * set->random_randomseedshiftmultiplier) * (unsigned int)set->random_randomseedshift);
 }
