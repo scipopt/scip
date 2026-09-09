@@ -1811,7 +1811,7 @@ SCIP_Bool SCIPsetGetSubscipsOff(
 #define SCIPsetIsSumRelGE(set, val1, val2) ( !EPSN(SCIPrelDiff(val1, val2), (set)->num_sumepsilon) )
 #define SCIPsetIsUpdateUnreliable(set, newvalue, oldvalue) \
    ( (ABS(oldvalue) / MAX(ABS(newvalue), set->num_epsilon)) >= set->num_recompfac )
-#define SCIPsetInitializeRandomSeed(set, val) ( (val + (set)->random_randomseedshiftmultiplier * (set)->random_randomseedshift) )
+#define SCIPsetInitializeRandomSeed(set, val) ((unsigned int)((val) + (unsigned int)(1 + 6 * (set)->random_randomseedshiftmultiplier) * (unsigned int)(set)->random_randomseedshift))
 
 #define SCIPsetGetSubscipsOff(set)         ( (set)->subscipsoff )
 

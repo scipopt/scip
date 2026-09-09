@@ -26,6 +26,7 @@
  * @ingroup PRIMALHEURISTICS
  * @brief  primal heuristic that adds solutions from synchronization
  * @author Leona Gottwald
+ * @author Gioni Mexi
  *
  * This heuristic takes solutions from somewhere else via the function SCIPheurSyncPassSol(). It
  * then tries to add this solution. It is used by the concurrent solvers, when solutions are
@@ -42,10 +43,12 @@
 #define __SCIP_HEUR_SYNC_H__
 
 #include "scip/def.h"
+#include "scip/type_concsolver.h"
 #include "scip/type_sol.h"
 #include "scip/type_scip.h"
 #include "scip/type_heur.h"
 #include "scip/type_retcode.h"
+#include "scip/type_var.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -71,6 +74,19 @@ SCIP_RETCODE SCIPheurSyncPassSol(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_HEUR*            heur,               /**< sync heuristic */
    SCIP_SOL*             sol                 /**< solution to be passed */
+   );
+
+/** enables the drain of the solution pool in which other concurrent solvers publish their new
+ *  incumbents immediately; the heuristic then runs at every node and tries all new pooled
+ *  solutions instead of receiving solutions only at the synchronization points
+ */
+SCIP_EXPORT
+void SCIPheurSyncEnableSolPool(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_HEUR*            heur,               /**< sync heuristic */
+   SCIP_CONCSOLVER*      concsolver,         /**< the concurrent solver this SCIP instance belongs to */
+   SCIP_VAR**            vars,               /**< variables of this SCIP in the communication variable order */
+   int                   nvars               /**< number of variables */
    );
 
 /** @} */

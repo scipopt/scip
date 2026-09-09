@@ -252,13 +252,15 @@ typedef struct TreeProfile TREEPROFILE;
 #define DEFAULT_TREEPROFILE_ENABLED  FALSE   /**< Should the event handler collect data? */
 #define DEFAULT_TREEPROFILE_MINNODESPERDEPTH 20.0 /**< minimum average number of nodes at each depth before producing estimations */
 #define DEFAULT_RESTARTPOLICY        'e'     /**< default restart policy: (a)lways, (c)ompletion, (e)stimation, (n)ever */
-#define DEFAULT_RESTARTLIMIT          1      /**< default restart limit */
+#define DEFAULT_RESTARTLIMIT         -1      /**< default restart limit (-1: no limit, restarts are limited by restartgrowth) */
 #define DEFAULT_MINNODES             1000L   /**< minimum number of nodes before restart */
 #define DEFAULT_COUNTONLYLEAVES      FALSE   /**< should only leaves count for the minnodes parameter? */
 #define DEFAULT_RESTARTFACTOR        50.0    /**< factor by which the estimated number of nodes should exceed the current number of nodes */
 #define DEFAULT_RESTARTNONLINEAR     FALSE   /**< whether to apply a restart when nonlinear constraints are present */
 #define DEFAULT_RESTARTACTPRICERS    FALSE   /**< whether to apply a restart when active pricers are used */
 #define DEFAULT_HITCOUNTERLIM        50      /**< limit on the number of successive samples to really trigger a restart */
+#define DEFAULT_RESTARTGROWTH       1.5      /**< factor by which the number of successive samples required to trigger a
+                                              *   restart grows with each restart already performed (1.0: no growth) */
 #define DEFAULT_CHECKPOINT_DEPTHLIM  50      /**< depth below which checkpoint is updated */
 #define DEFAULT_SSG_NMAXSUBTREES     -1      /**< the maximum number of individual SSG subtrees; the old split is kept if
                                                *  a new split exceeds this number of subtrees ; -1: no limit */
@@ -283,6 +285,8 @@ struct SCIP_EventhdlrData
    int                   nrestartsperformed; /**< number of restarts performed so far */
    int                   restarthitcounter;  /**< the number of successive samples that would trigger a restart */
    int                   hitcounterlim;      /**< limit on the number of successive samples to really trigger a restart */
+   SCIP_Real             restartgrowth;      /**< factor by which the number of successive samples required to trigger a
+                                              *   restart grows with each restart already performed (1.0: no growth) */
    int                   nreports;           /**< the number of reports already printed */
    int                   reportfreq;         /**< report frequency on estimation: -1: never, 0:always, k >= 1: k times evenly during search */
    int                   lastrestartrun;     /**< the last run at which this event handler triggered restart */
@@ -2873,9 +2877,18 @@ SCIP_DECL_EVENTEXEC(eventExecEstim)
    /* test if a restart should be applied */
    if( shouldApplyRestart(scip, eventhdlrdata) )
    {
+      SCIP_Real hitcounterlim;
+
       eventhdlrdata->restarthitcounter++;
 
-      if( eventhdlrdata->restarthitcounter >= eventhdlrdata->hitcounterlim )
+      /* the more restarts have already been performed, the more evidence is required to trigger another one; this makes
+       * an unlimited number of restarts self-limiting instead of relying on a hard limit
+       */
+      hitcounterlim = (SCIP_Real)eventhdlrdata->hitcounterlim;
+      if( eventhdlrdata->restartgrowth > 1.0 && eventhdlrdata->nrestartsperformed > 0 )
+         hitcounterlim *= pow(eventhdlrdata->restartgrowth, (SCIP_Real)eventhdlrdata->nrestartsperformed);
+
+      if( (SCIP_Real)eventhdlrdata->restarthitcounter >= hitcounterlim )
       {
          /* safe that we triggered a restart at this run */
          if( !SCIPisExact(scip) && SCIPgetNRuns(scip) > eventhdlrdata->lastrestartrun )
@@ -3023,6 +3036,10 @@ SCIP_RETCODE SCIPincludeEventHdlrEstim(
 
    SCIP_CALL( SCIPaddIntParam(scip, "estimation/restarts/hitcounterlim", "limit on the number of successive samples to really trigger a restart",
          &eventhdlrdata->hitcounterlim, FALSE, DEFAULT_HITCOUNTERLIM, 1, INT_MAX, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddRealParam(scip, "estimation/restarts/restartgrowth",
+         "factor by which the number of successive samples required to trigger a restart grows with each restart already performed (1.0: no growth)",
+         &eventhdlrdata->restartgrowth, FALSE, DEFAULT_RESTARTGROWTH, 1.0, SCIP_REAL_MAX, NULL, NULL) );
 
    SCIP_CALL( SCIPaddIntParam(scip, "estimation/reportfreq",
          "report frequency on estimation: -1: never, 0:always, k >= 1: k times evenly during search",

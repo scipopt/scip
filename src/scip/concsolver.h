@@ -25,6 +25,7 @@
 /**@file   concsolver.h
  * @brief  data structures for concurrent solvers
  * @author Leona Gottwald
+ * @author Gioni Mexi
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -190,9 +191,35 @@ SCIP_Longint SCIPconcsolverGetNSolsRecvd(
    SCIP_CONCSOLVER*      concsolver          /**< concurrent solver */
    );
 
+/** adds to the number of solutions the concurrent solver received from the other solvers; used
+ *  when the solution pool is enabled, where solutions are drained from the pool instead of read at the synchronization points
+ */
+void SCIPconcsolverAddNSolsRecvd(
+   SCIP_CONCSOLVER*      concsolver,         /**< concurrent solver */
+   SCIP_Longint          nsols               /**< number of received solutions to add */
+   );
+
 /** gets the number of solutions the concurrent solver shared during synchronization */
 SCIP_Longint SCIPconcsolverGetNSolsShared(
    SCIP_CONCSOLVER*      concsolver          /**< concurrent solver */
+   );
+
+/** adds to the number of solutions the concurrent solver shared with the other solvers; used
+ *  when the solution pool is enabled, where solutions are shared immediately instead of at the synchronization points
+ */
+void SCIPconcsolverAddNSolsShared(
+   SCIP_CONCSOLVER*      concsolver,         /**< concurrent solver */
+   SCIP_Longint          nsols               /**< number of shared solutions to add */
+   );
+
+/** adds to the number of tighter global variable bounds the solver received from the other solvers;
+ *  used in opportunistic mode where bounds are drained from the shared bound pool instead of read at the
+ *  synchronization points
+ */
+void SCIPconcsolverAddNTighterBnds(
+   SCIP_CONCSOLVER*      concsolver,         /**< concurrent solver */
+   SCIP_Longint          nbnds,              /**< number of received tighter bounds to add */
+   SCIP_Longint          nintbnds            /**< number of received tighter integer bounds to add */
    );
 
 /** gets the number of tighter global variable bounds the solver received */

@@ -18,6 +18,9 @@ Features
 - added detection and deletion of disconnected components to greedy IIS finder
 - added new propagator for Euclidean distance constraints
 - several functions in var.c do not depend on fixed numbers anymore
+- in opportunistic concurrent solving, new incumbents are shared immediately through a solution pool and tightened
+  global variable bounds through a bound pool that is applied at every node, instead of only at the synchronization
+  points
 
 ### Benders Decomposition
 - the no-good and integer optimality cuts for Benders' decomposition are generated per subproblem. Previously, only a
@@ -33,6 +36,11 @@ Performance improvements
 ------------------------
 
 - in opportunistic concurrent solving, signal early termination as soon as one solver reaches a terminal status, so the others stop at their next per-node check rather than running until their next sync point
+- in opportunistic concurrent solving, a solver no longer waits at a synchronization point until all other solvers
+  have synchronized, but only reads the synchronization data that is already complete, so that a slow solver does not
+  hold up the other solvers
+- restarts based on tree size estimation are no longer capped at one; each additional restart becomes harder to trigger than the last
+- spend a smaller part of the LP iterations on strong branching as long as only few restarts have been performed
 
 Interface changes
 -----------------
@@ -71,11 +79,19 @@ Interface changes
 - new methods SCIPtryAddSymmetryHandlingMethods(), SCIPpresolveSymmetryHandlingMethods() to call try-add and presolve routines of symmetry handlers
 - new methods SCIPsymhdlrCreate(), SCIPsymhdlrCopyInclude(), SCIPsymhdlrFree(), SCIPsymhdlrExit(), SCIPsymhdlrInit(), SCIPsymhdlrInitsol(), SCIPsymhdlrExitsol(), SCIPsymhdlrPresol(), SCIPsymhdlrProp(), SCIPsymhdlrResolvePropagation(), SCIPsymhdlrSepaLP(), SCIPsymhdlrSepaSol(), SCIPsymhdlrTryAdd(), SCIPsymhdlrSetSepa(), SCIPsymhdlrSetProp(), SCIPsymhdlrSetCopy(), SCIPsymhdlrSetFree(), SCIPsymhdlrSetInit(), SCIPsymhdlrSetExit(), SCIPsymhdlrSetInitsol(), SCIPsymhdlrSetExitsol(), SCIPsymhdlrSetPresol(), SCIPsymhdlrSetResprop(), SCIPaddSymhdlrComponent(), SCIPcreateSymmetryComponent(), SCIPsyminfoCompressPermInfo(), SCIPdisplaySymmetryGenerators() to execute callback methods of symmetry handlers
 - new method SCIPincludePropDistance()
+- new methods for the immediate sharing of incumbent solutions between the concurrent solvers in opportunistic mode: SCIPsyncstoreSolPoolEnabled(), SCIPsyncstoreGetMainScip(), SCIPsyncstoreUpdateBestMinObj(), SCIPsyncstoreUpdateBestDualbound(), SCIPsyncstoreGetBestMinObj(), SCIPsyncstoreGetNPoolSols(), SCIPsyncstoreGetPoolSol(), SCIPheurSyncEnableSolPool()
+- new methods for the immediate sharing of tightened global variable bounds between the concurrent solvers in opportunistic mode: SCIPsyncstoreAddBound(), SCIPsyncstoreGetBound(), SCIPsyncstoreGetBoundVersion(), SCIPpropSyncEnableBoundPool(), SCIPeventGlobalbndEnableBoundPool()
+- new methods SCIPsyncstoreTryLockCompleteSyncdata(), SCIPsyncstoreUnlockSyncdata() to read synchronization data without blocking on the other concurrent solvers
+- new method SCIPsyncstoreGetWinnerStatus() to get the terminal status of the winning concurrent solver
 - new method SCIPextractBendersIISMasterSolution() can be called to identify an irreducible master solution that achieves the same subproblem result, i.e. infeasible or feasible with the same objective.
 - new method SCIPgetProbvarBinary() and SCIPgetProbvarsBinary()	as interfaces to SCIPvarGetProbvarBinary()/SCIPvarsGetProbvarBinary()
 
 ### New parameters
 
+- `branching/relpscost/sbiterquotrestart`: factor for the strong branching LP iteration budget as long as at most `sbiterrestarts` restarts have been performed
+- `branching/relpscost/sbiterrestarts`: maximal number of performed restarts for which the strong branching LP iteration budget is scaled by `sbiterquotrestart` (-1: no scaling)
+- `branching/relpscost/maxinititer`: maximal iteration limit for strong branching initializations of pseudo cost entries if it is computed automatically (`inititer` = 0)
+- `estimation/restarts/restartgrowth`: factor by which the number of successive tree size estimations required to trigger a restart grows with each restart already performed (1.0: no growth)
 - `iis/<iisfinder>/enable`: whether to enable the iis finder of name <iisfinder>, e.g., greedy
 - `iis/greedy/detectcomponents`: should the deletion filter detect and delete disconnected components
 - `iis/greedy/componentminsize`: number of constraints a component must have at least to be detected
@@ -185,6 +201,8 @@ Interface changes
 - `propagating/distance/presoltiming`: timing mask of the presolving method of the distance propagator
 - `propagating/distance/priority`: priority of distance propagator
 - `propagating/distance/timingmask`: timing when distance propagator should be called
+- `concurrent/solpool`: whether new incumbents are shared between the concurrent solvers immediately through a solution pool instead of only at the synchronization points (only used in opportunistic mode)
+- `concurrent/paramportfolio`: whether the concurrent solvers are diversified with the built-in parameter portfolio (only used in opportunistic mode)
 - `benders/<benders>/iiscutstrengthen`: enables an IIS-type method to find stronger no-good-based cuts.
 - `benders/<benders>/earlytermminnodes`: the number of nodes processed in the subproblem before early termination
 - `benders/<benders>/earlytermminimp`: the minimum improvement in the dual bound required before early termination of
@@ -198,6 +216,7 @@ Interface changes
 
 - numeric tolerance parameters (epsilon, sumepsilon, feastol, dualfeastol) are now checked for consistency, altogether before solving and individually when changed during solving, rejecting invalid combinations with an error
 - `estimation/method`: use default setting `p` to apply linear check(p)oint extrapolation in tree size estimation
+- changed default of `estimation/restarts/restartlimit` to -1, so that the number of restarts triggered by tree size estimation is no longer capped at one, but limited by the new parameter `estimation/restarts/restartgrowth` instead
 - replaced param `propagating/symmetry/nautymaxlevel` by `symmetries/nautymaxlevel`
 - removed param `misc/usesymmetry`
 - removed param `propagating/symmetry/maxgenerators`
@@ -235,6 +254,11 @@ Interface changes
 - removed param `propagating/symmetry/usesimplesgncomp`
 - removed param `propagating/symmetry/symtiming`
 - removed param `propagating/symmetry/maxnnewivolus`
+- `parallel/mode`: the default is now the opportunistic mode
+- `parallel/maxnthreads`: the default was raised from 8 to 10
+- `concurrent/changechildsel`: the default is now FALSE
+- `concurrent/presolvebefore`: the default is now FALSE, so that every concurrent solver presolves with its own settings
+- `concurrent/symmetrybefore`: the default is now FALSE, so that symmetry is detected in the concurrent solvers
 
 ### Data structures
 
@@ -273,6 +297,7 @@ Fixed bugs
 ----------
 
 - fixed that parameter changes were printed to the log when parsing emphasis settings via an "emphasis:" line in a settings file (other parameter settings are not printed)
+- include original objective offset when writing transformed problem
 
 Interface changes
 -----------------
@@ -314,6 +339,8 @@ Testing
 Miscellaneous
 -------------
 
+- added an example with a nonlinear handler for the potential function of the Lennard-Jones Cluster problem
+
 @section RN1004 SCIP 10.0.4
 ***************************
 
@@ -323,9 +350,13 @@ Fixed bugs
 - disabled use of std::unchecked_array_iterator in amplmp's variant of fmt when using MSVC >= 2026
 - fixed that functions declared in pub_history.h were not included in optimized builds of SCIP
 - fixed that check/check.sh did not reset EXECNAME before calling tmpfile configuration script
+- fixed a bug in sassy/dejavu by adding a patch to dejavu/preprocess.h
 - fixed that registering branching candidates in the estimate callback of a nlhdlr was not accounted in the nlhdlr statistics
 - fixed bug with locking/unlocking aggregated variables in cons_orbisack/orbitope_full/orbitope_pp/symresack
 - fixed invalid memory access when calling SCIPgetStatus() in INIT stage
+- fixed that copying relaxation-only variable in SCIPgetVarCopy() was not rejected as intended
+- apply consistent arithmetic and tolerance to SCIPselectWeighted*() for stable critical item
+- correct random seed by matching release macro with debug function of SCIPsetInitializeRandomSeed()
 
 Build systems
 -------------

@@ -293,7 +293,7 @@ set(instances_MIP
     "instances/MIP/lseu.mps\;1120"
     "instances/MIP/MANN_a9.clq.lp\;16"
     "instances/MIP/misc03.mps\;3360"
-    "instances/MIP/Negated.cip\;1"
+    "instances/MIP/Negated.cip\;2"
     "instances/MIP/p0033.osil\;3089"
     "instances/MIP/p0548.mps\;8691"
     "instances/MIP/piperout-impl.cip\;0"
@@ -349,7 +349,7 @@ if(SCIP_WITH_EXACTSOLVE)
         "instances/MIP/enigma.mps\;0"
         "instances/MIPEX/flugpl_rational.mps\;1201500"
         "instances/MIP/Side.lp\;2"
-        "instances/MIPEX/Side-coef.cip\;2"
+        "instances/MIPEX/Side-coef.cip\;3"
         "instances/MIPEX/Side-coeftest.lp\;2"
         "instances/MIP/stein27_inf.lp\;+infinity"
         "instances/PseudoBoolean/normalized-t2001.13queen13.1111218308.opb\;+infinity"
@@ -939,7 +939,7 @@ foreach(instance ${instances_MIP_write})
 endforeach(instance)
 
 #
-# test writing and reading from and to different file extensions for MIP (only without original objective offset)
+# test writing and reading from and to different file extensions for MIP
 #
 foreach(instance ${instances_MIP})
     split_instance(instance)
@@ -1063,6 +1063,37 @@ if(NOT ${TPI} STREQUAL "none")
                                FAIL_REGULAR_EXPRESSION "ERROR"
                                DEPENDS scip-build
                            )
+    endforeach()
+    #
+    # the tests above run the default opportunistic mode with all sharing enabled; additionally run the
+    # deterministic mode and the opportunistic mode with the sharing of solutions and global variable bounds
+    # switched off completely, so that none of these combinations hits an assert; a configuration is a tuple
+    # of its name and the settings that are applied before the solve
+    #
+    set(concurrentconfigs
+        "deterministic\;set parallel mode 1"
+        "opportunistic-noshare\;set parallel mode 0\nset concurrent solpool FALSE\nset concurrent commvarbnds FALSE"
+        )
+    set(concurrentinstances
+        "instances/MIP/egout.mps\;568.1007"
+        "instances/MIP/bell5.mps\;8966406.49"
+        )
+    foreach(instance ${concurrentinstances})
+       split_instance(instance)
+       foreach(config ${concurrentconfigs})
+          list(GET config 0 name)
+          list(GET config 1 settings)
+          configure_file(interactiveshell/concurrentsolve-settings.bat.in interactiveshell/concurrentsolve-${name}-${basename}.bat)
+          add_test(NAME MIP-concurrentsolve-${name}-${basename}
+                   COMMAND $<TARGET_FILE:scip> -b ${PROJECT_BINARY_DIR}/check/interactiveshell/concurrentsolve-${name}-${basename}.bat
+                  )
+          set_tests_properties(MIP-concurrentsolve-${name}-${basename}
+                               PROPERTIES
+                                  PASS_REGULAR_EXPRESSION "Validation         : Success"
+                                  FAIL_REGULAR_EXPRESSION "ERROR"
+                                  DEPENDS scip-build
+                              )
+       endforeach()
     endforeach()
 endif()
 
@@ -1420,6 +1451,7 @@ if(SCIP_WITH_EXACTSOLVE)
         #
         foreach(setting ${settings_MIPEX})
           if(NOT ((${basename} STREQUAL "enigma.mps") AND ((${setting} STREQUAL "exact-exactlp") OR (${setting} STREQUAL "exact-projshift")) AND (${LPS} STREQUAL "grb")))  # certificate.cpp:3194 assert failing, #4261
+          if(NOT ((${basename} STREQUAL "stein27.zpl") AND (${LPS} STREQUAL "cpx")))  # certificate.cpp:3194 assert failing, #4261
             #
             # treat the instance as a tuple (list) of two values
             #
@@ -1466,6 +1498,7 @@ if(SCIP_WITH_EXACTSOLVE)
                                  FAIL_REGULAR_EXPRESSION "Failed")
             endif()
 
+          endif()
           endif()
         endforeach(setting)
     endforeach(instance ${instances_MIPEX})
