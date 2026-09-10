@@ -1189,7 +1189,6 @@ SCIP_RETCODE SCIPprobDelVar(
    *deleted = FALSE;
 
    /* don't remove variables that are not in the problem */
-   /**@todo what about negated variables? should the negation variable be removed instead? */
    if( SCIPvarGetProbindex(var) == -1 )
       return SCIP_OKAY;
 
@@ -1198,8 +1197,6 @@ SCIP_RETCODE SCIPprobDelVar(
     */
    if( SCIPvarIsTransformedOrigvar(var) )
       return SCIP_OKAY;
-
-   assert(SCIPvarGetNegatedVar(var) == NULL);
 
    SCIPsetDebugMsg(set, "deleting variable <%s> from problem (%d variables: %d binary, %d integer, %d continuous; %d implied)\n",
                    SCIPvarGetName(var), prob->nvars, prob->nbinvars + prob->nbinimplvars, prob->nintvars + prob->nintimplvars,
@@ -2742,11 +2739,9 @@ SCIP_RETCODE SCIPprobCollectStatistics(
 }
 
 
-#ifndef NDEBUG
+#ifdef NDEBUG
 
-/* In debug mode, the following methods are implemented as function calls to ensure
- * type validity.
- * In optimized mode, the methods are implemented as defines to improve performance.
+/* In optimized mode, the methods are implemented as defines to improve performance.
  * However, we want to have them in the library anyways, so we have to undef the defines.
  */
 
@@ -2776,8 +2771,10 @@ SCIP_RETCODE SCIPprobCollectStatistics(
 #undef SCIPprobGetObjscale
 #undef SCIPprobGetObjoffsetExact
 #undef SCIPprobGetObjscaleExact
-#undef SCIPisConsCompressedEnabled
+#undef SCIPprobIsConsCompressionEnabled
 #undef SCIPprobEnableConsCompression
+
+#endif
 
 /** is the problem permuted */
 SCIP_Bool SCIPprobIsPermuted(
@@ -3051,5 +3048,3 @@ void SCIPprobEnableConsCompression(
 
    prob->conscompression = TRUE;
 }
-
-#endif

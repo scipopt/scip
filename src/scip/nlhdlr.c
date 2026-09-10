@@ -705,6 +705,9 @@ SCIP_DECL_NLHDLRESTIMATE(SCIPnlhdlrEstimate)
    /* update statistics */
    ++nlhdlr->nenfocalls;
 
+   if( addbranchscores && *addedbranchscores )
+      ++nlhdlr->nbranchscores;
+
    return SCIP_OKAY;
 }
 

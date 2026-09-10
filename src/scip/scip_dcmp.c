@@ -440,7 +440,7 @@ SCIP_RETCODE SCIPcomputeDecompConsLabels(
 /** creates a decomposition of the variables from a labeling of the constraints
  *
  *  NOTE: by default, the variable labeling is based on a Dantzig-Wolfe decomposition. This means that constraints in named
- *  blocks have have precedence over linking constraints. If a variable exists in constraints from
+ *  blocks have precedence over linking constraints. If a variable exists in constraints from
  *  two or more named blocks, then this variable is marked as a linking variable.
  *  If a variable occurs in exactly one named block i>=0, it is assigned label i.
  *  Variables which are only in linking constraints are unlabeled. However, SCIPdecompGetVarsLabels() will

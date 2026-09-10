@@ -58,7 +58,7 @@ size_t SCIPfread(void *ptr, size_t size, size_t nmemb, SCIP_FILE *stream)
    int nbytesread;
 
    nbytesread = gzread((gzFile)stream, ptr, (unsigned int) (size * nmemb));
-   /* An error occured if nbytesread < 0. To be compatible with fread(), we return 0, which signifies an error there. */
+   /* An error occurred if nbytesread < 0. To be compatible with fread(), we return 0, which signifies an error there. */
    if ( nbytesread < 0 )
       return 0;
 

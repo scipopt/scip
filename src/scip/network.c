@@ -2277,8 +2277,8 @@ int decompositionGetFundamentalCycleRows(
 
    typedef struct
    {
-      spqr_node node;    /* cppcheck-suppress unusedStructMember */
-      spqr_arc nodeArc;  /* cppcheck-suppress unusedStructMember */
+      spqr_node node;
+      spqr_arc nodeArc;
    } DFSCallData;
    DFSCallData* pathSearchCallStack;
    if( BMSallocBlockMemoryArray(dec->env, &pathSearchCallStack, dec->numNodes) == NULL )

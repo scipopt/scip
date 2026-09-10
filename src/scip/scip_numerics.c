@@ -247,6 +247,10 @@ SCIP_RETCODE SCIPchgFeastol(
    /* change the settings */
    SCIP_CALL( SCIPsetSetFeastol(scip->set, scip->lp, feastol) );
 
+   /* in TRANSFORMING or later, reject if inconsistent */
+   if( SCIPsetGetStage(scip->set) >= SCIP_STAGE_TRANSFORMING && !SCIPsetCheckNumericTolerances(scip->set) )
+      return SCIP_PARAMETERWRONGVAL;
+
    return SCIP_OKAY;
 }
 
@@ -271,6 +275,10 @@ SCIP_RETCODE SCIPchgDualfeastol(
 
    /* change the settings */
    SCIP_CALL( SCIPsetSetDualfeastol(scip->set, dualfeastol) );
+
+   /* in TRANSFORMING or later, reject if inconsistent */
+   if( SCIPsetGetStage(scip->set) >= SCIP_STAGE_TRANSFORMING && !SCIPsetCheckNumericTolerances(scip->set) )
+      return SCIP_PARAMETERWRONGVAL;
 
    return SCIP_OKAY;
 }

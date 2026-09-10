@@ -75,6 +75,7 @@
 #include "scip/struct_stat.h"
 #include "scip/syncstore.h"
 #include "scip/lapack_calls.h"
+#include "symmetry/compute_symmetry.h"
 #include "tpi/tpi.h"
 
 #include <string.h>
@@ -351,6 +352,15 @@ SCIP_RETCODE doScipCreate(
       SCIP_CALL( SCIPsetIncludeExternalCode((*scip)->set, name, desc) );
    }
 
+   if( SYMcanComputeSymmetry() )
+   {
+      SCIP_CALL( SCIPsetIncludeExternalCode((*scip)->set, SYMsymmetryGetName(), SYMsymmetryGetDesc()) );
+      if ( SYMsymmetryGetAddName() != NULL )
+      {
+         SCIP_CALL( SCIPsetIncludeExternalCode((*scip)->set, SYMsymmetryGetAddName(), SYMsymmetryGetAddDesc()) );
+      }
+   }
+
    return SCIP_OKAY;
 }
 
@@ -566,7 +576,15 @@ SCIP_STATUS SCIPgetStatus(
    SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPgetStatus", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
 
    assert(scip != NULL);
-   assert(scip->stat != NULL);
+
+   /* during the INIT stage, stat does not yet exist */
+   if( scip->stat == NULL )
+   {
+      assert(scip->set != NULL);
+      assert(scip->set->stage == SCIP_STAGE_INIT);
+      return SCIP_STATUS_UNKNOWN;
+   }
+
    assert(scip->stat->status == SCIP_STATUS_UNKNOWN || (scip->set->stage != SCIP_STAGE_INIT && scip->set->stage != SCIP_STAGE_FREE));
 
    return scip->stat->status;

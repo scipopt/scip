@@ -690,7 +690,7 @@ SCIP_RETCODE SCIPperformGenericDivingAlgorithm(
                      return SCIP_INVALIDDATA; /*lint !e527*/
                }
                /* if the variable domain has been shrunk in the meantime, numerical troubles may have
-                * occured or variable was fixed by propagation while backtracking => Abort diving!
+                * occurred or variable was fixed by propagation while backtracking => Abort diving!
                 */
                if( infeasbdchange )
                {

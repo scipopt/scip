@@ -143,6 +143,11 @@ SCIP_RETCODE SCIPsolve(
 
 /** transforms, presolves, and solves problem using the configured concurrent solvers
  *
+ *  @warning By default (parallel/mode = 0, opportunistic), concurrent solvers exchange bounds and solutions
+ *           as soon as they become available, so the winner and the reported results depend on timing and
+ *           are not reproducible between runs. parallel/mode = 1 (deterministic) gives reproducible results,
+ *           but currently at a significant performance cost compared to opportunistic mode.
+ *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
  *

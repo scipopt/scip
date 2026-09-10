@@ -1,4 +1,6 @@
-=opt= circle6                    2.0
+# the optimal value for circle 6 is 1, but without a NLP solver it may not be found
+# and then switch to a heuristic price-and-branch, so we test only for a primal bound of 2
+=best= circle6                   2.0
 =opt= ring1                      1.0
 =opt= ring2                      1.0
 =opt= ring3                      1.0

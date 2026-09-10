@@ -42,6 +42,7 @@ git ls-files -c | xargs tar --transform "s|^|${NAME}/|" -chf $NAME.tar \
     --exclude="tex/*" \
     --exclude="check/check_*" \
     --exclude="check/*cluster*" \
+    --exclude="check/run_group.sh" \
     --exclude="check/evalcheck_*" \
     --exclude="check/schulz.sh" \
     --exclude="check/testset/*"

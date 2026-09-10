@@ -8,11 +8,38 @@ Features
 
 - added functionality to compute symmetries of entire symmetry detection graph rather than just the restriction to variable nodes
 - primal heuristic feasjump
+- primal heuristic localsearch
 - simpler restart control based on linear extrapolation since improvement checkpoint in tree size estimation
 - adds reader for decomposed problems to apply Benders' decomposition. The reader, extension `bdr`, lists the instance
   files for the master problem and subproblems. These instance files are then used to build up the Benders'
   decomposition within SCIP.
 - added new plugin type symmetry handler to allow users to add their own symmetry handling methods to SCIP
+- separated batch size handling for addition filter, constraint deletion filter, and bound deletion filter in greedy IIS finder
+- added detection and deletion of disconnected components to greedy IIS finder
+- added new propagator for Euclidean distance constraints
+- in opportunistic concurrent solving, new incumbents are shared immediately through a solution pool and tightened
+  global variable bounds through a bound pool that is applied at every node, instead of only at the synchronization
+  points
+
+### Benders Decomposition
+- the no-good and integer optimality cuts for Benders' decomposition are generated per subproblem. Previously, only a
+  single no-good or integer optimality cut was generated in a Benders' decomposition iteration. This change makes the
+  resulting cuts smaller, since they are no longer completely dense w.r.t. to the linking variables.
+- adds cut strengthening for no-good and integer optimality cuts in Benders' decomposition. The cut strengthening finds
+  a master problem solution with a smaller support that still achieves infeasibility or the same optimal objective
+  value, respectively. The new solution is found using a depth-first binary search algorithm.
+- adds approximate solving of CIP subproblems in Benders' decomposition. If solving a subproblem requires more than 10,000 nodes, the subproblem will terminate when the dual bound exceeds the auxiliary variable
+  by 1%. If the subproblem terminates early, the dual bound is used in the generation of the integer optimality cuts.
+
+Performance improvements
+------------------------
+
+- in opportunistic concurrent solving, signal early termination as soon as one solver reaches a terminal status, so the others stop at their next per-node check rather than running until their next sync point
+- in opportunistic concurrent solving, a solver no longer waits at a synchronization point until all other solvers
+  have synchronized, but only reads the synchronization data that is already complete, so that a slow solver does not
+  hold up the other solvers
+- restarts based on tree size estimation are no longer capped at one; each additional restart becomes harder to trigger than the last
+- spend a smaller part of the LP iterations on strong branching as long as only few restarts have been performed
 
 Interface changes
 -----------------
@@ -34,6 +61,7 @@ Interface changes
 - added SCIPiisfinderGetEnable() to check whether an iis finder is enabled
 - added SCIPiisfinderSetEnable() to set whether an iis finder is enabled
 - added SCIPincludeHeurFeasjump() to include feasibility jump primal heuristic
+- added SCIPincludeHeurLocalsearch() to include local search primal heuristic
 - added SCIPtightenVariableLowerAndUpperBounds() to tighten the variable bounds attached to a list of variables
 - added SCIPcreateBendersDefaultFromFiles() to add subproblems to the default Benders' decomposition plugin through
   instance files, instead of SCIP instances.
@@ -47,23 +75,55 @@ Interface changes
 - new methods SCIPsetIncludeSymhdlr(), SCIPsetSortSymhdlrs(), SCIPsetSortSymhdlrsProp(), SCIPsetSortSymhdlrsPresol(), SCIPsetSortSymhdlrsSepa(), SCIPsetSortSymhdlrsName(), SCIPsetFindSymhdlr() to sort symmetry handlers
 - new methods SCIPtryAddSymmetryHandlingMethods(), SCIPpresolveSymmetryHandlingMethods() to call try-add and presolve routines of symmetry handlers
 - new methods SCIPsymhdlrCreate(), SCIPsymhdlrCopyInclude(), SCIPsymhdlrFree(), SCIPsymhdlrExit(), SCIPsymhdlrInit(), SCIPsymhdlrInitsol(), SCIPsymhdlrExitsol(), SCIPsymhdlrPresol(), SCIPsymhdlrProp(), SCIPsymhdlrResolvePropagation(), SCIPsymhdlrSepaLP(), SCIPsymhdlrSepaSol(), SCIPsymhdlrTryAdd(), SCIPsymhdlrSetSepa(), SCIPsymhdlrSetProp(), SCIPsymhdlrSetCopy(), SCIPsymhdlrSetFree(), SCIPsymhdlrSetInit(), SCIPsymhdlrSetExit(), SCIPsymhdlrSetInitsol(), SCIPsymhdlrSetExitsol(), SCIPsymhdlrSetPresol(), SCIPsymhdlrSetResprop(), SCIPaddSymhdlrComponent(), SCIPcreateSymmetryComponent(), SCIPsyminfoCompressPermInfo(), SCIPdisplaySymmetryGenerators() to execute callback methods of symmetry handlers
+- new method SCIPincludePropDistance()
+- new methods for the immediate sharing of incumbent solutions between the concurrent solvers in opportunistic mode: SCIPsyncstoreSolPoolEnabled(), SCIPsyncstoreGetMainScip(), SCIPsyncstoreUpdateBestMinObj(), SCIPsyncstoreUpdateBestDualbound(), SCIPsyncstoreGetBestMinObj(), SCIPsyncstoreGetNPoolSols(), SCIPsyncstoreGetPoolSol(), SCIPheurSyncEnableSolPool()
+- new methods for the immediate sharing of tightened global variable bounds between the concurrent solvers in opportunistic mode: SCIPsyncstoreAddBound(), SCIPsyncstoreGetBound(), SCIPsyncstoreGetBoundVersion(), SCIPpropSyncEnableBoundPool(), SCIPeventGlobalbndEnableBoundPool()
+- new methods SCIPsyncstoreTryLockCompleteSyncdata(), SCIPsyncstoreUnlockSyncdata() to read synchronization data without blocking on the other concurrent solvers
+- new method SCIPsyncstoreGetWinnerStatus() to get the terminal status of the winning concurrent solver
+- new method SCIPextractBendersIISMasterSolution() can be called to identify an irreducible master solution that achieves the same subproblem result, i.e. infeasible or feasible with the same objective.
 
 ### New parameters
 
+- `branching/relpscost/sbiterquotrestart`: factor for the strong branching LP iteration budget as long as at most `sbiterrestarts` restarts have been performed
+- `branching/relpscost/sbiterrestarts`: maximal number of performed restarts for which the strong branching LP iteration budget is scaled by `sbiterquotrestart` (-1: no scaling)
+- `branching/relpscost/maxinititer`: maximal iteration limit for strong branching initializations of pseudo cost entries if it is computed automatically (`inititer` = 0)
+- `estimation/restarts/restartgrowth`: factor by which the number of successive tree size estimations required to trigger a restart grows with each restart already performed (1.0: no growth)
 - `iis/<iisfinder>/enable`: whether to enable the iis finder of name <iisfinder>, e.g., greedy
+- `iis/greedy/detectcomponents`: should the deletion filter detect and delete disconnected components
+- `iis/greedy/componentminsize`: number of constraints a component must have at least to be detected
 - `heuristics/feasjump/weightupdatedecay`: decay factor for the weight update
-- `heuristics/feasjump/maxeffort`: maximum effort spent in feasibility jump
-- `heuristics/feasjump/verbosity`: verbosity level of the feasibility jump solver
-- `heuristics/feasjump/onlywithoutsol`: should feasibility jump be called only if no solution exists?
-- `heuristics/feasjump/beforepresol`: should the heuristic be called before presolving?
-- `heuristics/feasjump/useinitialsol`: should the feasibility jump use the best known solution as initialization?
-- `heuristics/feasjump/iterations`: number of iterations to check if the heuristic reduces the total number of violated constraints
-- `heuristics/feasjump/mindecrease`: minimum percentage decrease for the number of violated constraints
-- `heuristics/feasjump/maxsols`: maximum number of solutions to find
-- `heuristics/feasjump/samplesize`: number of candidates to sample in tournament selection
 - `heuristics/feasjump/randprobgood`: probability of random selection from good variables
 - `heuristics/feasjump/randprobviol`: probability of random selection from violated constraint
-- `heuristics/feasjump/callbackeffort`: effort between callbacks
+- `heuristics/feasjump/samplesize`: number of candidates to sample in tournament selection
+- `heuristics/feasjump/verbosity`: verbosity level of the feasibility jump solver
+- `heuristics/feasjump/maxsols`: maximum number of solutions to find (-1: unlimited)
+- `heuristics/feasjump/mindecreaserel`: minimum relative decrease to reset the effort budget
+- `heuristics/feasjump/maxeffortfac`: maximum effort factor per nonzero without improvement (-1: unlimited)
+- `heuristics/feasjump/recomputefreq`: activity recomputation frequency (-1: off, 0: near boundary only)
+- `heuristics/feasjump/useinitialsol`: should best known solution be used?
+- `heuristics/feasjump/onlymainscip`: should run in subscip be skipped?
+- `heuristics/feasjump/onlybeforenode`: should run before presolving be skipped?
+- `heuristics/feasjump/onlywithoutsol`: should run with solution be skipped?
+- `heuristics/localsearch/smoothprob`: smooth probability (out of 10000)
+- `heuristics/localsearch/tabubase`: minimum tabu tenure
+- `heuristics/localsearch/tabuvariation`: random tabu variation
+- `heuristics/localsearch/sampleunsat`: unsat constraints to sample
+- `heuristics/localsearch/bmsunsatinfeas`: max moves scored during infeasible phase
+- `heuristics/localsearch/bmsunsatfeas`: max moves scored during feasible phase
+- `heuristics/localsearch/samplesat`: sat constraints to sample
+- `heuristics/localsearch/bmssat`: max moves scored from sat constraints
+- `heuristics/localsearch/bmsflip`: binary flip candidates
+- `heuristics/localsearch/bmsrandom`: random move candidates
+- `heuristics/localsearch/verbosity`: verbosity level of the local search solver
+- `heuristics/localsearch/maxsols`: maximum number of solutions to find (-1: unlimited)
+- `heuristics/localsearch/mindecreaserel`: minimum relative decrease to reset the effort budget
+- `heuristics/localsearch/maxeffortfac`: maximum effort factor per nonzero without improvement (-1: unlimited)
+- `heuristics/localsearch/recomputefreq`: activity recomputation frequency (-1: off, 0: near boundary only)
+- `heuristics/localsearch/useinitialsol`: should best known solution be used?
+- `heuristics/localsearch/useterminalsol`: should previous terminal solution be used?
+- `heuristics/localsearch/onlymainscip`: should run in subscip be skipped?
+- `heuristics/localsearch/onlybeforenode`: should run before presolving be skipped?
+- `heuristics/localsearch/onlywithoutsol`: should run with solution be skipped?
 - `estimation/checkpoint/depthlim`: depth below which checkpoint is updated
 - `symmetries/enabled`: whether symmetry handling in enabled
 - `symmetries/tryaddtiming`: whether symmetries are computed before or at the end of presolving
@@ -126,10 +186,33 @@ Interface changes
 - `symmetries/sst/requirecontvars`: whether SST cuts shall only be added if symmetry component has continuous variables
 - `symmetries/sst/sepapriority`: priority of the symmetry handler's separation method
 - `symmetries/sst/tryaddpriority`: priority of the symmetry handler's try-add method
+- `propagating/distance/freq`: frequency of distance propagator
+- `propagating/distance/maxprerounds`: maximal number of presolving rounds the distance propagator participates in
+- `propagating/distance/delay`: whether the distance propagator should be delayed, if other propagators found reductions
+- `propagating/distance/gapbisection`: domain width at which bisection in the distance propagator is stopped
+- `propagating/distance/maxndconssforpairs`: maximum number of distance constraints for which distance propagation of pairs is applied
+- `propagating/distance/maxniterbisection`: maximum number of iterations used in bisection of the distance propagator
+- `propagating/distance/multbisection`: multiplier used in bisection of the distance propagator to split interval [l,u] at point l + multiplier*(u - l)
+- `propagating/distance/presolpriority`: presolving priority of the distance propagator
+- `propagating/distance/presoltiming`: timing mask of the presolving method of the distance propagator
+- `propagating/distance/priority`: priority of distance propagator
+- `propagating/distance/timingmask`: timing when distance propagator should be called
+- `concurrent/solpool`: whether new incumbents are shared between the concurrent solvers immediately through a solution pool instead of only at the synchronization points (only used in opportunistic mode)
+- `concurrent/paramportfolio`: whether the concurrent solvers are diversified with the built-in parameter portfolio (only used in opportunistic mode)
+- `benders/<benders>/iiscutstrengthen`: enables an IIS-type method to find stronger no-good-based cuts.
+- `benders/<benders>/earlytermminnodes`: the number of nodes processed in the subproblem before early termination
+- `benders/<benders>/earlytermminimp`: the minimum improvement in the dual bound required before early termination of
+  the subproblem.
+- `benders/<benders>/benderscut/nogood/zerosolvars`: should variables that have a zero solution value be included in the
+  generated no-good cut. Default TRUE.
+- `benders/<benders>/benderscut/integer/zerosolvars`: should variables that have a zero solution value be included in the
+  generated no-good cut. Default TRUE.
 
 ### Changed parameters
 
+- numeric tolerance parameters (epsilon, sumepsilon, feastol, dualfeastol) are now checked for consistency, altogether before solving and individually when changed during solving, rejecting invalid combinations with an error
 - `estimation/method`: use default setting `p` to apply linear check(p)oint extrapolation in tree size estimation
+- changed default of `estimation/restarts/restartlimit` to -1, so that the number of restarts triggered by tree size estimation is no longer capped at one, but limited by the new parameter `estimation/restarts/restartgrowth` instead
 - replaced param `propagating/symmetry/nautymaxlevel` by `symmetries/nautymaxlevel`
 - removed param `misc/usesymmetry`
 - removed param `propagating/symmetry/maxgenerators`
@@ -167,6 +250,11 @@ Interface changes
 - removed param `propagating/symmetry/usesimplesgncomp`
 - removed param `propagating/symmetry/symtiming`
 - removed param `propagating/symmetry/maxnnewivolus`
+- `parallel/mode`: the default is now the opportunistic mode
+- `parallel/maxnthreads`: the default was raised from 8 to 10
+- `concurrent/changechildsel`: the default is now FALSE
+- `concurrent/presolvebefore`: the default is now FALSE, so that every concurrent solver presolves with its own settings
+- `concurrent/symmetrybefore`: the default is now FALSE, so that symmetry is detected in the concurrent solvers
 
 ### Data structures
 
@@ -198,9 +286,14 @@ Performance improvements
 ------------------------
 
 - Implemented interval function evaluation callback in CONOPT interface.
+- reduced complexity of SCIPundoBdchgsProof() during conflict analysis accelerating execution for many variables
+- terminate the dynamic programming in the exact knapsack solver early once the optimal LP-based upper bound is reached
 
 Fixed bugs
 ----------
+
+- fixed that parameter changes were printed to the log when parsing emphasis settings via an "emphasis:" line in a settings file (other parameter settings are not printed)
+- include original objective offset when writing transformed problem
 
 Interface changes
 -----------------
@@ -210,11 +303,15 @@ Interface changes
 - added SCIPcalcBestCut() to try multiple cut generation methods (FlowCover, KnapsackCover, CMIR) on an aggregation row and return the best cut by efficacy
 - added SCIPinitCutGenParams(), SCIPcreateCutGenResult(), and SCIPfreeCutGenResult() as helper functions for SCIPcalcBestCut()
 - added SCIPnlpiOracleEvalObjectiveInterval() and SCIPnlpiOracleEvalConstraintInterval()
+- added SCIPiisGetSubscipCons() and SCIPiisGetSubscipVar() to get the variables and constraints of the IIS subscip corresponding to the main problem
+- added SCIPgetSolvingPhase() along with enum SCIP_SOLVINGPHASE to query the current solving phase tracked by the solvingphase event handler, phase evaluation requires `solvingphases/enabled = TRUE` or `solvingphases/testmode = TRUE`
+- added SCIPgetSolvingPhaseFlags() along with typedef SCIP_SOLVINGPHASEFLAG for flags SCIP_SOLVINGPHASEFLAG_NONE/RANK1/ESTIMATE/OPTIMAL/LOG to query which reached transition criteria have been detected by the solvingphase event handler, flag evaluation requires `solvingphases/enabled = TRUE` or `solvingphases/testmode = TRUE`
 
 ### New parameters
 
 - `presolving/milp/enableGF2`: whether to enable GF2 presolver in PaPILO
 - `concurrent/symmetrybefore`: whether symmetry should be computed before concurrent solving
+- `constraints/<handler>/copytypedcons` for knapsack, logicor, setppc, and varbound constraint handlers to copy constraints with their native type instead of as linear constraints (default: FALSE)
 
 ### Changed parameters
 
@@ -238,26 +335,90 @@ Testing
 Miscellaneous
 -------------
 
+- added an example with a nonlinear handler for the potential function of the Lennard-Jones Cluster problem
+
+@section RN1004 SCIP 10.0.4
+***************************
+
+Fixed bugs
+----------
+
+- disabled use of std::unchecked_array_iterator in amplmp's variant of fmt when using MSVC >= 2026
+- fixed that functions declared in pub_history.h were not included in optimized builds of SCIP
+- fixed that check/check.sh did not reset EXECNAME before calling tmpfile configuration script
+- fixed a bug in sassy/dejavu by adding a patch to dejavu/preprocess.h
+- fixed that registering branching candidates in the estimate callback of a nlhdlr was not accounted in the nlhdlr statistics
+- fixed bug with locking/unlocking aggregated variables in cons_orbisack/orbitope_full/orbitope_pp/symresack
+- fixed invalid memory access when calling SCIPgetStatus() in INIT stage
+- fixed that copying relaxation-only variable in SCIPgetVarCopy() was not rejected as intended
+- apply consistent arithmetic and tolerance to SCIPselectWeighted*() for stable critical item
+- correct random seed by matching release macro with debug function of SCIPsetInitializeRandomSeed()
+
+Build systems
+-------------
+
+- fixed makefiles for build with LPS=highs
+- added workaround to cmake system when using -isystem for ZLIB headers on macOS (leads to compilation issues for C++ code)
+
+@section RN1003 SCIP 10.0.3
+***************************
+
+Fixed bugs
+----------
+
+- fixed statistic on added linear constraints in propagation
+- keep flag rangedrowpropagated of linear and exactlinear constraints for probing bound changes to avoid duplicate constraints by ranged row propagation
+- define result of SCIPconsProp() also if no propagation callback is available
+- keep variable for impossible substitution in cardinality constraint presolving to avoid duplication error
+- fix locking of indicator variables associated with cardinality constraints
+- free hashmap in cardinality constraints if problem is freed before transforming
+- fix CONSGETVARS and CONSGETNVARS callbacks of cardinality constraint handler
+- correct integer variable offset when removing duplicate variables from xor constraint
+- add applied clique as constraint when reformulating a binary product to avoid problem relaxation
+- round coefficients when aggregating integer variables with epsilon coefficient tolerance to ensure consistency of integrality
+- in the components constraint handler, avoid solving last component as a subproblem if all others components were trivial
+- when solving a node is interrupted, create a node branched event for the artificial child node
+- add missing capture of binary variable in indicator constraint handler
+- disregard deletable flag in IIS generation to reenable removal of unused variables
+- restore infeasible original problem in IIS addition filter if interrupted or hitting a limit
+- fixed that SCIP did not catch Ctrl+C in concurrent mode
+- SCIPsolveConcurrent() now returns with an error when reoptimization is enabled, since the concurrent sub-solvers do not perform reoptimization and the combination could segfault after SCIPfreeReoptSolve()
+- fixed indexing in the heap implementation in Dijkstra's algorithm; behavior of heap was and is correct
+
+Build systems
+-------------
+
+- fixed that the doc target in cmake builds was not available when using -DBUILD_TESTING=OFF
+- add /bigobj compiler flag when compiling with cmake, MSVC, LPS=spx, and in debug mode
+
+Miscellaneous
+-------------
+
+- added DEBUGTOOL=perf option for check scripts to collect perf statistics (new sections @06, @09, @10), including computation and comparison of non-memory-stalling frequency-normalized time
+- check scripts now write available memory (kB) and the current cumulative CPU ticks (from /proc/stat) before and after the solve to the .out file (new sections @07 and @08)
+- allow to return SCIP_CONSADDED when propagating constraints
+- cardinality constraint handler now parses and writes the indicator variables
+
 @section RN1002 SCIP 10.0.2
 ***************************
 
 Fixed bugs
 ----------
 
+- an error is now produced if the emphasis settings in parameter files are wrong
 - propagate focus lower bound to child nodes to avoid outdated global lower bound
+- set small coefficients in SCIPvarGetActiveRepresentatives() to zero, in particular for (multi-)aggregations
+- avoid flattening multi-aggregations twice
+- fixed that inttobinary presolver kept trying to aggregate variables that were marked as not to be aggregated
+- provide memory allocation for implied integral binary and integer variables in dks heuristic to avoid data corruption
+- fixed that violations of nonlinear constraints were not registered with solutions, and so were not included in the overview printed by the checksol command of the SCIP shell
+- fixed failing assert when assembling data for writing of JSON statistics and no plugins were included for some plugin types
 - fixed a bug in sassy/dejavu by updating version
 - add missing library exports of SCIPchgVarLbGlobalExact(), SCIPchgVarUbGlobalExact(), SCIPinferVarLbConsExact(), and SCIPinferVarUbConsExact()
-- set small coefficients in SCIPvarGetActiveRepresentatives() to 0; in particular for (multi-)aggregations
 - add prefix TNY_ for tnycthread functions in order to avoid name clash with POSIX threads functions
-- provide memory allocation for implied integral binary and integer variables in dks heuristic to avoid data corruption
-- an error is produced if the emphasis settings in parameter files are wrong
-- fixed that header files and library of exact LP solver interface (lpiexact) and header files of TPI were not installed by make install (non-cmake build)
-- fixed failing assert when assembling data for writing of JSON statistics and no plugins were included for some plugin types
 - keep sanitizers enabled if only unsupported for some language in cmake
+- fixed that header files and library of exact LP solver interface (lpiexact) and header files of TPI were not installed by make install (non-cmake build)
 - fixed that C++14 may not have been enforced when compiling with CppAD or Boost with makefiles
-- avoid flattening multi-aggregations twice
-- fixed that violations of nonlinear constraints were not registered with solutions, and so were not included in the overview printed by the checksol command of the SCIP shell
-- fixed bug in presol_inttobinary if the variables are not allowed to be aggregated
 
 Miscellaneous
 -------------
@@ -1722,7 +1883,7 @@ Fixed bugs
 - read objective offset from ZIMPL files
 - Make sure that objective limit is disabled if not all variables are in the LP. If we would run into
   an objective limit in this case, the results of the LP solver are unclear.
-- fixed bug in reopt.c, which occured for bounds outside of current valid bounds
+- fixed bug in reopt.c, which occurred for bounds outside of current valid bounds
 - fixed problem with recomputing symmetries after a restart
 - fixed bug in SCIPcalcMIR() with wrong order of arguments for removeZerosQuad()
 - fixed segmentation fault in update of cut statistic
@@ -2872,7 +3033,7 @@ Features
 
 - Using the parameter "propagating/symmetry/recomputerestart" one can now decide to recompute symmetries after a
   restart or not. Previously one could just turn off symmetry computation after a restart. If orbital fixing
-  has found a reduction before the restart occured, symmetries have to be updated to ensure correctness.
+  has found a reduction before the restart occurred, symmetries have to be updated to ensure correctness.
   To this end, the user can decide via "propagating/symmetry/disableofrestart" whether orbital fixing is disabled or
    whether symmetries are recomputed.
 
@@ -2953,7 +3114,7 @@ Features
 - Expressions of form abs(x)^p * x in a nonlinear constraint are now sometimes recognized and handled by abspower constraints.
 
 - If polyhedral symmetry handling methods are used (cons_orbisack, cons_orbitope, cons_symresack), it is now possible to
-  recompute symmetries if a restart occured.
+  recompute symmetries if a restart occurred.
 
 - upgrade some more quadratic constraints to second-order cone constraints, that is,
   handle linear binary variables as if squared in simple upgrade and
@@ -3486,7 +3647,7 @@ Fixed bugs
 - fixed two issues related to (near-)redundant logicor constraints in presolving
 - fixed counting of aggregations in XOR constraint handler
 - fixed handling of unbounded solutions
-- fixed update of LP size information when an LP error occured during probing
+- fixed update of LP size information when an LP error occurred during probing
 - handle special case of variable bound constraints during aggregating variables
 - tighten sides of linear constraints before trying to upgrade them to more specialized constraints (knapsack, logic-or etc.) when calling SCIPupgradeConsLinear()
 - fixed an issue in repair heuristic in the case of loose (noncolumn) variables
@@ -6620,7 +6781,7 @@ Interface changes
   `constraints/setppc/cliqueshrinking`, first for enabling/disabling the clique lifting algorithm in cons_setppc.c,
   second parameter is for trying to create extra clique constraints in lifting algorithm, third parameter is for trying
   to decrease the number of variable in a clique constraint in the lifting algorithm
-- `limits/totalnodes` that allows to stop at the correct node if a restart occured; therefore the new
+- `limits/totalnodes` that allows to stop at the correct node if a restart occurred; therefore the new
   `SCIP_STATUS_TOTALNODELIMIT` is added
 - `lp/{rootiterlim,iterlim}` to set a limit on the LP iterations spend in the initial root LP and each
   LP resolve, respectively
@@ -7350,7 +7511,7 @@ Fixed bugs
   - fixed bug in debug.c: removed tree nodes had not been checked if they were pruned due to an incumbent solution found by a diving heuristic
 
 - Bounds:
-  - fixed bug which occured when changing a bound in the solving stage when this variables got upgraded from continuous to
+  - fixed bug which occurred when changing a bound in the solving stage when this variables got upgraded from continuous to
     a integer type, where the bounds of this variable were still not integral; due to that SCIPchgVarType() has changed (see above)
   - fixed bug in handling of lazy bounds that resulted in putting the bounds explicitly into the LP
 
@@ -7387,7 +7548,7 @@ Fixed bugs
   - fixed memory leak in coloring part of maximum clique algorithm (tclique_coloring.c) in a better way
 
 - Numerics:
-  - fixed bug which occured when the dual farkas multipliers were not available in the lpi because the LP could only be
+  - fixed bug which occurred when the dual farkas multipliers were not available in the lpi because the LP could only be
     solved with the primal simplex due to numerical problems
   - fixed bug in ZI round heuristic that led to infeasible shiftings for numerically slightly infeasible rows with close-to-zero coefficients
   - fixed numerical issue in octane heuristic: close-to-zero values for ray direction could have led to bad computations
@@ -7449,9 +7610,9 @@ Fixed bugs:
 - fixed bug in conflict.c, infeasibility analysis with big values led to wrong result
 
 - Heuristics:
-  - fixed bug in DINS heuristic that occured when the incumbent solution value is outside the variable's current domain
+  - fixed bug in DINS heuristic that occurred when the incumbent solution value is outside the variable's current domain
   - fixed behavior of LNS heuristics when the subproblem aborts: continue in optimized mode, stop in debug mode
-  - fixed segmentation fault in heur_subnlp.c which occured if resolving the NLP with a tighter feasibility tolerance
+  - fixed segmentation fault in heur_subnlp.c which occurred if resolving the NLP with a tighter feasibility tolerance
     failed with a solver error
   - fixed bug in heur_subnlp.c where constraints forbidding variable fixations where added if a cutoff was used in the subproblem
   - fixed bug in heur_subnlp.c where wrong constraints forbidding variable fixations where added in case of general integers
@@ -7592,7 +7753,7 @@ Features
   at the moment, it contains information about the relaxation solution stored in the variables: objective value and
   validness
 - SCIP may now be manually restarted
-- SCIPsolveKnapsackExactly() got a new 12. parameter `SCIP_Bool* success` which stores if an error occured during
+- SCIPsolveKnapsackExactly() got a new 12. parameter `SCIP_Bool* success` which stores if an error occurred during
   solving(normally a memory problem)
 - SCIP can now handle problems with continuous variables w.r.t. to counting (the projection to the integral variables
   are counted)
@@ -8408,7 +8569,7 @@ Fixed bugs
 - increased the numerical stability of coefficient tightening for Big M formulations
 - fixed bug with incorrect pseudo activities when objective of a variable switches sign in linear constraint handler
 - fixed bug with empty constraints in several writing routines
-- fixed `GGT-Kaibel-Bug` in var.c, prop_pseudoobj.c and cons_varbound.c that occured while computing new values using
+- fixed `GGT-Kaibel-Bug` in var.c, prop_pseudoobj.c and cons_varbound.c that occurred while computing new values using
   infinity values
 
 - Bounds:

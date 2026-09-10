@@ -196,8 +196,8 @@ endif
 LPSOPTIONS	+=	highs
 ifeq ($(LPS),highs)
 LINKER		=	CPP
-FLAGS		+=	-I$(LIBDIR)/$(LIBTYPE)/highs.$(OSTYPE).$(ARCH).$(COMP).$(LPSOPT)/
-LPILIBOBJ	=	lpi/lpi_highs.o scip/bitencode.o blockmemshell/memory.o scip/message.o
+FLAGS		+=	-I$(LIBDIR)/$(LIBTYPE)/highs.$(OSTYPE).$(ARCH).$(COMP).$(LPSOPT)/include/highs
+LPILIBOBJ	=	lpi/lpi_highs.o scip/bitencode.o blockmemshell/memory.o scip/rbtree.o scip/message.o
 LPILIBSRC	=	$(SRCDIR)/lpi/lpi_highs.cpp $(SRCDIR)/scip/bitencode.c $(SRCDIR)/blockmemshell/memory.c $(SRCDIR)/scip/message.c
 SOFTLINKS	+=	$(LIBDIR)/$(LIBTYPE)/highs.$(OSTYPE).$(ARCH).$(COMP).$(LPSOPT)
 LPIINSTMSG	=	"  -> \"highs.$(OSTYPE).$(ARCH).$(COMP).$(LPSOPT)\" is the path to the HiGHS directory containing headers and libhighs.so.\n"
@@ -758,6 +758,7 @@ SCIPPLUGINLIBOBJ=	scip/benders_default.o \
 			scip/heur_intshifting.o \
 			scip/heur_linesearchdiving.o \
 			scip/heur_localbranching.o \
+			scip/heur_localsearch.o \
 			scip/heur_lpface.o \
 			scip/heur_alns.o \
 			scip/heur_locks.o \
@@ -830,6 +831,7 @@ SCIPPLUGINLIBOBJ=	scip/benders_default.o \
 			scip/presol_sparsify.o \
 			scip/presol_dualsparsify.o \
 			scip/presol_stuffing.o \
+			scip/prop_distance.o \
 			scip/prop_dualfix.o \
 			scip/prop_genvbounds.o \
 			scip/prop_nlobbt.o \

@@ -30,9 +30,11 @@
 
 #include "scip/scip.h"
 #include "scip/scip_iisfinder.h"
+#include "scip/scip_prob.h"
 #include "scip/scipdefplugins.h"
 
 #include "include/scip_test.h"
+#include <string.h>
 
 /** GLOBAL VARIABLES **/
 static SCIP* scip;
@@ -77,4 +79,55 @@ Test(iisplugin, valid)
    SCIP_CALL( SCIPgenerateIIS(scip) );
    /** ensure that the iis exists and is therefore valid */
    cr_expect_eq(SCIPiisIsSubscipInfeasible(iis), TRUE, "iis is not valid");
+
+   SCIP* subscip = SCIPiisGetSubscip(iis);
+   int nOrigVars = SCIPgetNOrigVars(scip);
+   cr_expect(nOrigVars > SCIPgetNOrigConss(subscip), "original has more variables than iis");
+
+   /** test a removed and a preserved variable */
+   SCIP_VAR** origVars = SCIPgetOrigVars(scip);
+   SCIP_VAR* x2 = NULL;
+   SCIP_VAR* x6 = NULL;
+   for( int i = 0; i < nOrigVars; ++i )
+   {
+      SCIP_VAR* var = origVars[i];
+      if( strcmp(SCIPvarGetName(var), "x2") == 0 )
+         x2 = var;
+      else if( strcmp(SCIPvarGetName(var), "x6") == 0 )
+         x6 = var;
+   }
+   cr_assert(x2 != NULL);
+   cr_assert(x6 != NULL);
+   SCIP_VAR* x2IIS = SCIPiisGetSubscipVar(iis, x2);
+   cr_assert(x2IIS != NULL);
+   cr_assert(strcmp(SCIPvarGetName(x2), SCIPvarGetName(x2IIS)) == 0);
+   SCIP_VAR* x6IIS = SCIPiisGetSubscipVar(iis, x6);
+   cr_assert(x6IIS == NULL);
+
+   /** test a removed and preserved constraint */
+   int nOrigConss = SCIPgetNOrigConss(scip);
+   SCIP_CONS** origConss = SCIPgetOrigConss(scip);
+   SCIP_CONS* c1 = NULL;
+   SCIP_CONS* c2 = NULL;
+   SCIP_CONS* c5 = NULL;
+   for( int i = 0; i < nOrigConss; ++i )
+   {
+      SCIP_CONS* cons = origConss[i];
+      if( strcmp(SCIPconsGetName(cons), "c1") == 0 )
+         c1 = cons;
+      else if( strcmp(SCIPconsGetName(cons), "c2") == 0 )
+         c2 = cons;
+      else if( strcmp(SCIPconsGetName(cons), "c5") == 0 )
+         c5 = cons;
+   }
+   cr_assert(c1 != NULL);
+   cr_assert(c2 != NULL);
+   cr_assert(c5 != NULL);
+   SCIP_CONS* c1IIS = SCIPiisGetSubscipCons(iis, c1);
+   SCIP_CONS* c2IIS = SCIPiisGetSubscipCons(iis, c2);
+   SCIP_CONS* c5IIS = SCIPiisGetSubscipCons(iis, c5);
+   cr_assert(c1IIS == NULL);
+   cr_assert(c2IIS != NULL || c5IIS != NULL);
+   cr_assert(c2IIS == NULL || strcmp(SCIPconsGetName(c2), SCIPconsGetName(c2IIS)) == 0);
+   cr_assert(c5IIS == NULL || strcmp(SCIPconsGetName(c5), SCIPconsGetName(c5IIS)) == 0);
 }

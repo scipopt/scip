@@ -68,7 +68,7 @@
  * </CENTER>
  *
  *
- * Instead of using a compact noncovex MINLP formulation, we utilize the results from A. Gleixner, S. Maher, B. Mueller,
+ * Instead of using a compact nonconvex MINLP formulation, we utilize the results from A. Gleixner, S. Maher, B. M&uuml;ller,
  * and J. Pedroso that have been presented in <a href="https://opus4.kobv.de/opus4-zib/frontdoor/index/index/docId/6449">ZIB-Report 17-07</a>.
  * Their approach is based on a Dantzig-Wolfe decomposition that can be solved via column generation. The first step
  * is a reformulation which is similar to the classical reformulation for the Cutting Stock Problem, however, featuring

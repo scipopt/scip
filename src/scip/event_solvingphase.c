@@ -98,16 +98,6 @@
  * Data structures
  */
 
-/** enumerator to represent the current solving phase */
-enum SolvingPhase
-{
-   SOLVINGPHASE_UNINITIALIZED = -1,          /**< solving phase has not been initialized yet */
-   SOLVINGPHASE_FEASIBILITY   = 0,           /**< no solution was found until now */
-   SOLVINGPHASE_IMPROVEMENT   = 1,           /**< current incumbent solution is suboptimal */
-   SOLVINGPHASE_PROOF         = 2            /**< current incumbent is optimal */
-};
-typedef enum SolvingPhase SOLVINGPHASE;
-
 /** depth information structure */
 struct DepthInfo
 {
@@ -131,23 +121,19 @@ struct SCIP_EventhdlrData
    char*                 proofsetname;       /**< settings file parameter for the proof phase -- precedence over emphasis settings */
    SCIP_Real             optimalvalue;       /**< value of optimal solution of the problem */
    SCIP_Longint          nnodesleft;         /**< store the number of open nodes that are considered internally to update data */
-   SOLVINGPHASE          solvingphase;       /**< the current solving phase */
+   SCIP_SOLVINGPHASE     solvingphase;       /**< the current solving phase */
+   SCIP_SOLVINGPHASEFLAG phaseflags;         /**< bit field of reached transition criteria */
    char                  transitionmethod;   /**< transition method from improvement phase -> proof phase?
                                                *  (e)stimate based, (l)ogarithmic regression based, (o)ptimal value based (cheat!),
                                                *  (r)ank-1 node based */
    SCIP_Longint          nodeoffset;         /**< node offset for triggering rank-1 node based phased transition */
-   SCIP_Longint          lastndelayedcutoffs;/**< the number of delayed cutoffs since the last update of a focus node */
+   SCIP_Longint          lastndelayedcutoffs; /**< the number of delayed cutoffs since the last update of a focus node */
    SCIP_Bool             fallback;           /**< should the phase transition fall back to improvement phase? */
    SCIP_Bool             interruptoptimal;   /**< interrupt after optimal solution was found */
    SCIP_Bool             userestart1to2;     /**< should a restart be applied between the feasibility and improvement phase? */
    SCIP_Bool             userestart2to3;     /**< should a restart be applied between the improvement and the proof phase? */
    SCIP_Bool             useemphsettings;    /**< should emphasis settings for the solving phases be used, or settings files? */
-
    SCIP_Bool             testmode;           /**< should transitions be tested only, but not triggered? */
-   SCIP_Bool             rank1reached;       /**< has the rank-1 transition into proof phase been reached? */
-   SCIP_Bool             estimatereached;    /**< has the best-estimate transition been reached? */
-   SCIP_Bool             optimalreached;     /**< is the incumbent already optimal? */
-   SCIP_Bool             logreached;         /**< has a logarithmic phase transition been reached? */
    SCIP_Bool             newbestsol;         /**< has a new incumbent been found since the last node was solved? */
 
    SCIP_REGRESSION*      regression;         /**< regression data for log linear regression of the incumbent solutions */
@@ -694,8 +680,6 @@ SCIP_Bool checkEstimateCriterion(
    SCIP_EVENTHDLRDATA*   eventhdlrdata       /**< event handler data */
    )
 {
-   assert(SCIPgetStage(scip) == SCIP_STAGE_SOLVING);
-
    if( SCIPgetNSols(scip) > 0 )
       return ((SCIPgetNNodes(scip) > eventhdlrdata->nodeoffset) && (eventhdlrdata->nnodesbelowincumbent == 0));
    else
@@ -771,7 +755,7 @@ SCIP_Bool transitionPhase3(
    SCIP_EVENTHDLRDATA*   eventhdlrdata       /**< event handler data */
    )
 {
-   if( eventhdlrdata->solvingphase == SOLVINGPHASE_PROOF && !eventhdlrdata->fallback )
+   if( eventhdlrdata->solvingphase == SCIP_SOLVINGPHASE_PROOF && !eventhdlrdata->fallback )
       return TRUE;
 
    /* check criterion based on selected transition method */
@@ -834,12 +818,12 @@ void determineSolvingPhase(
 {
    /* without solution, we are in the feasibility phase */
    if( SCIPgetNSols(scip) == 0 )
-      eventhdlrdata->solvingphase = SOLVINGPHASE_FEASIBILITY;
-   else if( eventhdlrdata->solvingphase != SOLVINGPHASE_PROOF || eventhdlrdata->fallback )
-      eventhdlrdata->solvingphase = SOLVINGPHASE_IMPROVEMENT;
+      eventhdlrdata->solvingphase = SCIP_SOLVINGPHASE_FEASIBILITY;
+   else if( eventhdlrdata->solvingphase != SCIP_SOLVINGPHASE_PROOF || eventhdlrdata->fallback )
+      eventhdlrdata->solvingphase = SCIP_SOLVINGPHASE_IMPROVEMENT;
 
-   if( eventhdlrdata->solvingphase == SOLVINGPHASE_IMPROVEMENT && transitionPhase3(scip, eventhdlrdata) )
-      eventhdlrdata->solvingphase = SOLVINGPHASE_PROOF;
+   if( eventhdlrdata->solvingphase == SCIP_SOLVINGPHASE_IMPROVEMENT && transitionPhase3(scip, eventhdlrdata) )
+      eventhdlrdata->solvingphase = SCIP_SOLVINGPHASE_PROOF;
 }
 
 /** changes parameters by using emphasis settings */
@@ -854,16 +838,16 @@ SCIP_RETCODE changeEmphasisParameters(
    /* choose the appropriate emphasis settings for the new solving phase */
    switch(eventhdlrdata->solvingphase)
    {
-      case SOLVINGPHASE_FEASIBILITY:
+      case SCIP_SOLVINGPHASE_FEASIBILITY:
          paramemphasis = SCIP_PARAMEMPHASIS_PHASEFEAS;
          break;
-      case SOLVINGPHASE_IMPROVEMENT:
+      case SCIP_SOLVINGPHASE_IMPROVEMENT:
          paramemphasis = SCIP_PARAMEMPHASIS_PHASEIMPROVE;
          break;
-      case SOLVINGPHASE_PROOF:
+      case SCIP_SOLVINGPHASE_PROOF:
          paramemphasis = SCIP_PARAMEMPHASIS_PHASEPROOF;
          break;
-      case SOLVINGPHASE_UNINITIALIZED:
+      case SCIP_SOLVINGPHASE_UNINITIALIZED:
       default:
          SCIPdebugMsg(scip, "Unknown solving phase: %d -> ABORT!\n ", eventhdlrdata->solvingphase);
          SCIPABORT();
@@ -889,16 +873,16 @@ SCIP_RETCODE changeParametersUsingSettingsFiles(
    /* choose the settings file for the new solving phase */
    switch(eventhdlrdata->solvingphase)
    {
-      case SOLVINGPHASE_FEASIBILITY:
+      case SCIP_SOLVINGPHASE_FEASIBILITY:
          paramfilename = eventhdlrdata->feassetname;
          break;
-      case SOLVINGPHASE_IMPROVEMENT:
+      case SCIP_SOLVINGPHASE_IMPROVEMENT:
          paramfilename = eventhdlrdata->improvesetname;
          break;
-      case SOLVINGPHASE_PROOF:
+      case SCIP_SOLVINGPHASE_PROOF:
          paramfilename = eventhdlrdata->proofsetname;
          break;
-      case SOLVINGPHASE_UNINITIALIZED:
+      case SCIP_SOLVINGPHASE_UNINITIALIZED:
       default:
          SCIPdebugMsg(scip, "Unknown solving phase: %d -> ABORT!\n ", eventhdlrdata->solvingphase);
          return SCIP_INVALIDCALL;
@@ -1037,11 +1021,11 @@ SCIP_RETCODE applySolvingPhase(
    SCIP_EVENTHDLRDATA*   eventhdlrdata       /**< event handler data */
    )
 {
-   SOLVINGPHASE oldsolvingphase;
+   SCIP_SOLVINGPHASE oldsolvingphase;
    SCIP_Bool restart;
 
    /* return immediately if we are in the proof phase */
-   if( eventhdlrdata->solvingphase == SOLVINGPHASE_PROOF && !eventhdlrdata->fallback )
+   if( eventhdlrdata->solvingphase == SCIP_SOLVINGPHASE_PROOF && !eventhdlrdata->fallback )
       return SCIP_OKAY;
 
    /* save current solving phase */
@@ -1055,7 +1039,7 @@ SCIP_RETCODE applySolvingPhase(
       return SCIP_OKAY;
 
    /* check if the solving process should be interrupted when the current solution is optimal */
-   if( eventhdlrdata->solvingphase == SOLVINGPHASE_PROOF && eventhdlrdata->transitionmethod == 'o' &&
+   if( eventhdlrdata->solvingphase == SCIP_SOLVINGPHASE_PROOF && eventhdlrdata->transitionmethod == 'o' &&
          eventhdlrdata->interruptoptimal )
    {
       SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL, "Solution is optimal. Calling user interruption.\n");
@@ -1065,9 +1049,9 @@ SCIP_RETCODE applySolvingPhase(
    }
 
    /* check if a restart should be performed after phase transition */
-   if( eventhdlrdata->solvingphase == SOLVINGPHASE_IMPROVEMENT && eventhdlrdata->userestart1to2 )
+   if( eventhdlrdata->solvingphase == SCIP_SOLVINGPHASE_IMPROVEMENT && eventhdlrdata->userestart1to2 )
       restart = TRUE;
-   else if( eventhdlrdata->solvingphase == SOLVINGPHASE_PROOF && eventhdlrdata->userestart2to3 )
+   else if( eventhdlrdata->solvingphase == SCIP_SOLVINGPHASE_PROOF && eventhdlrdata->userestart2to3 )
       restart = TRUE;
    else
       restart = FALSE;
@@ -1189,31 +1173,43 @@ void testCriteria(
    assert(scip != NULL);
    assert(eventhdlrdata != NULL);
 
-   if( ! eventhdlrdata->logreached && checkLogCriterion(scip, eventhdlrdata) )
+   if( !(eventhdlrdata->phaseflags & SCIP_SOLVINGPHASEFLAG_LOG) && checkLogCriterion(scip, eventhdlrdata) )
    {
-      eventhdlrdata->logreached = TRUE;
-      SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL, "  Log criterion reached after %lld nodes, %.2f sec.\n",
-         SCIPgetNNodes(scip), SCIPgetSolvingTime(scip));
+      eventhdlrdata->phaseflags |= SCIP_SOLVINGPHASEFLAG_LOG;
+      if( eventhdlrdata->testmode )
+      {
+         SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL, "  Log criterion reached after %lld nodes, %.2f sec.\n",
+               SCIPgetNNodes(scip), SCIPgetSolvingTime(scip));
+      }
    }
-   if( ! eventhdlrdata->rank1reached && checkRankOneTransition(scip, eventhdlrdata) )
+   if( !(eventhdlrdata->phaseflags & SCIP_SOLVINGPHASEFLAG_RANK1) && checkRankOneTransition(scip, eventhdlrdata) )
    {
-      eventhdlrdata->rank1reached = TRUE;
-      SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL, "  Rank 1 criterion reached after %lld nodes, %.2f sec.\n",
-         SCIPgetNNodes(scip), SCIPgetSolvingTime(scip));
+      eventhdlrdata->phaseflags |= SCIP_SOLVINGPHASEFLAG_RANK1;
+      if( eventhdlrdata->testmode )
+      {
+         SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL, "  Rank 1 criterion reached after %lld nodes, %.2f sec.\n",
+               SCIPgetNNodes(scip), SCIPgetSolvingTime(scip));
+      }
    }
 
-   if( ! eventhdlrdata->estimatereached && checkEstimateCriterion(scip, eventhdlrdata) )
+   if( !(eventhdlrdata->phaseflags & SCIP_SOLVINGPHASEFLAG_ESTIMATE) && checkEstimateCriterion(scip, eventhdlrdata) )
    {
-      eventhdlrdata->estimatereached = TRUE;
-      SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL, "  Estimate criterion reached after %lld nodes, %.2f sec.\n",
-         SCIPgetNNodes(scip), SCIPgetSolvingTime(scip));
+      eventhdlrdata->phaseflags |= SCIP_SOLVINGPHASEFLAG_ESTIMATE;
+      if( eventhdlrdata->testmode )
+      {
+         SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL, "  Estimate criterion reached after %lld nodes, %.2f sec.\n",
+               SCIPgetNNodes(scip), SCIPgetSolvingTime(scip));
+      }
    }
 
-   if( ! eventhdlrdata->optimalreached && checkOptimalSolution(scip, eventhdlrdata) )
+   if( !(eventhdlrdata->phaseflags & SCIP_SOLVINGPHASEFLAG_OPTIMAL) && checkOptimalSolution(scip, eventhdlrdata) )
    {
-      eventhdlrdata->optimalreached = TRUE;
-      SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL, "  Optimum reached after %lld nodes, %.2f sec.\n",
-         SCIPgetNNodes(scip), SCIPgetSolvingTime(scip));
+      eventhdlrdata->phaseflags |= SCIP_SOLVINGPHASEFLAG_OPTIMAL;
+      if( eventhdlrdata->testmode )
+      {
+         SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL, "  Optimum reached after %lld nodes, %.2f sec.\n",
+               SCIPgetNNodes(scip), SCIPgetSolvingTime(scip));
+      }
    }
 }
 
@@ -1371,19 +1367,18 @@ SCIP_DECL_EVENTINIT(eventInitSolvingphase)
    assert(eventhdlrdata != NULL);
 
    /* initialize the solving phase */
-   eventhdlrdata->solvingphase = SOLVINGPHASE_UNINITIALIZED;
+   eventhdlrdata->solvingphase = SCIP_SOLVINGPHASE_UNINITIALIZED;
 
    /* none of the transitions is reached yet */
-   eventhdlrdata->optimalreached = FALSE;
-   eventhdlrdata->logreached = FALSE;
-   eventhdlrdata->rank1reached = FALSE;
-   eventhdlrdata->estimatereached = FALSE;
+   eventhdlrdata->phaseflags = SCIP_SOLVINGPHASEFLAG_NONE;
    eventhdlrdata->nnondefaultparams = 0;
    eventhdlrdata->nondefaultparams = NULL;
    eventhdlrdata->nondefaultparamssize = 0;
 
-   /* apply solving phase for the first time after problem was transformed to apply settings for the feasibility phase */
-   if( eventhdlrdata->enabled )
+   /* in test mode we only determine the phase without changing solver settings */
+   if( eventhdlrdata->testmode )
+      determineSolvingPhase(scip, eventhdlrdata);
+   else if( eventhdlrdata->enabled )
    {
       /* collect non-default parameters */
       SCIP_CALL( collectNondefaultParams(scip, eventhdlrdata) );
@@ -1436,6 +1431,7 @@ SCIP_DECL_EVENTEXEC(eventExecSolvingphase)
    assert(eventhdlr != NULL);
 
    eventhdlrdata = SCIPeventhdlrGetData(eventhdlr);
+   assert(eventhdlrdata != NULL);
    eventtype = SCIPeventGetType(event);
    assert(eventtype & (EVENTHDLR_EVENT));
    assert(eventtype != SCIP_EVENTTYPE_NODEFOCUSED || SCIPeventGetNode(event) == SCIPgetCurrentNode(scip));
@@ -1443,17 +1439,17 @@ SCIP_DECL_EVENTEXEC(eventExecSolvingphase)
    /* update data structures depending on the event */
    SCIP_CALL( updateDataStructures(scip, eventhdlrdata, eventtype) );
 
-   /* if the phase-based solver is enabled, we check if a phase transition occurred and alter the settings accordingly */
-   if( eventhdlrdata->enabled )
+   /* in test mode we only determine the phase without changing solver settings */
+   if( eventhdlrdata->testmode )
+      determineSolvingPhase(scip, eventhdlrdata);
+   else
    {
+      assert(eventhdlrdata->enabled);
       SCIP_CALL( applySolvingPhase(scip, eventhdlrdata) );
    }
 
-   /* in test mode, we check every transition criterion */
-   if( eventhdlrdata->testmode )
-   {
-      testCriteria(scip, eventhdlrdata);
-   }
+   /* update the bit field of reached transition criteria */
+   testCriteria(scip, eventhdlrdata);
 
    return SCIP_OKAY;
 }
@@ -1559,10 +1555,10 @@ SCIP_RETCODE SCIPincludeEventHdlrSolvingphase(
    SCIP_CALL( SCIPsetEventhdlrExitsol(scip, eventhdlr, eventExitsolSolvingphase) );
 
    /* add Solvingphase event handler parameters */
-   SCIP_CALL( SCIPaddBoolParam(scip, EVENTHDLR_NAME "s/enabled", "should the event handler adapt the solver behavior?",
+   SCIP_CALL( SCIPaddBoolParam(scip, EVENTHDLR_NAME "s/enabled", "is the event handler enabled?",
          &eventhdlrdata->enabled, FALSE, DEFAULT_ENABLED, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddBoolParam(scip, EVENTHDLR_NAME "s/testmode", "should the event handler test all phase transitions?",
+   SCIP_CALL( SCIPaddBoolParam(scip, EVENTHDLR_NAME "s/testmode", "should the event handler only determine phase transitions, suppressing settings changes?",
          &eventhdlrdata->testmode, FALSE, DEFAULT_TESTMODE, NULL, NULL) );
 
    SCIP_CALL( SCIPaddStringParam(scip, EVENTHDLR_NAME "s/feassetname", "settings file for feasibility phase -- precedence over emphasis settings",
@@ -1605,4 +1601,44 @@ SCIP_RETCODE SCIPincludeEventHdlrSolvingphase(
       &eventhdlrdata->useemphsettings, FALSE, DEFAULT_USEEMPHSETTINGS, NULL, NULL) );
 
    return SCIP_OKAY;
+}
+
+/** returns the current solving phase tracked by the solvingphase event handler */
+SCIP_SOLVINGPHASE SCIPgetSolvingPhase(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   SCIP_EVENTHDLR* eventhdlr;
+   SCIP_EVENTHDLRDATA* eventhdlrdata;
+
+   assert(scip != NULL);
+
+   eventhdlr = SCIPfindEventhdlr(scip, EVENTHDLR_NAME);
+   if( eventhdlr == NULL )
+      return SCIP_SOLVINGPHASE_UNINITIALIZED;
+
+   eventhdlrdata = SCIPeventhdlrGetData(eventhdlr);
+   assert(eventhdlrdata != NULL);
+
+   return eventhdlrdata->solvingphase;
+}
+
+/** returns the bit field of reached transition criteria */
+SCIP_SOLVINGPHASEFLAG SCIPgetSolvingPhaseFlags(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   SCIP_EVENTHDLR* eventhdlr;
+   SCIP_EVENTHDLRDATA* eventhdlrdata;
+
+   assert(scip != NULL);
+
+   eventhdlr = SCIPfindEventhdlr(scip, EVENTHDLR_NAME);
+   if( eventhdlr == NULL )
+      return SCIP_SOLVINGPHASEFLAG_NONE;
+
+   eventhdlrdata = SCIPeventhdlrGetData(eventhdlr);
+   assert(eventhdlrdata != NULL);
+
+   return eventhdlrdata->phaseflags;
 }

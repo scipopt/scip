@@ -81,7 +81,7 @@
 struct SCIP_HeurData
 {
    int                   lastsolindex;       /**< index of last solution for which heuristic was performed */
-   SCIP_Real             matchingrate;       /**< percentage by which two variables have have to match in their LP-row
+   SCIP_Real             matchingrate;       /**< percentage by which two variables have to match in their LP-row
                                               *   set to be associated as pair by heuristic */
    SCIP_VAR**            binvars;            /**< Array of binary variables which are sorted with respect to their occurrence
                                               *   in the LP-rows */

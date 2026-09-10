@@ -152,6 +152,7 @@
 #ifdef WITH_CARDINALITY_UPGRADE
 #define DEFAULT_UPGDCARDINALITY   FALSE /**< if TRUE then try to update knapsack constraints to cardinality constraints */
 #endif
+#define DEFAULT_COPYTYPEDCONS     FALSE /**< should knapsack constraints be copied as knapsack instead of linear? */
 
 /* @todo maybe use event SCIP_EVENTTYPE_VARUNLOCKED to decide for another dual-presolving run on a constraint */
 
@@ -220,6 +221,7 @@ struct SCIP_ConshdlrData
    SCIP_Bool             upgdcardinality;    /**< if TRUE then try to update knapsack constraints to cardinality constraints */
    SCIP_Bool             upgradedcard;       /**< whether we have already upgraded knapsack constraints to cardinality constraints */
 #endif
+   SCIP_Bool             copytypedcons;      /**< should knapsack constraints be copied as knapsack instead of linear? */
 };
 
 
@@ -1098,7 +1100,7 @@ SCIP_RETCODE SCIPsolveKnapsackExactly(
    int*                  nsolitems,          /**< pointer to store number of items in solution, or NULL */
    int*                  nnonsolitems,       /**< pointer to store number of items not in solution, or NULL */
    SCIP_Real*            solval,             /**< pointer to store optimal solution value, or NULL */
-   SCIP_Bool*            success             /**< pointer to store if an error occured during solving
+   SCIP_Bool*            success             /**< pointer to store if an error occurred during solving
                                               *   (normally a memory problem) */
    )
 {
@@ -1125,6 +1127,7 @@ SCIP_RETCODE SCIPsolveKnapsackExactly(
    SCIP_Real greedyupperbound;
    SCIP_Bool eqweights;
    SCIP_Bool intprofits;
+   int lastitem;  /* last item processed in DP (for early termination) */
 
    assert(weights != NULL);
    assert(profits != NULL);
@@ -1480,6 +1483,9 @@ SCIP_RETCODE SCIPsolveKnapsackExactly(
    for( d = currminweight; d < intcap; ++d )
       optvalues[d] = myprofits[0];
 
+   /* by default, all items are processed */
+   lastitem = nmyitems - 1;
+
    /* fills dynamic programming table with optimal values */
    for( j = 1; j < nmyitems; ++j )
    {
@@ -1517,6 +1523,13 @@ SCIP_RETCODE SCIPsolveKnapsackExactly(
          currminweight = intweight;
 
       allcurrminweight[j] = currminweight;
+
+      /* early termination: if current best value reaches the LP upper bound, we have found an optimal solution */
+      if( intprofits && optvalues[IDX(j, intcap - 1)] >= greedyupperbound )
+      {
+         lastitem = j;
+         break;
+      }
    }
 
    /* update optimal solution by following the table */
@@ -1527,8 +1540,12 @@ SCIP_RETCODE SCIPsolveKnapsackExactly(
 
       SCIPdebugMsg(scip, "Fill the solution vector after solving exactly.\n");
 
+      /* items after lastitem were not processed due to early termination; they are not in the solution */
+      for( j = nmyitems - 1; j > lastitem; --j )
+         nonsolitems[(*nnonsolitems)++] = myitems[j];
+
       /* insert all items in (non-) solution vector */
-      for( j = nmyitems - 1; j > 0; --j )
+      for( j = lastitem; j > 0; --j )
       {
          /* if the following condition holds this means all remaining items does not fit anymore */
          if( d < allcurrminweight[j] )
@@ -1572,7 +1589,7 @@ SCIP_RETCODE SCIPsolveKnapsackExactly(
 
    /* update solution value */
    if( solval != NULL )
-      *solval += optvalues[IDX(nmyitems-1,intcap-1)];
+      *solval += optvalues[IDX(lastitem, intcap - 1)];
    SCIPfreeBufferArray(scip, &allcurrminweight);
 
    /* free all temporary memory */
@@ -7654,7 +7671,7 @@ SCIP_RETCODE propagateCons(
                   SCIPdebugMsg(scip, " -> fixing variable <%s> to 0\n", SCIPvarGetName(maxvar));
                   SCIP_CALL( SCIPresetConsAge(scip, cons) );
                   SCIP_CALL( SCIPinferBinvarCons(scip, maxvar, FALSE, cons, cliquestartposs[c], &infeasible, &tightened) );
-                  assert(consdata->onesweightsum == oldonesweightsum);  /* cppcheck-suppress knownConditionTrueFalse */
+                  assert(consdata->onesweightsum == oldonesweightsum);
                   assert(!infeasible);
                   assert(tightened);
                   (*nfixedvars)++;
@@ -8177,7 +8194,6 @@ SCIP_RETCODE detectRedundantVars(
    SCIP_Longint* weights;
    SCIP_Longint capacity;
    SCIP_Longint sum;
-   int noldchgcoefs;
    int nvars;
    int v;
    int w;
@@ -8194,7 +8210,6 @@ SCIP_RETCODE detectRedundantVars(
    assert(consdata->nvars >= 2);
    assert(consdata->weightsum > consdata->capacity);
 
-   noldchgcoefs = *nchgcoefs;
    vars = consdata->vars;
    weights = consdata->weights;
    nvars = consdata->nvars;
@@ -8231,10 +8246,6 @@ SCIP_RETCODE detectRedundantVars(
 
       return SCIP_OKAY;
    }
-
-   /* if we already found some redundant variables, stop here */
-   if( *nchgcoefs > noldchgcoefs )
-      return SCIP_OKAY;
 
    assert(vars == consdata->vars);
    assert(weights == consdata->weights);
@@ -13240,34 +13251,80 @@ SCIP_DECL_CONSPRINT(consPrintKnapsack)
 static
 SCIP_DECL_CONSCOPY(consCopyKnapsack)
 {  /*lint --e{715}*/
+   SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_VAR** sourcevars;
    SCIP_Longint* weights;
-   SCIP_Real* coefs;
    const char* consname;
    int nvars;
-   int v;
 
-   /* get variables and coefficients of the source constraint */
+   assert(scip != NULL);
+   assert(sourcescip != NULL);
+   assert(sourcecons != NULL);
+   assert(valid != NULL);
+
+   conshdlrdata = SCIPconshdlrGetData(sourceconshdlr);
+   assert(conshdlrdata != NULL);
+
+   /* get variables and weights of the source constraint */
    sourcevars = SCIPgetVarsKnapsack(sourcescip, sourcecons);
    nvars = SCIPgetNVarsKnapsack(sourcescip, sourcecons);
    weights = SCIPgetWeightsKnapsack(sourcescip, sourcecons);
 
-   SCIP_CALL( SCIPallocBufferArray(scip, &coefs, nvars) );
-   for( v = 0; v < nvars; ++v )
-      coefs[v] = (SCIP_Real) weights[v];
+   if( conshdlrdata->copytypedcons )
+   {
+      SCIP_VAR** targetvars;
+      int v;
 
-   if( name != NULL )
-      consname = name;
+      *valid = TRUE;
+      assert(nvars >= 0);
+
+      /* allocate target variable array */
+      SCIP_CALL( SCIPallocBufferArray(scip, &targetvars, nvars) );
+
+      /* map source variables to target variables */
+      for( v = 0; v < nvars && *valid; ++v )
+      {
+         SCIP_CALL( SCIPgetVarCopy(sourcescip, scip, sourcevars[v], &targetvars[v], varmap, consmap, global, valid) );
+         assert(!(*valid) || targetvars[v] != NULL);
+      }
+
+      /* only create the target constraint if all variables were successfully copied */
+      if( *valid )
+      {
+         if( name != NULL )
+            consname = name;
+         else
+            consname = SCIPconsGetName(sourcecons);
+
+         SCIP_CALL( SCIPcreateConsKnapsack(scip, cons, consname, nvars, targetvars, weights,
+               SCIPgetCapacityKnapsack(sourcescip, sourcecons),
+               initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode) );
+      }
+
+      SCIPfreeBufferArray(scip, &targetvars);
+   }
    else
-      consname = SCIPconsGetName(sourcecons);
+   {
+      SCIP_Real* coefs;
+      int v;
 
-   /* copy the logic using the linear constraint copy method */
-   SCIP_CALL( SCIPcopyConsLinear(scip, cons, sourcescip, consname, nvars, sourcevars, coefs,
-         -SCIPinfinity(scip), (SCIP_Real) SCIPgetCapacityKnapsack(sourcescip, sourcecons), varmap, consmap,
-         initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode, global, valid) );
-   assert(cons != NULL);
+      SCIP_CALL( SCIPallocBufferArray(scip, &coefs, nvars) );
+      for( v = 0; v < nvars; ++v )
+         coefs[v] = (SCIP_Real) weights[v];
 
-   SCIPfreeBufferArray(scip, &coefs);
+      if( name != NULL )
+         consname = name;
+      else
+         consname = SCIPconsGetName(sourcecons);
+
+      /* copy the logic using the linear constraint copy method */
+      SCIP_CALL( SCIPcopyConsLinear(scip, cons, sourcescip, consname, nvars, sourcevars, coefs,
+            -SCIPinfinity(scip), (SCIP_Real) SCIPgetCapacityKnapsack(sourcescip, sourcecons), varmap, consmap,
+            initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode, global, valid) );
+      assert(cons != NULL);
+
+      SCIPfreeBufferArray(scip, &coefs);
+   }
 
    return SCIP_OKAY;
 }
@@ -13652,6 +13709,11 @@ SCIP_RETCODE SCIPincludeConshdlrKnapsack(
          "if TRUE then try to update knapsack constraints to cardinality constraints",
          &conshdlrdata->upgdcardinality, TRUE, DEFAULT_UPGDCARDINALITY, NULL, NULL) );
 #endif
+   SCIP_CALL( SCIPaddBoolParam(scip,
+         "constraints/" CONSHDLR_NAME "/copytypedcons",
+         "should knapsack constraints be copied as knapsack instead of as linear constraints?",
+         &conshdlrdata->copytypedcons, TRUE, DEFAULT_COPYTYPEDCONS, NULL, NULL) );
+
    return SCIP_OKAY;
 }
 

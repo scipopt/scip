@@ -776,7 +776,7 @@ SCIP_RETCODE SCIPcomputeLPRelIntPoint(
  *  @note calling this method in SCIP_STAGE_SOLVED is only recommended to experienced users and should only be called
  *        for pure LP instances (without presolving)
  *
- *  @note The return value of this method should be used carefully if the dual feasibility check was explictely disabled.
+ *  @note The return value of this method should be used carefully if the dual feasibility check was explicitly disabled.
  */
 SCIP_EXPORT
 SCIP_Real SCIPgetColRedcost(

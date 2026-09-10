@@ -884,12 +884,13 @@ SCIP_RETCODE SCIPinterruptLP(
 {
    SCIP_CALL( SCIPcheckStage(scip, "SCIPinterruptLP", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
 
+   if( interrupt )
+      scip->stat->userinterrupt = TRUE;
+
    if( scip->lp == NULL )
       return SCIP_OKAY;
 
    SCIP_CALL( SCIPlpInterrupt(scip->lp, interrupt) );
-   if( interrupt )
-      scip->stat->userinterrupt = TRUE;
 
    return SCIP_OKAY;
 }
@@ -1158,7 +1159,7 @@ SCIP_RETCODE SCIPcomputeLPRelIntPoint(
  *  @note calling this method in SCIP_STAGE_SOLVED is only recommended to experienced users and should only be called
  *        for pure LP instances (without presolving)
  *
- *  @note The return value of this method should be used carefully if the dual feasibility check was explictely disabled.
+ *  @note The return value of this method should be used carefully if the dual feasibility check was explicitly disabled.
  */
 SCIP_Real SCIPgetColRedcost(
    SCIP*                 scip,               /**< SCIP data structure */

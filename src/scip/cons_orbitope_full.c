@@ -1045,8 +1045,10 @@ SCIP_RETCODE replaceAggregatedVarsOrbitopeFull(
          assert( SCIPvarIsActive(var) || SCIPvarGetStatus(var) == SCIP_VARSTATUS_NEGATED || SCIPvarGetStatus(var) == SCIP_VARSTATUS_FIXED );
          if ( var != vars[i][j] )
          {
+            SCIP_CALL( SCIPunlockVarCons(scip, vars[i][j], cons, TRUE, TRUE) );
             SCIP_CALL( SCIPreleaseVar(scip, &vars[i][j]) );
             vars[i][j] = var;
+            SCIP_CALL( SCIPlockVarCons(scip, vars[i][j], cons, TRUE, TRUE) );
             SCIP_CALL( SCIPcaptureVar(scip, var) );
          }
       }

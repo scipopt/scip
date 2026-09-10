@@ -147,7 +147,7 @@ echo                                               >> "${OUTFILE}"
 echo "hard time limit: ${HARDTIMELIMIT}          " >> "${OUTFILE}"
 echo "hard mem limit: ${HARDMEMLIMIT}"             >> "${OUTFILE}"
 echo                                               >> "${OUTFILE}"
-echo "SLURM jobID: ${SLURM}_JOB_ID"                >> "${OUTFILE}"
+echo "SLURM jobID: ${SLURM_JOB_ID}"                >> "${OUTFILE}"
 echo                                               >> "${OUTFILE}"
 echo "@01 ${FILENAME} ==========="                 >> "${OUTFILE}"
 echo "@01 ${FILENAME} ==========="                 >> "${ERRFILE}"
@@ -174,6 +174,8 @@ if test "${retcode}" != 0
 then
     echo "${EXECNAME} returned with error code ${retcode}." >> "${ERRFILE}"
 fi
+# target frequency for time normalization
+echo "@09 ${TARGETFREQ:-0}"         >> "${OUTFILE}"
 
 echo                                >> "${OUTFILE}"
 echo "call solution checker"        >> "${OUTFILE}"

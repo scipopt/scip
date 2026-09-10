@@ -64,9 +64,6 @@ void setup(void)
       SCIP_CALL( SCIPaddVar(scip, var) );
       SCIP_CALL( SCIPreleaseVar(scip, &var) );
    }
-
-   /* change reformbinprodsand parameter */
-   SCIP_CALL( SCIPsetBoolParam(scip, "constraints/nonlinear/reformbinprodsand", FALSE) );
 }
 
 static
@@ -88,6 +85,9 @@ Test(reformbinprods, presolve_single_2)
    SCIP_Bool infeasible;
    int naddconss = 0;
    int nchgcoefs = 0;
+
+   /* change reformbinprodsand parameter */
+   SCIP_CALL( SCIPsetBoolParam(scip, "constraints/nonlinear/reformbinprodsand", FALSE) );
 
    SCIP_CALL( SCIPparseExpr(scip, &expr, "<x0>[B] * <x1>[B] + <x2>[B]", NULL, NULL, NULL) );
    SCIP_CALL( SCIPcreateConsBasicNonlinear(scip, &cons, "c1", expr, 1.0, 1.0) );
@@ -146,8 +146,8 @@ Test(reformbinprods, presolve_two)
 
    /* call canonizalize() to replace binary products; note that cannonizalize is called once in presolving to replace common subexpressions */
    SCIP_CALL( canonicalizeConstraints(scip, conshdlr, conss, 2, SCIP_PRESOLTIMING_EXHAUSTIVE, &infeasible, NULL, &naddconss, &nchgcoefs) );
-   cr_expect(naddconss == 4, "expect 4 got %d", naddconss);
-   cr_expect(SCIPgetNConss(scip) == 6, "expect 6 got %d", SCIPgetNConss(scip));
+   cr_expect(naddconss == 2, "expect 2 got %d", naddconss);
+   cr_expect(SCIPgetNConss(scip) == 4, "expect 4 got %d", SCIPgetNConss(scip));
 
    /* SCIPwriteTransProblem(scip, "reform.cip", NULL, FALSE); */
 }
@@ -164,6 +164,9 @@ Test(reformbinprods, clique)
    SCIP_VAR* clique_vars[2];
    SCIP_Bool clique_vals[2];
    int nbdchgs;
+
+   /* change reformbinprodsand parameter */
+   SCIP_CALL( SCIPsetBoolParam(scip, "constraints/nonlinear/reformbinprodsand", FALSE) );
 
    /* create constraint x0 x1 + x2 x3 + sin(x0 x1) <= 1 */
    SCIP_CALL( SCIPparseExpr(scip, &expr, "<x0>[B] * <x1>[B] + <x2>[B] * <x3>[B]", NULL, NULL, NULL) );
@@ -200,8 +203,8 @@ Test(reformbinprods, clique)
 
    /* call canonizalize() to replace binary products; note that canonicalize is called once in presolving to replace common subexpressions */
    SCIP_CALL( canonicalizeConstraints(scip, conshdlr, conss, 1, SCIP_PRESOLTIMING_EXHAUSTIVE, &infeasible, NULL, &naddconss, &nchgcoefs) );
-   cr_expect(naddconss == 0, "expect 0 got %d", naddconss);
-   cr_expect(SCIPgetNConss(scip) == 1, "expect 1 got %d", SCIPgetNConss(scip));
+   cr_expect(naddconss == 2, "expect 2 got %d", naddconss);
+   cr_expect(SCIPgetNConss(scip) == 3, "expect 3 got %d", SCIPgetNConss(scip));
    cr_expect(nchgcoefs == 4, "expect 4 changed coefs, got %d", nchgcoefs);
 }
 
@@ -213,6 +216,9 @@ Test(reformbinprods, factorize1)
    SCIP_CONS* cons;
    SCIP_VAR* var;
    int naddconss = 0;
+
+   /* change reformbinprodsand parameter */
+   SCIP_CALL( SCIPsetBoolParam(scip, "constraints/nonlinear/reformbinprodsand", FALSE) );
 
    SCIP_CALL( SCIPparseExpr(scip, &expr, "<x0>[B] * <x1>[B] - <x0>[B] * <x2>[B] - <x0>[B] * <x3>[B]", NULL, NULL, NULL) );
    SCIP_CALL( SCIPcreateConsBasicNonlinear(scip, &cons, "c1", expr, 0.0, 0.5) );
@@ -249,6 +255,9 @@ Test(reformbinprods, factorize2)
    SCIP_CONS* cons;
    SCIP_VAR* var;
    int naddconss = 0;
+
+   /* change reformbinprodsand parameter */
+   SCIP_CALL( SCIPsetBoolParam(scip, "constraints/nonlinear/reformbinprodsand", FALSE) );
 
    /* expression is equivalent to  x0 * (x1 - x2 + x7) + x3 * (-x4 -x5) + sin(x0) */
    SCIP_CALL( SCIPparseExpr(scip, &expr, "<x0>[B] * <x1>[B] + <x0>[B] * <x7>[B] - <x4>[B] * <x3>[B] + sin(<x0>[B]) - <x0>[B] * <x2>[B] - <x3>[B] * <x5>[B]", NULL, NULL, NULL) );

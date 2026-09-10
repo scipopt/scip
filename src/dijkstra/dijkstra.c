@@ -96,9 +96,10 @@ DIJKSTRA_Bool dijkstraHeapIsValid(
    /* check heap property */
    for (i = 0; i < used / 2; ++i)
    {
-      if ( value[entry[i]] > value[entry[i + i]] )
+      unsigned int child = i + i + 1;
+      if ( value[entry[i]] > value[entry[child]] )
          return FALSE;
-      if ( i + i + 1 < used && value[entry[i]] > value[entry[i + i + 1]] )
+      if ( child + 1 < used && value[entry[i]] > value[entry[child + 1]] )
          return FALSE;
    }
 
@@ -122,7 +123,7 @@ void dijkstraSiftDown(
    unsigned int ent;
    unsigned int e;
 
-   child = current + current;
+   child = current + current + 1;
    ent = entry[current];
    val = value[ent];
 
@@ -145,7 +146,7 @@ void dijkstraSiftDown(
       order[e] = current;
 
       current = child;
-      child += child;
+      child += child + 1;
    }
    entry[current] = ent;
    order[ent] = current;
@@ -171,7 +172,7 @@ void dijkstraSiftUp(
 
    while ( current > 0 )
    {
-      parent = current / 2;
+      parent = (current - 1) / 2;
       e = entry[parent];
 
       if ( value[e] <= val )

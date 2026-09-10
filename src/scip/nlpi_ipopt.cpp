@@ -945,9 +945,9 @@ SCIP_DECL_NLPICREATEPROBLEM(nlpiCreateProblemIpopt)
       (*problem)->ipopt = new IpoptApplication(false);
 
       /* plugin our journal to get output through SCIP message handler */
-      SmartPtr<Journal> jrnl = new ScipJournal("console", J_ITERSUMMARY, scip);
+      SmartPtr<ScipJournal> jrnl = new ScipJournal("console", J_ITERSUMMARY, scip);
       jrnl->SetPrintLevel(J_DBG, J_NONE);
-      if( !(*problem)->ipopt->Jnlst()->AddJournal(jrnl) )
+      if( !(*problem)->ipopt->Jnlst()->AddJournal(GetRawPtr(jrnl)) )
       {
          SCIPerrorMessage("Failed to register ScipJournal for IPOPT output.");
       }

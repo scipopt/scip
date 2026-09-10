@@ -27,22 +27,27 @@
  * @brief  propagator for applying global bound changes that were communicated by other
  *         concurrent solvers
  * @author Leona Gottwald
+ * @author Gioni Mexi
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 #include "blockmemshell/memory.h"
+#include "scip/concsolver.h"
 #include "scip/concurrent.h"
 #include "scip/prop_sync.h"
 #include "scip/pub_message.h"
 #include "scip/pub_prop.h"
 #include "scip/pub_var.h"
+#include "scip/scip_concurrent.h"
 #include "scip/scip_mem.h"
 #include "scip/scip_message.h"
+#include "scip/scip_numerics.h"
 #include "scip/scip_probing.h"
 #include "scip/scip_prop.h"
 #include "scip/scip_var.h"
 #include "scip/scip_message.h"
+#include "scip/syncstore.h"
 #include "tpi/tpi.h"
 
 /* fundamental propagator properties */
@@ -71,6 +76,11 @@ struct SCIP_PropData
    int                   bndsize;       /**< current size of bound change array */
    SCIP_Longint          ntightened;    /**< number of tightened bounds */
    SCIP_Longint          ntightenedint; /**< number of tightened bounds of integer variables */
+   SCIP_Bool             useboundpool;  /**< should tightened global bounds be drained from the shared bound pool every node? */
+   SCIP_VAR**            boundpoolvars; /**< this solver's variables in the communication variable order (not owned) */
+   int                   nboundpoolvars; /**< number of variables in boundpoolvars */
+   int                   lastboundversion; /**< bound-pool change counter at the last drain, to skip the scan when unchanged */
+   SCIP_CONCSOLVER*      concsolver;    /**< the concurrent solver this propagator belongs to, for the shared statistics */
 };
 
 
@@ -142,6 +152,56 @@ SCIP_RETCODE applyBoundChanges(
 
    data->nbnds = 0;
    SCIPenableConcurrentBoundStorage(scip);
+
+   return SCIP_OKAY;
+}
+
+/** applies one shared global bound from the bound pool to the local problem, resolving the variable
+ *  through aggregations and skipping multi-aggregated variables; updates the tightening counters and
+ *  the propagation result. The tightening is idempotent, so re-applying an already known bound is a no-op.
+ */
+static
+SCIP_RETCODE applySharedBound(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_PROPDATA*        data,               /**< propagator data */
+   SCIP_VAR*             var,                /**< this solver's variable in communication order */
+   SCIP_Real             val,                /**< shared bound value in communication space */
+   SCIP_BOUNDTYPE        boundtype,          /**< whether val is a lower or an upper bound */
+   SCIP_RESULT*          result              /**< pointer to update the propagation result */
+   )
+{
+   SCIP_Bool infeas;
+   SCIP_Bool tightened;
+
+   assert(var != NULL);
+
+   /* resolve to the active problem variable, adjusting the value and bound type through aggregations */
+   SCIP_CALL( SCIPvarGetProbvarBound(&var, &val, &boundtype) );
+
+   /* cannot change bounds of multi-aggregated variables so skip this bound */
+   if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_MULTAGGR )
+      return SCIP_OKAY;
+
+   if( boundtype == SCIP_BOUNDTYPE_LOWER )
+   {
+      SCIP_CALL( SCIPtightenVarLbGlobal(scip, var, val, FALSE, &infeas, &tightened) );
+   }
+   else
+   {
+      SCIP_CALL( SCIPtightenVarUbGlobal(scip, var, val, FALSE, &infeas, &tightened) );
+   }
+
+   if( tightened )
+   {
+      ++data->ntightened;
+      if( SCIPvarIsNonimpliedIntegral(var) )
+         ++data->ntightenedint;
+   }
+
+   if( infeas )
+      *result = SCIP_CUTOFF;
+   else if( tightened && *result != SCIP_CUTOFF )
+      *result = SCIP_REDUCEDDOM;
 
    return SCIP_OKAY;
 }
@@ -284,7 +344,66 @@ SCIP_DECL_PROPEXEC(propExecSync)
          *result = SCIP_REDUCEDDOM;
    }
 
-   SCIPpropSetFreq(prop, -1);
+   /* Apply the tightest global bounds the other solvers published on the shared bound pool. No locking is
+    * needed: bounds only get tighter and re-applying a known bound is a no-op, so missing the
+    * newest bound just defers it to the next node. the version counter is bumped on every tightening; skip the
+    * whole scan when it has not changed since the last drain. Read the version before scanning so that a
+    * bound landing mid-scan leaves version != lastboundversion and is picked up at the next node.
+    */
+   if( data->useboundpool && *result != SCIP_CUTOFF )
+   {
+      SCIP_SYNCSTORE* syncstore;
+      int version;
+
+      syncstore = SCIPgetSyncstore(scip);
+      version = SCIPsyncstoreGetBoundVersion(syncstore);
+
+      if( version != data->lastboundversion )
+      {
+         SCIP_Longint nbnds0;
+         SCIP_Longint nintbnds0;
+         int v;
+
+         nbnds0 = data->ntightened;
+         nintbnds0 = data->ntightenedint;
+
+         for( v = 0; v < data->nboundpoolvars && *result != SCIP_CUTOFF; ++v )
+         {
+            SCIP_VAR* var;
+            SCIP_Real lb;
+            SCIP_Real ub;
+
+            var = data->boundpoolvars[v];
+            if( var == NULL )
+               continue;
+
+            SCIPsyncstoreGetBound(syncstore, v, &lb, &ub);
+
+            if( !SCIPisInfinity(scip, -lb) )
+               SCIP_CALL( applySharedBound(scip, data, var, lb, SCIP_BOUNDTYPE_LOWER, result) );
+
+            if( *result != SCIP_CUTOFF && !SCIPisInfinity(scip, ub) )
+               SCIP_CALL( applySharedBound(scip, data, var, ub, SCIP_BOUNDTYPE_UPPER, result) );
+         }
+
+         /* report the bounds applied from the pool as received tighter bounds, so the concurrent
+          * solver statistics reflect the immediate sharing the same way the synchronization-point
+          * path does (the propagator's own ntightened counters are updated in applySharedBound)
+          */
+         if( data->concsolver != NULL && data->ntightened > nbnds0 )
+            SCIPconcsolverAddNTighterBnds(data->concsolver, data->ntightened - nbnds0, data->ntightenedint - nintbnds0);
+
+         data->lastboundversion = version;
+      }
+   }
+
+   /* with the bound pool active the propagator stays awake at every node to drain new bounds; otherwise
+    * it sleeps and is woken again when bounds are pushed via SCIPpropSyncAddBndchg
+    */
+   if( data->useboundpool )
+      SCIPpropSetFreq(prop, 1);
+   else
+      SCIPpropSetFreq(prop, -1);
 
    return SCIP_OKAY;
 }
@@ -302,6 +421,11 @@ SCIP_RETCODE SCIPincludePropSync(
    SCIP_PROP* prop = NULL;
 
    SCIP_CALL( SCIPallocBlockMemory(scip, &propdata) );
+   propdata->useboundpool = FALSE;
+   propdata->boundpoolvars = NULL;
+   propdata->nboundpoolvars = 0;
+   propdata->lastboundversion = 0;
+   propdata->concsolver = NULL;
 
    /* include propagator */
    SCIP_CALL( SCIPincludePropBasic(scip, &prop, PROP_NAME, PROP_DESC, PROP_PRIORITY, PROP_FREQ, PROP_DELAY, PROP_TIMING,
@@ -315,6 +439,35 @@ SCIP_RETCODE SCIPincludePropSync(
    SCIP_CALL( SCIPsetPropPresol(scip, prop, propPresolSync, PROP_PRESOL_PRIORITY, PROP_PRESOL_MAXROUNDS, PROP_PRESOLTIMING) );
 
    return SCIP_OKAY;
+}
+
+/** enables the bound-pool drain in the sync propagator; it then runs at every node and applies the
+ *  tightened global variable bounds published immediately by the other concurrent solvers
+ */
+void SCIPpropSyncEnableBoundPool(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_PROP*            prop,               /**< the sync propagator */
+   SCIP_CONCSOLVER*      concsolver,         /**< the concurrent solver this SCIP instance belongs to */
+   SCIP_VAR**            vars,               /**< variables of this SCIP in the communication variable order */
+   int                   nvars               /**< number of variables */
+   )
+{
+   SCIP_PROPDATA* data;
+
+   assert(scip != NULL);
+   assert(prop != NULL);
+   assert(concsolver != NULL);
+   assert(vars != NULL);
+
+   data = SCIPpropGetData(prop);
+   assert(data != NULL);
+
+   data->useboundpool = TRUE;
+   data->boundpoolvars = vars;
+   data->nboundpoolvars = nvars;
+   data->lastboundversion = 0;
+   data->concsolver = concsolver;
+   SCIPpropSetFreq(prop, 1);
 }
 
 

@@ -260,6 +260,12 @@ SCIP_RETCODE SCIPtransformProb(
       return SCIP_PLUGINNOTFOUND;
    }
 
+   /* check consistency of numeric parameters before transforming;
+    * on failure, stay in PROBLEM stage so the user can correct the settings
+    */
+   if( !SCIPsetCheckNumericTolerances(scip->set) )
+      return SCIP_PARAMETERWRONGVAL;
+
    /* remember number of constraints */
    SCIPprobMarkNConss(scip->origprob);
 
@@ -534,7 +540,7 @@ SCIP_RETCODE initPresolve(
 static
 SCIP_RETCODE exitPresolve(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_Bool             solved,             /**< is problem already solved? */
+   SCIP_Bool             solved,             /**< Is the solving process terminating? */
    SCIP_Bool*            infeasible          /**< pointer to store if the clique clean up detects an infeasibility */
    )
 {
@@ -3185,6 +3191,13 @@ SCIP_RETCODE SCIPsolveConcurrent(
       return SCIP_NOTIMPLEMENTED;
    }
 
+   /* concurrent solvers do not support reoptimization */
+   if( scip->set->reopt_enable )
+   {
+      SCIPerrorMessage("Concurrent solve not implemented for reoptimization mode.\n");
+      return SCIP_NOTIMPLEMENTED;
+   }
+
    SCIP_CALL( SCIPsetIntParam(scip, "timing/clocktype", (int)SCIP_CLOCKTYPE_WALL) );
 
    minnthreads = scip->set->parallel_minnthreads;
@@ -3195,6 +3208,10 @@ SCIP_RETCODE SCIPsolveConcurrent(
       SCIPerrorMessage("minimum number of threads greater than maximum number of threads\n");
       return SCIP_INVALIDDATA;
    }
+
+   /* capture the CTRL-C interrupt */
+   if( scip->set->misc_catchctrlc )
+      SCIPinterruptCapture(scip->interrupt);
 
    if( scip->concurrent == NULL )
    {
@@ -3223,7 +3240,10 @@ SCIP_RETCODE SCIPsolveConcurrent(
          /* if yes, then presolve the problem */
          SCIP_CALL( SCIPpresolve(scip) );
          if( SCIPgetStatus(scip) != SCIP_STATUS_UNKNOWN )
-            return SCIP_OKAY;
+         {
+            retcode = SCIP_OKAY;
+            goto TERMINATE;
+         }
       }
       else
       {
@@ -3245,7 +3265,8 @@ SCIP_RETCODE SCIPsolveConcurrent(
       if( scip->set->stage < SCIP_STAGE_PRESOLVED )
       {
          SCIP_CALL( displayRelevantStats(scip) );
-         return SCIP_OKAY;
+         retcode = SCIP_OKAY;
+         goto TERMINATE;
       }
 
       /* estimate memory */
@@ -3278,17 +3299,20 @@ SCIP_RETCODE SCIPsolveConcurrent(
          SCIPsyncstoreSetSolveIsStopped(SCIPgetSyncstore(scip), TRUE);
          SCIPwarningMessage(scip, "Requested minimum number of threads could not be satisfied with given memory limit.\n");
          SCIP_CALL( displayRelevantStats(scip) );
-         return SCIP_OKAY;
+         retcode = SCIP_OKAY;
+         goto TERMINATE;
       }
 
       if( nthreads == 1 )
       {
          SCIPwarningMessage(scip, "Can only use 1 thread, performing sequential solve instead.\n");
          SCIP_CALL( SCIPfreeConcurrent(scip) );
-         return SCIPsolve(scip);
+         retcode = SCIPsolve(scip);
+         goto TERMINATE;
       }
       nthreads = MIN(nthreads, maxnthreads);
-      SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "Using %d threads for concurrent solve.\n", nthreads);
+      SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "Using %d threads for concurrent solve in %s mode.\n", nthreads,
+         scip->set->parallel_mode == (int) SCIP_PARA_OPPORTUNISTIC ? "opportunistic" : "deterministic");
 
       /* now set up nthreads many concurrent solvers that will be used for the concurrent solve
        * using the preferred priorities of each concurrent solver
@@ -3354,6 +3378,11 @@ SCIP_RETCODE SCIPsolveConcurrent(
    retcode = SCIPconcurrentSolve(scip);
    SCIPclockStop(scip->stat->solvingtime, scip->set);
    SCIP_CALL( displayRelevantStats(scip) );
+
+TERMINATE:
+   /* release the CTRL-C interrupt */
+   if( scip->set->misc_catchctrlc )
+      SCIPinterruptRelease(scip->interrupt);
 
    return retcode;
 }
@@ -3568,7 +3597,7 @@ SCIP_RETCODE SCIPfreeSolve(
       assert(scip->stat->status != SCIP_STATUS_OPTIMAL);
 
       /* exit presolving */
-      SCIP_CALL( exitPresolve(scip, FALSE, &infeasible) );
+      SCIP_CALL( exitPresolve(scip, TRUE, &infeasible) );
       assert(scip->set->stage == SCIP_STAGE_PRESOLVED);
    }
 
@@ -3636,7 +3665,7 @@ SCIP_RETCODE SCIPfreeReoptSolve(
       assert(scip->stat->status != SCIP_STATUS_OPTIMAL);
 
       /* exit presolving */
-      SCIP_CALL( exitPresolve(scip, FALSE, &infeasible) );
+      SCIP_CALL( exitPresolve(scip, TRUE, &infeasible) );
       assert(scip->set->stage == SCIP_STAGE_PRESOLVED);
 
       return SCIP_OKAY;
@@ -3705,7 +3734,7 @@ SCIP_RETCODE SCIPfreeTransform(
       assert(scip->stat->status != SCIP_STATUS_OPTIMAL);
 
       /* exit presolving */
-      SCIP_CALL( exitPresolve(scip, FALSE, &infeasible) );
+      SCIP_CALL( exitPresolve(scip, TRUE, &infeasible) );
       assert(scip->set->stage == SCIP_STAGE_PRESOLVED);
    }
 

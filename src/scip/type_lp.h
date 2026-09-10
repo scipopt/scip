@@ -47,7 +47,7 @@ enum SCIP_LPSolStat
    SCIP_LPSOLSTAT_OBJLIMIT     = 4,     /**< objective limit was reached during optimization */
    SCIP_LPSOLSTAT_ITERLIMIT    = 5,     /**< iteration limit was reached during optimization */
    SCIP_LPSOLSTAT_TIMELIMIT    = 6,     /**< time limit was reached during optimization */
-   SCIP_LPSOLSTAT_ERROR        = 7      /**< an error occured during optimization */
+   SCIP_LPSOLSTAT_ERROR        = 7      /**< an error occurred during optimization */
 };
 typedef enum SCIP_LPSolStat SCIP_LPSOLSTAT;
 

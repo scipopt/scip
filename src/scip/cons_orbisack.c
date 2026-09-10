@@ -1060,8 +1060,10 @@ SCIP_RETCODE replaceAggregatedVarsOrbisack(
       assert( SCIPvarIsActive(var) || SCIPvarGetStatus(var) == SCIP_VARSTATUS_NEGATED || SCIPvarGetStatus(var) == SCIP_VARSTATUS_FIXED );
       if ( var != vars1[i] )
       {
+         SCIP_CALL( SCIPunlockVarCons(scip, vars1[i], cons, TRUE, FALSE) );
          SCIP_CALL( SCIPreleaseVar(scip, &vars1[i]) );
          vars1[i] = var;
+         SCIP_CALL( SCIPlockVarCons(scip, vars1[i], cons, TRUE, FALSE) );
          SCIP_CALL( SCIPcaptureVar(scip, var) );
       }
 
@@ -1073,8 +1075,10 @@ SCIP_RETCODE replaceAggregatedVarsOrbisack(
       assert( SCIPvarIsActive(var) || SCIPvarGetStatus(var) == SCIP_VARSTATUS_NEGATED || SCIPvarGetStatus(var) == SCIP_VARSTATUS_FIXED );
       if ( var != vars2[i] )
       {
+         SCIP_CALL( SCIPunlockVarCons(scip, vars2[i], cons, FALSE, TRUE) );
          SCIP_CALL( SCIPreleaseVar(scip, &vars2[i]) );
          vars2[i] = var;
+         SCIP_CALL( SCIPlockVarCons(scip, vars2[i], cons, FALSE, TRUE) );
          SCIP_CALL( SCIPcaptureVar(scip, var) );
       }
    }

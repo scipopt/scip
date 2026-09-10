@@ -143,7 +143,7 @@ public:
  *
  *  The method should be called in one of the following ways:
  *
- *   1. The user is resposible of deleting the object:
+ *   1. The user is responsible of deleting the object:
  *       SCIP_CALL( SCIPcreate(&scip) );
  *       ...
  *       MyDialog* mydialog = new MyDialog(...);

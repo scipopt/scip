@@ -28,7 +28,7 @@
 # This script cancels the process if required variables are not correctly set
 
 # input variables - should be passed to this script
-QUEUE="${1}"     # the name of the cluster queue (e.g., M640, Gold6338, moskito)
+QUEUE="${1}"     # the name of the cluster queue (e.g., M640v2, C6520, moskito)
 PPN="${2}"       # number of cluster nodes to use
 EXCLUSIVE="${3}" # should cluster nodes be blocked for other users while the jobs are running?
 QUEUETYPE="${4}" # either 'srun' or 'qsub'
@@ -47,9 +47,10 @@ then
     exit 1
 fi
 
-# check whether there is enough memory on the host system, otherwise we need to submit from the target system
+# slurm submission configuration
 if test "${QUEUETYPE}" = "srun"
 then
+    # check whether there is enough memory on the host system, otherwise we need to submit from the target system
     HOSTMEM=$(ulimit -m)
     if test "${HOSTMEM}" != "unlimited"
     then
@@ -58,6 +59,14 @@ then
             echo "Not enough memory on host system - please submit from target system (e.g. ssh opt201)."
             exit 1
         fi
+    fi
+
+    # use medium frequency with Performance governor if available
+    if scontrol show config 2>/dev/null | grep -qE '^CpuFreqGovernors\b.*\bPerformance\b'
+    then
+        CPUFREQ="medium-medium:Performance"
+    else
+        CPUFREQ="medium-medium"
     fi
 fi
 
@@ -73,38 +82,71 @@ elif [[ "$(uname -n)" =~ htc ]]; then
     ACCOUNT="optimi_integer"
 fi
 
-if test "${CLUSTERQUEUE}" = "M640-low"
+if test "${CLUSTERQUEUE}" = "M640v2-low"
 then
     NICE="--nice=10000"
-    CLUSTERQUEUE="M640"
-elif test "${CLUSTERQUEUE}" = "M640v2-low"
-then
-    NICE="--nice=10000"
-    CLUSTERQUEUE="M640"
+    CLUSTERQUEUE="M640v2"
 fi
 
-if test "${CLUSTERQUEUE}" = "Gold6338"
-then
-    CONSTRAINT="Gold6338"
-    CLUSTERQUEUE="big"
-elif test "${CLUSTERQUEUE}" = "Gold6342"
-then
-    CONSTRAINT="Gold6342"
-    CLUSTERQUEUE="big"
-elif test "${CLUSTERQUEUE}" = "M640v2"
+if test "${CLUSTERQUEUE}" = "M640v2"
 then
     CONSTRAINT="Gold5222"
     CLUSTERQUEUE="opt_int"
-elif test "${CLUSTERQUEUE}" = "M640"
+    TARGETFREQ=2528567
+elif test "${CLUSTERQUEUE}" = "R740"
 then
-    CONSTRAINT="Gold5122"
-    CLUSTERQUEUE="opt_int"
+    CONSTRAINT="Gold6246"
+    CLUSTERQUEUE="high-mem"
+    TARGETFREQ=3300000
+elif test "${CLUSTERQUEUE}" = "C6520"
+then
+    CONSTRAINT="Gold6338"
+    CLUSTERQUEUE="big"
+    TARGETFREQ=1980945
+    # exclude nodes with broken frequency scaling
+    test "${EXCLUDENODES}" = "none" && EXCLUDENODES=""
+    EXCLUDENODES="htc-cmp[101-102],htc-cmp104,htc-cmp126,htc-cmp[145-148]${EXCLUDENODES:+,${EXCLUDENODES}}"
+elif test "${CLUSTERQUEUE}" = "R650"
+then
+    CONSTRAINT="Gold6342"
+    CLUSTERQUEUE="big"
+    TARGETFREQ=2128567
+elif test "${CLUSTERQUEUE}" = "R7525"
+then
+    CONSTRAINT="EPYC7542"
+    CLUSTERQUEUE="big"
+    TARGETFREQ=2900000
+elif test "${CLUSTERQUEUE}" = "R7525X"
+then
+    CONSTRAINT="EPYC7773X"
+    CLUSTERQUEUE="high-mem"
+    TARGETFREQ=1900000
+elif test "${CLUSTERQUEUE}" = "small"
+then
+    if [ "${DEBUGTOOL}" == "rr" ] || [ "${DEBUGTOOL}" == "perf" ]
+    then
+        # exclude nodes that don't have access to hardware performance counters enabled
+        test "${EXCLUDENODES}" = "none" && EXCLUDENODES=""
+        EXCLUDENODES="htc-cmp[220-229]${EXCLUDENODES:+,${EXCLUDENODES}}"
+    fi
+    if [ "${DEBUGTOOL}" == "rr" ]
+    then
+        # rr does not run reliably on AMD Zen CPUs (https://github.com/rr-debugger/rr/wiki/Zen)
+        # an easy way to exclude such nodes is to run on Intel CPUs only
+        CONSTRAINT="Intel"
+    fi
 fi
 
 # check if the slurm blades should be used exclusively
 if test "${EXCLUSIVE}" = "true"
 then
     EXCLUSIVE=" --exclusive"
+    AUTO_PPN_PENDING=0
+elif test "${EXCLUSIVE}" = "auto"
+then
+    EXCLUSIVE=" --exclusive"
+    AUTO_PPN_PENDING=1
 else
     EXCLUSIVE=""
+    AUTO_PPN_PENDING=0
 fi
