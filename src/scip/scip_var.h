@@ -853,6 +853,27 @@ SCIP_RETCODE SCIPgetNegatedVars(
    SCIP_VAR**            negvars             /**< array to store the negated variables */
    );
 
+/** gets corresponding active, fixed, or multi-aggregated problem variables of binary variables and
+ *  updates the given negation status of each variable
+ */
+SCIP_EXPORT
+SCIP_RETCODE SCIPgetProbvarsBinary(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR***           vars,               /**< pointer to binary problem variables */
+   SCIP_Bool**           negatedarr,         /**< pointer to corresponding array to update the negation status */
+   int                   nvars               /**< number of variables and values in vars and negated array */
+   );
+
+/** gets corresponding active, fixed, or multi-aggregated problem variable of a binary variable and
+ *  updates the given negation status
+ */
+SCIP_EXPORT
+SCIP_RETCODE SCIPgetProbvarBinary(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR**            var,                /**< pointer to binary problem variable */
+   SCIP_Bool*            negated             /**< pointer to update the negation status */
+   );
+
 /** gets a binary variable that is equal to the given binary variable, and that is either active, fixed, or
  *  multi-aggregated, or the negated variable of an active, fixed, or multi-aggregated variable
  *

@@ -1460,7 +1460,8 @@ SCIP_RETCODE SCIPdomchgFree(
 static
 SCIP_RETCODE domchgMakeDynamic(
    SCIP_DOMCHG**         domchg,             /**< pointer to domain change data */
-   BMS_BLKMEM*           blkmem              /**< block memory */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set                 /**< global SCIP settings */
    )
 {
    assert(domchg != NULL);
@@ -1501,8 +1502,10 @@ SCIP_RETCODE domchgMakeDynamic(
    {
       int i;
       for( i = 0; i < (int)(*domchg)->domchgbound.nboundchgs; ++i )
+      {
          assert(!SCIPvarIsIntegral((*domchg)->domchgbound.boundchgs[i].var)
-            || EPSISINT((*domchg)->domchgbound.boundchgs[i].newbound, 1e-06));
+            || SCIPsetIsIntegral(set, (*domchg)->domchgbound.boundchgs[i].newbound));
+      }
    }
 #endif
 
@@ -1836,7 +1839,7 @@ SCIP_RETCODE SCIPdomchgAddBoundchg(
    }
    else if( (*domchg)->domchgdyn.domchgtype != SCIP_DOMCHGTYPE_DYNAMIC ) /*lint !e641*/
    {
-      SCIP_CALL( domchgMakeDynamic(domchg, blkmem) );
+      SCIP_CALL( domchgMakeDynamic(domchg, blkmem, set) );
    }
    assert(*domchg != NULL && (*domchg)->domchgdyn.domchgtype == SCIP_DOMCHGTYPE_DYNAMIC); /*lint !e641*/
 
@@ -1928,7 +1931,7 @@ SCIP_RETCODE SCIPdomchgAddHolechg(
    }
    else if( (*domchg)->domchgdyn.domchgtype != SCIP_DOMCHGTYPE_DYNAMIC ) /*lint !e641*/
    {
-      SCIP_CALL( domchgMakeDynamic(domchg, blkmem) );
+      SCIP_CALL( domchgMakeDynamic(domchg, blkmem, set) );
    }
    assert(*domchg != NULL && (*domchg)->domchgdyn.domchgtype == SCIP_DOMCHGTYPE_DYNAMIC); /*lint !e641*/
 
@@ -16962,7 +16965,7 @@ SCIP_RETCODE SCIPvarAddClique(
    *infeasible = FALSE;
 
    /* get corresponding active problem variable */
-   SCIP_CALL( SCIPvarGetProbvarBinary(&var, &value) );
+   SCIP_CALL( SCIPvarGetProbvarBinary(set, &var, &value) );
    assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN
       || SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE
       || SCIPvarGetStatus(var) == SCIP_VARSTATUS_FIXED
@@ -17099,6 +17102,7 @@ SCIP_RETCODE SCIPvarDelCliqueFromList(
 SCIP_RETCODE SCIPvarDelClique(
    SCIP_VAR*             var,                /**< problem variable  */
    BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_CLIQUETABLE*     cliquetable,        /**< clique table data structure */
    SCIP_Bool             value,              /**< value of the variable in the clique */
    SCIP_CLIQUE*          clique              /**< clique the variable should be removed from */
@@ -17108,7 +17112,7 @@ SCIP_RETCODE SCIPvarDelClique(
    assert(SCIPvarIsBinary(var));
 
    /* get corresponding active problem variable */
-   SCIP_CALL( SCIPvarGetProbvarBinary(&var, &value) );
+   SCIP_CALL( SCIPvarGetProbvarBinary(set, &var, &value) );
    assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN
       || SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE
       || SCIPvarGetStatus(var) == SCIP_VARSTATUS_FIXED
@@ -17943,6 +17947,7 @@ SCIP_VAR* SCIPvarGetProbvar(
  *  negation status of each variable
  */
 SCIP_RETCODE SCIPvarsGetProbvarBinary(
+   SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_VAR***           vars,               /**< pointer to binary problem variables */
    SCIP_Bool**           negatedarr,         /**< pointer to corresponding array to update the negation status */
    int                   nvars               /**< number of variables and values in vars and negated array */
@@ -17963,7 +17968,7 @@ SCIP_RETCODE SCIPvarsGetProbvarBinary(
       negated = &((*negatedarr)[v]);
 
       /* get problem variable */
-      SCIP_CALL( SCIPvarGetProbvarBinary(var, negated) );
+      SCIP_CALL( SCIPvarGetProbvarBinary(set, var, negated) );
    }
 
    return SCIP_OKAY;
@@ -17975,6 +17980,7 @@ SCIP_RETCODE SCIPvarsGetProbvarBinary(
  *  FALSE is used)
  */
 SCIP_RETCODE SCIPvarGetProbvarBinary(
+   SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_VAR**            var,                /**< pointer to binary problem variable */
    SCIP_Bool*            negated             /**< pointer to update the negation status */
    )
@@ -17987,6 +17993,7 @@ SCIP_RETCODE SCIPvarGetProbvarBinary(
 
    assert(var != NULL);
    assert(*var != NULL);
+   assert(set != NULL);
    assert(negated != NULL);
    assert(SCIPvarIsBinary(*var));
 
@@ -18017,7 +18024,7 @@ SCIP_RETCODE SCIPvarGetProbvarBinary(
             assert( (*var)->data.multaggr.vars != NULL );
             assert( (*var)->data.multaggr.scalars != NULL );
             assert( SCIPvarIsBinary((*var)->data.multaggr.vars[0]) );
-            assert(!EPSZ((*var)->data.multaggr.scalars[0], 1e-06));
+            assert( !SCIPsetIsSumZero(set, (*var)->data.multaggr.scalars[0]) );
 
             /* if not all variables were fully propagated, it might happen that a variable is multi-aggregated to
              * another variable which needs to be fixed
@@ -18027,9 +18034,10 @@ SCIP_RETCODE SCIPvarGetProbvarBinary(
              *
              * is this special case we need to return the muti-aggregation
              */
-            if( EPSEQ((*var)->data.multaggr.constant, -1.0, 1e-06) || (EPSEQ((*var)->data.multaggr.constant, 1.0, 1e-06) && EPSEQ((*var)->data.multaggr.scalars[0], 1.0, 1e-06)) )
+            if( SCIPsetIsSumEQ(set, (*var)->data.multaggr.constant, -1.0)
+               || (SCIPsetIsSumEQ(set, (*var)->data.multaggr.constant, 1.0) && SCIPsetIsSumEQ(set, (*var)->data.multaggr.scalars[0], 1.0)))
             {
-               assert(EPSEQ((*var)->data.multaggr.scalars[0], 1.0, 1e-06));
+               assert(SCIPsetIsSumEQ(set, (*var)->data.multaggr.scalars[0], 1.0));
             }
             else
             {
@@ -18038,7 +18046,7 @@ SCIP_RETCODE SCIPvarGetProbvarBinary(
                 *       fixed to zero, but this should be done by another enforcement; so not depending on the scalar,
                 *       we will return the aggregated variable;
                 */
-               if( !EPSEQ(REALABS((*var)->data.multaggr.scalars[0]), 1.0, 1e-06) )
+               if( !SCIPsetIsSumEQ(set, REALABS((*var)->data.multaggr.scalars[0]), 1.0) )
                {
                   active = TRUE;
                   break;
@@ -18048,31 +18056,31 @@ SCIP_RETCODE SCIPvarGetProbvarBinary(
                 *       aggregation variable needs to be fixed to one, but this should be done by another enforcement;
                 *       so if this is the case, we will return the aggregated variable
                 */
-               assert(EPSZ((*var)->data.multaggr.constant, 1e-06) || EPSEQ((*var)->data.multaggr.constant, 1.0, 1e-06)
-                  || EPSZ((*var)->data.multaggr.constant + (*var)->data.multaggr.scalars[0], 1e-06)
-                  || EPSEQ((*var)->data.multaggr.constant + (*var)->data.multaggr.scalars[0], 1.0, 1e-06));
+               assert(SCIPsetIsSumZero(set, (*var)->data.multaggr.constant) || SCIPsetIsSumEQ(set, (*var)->data.multaggr.constant, 1.0)
+                  || SCIPsetIsSumZero(set, (*var)->data.multaggr.constant + (*var)->data.multaggr.scalars[0])
+                  || SCIPsetIsSumEQ(set, (*var)->data.multaggr.constant + (*var)->data.multaggr.scalars[0], 1.0));
 
-               if( !EPSZ((*var)->data.multaggr.constant, 1e-06) && !EPSEQ((*var)->data.multaggr.constant, 1.0, 1e-06) )
+               if( !SCIPsetIsSumZero(set, (*var)->data.multaggr.constant) && !SCIPsetIsSumEQ(set, (*var)->data.multaggr.constant, 1.0) )
                {
                   active = TRUE;
                   break;
                }
 
-               assert(EPSEQ((*var)->data.multaggr.scalars[0], 1.0, 1e-06) || EPSEQ((*var)->data.multaggr.scalars[0], -1.0, 1e-06));
+               assert(SCIPsetIsSumEQ(set, (*var)->data.multaggr.scalars[0], 1.0) || SCIPsetIsSumEQ(set, (*var)->data.multaggr.scalars[0], -1.0));
 
-               if( EPSZ((*var)->data.multaggr.constant, 1e-06) )
+               if( SCIPsetIsSumZero(set, (*var)->data.multaggr.constant) )
                {
                   /* if the scalar is negative, either the aggregation variable is already fixed to zero or has at
                    * least one uplock (that hopefully will enforce this fixation to zero); can it happen that this
                    * variable itself is multi-aggregated again?
                    */
-                  assert(EPSEQ((*var)->data.multaggr.scalars[0], -1.0, 1e-06) ?
+                  assert(SCIPsetIsSumEQ(set, (*var)->data.multaggr.scalars[0], -1.0) ?
                      ((SCIPvarGetUbGlobal((*var)->data.multaggr.vars[0]) < 0.5) ||
                         SCIPvarGetNLocksUpType((*var)->data.multaggr.vars[0], SCIP_LOCKTYPE_MODEL) > 0) : TRUE);
                }
                else
                {
-                  assert(EPSEQ((*var)->data.multaggr.scalars[0], -1.0, 1e-06));
+                  assert(SCIPsetIsSumEQ(set, (*var)->data.multaggr.scalars[0], -1.0));
 #ifndef NDEBUG
                   constant += (*negated) != orignegated ? -1.0 : 1.0;
 #endif
@@ -18088,8 +18096,8 @@ SCIP_RETCODE SCIPvarGetProbvarBinary(
 
       case SCIP_VARSTATUS_AGGREGATED:  /* x = a'*x' + c'  =>  a*x + c == (a*a')*x' + (a*c' + c) */
          assert((*var)->data.aggregate.var != NULL);
-         assert(EPSEQ((*var)->data.aggregate.scalar, 1.0, 1e-06) || EPSEQ((*var)->data.aggregate.scalar, -1.0, 1e-06));
-         assert(EPSLE((*var)->data.aggregate.var->glbdom.ub - (*var)->data.aggregate.var->glbdom.lb, 1.0, 1e-06));
+         assert(SCIPsetIsSumEQ(set, (*var)->data.aggregate.scalar, 1.0) || SCIPsetIsSumEQ(set, (*var)->data.aggregate.scalar, -1.0));
+         assert(SCIPsetIsSumLE(set, (*var)->data.aggregate.var->glbdom.ub - (*var)->data.aggregate.var->glbdom.lb, 1.0));
 #ifndef NDEBUG
          constant += (*negated) != orignegated ? -(*var)->data.aggregate.constant : (*var)->data.aggregate.constant;
 #endif
@@ -18118,8 +18126,8 @@ SCIP_RETCODE SCIPvarGetProbvarBinary(
    if( active )
    {
       assert(SCIPvarIsBinary(*var));
-      assert(EPSZ(constant, 1e-06) || EPSEQ(constant, 1.0, 1e-06));
-      assert(EPSZ(constant, 1e-06) == ((*negated) == orignegated));
+      assert(SCIPsetIsSumZero(set, constant) || SCIPsetIsSumEQ(set, constant, 1.0));
+      assert(SCIPsetIsSumZero(set, constant) == ((*negated) == orignegated));
 
       return SCIP_OKAY;
    }
@@ -19057,16 +19065,12 @@ SCIP_Real SCIPvarGetLPSol_rec(
 
       assert(!var->donotaggr);
       assert(var->data.aggregate.var != NULL);
+
       lpsolval = SCIPvarGetLPSol(var->data.aggregate.var);
 
-      /* In the following test we use SCIP_DEFAULT_INFINITY, because we do not want to introduce a SCIP or SCIP_SET
-       * pointer to this method, since it is (or is called by) a public interface method. Note that
-       * this may yield inconsistent values if the parameter <numerics/infinity> is modified by the user.
-       */
-      if( lpsolval >= SCIP_DEFAULT_INFINITY )
-         return (var->data.aggregate.scalar > 0) ? SCIP_DEFAULT_INFINITY : -SCIP_DEFAULT_INFINITY;
-      else if( lpsolval <= -SCIP_DEFAULT_INFINITY )
-         return (var->data.aggregate.scalar > 0) ? -SCIP_DEFAULT_INFINITY : SCIP_DEFAULT_INFINITY;
+      /**@todo Get access to SCIP's infinity value and either add an assert that the absolute value of the computed
+       * LP-value is not infinite or truncate it. This would require access to a set or scip pointer and involve several
+       * interface changes because of public functions. */
 
       return var->data.aggregate.scalar * lpsolval + var->data.aggregate.constant;
    }
@@ -19250,18 +19254,16 @@ SCIP_Real SCIPvarGetPseudoSol_rec(
    case SCIP_VARSTATUS_AGGREGATED:
    {
       SCIP_Real pseudosolval;
+
       assert(!var->donotaggr);
       assert(var->data.aggregate.var != NULL);
-      /* a correct implementation would need to check the value of var->data.aggregate.var for infinity and return the
-       * corresponding infinity value instead of performing an arithmetical transformation (compare method
-       * SCIPvarGetLbLP()); however, we do not want to introduce a SCIP or SCIP_SET pointer to this method, since it is
-       * (or is called by) a public interface method; instead, we only assert that values are finite
-       * w.r.t. SCIP_DEFAULT_INFINITY, which seems to be true in our regression tests; note that this may yield false
-       * positives and negatives if the parameter <numerics/infinity> is modified by the user
-       */
+
       pseudosolval = SCIPvarGetPseudoSol(var->data.aggregate.var);
-      assert(pseudosolval > -SCIP_DEFAULT_INFINITY);
-      assert(pseudosolval < +SCIP_DEFAULT_INFINITY);
+
+      /**@todo Get access to SCIP's infinity value and either add an assert that the absolute value of the computed
+       * LP-value is not infinite or truncate it. This would require access to a set or scip pointer and involve several
+       * interface changes because of public functions. */
+
       return var->data.aggregate.scalar * pseudosolval + var->data.aggregate.constant;
    }
    case SCIP_VARSTATUS_MULTAGGR:
@@ -19458,15 +19460,11 @@ SCIP_Real SCIPvarGetRootSol(
    case SCIP_VARSTATUS_AGGREGATED:
       assert(!var->donotaggr);
       assert(var->data.aggregate.var != NULL);
-      /* a correct implementation would need to check the value of var->data.aggregate.var for infinity and return the
-       * corresponding infinity value instead of performing an arithmetical transformation (compare method
-       * SCIPvarGetLbLP()); however, we do not want to introduce a SCIP or SCIP_SET pointer to this method, since it is
-       * (or is called by) a public interface method; instead, we only assert that values are finite
-       * w.r.t. SCIP_DEFAULT_INFINITY, which seems to be true in our regression tests; note that this may yield false
-       * positives and negatives if the parameter <numerics/infinity> is modified by the user
-       */
-      assert(SCIPvarGetRootSol(var->data.aggregate.var) > -SCIP_DEFAULT_INFINITY);
-      assert(SCIPvarGetRootSol(var->data.aggregate.var) < +SCIP_DEFAULT_INFINITY);
+
+      /**@todo Get access to SCIP's infinity value and either add an assert that the absolute value of the computed
+       * LP-value is not infinite or truncate it. This would require access to a set or scip pointer and involve several
+       * interface changes because of public functions. */
+
       return var->data.aggregate.scalar * SCIPvarGetRootSol(var->data.aggregate.var) + var->data.aggregate.constant;
 
    case SCIP_VARSTATUS_MULTAGGR:
@@ -19823,15 +19821,11 @@ SCIP_Real SCIPvarGetBestRootSol(
    case SCIP_VARSTATUS_AGGREGATED:
       assert(!var->donotaggr);
       assert(var->data.aggregate.var != NULL);
-      /* a correct implementation would need to check the value of var->data.aggregate.var for infinity and return the
-       * corresponding infinity value instead of performing an arithmetical transformation (compare method
-       * SCIPvarGetLbLP()); however, we do not want to introduce a SCIP or SCIP_SET pointer to this method, since it is
-       * (or is called by) a public interface method; instead, we only assert that values are finite
-       * w.r.t. SCIP_DEFAULT_INFINITY, which seems to be true in our regression tests; note that this may yield false
-       * positives and negatives if the parameter <numerics/infinity> is modified by the user
-       */
-      assert(SCIPvarGetBestRootSol(var->data.aggregate.var) > -SCIP_DEFAULT_INFINITY);
-      assert(SCIPvarGetBestRootSol(var->data.aggregate.var) < +SCIP_DEFAULT_INFINITY);
+
+      /**@todo Get access to SCIP's infinity value and either add an assert that the absolute value of the computed
+       * LP-value is not infinite or truncate it. This would require access to a set or scip pointer and involve several
+       * interface changes because of public functions. */
+
       return var->data.aggregate.scalar * SCIPvarGetBestRootSol(var->data.aggregate.var) + var->data.aggregate.constant;
 
    case SCIP_VARSTATUS_MULTAGGR:

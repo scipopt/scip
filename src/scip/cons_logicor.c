@@ -754,7 +754,7 @@ SCIP_RETCODE dualPresolving(
       negated = FALSE;
 
       /* get the active variable */
-      SCIP_CALL( SCIPvarGetProbvarBinary(&var, &negated) );
+      SCIP_CALL( SCIPgetProbvarBinary(scip, &var, &negated) );
       assert(SCIPvarIsActive(var));
 
       if( negated )
@@ -866,7 +866,7 @@ SCIP_RETCODE dualPresolving(
       negated = FALSE;
 
       /* get the active variable */
-      SCIP_CALL( SCIPvarGetProbvarBinary(&activevar, &negated) );
+      SCIP_CALL( SCIPgetProbvarBinary(scip, &activevar, &negated) );
       assert(SCIPvarIsActive(activevar));
 
       if( negated )

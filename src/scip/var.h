@@ -470,6 +470,25 @@ SCIP_RETCODE SCIPvarFixExact(
    SCIP_Bool*            fixed               /**< pointer to store whether the fixing was performed (variable was unfixed) */
    );
 
+/** gets corresponding active, fixed, or multi-aggregated problem variables of binary variables and
+ *  updates the given negation status of each variable
+ */
+SCIP_RETCODE SCIPvarsGetProbvarBinary(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_VAR***           vars,               /**< pointer to binary problem variables */
+   SCIP_Bool**           negatedarr,         /**< pointer to corresponding array to update the negation status */
+   int                   nvars               /**< number of variables and values in vars and negated array */
+   );
+
+/** gets corresponding active, fixed, or multi-aggregated problem variable of a binary variable and
+ *  updates the given negation status
+ */
+SCIP_RETCODE SCIPvarGetProbvarBinary(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_VAR**            var,                /**< pointer to binary problem variable */
+   SCIP_Bool*            negated             /**< pointer to update the negation status */
+   );
+
 /** transforms given variables, scalars and constant to the corresponding active variables, scalars and constant
  *
  * If the number of needed active variables is greater than the available slots in the variable array, nothing happens
@@ -1435,6 +1454,7 @@ SCIP_RETCODE SCIPvarsAddClique(
 SCIP_RETCODE SCIPvarDelClique(
    SCIP_VAR*             var,                /**< problem variable  */
    BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_CLIQUETABLE*     cliquetable,        /**< clique table data structure */
    SCIP_Bool             value,              /**< value of the variable in the clique */
    SCIP_CLIQUE*          clique              /**< clique the variable should be removed from */
