@@ -333,6 +333,8 @@ Build system
 
 ### Makefiles
 
+- changed default compiler (COMP) from gnu to clang when on macOS
+
 Testing
 -------
 

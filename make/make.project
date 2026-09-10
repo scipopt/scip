@@ -63,7 +63,11 @@ endif
 VERBOSE         ?= false
 OPT             ?= opt
 LTO             ?= false
+ifeq ($(OSTYPE),darwin)
+COMP            ?= clang
+else
 COMP            ?= gnu
+endif
 STATICLIBEXT    ?= a
 SHAREDLIBEXT    ?= so
 LIBEXT          ?= $(STATICLIBEXT)
