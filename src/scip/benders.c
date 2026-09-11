@@ -871,6 +871,7 @@ void findAuxiliaryVar(
    int len = 1;
    int i;
 
+   assert(targetvar != NULL);
    i = 0;
    (*targetvar) = NULL;
 
@@ -3467,6 +3468,9 @@ SCIP_RETCODE solveBendersSubproblems(
 
    assert(benders != NULL);
    assert(set != NULL);
+   assert(infeasible != NULL);
+   assert(optimal != NULL);
+   assert(stopped != NULL);
 
    /* in the case of an LNS check, only the convex relaxations of the subproblems will be solved. This is a performance
     * feature, since solving the convex relaxation is typically much faster than solving the corresponding CIP. While
@@ -4431,8 +4435,9 @@ SCIP_RETCODE executeUserDefinedSolvesub(
    assert(benders != NULL);
    assert(probnumber >= 0 && probnumber < benders->nsubproblems);
    assert(benders->benderssolvesubconvex != NULL || benders->benderssolvesub != NULL);
-
    assert(solveloop == SCIP_BENDERSSOLVELOOP_USERCONVEX || solveloop == SCIP_BENDERSSOLVELOOP_USERCIP);
+   assert(objective != NULL);
+   assert(result != NULL);
 
    (*objective) = -SCIPsetInfinity(set);
 
@@ -4507,6 +4512,7 @@ SCIP_RETCODE SCIPbendersExecSubproblemSolve(
 
    assert(benders != NULL);
    assert(probnumber >= 0 && probnumber < benders->nsubproblems);
+   assert(solved != NULL);
 
    SCIPsetDebugMsg(set, "Benders' decomposition: solving subproblem %d\n", probnumber);
 
