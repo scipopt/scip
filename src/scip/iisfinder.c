@@ -41,6 +41,7 @@
 #include "scip/iisfinder.h"
 #include "scip/iisfinder_greedy.h"
 #include "scip/struct_iisfinder.h"
+#include "scip/type_misc.h"
 
 
 /** method to call, when the priority of an IIS finder was changed */
@@ -1072,6 +1073,25 @@ SCIP_VAR* SCIPiisGetSubscipVar(
    assert( iis != NULL );
    return SCIPhashmapGetImage(iis->varsmap, var);
 }
+
+/** get the varsmap of an IIS */
+SCIP_HASHMAP* SCIPiisGetVarsmap(
+   SCIP_IIS*             iis                 /**< pointer to the IIS */
+   )
+{
+   assert( iis != NULL );
+   return iis->varsmap;
+}
+
+/** get the conssmap of an IIS */
+SCIP_HASHMAP* SCIPiisGetConssmap(
+   SCIP_IIS*             iis                 /**< pointer to the IIS */
+   )
+{
+   assert( iis != NULL );
+   return iis->conssmap;
+}
+
 
 /** compares two IIS finders w. r. to their priority */
 SCIP_DECL_SORTPTRCOMP(SCIPiisfinderComp)
