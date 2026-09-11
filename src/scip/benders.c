@@ -3694,7 +3694,7 @@ SCIP_RETCODE generateBendersCuts(
    SCIP_BENDERSSUBSTATUS* substatus,         /**< array to store the status of the subsystem */
    int*                  solveidx,           /**< the indices of subproblems to be solved in this loop */
    int                   nsolveidx,          /**< the number of subproblems to be solved in this loop */
-   int**                 mergecands,         /**< the subproblems that are merge candidates */
+   int*                  mergecands,         /**< the subproblems that are merge candidates */
    int*                  npriomergecands,    /**< the number of priority merge candidates. */
    int*                  nmergecands,        /**< the number of merge candidates. */
    int*                  nsolveloops         /**< the number of solve loops, is updated w.r.t added cuts */
@@ -3816,7 +3816,7 @@ SCIP_RETCODE generateBendersCuts(
                 */
                if( substatus[i] != SCIP_BENDERSSUBSTATUS_OPTIMAL )
                {
-                  (*mergecands)[(*nmergecands)] = i;
+                  mergecands[(*nmergecands)] = i;
                   (*nmergecands)++;
                }
             }
@@ -3828,14 +3828,14 @@ SCIP_RETCODE generateBendersCuts(
                 */
                if( substatus[i] == SCIP_BENDERSSUBSTATUS_INFEAS )
                {
-                  (*mergecands)[(*nmergecands)] = (*mergecands)[(*npriomergecands)];
-                  (*mergecands)[(*npriomergecands)] = i;
+                  mergecands[(*nmergecands)] = mergecands[(*npriomergecands)];
+                  mergecands[(*npriomergecands)] = i;
                   (*npriomergecands)++;
                   (*nmergecands)++;
                }
                else if( substatus[i] != SCIP_BENDERSSUBSTATUS_OPTIMAL )
                {
-                  (*mergecands)[(*nmergecands)] = i;
+                  mergecands[(*nmergecands)] = i;
                   (*nmergecands)++;
                }
             }
@@ -4109,7 +4109,7 @@ SCIP_RETCODE SCIPbendersExec(
          if( type != SCIP_BENDERSENFOTYPE_PSEUDO )
          {
             SCIP_CALL( generateBendersCuts(benders, set, sol, result, type, solveloop, checkint, subprobsolved,
-                  substatus, solveidx, nsolveidx, &mergecands, &npriomergecands, &nmergecands, &nsolveloops) );
+                  substatus, solveidx, nsolveidx, mergecands, &npriomergecands, &nmergecands, &nsolveloops) );
          }
          else
          {
