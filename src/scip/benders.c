@@ -1674,7 +1674,9 @@ SCIP_RETCODE addSlackVarsToConstraints(
    SCIP* subproblem;
    SCIP_CONSHDLR* linearconshdlrs[NLINEARCONSHDLRS];
    SCIP_CONSHDLR* nlconshdlr;
+   SCIP_CONS** origconss;
    SCIP_CONS* cons;
+   int norgiconss;
    int i;
 
    assert(benders != NULL);
@@ -1692,9 +1694,11 @@ SCIP_RETCODE addSlackVarsToConstraints(
 
    nlconshdlr = SCIPfindConshdlr(subproblem, "nonlinear");
 
-   for( i = 0; i < SCIPgetNOrigConss(subproblem); ++i )
+   origconss = SCIPgetOrigConss(subproblem);
+   norgiconss = SCIPgetNOrigConss(subproblem);
+   for( i = 0; i < norgiconss; ++i )
    {
-      cons = SCIPgetOrigConss(subproblem)[i];
+      cons = origconss[i];
 
       /* adding the slack variables to the constraint */
       SCIP_CALL( addSlackVars(subproblem, benders, cons, linearconshdlrs, nlconshdlr, NLINEARCONSHDLRS) );
