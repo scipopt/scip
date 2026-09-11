@@ -3909,10 +3909,18 @@ SCIP_RETCODE SCIPbendersExec(
    int i;
    int l;
 
+   assert(benders != NULL);
+   assert(result != NULL);
+   assert(infeasible != NULL);
+   assert(auxviol != NULL);
+
    success = TRUE;
    stopped = FALSE;
 
-   SCIPsetDebugMsg(set, "Starting Benders' decomposition subproblem solving. type %d checkint %u\n", type, checkint);
+   *auxviol = FALSE;
+   *infeasible = FALSE;
+
+   SCIPsetDebugMsg(set, "Starting Benders' decomposition subproblem solving; type: %d, checkint: %u\n", type, checkint);
 
 #ifdef SCIP_MOREDEBUG
    SCIP_CALL( SCIPprintSol(set->scip, sol, NULL, FALSE) );
@@ -3923,9 +3931,6 @@ SCIP_RETCODE SCIPbendersExec(
 
    nsubproblems = SCIPbendersGetNSubproblems(benders);
 
-   (*auxviol) = FALSE;
-   (*infeasible) = FALSE;
-
    /* It is assumed that the problem is optimal, until a subproblem is found not to be optimal. However, not all
     * subproblems could be checked in each iteration. As such, it is not possible to state that the problem is optimal
     * if not all subproblems are checked. Situations where this may occur is when a subproblem is a MIP and only the LP
@@ -3935,11 +3940,6 @@ SCIP_RETCODE SCIPbendersExec(
    optimal = TRUE;
    nverified = 0;
    nsolved = 0;
-
-   assert(benders != NULL);
-   assert(result != NULL);
-   assert(infeasible != NULL);
-   assert(auxviol != NULL);
 
    /* if the Benders' decomposition is called from a sub-SCIP and the sub-SCIPs have been deactivated, then it is
     * assumed that this is an LNS heuristic. As such, the check is not performed and the solution is assumed to be
