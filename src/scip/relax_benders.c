@@ -578,13 +578,11 @@ SCIP_RETCODE setSolutionValues(
       SCIP* solscip;
       SCIP_HASHMAP* varmap;
       SCIP_SOL* bestsol;
-      SCIP_Bool subproblem;
+      SCIP_Bool issubproblemvar;
 
-      /* if the varlabel is >= 0, then the variable belongs to the subproblem. Otherwise, the variable belongs to the
-       * master problem.
-       */
-      subproblem = varslabels[i] >= 0;
-      if( subproblem )
+      /* If the varlabel is >= 0, then the variable belongs to the subproblem, otherwise to the master problem. */
+      issubproblemvar = varslabels[i] >= 0;
+      if( issubproblemvar )
       {
          solscip = relaxdata->subproblems[varslabels[i]];
          varmap = relaxdata->subvarmaps[varslabels[i]];
@@ -601,7 +599,7 @@ SCIP_RETCODE setSolutionValues(
          SCIP_Bool nlprelaxation;
 
          /* the subproblem could be an NLP. As such, we need to get the solution directly from the NLP */
-         nlprelaxation = subproblem && SCIPisNLPConstructed(solscip) && SCIPgetNNlpis(solscip);
+         nlprelaxation = issubproblemvar && SCIPisNLPConstructed(solscip) && SCIPgetNNlpis(solscip);
          assert(!nlprelaxation || nlpsols != NULL);
          if( nlprelaxation && nlpsols != NULL )
          {
