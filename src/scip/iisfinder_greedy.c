@@ -1166,13 +1166,21 @@ SCIP_RETCODE SCIPiisGreedyMakeIrreducible(
    isstandalone = !SCIPhashmapIsEmpty(iis->conssmap);
    if( isstandalone )
    {
-      conss = SCIPgetOrigConss(scip);
-      SCIP_CALL( SCIPhashmapCreate(&invconssmap, SCIPblkmem(scip), nconss) );
-      for( c = 0; c < nconss; ++c )
+      SCIP_HASHMAPENTRY* entry;
+      int nentries;
+
+      SCIP_CALL( SCIPhashmapCreate(&invconssmap, SCIPblkmem(scip), SCIPhashmapGetNElements(iis->conssmap)) );
+      nentries = SCIPhashmapGetNEntries(iis->conssmap);
+      for( c = 0; c < nentries; ++c )
       {
-         imagecons = SCIPhashmapGetImage(iis->conssmap, conss[c]);
+         entry = SCIPhashmapGetEntry(iis->conssmap, c);
+         if( entry == NULL )
+            continue;
+
+         imagecons = SCIPhashmapEntryGetImage(entry);
          assert(imagecons != NULL);
-         SCIP_CALL( SCIPhashmapInsert(invconssmap, imagecons, conss[c]) );
+
+         SCIP_CALL( SCIPhashmapInsert(invconssmap, imagecons, SCIPhashmapEntryGetOrigin(entry)) );
       }
       SCIP_CALL( SCIPhashmapRemoveAll(iis->conssmap) );
    }
