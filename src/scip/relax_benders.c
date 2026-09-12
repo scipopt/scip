@@ -459,6 +459,8 @@ SCIP_RETCODE solveBendersSubproblems(
    assert(relax != NULL);
    assert(infeasible != NULL);
 
+   *infeasible = FALSE;
+
    relaxdata = SCIPrelaxGetData(relax);
    assert(relaxdata != NULL);
 
