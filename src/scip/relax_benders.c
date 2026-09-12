@@ -313,14 +313,14 @@ SCIP_RETCODE applyDecomposition(
    /* copying the constraints to the appropriate subproblems */
    for( i = 0; i < nconss; i++ )
    {
-      /* the constraints with a block label >= 0 correspond to subproblem constraints. All other constraints are master
+      /* The constraints with a block label >= 0 correspond to subproblem constraints. All other constraints are master
        * constraints.
        */
-      if( conslabels[i] >= 0 )
+      int l = conslabels[i];
+      if( l >= 0 )
       {
-         assert(conslabels[i] < relaxdata->nsubproblems);
-         SCIP_CALL( addConstraintToBendersProblem(scip, relaxdata->subproblems[conslabels[i]], relaxdata->subvarmaps[conslabels[i]],
-               conss[i]) );
+         assert(l < relaxdata->nsubproblems);
+         SCIP_CALL( addConstraintToBendersProblem(scip, relaxdata->subproblems[l], relaxdata->subvarmaps[l], conss[i]) );
       }
       else
       {
