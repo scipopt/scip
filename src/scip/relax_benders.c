@@ -53,7 +53,7 @@
  * Benders' decomposition as a start heuristic, then this can be set with the parameter "relaxing/benders/nodelimit".
  *
  * If the Benders' decomposition relaxator is used, then statistics for both the original SCIP instance and the master
- * problem SCIP instance are displayed when the statistics are requested by via the SCIP shell dialog.
+ * problem SCIP instance are displayed when the statistics are requested via the SCIP shell dialog.
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -199,7 +199,7 @@ SCIP_RETCODE addConstraintToBendersProblem(
          SCIPconsIsLocal(sourcecons), SCIPconsIsModifiable(sourcecons), SCIPconsIsDynamic(sourcecons),
          SCIPconsIsRemovable(sourcecons), SCIPconsIsStickingAtNode(sourcecons), TRUE, &success) );
 
-   /* if the copy failed, then the subproblem for the decomposition could not be performed. */
+   /* if the copy failed, then Benders' decomposition could not be performed. */
    if( !success )
    {
       SCIPerrorMessage("It is not possible to copy constraint <%s>. Benders' decomposition could not be applied.\n",
@@ -260,8 +260,8 @@ SCIP_RETCODE applyDecomposition(
    SCIP_CALL( SCIPcopyPlugins(scip, relaxdata->masterprob, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE,
          TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, &valid) );
 
-   /* including the default Benders' decomposition plugin. This is added separately so that any addition of the plugin
-    * in the master problem is ignored
+   /* Including the default Benders' decomposition plugin. This is added separately so that any addition of the plugin
+    * in the master problem is ignored.
     */
    SCIP_CALL( SCIPincludeBendersDefault(relaxdata->masterprob) );
 
@@ -286,7 +286,7 @@ SCIP_RETCODE applyDecomposition(
 
    /* TODO: Need to work out whether a check for original and transformed problem is necessary */
 
-   /* getting the variables and constraints from the problem */
+   /* getting the variables and constraints from the original problem */
    SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, NULL, NULL, NULL, NULL) );
    conss = SCIPgetConss(scip);
    nconss = SCIPgetNConss(scip);
@@ -511,7 +511,7 @@ SCIP_RETCODE getNlpSolution(
 }
 
 /** using the stored mappings for the variables, the solution values from the master and subproblems are used to set the
- * solution values in the original SCIP solution
+ *  solution values in the original SCIP solution
  */
 static
 SCIP_RETCODE setSolutionValues(
@@ -563,7 +563,7 @@ SCIP_RETCODE setSolutionValues(
 
    decomp = relaxdata->decomp;
 
-   /* getting the variables and constraints from the problem */
+   /* getting the variables and constraints from the original problem */
    SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, NULL, NULL, NULL, NULL) );
 
    /* allocating buffer memory for the labels arrays */
@@ -799,8 +799,6 @@ SCIP_RELAXDATA* relaxdata;
 }
 
 
-
-
 /** solving process initialization method of relaxator (called when branch and bound process is about to begin) */
 static
 SCIP_DECL_RELAXINITSOL(relaxInitsolBenders)
@@ -840,7 +838,7 @@ SCIP_DECL_RELAXINITSOL(relaxInitsolBenders)
    /* if the default Benders' decomposition plugin doesn't exist, then this will result in an error */
    if( benders == NULL )
    {
-      SCIPerrorMessage("The default Benders' decomposition plugin is required to apply Benders' decomposition using the input decomposition.");
+      SCIPerrorMessage("The default Benders' decomposition plugin is required to apply Benders' decomposition using the input decomposition.\n");
       return SCIP_ERROR;
    }
 
@@ -883,11 +881,13 @@ SCIP_DECL_RELAXEXEC(relaxExecBenders)
    /* copying the time and memory limits from the original SCIP to the master problem */
    SCIP_CALL( SCIPcopyLimits(scip, relaxdata->masterprob) );
 
-   /* is a Benders' decomposition node limit is set, then it is applied to the master problem */
+   /* if a Benders' decomposition node limit is set, then it is applied to the master problem */
    if( relaxdata->nodelimit >= 0 )
+   {
       SCIP_CALL( SCIPsetLongintParam(relaxdata->masterprob, "limits/totalnodes", relaxdata->nodelimit) );
+   }
 
-   /* presolving the master problem to initialise the Benders' decomposition data structures. This will allow us to
+   /* Presolving the master problem to initialise the Benders' decomposition data structures. This will allow us to
     * supply an initial solution coming from the original SCIP instance.
     */
    SCIP_CALL( SCIPpresolve(relaxdata->masterprob) );
@@ -899,8 +899,7 @@ SCIP_DECL_RELAXEXEC(relaxExecBenders)
 
    masterstatus = SCIPgetStatus(relaxdata->masterprob);
 
-   SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL,
-      "\nBenders' decomposition solve has completed.\n\n");
+   SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL, "\nBenders' decomposition solve has completed.\n\n");
 
    /* if the problem is solved to be infeasible, then the result needs to be set to CUTOFF. */
    if( masterstatus == SCIP_STATUS_INFEASIBLE )
@@ -909,7 +908,7 @@ SCIP_DECL_RELAXEXEC(relaxExecBenders)
       return SCIP_OKAY;
    }
 
-   /* a solution for the original SCIP needs to be created. This will transfer the best found solution from the
+   /* A solution for the original SCIP needs to be created. This will transfer the best found solution from the
     * Benders decomposition solve back to the original SCIP instance.
     */
    SCIP_CALL( createOriginalSolution(scip, relax, &infeasible) );
@@ -917,7 +916,7 @@ SCIP_DECL_RELAXEXEC(relaxExecBenders)
    (*lowerbound) = SCIPgetDualbound(relaxdata->masterprob);
    (*result) = SCIP_SUCCESS;
 
-   /* if only the Benders' decomposition algorithm should be executed, then there we need to stop the original SCIP
+   /* If only the Benders' decomposition algorithm should be executed, then there we need to stop the original SCIP
     * instance. This is achieved by calling SCIPinterruptSolve. However, it is not necessary to interrupt the solve if
     * the time, gap, primal or dual limits are reached in the Benders' decomposition algorithm.
     */
@@ -939,9 +938,6 @@ SCIP_DECL_RELAXEXEC(relaxExecBenders)
 
    return SCIP_OKAY;
 }
-
-
-
 
 
 /*
