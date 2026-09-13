@@ -143,8 +143,9 @@ SCIP_RETCODE solveFeasibilityNonlinearSubproblem(
 
    assert(scip != NULL);
    assert(benderscutdata != NULL);
+   assert(success != NULL);
 
-   (*success) = TRUE;
+   *success = TRUE;
 
    SCIP_CALL( SCIPsolveNlpi(scip, benderscutdata->nlpi, benderscutdata->nlpiprob, .iterlimit = 3000) );  /*lint !e666*/
    SCIPdebugMsg(scip, "NLP solstat = %d\n", SCIPgetNlpiSolstat(scip, benderscutdata->nlpi, benderscutdata->nlpiprob));
@@ -155,7 +156,7 @@ SCIP_RETCODE solveFeasibilityNonlinearSubproblem(
     * since the NLP should always be feasible. In debug mode, an ABORT will be thrown.
     */
    if( nlpsolstat > SCIP_NLPSOLSTAT_FEASIBLE )
-      (*success) = FALSE;
+      *success = FALSE;
 
    return SCIP_OKAY;
 }
@@ -173,6 +174,7 @@ SCIP_RETCODE createAuxiliaryNonlinearSubproblem(
    int i;
 
    assert(masterprob != NULL);
+   assert(benderscut != NULL);
 
    benderscutdata = SCIPbenderscutGetData(benderscut);
    assert(benderscutdata != NULL);
@@ -293,6 +295,7 @@ SCIP_RETCODE generateAndApplyBendersCuts(
    assert(masterprob != NULL);
    assert(subproblem != NULL);
    assert(benders != NULL);
+   assert(benderscut != NULL);
    assert(result != NULL);
 
    benderscutdata = SCIPbenderscutGetData(benderscut);
@@ -314,7 +317,7 @@ SCIP_RETCODE generateAndApplyBendersCuts(
 
    if( !success )
    {
-      (*result) = SCIP_DIDNOTFIND;
+      *result = SCIP_DIDNOTFIND;
       SCIPdebugMsg(masterprob, "Error in generating Benders' feasibility cut for problem %d. "
          "The feasibility subproblem failed to solve with a feasible solution.\n", probnumber);
       return SCIP_OKAY;
@@ -331,6 +334,7 @@ SCIP_RETCODE generateAndApplyBendersCuts(
    {
       int varindex;
       SCIP_Real solval;
+
       if( SCIPhashmapExists(benderscutdata->var2idx, benderscutdata->nlpivars[i]) )
       {
          varindex = SCIPhashmapGetImageInt(benderscutdata->var2idx, benderscutdata->nlpivars[i]);
@@ -354,7 +358,7 @@ SCIP_RETCODE generateAndApplyBendersCuts(
          sol, probnumber, cutname, obj, primalvals, consdualvals, varlbdualvals, varubdualvals, benderscutdata->row2idx,
          benderscutdata->var2idx, type, FALSE, TRUE, result) );
 
-   if( (*result) == SCIP_CONSADDED )
+   if( *result == SCIP_CONSADDED )
    {
       if( SCIPisInfinity(masterprob, -SCIPgetDualbound(masterprob))
          && SCIPbenderscutGetNFound(benderscut) % SCIP_DEFAULT_DISPLAYFREQ == 0 )
@@ -425,7 +429,8 @@ SCIP_DECL_BENDERSCUTEXEC(benderscutExecFeasalt)
       SCIPdebugMsg(scip, "The subproblem %d is set to NULL. The <%s> Benders' decomposition cut can not be executed.\n",
          probnumber, BENDERSCUT_NAME);
 
-      (*result) = SCIP_DIDNOTRUN;
+      *result = SCIP_DIDNOTRUN;
+
       return SCIP_OKAY;
    }
 
@@ -461,12 +466,10 @@ SCIP_RETCODE SCIPincludeBenderscutFeasalt(
    SCIP_BENDERS*         benders             /**< Benders' decomposition */
    )
 {
-   SCIP_BENDERSCUT* benderscut;
+   SCIP_BENDERSCUT* benderscut = NULL;
    SCIP_BENDERSCUTDATA* benderscutdata;
 
    assert(benders != NULL);
-
-   benderscut = NULL;
 
    SCIP_CALL( SCIPallocBlockMemory(scip, &benderscutdata) );
    BMSclearMemory(benderscutdata);
