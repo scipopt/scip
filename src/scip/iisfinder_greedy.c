@@ -1135,9 +1135,7 @@ SCIP_RETCODE SCIPiisGreedyMakeIrreducible(
    SCIP_IIS*             iis                 /**< IIS data structure */
    )
 {
-   SCIP* scip = SCIPiisGetSubscip(iis);
-   SCIP_CONS** conss;
-   SCIP_CONS* imagecons;
+   SCIP* scip;
    SCIP_HASHMAP* invconssmap = NULL;
    SCIP_Real timelim;
    SCIP_Longint nodelim;
@@ -1147,10 +1145,6 @@ SCIP_RETCODE SCIPiisGreedyMakeIrreducible(
    SCIP_Bool alldeletionssolved = TRUE;
    int nvars;
    int nconss;
-   int maxbatchsize;
-   int c;
-
-   assert( scip != NULL );
 
    if( !SCIPiisIsSubscipInfeasible(iis) )
    {
@@ -1158,16 +1152,17 @@ SCIP_RETCODE SCIPiisGreedyMakeIrreducible(
       return SCIP_INVALIDDATA;
    }
 
-   nvars = SCIPgetNOrigVars(scip);
-   nconss = SCIPgetNOrigConss(scip);
-   maxbatchsize = MAX(nvars, nconss);
+   scip = SCIPiisGetSubscip(iis);
+   assert( scip != NULL );
 
    /* if this function is called by a user outside of iisfinder.c::SCIPiisGenerate(), build inverse constraints hashmap */
    isstandalone = !SCIPhashmapIsEmpty(iis->conssmap);
    if( isstandalone )
    {
       SCIP_HASHMAPENTRY* entry;
+      SCIP_CONS* imagecons;
       int nentries;
+      int c;
 
       SCIP_CALL( SCIPhashmapCreate(&invconssmap, SCIPblkmem(scip), SCIPhashmapGetNElements(iis->conssmap)) );
       nentries = SCIPhashmapGetNEntries(iis->conssmap);
@@ -1191,9 +1186,12 @@ SCIP_RETCODE SCIPiisGreedyMakeIrreducible(
    SCIP_CALL( SCIPgetBoolParam(scip, "iis/removebounds", &removebounds) );
    SCIP_CALL( SCIPgetBoolParam(scip, "iis/silent", &silent) );
 
+   nvars = SCIPgetNOrigVars(scip);
+   nconss = SCIPgetNOrigConss(scip);
+
    /* make irreducible by running the deletion filter with singleton batches */
    SCIP_CALL( deletionFilterBatch(iis, timelim, nodelim, removebounds, silent,
-         DEFAULT_TIMELIMPERITER, DEFAULT_NODELIMPERITER, TRUE, 1, maxbatchsize,
+         DEFAULT_TIMELIMPERITER, DEFAULT_NODELIMPERITER, TRUE, 1, MAX(nvars, nconss),
          DEFAULT_BATCHINGFACTOR, DEFAULT_BATCHINGOFFSET, DEFAULT_BATCHUPDATEINTERVAL, &alldeletionssolved) );
    if( alldeletionssolved && SCIPiisGetTime(iis) < timelim && ( nodelim == -1 || SCIPiisGetNNodes(iis) < nodelim ) )
       SCIPiisSetSubscipIrreducible(iis, TRUE);
@@ -1201,6 +1199,10 @@ SCIP_RETCODE SCIPiisGreedyMakeIrreducible(
    /* recreate main constraints hashmap */
    if( isstandalone )
    {
+      SCIP_CONS** conss;
+      SCIP_CONS* imagecons;
+      int c;
+
       assert(invconssmap != NULL);
       nconss = SCIPgetNOrigConss(scip);
       conss = SCIPgetOrigConss(scip);
