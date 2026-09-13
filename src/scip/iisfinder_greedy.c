@@ -1713,9 +1713,7 @@ SCIP_RETCODE SCIPiisGreedyMakeIrreducible(
    SCIP_IIS*             iis                 /**< IIS data structure */
    )
 {
-   SCIP* scip = SCIPiisGetSubscip(iis);
-   SCIP_CONS** conss;
-   SCIP_CONS* imagecons;
+   SCIP* scip;
    SCIP_HASHMAP* invconssmap = NULL;
    SCIP_Real timelim;
    SCIP_Longint nodelim;
@@ -1723,10 +1721,6 @@ SCIP_RETCODE SCIPiisGreedyMakeIrreducible(
    SCIP_Bool removebounds;
    SCIP_Bool silent;
    SCIP_Bool alldeletionssolved = TRUE;
-   int nconss;
-   int c;
-
-   assert( scip != NULL );
 
    if( !SCIPiisIsSubscipInfeasible(iis) )
    {
@@ -1734,19 +1728,30 @@ SCIP_RETCODE SCIPiisGreedyMakeIrreducible(
       return SCIP_INVALIDDATA;
    }
 
-   nconss = SCIPgetNOrigConss(scip);
+   scip = SCIPiisGetSubscip(iis);
+   assert( scip != NULL );
 
    /* if this function is called by a user outside of iisfinder.c::SCIPiisGenerate(), build inverse constraints hashmap */
    isstandalone = !SCIPhashmapIsEmpty(iis->conssmap);
    if( isstandalone )
    {
-      conss = SCIPgetOrigConss(scip);
-      SCIP_CALL( SCIPhashmapCreate(&invconssmap, SCIPblkmem(scip), nconss) );
-      for( c = 0; c < nconss; ++c )
+      SCIP_HASHMAPENTRY* entry;
+      SCIP_CONS* imagecons;
+      int nentries;
+      int c;
+
+      SCIP_CALL( SCIPhashmapCreate(&invconssmap, SCIPblkmem(scip), SCIPhashmapGetNElements(iis->conssmap)) );
+      nentries = SCIPhashmapGetNEntries(iis->conssmap);
+      for( c = 0; c < nentries; ++c )
       {
-         imagecons = SCIPhashmapGetImage(iis->conssmap, conss[c]);
+         entry = SCIPhashmapGetEntry(iis->conssmap, c);
+         if( entry == NULL )
+            continue;
+
+         imagecons = SCIPhashmapEntryGetImage(entry);
          assert(imagecons != NULL);
-         SCIP_CALL( SCIPhashmapInsert(invconssmap, imagecons, conss[c]) );
+
+         SCIP_CALL( SCIPhashmapInsert(invconssmap, imagecons, SCIPhashmapEntryGetOrigin(entry)) );
       }
       SCIP_CALL( SCIPhashmapRemoveAll(iis->conssmap) );
    }
@@ -1768,6 +1773,11 @@ SCIP_RETCODE SCIPiisGreedyMakeIrreducible(
    /* recreate main constraints hashmap */
    if( isstandalone )
    {
+      SCIP_CONS** conss;
+      SCIP_CONS* imagecons;
+      int nconss;
+      int c;
+
       assert(invconssmap != NULL);
       nconss = SCIPgetNOrigConss(scip);
       conss = SCIPgetOrigConss(scip);
