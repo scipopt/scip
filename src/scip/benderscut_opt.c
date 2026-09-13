@@ -275,7 +275,6 @@ SCIP_RETCODE computeMIRForOptimalityCut(
    SCIP_VAR**            vars,               /**< pointer to array of variables in the generated cut with non-zero coefficient */
    SCIP_Real*            vals,               /**< pointer to array of coefficients of the variables in the generated cut */
    SCIP_Real             lhs,                /**< the left hand side of the cut */
-   SCIP_Real             rhs,                /**< the right hand side of the cut */
    int                   nvars,              /**< the number of variables in the cut */
    SCIP_Real*            cutcoefs,           /**< the coefficients of the MIR cut */
    int*                  cutinds,            /**< the variable indices of the MIR cut */
@@ -311,7 +310,6 @@ SCIP_RETCODE computeMIRForOptimalityCut(
    SCIP_CALL( SCIPallocBufferArray(masterprob, &rowvals, nvars) );
    SCIP_CALL( SCIPallocBufferArray(masterprob, &rowinds, nvars) );
 
-   assert(SCIPisInfinity(masterprob, rhs));
    assert(!SCIPisInfinity(masterprob, lhs));
    for( i = 0; i < nvars; i++ )
    {
@@ -1037,7 +1035,7 @@ SCIP_RETCODE SCIPgenerateAndApplyBendersOptCut(
             SCIP_CALL( SCIPallocBufferArray(masterprob, &cutcoefs, nvars) );
             SCIP_CALL( SCIPallocBufferArray(masterprob, &cutinds, nvars) );
 
-            SCIP_CALL( computeMIRForOptimalityCut(masterprob, sol, vars, vals, lhs, rhs, nvars, cutcoefs,
+            SCIP_CALL( computeMIRForOptimalityCut(masterprob, sol, vars, vals, lhs, nvars, cutcoefs,
                   cutinds, &cutrhs, &cutnnz, &mirsuccess) );
 
             /* if the MIR cut was computed successfully, then the current row/constraint needs to be destroyed and
