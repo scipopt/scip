@@ -1003,7 +1003,7 @@ void resetSubproblemObjectiveValue(
    }
 }
 
-/** compares two Benders' decompositions w. r. to their priority */
+/** compares two Benders' decompositions w.r.t. their priority */
 SCIP_DECL_SORTPTRCOMP(SCIPbendersComp)
 {  /*lint --e{715}*/
    return ((SCIP_BENDERS*)elem2)->priority - ((SCIP_BENDERS*)elem1)->priority;
@@ -6224,7 +6224,7 @@ void SCIPbendersRemoveSubproblems(
    benders->naddedsubprobs = 0;
 }
 
-/** returns the main auxiliary variable that is used the subproblem objective function. */
+/** returns the master auxiliary variable that is used the subproblem objective function */
 SCIP_VAR* SCIPbenderGetMasterAuxiliaryVar(
    SCIP_BENDERS*         benders             /**< Benders' decomposition */
    )
@@ -6528,7 +6528,7 @@ void SCIPbendersSetSubproblemIsNonlinear(
    assert(benders->nnonlinearsubprobs >= 0 && benders->nnonlinearsubprobs <= benders->nsubproblems);
 }
 
-/** returns whether the subproblem contains non-linear constraints. */
+/** returns whether the subproblem contains non-linear constraints */
 SCIP_Bool SCIPbendersSubproblemIsNonlinear(
    SCIP_BENDERS*         benders,            /**< Benders' decomposition */
    int                   probnumber          /**< the subproblem number */
@@ -6561,7 +6561,7 @@ void SCIPbendersSetMasterIsNonlinear(
    benders->masterisnonlinear = isnonlinear;
 }
 
-/** returns whether the master problem contains non-linear constraints. */
+/** returns whether the master problem contains non-linear constraints */
 SCIP_Bool SCIPbendersMasterIsNonlinear(
    SCIP_BENDERS*         benders             /**< Benders' decomposition */
    )
@@ -6597,6 +6597,7 @@ void SCIPbendersSetSubproblemsAreInfeasible(
 }
 
 /** returns whether at least one of the subproblems has been identified as infeasible.
+ *
  *  NOTE: this is without any variable fixing being performed
  */
 SCIP_Bool SCIPbendersSubproblemsAreInfeasible(
@@ -6608,7 +6609,7 @@ SCIP_Bool SCIPbendersSubproblemsAreInfeasible(
    return benders->subprobsinfeasible;
 }
 
-/** changes all of the master problem variables in the given subproblem to continuous. */
+/** changes all of the master problem variables in the given subproblem to continuous */
 SCIP_RETCODE SCIPbendersChgMastervarsToCont(
    SCIP_BENDERS*         benders,            /**< Benders' decomposition */
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -7120,7 +7121,7 @@ SCIP_BENDERSCUT* SCIPfindBenderscut(
 }
 
 /** returns the array of currently available Benders' cuts; active Benders' decomposition are in the first slots of
- * the array
+ *  the array
  */
 SCIP_BENDERSCUT** SCIPbendersGetBenderscuts(
    SCIP_BENDERS*         benders             /**< Benders' decomposition */
