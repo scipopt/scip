@@ -125,8 +125,9 @@ SCIP_RETCODE computeStandardLPFeasibilityCut(
    assert(subproblem != NULL);
    assert(benders != NULL);
    assert(SCIPgetLPSolstat(subproblem) == SCIP_LPSOLSTAT_INFEASIBLE);
+   assert(success != NULL);
 
-   (*success) = FALSE;
+   *success = FALSE;
 
    /* looping over all LP rows and setting the coefficients of the cut */
    nrows = SCIPgetNLPRows(subproblem);
@@ -144,17 +145,17 @@ SCIP_RETCODE computeStandardLPFeasibilityCut(
          continue;
 
       if( dualsol > 0.0 )
-         addval = dualsol*SCIProwGetLhs(lprow);
+         addval = dualsol * SCIProwGetLhs(lprow);
       else
-         addval = dualsol*SCIProwGetRhs(lprow);
+         addval = dualsol * SCIProwGetRhs(lprow);
 
       *lhs += addval;
 
       /* if the bound becomes infinite, then the cut generation terminates. */
-      if( SCIPisInfinity(masterprob, *lhs) || SCIPisInfinity(masterprob, -*lhs)
+      if( SCIPisInfinity(masterprob, *lhs) || SCIPisInfinity(masterprob, -(*lhs))
          || SCIPisInfinity(masterprob, addval) || SCIPisInfinity(masterprob, -addval))
       {
-         (*success) = FALSE;
+         *success = FALSE;
          SCIPdebugMsg(masterprob, "Infinite bound when generating feasibility cut.\n");
          return SCIP_OKAY;
       }
@@ -195,24 +196,24 @@ SCIP_RETCODE computeStandardLPFeasibilityCut(
          addval = 0;
 
          if( SCIPisPositive(subproblem, dualsol) )
-            addval = dualsol*SCIPvarGetUbGlobal(var);
+            addval = dualsol * SCIPvarGetUbGlobal(var);
          else if( SCIPisNegative(subproblem, dualsol) )
-            addval = dualsol*SCIPvarGetLbGlobal(var);
+            addval = dualsol * SCIPvarGetLbGlobal(var);
 
          *lhs -= addval;
 
          /* if the bound becomes infinite, then the cut generation terminates. */
-         if( SCIPisInfinity(masterprob, *lhs) || SCIPisInfinity(masterprob, -*lhs)
+         if( SCIPisInfinity(masterprob, *lhs) || SCIPisInfinity(masterprob, -(*lhs))
             || SCIPisInfinity(masterprob, addval) || SCIPisInfinity(masterprob, -addval))
          {
-            (*success) = FALSE;
+            *success = FALSE;
             SCIPdebugMsg(masterprob, "Infinite bound when generating feasibility cut.\n");
             return SCIP_OKAY;
          }
       }
    }
 
-   (*success) = TRUE;
+   *success = TRUE;
 
    return SCIP_OKAY;
 }
@@ -246,9 +247,10 @@ SCIP_RETCODE computeStandardNLPFeasibilityCut(
    assert(benders != NULL);
    assert(SCIPisNLPConstructed(subproblem));
    assert(SCIPgetNLPSolstat(subproblem) == SCIP_NLPSOLSTAT_LOCINFEASIBLE || SCIPgetNLPSolstat(subproblem) == SCIP_NLPSOLSTAT_GLOBINFEASIBLE);
+   assert(success != NULL);
+   assert(lhs != NULL);
 
-   (*success) = FALSE;
-
+   *success = FALSE;
    *lhs = 0.0;
    dirderiv = 0.0;
 
@@ -290,15 +292,15 @@ SCIP_RETCODE computeStandardNLPFeasibilityCut(
    *lhs += dirderiv;
 
    /* if the side became infinite or dirderiv was infinite, then the cut generation terminates. */
-   if( SCIPisInfinity(masterprob, *lhs) || SCIPisInfinity(masterprob, -*lhs)
+   if( SCIPisInfinity(masterprob, *lhs) || SCIPisInfinity(masterprob, -(*lhs))
       || SCIPisInfinity(masterprob, dirderiv) || SCIPisInfinity(masterprob, -dirderiv))
    {
-      (*success) = FALSE;
+      *success = FALSE;
       SCIPdebugMsg(masterprob, "Infinite bound when generating feasibility cut. lhs = %g dirderiv = %g.\n", *lhs, dirderiv);
       return SCIP_OKAY;
    }
 
-   (*success) = TRUE;
+   *success = TRUE;
 
    return SCIP_OKAY;
 }
@@ -367,7 +369,7 @@ SCIP_RETCODE generateAndApplyBendersCuts(
     */
    if( !success )
    {
-      (*result) = SCIP_DIDNOTFIND;
+      *result = SCIP_DIDNOTFIND;
       SCIPdebugMsg(masterprob, "Error in generating Benders' feasibility cut for problem %d.\n", probnumber);
    }
    else
@@ -403,7 +405,7 @@ SCIP_RETCODE generateAndApplyBendersCuts(
 
          SCIPdebugPrintCons(masterprob, cut, NULL);
 
-         (*result) = SCIP_CONSADDED;
+         *result = SCIP_CONSADDED;
       }
 
       SCIP_CALL( SCIPreleaseCons(masterprob, &cut) );
@@ -439,7 +441,7 @@ SCIP_DECL_BENDERSCUTEXEC(benderscutExecFeas)
       SCIPdebugMsg(scip, "The subproblem %d is set to NULL. The <%s> Benders' decomposition cut can not be executed.\n",
          probnumber, BENDERSCUT_NAME);
 
-      (*result) = SCIP_DIDNOTRUN;
+      *result = SCIP_DIDNOTRUN;
       return SCIP_OKAY;
    }
 
@@ -472,11 +474,9 @@ SCIP_RETCODE SCIPincludeBenderscutFeas(
    SCIP_BENDERS*         benders             /**< Benders' decomposition */
    )
 {
-   SCIP_BENDERSCUT* benderscut;
+   SCIP_BENDERSCUT* benderscut = NULL;
 
    assert(benders != NULL);
-
-   benderscut = NULL;
 
    /* include Benders' decomposition cuts */
    SCIP_CALL( SCIPincludeBenderscutBasic(scip, benders, &benderscut, BENDERSCUT_NAME, BENDERSCUT_DESC,
