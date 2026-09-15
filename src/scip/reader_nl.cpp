@@ -50,6 +50,9 @@
 #ifdef max
 #undef max   // undo definition of max in windows.h
 #endif
+#ifdef min
+#undef min   // undo definition of min in windows.h
+#endif
 #ifdef IGNORE
 #undef IGNORE // undo definition of IGNORE in windows.h
 #endif

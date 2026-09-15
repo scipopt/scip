@@ -16,6 +16,8 @@ Fixed bugs
 - fixed that copying relaxation-only variable in SCIPgetVarCopy() was not rejected as intended
 - apply consistent arithmetic and tolerance to SCIPselectWeighted*() for stable critical item
 - correct random seed by matching release macro with debug function of SCIPsetInitializeRandomSeed()
+- fixed compilation issue with MSVC 2026 when enabling C++20
+- fixed compilation issues with clang-based Intel compiler on Windows
 
 Build systems
 -------------

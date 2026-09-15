@@ -68,7 +68,7 @@ class ADTape {
 		(const AD<Base> &left, const AD<Base> &right);
 	friend AD<Base> CppAD::operator - <Base>
 		(const AD<Base> &left, const AD<Base> &right);
-# ifdef _MSC_VER
+# if defined(_MSC_VER) && !defined(__clang__) /* icx-cl defines _MSC_VER but needs the non-MSVC friend syntax below */
     // see https://github.com/coin-or/CppAD/issues/60
 	template <class Type> friend AD<Type> CppAD::operator * <Type>
 		(const AD<Type> &left, const AD<Type> &right);
@@ -88,7 +88,7 @@ class ADTape {
 		(const AD<Base> &left, const AD<Base> &right);
 	friend bool CppAD::operator >= <Base>
 		(const AD<Base> &left, const AD<Base> &right);
-# ifdef _MSC_VER
+# if defined(_MSC_VER) && !defined(__clang__) /* icx-cl defines _MSC_VER but needs the non-MSVC friend syntax below */
     // see https://github.com/coin-or/CppAD/issues/60
 	template <class Type> friend bool CppAD::operator == <Type>
 		(const AD<Type> &left, const AD<Type> &right);
