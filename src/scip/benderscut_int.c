@@ -191,6 +191,7 @@ SCIP_RETCODE computeStandardIntegerOptCut(
    SCIP_Real lhs;          /* the left hand side of the cut */
    int i;
    SCIPdebug( SCIP* subproblem; )
+
 #ifndef NDEBUG
    SCIP_Real verifyobj = 0;
 #endif
@@ -199,9 +200,8 @@ SCIP_RETCODE computeStandardIntegerOptCut(
    assert(benders != NULL);
    assert(cons != NULL || addcut);
    assert(row != NULL || !addcut);
-   assert(success != NULL);
 
-   *success = FALSE;
+   (*success) = FALSE;
 
    /* getting the best solution from the subproblem */
 
@@ -258,7 +258,7 @@ SCIP_RETCODE computeStandardIntegerOptCut(
    /* if the bound becomes infinite, then the cut generation terminates. */
    if( SCIPisInfinity(masterprob, lhs) || SCIPisInfinity(masterprob, -lhs) )
    {
-      *success = FALSE;
+      (*success) = FALSE;
       SCIPdebugMsg(masterprob, "Infinite bound when generating integer optimality cut.\n");
       return SCIP_OKAY;
    }
@@ -288,7 +288,7 @@ SCIP_RETCODE computeStandardIntegerOptCut(
 
    assert(SCIPisFeasEQ(masterprob, verifyobj, subprobobj));
 
-   *success = TRUE;
+   (*success) = TRUE;
 
    return SCIP_OKAY;
 }
@@ -345,17 +345,22 @@ SCIP_RETCODE generateAndApplyBendersIntegerCuts(
 {
    SCIP_BENDERSCUTDATA* benderscutdata;
    SCIP_CONSHDLR* consbenders;
-   SCIP_CONS* cons = NULL;
-   SCIP_ROW* row = NULL;
+   SCIP_CONS* cons;
+   SCIP_ROW* row;
    char cutname[SCIP_MAXSTRLEN];
    SCIP_Bool optimal;
    SCIP_Bool addcut;
-   SCIP_Bool success = FALSE;
+   SCIP_Bool success;
 
    assert(masterprob != NULL);
    assert(benders != NULL);
    assert(benderscut != NULL);
    assert(result != NULL);
+
+   row = NULL;
+   cons = NULL;
+
+   success = FALSE;
 
    /* retrieving the Benders' cut data */
    benderscutdata = SCIPbenderscutGetData(benderscut);
@@ -370,7 +375,6 @@ SCIP_RETCODE generateAndApplyBendersIntegerCuts(
 
    /* retrieving the Benders' decomposition constraint handler */
    consbenders = SCIPfindConshdlr(masterprob, "benders");
-   assert(consbenders != NULL);
 
    /* checking the optimality of the original problem with a comparison between the auxiliary variable and the
     * objective value of the subproblem
@@ -380,9 +384,9 @@ SCIP_RETCODE generateAndApplyBendersIntegerCuts(
 
    if( optimal )
    {
-      *result = SCIP_FEASIBLE;
+      (*result) = SCIP_FEASIBLE;
       SCIPdebugMsg(masterprob, "No <%s> cut added. Current Master Problem Obj: %g\n", BENDERSCUT_NAME,
-         SCIPgetSolOrigObj(masterprob, NULL) * (int)SCIPgetObjsense(masterprob));
+         SCIPgetSolOrigObj(masterprob, NULL)*(int)SCIPgetObjsense(masterprob));
       return SCIP_OKAY;
    }
 
@@ -458,7 +462,7 @@ SCIP_RETCODE generateAndApplyBendersIntegerCuts(
     */
    if( !success )
    {
-      *result = SCIP_DIDNOTFIND;
+      (*result) = SCIP_DIDNOTFIND;
       SCIPdebugMsg(masterprob, "Error in generating Benders' integer optimality cut for problem %d.\n", probnumber);
    }
    else
@@ -487,7 +491,7 @@ SCIP_RETCODE generateAndApplyBendersIntegerCuts(
          SCIPinfoMessage(masterprob, NULL, ";\n");
 #endif
 
-         *result = SCIP_SEPARATED;
+         (*result) = SCIP_SEPARATED;
       }
       else
       {
@@ -495,7 +499,7 @@ SCIP_RETCODE generateAndApplyBendersIntegerCuts(
 
          SCIPdebugPrintCons(masterprob, cons, NULL);
 
-         *result = SCIP_CONSADDED;
+         (*result) = SCIP_CONSADDED;
       }
    }
 
@@ -581,7 +585,7 @@ SCIP_DECL_BENDERSCUTEXEC(benderscutExecInt)
       SCIPdebugMsg(scip, "The subproblem %d is set to NULL. The <%s> Benders' decomposition cut can not be executed.\n",
          probnumber, BENDERSCUT_NAME);
 
-      *result = SCIP_DIDNOTRUN;
+      (*result) = SCIP_DIDNOTRUN;
       return SCIP_OKAY;
    }
 
@@ -629,7 +633,7 @@ SCIP_RETCODE SCIPincludeBenderscutInt(
    )
 {
    SCIP_BENDERSCUTDATA* benderscutdata;
-   SCIP_BENDERSCUT* benderscut = NULL;
+   SCIP_BENDERSCUT* benderscut;
    char paramname[SCIP_MAXSTRLEN];
 
    assert(benders != NULL);
@@ -638,6 +642,8 @@ SCIP_RETCODE SCIPincludeBenderscutInt(
    SCIP_CALL( SCIPallocBlockMemory(scip, &benderscutdata) );
    BMSclearMemory(benderscutdata);
    benderscutdata->benders = benders;
+
+   benderscut = NULL;
 
    /* include Benders' decomposition cuts */
    SCIP_CALL( SCIPincludeBenderscutBasic(scip, benders, &benderscut, BENDERSCUT_NAME, BENDERSCUT_DESC,
