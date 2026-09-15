@@ -298,6 +298,8 @@ Fixed bugs
 
 - fixed that parameter changes were printed to the log when parsing emphasis settings via an "emphasis:" line in a settings file (other parameter settings are not printed)
 - include original objective offset when writing transformed problem
+- correct node selector for heuristic node preview in main solving loop
+- stop interrupted node without copying to child to simplify solving continuation
 
 Interface changes
 -----------------
