@@ -155,13 +155,13 @@ SCIP_RETCODE doBenderscutCreate(
    (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "benders/%s/benderscut/%s/priority", SCIPbendersGetName(benders), name);
    (void) SCIPsnprintf(paramdesc, SCIP_MAXSTRLEN, "priority of Benders' cut <%s>", name);
    SCIP_CALL( SCIPsetAddIntParam(set, messagehdlr, blkmem, paramname, paramdesc,
-         &(*benderscut)->priority, TRUE, priority, INT_MIN/4, INT_MAX/4,
-         paramChgdBenderscutPriority, (SCIP_PARAMDATA*)(*benderscut)) ); /*lint !e740*/
+                  &(*benderscut)->priority, TRUE, priority, INT_MIN/4, INT_MAX/4,
+                  paramChgdBenderscutPriority, (SCIP_PARAMDATA*)(*benderscut)) ); /*lint !e740*/
 
    (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "benders/%s/benderscut/%s/enabled", SCIPbendersGetName(benders), name);
    SCIP_CALL( SCIPsetAddBoolParam(set, messagehdlr, blkmem, paramname,
-         "is this Benders' decomposition cut method used to generate cuts?", &(*benderscut)->enabled, FALSE,
-         SCIP_DEFAULT_ENABLED, NULL, NULL) ); /*lint !e740*/
+        "is this Benders' decomposition cut method used to generate cuts?", &(*benderscut)->enabled, FALSE,
+        SCIP_DEFAULT_ENABLED, NULL, NULL) ); /*lint !e740*/
 
    return SCIP_OKAY;
 }
@@ -353,13 +353,15 @@ SCIP_RETCODE SCIPbenderscutExec(
    SCIP_RESULT*          result              /**< pointer to store the result of the callback method */
    )
 {
-   SCIP_RESULT cutresult = SCIP_DIDNOTRUN;
+   SCIP_RESULT cutresult;
 
    assert(benderscut != NULL);
    assert(benderscut->benderscutexec != NULL);
    assert(set != NULL);
    assert(set->scip != NULL);
    assert(result != NULL);
+
+   cutresult = SCIP_DIDNOTRUN;
 
    SCIPsetDebugMsg(set, "executing Benders' decomposition cut <%s>\n", benderscut->name);
 
@@ -392,7 +394,7 @@ SCIP_RETCODE SCIPbenderscutExec(
    if( cutresult == SCIP_CONSADDED || cutresult == SCIP_SEPARATED )
       benderscut->nfound++;
 
-   *result = cutresult;
+   (*result) = cutresult;
 
    return SCIP_OKAY;
 }

@@ -857,7 +857,7 @@ SCIP_RETCODE SCIPsolveBendersSubproblem(
 
    SCIP_CALL( SCIPcheckStage(scip, "SCIPsolveBendersSubproblem", FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
 
-   SCIP_CALL( SCIPbendersSolveSubproblem(benders, scip->set, sol, probnumber, infeasible, solvecip, objective) );
+  SCIP_CALL( SCIPbendersSolveSubproblem(benders, scip->set, sol, probnumber, infeasible, solvecip, objective) );
 
    return SCIP_OKAY;
 }
@@ -925,9 +925,8 @@ SCIP_RETCODE SCIPcheckBendersSubproblemOptimality(
    assert(scip != NULL);
    assert(benders != NULL);
    assert(probnumber >= 0 && probnumber < SCIPbendersGetNSubproblems(benders));
-   assert(optimal != NULL);
 
-   *optimal = FALSE;
+   (*optimal) = FALSE;
 
    if( SCIPbendersGetAuxiliaryVar(benders, probnumber) == NULL )
    {
@@ -945,7 +944,7 @@ SCIP_RETCODE SCIPcheckBendersSubproblemOptimality(
             FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
    }
 
-   *optimal = SCIPbendersSubproblemIsOptimal(benders, scip->set, sol, probnumber);
+   (*optimal) = SCIPbendersSubproblemIsOptimal(benders, scip->set, sol, probnumber);
 
    return SCIP_OKAY;
 }
