@@ -81,7 +81,6 @@ SCIP_RETCODE polishSolution(
 
    assert(subproblem != NULL);
    assert(SCIPinProbing(subproblem));
-   assert(success != NULL);
 
    (*success) = FALSE;
 
@@ -128,7 +127,6 @@ SCIP_RETCODE checkSetupTolerances(
    assert(masterprob != NULL);
    assert(vars != NULL);
    assert(vals != NULL);
-   assert(valid != NULL);
 
    /* initialising the verify objective with the left hand side of the optimality cut */
    verifyobj = lhs;
@@ -174,7 +172,6 @@ SCIP_RETCODE resolveNLPWithTighterFeastol(
 
    assert(subproblem != NULL);
    assert(SCIPinProbing(subproblem));
-   assert(success != NULL);
 
    (*success) = FALSE;
 
@@ -285,19 +282,15 @@ SCIP_RETCODE computeMIRForOptimalityCut(
 {
    SCIP_AGGRROW* aggrrow;
    SCIP_Real* rowvals;
-   SCIP_Real cutefficacy;
-   SCIP_Bool cutislocal;
-   SCIP_Bool cutsuccess;
    int* rowinds;
-   int cutrank;
-   int i;
 
-   assert(masterprob != NULL);
-   assert(cutcoefs != NULL);
-   assert(cutinds != NULL);
-   assert(cutrhs != NULL);
-   assert(cutnnz != NULL);
-   assert(success != NULL);
+   SCIP_Real cutefficacy;
+   int cutrank;
+   SCIP_Bool cutislocal;
+
+   SCIP_Bool cutsuccess;
+
+   int i;
 
    /* creating the aggregation row. There will be only a single row in this aggregation, since it is only used to
     * compute the MIR coefficients
@@ -385,8 +378,6 @@ SCIP_RETCODE computeStandardLPOptimalityCut(
    assert(*vars != NULL);
    assert(vals != NULL);
    assert(*vals != NULL);
-   assert(checkobj != NULL);
-   assert(success != NULL);
 
    (*checkobj) = 0;
    (*success) = FALSE;
@@ -528,8 +519,6 @@ SCIP_RETCODE computeStandardNLPOptimalityCut(
    assert(SCIPisNLPConstructed(subproblem));
    assert(SCIPgetNLPSolstat(subproblem) <= SCIP_NLPSOLSTAT_FEASIBLE || consdualvals != NULL);
    assert(SCIPhasNLPSolution(subproblem) || consdualvals != NULL);
-   assert(checkobj != NULL);
-   assert(success != NULL);
 
    (*checkobj) = 0;
    (*success) = FALSE;
@@ -538,6 +527,8 @@ SCIP_RETCODE computeStandardNLPOptimalityCut(
       && !(primalvals != NULL && consdualvals != NULL && varlbdualvals != NULL && varubdualvals != NULL && row2idx != NULL && var2idx != NULL) ) /*lint !e845*/
    {
       SCIPerrorMessage("The optimality cut must generated from either a SCIP instance or all of the dual solutions and indices must be supplied");
+      (*success) = FALSE;
+
       return SCIP_ERROR;
    }
 
@@ -864,6 +855,7 @@ SCIP_RETCODE SCIPgenerateAndApplyBendersOptCut(
    SCIP_Bool optimal;
    SCIP_Bool success;
    SCIP_Bool mirsuccess;
+
    SCIP_Real checkobj;
    SCIP_Real verifyobj;
 
@@ -886,7 +878,6 @@ SCIP_RETCODE SCIPgenerateAndApplyBendersOptCut(
 
    /* retrieving the Benders' decomposition constraint handler */
    consbenders = SCIPfindConshdlr(masterprob, "benders");
-   assert(consbenders != NULL);
 
    /* checking the optimality of the original problem with a comparison between the auxiliary variable and the
     * objective value of the subproblem */
