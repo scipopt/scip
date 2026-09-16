@@ -2495,7 +2495,6 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpRelpscost)
    /* init orbits if necessary */
    if( runfiltering )
    {
-      printf("I am here\n");
       SCIP_CALL( initOrbits(scip, branchruledata) );
    }
 
