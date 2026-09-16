@@ -5404,8 +5404,6 @@ SCIP_Bool SCIPbendersSubproblemIsOptimal(
 
    optimal = FALSE;
 
-   optimal = FALSE;
-
    auxiliaryvarval = SCIPbendersGetAuxiliaryVarVal(benders, set, sol, probnumber);
 
    SCIPsetDebugMsg(set, "Subproblem %d - Auxiliary Variable: %g Subproblem Objective: %g Reldiff: %g Soltol: %g\n",
