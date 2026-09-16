@@ -2264,7 +2264,7 @@ SCIP_RETCODE SCIPtryAddSymmetryHandlingMethods(
    SCIP_Real* vardomcenter = NULL;
    int** perms;
    int nsymhdlrs;
-   int nperms;
+   int nperms = 0;
    int c;
    int i;
 
