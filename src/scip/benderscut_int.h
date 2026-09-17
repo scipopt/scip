@@ -42,7 +42,7 @@
  * \f]
  * If the subproblem is feasible, and \f$z(\bar{x}) > \varphi\f$ (indicating that the current underestimators are not
  * optimal) then the Benders' decomposition integer optimality cut can be generated from the optimal solution of the
- * subproblem. Let \f$S_{r}\f$ be the set of indicies for master problem variables that are 1 in \f$\bar{x}\f$ and
+ * subproblem. Let \f$S_{r}\f$ be the set of indices for master problem variables that are 1 in \f$\bar{x}\f$ and
  * \f$L\f$ a known lowerbound on the subproblem objective function value.
  *
  * The resulting cut is:

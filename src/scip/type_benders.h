@@ -48,10 +48,10 @@ extern "C" {
 
 enum SCIP_BendersEnfoType
 {
-    SCIP_BENDERSENFOTYPE_LP      = 1,        /**< the Benders' subproblems are solved during the enforcement of an LP solution */
-    SCIP_BENDERSENFOTYPE_RELAX   = 2,        /**< the Benders' subproblems are solved during the enforcement of a relaxation solution */
-    SCIP_BENDERSENFOTYPE_PSEUDO  = 3,        /**< the Benders' subproblems are solved during the enforcement of a pseudo solution */
-    SCIP_BENDERSENFOTYPE_CHECK   = 4         /**< the Benders' subproblems are solved during the checking of a solution for feasibility */
+   SCIP_BENDERSENFOTYPE_LP      = 1,         /**< the Benders' subproblems are solved during the enforcement of an LP solution */
+   SCIP_BENDERSENFOTYPE_RELAX   = 2,         /**< the Benders' subproblems are solved during the enforcement of a relaxation solution */
+   SCIP_BENDERSENFOTYPE_PSEUDO  = 3,         /**< the Benders' subproblems are solved during the enforcement of a pseudo solution */
+   SCIP_BENDERSENFOTYPE_CHECK   = 4          /**< the Benders' subproblems are solved during the checking of a solution for feasibility */
 };
 typedef enum SCIP_BendersEnfoType SCIP_BENDERSENFOTYPE;  /**< indicates the callback in cons_benders and cons_benderslp that triggered the subproblem solve */
 
@@ -115,7 +115,7 @@ typedef struct SCIP_SubproblemSolveStat SCIP_SUBPROBLEMSOLVESTAT; /**< the solvi
 #define SCIP_DECL_BENDERSFREE(x) SCIP_RETCODE x (SCIP* scip, SCIP_BENDERS* benders)
 
 /** initialization method of Benders' decomposition (called after problem was transformed and the Benders' decomposition
- * is active)
+ *  is active)
  *
  *  input:
  *  - scip            : SCIP main data structure
@@ -124,7 +124,7 @@ typedef struct SCIP_SubproblemSolveStat SCIP_SUBPROBLEMSOLVESTAT; /**< the solvi
 #define SCIP_DECL_BENDERSINIT(x) SCIP_RETCODE x (SCIP* scip, SCIP_BENDERS* benders)
 
 /** deinitialization method of Benders' decomposition (called before transformed problem is freed and the Benders'
- * decomposition is active)
+ *  decomposition is active)
  *
  *  input:
  *  - scip            : SCIP main data structure
@@ -206,7 +206,7 @@ typedef struct SCIP_SubproblemSolveStat SCIP_SUBPROBLEMSOLVESTAT; /**< the solvi
 #define SCIP_DECL_BENDERSCREATESUB(x) SCIP_RETCODE x (SCIP* scip, SCIP_BENDERS* benders, int probnumber)
 
 /** called before the subproblem solving loop for Benders' decomposition. The pre subproblem solve function gives the
- *  user an oppportunity to perform any global set up for the Benders' decomposition.
+ *  user an opportunity to perform any global set up for the Benders' decomposition.
  *
  *  input:
  *  - scip            : SCIP main data structure
@@ -232,7 +232,7 @@ typedef struct SCIP_SubproblemSolveStat SCIP_SUBPROBLEMSOLVESTAT; /**< the solvi
    SCIP_RESULT* result)
 
 /** the solving method for a convex Benders' decomposition subproblem. This call back is provided to solve problems
- *  for which the dual soluitons are used to generate Benders' decomposition cuts. In the classical Benders'
+ *  for which the dual solutions are used to generate Benders' decomposition cuts. In the classical Benders'
  *  decomposition implementation, this would be an LP. However, it can be any convex problem where the dual solutions
  *  are given by a single vector of reals.
  *
@@ -305,23 +305,23 @@ typedef struct SCIP_SubproblemSolveStat SCIP_SUBPROBLEMSOLVESTAT; /**< the solvi
   SCIP_Real* objective, SCIP_RESULT* result)
 
 /** the post-solve method for Benders' decomposition. The post-solve method is called after the subproblems have
- * been solved but before they have been freed. After the solving of the Benders' decomposition subproblems, the
- * subproblem solving data is freed in the SCIP_DECL_BENDERSFREESUB callback. However, it is not necessary to implement
- * SCIP_DECL_BENDERSFREESUB.
+ *  been solved but before they have been freed. After the solving of the Benders' decomposition subproblems, the
+ *  subproblem solving data is freed in the SCIP_DECL_BENDERSFREESUB callback. However, it is not necessary to implement
+ *  SCIP_DECL_BENDERSFREESUB.
  *
- * If SCIP_DECL_BENDERSFREESUB is not implemented, then the Benders' decomposition framework will perform a default
- * freeing of the subproblems. If a subproblem is an LP, then they will be in probing mode for the subproblem
- * solve. So the freeing process involves ending the probing mode. If the subproblem is a MIP, then the subproblem is
- * solved by calling SCIPsolve. As such, the transformed problem must be freed after each subproblem solve.
+ *  If SCIP_DECL_BENDERSFREESUB is not implemented, then the Benders' decomposition framework will perform a default
+ *  freeing of the subproblems. If a subproblem is an LP, then they will be in probing mode for the subproblem
+ *  solve. So the freeing process involves ending the probing mode. If the subproblem is a MIP, then the subproblem is
+ *  solved by calling SCIPsolve. As such, the transformed problem must be freed after each subproblem solve.
  *
- * This callback provides the opportunity for the user to clean up any data structures that should not exist beyond the current
- * iteration.
- * The user has full access to the master and subproblems in this callback. So it is possible to construct solution for
- * the master problem in the method.
- * Additionally, if there are any subproblems that are infeasibility and this can not be resolved, then the it is
- * possible to merge these subproblems into the master problem. The subproblem indices are given in the mergecands
- * array. The merging can be perform by a user defined function or by calling SCIPmergeBendersSubproblemIntoMaster. If a
- * subproblem was merged into the master problem, then the merged flag must be set to TRUE.
+ *  This callback provides the opportunity for the user to clean up any data structures that should not exist beyond the current
+ *  iteration.
+ *  The user has full access to the master and subproblems in this callback. So it is possible to construct solution for
+ *  the master problem in the method.
+ *  Additionally, if there are any subproblems that are infeasibility and this can not be resolved, then the it is
+ *  possible to merge these subproblems into the master problem. The subproblem indices are given in the mergecands
+ *  array. The merging can be perform by a user defined function or by calling SCIPmergeBendersSubproblemIntoMaster. If a
+ *  subproblem was merged into the master problem, then the merged flag must be set to TRUE.
  *
  *  input:
  *  - scip            : SCIP main data structure
@@ -361,7 +361,7 @@ typedef struct SCIP_SubproblemSolveStat SCIP_SUBPROBLEMSOLVESTAT; /**< the solvi
  */
 #define SCIP_DECL_BENDERSFREESUB(x) SCIP_RETCODE x (SCIP* scip, SCIP_BENDERS* benders, int probnumber)
 
-/** the variable mapping from the subproblem to the master problem. It is neccessary to have a mapping between every
+/** the variable mapping from the subproblem to the master problem. It is necessary to have a mapping between every
  *  master problem variable and its counterpart in the subproblem. This mapping must go both ways: from master to sub
  *  and sub to master.
  *
