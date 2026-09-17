@@ -42,6 +42,11 @@ Performance improvements
 - restarts based on tree size estimation are no longer capped at one; each additional restart becomes harder to trigger than the last
 - spend a smaller part of the LP iterations on strong branching as long as only few restarts have been performed
 
+Fixed bugs
+----------
+
+- order stored solutions by rational objective values in exact mode, including insertion, re-sorting, and transformed-space tie breaking
+
 Interface changes
 -----------------
 
