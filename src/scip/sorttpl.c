@@ -819,6 +819,9 @@ void SORTTPL_NAME(sorttpl_checkWeightedSelection, SORTTPL_NAMEEXT)
    SCIP_Real weightsum = 0.0;
    int i;
 
+   assert(medianpos >= 0);
+   assert(medianpos <= len);
+
    for( i = 0; i < len; i++ )
    {
       weightsum += weights != NULL ? weights[i] : 1.0;
@@ -888,6 +891,7 @@ void SORTTPL_NAME(SCIPselectWeighted, SORTTPL_NAMEEXT)
 
    partialweightsum = 0.0;
 
+SELECT:
    while( hi - lo + 1 > SORTTPL_SHELLSORTMAX )
    {
       int i;
@@ -1013,14 +1017,13 @@ void SORTTPL_NAME(SCIPselectWeighted, SORTTPL_NAMEEXT)
          lo, hi);
    }
 
-   /* it is impossible for lo or high to reach the end of the array. In this case, the item weights sum up to
-    * at most the capacity, which is handled at the top of this method.
-    */
-   assert(lo < len);
+   /* after sorting it is possible for lo to reach the end of the array */
+   assert(lo <= len);
    assert(hi < len);
+   hi = MIN(hi + 1, len - 1);
 
    /* determine the critical item position among the remaining elements */
-   for( j = lo; j <= MAX(lo, hi); ++j )
+   for( j = lo; j <= hi; ++j )
    {
       partialweightsum += weights != NULL ? weights[j] : 1.0;
 
@@ -1029,9 +1032,20 @@ void SORTTPL_NAME(SCIPselectWeighted, SORTTPL_NAMEEXT)
       {
          localmedianpos = j;
 
-         break;
+         goto CHECKANDRETURN;
       }
    }
+
+   /* continue selection after candidate range if sorting introduced substantial numerical deviation */
+   if( j < len )
+   {
+      lo = j;
+      hi = len - 1;
+
+      goto SELECT;
+   }
+
+   localmedianpos = len;
 
 CHECKANDRETURN:
 
