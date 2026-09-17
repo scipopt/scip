@@ -272,7 +272,6 @@ SCIP_RETCODE computeMIRForOptimalityCut(
    SCIP_VAR**            vars,               /**< pointer to array of variables in the generated cut with non-zero coefficient */
    SCIP_Real*            vals,               /**< pointer to array of coefficients of the variables in the generated cut */
    SCIP_Real             lhs,                /**< the left hand side of the cut */
-   SCIP_Real             rhs,                /**< the right hand side of the cut */
    int                   nvars,              /**< the number of variables in the cut */
    SCIP_Real*            cutcoefs,           /**< the coefficients of the MIR cut */
    int*                  cutinds,            /**< the variable indices of the MIR cut */
@@ -304,7 +303,6 @@ SCIP_RETCODE computeMIRForOptimalityCut(
    SCIP_CALL( SCIPallocBufferArray(masterprob, &rowvals, nvars) );
    SCIP_CALL( SCIPallocBufferArray(masterprob, &rowinds, nvars) );
 
-   assert(SCIPisInfinity(masterprob, rhs));
    assert(!SCIPisInfinity(masterprob, lhs));
    for( i = 0; i < nvars; i++ )
    {
@@ -358,7 +356,6 @@ SCIP_RETCODE computeStandardLPOptimalityCut(
    SCIP_VAR***           vars,               /**< pointer to array of variables in the generated cut with non-zero coefficient */
    SCIP_Real**           vals,               /**< pointer to array of coefficients of the variables in the generated cut */
    SCIP_Real*            lhs,                /**< the left hand side of the cut */
-   SCIP_Real*            rhs,                /**< the right hand side of the cut */
    int*                  nvars,              /**< the number of variables in the cut */
    int*                  varssize,           /**< the number of variables in the array */
    SCIP_Real*            checkobj,           /**< stores the objective function computed from the dual solution */
@@ -374,8 +371,6 @@ SCIP_RETCODE computeStandardLPOptimalityCut(
    int nrows;
    int i;
 
-   (*checkobj) = 0;
-
    assert(masterprob != NULL);
    assert(subproblem != NULL);
    assert(benders != NULL);
@@ -384,6 +379,7 @@ SCIP_RETCODE computeStandardLPOptimalityCut(
    assert(vals != NULL);
    assert(*vals != NULL);
 
+   (*checkobj) = 0;
    (*success) = FALSE;
 
    /* looping over all LP rows and setting the coefficients of the cut */
@@ -480,15 +476,6 @@ SCIP_RETCODE computeStandardLPOptimalityCut(
       }
    }
 
-   assert(SCIPisInfinity(masterprob, (*rhs)));
-   /* the rhs should be infinite. If it changes, then there is an error */
-   if( !SCIPisInfinity(masterprob, (*rhs)) )
-   {
-      (*success) = FALSE;
-      SCIPdebugMsg(masterprob, "RHS is not infinite. rhs = %g.\n", (*rhs));
-      return SCIP_OKAY;
-   }
-
    (*success) = TRUE;
 
    return SCIP_OKAY;
@@ -503,7 +490,6 @@ SCIP_RETCODE computeStandardNLPOptimalityCut(
    SCIP_VAR***           vars,               /**< pointer to array of variables in the generated cut with non-zero coefficient */
    SCIP_Real**           vals,               /**< pointer to array of coefficients of the variables in the generated cut */
    SCIP_Real*            lhs,                /**< the left hand side of the cut */
-   SCIP_Real*            rhs,                /**< the right hand side of the cut */
    int*                  nvars,              /**< the number of variables in the cut */
    int*                  varssize,           /**< the number of variables in the array */
    SCIP_Real             objective,          /**< the objective function of the subproblem */
@@ -527,8 +513,6 @@ SCIP_RETCODE computeStandardNLPOptimalityCut(
    int idx;
    int i;
 
-   (*checkobj) = 0;
-
    assert(masterprob != NULL);
    assert(subproblem != NULL);
    assert(benders != NULL);
@@ -536,6 +520,7 @@ SCIP_RETCODE computeStandardNLPOptimalityCut(
    assert(SCIPgetNLPSolstat(subproblem) <= SCIP_NLPSOLSTAT_FEASIBLE || consdualvals != NULL);
    assert(SCIPhasNLPSolution(subproblem) || consdualvals != NULL);
 
+   (*checkobj) = 0;
    (*success) = FALSE;
 
    if( !(primalvals == NULL && consdualvals == NULL && varlbdualvals == NULL && varubdualvals == NULL && row2idx == NULL && var2idx == NULL)
@@ -563,8 +548,6 @@ SCIP_RETCODE computeStandardNLPOptimalityCut(
 
    (*lhs) = objective;
    assert(!SCIPisInfinity(subproblem, REALABS(*lhs)));
-
-   (*rhs) = SCIPinfinity(masterprob);
 
    dirderiv = 0.0;
 
@@ -924,16 +907,17 @@ SCIP_RETCODE SCIPgenerateAndApplyBendersOptCut(
    if( SCIPisNLPConstructed(subproblem) && SCIPgetNNlpis(subproblem) )
    {
       /* computing the coefficients of the optimality cut */
-      SCIP_CALL( computeStandardNLPOptimalityCut(masterprob, subproblem, benders, &vars, &vals, &lhs, &rhs, &nvars,
+      SCIP_CALL( computeStandardNLPOptimalityCut(masterprob, subproblem, benders, &vars, &vals, &lhs, &nvars,
             &varssize, objective, primalvals, consdualvals, varlbdualvals, varubdualvals, row2idx,
             var2idx, &checkobj, &success) );
    }
    else
    {
       /* computing the coefficients of the optimality cut */
-      SCIP_CALL( computeStandardLPOptimalityCut(masterprob, subproblem, benders, &vars, &vals, &lhs, &rhs, &nvars,
+      SCIP_CALL( computeStandardLPOptimalityCut(masterprob, subproblem, benders, &vars, &vals, &lhs, &nvars,
             &varssize, &checkobj, &success) );
    }
+   assert(SCIPisInfinity(masterprob, rhs));
 
    /* if success is FALSE, then there was an error in generating the optimality cut. No cut will be added to the master
     * problem. Otherwise, the constraint is added to the master problem.
@@ -1042,7 +1026,7 @@ SCIP_RETCODE SCIPgenerateAndApplyBendersOptCut(
             SCIP_CALL( SCIPallocBufferArray(masterprob, &cutcoefs, nvars) );
             SCIP_CALL( SCIPallocBufferArray(masterprob, &cutinds, nvars) );
 
-            SCIP_CALL( computeMIRForOptimalityCut(masterprob, sol, vars, vals, lhs, rhs, nvars, cutcoefs,
+            SCIP_CALL( computeMIRForOptimalityCut(masterprob, sol, vars, vals, lhs, nvars, cutcoefs,
                   cutinds, &cutrhs, &cutnnz, &mirsuccess) );
 
             /* if the MIR cut was computed successfully, then the current row/constraint needs to be destroyed and

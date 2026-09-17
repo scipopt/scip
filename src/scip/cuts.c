@@ -11674,7 +11674,7 @@ SCIP_RETCODE SCIPcalcFlowCover(
    SCIP_Bool localbdsused;
    SCIP_Real lambda;
    SCIP_Real* tmpcoefs;
-   SCIP_Real tmprhs;
+   SCIP_Real tmprhs = 0.0;
    SCIP_Bool tmpislocal;
    int* tmpinds;
    int tmpnnz;

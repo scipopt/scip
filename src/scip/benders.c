@@ -912,6 +912,7 @@ void findAuxiliaryVar(
    int len = 1;
    int i;
 
+   assert(targetvar != NULL);
    i = 0;
    (*targetvar) = NULL;
 
@@ -1043,7 +1044,7 @@ void resetSubproblemObjectiveValue(
    }
 }
 
-/** compares two Benders' decompositions w. r. to their priority */
+/** compares two Benders' decompositions w.r.t. their priority */
 SCIP_DECL_SORTPTRCOMP(SCIPbendersComp)
 {  /*lint --e{715}*/
    return ((SCIP_BENDERS*)elem2)->priority - ((SCIP_BENDERS*)elem1)->priority;
@@ -1758,7 +1759,9 @@ SCIP_RETCODE addSlackVarsToConstraints(
    SCIP* subproblem;
    SCIP_CONSHDLR* linearconshdlrs[NLINEARCONSHDLRS];
    SCIP_CONSHDLR* nlconshdlr;
+   SCIP_CONS** origconss;
    SCIP_CONS* cons;
+   int norgiconss;
    int i;
 
    assert(benders != NULL);
@@ -1776,9 +1779,11 @@ SCIP_RETCODE addSlackVarsToConstraints(
 
    nlconshdlr = SCIPfindConshdlr(subproblem, "nonlinear");
 
-   for( i = 0; i < SCIPgetNOrigConss(subproblem); ++i )
+   origconss = SCIPgetOrigConss(subproblem);
+   norgiconss = SCIPgetNOrigConss(subproblem);
+   for( i = 0; i < norgiconss; ++i )
    {
-      cons = SCIPgetOrigConss(subproblem)[i];
+      cons = origconss[i];
 
       /* adding the slack variables to the constraint */
       SCIP_CALL( addSlackVars(subproblem, benders, cons, linearconshdlrs, nlconshdlr, NLINEARCONSHDLRS) );
@@ -4368,7 +4373,7 @@ SCIP_RETCODE generateBendersCuts(
    SCIP_BENDERSSUBSTATUS* substatus,         /**< array to store the status of the subsystem */
    int*                  solveidx,           /**< the indices of subproblems to be solved in this loop */
    int                   nsolveidx,          /**< the number of subproblems to be solved in this loop */
-   int**                 mergecands,         /**< the subproblems that are merge candidates */
+   int*                  mergecands,         /**< the subproblems that are merge candidates */
    int*                  npriomergecands,    /**< the number of priority merge candidates. */
    int*                  nmergecands,        /**< the number of merge candidates. */
    int*                  nsolveloops         /**< the number of solve loops, is updated w.r.t added cuts */
@@ -4516,7 +4521,7 @@ SCIP_RETCODE generateBendersCuts(
                 */
                if( substatus[i] != SCIP_BENDERSSUBSTATUS_OPTIMAL )
                {
-                  (*mergecands)[(*nmergecands)] = i;
+                  mergecands[(*nmergecands)] = i;
                   (*nmergecands)++;
                }
             }
@@ -4528,14 +4533,14 @@ SCIP_RETCODE generateBendersCuts(
                 */
                if( substatus[i] == SCIP_BENDERSSUBSTATUS_INFEAS )
                {
-                  (*mergecands)[(*nmergecands)] = (*mergecands)[(*npriomergecands)];
-                  (*mergecands)[(*npriomergecands)] = i;
+                  mergecands[(*nmergecands)] = mergecands[(*npriomergecands)];
+                  mergecands[(*npriomergecands)] = i;
                   (*npriomergecands)++;
                   (*nmergecands)++;
                }
                else if( substatus[i] != SCIP_BENDERSSUBSTATUS_OPTIMAL )
                {
-                  (*mergecands)[(*nmergecands)] = i;
+                  mergecands[(*nmergecands)] = i;
                   (*nmergecands)++;
                }
             }
@@ -4618,19 +4623,24 @@ SCIP_RETCODE SCIPbendersExec(
    int i;
    int l;
 
+   assert(benders != NULL);
+   assert(result != NULL);
+   assert(infeasible != NULL);
+   assert(auxviol != NULL);
+
    success = TRUE;
    stopped = FALSE;
 
-   SCIPsetDebugMsg(set, "Starting Benders' decomposition subproblem solving. type %d checkint %u\n", type, checkint);
+   *auxviol = FALSE;
+   *infeasible = FALSE;
+
+   SCIPsetDebugMsg(set, "Starting Benders' decomposition subproblem solving; type: %d, checkint: %u\n", type, checkint);
 
 #ifdef SCIP_MOREDEBUG
    SCIP_CALL( SCIPprintSol(set->scip, sol, NULL, FALSE) );
 #endif
 
    nsubproblems = SCIPbendersGetNSubproblems(benders);
-
-   (*auxviol) = FALSE;
-   (*infeasible) = FALSE;
 
    /* It is assumed that the problem is optimal, until a subproblem is found not to be optimal. However, not all
     * subproblems could be checked in each iteration. As such, it is not possible to state that the problem is optimal
@@ -4641,11 +4651,6 @@ SCIP_RETCODE SCIPbendersExec(
    optimal = TRUE;
    nverified = 0;
    nsolved = 0;
-
-   assert(benders != NULL);
-   assert(result != NULL);
-   assert(infeasible != NULL);
-   assert(auxviol != NULL);
 
    /* if the Benders' decomposition is called from a sub-SCIP and the sub-SCIPs have been deactivated, then it is
     * assumed that this is an LNS heuristic. As such, the check is not performed and the solution is assumed to be
@@ -4814,7 +4819,7 @@ SCIP_RETCODE SCIPbendersExec(
          if( type != SCIP_BENDERSENFOTYPE_PSEUDO )
          {
             SCIP_CALL( generateBendersCuts(benders, set, sol, result, type, solveloop, checkint, subprobsolved,
-                  substatus, solveidx, nsolveidx, &mergecands, &npriomergecands, &nmergecands, &nsolveloops) );
+                  substatus, solveidx, nsolveidx, mergecands, &npriomergecands, &nmergecands, &nsolveloops) );
          }
          else
          {
@@ -6968,7 +6973,7 @@ void SCIPbendersRemoveSubproblems(
    benders->naddedsubprobs = 0;
 }
 
-/** returns the main auxiliary variable that is used the subproblem objective function. */
+/** returns the master auxiliary variable that is used the subproblem objective function */
 SCIP_VAR* SCIPbenderGetMasterAuxiliaryVar(
    SCIP_BENDERS*         benders             /**< Benders' decomposition */
    )
@@ -7272,7 +7277,7 @@ void SCIPbendersSetSubproblemIsNonlinear(
    assert(benders->nnonlinearsubprobs >= 0 && benders->nnonlinearsubprobs <= benders->nsubproblems);
 }
 
-/** returns whether the subproblem contains non-linear constraints. */
+/** returns whether the subproblem contains non-linear constraints */
 SCIP_Bool SCIPbendersSubproblemIsNonlinear(
    SCIP_BENDERS*         benders,            /**< Benders' decomposition */
    int                   probnumber          /**< the subproblem number */
@@ -7305,7 +7310,7 @@ void SCIPbendersSetMasterIsNonlinear(
    benders->masterisnonlinear = isnonlinear;
 }
 
-/** returns whether the master problem contains non-linear constraints. */
+/** returns whether the master problem contains non-linear constraints */
 SCIP_Bool SCIPbendersMasterIsNonlinear(
    SCIP_BENDERS*         benders             /**< Benders' decomposition */
    )
@@ -7341,6 +7346,7 @@ void SCIPbendersSetSubproblemsAreInfeasible(
 }
 
 /** returns whether at least one of the subproblems has been identified as infeasible.
+ *
  *  NOTE: this is without any variable fixing being performed
  */
 SCIP_Bool SCIPbendersSubproblemsAreInfeasible(
@@ -7352,7 +7358,7 @@ SCIP_Bool SCIPbendersSubproblemsAreInfeasible(
    return benders->subprobsinfeasible;
 }
 
-/** changes all of the master problem variables in the given subproblem to continuous. */
+/** changes all of the master problem variables in the given subproblem to continuous */
 SCIP_RETCODE SCIPbendersChgMastervarsToCont(
    SCIP_BENDERS*         benders,            /**< Benders' decomposition */
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -7864,7 +7870,7 @@ SCIP_BENDERSCUT* SCIPfindBenderscut(
 }
 
 /** returns the array of currently available Benders' cuts; active Benders' decomposition are in the first slots of
- * the array
+ *  the array
  */
 SCIP_BENDERSCUT** SCIPbendersGetBenderscuts(
    SCIP_BENDERS*         benders             /**< Benders' decomposition */

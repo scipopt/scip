@@ -118,7 +118,7 @@ struct SCIP_Benders
    int                   numthreads;         /**< the number of threads to use when solving the subproblem */
 #endif
    SCIP_Bool             execfeasphase;      /**< should a feasibility phase be executed during the root node, i.e.
-                                                  adding slack variables to constraints to ensure feasibility */
+                                              *   adding slack variables to constraints to ensure feasibility */
    SCIP_Real             slackvarcoef;       /**< the initial objective coefficient of the slack variables in the subproblem */
    SCIP_Real             maxslackvarcoef;    /**< the maximal objective coefficient of the slack variables in the subproblem */
    SCIP_Bool             checkconsconvexity; /**< should the constraints of the subproblems be checked for convexity? */
@@ -159,11 +159,11 @@ struct SCIP_Benders
    int                   nconvexsubprobs;    /**< the number of subproblems that are convex */
    int                   nnonlinearsubprobs; /**< the number of subproblems that are non-linear */
    SCIP_Bool             subprobscreated;    /**< have the subproblems been created for this Benders' decomposition.
-                                                  This flag is used when retransforming the problem.*/
+                                              *   This flag is used when retransforming the problem.*/
    SCIP_Bool             subprobsinfeasible; /**< flag to indicate that infeasibility of at least one subproblem has
-                                                  been detected in the initialisation stages. */
+                                              *   been detected in the initialisation stages. */
    SCIP_Bool*            mastervarscont;     /**< flag to indicate that the master problem variable have been converted
-                                               to continuous variables. */
+                                              *   to continuous variables. */
    SCIP_Bool*            subprobsetup;       /**< flag to indicate whether the subproblem has been set up. */
    SCIP_Bool*            indepsubprob;       /**< flag to indicate if a subproblem is independent of the master prob */
    SCIP_Bool*            subprobenabled;     /**< flag to indicate whether the subproblem is enabled */
@@ -178,12 +178,13 @@ struct SCIP_Benders
    SCIP_Real             convexmult;         /**< the multiplier for the convex comb of the LP and sepa point */
    SCIP_Real             perturbeps;         /**< epsilon value to perturb the LP solution */
    int                   noimprovecount;     /**< count of the iterations without improvement */
-   int                   noimprovelimit;     /**< limit used to change behaviour of stabilitation */
+   int                   noimprovelimit;     /**< limit used to change behaviour of stabilisation */
    SCIP_NODE*            prevnode;           /**< the previous node where the cut strengthening was performed */
    SCIP_Longint          prevnlpiter;        /**< number of LP iters at the previous call of the cut strengthening */
    SCIP_Real             prevlowerbound;     /**< the lowerbound from the previous LP enforcement iteration */
    SCIP_Bool             strengthenenabled;  /**< is the core point cut strengthening enabled */
-   char                  strengthenintpoint; /**< where should the strengthening interior point be sourced from ('l'p relaxation, 'f'irst solution, 'i'ncumbent solution, 'r'elative interior point, vector of 'o'nes, vector of 'z'eros)  */
+   char                  strengthenintpoint; /**< where should the strengthening interior point be sourced from
+                                              *   ('l'p relaxation, 'f'irst solution, 'i'ncumbent solution, 'r'elative interior point, vector of 'o'nes, vector of 'z'eros)  */
    SCIP_Bool             strengthenround;    /**< flag to indicate whether a cut strengthening round is being performed */
    int                   nstrengthencuts;    /**< the number of strengthened cuts found */
    int                   nstrengthencalls;   /**< the number of calls to the strengthening round */
