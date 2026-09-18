@@ -25,11 +25,9 @@ for i in range(1,len(sys.argv)):
         apos = i
     if argument == "-v":
         vpos = i
-if vpos == -1:
-    apos = 1
 
 # check correct usage
-if len(sys.argv) == 1 or len(sys.argv) > 4 or vpos == len(sys.argv)-1 or vpos == apos -1:
+if len(sys.argv) == 1 or len(sys.argv) > 4 or vpos == len(sys.argv)-1 or vpos == apos:
     print("usage: scripts/updateversion.py [-a] [-v <MAJOR>.<MINOR>.<PATCH>]")
 else:
     # old version numbers
