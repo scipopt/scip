@@ -49,17 +49,6 @@
 #define SYM_MAXPREROUNDS         1 /**< maximal number of presolving rounds the symmetry handler participates in (-1: no limit) */
 
 /*
- * Data structures
- */
-
-/** symmetry component data for components handled by folding symmetry handler */
-struct SCIP_SymCompData
-{
-   SCIP_CONS**           conss;              /**< list of generated constraints */
-   int                   nconss;             /**< number of generated constraints */
-};
-
-/*
  * Local methods
  */
 
@@ -247,30 +236,27 @@ SCIP_RETCODE applyFolding(
    int                   nperms,             /**< number of permutations */
    SCIP_VAR**            permvars,           /**< variables the permutations act on */
    int                   npermvars,          /**< number of variables the permutations act on */
-   SCIP_SYMCOMPDATA**    symcompdata,        /**< pointer to store data of symmetry component */
    int                   id,                 /**< ID of symmetry component */
    int*                  naddedconss         /**< pointer to store number of added constraints */
    )
 {
-   char name[SCIP_MAXSTRLEN];
-   SCIP_VAR* tmpvars[2] = { NULL, NULL };
-   SCIP_Real coefs[2] = { 1.0, -1.0 };
+   SCIP_Bool infeasible;
+   SCIP_Bool redundant;
+   SCIP_Bool aggregated;
    int* orbits;
    int* orbitbegins;
    int norbits;
-   int nvars;
-   int nconss;
-   int oidx;
    int first;
+   int nvars;
+   int oidx;
    int i;
-   int c = 0;
+   int naggr = 0;
 
    assert(scip != NULL);
    assert(perms != NULL);
    assert(nperms > 0);
    assert(permvars != NULL);
    assert(npermvars > 0);
-   assert(symcompdata != NULL);
    assert(naddedconss != NULL);
 
    *naddedconss = 0;
@@ -283,32 +269,21 @@ SCIP_RETCODE applyFolding(
    SCIP_CALL( SCIPcomputeOrbitsSym(scip, FALSE, permvars, npermvars, perms, nperms, orbits, orbitbegins, &norbits) );
    assert(norbits > 0);
 
-   /* compute number of conss to be added */
-   nconss = orbitbegins[norbits] - norbits;
-
-   /* allocate memory for component data and create constraints  */
-   SCIP_CALL( SCIPallocBlockMemory(scip, symcompdata) );
-   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(*symcompdata)->conss, nconss) );
-   (*symcompdata)->nconss = nconss;
-
    for( oidx = 0; oidx < norbits; ++oidx )
    {
       first = orbits[orbitbegins[oidx]];
-      tmpvars[0] = permvars[first];
 
       for( i = orbitbegins[oidx] + 1; i < orbitbegins[oidx + 1]; ++i )
       {
-         (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "folding_symcomp_%d_%d_%d_%d", id, oidx, first, orbits[i]);
-
-         tmpvars[1] = permvars[orbits[i]];
-         SCIP_CALL( SCIPcreateConsBasicLinear(scip, &(*symcompdata)->conss[c], name, 2, tmpvars, coefs, 0.0, 0.0) );
-         SCIP_CALL( SCIPaddCons(scip, (*symcompdata)->conss[c++]) );
-         assert(c <= nconss);
+         SCIP_CALL( SCIPaggregateVars(scip, permvars[first], permvars[orbits[i]], 1.0, -1.0, 0.0,
+               &infeasible, &redundant, &aggregated) );
+         if( aggregated )
+            ++naggr;
       }
    }
-   assert(c == nconss);
+   assert(naggr <= orbitbegins[norbits] - norbits);
 
-   *naddedconss = nconss;
+   *naddedconss = naggr;
 
    SCIPfreeBufferArray(scip, &orbitbegins);
    SCIPfreeBufferArray(scip, &orbits);
@@ -346,7 +321,7 @@ SCIP_DECL_SYMHDLRTRYADD(symTryaddFolding)
       goto FREEMEM;
 
    /* apply folding */
-   SCIP_CALL( applyFolding(scip, perms, nperms, permvars, npermvars, symcompdata, id, naddedconss) );
+   SCIP_CALL( applyFolding(scip, perms, nperms, permvars, npermvars, id, naddedconss) );
    *success = TRUE;
 
  FREEMEM:
@@ -365,70 +340,6 @@ SCIP_DECL_SYMHDLRCOPY(symCopyFolding)
 
    /* call inclusion method of symmetry handler */
    SCIP_CALL( SCIPincludeSymhdlrFolding(scip) );
-
-   return SCIP_OKAY;
-}
-
-/** deinitialization method of symmetry handler (called before transformed problem is freed) */
-static
-SCIP_DECL_SYMHDLREXIT(symExitFolding)
-{  /*lint --e{715}*/
-   SCIP_SYMCOMPDATA* symdata;
-   int s;
-   int c;
-
-   for( s = 0; s < nsymcomps; ++s )
-   {
-      symdata = SCIPsymcompGetData(symcomps[s]);
-      assert(symdata->conss == NULL || symdata->nconss > 0);
-
-      for( c = 0; c < symdata->nconss; ++c )
-      {
-         SCIP_CALL( SCIPreleaseCons(scip, &symdata->conss[c]) );
-      }
-      SCIPfreeBlockMemoryArray(scip, &symdata->conss, symdata->nconss);
-      SCIPfreeBlockMemory(scip, &symdata);
-   }
-
-   return SCIP_OKAY;
-}
-
-/** presolving method of symmetry handler */
-static
-SCIP_DECL_SYMHDLRPRESOL(symPresolFolding)
-{  /*lint --e{715}*/
-   SCIP_SYMCOMPDATA* symdata;
-   int s;
-   int c;
-
-   assert(result != NULL);
-
-   *result = nsymcomps > 0 ? SCIP_DIDNOTFIND : SCIP_DIDNOTRUN;
-
-   for( s = 0; s < nsymcomps; ++s )
-   {
-      symdata = SCIPsymcompGetData(symcomps[s]);
-      assert(symdata->nconss > 0);
-
-      for( c = 0; c < symdata->nconss; ++c )
-      {
-         if( !SCIPconsIsActive(symdata->conss[c]) )
-            continue;
-
-         SCIP_CALL( SCIPpresolCons(scip, symdata->conss[c], nrounds, presoltiming, nnewfixedvars, nnewaggrvars,
-               nnewchgvartypes, nnewchgbds, nnewholes, nnewdelconss, nnewaddconss, nnewupgdconss, nnewchgcoefs,
-               nnewchgsides, nfixedvars, naggrvars, nchgvartypes, nchgbds, naddholes, ndelconss, naddconss,
-               nupgdconss, nchgcoefs, nchgsides, result) );
-
-         /* exit if cutoff or unboundedness has been detected */
-         if( *result == SCIP_CUTOFF || *result == SCIP_UNBOUNDED )
-         {
-            SCIPdebugMsg(scip, "Presolving constraint <%s> detected cutoff or unboundedness.\n",
-               SCIPconsGetName(symdata->conss[c]));
-            return SCIP_OKAY;
-         }
-      }
-   }
 
    return SCIP_OKAY;
 }
@@ -452,9 +363,6 @@ SCIP_RETCODE SCIPincludeSymhdlrFolding(
 
    /* include non-fundamental callback methods */
    SCIP_CALL( SCIPsetSymhdlrCopy(scip, symhdlr, symCopyFolding) );
-   SCIP_CALL( SCIPsetSymhdlrExit(scip, symhdlr, symExitFolding) );
-   SCIP_CALL( SCIPsetSymhdlrPresol(scip, symhdlr, symPresolFolding,
-         SYM_MAXPREROUNDS, SYM_PRESOLPRIORITY, SYM_PRESOLTIMING) );
 
    return SCIP_OKAY;
 }
