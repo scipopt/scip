@@ -569,8 +569,9 @@ SCIP_RETCODE exitPresolve(
       {
          int naddedconss = 0;
          int nchgbds = 0;
+         int naggrvars = 0;
 
-         SCIP_CALL( SCIPtryAddSymmetryHandlingMethods(scip, &naddedconss, FALSE, &nchgbds) );
+         SCIP_CALL( SCIPtryAddSymmetryHandlingMethods(scip, &naddedconss, FALSE, &nchgbds, &naggrvars) );
       }
    }
 
@@ -1406,6 +1407,7 @@ SCIP_RETCODE presolve(
          {
             int nnewconss = 0;
             int nchgbds = 0;
+            int naggrvars = 0;
             int npresolfixedvarsold;
             int npresolaggrvarsold;
             int npresolchgvartypesold;
@@ -1417,10 +1419,11 @@ SCIP_RETCODE presolve(
             int npresolchgcoefsold;
             int npresolchgsidesold;
 
-            SCIP_CALL( SCIPtryAddSymmetryHandlingMethods(scip, &nnewconss, TRUE, &nchgbds) );
+            SCIP_CALL( SCIPtryAddSymmetryHandlingMethods(scip, &nnewconss, TRUE, &nchgbds, &naggrvars) );
 
             scip->stat->npresoladdconss += nnewconss;
             scip->stat->npresolchgbds += nchgbds;
+            scip->stat->npresolaggrvars += naggrvars;
 
             /* Call presolving methods of symmetry handlers, use timing SCIP_PRESOLTIMING_MAX to guarantee that they are
              * presolved at least once. Also keep track of numbers of previous presolving reductions to see whether a
@@ -2678,11 +2681,13 @@ SCIP_RETCODE SCIPpresolve(
       {
          int nnewconss;
          int nchgbds;
+         int naggrvars;
 
-         SCIP_CALL( SCIPtryAddSymmetryHandlingMethods(scip, &nnewconss, TRUE, &nchgbds) );
+         SCIP_CALL( SCIPtryAddSymmetryHandlingMethods(scip, &nnewconss, TRUE, &nchgbds, &naggrvars) );
 
          scip->stat->npresoladdconss += nnewconss;
          scip->stat->npresolchgbds += nchgbds;
+         scip->stat->npresolaggrvars += naggrvars;
       }
 
       /* presolve problem */

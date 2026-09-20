@@ -2255,7 +2255,8 @@ SCIP_RETCODE SCIPtryAddSymmetryHandlingMethods(
    SCIP*                 scip,               /**< SCIP data structure */
    int*                  naddedconss,        /**< pointer to store number of constraints added by symmetry handlers */
    SCIP_Bool             allowbdchgs,        /**< whether bound changed permitted (needed for stage EXITPRESOLVE) */
-   int*                  nchgbds             /**< pointer to store number of changed variable bounds */
+   int*                  nchgbds,            /**< pointer to store number of changed variable bounds */
+   int*                  naggrvars           /**< pointer to store number of aggregated variables */
    )
 {
    SCIP_SYMINFO* syminfo;
@@ -2271,9 +2272,11 @@ SCIP_RETCODE SCIPtryAddSymmetryHandlingMethods(
    assert(scip != NULL);
    assert(naddedconss != NULL);
    assert(nchgbds != NULL);
+   assert(naggrvars != NULL);
 
    *naddedconss = 0;
    *nchgbds = 0;
+   *naggrvars = 0;
 
    /* only run when symmetry handling is enabled */
    if( !scip->set->sym_enabled )
@@ -2368,6 +2371,7 @@ SCIP_RETCODE SCIPtryAddSymmetryHandlingMethods(
       SCIP_SYMCOMPDATA* symcompdata;
       int ntmpconss;
       int ntmpchgbds;
+      int ntmpaggrvars;
 
       /* possibly get symmetries of this component */
       if( syminfo->ncomponents > 1 )
@@ -2383,11 +2387,13 @@ SCIP_RETCODE SCIPtryAddSymmetryHandlingMethods(
       {
          SCIP_CALL( SCIPsymhdlrTryAdd(symhdlrs[i], scip->set, perms, nperms, syminfo->symtype, syminfo->permvars, /*lint !e644 */
                syminfo->npermvars, vardomcenter, syminfo->permvarmap, graph, c, &symcompdata, &ntmpconss, allowbdchgs,
-               &ntmpchgbds, &success) );
+               &ntmpchgbds, &ntmpaggrvars, &success) );
          *naddedconss += ntmpconss;
          *nchgbds += ntmpchgbds;
+         *naggrvars += ntmpaggrvars;
          symhdlrs[i]->naddconss += ntmpconss;
          symhdlrs[i]->nchgbds += ntmpchgbds;
+         symhdlrs[i]->naggrvars += ntmpaggrvars;
 
          if( success )
          {

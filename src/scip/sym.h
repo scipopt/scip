@@ -207,6 +207,7 @@ SCIP_RETCODE SCIPsymhdlrTryAdd(
    int*                  naddedconss,        /**< pointer to store number of constraints added by symhdlr */
    SCIP_Bool             allowbdchgs,        /**< whether bound changed permitted (needed for stage EXITPRESOLVE) */
    int*                  nchgbds,            /**< pointer to store number of changed variable bounds */
+   int*                  naggrvars,          /**< pointer to store number of aggregated variables */
    SCIP_Bool*            success             /**< pointer to store whether symmetry handling method could be added */
    );
 
