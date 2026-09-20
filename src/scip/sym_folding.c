@@ -237,7 +237,7 @@ SCIP_RETCODE applyFolding(
    SCIP_VAR**            permvars,           /**< variables the permutations act on */
    int                   npermvars,          /**< number of variables the permutations act on */
    int                   id,                 /**< ID of symmetry component */
-   int*                  naddedconss         /**< pointer to store number of added constraints */
+   int*                  naggrvars           /**< pointer to store number of aggregated variables */
    )
 {
    SCIP_Bool infeasible;
@@ -250,16 +250,15 @@ SCIP_RETCODE applyFolding(
    int nvars;
    int oidx;
    int i;
-   int naggr = 0;
 
    assert(scip != NULL);
    assert(perms != NULL);
    assert(nperms > 0);
    assert(permvars != NULL);
    assert(npermvars > 0);
-   assert(naddedconss != NULL);
+   assert(naggrvars != NULL);
 
-   *naddedconss = 0;
+   *naggrvars = 0;
    nvars = SCIPgetNVars(scip);
    assert(nvars >= npermvars);
 
@@ -278,12 +277,10 @@ SCIP_RETCODE applyFolding(
          SCIP_CALL( SCIPaggregateVars(scip, permvars[first], permvars[orbits[i]], 1.0, -1.0, 0.0,
                &infeasible, &redundant, &aggregated) );
          if( aggregated )
-            ++naggr;
+            ++(*naggrvars);
       }
    }
-   assert(naggr <= orbitbegins[norbits] - norbits);
-
-   *naddedconss = naggr;
+   assert(*naggrvars <= orbitbegins[norbits] - norbits);
 
    SCIPfreeBufferArray(scip, &orbitbegins);
    SCIPfreeBufferArray(scip, &orbits);
@@ -303,6 +300,7 @@ SCIP_DECL_SYMHDLRTRYADD(symTryaddFolding)
    int nsymvars;
 
    assert(success != NULL);
+   assert(naggrvars != NULL);
 
    *success = FALSE;
 
@@ -321,7 +319,7 @@ SCIP_DECL_SYMHDLRTRYADD(symTryaddFolding)
       goto FREEMEM;
 
    /* apply folding */
-   SCIP_CALL( applyFolding(scip, perms, nperms, permvars, npermvars, id, naddedconss) );
+   SCIP_CALL( applyFolding(scip, perms, nperms, permvars, npermvars, id, naggrvars) );
    *success = TRUE;
 
  FREEMEM:
