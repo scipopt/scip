@@ -158,67 +158,6 @@ SCIP_Bool isConsConvex(
    return SCIPconsIsRelaxConvex(cons);
 }
 
-/** returns whether two arrays of variables have at least one variable in common */
-static
-SCIP_RETCODE doArraysOverlap(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_VAR**            vars1,              /**< first array of variables */
-   int                   nvars1,             /**< number of variables in first array */
-   SCIP_VAR**            vars2,              /**< second array of variables */
-   int                   nvars2,             /**< number of variables in second array */
-   SCIP_Bool*            hasoverlap          /**< pointer to store whether overlap is detected */
-   )
-{
-   SCIP_HASHSET* varset;
-   SCIP_VAR** setvars;
-   SCIP_VAR** othervars;
-   int nsetvars;
-   int nothervars;
-   int v;
-
-   assert(scip != NULL);
-   assert(vars1 != NULL);
-   assert(nvars1 > 0);
-   assert(vars2 != NULL);
-   assert(nvars2 > 0);
-   assert(hasoverlap != NULL);
-
-   *hasoverlap = FALSE;
-
-   if( nvars1 <= nvars2 )
-   {
-      setvars = vars1;
-      nsetvars = nvars1;
-      othervars = vars2;
-      nothervars = nvars2;
-   }
-   else
-   {
-      setvars = vars2;
-      nsetvars = nvars2;
-      othervars = vars1;
-      nothervars = nvars1;
-   }
-
-   /* insert the small array of variables in a hashset */
-   SCIP_CALL( SCIPhashsetCreate(&varset, SCIPblkmem(scip), nsetvars) );
-   for( v = 0; v < nsetvars; ++v )
-   {
-      SCIP_CALL( SCIPhashsetInsert(varset, SCIPblkmem(scip), setvars[v]) );
-   }
-
-   /* check whether a variable from the other array is contained in the hashset */
-   for( v = 0; v < nothervars && !(*hasoverlap); ++v )
-   {
-      if( SCIPhashsetExists(varset, othervars[v]) )
-         *hasoverlap = TRUE;
-   }
-
-   SCIPhashsetFree(&varset, SCIPblkmem(scip));
-
-   return SCIP_OKAY;
-}
-
 /** checks whether all constraints containing an affected variable are convex */
 static
 SCIP_RETCODE checkRelevantConssAreConvex(
@@ -228,12 +167,14 @@ SCIP_RETCODE checkRelevantConssAreConvex(
    SCIP_Bool*            success             /**< pointer to store whether all relevant constraints are convex */
    )
 {
+   SCIP_HASHSET* affvarsset = NULL;
    SCIP_CONS** conss;
    SCIP_VAR** locvars;
    int nlocvars;
    int nvars;
    int nconss;
    int c;
+   int v;
 
    assert(scip != NULL);
    assert(affectedvars != NULL);
@@ -255,8 +196,6 @@ SCIP_RETCODE checkRelevantConssAreConvex(
    *success = TRUE;
    for( c = 0; c < nconss && *success; ++c )
    {
-      SCIP_Bool hasoverlap = FALSE;
-
       /* check whether non-convex constraints do not contain affected variables */
       if( isConsConvex(conss[c]) )
          continue;
@@ -269,9 +208,30 @@ SCIP_RETCODE checkRelevantConssAreConvex(
       SCIP_CALL( SCIPgetConsVars(scip, conss[c], locvars, nvars, success) );
       assert(*success);
 
-      SCIP_CALL( doArraysOverlap(scip, locvars, nlocvars, affectedvars, naffectedvars, &hasoverlap) );
-      if( hasoverlap )
-         *success = FALSE;
+      /* store the affected variables in a hashset for checking overlap with locvars */
+      if( affvarsset == NULL )
+      {
+         SCIP_CALL( SCIPhashsetCreate(&affvarsset, SCIPblkmem(scip), naffectedvars) );
+         for( v = 0; v < naffectedvars; ++v )
+         {
+            SCIP_CALL( SCIPhashsetInsert(affvarsset, SCIPblkmem(scip), affectedvars[v]) );
+         }
+      }
+
+      /* check whether a variable from the other array is contained in the hashset */
+      for( v = 0; v < nlocvars; ++v )
+      {
+         if( SCIPhashsetExists(affvarsset, locvars[v]) )
+         {
+            *success = FALSE;
+            break;
+         }
+      }
+   }
+
+   if( affvarsset != NULL )
+   {
+      SCIPhashsetFree(&affvarsset, SCIPblkmem(scip));
    }
 
    SCIPfreeBufferArray(scip, &locvars);
