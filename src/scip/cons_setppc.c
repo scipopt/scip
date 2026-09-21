@@ -7738,6 +7738,7 @@ SCIP_DECL_CONSTRANS(consTransSetppc)
          SCIPconsIsChecked(sourcecons), SCIPconsIsPropagated(sourcecons),
          SCIPconsIsLocal(sourcecons), SCIPconsIsModifiable(sourcecons),
          SCIPconsIsDynamic(sourcecons), SCIPconsIsRemovable(sourcecons), SCIPconsIsStickingAtNode(sourcecons)) );
+   SCIP_CALL( SCIPsetConsIsRelaxConvex(scip, *targetcons, TRUE) );
 
    if( (SCIP_SETPPCTYPE)sourcedata->setppctype == SCIP_SETPPCTYPE_PARTITIONING )
    {

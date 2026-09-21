@@ -2272,6 +2272,7 @@ SCIP_DECL_CONSTRANS(consTransLinking)
          SCIPconsIsChecked(sourcecons), SCIPconsIsPropagated(sourcecons),
          SCIPconsIsLocal(sourcecons), SCIPconsIsModifiable(sourcecons),
          SCIPconsIsDynamic(sourcecons), SCIPconsIsRemovable(sourcecons), SCIPconsIsStickingAtNode(sourcecons)) );
+   SCIP_CALL( SCIPsetConsIsRelaxConvex(scip, *targetcons, TRUE) );
 
    /* insert (transformed) linking constraint into the hash map */
    assert(conshdlrdata->varmap != NULL);
