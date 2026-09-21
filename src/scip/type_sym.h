@@ -70,7 +70,7 @@ typedef struct SCIP_SymInfo SCIP_SYMINFO;    /**< data structure for storing sym
  *  - id              : numerical identifier of set of permutation symmetries for which symmetry handler is tested
  *  - symcompdata     : pointer for storing data of symmetry component
  *  - naddedconss     : pointer to store number of constraints added by symhdlr
- *  - allowbdchgs     : whether bound changed permitted (FALSE iff SCIP_STAGE is EXITPRESOLVE)
+ *  - allowbdchgs     : whether bound changes permitted (FALSE iff SCIP_STAGE is EXITPRESOLVE)
  *  - nchgbds         : pointer to store number of changed variable bounds
  *  - naggrvars       : pointer to store number of aggregated variables
  *  - success         : pointer to store whether the symmetry handling method has been added
