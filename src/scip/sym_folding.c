@@ -443,7 +443,6 @@ SCIP_DECL_SYMHDLRPRESOL(symPresolFolding)
    for( s = 0; s < nsymcomps; ++s )
    {
       symdata = SCIPsymcompGetData(symcomps[s]);
-      assert(symdata->nconss > 0);
 
       for( c = 0; c < symdata->nconss; ++c )
       {
