@@ -66,6 +66,9 @@ SCIP_RETCODE SCIPincludePresolMILP(
 #endif
 
 #include <assert.h>
+#include "papilo/core/Presolve.hpp"
+#include "papilo/core/ProblemBuilder.hpp"
+#include "papilo/Config.hpp"
 #include "scip/cons_linear.h"
 #include "scip/cons_exactlinear.h"
 #include "scip/pub_matrix.h"
@@ -89,9 +92,6 @@ SCIP_RETCODE SCIPincludePresolMILP(
 #include "scip/struct_rational.h"
 #endif
 #include "scip/rational.h"
-#include "papilo/core/Presolve.hpp"
-#include "papilo/core/ProblemBuilder.hpp"
-#include "papilo/Config.hpp"
 
 /* API since PaPILO 2.3.0 */
 #if !defined(PAPILO_API_VERSION)
