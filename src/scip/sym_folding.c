@@ -276,6 +276,11 @@ SCIP_RETCODE applyFolding(
    nvars = SCIPgetNVars(scip);
    assert(nvars >= npermvars);
 
+   /* allocate memory for component data and create constraints  */
+   SCIP_CALL( SCIPallocBlockMemory(scip, symcompdata) );
+   (*symcompdata)->conss = NULL;
+   (*symcompdata)->nconss = 0;
+
    /* compute orbits of symmetry component */
    SCIP_CALL( SCIPallocBufferArray(scip, &orbits, nvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &orbitbegins, nvars) );
@@ -293,9 +298,6 @@ SCIP_RETCODE applyFolding(
 
       /* compute number of conss to be added (per orbit, the representative does not need to be folded) */
       nconss = orbitbegins[norbits] - norbits;
-
-      /* allocate memory for component data and create constraints  */
-      SCIP_CALL( SCIPallocBlockMemory(scip, symcompdata) );
       SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(*symcompdata)->conss, nconss) );
       (*symcompdata)->nconss = nconss;
 
@@ -421,7 +423,7 @@ SCIP_DECL_SYMHDLREXIT(symExitFolding)
       {
          SCIP_CALL( SCIPreleaseCons(scip, &symdata->conss[c]) );
       }
-      SCIPfreeBlockMemoryArray(scip, &symdata->conss, symdata->nconss);
+      SCIPfreeBlockMemoryArrayNull(scip, &symdata->conss, symdata->nconss);
       SCIPfreeBlockMemory(scip, &symdata);
    }
 
