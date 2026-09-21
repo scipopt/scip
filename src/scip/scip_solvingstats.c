@@ -3369,7 +3369,7 @@ void SCIPprintSymhdlrStatistics(
 
    SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPprintSymhdlrStatistics", FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
 
-   SCIPmessageFPrintInfo(scip->messagehdlr, file, "Symmetries         :  #Separate #Propagate   #ResProp    Cutoffs    DomReds       Cuts    Applied\n");
+   SCIPmessageFPrintInfo(scip->messagehdlr, file, "Symmetries         :  #Separate #Propagate   #ResProp    Cutoffs    DomReds       Cuts    Applied   AggrVars\n");
 
    /* sort symmetry handlers w.r.t. their name */
    SCIPsetSortSymhdlrsName(scip->set);
@@ -3379,7 +3379,7 @@ void SCIPprintSymhdlrStatistics(
       SCIP_SYMHDLR* symhdlr;
       symhdlr = scip->set->symhdlrs[i];
 
-      SCIPmessageFPrintInfo(scip->messagehdlr, file, "  %-17.17s: %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT" %10" SCIP_LONGINT_FORMAT" %10" SCIP_LONGINT_FORMAT" %10" SCIP_LONGINT_FORMAT "\n",
+      SCIPmessageFPrintInfo(scip->messagehdlr, file, "  %-17.17s: %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT" %10" SCIP_LONGINT_FORMAT" %10" SCIP_LONGINT_FORMAT" %10" SCIP_LONGINT_FORMAT " %10d\n",
          SCIPsymhdlrGetName(symhdlr),
          SCIPsymhdlrGetNSepaCalls(symhdlr),
          SCIPsymhdlrGetNPropCalls(symhdlr),
@@ -3387,7 +3387,8 @@ void SCIPprintSymhdlrStatistics(
          SCIPsymhdlrGetNCutoffs(symhdlr),
          SCIPsymhdlrGetNDomredsFound(symhdlr),
          SCIPsymhdlrGetNCutsFound(symhdlr),
-         SCIPsymhdlrGetNCutsAdded(symhdlr));
+         SCIPsymhdlrGetNCutsAdded(symhdlr),
+         SCIPsymhdlrGetNAggrVars(symhdlr));
    }
 
    SCIPmessageFPrintInfo(scip->messagehdlr, file, "Symmetry Timings   :  TotalTime  SetupTime   Presolve   Separate  Propagate    ResProp    SB-Prop\n");
