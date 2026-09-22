@@ -488,6 +488,24 @@ void SCIPsyncstoreUpdateBestMinObj(
             *published = TRUE;
       }
 
+      /* pass the incumbent into the main SCIP
+       */
+      if( solvals != NULL )
+      {
+         SCIP_VAR** mainvars;
+         SCIP_SOL* mainsol;
+         SCIP_Bool stored;
+         int nmainvars;
+
+         nmainvars = SCIPgetNVars(syncstore->mainscip);
+         assert(nmainvars <= nsolvals);
+         mainvars = SCIPgetVars(syncstore->mainscip);
+
+         SCIP_CALL_ABORT( SCIPcreateSol(syncstore->mainscip, &mainsol, NULL) );
+         SCIP_CALL_ABORT( SCIPsetSolVals(syncstore->mainscip, mainsol, nmainvars, mainvars, solvals) );
+         SCIP_CALL_ABORT( SCIPaddSolFree(syncstore->mainscip, &mainsol, &stored) );
+      }
+
       /* optionally log the new global incumbent; independent of the solution pool and active in both modes */
       if( syncstore->printincumbents )
          syncstorePrintIncumbent(syncstore, minobj, solvername);
@@ -1033,6 +1051,16 @@ SCIP_RETCODE SCIPsyncstoreFinishSync(
    {
       syncstore->lastsync = *syncdata;
       printline = TRUE;
+
+      /* publish this round's best solution as the new global incumbent, if it is one */
+      if( (*syncdata)->nsols > 0 )
+      {
+         int ownerid = (*syncdata)->solsource[(*syncdata)->nsols - 1];
+
+         SCIPsyncstoreUpdateBestMinObj(syncstore, (*syncdata)->solobj[(*syncdata)->nsols - 1],
+            SCIPconcsolverGetName(SCIPgetConcurrentSolvers(syncstore->mainscip)[ownerid]), ownerid,
+            (*syncdata)->sols[(*syncdata)->nsols - 1], syncstore->ninitvars, NULL);
+      }
 
       SCIP_CALL( SCIPtpiBroadcastCondition((*syncdata)->allsynced) );
    }
