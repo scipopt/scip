@@ -729,7 +729,7 @@ SCIP_RETCODE checkFullOrbitopeSolution(
    assert( consdata->vars != NULL );
    assert( consdata->nrows > 0 );
    assert( consdata->ncols > 0 );
-   assert( ! consdata->ismodelcons ); /* non-model constraints are never checked */
+   assert( consdata->ismodelcons ); /* non-model constraints are never checked */
 
    vars = consdata->vars;
    nrows = consdata->nrows;
