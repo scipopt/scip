@@ -236,6 +236,60 @@ SCIP_RETCODE SCIPprimalClear(
    return SCIP_OKAY;
 }
 
+/** compares solution objectives, using rational values in exact solving mode
+ *
+ *  If transprob is NULL, compare the original objective values.
+ */
+static
+int primalCompareSolObj(
+   SCIP_SOL*             sol1,               /**< first solution */
+   SCIP_SOL*             sol2,               /**< second solution */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_PROB*            origprob,           /**< original problem */
+   SCIP_PROB*            transprob           /**< transformed problem, or NULL */
+   )
+{
+   SCIP_Real obj1;
+   SCIP_Real obj2;
+
+   if( set->exact_enable )
+   {
+      SCIP_RATIONAL* exact1;
+      SCIP_RATIONAL* exact2;
+      int comparison;
+
+      SCIP_CALL_ABORT( SCIPrationalCreateBuffer(set->buffer, &exact1) );
+      SCIP_CALL_ABORT( SCIPrationalCreateBuffer(set->buffer, &exact2) );
+      if( SCIPsolIsExact(sol1) )
+      {
+         if( transprob != NULL )
+            SCIPsolGetObjExact(sol1, set, transprob, origprob, exact1);
+         else
+            SCIPrationalSetRational(exact1, SCIPsolGetOrigObjExact(sol1));
+      }
+      else
+         SCIPrationalSetReal(exact1, transprob != NULL ? SCIPsolGetObj(sol1, set, transprob, origprob) : SCIPsolGetOrigObj(sol1));
+      if( SCIPsolIsExact(sol2) )
+      {
+         if( transprob != NULL )
+            SCIPsolGetObjExact(sol2, set, transprob, origprob, exact2);
+         else
+            SCIPrationalSetRational(exact2, SCIPsolGetOrigObjExact(sol2));
+      }
+      else
+         SCIPrationalSetReal(exact2, transprob != NULL ? SCIPsolGetObj(sol2, set, transprob, origprob) : SCIPsolGetOrigObj(sol2));
+
+      comparison = SCIPrationalIsGT(exact1, exact2) - SCIPrationalIsLT(exact1, exact2);
+      SCIPrationalFreeBuffer(set->buffer, &exact2);
+      SCIPrationalFreeBuffer(set->buffer, &exact1);
+      return comparison;
+   }
+
+   obj1 = transprob != NULL ? SCIPsolGetObj(sol1, set, transprob, origprob) : SCIPsolGetOrigObj(sol1);
+   obj2 = transprob != NULL ? SCIPsolGetObj(sol2, set, transprob, origprob) : SCIPsolGetOrigObj(sol2);
+   return (obj1 > obj2) - (obj1 < obj2);
+}
+
 /** sorts primal solutions by objective value */
 static
 void sortPrimalSols(
@@ -250,12 +304,10 @@ void sortPrimalSols(
    for( i = 1; i < primal->nsols; ++i )
    {
       SCIP_SOL* sol;
-      SCIP_Real objval;
       int j;
 
       sol = primal->sols[i];
-      objval = SCIPsolGetObj(sol, set, transprob, origprob);
-      for( j = i; j > 0 && objval < SCIPsolGetObj(primal->sols[j-1], set, transprob, origprob); --j )
+      for( j = i; j > 0 && primalCompareSolObj(sol, primal->sols[j-1], set, origprob, transprob) < 0; --j )
          primal->sols[j] = primal->sols[j-1];
       primal->sols[j] = sol;
    }
@@ -1212,7 +1264,6 @@ int primalSearchSolPos(
 {
    SCIP_SOL** sols;
    SCIP_Real obj;
-   SCIP_Real middleobj;
    int left;
    int right;
    int middle;
@@ -1230,9 +1281,7 @@ int primalSearchSolPos(
       assert(left < middle && middle < right);
       assert(0 <= middle && middle < primal->nsols);
 
-      middleobj = SCIPsolGetObj(sols[middle], set, transprob, origprob);
-
-      if( obj < middleobj )
+      if( primalCompareSolObj(sol, sols[middle], set, origprob, transprob) < 0 )
          right = middle;
       else
          left = middle;
@@ -1243,7 +1292,8 @@ int primalSearchSolPos(
    if( !SCIPsolIsOriginal(sol) )
    {
       while( right > 0 && SCIPsolIsOriginal(sols[right-1])
-         && SCIPsetIsEQ(set, SCIPsolGetObj(sols[right-1], set, transprob, origprob), obj) )
+         && (set->exact_enable ? primalCompareSolObj(sol, sols[right-1], set, origprob, transprob) == 0
+            : SCIPsetIsEQ(set, SCIPsolGetObj(sols[right-1], set, transprob, origprob), obj)) )
          --right;
    }
 
@@ -1254,18 +1304,15 @@ int primalSearchSolPos(
 static
 int primalSearchOrigSolPos(
    SCIP_PRIMAL*          primal,             /**< primal data */
+   SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_SOL*             sol                 /**< primal solution to search position for */
    )
 {
-   SCIP_Real obj;
-   SCIP_Real middleobj;
    int left;
    int right;
    int middle;
 
    assert(primal != NULL);
-
-   obj = SCIPsolGetOrigObj(sol);
 
    left = -1;
    right = primal->nsols;
@@ -1274,8 +1321,7 @@ int primalSearchOrigSolPos(
       middle = (left+right)/2;
       assert(left < middle && middle < right);
       assert(0 <= middle && middle < primal->nsols);
-      middleobj = SCIPsolGetOrigObj(primal->sols[middle]);
-      if( obj < middleobj )
+      if( primalCompareSolObj(sol, primal->sols[middle], set, NULL, NULL) < 0 )
          right = middle;
       else
          left = middle;
@@ -1511,7 +1557,7 @@ SCIP_Bool origsolOfInterest(
    assert(SCIPsolIsOriginal(sol));
 
    /* find insert position for the solution */
-   (*insertpos) = primalSearchOrigSolPos(primal, sol);
+   (*insertpos) = primalSearchOrigSolPos(primal, set, sol);
 
    if( !set->reopt_enable && (*insertpos) < set->limit_maxorigsol && !primalExistsOrigSol(primal, set, stat, origprob, sol, *insertpos) )
       return TRUE;
