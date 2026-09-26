@@ -6,6 +6,8 @@
 Fixed bugs
 ----------
 
+- corrected memory allocation condition for storing column swaps in symmetry_orbitopal
+
 
 @section RN1010 SCIP 10.1.0
 ***************************
