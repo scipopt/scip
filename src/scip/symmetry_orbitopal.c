@@ -923,10 +923,10 @@ SCIP_DECL_EVENTEXEC(eventExecNodeBranched)
          if ( tmpcolswap.from == tmpcolswap.to ) /*lint !e644*/
             continue;
 
-         /* mark that this row index is the new one in the node */
-         if ( newnodeinfo->rows == NULL )
+         /* store column swap */
+         if ( newnodeinfo->colswaps == NULL )
          {
-            assert( newnodeinfo->nrows == 0 );
+            assert( newnodeinfo->ncolswaps == 0 );
             SCIP_CALL( SCIPallocBlockMemoryArray(scip, &newnodeinfo->colswaps, newnodeinfo->ncolswaps + 1) );
          }
          else
