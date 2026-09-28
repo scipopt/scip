@@ -43,18 +43,18 @@
 #include <map>
 #include <cstdlib>
 #ifdef _WIN32
+#ifndef WIN32_LEAN_AND_MEAN
+#define WIN32_LEAN_AND_MEAN
+#endif
+#ifndef NOMINMAX
+#define NOMINMAX
+#endif
 #include <windows.h> // to be able to do the includes below
 #include <io.h>      // for _mktemp_s
 #include <direct.h>  // for _mkdir
 #include <fileapi.h> // for GetTempPath
-#ifdef max
-#undef max   // undo definition of max in windows.h
-#endif
-#ifdef min
-#undef min   // undo definition of min in windows.h
-#endif
 #ifdef IGNORE
-#undef IGNORE // undo definition of IGNORE in windows.h
+#undef IGNORE // undo definition of IGNORE in winbase.h
 #endif
 #else
 #include <unistd.h>  // for mkdtemp on macOS

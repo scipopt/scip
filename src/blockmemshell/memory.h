@@ -87,7 +87,7 @@ extern "C" {
  */
 #ifndef SCIP_EXPORT
 
-#if defined(_WIN32) || defined(_WIN64)
+#ifdef _WIN32
 #define SCIP_EXPORT __declspec(dllexport)
 #elif defined(__GNUC__) && __GNUC__ >= 4
 #define SCIP_EXPORT __attribute__((__visibility__("default")))
