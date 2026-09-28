@@ -108,7 +108,7 @@
 #endif
 
 #ifndef SCIP_LONGINT_FORMAT
-#if defined(_WIN32) || defined(_WIN64)
+#ifdef _WIN32
 #define LONGINT_FORMAT           "I64d"
 #else
 #define LONGINT_FORMAT           "lld"
@@ -126,7 +126,7 @@
 
 /* define inline (if not already defined) */
 #ifndef INLINE
-#if defined(_WIN32) || defined(_WIN64) || defined(__STDC__)
+#if defined(_WIN32) || defined(__STDC__)
 #define INLINE                 __inline
 #else
 #define INLINE                 inline
