@@ -678,6 +678,12 @@ void SCIPsyncdataSetStatus(
          syncdata->winner = solverid;
       }
    }
+   else
+   {
+      /* pick the winner with smaller solver id */
+      if( status == SCIP_STATUS_OPTIMAL && solverid < syncdata->winner )
+         syncdata->winner = solverid;
+   }
 }
 
 /** adds memory used to the synchronization data */
