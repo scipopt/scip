@@ -10,6 +10,7 @@ Fixed bugs
 - change header include order for PaPILO presolver to avoid template instantiation issues with Boost headers on some systems
 - fixed nondeterministic selection of the winning solver in concurrent solving when several solvers reach an
   optimal status; ties are now broken by the smallest solver id
+- move definition of ObjTable::scip_output() into objtable.h to avoid missing symbols (vtable, typeinfo) when linking SCIP library
 
 
 @section RN1010 SCIP 10.1.0
