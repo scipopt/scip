@@ -1032,7 +1032,14 @@ SCIP_DECL_CONCSOLVERSYNCWRITE(concsolverScipSyncWrite)
       return SCIP_OKAY;
 
    if( SCIPsyncdataGetStatus(syncdata) != SCIP_STATUS_UNKNOWN )
+   {
+      data = SCIPconcsolverGetData(concsolver);
+      assert(data != NULL);
+      assert(data->solverscip != NULL);
+      concsolverid = SCIPconcsolverGetIdx(concsolver);
+      SCIPsyncdataSetStatus(syncdata, SCIPgetStatus(data->solverscip), concsolverid);
       return SCIP_OKAY;
+   }
 
    data = SCIPconcsolverGetData(concsolver);
    assert(data != NULL);
