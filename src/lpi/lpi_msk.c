@@ -135,7 +135,11 @@ typedef enum MSKoptimizertype_enum MSKoptimizertype;
 #define WRITE_ABOVE                  0
 #endif
 #define DEGEN_LEVEL                  MSK_SIM_DEGEN_FREE
+#if MSK_VERSION_MAJOR < 12  /* option MSK_IPAR_SIM_SOLVE_FORM removed with Mosek 12 */
 #define ALWAYS_SOLVE_PRIMAL_FORM     1
+#else
+#define ALWAYS_SOLVE_PRIMAL_FORM     0
+#endif
 #if DEBUG_PRINT_STAT > 0
 static int numstrongbranchmaxiterup =  0;
 static int numstrongbranchmaxiterdo =  0;
