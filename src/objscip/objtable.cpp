@@ -48,26 +48,6 @@ struct SCIP_TableData
 };
 
 
-namespace scip
-{
-
-SCIP_DECL_TABLEOUTPUT(ObjTable::scip_output)
-{
-   SCIP_DATATREE* datatree;
-
-   SCIP_CALL( SCIPcreateDatatree(scip, &datatree, -1) );
-   SCIP_CALL( scip_collect(scip, table, datatree) );
-
-   SCIP_CALL( SCIPprintDatatreeAsTable(scip, datatree, file, scip_name_, scip_name_) );
-
-   SCIPfreeDatatree(scip, &datatree);
-
-   return SCIP_OKAY;
-}
-
-}
-
-
 /*
  * Callback methods of statistics table
  */
