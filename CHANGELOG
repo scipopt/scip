@@ -7,6 +7,7 @@ Fixed bugs
 ----------
 
 - corrected memory allocation condition for storing column swaps in symmetry_orbitopal
+- change header include order for PaPILO presolver to avoid template instantiation issues with Boost headers on some systems
 
 
 @section RN1010 SCIP 10.1.0
