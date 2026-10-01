@@ -151,7 +151,7 @@
 #define SCIP_LONGINT_MAX          LLONG_MAX
 #define SCIP_LONGINT_MIN          LLONG_MIN
 #ifndef SCIP_LONGINT_FORMAT
-#ifdef _WIN32
+#ifdef _MSC_VER
 #define SCIP_LONGINT_FORMAT           "I64d"
 #else
 #define SCIP_LONGINT_FORMAT           "lld"
