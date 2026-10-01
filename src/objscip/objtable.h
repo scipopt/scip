@@ -170,7 +170,19 @@ public:
     *
     *  @see SCIP_DECL_TABLEOUTPUT(x) in @ref type_table.h
     */
-   virtual SCIP_DECL_TABLEOUTPUT(scip_output);
+   virtual SCIP_DECL_TABLEOUTPUT(scip_output)
+   {
+      SCIP_DATATREE* datatree;
+
+      SCIP_CALL( SCIPcreateDatatree(scip, &datatree, -1) );
+      SCIP_CALL( scip_collect(scip, table, datatree) );
+
+      SCIP_CALL( SCIPprintDatatreeAsTable(scip, datatree, file, scip_name_, scip_name_) );
+
+      SCIPfreeDatatree(scip, &datatree);
+
+      return SCIP_OKAY;
+   }
 
    /** data collection method
     *
