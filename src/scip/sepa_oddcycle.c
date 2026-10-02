@@ -3338,8 +3338,8 @@ SCIP_RETCODE separateGLS(
 
       (void)  SCIPsnprintf(probname, SCIP_MAXSTRLEN, "%s", SCIPgetProbName(scip));
       SCIPsplitFilename(probname, NULL, &name, NULL, NULL);
-      (void)  SCIPsnprintf(filename, SCIP_MAXSTRLEN, "%s_%d.gml", name, SCIPgetNLPs(scip));
-      SCIP_CALL( SCIPwriteCliqueGraph(scip, filename, TRUE, TRUE) );
+      (void)  SCIPsnprintf(filename, SCIP_MAXSTRLEN, "%s_%" SCIP_LONGINT_FORMAT ".gml", name, SCIPgetNLPs(scip));
+      SCIP_CALL( SCIPwriteCliqueGraph(scip, filename, TRUE) );
       SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "Wrote clique/implication graph to <%s>.\n", filename);
    }
 #endif
