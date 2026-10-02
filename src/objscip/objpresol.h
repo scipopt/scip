@@ -50,7 +50,7 @@ namespace scip
  *  - \ref PRESOLVERS "List of available presolvers"
  *  - \ref type_presol.h "Corresponding C interface"
  */
-class ObjPresol : public ObjCloneable
+class SCIP_EXPORT ObjPresol : public ObjCloneable
 {
 public:
    /*lint --e{1540}*/

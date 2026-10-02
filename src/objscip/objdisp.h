@@ -50,7 +50,7 @@ namespace scip
  * - \ref DISPLAYS "List of available display columns"
  *  - \ref type_disp.h "Corresponding C interface"
  */
-class ObjDisp : public ObjCloneable
+class SCIP_EXPORT ObjDisp : public ObjCloneable
 {
 public:
    /*lint --e{1540}*/

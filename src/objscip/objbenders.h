@@ -53,7 +53,7 @@ namespace scip
  *  - \ref BENDERS "List of available Benders' decomposition plugins"
  *  - \ref type_benders.h "Corresponding C interface"
  */
-class ObjBenders : public ObjCloneable
+class SCIP_EXPORT ObjBenders : public ObjCloneable
 {
 public:
    /*lint --e{1540}*/
