@@ -108,7 +108,7 @@
 #endif
 
 #ifndef SCIP_LONGINT_FORMAT
-#if defined(_WIN32) || defined(_WIN64)
+#ifdef _MSC_VER
 #define LONGINT_FORMAT           "I64d"
 #else
 #define LONGINT_FORMAT           "lld"
