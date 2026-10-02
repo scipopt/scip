@@ -57,6 +57,7 @@ Interface changes
 - new argument nsymprop for SCIPnodeGetNDomchg() to report number of symmetry-based reductions in domain changes
 - SCIPvarGetProbvarBinary() and SCIPvarsGetProbvarBinary() need a SCIP_SET* pointer and are therefore not public anymore;
   use the public functions SCIPgetProbvarBinary() and SCIPgetProbvarsBinary()
+- changed the definition of SCIP_Longint and related defines from long long to int64_t
 
 ### New API functions
 

@@ -45,6 +45,7 @@
 #include <math.h>
 #include <limits.h>
 #include <float.h>
+#include <inttypes.h>
 
 /*
  * include build configuration flags
@@ -142,21 +143,10 @@
  * Long Integer values
  */
 
-#ifndef LLONG_MAX
-#define LLONG_MAX        9223372036854775807LL
-#define LLONG_MIN        (-LLONG_MAX - 1LL)
-#endif
-
-#define SCIP_Longint long long                         /**< type used for long integer values */
-#define SCIP_LONGINT_MAX          LLONG_MAX
-#define SCIP_LONGINT_MIN          LLONG_MIN
-#ifndef SCIP_LONGINT_FORMAT
-#ifdef _MSC_VER
-#define SCIP_LONGINT_FORMAT           "I64d"
-#else
-#define SCIP_LONGINT_FORMAT           "lld"
-#endif
-#endif
+#define SCIP_Longint                int64_t            /**< type used for long integer values */
+#define SCIP_LONGINT_MAX          INT64_MAX
+#define SCIP_LONGINT_MIN          INT64_MIN
+#define SCIP_LONGINT_FORMAT          PRId64
 
 /*
  * Floating point values
