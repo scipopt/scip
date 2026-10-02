@@ -412,7 +412,7 @@ SCIP_RETCODE SCIPconcsolverSync(
       return SCIP_OKAY;
    }
 
-   SCIPdebugMessage("concsolver %s starts sync %lli\n", concsolver->name, concsolver->nsyncs);
+   SCIPdebugMessage("concsolver %s starts sync %" SCIP_LONGINT_FORMAT "\n", concsolver->name, concsolver->nsyncs);
 
    SCIP_CALL( concsolvertype->concsolversyncwrite(concsolver, syncstore, syncdata, set->concurrent_nbestsols, set->concurrent_maxnsols, &nsols) );
    concsolver->nsolsshared += nsols;
@@ -500,7 +500,7 @@ SCIP_RETCODE SCIPconcsolverSync(
       }
    }
 
-   SCIPdebugMessage("concsolver %s finishing sync %lli\n", concsolver->name, concsolver->nsyncs);
+   SCIPdebugMessage("concsolver %s finishing sync %" SCIP_LONGINT_FORMAT "\n", concsolver->name, concsolver->nsyncs);
 
    SCIP_CALL( SCIPsyncstoreFinishSync(syncstore, &syncdata) );
    ++concsolver->nsyncs;

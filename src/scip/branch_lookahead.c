@@ -5476,7 +5476,7 @@ SCIP_RETCODE selectVarStart(
       /* only unviolating constraints and domain changes: store branching decision */
       if( persistent != NULL && !status->lperror && isStoreDecision(config, binconsdata, domainreductions) )
       {
-         LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "store decision: lpiters=%lld, cand <%s>[%g,%g - %g]\n",
+         LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "store decision: lpiters=%" SCIP_LONGINT_FORMAT ", cand <%s>[%g,%g - %g]\n",
             SCIPgetNNodeLPIterations(scip), SCIPvarGetName(decision->branchvar),
             SCIPvarGetLbLocal(decision->branchvar), SCIPvarGetUbLocal(decision->branchvar),
             SCIPgetSolVal(scip, NULL, decision->branchvar));
@@ -5614,7 +5614,7 @@ SCIP_RETCODE selectVarStart(
             {
                ++statistics->chosenfsbcand[chosencandnr];
 
-               LABdebugMessage(scip, SCIP_VERBLEVEL_FULL, "node %lld chose candidate %d score %16.9g vs %16.9g FSB: %16.9g vs %16.9g\n",
+               LABdebugMessage(scip, SCIP_VERBLEVEL_FULL, "node %" SCIP_LONGINT_FORMAT " chose candidate %d score %16.9g vs %16.9g FSB: %16.9g vs %16.9g\n",
                   SCIPnodeGetNumber(SCIPgetCurrentNode(scip)), chosencandnr,
                   scorecontainer->scores[SCIPvarGetProbindex(candidatelist->candidates[chosencandnr]->branchvar)],
                   scorecontainer->scores[SCIPvarGetProbindex(candidatelist->candidates[0]->branchvar)],
@@ -5665,7 +5665,7 @@ SCIP_Bool isUsePreviousResult(
    assert(persistent != NULL);
 
    LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "check if previous result should be used: valid=%d, "\
-      "nodes=%lld (old=%lld), iterations=%lld (old=%lld), lps=%lld (old=%lld)\n",
+      "nodes=%" SCIP_LONGINT_FORMAT " (old=%" SCIP_LONGINT_FORMAT "), iterations=%" SCIP_LONGINT_FORMAT " (old=%" SCIP_LONGINT_FORMAT "), lps=%" SCIP_LONGINT_FORMAT " (old=%" SCIP_LONGINT_FORMAT ")\n",
       branchingDecisionIsValid(persistent->olddecision),
       SCIPgetNTotalNodes(scip), persistent->oldntotalnodes,
       SCIPgetNNodeLPIterations(scip), persistent->oldnnodelpiterations,
@@ -5984,7 +5984,7 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpLookahead)
 
    SCIP_STRINGEQ( SCIPbranchruleGetName(branchrule), BRANCHRULE_NAME, SCIP_INVALIDCALL );
 
-   LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "Entering branchExeclpLookahead at node %lld.\n", SCIPnodeGetNumber(SCIPgetCurrentNode(scip)));
+   LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "Entering branchExeclpLookahead at node %" SCIP_LONGINT_FORMAT ".\n", SCIPnodeGetNumber(SCIPgetCurrentNode(scip)));
 
    branchruledata = SCIPbranchruleGetData(branchrule);
    assert(branchruledata != NULL);

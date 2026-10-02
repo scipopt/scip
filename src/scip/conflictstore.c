@@ -724,7 +724,7 @@ SCIP_RETCODE conflictstoreCleanUpStorage(
    /* increase the number of clean ups */
    ++conflictstore->ncleanups;
 
-   SCIPsetDebugMsg(set, "clean-up #%lld: removed %d/%d conflicts, %d depending on cutoff bound\n",
+   SCIPsetDebugMsg(set, "clean-up #%" SCIP_LONGINT_FORMAT ": removed %d/%d conflicts, %d depending on cutoff bound\n",
          conflictstore->ncleanups, ndelconfs, conflictstore->nconflicts+ndelconfs, conflictstore->ncbconflicts);
 
    return SCIP_OKAY; /*lint !e438*/

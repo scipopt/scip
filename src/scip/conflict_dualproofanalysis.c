@@ -492,7 +492,7 @@ SCIP_RETCODE tightenSingleVar(
          SCIP_Real consrhs;
          char name[SCIP_MAXSTRLEN];
 
-         SCIPsetDebugMsg(set, "add constraint <%s>[%c] %s %g to node #%lld in depth %d\n",
+         SCIPsetDebugMsg(set, "add constraint <%s>[%c] %s %g to node #%" SCIP_LONGINT_FORMAT " in depth %d\n",
                SCIPvarGetName(var), varGetChar(var), boundtype == SCIP_BOUNDTYPE_UPPER ? "<=" : ">=", newbound,
                SCIPnodeGetNumber(tree->path[validdepth]), validdepth);
 
@@ -1135,7 +1135,7 @@ SCIP_RETCODE createAndAddProofcons(
       SCIP_CALL( SCIPnodeAddCons(tree->path[proofset->validdepth], blkmem, set, stat, tree, cons) );
    }
 
-   SCIPsetDebugMsg(set, "added proof-constraint to node %p (#%lld) in depth %d (nproofconss %d)\n",
+   SCIPsetDebugMsg(set, "added proof-constraint to node %p (#%" SCIP_LONGINT_FORMAT ") in depth %d (nproofconss %d)\n",
          (void*)tree->path[proofset->validdepth], SCIPnodeGetNumber(tree->path[proofset->validdepth]),
          proofset->validdepth,
          (conflicttype == SCIP_CONFTYPE_INFEASLP || conflicttype == SCIP_CONFTYPE_ALTINFPROOF)

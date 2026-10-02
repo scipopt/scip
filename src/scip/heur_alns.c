@@ -2318,7 +2318,7 @@ SCIP_RETCODE setupSubScip(
       SCIP_CALL( SCIPsetIntParam(subscip, "randomization/randomseedshift", (int)SCIPheurGetNCalls(heur)) );
    }
 
-   SCIPdebugMsg(scip, "Solve Limits: %lld (%lld) nodes (stall nodes), %.1f sec., %d sols\n",
+   SCIPdebugMsg(scip, "Solve Limits: %" SCIP_LONGINT_FORMAT " (%" SCIP_LONGINT_FORMAT ") nodes (stall nodes), %.1f sec., %d sols\n",
          solvelimits->nodelimit, solvelimits->stallnodes, solvelimits->timelimit, heurdata->nsolslim);
 
    return SCIP_OKAY;

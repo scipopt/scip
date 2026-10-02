@@ -195,7 +195,7 @@ SCIP_RETCODE checkDivingCandidates(
    /* CHECK#2: check objective dynamism */
    if( objdynamism < heurdata->objdynamism )
    {
-      SCIPdebugMsg(scip, " ---> disable farkasdiving at node %lld\n", SCIPnodeGetNumber(SCIPgetCurrentNode(scip)));
+      SCIPdebugMsg(scip, " ---> disable farkasdiving at node %" SCIP_LONGINT_FORMAT "\n", SCIPnodeGetNumber(SCIPgetCurrentNode(scip)));
 
       *success = FALSE;
       goto TERMINATE;
@@ -236,7 +236,7 @@ SCIP_RETCODE checkDivingCandidates(
 
       if( maxfreq > heurdata->maxobjocc * nnzobjcoefs )
       {
-         SCIPdebugMsg(scip, " ---> disable farkasdiving at node %lld\n", SCIPnodeGetNumber(SCIPgetCurrentNode(scip)));
+         SCIPdebugMsg(scip, " ---> disable farkasdiving at node %" SCIP_LONGINT_FORMAT "\n", SCIPnodeGetNumber(SCIPgetCurrentNode(scip)));
 
          *success = FALSE;
       }

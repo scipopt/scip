@@ -2049,7 +2049,7 @@ SCIP_RETCODE propagateOrbitope(
             int nbranchings, nconsprop, nprop;
             SCIPnodeGetDomchg(tmpnode);
             SCIPnodeGetNDomchg(tmpnode, &nbranchings, &nconsprop, &nprop);
-            SCIPdebugPrintf("  node %lld: (%d, %d, %d) \n", tmpnode->number, nbranchings, nconsprop, nprop);
+            SCIPdebugPrintf("  node %" SCIP_LONGINT_FORMAT ": (%d, %d, %d) \n", tmpnode->number, nbranchings, nconsprop, nprop);
             tmpnode = SCIPnodeGetParent(tmpnode);
          }
       }

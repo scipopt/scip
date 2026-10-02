@@ -1889,7 +1889,7 @@ void SCIPrationalVPrintf(
             break;
          case 'l':
             lval = va_arg(arguments, SCIP_Longint);
-            printf("%lld", lval);
+            printf("%" SCIP_LONGINT_FORMAT, lval);
             break;
          case 'u':
             ival = va_arg(arguments, int);

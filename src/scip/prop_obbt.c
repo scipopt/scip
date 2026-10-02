@@ -1886,7 +1886,7 @@ SCIP_RETCODE findNewBounds(
       SCIPdebugMsg(scip, "before solving      var <%s>, LP value: %f\n",
          SCIPvarGetName(currbound->var), SCIPvarGetLPSol(currbound->var));
 
-      SCIPdebugMsg(scip, "probing iterations before solve: %lld \n", SCIPgetNLPIterations(scip));
+      SCIPdebugMsg(scip, "probing iterations before solve: %" SCIP_LONGINT_FORMAT " \n", SCIPgetNLPIterations(scip));
 
       propdata->nprobingiterations -= SCIPgetNLPIterations(scip);
 
@@ -1896,7 +1896,7 @@ SCIP_RETCODE findNewBounds(
       propdata->nprobingiterations += SCIPgetNLPIterations(scip);
       propdata->nsolvedbounds++;
 
-      SCIPdebugMsg(scip, "probing iterations after solve: %lld \n", SCIPgetNLPIterations(scip));
+      SCIPdebugMsg(scip, "probing iterations after solve: %" SCIP_LONGINT_FORMAT " \n", SCIPgetNLPIterations(scip));
       SCIPdebugMsg(scip, "OPT: %u ERROR: %u\n" , optimal, error);
       SCIPdebugMsg(scip, "after solving      Boundtype: %d , LB: %e , UB: %e\n",
          currbound->boundtype == SCIP_BOUNDTYPE_LOWER, SCIPvarGetLbLocal(currbound->var),
@@ -2482,7 +2482,7 @@ SCIP_RETCODE applyObbtBilinear(
 
    nolditerations = SCIPgetNLPIterations(scip);
    nleftiterations = getIterationsLeft(scip, nolditerations, itlimit);
-   SCIPdebugMsg(scip, "iteration limit: %lld\n", nleftiterations);
+   SCIPdebugMsg(scip, "iteration limit: %" SCIP_LONGINT_FORMAT "\n", nleftiterations);
 
    /* 1. start probing */
    SCIP_CALL( SCIPstartProbing(scip) );
@@ -2571,7 +2571,7 @@ SCIP_RETCODE applyObbtBilinear(
 
          /* update number of LP iterations */
          nleftiterations = getIterationsLeft(scip, nolditerations, itlimit);
-         SCIPdebugMsg(scip, "LP iterations left: %lld\n", nleftiterations);
+         SCIPdebugMsg(scip, "LP iterations left: %" SCIP_LONGINT_FORMAT "\n", nleftiterations);
 
          /* add inequality to quadratic constraint handler if it separates (xt,yt) */
          if( !SCIPisHugeValue(scip, xcoef)  && !SCIPisFeasZero(scip, xcoef)

@@ -87,7 +87,7 @@ SCIP_RETCODE Exec(
       goto TERMINATE;
    }
 
-   SCIPdebugMsg(scip, "current node is %lld, ID %u:\n", SCIPnodeGetNumber(curnode), curid);
+   SCIPdebugMsg(scip, "current node is %" SCIP_LONGINT_FORMAT ", ID %u:\n", SCIPnodeGetNumber(curnode), curid);
 
    /* get the corresponding node of the reoptimization tree */
    reoptnode = SCIPgetReoptnode(scip, curid);
@@ -226,7 +226,7 @@ SCIP_RETCODE Exec(
 
   TERMINATE:
 
-   SCIPdebugMsg(scip, "**** finish reoptimizing %d child nodes of node %lld ****\n", ncreatednodes, SCIPnodeGetNumber(curnode));
+   SCIPdebugMsg(scip, "**** finish reoptimizing %d child nodes of node %" SCIP_LONGINT_FORMAT " ****\n", ncreatednodes, SCIPnodeGetNumber(curnode));
 
    return SCIP_OKAY;
 }

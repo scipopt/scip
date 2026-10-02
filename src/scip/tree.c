@@ -5089,7 +5089,7 @@ SCIP_RETCODE SCIPnodeFocus(
          assert(!(*node)->active);
          assert((*node)->depth != 0 || tree->focusnode == NULL);
 
-         SCIPsetDebugMsg(set, "cutting off leaf node #%lld (queuelen=%d) at depth %d with lowerbound=%g\n",
+         SCIPsetDebugMsg(set, "cutting off leaf node #%" SCIP_LONGINT_FORMAT " (queuelen=%d) at depth %d with lowerbound=%g\n",
             SCIPnodeGetNumber(*node), SCIPnodepqLen(tree->leaves), SCIPnodeGetDepth(*node), SCIPnodeGetLowerbound(*node));
 
          /* check if the node should be stored for reoptimization */

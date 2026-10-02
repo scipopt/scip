@@ -20642,7 +20642,7 @@ SCIP_RETCODE SCIPvarUpdatePseudocost(
       f = fopen(filename, "a");
       if( NULL != f )
       {
-         fprintf(f, "%lld %s \t %lld \t %lld \t %lld \t %d \t %15.9f \t %.3f\n",
+         fprintf(f, "%" SCIP_LONGINT_FORMAT " %s \t %" SCIP_LONGINT_FORMAT " \t %" SCIP_LONGINT_FORMAT " \t %" SCIP_LONGINT_FORMAT " \t %d \t %15.9f \t %.3f\n",
             ++counter,
             SCIPvarGetName(var),
             SCIPnodeGetNumber(currentnode),

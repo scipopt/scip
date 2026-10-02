@@ -332,7 +332,7 @@ SCIP_RETCODE enfoConss(
                quadcoefs, lhs, SCIPinfinity(scip),
                TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, TRUE) );
 
-            SCIPdebugMsg(scip, "add constraint %s in node %lld\n", name, SCIPnodeGetNumber(SCIPgetCurrentNode(scip)));
+            SCIPdebugMsg(scip, "add constraint %s in node %" SCIP_LONGINT_FORMAT "\n", name, SCIPnodeGetNumber(SCIPgetCurrentNode(scip)));
 
             /* add and release constraint */
             SCIP_CALL( SCIPaddCons(scip, cons) );
@@ -506,7 +506,7 @@ SCIP_DECL_CONSPRESOL(consPresolCpp)
                quadcoefs, lhs, SCIPinfinity(scip),
                TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, TRUE) );
 
-            SCIPdebugMsg(scip, "add constraint %s in node %lld\n", name, SCIPnodeGetNumber(SCIPgetCurrentNode(scip)));
+            SCIPdebugMsg(scip, "add constraint %s in node %" SCIP_LONGINT_FORMAT "\n", name, SCIPnodeGetNumber(SCIPgetCurrentNode(scip)));
 
             /* add and release constraint */
             SCIP_CALL( SCIPaddCons(scip, cons) );

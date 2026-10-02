@@ -1296,7 +1296,7 @@ SCIP_Bool SCIPhypergraphIsValid(
                if( file )
                {
                   fprintf(file, "SCIPhypergraphIsValid detected inconsistency: "
-                     "incidence #%d is %lld (via edges) and %lld (via vertices)!\n", i, incidences1[i], incidences2[i]);
+                     "incidence #%d is %" SCIP_LONGINT_FORMAT " (via edges) and %" SCIP_LONGINT_FORMAT " (via vertices)!\n", i, incidences1[i], incidences2[i]);
                   fflush(file);
                }
             }
@@ -1376,7 +1376,7 @@ SCIP_Bool SCIPhypergraphIsValid(
                if( file )
                {
                   fprintf(file, "SCIPhypergraphIsValid detected inconsistency: "
-                     "incidence #%d is %lld (via edges) and %lld (via vertices)!\n", i, incidences1[i], incidences2[i]);
+                     "incidence #%d is %" SCIP_LONGINT_FORMAT " (via edges) and %" SCIP_LONGINT_FORMAT " (via vertices)!\n", i, incidences1[i], incidences2[i]);
                   fflush(file);
                }
             }
