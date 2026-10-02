@@ -74,7 +74,7 @@ namespace scip
       Rational(const Rational& r){};
       Rational(const char* s){val = atof(s);}
       Rational& operator=(const Rational& r){val = 0.0; return *this;};
-      Rational(const long long num, const long long den){val = 0.0;};
+      Rational(const SCIP_Longint num, const SCIP_Longint den){val = 0.0;};
       Rational(const Rational& num, const Rational& den){val = 0.0;};
       Rational(const std::string& s){val = 0.0;};
       Rational(const double d){val = 0.0;};
