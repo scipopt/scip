@@ -58,6 +58,7 @@ Interface changes
 - SCIPvarGetProbvarBinary() and SCIPvarsGetProbvarBinary() need a SCIP_SET* pointer and are therefore not public anymore;
   use the public functions SCIPgetProbvarBinary() and SCIPgetProbvarsBinary()
 - changed the definition of SCIP_Longint and related defines from long long to int64_t
+- replaced use of unsigned long long by uint64_t
 
 ### New API functions
 
