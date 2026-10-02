@@ -13470,13 +13470,15 @@ SCIP_RETCODE SCIPprocessRowprepNonlinear(
           * skip if gap is zero
           */
          if( auxvalue == SCIP_INVALID )
-            strcat(SCIProwprepGetName(rowprep), "_estimategap=inf");
+            (void) strncat(SCIProwprepGetName(rowprep), "_estimategap=inf",
+               SCIP_MAXSTRLEN - strlen(SCIProwprepGetName(rowprep)) - 1);
          else if( !SCIPisEQ(scip, auxvalue, estimateval) )
          {
             char gap[40];
             /* coverity[secure_coding] */
             (void) sprintf(gap, "_estimategap=%g", REALABS(auxvalue - estimateval));
-            strcat(SCIProwprepGetName(rowprep), gap);
+            (void) strncat(SCIProwprepGetName(rowprep), gap,
+               SCIP_MAXSTRLEN - strlen(SCIProwprepGetName(rowprep)) - 1);
          }
       }
 

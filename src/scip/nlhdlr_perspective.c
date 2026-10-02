@@ -1914,8 +1914,10 @@ SCIP_DECL_NLHDLRENFO(nlhdlrEnfoPerspective)
          rowprep = (SCIP_ROWPREP*) SCIPgetPtrarrayVal(scip, rowpreps, r);
          resultr = SCIP_DIDNOTFIND;
 
-         (void) strcat(SCIProwprepGetName(rowprep), "_persp_indicator_");
-         (void) strcat(SCIProwprepGetName(rowprep), SCIPvarGetName(indicator));
+         (void) strncat(SCIProwprepGetName(rowprep), "_persp_indicator_",
+            SCIP_MAXSTRLEN - strlen(SCIProwprepGetName(rowprep)) - 1);
+         (void) strncat(SCIProwprepGetName(rowprep), SCIPvarGetName(indicator),
+            SCIP_MAXSTRLEN - strlen(SCIProwprepGetName(rowprep)) - 1);
 
          SCIP_CALL( SCIPprocessRowprepNonlinear(scip, nlhdlr, cons, expr, rowprep, overestimate, auxvar, auxvalue,
                allowweakcuts, SCIPgetBoolarrayVal(scip, addedbranchscores2, r), FALSE, solcopy, &resultr) );
