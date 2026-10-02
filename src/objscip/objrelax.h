@@ -49,7 +49,7 @@ namespace scip
  *  - \ref RELAX "Instructions for implementing a relaxation handler"
  *  - \ref type_relax.h "Corresponding C interface"
  */
-class ObjRelax : public ObjCloneable
+class SCIP_EXPORT ObjRelax : public ObjCloneable
 {
 public:
    /*lint --e{1540}*/

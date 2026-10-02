@@ -50,7 +50,7 @@ namespace scip
  * - \ref DIALOGS "List of available dialogs"
  *  - \ref type_dialog.h "Corresponding C interface"
  */
-class ObjDialog : public ObjCloneable
+class SCIP_EXPORT ObjDialog : public ObjCloneable
 {
 public:
    /*lint --e{1540}*/
