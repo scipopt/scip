@@ -22,7 +22,7 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   struct_rational.h
+/**@file   multiprecision.hpp
  * @brief  definition of wrapper class for rational numbers
  * @author Leon Eifler
  */
