@@ -570,6 +570,14 @@ SCIP_RETCODE SCIPregForestFromFile(
       if( SCIPfgets(buffer, (int) sizeof(buffer), file) == NULL )
          break;
 
+      /* ensure that the node arrays are not overrun by too many lines in the file */
+      if( pos >= size )
+      {
+         SCIPerrorMessage("Regression file '%s' contains more than %d nodes\n", filename, size);
+         error = TRUE;
+         break;
+      }
+
       sscanret = sscanf(buffer, dataformat,
          &node,
          &regforestptr->child[2 * pos],
@@ -588,7 +596,12 @@ SCIP_RETCODE SCIPregForestFromFile(
       /* new root node - increase the tree index position */
       if( node == 0 )
       {
-         assert(treepos < regforestptr->ntrees);
+         if( treepos >= regforestptr->ntrees )
+         {
+            SCIPerrorMessage("Regression file '%s' contains more than %d trees\n", filename, regforestptr->ntrees);
+            error = TRUE;
+            break;
+         }
 
          regforestptr->nbegin[treepos++] = pos;
       }
