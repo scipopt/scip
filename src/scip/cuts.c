@@ -11716,7 +11716,7 @@ SCIP_RETCODE SCIPcalcFlowCover(
    SCIP_CALL( SCIPallocBufferArray(scip, &tmpinds, nvars) );
 
    SCIP_CALL( generateLiftedFlowCoverCut(scip, &snf, aggrrow, transvarflowcoverstatus, lambda, tmpcoefs, &tmprhs, tmpinds, &tmpnnz, success) );
-   SCIPdebugMsg(scip, "computed flowcover_%lli_%i:\n", SCIPgetNLPs(scip), SCIPgetNCuts(scip));
+   SCIPdebugMsg(scip, "computed flowcover_%" SCIP_LONGINT_FORMAT "_%i:\n", SCIPgetNLPs(scip), SCIPgetNCuts(scip));
 
    /* if success is FALSE generateLiftedFlowCoverCut wont have touched the tmpcoefs array so we dont need to clean it then */
    if( *success )
