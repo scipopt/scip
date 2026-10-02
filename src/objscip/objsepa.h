@@ -49,7 +49,7 @@ namespace scip
  *  - \ref SEPARATORS "List of available cut separators"
  *  - \ref type_sepa.h "Corresponding C interface"
  */
-class ObjSepa : public ObjCloneable
+class SCIP_EXPORT ObjSepa : public ObjCloneable
 {
 public:
    /*lint --e{1540}*/

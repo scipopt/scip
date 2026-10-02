@@ -49,7 +49,7 @@ namespace scip
  *  - \ref FILEREADERS "List of available file readers and writers"
  *  - \ref type_reader.h "Corresponding C interface"
  */
-class ObjReader : public ObjCloneable
+class SCIP_EXPORT ObjReader : public ObjCloneable
 {
 public:
    /*lint --e{1540}*/

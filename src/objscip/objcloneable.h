@@ -44,7 +44,7 @@ namespace scip
     * All C++ wrapper object plugins should extend this class, except constraint handlers and variable pricers. This is
     * needed to be able to copy (clone) a SCIP instance.
     */
-   struct ObjCloneable
+   struct SCIP_EXPORT ObjCloneable
    {
       virtual ~ObjCloneable() {}
 

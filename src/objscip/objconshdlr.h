@@ -53,7 +53,7 @@ namespace scip
  *  - \ref CONSHDLRS "List of available constraint handlers"
  *  - \ref type_cons.h "Corresponding C interface"
  */
-class ObjConshdlr : public ObjProbCloneable
+class SCIP_EXPORT ObjConshdlr : public ObjProbCloneable
 {
 public:
    /*lint --e{1540}*/
