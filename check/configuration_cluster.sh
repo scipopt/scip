@@ -78,8 +78,8 @@ ACCOUNT=""
 if [ "${CLUSTERQUEUE}" = "moskito" ] || [ "${CLUSTERQUEUE}" = "prio" ]; then
     ACCOUNT="dopt"
 elif [[ "$(uname -n)" =~ htc ]]; then
-    # z1 cluster
-    ACCOUNT="optimi_integer"
+    # z3 cluster
+    ACCOUNT=$(sshare -U -P --noheader --format=Account | head -n 1)
 fi
 
 if test "${CLUSTERQUEUE}" = "M640v2-low"
@@ -92,6 +92,7 @@ if test "${CLUSTERQUEUE}" = "M640v2"
 then
     CONSTRAINT="Gold5222"
     CLUSTERQUEUE="opt_int"
+    ACCOUNT="optimi_integer"
     TARGETFREQ=2528567
 elif test "${CLUSTERQUEUE}" = "R740"
 then
