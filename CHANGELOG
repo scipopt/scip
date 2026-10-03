@@ -6,6 +6,8 @@
 Fixed bugs
 ----------
 
+- preserve problem arrays and ownership when allocation fails during variable or constraint insertion, avoiding crashes in cleanup
+
 - corrected memory allocation condition for storing column swaps in symmetry_orbitopal
 - change header include order for PaPILO presolver to avoid template instantiation issues with Boost headers on some systems
 - avoid use of %I64d format specifier on Windows when not using Microsoft-compatible compiler
