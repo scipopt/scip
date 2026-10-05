@@ -5015,7 +5015,8 @@ SCIP_RETCODE SCIPwriteLp(
             if( changed && !infeasible )
             {
                SCIP_CALL( SCIPcheckExprQuadratic(scip, expr, &isquadratic) );
-               isquadratic &= SCIPexprAreQuadraticExprsVariables(expr);
+               if( isquadratic )
+                  isquadratic = SCIPexprAreQuadraticExprsVariables(expr);
             }
          }
          else
