@@ -34,8 +34,9 @@
 # (To distribute this file outside of YCM, substitute the full
 #  License text for the above reference.)
 
-if(NOT WIN32)
-  # On non Windows systems we use PkgConfig to find IPOPT
+if(NOT MSVC)
+  # When not using a MS-alike compiler we use PkgConfig to find IPOPT
+  # (Ipopt's .pc files reports linker flags in -L/-l style)
   find_package(PkgConfig QUIET)
 
   if(DEFINED IPOPT_DIR)
@@ -120,7 +121,7 @@ if(NOT WIN32)
     set(IPOPT_LINK_FLAGS "")
   endif()
 
-# Windows platforms
+# MSVC platforms
 else()
   include(SelectLibraryConfigurations)
 
