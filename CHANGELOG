@@ -9,6 +9,7 @@ Fixed bugs
 - corrected memory allocation condition for storing column swaps in symmetry_orbitopal
 - change header include order for PaPILO presolver to avoid template instantiation issues with Boost headers on some systems
 - avoid use of %I64d format specifier on Windows when not using Microsoft-compatible compiler
+- use pkg-config to detect Ipopt libs with cmake on Windows when not using Microsoft-compatible compiler (e.g., MINGW)
 - fixed nondeterministic selection of the winning solver in concurrent solving when several solvers reach an
   optimal status; ties are now broken by the smallest solver id
 - move definition of ObjTable::scip_output() into objtable.h to avoid missing symbols (vtable, typeinfo) when linking SCIP library
