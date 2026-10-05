@@ -5456,8 +5456,8 @@ SCIP_RETCODE SCIPwriteMps(
 
          /* check if it is a quadratic constraint */
          expr = SCIPgetExprNonlinear(cons);
-         SCIP_CALL( SCIPcheckExprQuadratic(scip, expr, &isquadratic) );
-         if( !isquadratic || !SCIPexprAreQuadraticExprsVariables(expr) )
+         SCIP_CALL( SCIPcheckQuadraticNonlinear(scip, cons, &isquadratic) );
+         if( !isquadratic )
          {
             SCIP_EXPR* exprcopy;
             SCIP_Bool changed;
@@ -5470,7 +5470,8 @@ SCIP_RETCODE SCIPwriteMps(
             if( changed && !infeasible )
             {
                SCIP_CALL( SCIPcheckExprQuadratic(scip, expr, &isquadratic) );
-               isquadratic &= SCIPexprAreQuadraticExprsVariables(expr);
+               if( isquadratic )
+                  isquadratic = SCIPexprAreQuadraticExprsVariables(expr);
             }
          }
 
