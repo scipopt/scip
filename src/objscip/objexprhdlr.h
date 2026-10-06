@@ -50,7 +50,7 @@ namespace scip
  *  - \ref EXPRHDLRS "List of available expression handlers"
  *  - \ref type_expr.h "Corresponding C interface"
  */
-class ObjExprhdlr : public ObjCloneable
+class SCIP_EXPORT ObjExprhdlr : public ObjCloneable
 {
 public:
    /*lint --e{1540}*/

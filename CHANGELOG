@@ -13,6 +13,8 @@ Fixed bugs
 - fixed nondeterministic selection of the winning solver in concurrent solving when several solvers reach an
   optimal status; ties are now broken by the smallest solver id
 - move definition of ObjTable::scip_output() into objtable.h to avoid missing symbols (vtable, typeinfo) when linking SCIP library
+- fix problems when using the clone() methods by making clonable objscip classes visible in shared/dynamic libraries
+  (so the typeinfo of the classes becomes available)
 - fixed invalid memory access in LP and MPS writers for a nonlinear constraint that is not quadratic after simplification changes
 - added some missing checks for string buffer sizes
 

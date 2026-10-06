@@ -50,7 +50,7 @@ namespace scip
  *  - \ref PRIMALHEURISTICS "List of available primal heuristics"
  *  - \ref type_heur.h "Corresponding C interface"
  */
-class ObjHeur : public ObjCloneable
+class SCIP_EXPORT ObjHeur : public ObjCloneable
 {
 public:
    /*lint --e{1540}*/

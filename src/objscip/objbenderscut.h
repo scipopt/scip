@@ -53,7 +53,7 @@ namespace scip
  *  - \ref BENDERSCUTS "List of available Benders' decomposition plugins"
  *  - \ref type_benderscut.h "Corresponding C interface"
  */
-class ObjBenderscut : public ObjCloneable
+class SCIP_EXPORT ObjBenderscut : public ObjCloneable
 {
 public:
    /*lint --e{1540}*/

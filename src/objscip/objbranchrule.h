@@ -51,7 +51,7 @@ namespace scip
  *  - \ref BRANCHINGRULES "List of available branching rules"
  *  - \ref type_branch.h "Corresponding C interface"
  */
-class ObjBranchrule : public ObjCloneable
+class SCIP_EXPORT ObjBranchrule : public ObjCloneable
 {
 public:
    /*lint --e{1540}*/

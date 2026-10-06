@@ -50,7 +50,7 @@ namespace scip
  *  - \ref NODESELECTORS "List of available node selectors"
  *  - \ref type_nodesel.h "Corresponding C interface"
  */
-class ObjNodesel : public ObjCloneable
+class SCIP_EXPORT ObjNodesel : public ObjCloneable
 {
 public:
    /*lint --e{1540}*/
