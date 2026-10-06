@@ -50,7 +50,7 @@ namespace scip
  *  - \ref PROPAGATORS "List of available propagators"
  *  - \ref type_prop.h "Corresponding C interface"
  */
-class ObjProp : public ObjCloneable
+class SCIP_EXPORT ObjProp : public ObjCloneable
 {
 public:
    /*lint --e{1540}*/
