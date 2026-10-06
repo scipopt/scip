@@ -83,7 +83,7 @@ void storeBacktrace(
    assert(iterpos >= 0);
    assert(iterpos < SCIP_EXPRITER_MAXNACTIVE);
 
-   if( subscipdepth > MAXSUBSCIPDEPTH )
+   if( subscipdepth >= MAXSUBSCIPDEPTH )
       return;
 
    size = backtrace(array, MAXBACKTRACE);
