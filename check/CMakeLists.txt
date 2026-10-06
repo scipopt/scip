@@ -1095,6 +1095,24 @@ if(NOT ${TPI} STREQUAL "none")
                               )
        endforeach()
     endforeach()
+     #
+     # regression test for https://github.com/scipopt/scip/issues/216: with a finite memory limit and
+     # misc/avoidmemout=TRUE, SCIPsolveConcurrent() must estimate the thread count from the memory limit
+     # instead of falling back to a sequential solve
+     #
+     set(path "instances/MIP/bell5.mps")
+     set(optval "8966406.49")
+     get_filename_component(basename ${path} NAME)
+     configure_file(interactiveshell/concurrentsolve-memlimit.bat.in interactiveshell/concurrentsolve-memlimit-${basename}.bat)
+     add_test(NAME MIP-concurrentsolve-memlimit-${basename}
+              COMMAND $<TARGET_FILE:scip> -b ${PROJECT_BINARY_DIR}/check/interactiveshell/concurrentsolve-memlimit-${basename}.bat
+             )
+     set_tests_properties(MIP-concurrentsolve-memlimit-${basename}
+                          PROPERTIES
+                             PASS_REGULAR_EXPRESSION "Validation         : Success"
+                             FAIL_REGULAR_EXPRESSION "performing sequential solve;ERROR"
+                             DEPENDS scip-build
+                         )
 endif()
 
 #
