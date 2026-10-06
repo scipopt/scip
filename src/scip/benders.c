@@ -938,8 +938,12 @@ void findAuxiliaryVar(
       if( (*targetvar) != NULL )
          return;
 
-      (void) SCIPsnprintf(tmpprefix, len, "t_%s", prefix);
+      /* prepend "t_" for the next sub-SCIP copy, but do not overrun the prefix buffer */
       len += 2;
+      if( len > SCIP_MAXSTRLEN )
+         return;
+
+      (void) SCIPsnprintf(tmpprefix, len, "t_%s", prefix);
       (void) strncpy(prefix, tmpprefix, len); /*lint !e732*/
 
       i++;
