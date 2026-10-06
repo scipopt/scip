@@ -210,6 +210,28 @@ Test(presolve, singlelockedvars3)
    SCIP_CALL( SCIPchgVarLbGlobal(scip, z, -1.0) );
    SCIP_CALL( SCIPchgVarUbGlobal(scip, z, 2.0) );
 
+   /* same example as singlelockedvars1; x should be binary */
+   SCIP_CALL( addCons("+<x>^2 -<y>^2 +<z>^6 + <x>*<y> + 1/sin(20 + <y>)", 0.5, SCIPinfinity(scip)) );
+
+   /* apply presolving */
+   SCIP_CALL( TESTscipSetStage(scip, SCIP_STAGE_PRESOLVED, FALSE) );
+   cr_expect(SCIPgetNConss(scip) == 1);
+
+   /* check variable types */
+   checkTypes(SCIP_VARTYPE_BINARY, SCIP_VARTYPE_CONTINUOUS, SCIP_VARTYPE_CONTINUOUS);
+   checkImplTypes(SCIP_IMPLINTTYPE_NONE, SCIP_IMPLINTTYPE_NONE, SCIP_IMPLINTTYPE_NONE);
+}
+
+/* test for presolSingleLockedVars() */
+Test(presolve, singlelockedvars3a)
+{
+   /* allow creation of bound disjunction constraints */
+   SCIP_CALL( SCIPsetCharParam(scip, "constraints/nonlinear/checkvarlocks", 'b') );
+
+   /* change bounds of z */
+   SCIP_CALL( SCIPchgVarLbGlobal(scip, z, -1.0) );
+   SCIP_CALL( SCIPchgVarUbGlobal(scip, z, 2.0) );
+
    /* same example as singlelockedvars1; x should be binary and there should be one disjunction constraint for z */
    SCIP_CALL( addCons("+<x>^2 -<y>^2 +<z>^6 + <x>*<y> + 1/sin(20 + <y>)", 0.5, SCIPinfinity(scip)) );
 
