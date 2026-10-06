@@ -49,7 +49,7 @@ namespace scip
  *  - \ref PRICER "Instructions for implementing a variable pricer"
  *  - \ref type_pricer.h "Corresponding C interface"
  */
-class ObjPricer : public ObjProbCloneable
+class SCIP_EXPORT ObjPricer : public ObjProbCloneable
 {
 public:
    /*lint --e{1540}*/

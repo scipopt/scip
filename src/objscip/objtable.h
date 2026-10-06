@@ -50,7 +50,7 @@ namespace scip
  * - \ref TABLES "List of available statistics tables"
  * - \ref type_table.h "Corresponding C interface"
  */
-class ObjTable : public ObjCloneable
+class SCIP_EXPORT ObjTable : public ObjCloneable
 {
 public:
    /*lint --e{1540}*/
