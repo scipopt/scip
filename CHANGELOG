@@ -15,6 +15,7 @@ Fixed bugs
 - move definition of ObjTable::scip_output() into objtable.h to avoid missing symbols (vtable, typeinfo) when linking SCIP library
 - fixed invalid memory access in LP and MPS writers for a nonlinear constraint that is not quadratic after simplification changes
 - added some missing checks for string buffer sizes
+- fixed possible invalid cuts for x^n with n odd and x having mixed sign
 
 
 @section RN1010 SCIP 10.1.0
