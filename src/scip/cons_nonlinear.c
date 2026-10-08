@@ -11309,7 +11309,14 @@ SCIP_DECL_CONSINITPRE(consInitpreNonlinear)
 static
 SCIP_DECL_CONSEXITPRE(consExitpreNonlinear)
 {  /*lint --e{715}*/
+   SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_Bool infeasible;
+
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+
+   /* reset flag to allow another call of presolSingleLockedVars() after a restart */
+   conshdlrdata->checkedvarlocks = FALSE;
 
    if( nconss == 0 )
       return SCIP_OKAY;
@@ -11394,9 +11401,6 @@ SCIP_DECL_CONSEXITSOL(consExitsolNonlinear)
 
    /* free hash table for bilinear terms */
    SCIP_CALL( bilinearTermsFree(scip, conshdlrdata) );
-
-   /* reset flag to allow another call of presolSingleLockedVars() after a restart */
-   conshdlrdata->checkedvarlocks = FALSE;
 
    /* drop catching new solution event, if catched before */
    if( conshdlrdata->newsoleventfilterpos >= 0 )
