@@ -80,10 +80,14 @@ SCIP_RETCODE probEnsureVarsMem(
 
    if( num > prob->varssize )
    {
+      SCIP_VAR** resized;
       int newsize;
 
       newsize = SCIPsetCalcMemGrowSize(set, num);
-      SCIP_ALLOC( BMSreallocMemoryArray(&prob->vars, newsize) );
+      resized = prob->vars;
+      /* Preserve the owned array if allocation fails: cleanup still needs it. */
+      SCIP_ALLOC( BMSreallocMemoryArray(&resized, newsize) );
+      prob->vars = resized;
       prob->varssize = newsize;
    }
    assert(num <= prob->varssize);
@@ -104,10 +108,14 @@ SCIP_RETCODE probEnsureFixedvarsMem(
 
    if( num > prob->fixedvarssize )
    {
+      SCIP_VAR** resized;
       int newsize;
 
       newsize = SCIPsetCalcMemGrowSize(set, num);
-      SCIP_ALLOC( BMSreallocMemoryArray(&prob->fixedvars, newsize) );
+      resized = prob->fixedvars;
+      /* Preserve the owned array if allocation fails: cleanup still needs it. */
+      SCIP_ALLOC( BMSreallocMemoryArray(&resized, newsize) );
+      prob->fixedvars = resized;
       prob->fixedvarssize = newsize;
    }
    assert(num <= prob->fixedvarssize);
@@ -128,10 +136,14 @@ SCIP_RETCODE probEnsureDeletedvarsMem(
 
    if( num > prob->deletedvarssize )
    {
+      SCIP_VAR** resized;
       int newsize;
 
       newsize = SCIPsetCalcMemGrowSize(set, num);
-      SCIP_ALLOC( BMSreallocMemoryArray(&prob->deletedvars, newsize) );
+      resized = prob->deletedvars;
+      /* Preserve the owned array if allocation fails: cleanup still needs it. */
+      SCIP_ALLOC( BMSreallocMemoryArray(&resized, newsize) );
+      prob->deletedvars = resized;
       prob->deletedvarssize = newsize;
    }
    assert(num <= prob->deletedvarssize);
@@ -152,14 +164,21 @@ SCIP_RETCODE probEnsureConssMem(
 
    if( num > prob->consssize )
    {
+      SCIP_CONS** resized;
       int newsize;
 
       newsize = SCIPsetCalcMemGrowSize(set, num);
-      SCIP_ALLOC( BMSreallocMemoryArray(&prob->conss, newsize) );
+      resized = prob->conss;
+      /* Preserve the owned array if allocation fails: cleanup still needs it. */
+      SCIP_ALLOC( BMSreallocMemoryArray(&resized, newsize) );
+      prob->conss = resized;
       /* resize sorted original constraints if they exist */
       if( prob->origcheckconss != NULL )
       {
-         SCIP_ALLOC( BMSreallocMemoryArray(&prob->origcheckconss, newsize) );
+         SCIP_CONS** resized = prob->origcheckconss;
+         /* Preserve the owned array if allocation fails: cleanup still needs it. */
+         SCIP_ALLOC( BMSreallocMemoryArray(&resized, newsize) );
+         prob->origcheckconss = resized;
       }
       prob->consssize = newsize;
    }
@@ -1123,11 +1142,11 @@ SCIP_RETCODE SCIPprobAddVar(
    }
 #endif
 
+   /* Allocate before acquiring ownership: a failed resize must not leak a capture. */
+   SCIP_CALL( probEnsureVarsMem(prob, set, prob->nvars+1) );
+
    /* capture variable */
    SCIPvarCapture(var);
-
-   /* allocate additional memory */
-   SCIP_CALL( probEnsureVarsMem(prob, set, prob->nvars+1) );
 
    /* insert variable in vars array and mark it to be in problem */
    probInsertVar(prob, var);
@@ -1524,12 +1543,14 @@ SCIP_RETCODE SCIPprobAddCons(
    SCIPsetDebugMsg(set, "adding constraint <%s> to global problem -> %d constraints\n",
       SCIPconsGetName(cons), prob->nconss+1);
 
+   /* A failed resize must leave the constraint outside the problem. */
+   SCIP_CALL( probEnsureConssMem(prob, set, prob->nconss+1) );
+
    /* mark the constraint as problem constraint, and remember the constraint's position */
    cons->addconssetchg = NULL;
    cons->addarraypos = prob->nconss;
 
    /* add the constraint to the problem's constraint array */
-   SCIP_CALL( probEnsureConssMem(prob, set, prob->nconss+1) );
    prob->conss[prob->nconss] = cons;
    if( prob->origcheckconss != NULL )
       prob->origcheckconss[prob->nconss] = cons;
