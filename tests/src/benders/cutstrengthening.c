@@ -461,9 +461,8 @@ SCIP_Bool allActive(
  * IIS-correctness tests
  */
 
-Test(cutstrengthening, singleVariableIIS, .init = setup, .fini = teardown,
-   .description = "DFBS reduces an 8-of-12 active master solution down to a single-variable IIS (infeasible substatus)"
-   )
+/** @brief DFBS reduces an 8-of-12 active master solution down to a single-variable IIS (infeasible substatus) */
+void test_cutstrengthening_singleVariableIIS(void)
 {
    SCIP_SOL* sol;
    SCIP_SOL* newsol;
@@ -503,16 +502,15 @@ Test(cutstrengthening, singleVariableIIS, .init = setup, .fini = teardown,
       SCIP_CALL( SCIPfreeSol(scip, &newsol) );
    }
 
-   cr_assert( notnull );
-   cr_assert( alliispresent, "expected IIS member x%d to be active in the reduced solution", iis[0] );
-   cr_assert( reducedactive < origactive );
-   cr_assert_eq( reducedactive, 1,
+   TEST_ASSERT( notnull );
+   TEST_ASSERT( alliispresent, "expected IIS member x%d to be active in the reduced solution", iis[0] );
+   TEST_ASSERT( reducedactive < origactive );
+   TEST_ASSERT_EQUAL( reducedactive, 1,
       "expected DFBS to isolate the single-variable IIS exactly, found %d active variables", reducedactive );
 }
 
-Test(cutstrengthening, twoVariableIIS, .init = setup, .fini = teardown,
-   .description = "DFBS reduces an 8-of-12 active master solution down to a two-variable IIS (infeasible substatus)"
-   )
+/** @brief DFBS reduces an 8-of-12 active master solution down to a two-variable IIS (infeasible substatus) */
+void test_cutstrengthening_twoVariableIIS(void)
 {
    SCIP_SOL* sol;
    SCIP_SOL* newsol;
@@ -552,16 +550,15 @@ Test(cutstrengthening, twoVariableIIS, .init = setup, .fini = teardown,
       SCIP_CALL( SCIPfreeSol(scip, &newsol) );
    }
 
-   cr_assert( notnull );
-   cr_assert( alliispresent, "expected all IIS members to be active in the reduced solution" );
-   cr_assert( reducedactive < origactive );
-   cr_assert_eq( reducedactive, 2,
+   TEST_ASSERT( notnull );
+   TEST_ASSERT( alliispresent, "expected all IIS members to be active in the reduced solution" );
+   TEST_ASSERT( reducedactive < origactive );
+   TEST_ASSERT_EQUAL( reducedactive, 2,
       "expected DFBS to isolate the 2-variable IIS exactly, found %d active variables", reducedactive );
 }
 
-Test(cutstrengthening, multiVariableIIS, .init = setup, .fini = teardown,
-   .description = "DFBS reduces an 8-of-12 active master solution down to a 3-variable IIS (infeasible substatus)"
-   )
+/** @brief DFBS reduces an 8-of-12 active master solution down to a 3-variable IIS (infeasible substatus) */
+void test_cutstrengthening_multiVariableIIS(void)
 {
    SCIP_SOL* sol;
    SCIP_SOL* newsol;
@@ -601,16 +598,15 @@ Test(cutstrengthening, multiVariableIIS, .init = setup, .fini = teardown,
       SCIP_CALL( SCIPfreeSol(scip, &newsol) );
    }
 
-   cr_assert( notnull );
-   cr_assert( alliispresent, "expected all IIS members to be active in the reduced solution" );
-   cr_assert( reducedactive < origactive );
-   cr_assert_eq( reducedactive, 3,
+   TEST_ASSERT( notnull );
+   TEST_ASSERT( alliispresent, "expected all IIS members to be active in the reduced solution" );
+   TEST_ASSERT( reducedactive < origactive );
+   TEST_ASSERT_EQUAL( reducedactive, 3,
       "expected DFBS to isolate the 3-variable IIS exactly, found %d active variables", reducedactive );
 }
 
-Test(cutstrengthening, largeActiveSetFourVariableIIS, .init = setup, .fini = teardown,
-   .description = "DFBS reduces an 11-of-12 active master solution towards a four-variable IIS (infeasible substatus)"
-   )
+/** @brief DFBS reduces an 11-of-12 active master solution towards a four-variable IIS (infeasible substatus) */
+void test_cutstrengthening_largeActiveSetFourVariableIIS(void)
 {
    SCIP_SOL* sol;
    SCIP_SOL* newsol;
@@ -650,17 +646,16 @@ Test(cutstrengthening, largeActiveSetFourVariableIIS, .init = setup, .fini = tea
       SCIP_CALL( SCIPfreeSol(scip, &newsol) );
    }
 
-   cr_assert( notnull );
-   cr_assert( alliispresent, "expected all IIS members to be active in the reduced solution" );
-   cr_assert( reducedactive < origactive,
+   TEST_ASSERT( notnull );
+   TEST_ASSERT( alliispresent, "expected all IIS members to be active in the reduced solution" );
+   TEST_ASSERT( reducedactive < origactive,
       "expected some reduction from the original %d active variables, found %d", origactive, reducedactive );
-   cr_assert_eq( reducedactive, 4,
+   TEST_ASSERT_EQUAL( reducedactive, 4,
       "expected DFBS to isolate the 4-variable IIS exactly, found %d active variables", reducedactive );
 }
 
-Test(cutstrengthening, wholeActiveSetIsIIS, .init = setup, .fini = teardown,
-   .description = "DFBS cannot reduce the active set when every active variable is required"
-   )
+/** @brief DFBS cannot reduce the active set when every active variable is required */
+void test_cutstrengthening_wholeActiveSetIsIIS(void)
 {
    SCIP_SOL* sol;
    SCIP_SOL* newsol;
@@ -697,16 +692,15 @@ Test(cutstrengthening, wholeActiveSetIsIIS, .init = setup, .fini = teardown,
       SCIP_CALL( SCIPfreeSol(scip, &newsol) );
    }
 
-   cr_assert( notnull );
-   cr_assert_eq( reducedactive, 8,
+   TEST_ASSERT( notnull );
+   TEST_ASSERT_EQUAL( reducedactive, 8,
       "expected no reduction since the whole active set is required, found %d active variables", reducedactive );
-   cr_assert_eq( benders->dfbsdata->freq, prevfreq + 5,
+   TEST_ASSERT_EQUAL( benders->dfbsdata->freq, prevfreq + 5,
       "expected the adaptive frequency to increase by 5 after a call with no reduction" );
 }
 
-Test(cutstrengthening, auxviolObjectiveIIS, .init = setup, .fini = teardown,
-   .description = "DFBS reduces the active set based on reproducing the subproblem objective (AUXVIOL substatus)"
-   )
+/** @brief DFBS reduces the active set based on reproducing the subproblem objective (AUXVIOL substatus) */
+void test_cutstrengthening_auxviolObjectiveIIS(void)
 {
    SCIP_SOL* sol;
    SCIP_SOL* newsol;
@@ -721,7 +715,7 @@ Test(cutstrengthening, auxviolObjectiveIIS, .init = setup, .fini = teardown,
    int i;
 
    auxvar = SCIPbendersGetAuxiliaryVar(benders, 0);
-   cr_assert( auxvar != NULL );
+   TEST_ASSERT( auxvar != NULL );
 
    SCIP_CALL( SCIPcreateSol(scip, &sol, NULL) );
    for( i = 0; i < 8; i++ )
@@ -757,16 +751,15 @@ Test(cutstrengthening, auxviolObjectiveIIS, .init = setup, .fini = teardown,
       SCIP_CALL( SCIPfreeSol(scip, &newsol) );
    }
 
-   cr_assert( notnull );
-   cr_assert( alliispresent, "expected all IIS members to be active in the reduced solution" );
-   cr_assert( reducedactive < origactive );
-   cr_assert_eq( reducedactive, 3,
+   TEST_ASSERT( notnull );
+   TEST_ASSERT( alliispresent, "expected all IIS members to be active in the reduced solution" );
+   TEST_ASSERT( reducedactive < origactive );
+   TEST_ASSERT_EQUAL( reducedactive, 3,
       "expected DFBS to isolate the 3-variable IIS exactly, found %d active variables", reducedactive );
 }
 
-Test(cutstrengthening, auxviolSingleVariableIIS, .init = setup, .fini = teardown,
-   .description = "DFBS reduces an 8-of-12 active master solution down to a single-variable IIS (AUXVIOL substatus)"
-   )
+/** @brief DFBS reduces an 8-of-12 active master solution down to a single-variable IIS (AUXVIOL substatus) */
+void test_cutstrengthening_auxviolSingleVariableIIS(void)
 {
    SCIP_SOL* sol;
    SCIP_SOL* newsol;
@@ -781,7 +774,7 @@ Test(cutstrengthening, auxviolSingleVariableIIS, .init = setup, .fini = teardown
    int i;
 
    auxvar = SCIPbendersGetAuxiliaryVar(benders, 0);
-   cr_assert( auxvar != NULL );
+   TEST_ASSERT( auxvar != NULL );
 
    SCIP_CALL( SCIPcreateSol(scip, &sol, NULL) );
    for( i = 0; i < 8; i++ )
@@ -813,16 +806,15 @@ Test(cutstrengthening, auxviolSingleVariableIIS, .init = setup, .fini = teardown
       SCIP_CALL( SCIPfreeSol(scip, &newsol) );
    }
 
-   cr_assert( notnull );
-   cr_assert( alliispresent, "expected IIS member x%d to be active in the reduced solution", iis[0] );
-   cr_assert( reducedactive < origactive );
-   cr_assert_eq( reducedactive, 1,
+   TEST_ASSERT( notnull );
+   TEST_ASSERT( alliispresent, "expected IIS member x%d to be active in the reduced solution", iis[0] );
+   TEST_ASSERT( reducedactive < origactive );
+   TEST_ASSERT_EQUAL( reducedactive, 1,
       "expected DFBS to isolate the single-variable IIS exactly, found %d active variables", reducedactive );
 }
 
-Test(cutstrengthening, auxviolWholeActiveSetIsIIS, .init = setup, .fini = teardown,
-   .description = "DFBS cannot reduce the active set when every active variable is required (AUXVIOL substatus)"
-   )
+/** @brief DFBS cannot reduce the active set when every active variable is required (AUXVIOL substatus) */
+void test_cutstrengthening_auxviolWholeActiveSetIsIIS(void)
 {
    SCIP_SOL* sol;
    SCIP_SOL* newsol;
@@ -835,7 +827,7 @@ Test(cutstrengthening, auxviolWholeActiveSetIsIIS, .init = setup, .fini = teardo
    int i;
 
    auxvar = SCIPbendersGetAuxiliaryVar(benders, 0);
-   cr_assert( auxvar != NULL );
+   TEST_ASSERT( auxvar != NULL );
 
    SCIP_CALL( SCIPcreateSol(scip, &sol, NULL) );
    for( i = 0; i < 8; i++ )
@@ -866,9 +858,27 @@ Test(cutstrengthening, auxviolWholeActiveSetIsIIS, .init = setup, .fini = teardo
       SCIP_CALL( SCIPfreeSol(scip, &newsol) );
    }
 
-   cr_assert( notnull );
-   cr_assert_eq( reducedactive, 8,
+   TEST_ASSERT( notnull );
+   TEST_ASSERT_EQUAL( reducedactive, 8,
       "expected no reduction since the whole active set is required, found %d active variables", reducedactive );
-   cr_assert_eq( benders->dfbsdata->freq, prevfreq + 5,
+   TEST_ASSERT_EQUAL( benders->dfbsdata->freq, prevfreq + 5,
       "expected the adaptive frequency to increase by 5 after a call with no reduction" );
+}
+
+void setUp(void) { setup(); }
+
+void tearDown(void) { teardown(); }
+
+int main(void)
+{
+   UNITY_BEGIN();
+   RUN_TEST(test_cutstrengthening_auxviolObjectiveIIS);
+   RUN_TEST(test_cutstrengthening_auxviolSingleVariableIIS);
+   RUN_TEST(test_cutstrengthening_auxviolWholeActiveSetIsIIS);
+   RUN_TEST(test_cutstrengthening_largeActiveSetFourVariableIIS);
+   RUN_TEST(test_cutstrengthening_multiVariableIIS);
+   RUN_TEST(test_cutstrengthening_singleVariableIIS);
+   RUN_TEST(test_cutstrengthening_twoVariableIIS);
+   RUN_TEST(test_cutstrengthening_wholeActiveSetIsIIS);
+   return UNITY_END();
 }

@@ -76,7 +76,7 @@ void teardown(void)
    SCIP_CALL( SCIPfree(&scip) );
 
    /* check for memory leaks */
-   cr_assert_eq(BMSgetMemoryUsed(), 0, "There is are memory leak!!");
+   TEST_ASSERT_EQUAL(BMSgetMemoryUsed(), 0, "There is are memory leak!!");
 }
 
 /* helper function to add a row containing two variables via SCIPaddRowProbing() */
@@ -94,9 +94,8 @@ SCIP_RETCODE addRowProbing(SCIP* _scip, SCIP_VAR* _x, SCIP_VAR* _y, SCIP_Real co
    return SCIP_OKAY;
 }
 
-Test(projection, onerow, .init = setup, .fini=teardown,
-   .description = "single row example"
-   )
+/** @brief single row example */
+void test_projection_onerow(void)
 {
    SCIP_Bool infeasible;
    SCIP_Real xcoef;
@@ -119,17 +118,16 @@ Test(projection, onerow, .init = setup, .fini=teardown,
    assert(!lperror);
 
    SCIP_CALL( solveBilinearLP(scip, x, y, -10, 5, 10, -5, &xcoef, &ycoef, &constant, -1, &nnonzduals) );
-   cr_expect(nnonzduals == 1);
-   cr_expect(SCIPisEQ(scip, xcoef, 1.0));
-   cr_expect(SCIPisEQ(scip, ycoef, 0.4));
-   cr_expect(SCIPisEQ(scip, constant, 10.0));
+   SOFT_ASSERT(nnonzduals == 1);
+   SOFT_ASSERT(SCIPisEQ(scip, xcoef, 1.0));
+   SOFT_ASSERT(SCIPisEQ(scip, ycoef, 0.4));
+   SOFT_ASSERT(SCIPisEQ(scip, constant, 10.0));
 
    SCIP_CALL( SCIPendProbing(scip) );
 }
 
-Test(projection, tworows, .init = setup, .fini=teardown,
-   .description = "two row example"
-   )
+/** @brief two row example */
+void test_projection_tworows(void)
 {
    SCIP_Bool infeasible;
    SCIP_Real xcoef;
@@ -155,17 +153,16 @@ Test(projection, tworows, .init = setup, .fini=teardown,
    assert(!lperror);
 
    SCIP_CALL( solveBilinearLP(scip, x, y, -10, 5, 10, -5, &xcoef, &ycoef, &constant, -1, &nnonzduals) );
-   cr_expect(nnonzduals == 1);
-   cr_expect(SCIPisEQ(scip, xcoef, 1.0));
-   cr_expect(SCIPisEQ(scip, ycoef, 0.7));
-   cr_expect(SCIPisEQ(scip, constant, 5.0));
+   SOFT_ASSERT(nnonzduals == 1);
+   SOFT_ASSERT(SCIPisEQ(scip, xcoef, 1.0));
+   SOFT_ASSERT(SCIPisEQ(scip, ycoef, 0.7));
+   SOFT_ASSERT(SCIPisEQ(scip, constant, 5.0));
 
    SCIP_CALL( SCIPendProbing(scip) );
 }
 
-Test(projection, transitivity, .init = setup, .fini=teardown,
-   .description = "example involving two rows that need to be combined together"
-   )
+/** @brief example involving two rows that need to be combined together */
+void test_projection_transitivity(void)
 {
    SCIP_Bool infeasible;
    SCIP_Real xcoef;
@@ -191,17 +188,16 @@ Test(projection, transitivity, .init = setup, .fini=teardown,
    assert(!lperror);
 
    SCIP_CALL( solveBilinearLP(scip, x, z, 0.0, 2.0, 10, 1.0, &xcoef, &zcoef, &constant, -1, &nnonzduals) );
-   cr_expect(nnonzduals == 2);
-   cr_expect(SCIPisEQ(scip, xcoef, 1.0));
-   cr_expect(SCIPisEQ(scip, zcoef, 1.0));
-   cr_expect(SCIPisEQ(scip, constant, 0.0));
+   SOFT_ASSERT(nnonzduals == 2);
+   SOFT_ASSERT(SCIPisEQ(scip, xcoef, 1.0));
+   SOFT_ASSERT(SCIPisEQ(scip, zcoef, 1.0));
+   SOFT_ASSERT(SCIPisEQ(scip, constant, 0.0));
 
    SCIP_CALL( SCIPendProbing(scip) );
 }
 
-Test(projection, threevars, .init = setup, .fini=teardown,
-   .description = "three variable example"
-   )
+/** @brief three variable example */
+void test_projection_threevars(void)
 {
    SCIP_Bool infeasible;
    SCIP_Real xcoef;
@@ -229,30 +225,29 @@ Test(projection, threevars, .init = setup, .fini=teardown,
    assert(!lperror);
 
    SCIP_CALL( solveBilinearLP(scip, x, z, -10, 3, 10, 1, &xcoef, &zcoef, &constant, -1, &nnonzduals) );
-   cr_expect(nnonzduals == 1);
-   cr_expect(SCIPisEQ(scip, xcoef, 1.0));
-   cr_expect(SCIPisEQ(scip, zcoef, 1.2/2.2));
-   cr_expect(SCIPisEQ(scip, constant, 1.0/2.2));
+   SOFT_ASSERT(nnonzduals == 1);
+   SOFT_ASSERT(SCIPisEQ(scip, xcoef, 1.0));
+   SOFT_ASSERT(SCIPisEQ(scip, zcoef, 1.2/2.2));
+   SOFT_ASSERT(SCIPisEQ(scip, constant, 1.0/2.2));
 
    SCIP_CALL( solveBilinearLP(scip, z, y, 1, 5, 3, -5, &zcoef, &ycoef, &constant, -1, &nnonzduals) );
-   cr_expect(nnonzduals == 1);
-   cr_expect(SCIPisEQ(scip, zcoef, 1.0));
-   cr_expect(SCIPisEQ(scip, ycoef, 2.0));
-   cr_expect(SCIPisEQ(scip, constant, -5.0));
+   SOFT_ASSERT(nnonzduals == 1);
+   SOFT_ASSERT(SCIPisEQ(scip, zcoef, 1.0));
+   SOFT_ASSERT(SCIPisEQ(scip, ycoef, 2.0));
+   SOFT_ASSERT(SCIPisEQ(scip, constant, -5.0));
 
    /* the resulting inequality y >= 3 results in no useful inequality */
    SCIP_CALL( solveBilinearLP(scip, x, y, -10, 5, 10, -5, &xcoef, &ycoef, &constant, -1, &nnonzduals) );
-   cr_expect(nnonzduals == 0);
-   cr_expect(xcoef == SCIP_INVALID);
-   cr_expect(ycoef == SCIP_INVALID);
-   cr_expect(constant == SCIP_INVALID);
+   SOFT_ASSERT(nnonzduals == 0);
+   SOFT_ASSERT(xcoef == SCIP_INVALID);
+   SOFT_ASSERT(ycoef == SCIP_INVALID);
+   SOFT_ASSERT(constant == SCIP_INVALID);
 
    SCIP_CALL( SCIPendProbing(scip) );
 }
 
-Test(projection, fourrows, .init = setup, .fini=teardown,
-   .description = "four rows example"
-   )
+/** @brief four rows example */
+void test_projection_fourrows(void)
 {
    SCIP_Bool infeasible;
    SCIP_Real xcoef;
@@ -286,31 +281,47 @@ Test(projection, fourrows, .init = setup, .fini=teardown,
 
    /* TR */
    SCIP_CALL( solveBilinearLP(scip, x, y, -10, -5, 10, 5, &xcoef, &ycoef, &constant, -1, &nnonzduals) );
-   cr_expect(nnonzduals == 1);
-   cr_expect(SCIPisEQ(scip, xcoef, 1.0));
-   cr_expect(SCIPisEQ(scip, ycoef, -5.0/3.0));
-   cr_expect(SCIPisEQ(scip, constant, 10.0));
+   SOFT_ASSERT(nnonzduals == 1);
+   SOFT_ASSERT(SCIPisEQ(scip, xcoef, 1.0));
+   SOFT_ASSERT(SCIPisEQ(scip, ycoef, -5.0/3.0));
+   SOFT_ASSERT(SCIPisEQ(scip, constant, 10.0));
 
    /* TL */
    SCIP_CALL( solveBilinearLP(scip, x, y, 10, -5, -10, 5, &xcoef, &ycoef, &constant, -1, &nnonzduals) );
-   cr_expect(nnonzduals == 1);
-   cr_expect(SCIPisEQ(scip, xcoef, -1.0));
-   cr_expect(SCIPisEQ(scip, ycoef, -0.5));
-   cr_expect(SCIPisEQ(scip, constant, 10.0));
+   SOFT_ASSERT(nnonzduals == 1);
+   SOFT_ASSERT(SCIPisEQ(scip, xcoef, -1.0));
+   SOFT_ASSERT(SCIPisEQ(scip, ycoef, -0.5));
+   SOFT_ASSERT(SCIPisEQ(scip, constant, 10.0));
 
    /* BR */
    SCIP_CALL( solveBilinearLP(scip, x, y, -10, 5, 10, -5, &xcoef, &ycoef, &constant, -1, &nnonzduals) );
-   cr_expect(nnonzduals == 1);
-   cr_expect(SCIPisEQ(scip, xcoef, 1.0));
-   cr_expect(SCIPisEQ(scip, ycoef, 1.0));
-   cr_expect(SCIPisEQ(scip, constant, 8.0));
+   SOFT_ASSERT(nnonzduals == 1);
+   SOFT_ASSERT(SCIPisEQ(scip, xcoef, 1.0));
+   SOFT_ASSERT(SCIPisEQ(scip, ycoef, 1.0));
+   SOFT_ASSERT(SCIPisEQ(scip, constant, 8.0));
 
    /* BL */
    SCIP_CALL( solveBilinearLP(scip, x, y, 10, 5, -10, -5, &xcoef, &ycoef, &constant, -1, &nnonzduals) );
-   cr_expect(nnonzduals == 1);
-   cr_expect(SCIPisEQ(scip, xcoef, -1.0));
-   cr_expect(SCIPisEQ(scip, ycoef, 5.0/3.0));
-   cr_expect(SCIPisEQ(scip, constant, 40.0/3.0));
+   SOFT_ASSERT(nnonzduals == 1);
+   SOFT_ASSERT(SCIPisEQ(scip, xcoef, -1.0));
+   SOFT_ASSERT(SCIPisEQ(scip, ycoef, 5.0/3.0));
+   SOFT_ASSERT(SCIPisEQ(scip, constant, 40.0/3.0));
 
    SCIP_CALL( SCIPendProbing(scip) );
+}
+
+void setUp(void) { setup(); }
+
+void tearDown(void) { teardown(); }
+
+int main(void)
+{
+   UNITY_BEGIN();
+   RUN_TEST(test_projection_onerow
+);
+   RUN_TEST(test_projection_tworows);
+   RUN_TEST(test_projection_transitivity);
+   RUN_TEST(test_projection_threevars);
+   RUN_TEST(test_projection_fourrows);
+   return UNITY_END();
 }

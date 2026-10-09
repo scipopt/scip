@@ -37,7 +37,7 @@
 /** concurrent solving does not support reoptimization: SCIPsolveConcurrent() must return SCIP_NOTIMPLEMENTED instead of
  *  running into a segmentation fault (see PySCIPOpt#884).
  */
-Test(concurrent, reoptimization)
+void test_concurrent_reoptimization(void)
 {
    SCIP* scip;
    SCIP_VAR* x;
@@ -73,7 +73,7 @@ Test(concurrent, reoptimization)
     */
    if( SCIPtpiIsAvailable() )
    {
-      cr_assert_eq(SCIPsolveConcurrent(scip), SCIP_NOTIMPLEMENTED,
+      TEST_ASSERT_EQUAL(SCIPsolveConcurrent(scip), SCIP_NOTIMPLEMENTED,
          "SCIPsolveConcurrent() must reject reoptimization with SCIP_NOTIMPLEMENTED.");
    }
 
@@ -81,4 +81,15 @@ Test(concurrent, reoptimization)
    SCIP_CALL( SCIPreleaseVar(scip, &y) );
    SCIP_CALL( SCIPreleaseVar(scip, &x) );
    SCIP_CALL( SCIPfree(&scip) );
+}
+
+void setUp(void) {}
+
+void tearDown(void) {}
+
+int main(void)
+{
+   UNITY_BEGIN();
+   RUN_TEST(test_concurrent_reoptimization);
+   return UNITY_END();
 }

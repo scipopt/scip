@@ -62,14 +62,24 @@ void teardown(void)
    SCIPfree(&scip);
 }
 
-TestSuite(select, .init = setup, .fini = teardown);
+void setUp(void)
+{
+   setup();
+}
+
+void tearDown(void)
+{
+   teardown();
+}
 
 /* TESTS  */
-Test(select, create_and_free)
+void test_select_create_and_free(void)
 {
    /* calls setup and teardown */
 }
-Test(select, random_permutation, .description = "tests selection on a bunch of random permutations of the integers 1...n")
+
+/** @brief tests selection on a bunch of random permutations of the integers 1...n */
+void test_select_random_permutation(void)
 {
    int len = ARRAYMEMSIZE;
    int i;
@@ -90,7 +100,7 @@ Test(select, random_permutation, .description = "tests selection on a bunch of r
       SCIPselectInt(key, i, len);
 
       /* the element key[i] must be the index itself */
-      cr_assert_eq(key[i], i, "Wrong key selected: %d ~= %d", key[i], i);
+      TEST_ASSERT_EQUAL(key[i], i, "Wrong key selected: %d ~= %d", key[i], i);
 
       /* check if the partial sorting correctly worked */
       for( j = 0; j < len; ++j )
@@ -104,16 +114,13 @@ Test(select, random_permutation, .description = "tests selection on a bunch of r
             if( key[k] == j )
                break;
          }
-         cr_assert_lt(k, end, "Element %d is not in the right partition [%d,%d]\n", j, start, end);
+         TEST_ASSERT_LESS_THAN(k, end, "Element %d is not in the right partition [%d,%d]\n", j, start, end);
       }
    }
 }
 
-/* For SCIPselectWeightedInt, we test the boundary case when the capacity is 0. In this case, the algorithm should always return
- * the first element (since the algorithm partially sorts the given array). To test this, we build an all 1 array (key) and modify
- * its i-th position to be 0, call SCIPselectWeightedInt and expect key[0] to be 0
- */
-Test(select, zero_capacity, .description = "tests if weighted median selection always returns the minimum element when the capacity is zero")
+/** @brief tests if weighted median selection always returns the minimum element when the capacity is zero */
+void test_select_zero_capacity(void)
 {
    int i;
 
@@ -128,15 +135,16 @@ Test(select, zero_capacity, .description = "tests if weighted median selection a
       key[i] = 0;
       medianpos = -1;
       SCIPselectWeightedInt(key, NULL, 0.0, ARRAYMEMSIZE, &medianpos);
-      cr_assert_eq(medianpos, 0, "Selection process found median at pos %d, should be 0", medianpos);
-      cr_assert_eq(key[0], 0, "Selection process selected wrong median %d at pos 0, should be 0", key[0]);
+      TEST_ASSERT_EQUAL(medianpos, 0, "Selection process found median at pos %d, should be 0", medianpos);
+      TEST_ASSERT_EQUAL(key[0], 0, "Selection process selected wrong median %d at pos 0, should be 0", key[0]);
 
       /* start next iteration with an all 1-s array */
       key[0] = 1;
    }
 }
 
-Test(select, exactIntegerSolution, .description="tests the correct behavior if a knapsack has integral LP solution")
+/** @brief tests the correct behavior if a knapsack has integral LP solution */
+void test_select_exactIntegerSolution(void)
 {
    int medianpos;
    SCIP_Real profits[ARRAYMEMSIZE];
@@ -156,12 +164,13 @@ Test(select, exactIntegerSolution, .description="tests the correct behavior if a
 
    SCIPselectWeightedDownRealInt(profits, items, weights, capacity, len, &medianpos);
 
-   cr_assert_eq(medianpos, 3, "Median position %d should be the last item", medianpos);
-   cr_assert_eq(items[3],0, "Wrong last item %d after selection", items[3]);
+   TEST_ASSERT_EQUAL(medianpos, 3, "Median position %d should be the last item", medianpos);
+   TEST_ASSERT_EQUAL(items[3],0, "Wrong last item %d after selection", items[3]);
 }
 
 
-Test(select, exactIntegerSolution2, .description="second test for the correct behavior for slightly larger coefficients")
+/** @brief second test for the correct behavior for slightly larger coefficients */
+void test_select_exactIntegerSolution2(void)
 {
    int medianpos;
    SCIP_Real profits[ARRAYMEMSIZE];
@@ -183,12 +192,13 @@ Test(select, exactIntegerSolution2, .description="second test for the correct be
 
    SCIPselectWeightedDownRealInt(profits, items, weights, capacity, len, &medianpos);
 
-   cr_assert_eq(medianpos, 3, "Median position %d should be the last item", medianpos);
-   cr_assert_eq(items[3],3, "Wrong median item %d after selection", items[4]);
-   cr_assert_eq(items[4],1);
+   TEST_ASSERT_EQUAL(medianpos, 3, "Median position %d should be the last item", medianpos);
+   TEST_ASSERT_EQUAL(items[3],3, "Wrong median item %d after selection", items[4]);
+   TEST_ASSERT_EQUAL(items[4],1);
 }
 
-Test(select, everythingFits, .description="realistic example where all items fit that has failed")
+/** @brief realistic example where all items fit that has failed */
+void test_select_everythingFits(void)
 {
    SCIP_Real testweights[] = {
             2, 2, 1, 1, 3, 1, 1, 2, 2, 1,
@@ -215,5 +225,17 @@ Test(select, everythingFits, .description="realistic example where all items fit
 
    SCIPselectWeightedDownRealInt(testprofits, items, testweights, capacity, len, &medianpos);
 
-   cr_assert_eq(medianpos, len, "Medianposition %d != %d", medianpos, len);
+   TEST_ASSERT_EQUAL(medianpos, len, "Medianposition %d != %d", medianpos, len);
+}
+
+int main(void)
+{
+   UNITY_BEGIN();
+   RUN_TEST(test_select_create_and_free);
+   RUN_TEST(test_select_random_permutation);
+   RUN_TEST(test_select_zero_capacity);
+   RUN_TEST(test_select_exactIntegerSolution);
+   RUN_TEST(test_select_exactIntegerSolution2);
+   RUN_TEST(test_select_everythingFits);
+   return UNITY_END();
 }

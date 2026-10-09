@@ -81,7 +81,7 @@ static
 void teardown(void)
 {
    SCIP_CALL( SCIPfree(&scip) );
-   cr_assert_eq(BMSgetMemoryUsed(), 0, "Memory leak!");
+   TEST_ASSERT_EQUAL(BMSgetMemoryUsed(), 0, "Memory leak!");
 }
 
 /** simple example with 4 variables and 2 linear constraints */
@@ -171,13 +171,13 @@ void simpleExample1(
          &npermvars, &permvars, NULL, &nperms, &perms, NULL,
          &components, &componentbegins, &vartocomponent, &ncomponents) );
 
-   cr_assert( ncomponents == 1 );
-   cr_assert( componentbegins[0] == 0 );
-   cr_assert( componentbegins[1] == nperms );
-   cr_assert( vartocomponent[0] == 0 );
-   cr_assert( vartocomponent[1] == 0 );
-   cr_assert( vartocomponent[2] == 0 );
-   cr_assert( vartocomponent[3] == 0 );
+   TEST_ASSERT( ncomponents == 1 );
+   TEST_ASSERT( componentbegins[0] == 0 );
+   TEST_ASSERT( componentbegins[1] == nperms );
+   TEST_ASSERT( vartocomponent[0] == 0 );
+   TEST_ASSERT( vartocomponent[1] == 0 );
+   TEST_ASSERT( vartocomponent[2] == 0 );
+   TEST_ASSERT( vartocomponent[3] == 0 );
 
    /* compute orbits */
    SCIP_CALL( SCIPallocBufferArray(scip, &orbits, permlen) );
@@ -190,28 +190,28 @@ void simpleExample1(
 
    if ( detectsignedperms )
    {
-      cr_assert( norbits == 2 );
-      cr_assert( orbitbegins[0] == 0 );
-      cr_assert( orbitbegins[1] == 4 );
-      cr_assert( orbitbegins[2] == 8 );
-      cr_assert( orbits[0] == 0 );
-      cr_assert( orbits[1] == 1 );
-      cr_assert( orbits[2] == 2 );
-      cr_assert( orbits[3] == 3 );
-      cr_assert( orbits[4] == 4 );
-      cr_assert( orbits[5] == 5 );
-      cr_assert( orbits[6] == 6 );
-      cr_assert( orbits[7] == 7 );
+      TEST_ASSERT( norbits == 2 );
+      TEST_ASSERT( orbitbegins[0] == 0 );
+      TEST_ASSERT( orbitbegins[1] == 4 );
+      TEST_ASSERT( orbitbegins[2] == 8 );
+      TEST_ASSERT( orbits[0] == 0 );
+      TEST_ASSERT( orbits[1] == 1 );
+      TEST_ASSERT( orbits[2] == 2 );
+      TEST_ASSERT( orbits[3] == 3 );
+      TEST_ASSERT( orbits[4] == 4 );
+      TEST_ASSERT( orbits[5] == 5 );
+      TEST_ASSERT( orbits[6] == 6 );
+      TEST_ASSERT( orbits[7] == 7 );
    }
    else
    {
-      cr_assert( norbits == 1 );
-      cr_assert( orbitbegins[0] == 0 );
-      cr_assert( orbitbegins[1] == 4 );
-      cr_assert( orbits[0] == 0 );
-      cr_assert( orbits[1] == 1 );
-      cr_assert( orbits[2] == 2 );
-      cr_assert( orbits[3] == 3 );
+      TEST_ASSERT( norbits == 1 );
+      TEST_ASSERT( orbitbegins[0] == 0 );
+      TEST_ASSERT( orbitbegins[1] == 4 );
+      TEST_ASSERT( orbits[0] == 0 );
+      TEST_ASSERT( orbits[1] == 1 );
+      TEST_ASSERT( orbits[2] == 2 );
+      TEST_ASSERT( orbits[3] == 3 );
    }
    SCIPfreeBufferArray(scip, &orbitbegins);
    SCIPfreeBufferArray(scip, &orbits);
@@ -328,14 +328,14 @@ void simpleExample2(
          &npermvars, &permvars, NULL, &nperms, &perms, NULL,
          &components, &componentbegins, &vartocomponent, &ncomponents) );
 
-   cr_assert( nperms == 1 );
-   cr_assert( ncomponents == 1 );
-   cr_assert( componentbegins[0] == 0 );
-   cr_assert( componentbegins[1] == 1 );
-   cr_assert( vartocomponent[0] == 0 );
-   cr_assert( vartocomponent[1] == 0 );
-   cr_assert( vartocomponent[2] == 0 );
-   cr_assert( vartocomponent[3] == 0 );
+   TEST_ASSERT( nperms == 1 );
+   TEST_ASSERT( ncomponents == 1 );
+   TEST_ASSERT( componentbegins[0] == 0 );
+   TEST_ASSERT( componentbegins[1] == 1 );
+   TEST_ASSERT( vartocomponent[0] == 0 );
+   TEST_ASSERT( vartocomponent[1] == 0 );
+   TEST_ASSERT( vartocomponent[2] == 0 );
+   TEST_ASSERT( vartocomponent[3] == 0 );
 
    /* compute orbits */
    SCIP_CALL( SCIPallocBufferArray(scip, &orbits, permlen) );
@@ -348,29 +348,29 @@ void simpleExample2(
 
    if ( detectsignedperms )
    {
-      cr_assert( norbits == 4 );
-      cr_assert( orbitbegins[0] == 0 );
-      cr_assert( orbitbegins[1] == 2 );
-      cr_assert( orbitbegins[2] == 4 );
-      cr_assert( orbitbegins[3] == 6 );
-      cr_assert( orbits[0] == 0 );
-      cr_assert( orbits[1] == 1 );
-      cr_assert( orbits[2] == 2 );
-      cr_assert( orbits[3] == 3 );
-      cr_assert( orbits[4] == 4 );
-      cr_assert( orbits[5] == 5 );
-      cr_assert( orbits[6] == 6 );
-      cr_assert( orbits[7] == 7 );
+      TEST_ASSERT( norbits == 4 );
+      TEST_ASSERT( orbitbegins[0] == 0 );
+      TEST_ASSERT( orbitbegins[1] == 2 );
+      TEST_ASSERT( orbitbegins[2] == 4 );
+      TEST_ASSERT( orbitbegins[3] == 6 );
+      TEST_ASSERT( orbits[0] == 0 );
+      TEST_ASSERT( orbits[1] == 1 );
+      TEST_ASSERT( orbits[2] == 2 );
+      TEST_ASSERT( orbits[3] == 3 );
+      TEST_ASSERT( orbits[4] == 4 );
+      TEST_ASSERT( orbits[5] == 5 );
+      TEST_ASSERT( orbits[6] == 6 );
+      TEST_ASSERT( orbits[7] == 7 );
    }
    else
    {
-      cr_assert( norbits == 2 );
-      cr_assert( orbitbegins[0] == 0 );
-      cr_assert( orbitbegins[1] == 2 );
-      cr_assert( orbits[0] == 0 );
-      cr_assert( orbits[1] == 1 );
-      cr_assert( orbits[2] == 2 );
-      cr_assert( orbits[3] == 3 );
+      TEST_ASSERT( norbits == 2 );
+      TEST_ASSERT( orbitbegins[0] == 0 );
+      TEST_ASSERT( orbitbegins[1] == 2 );
+      TEST_ASSERT( orbits[0] == 0 );
+      TEST_ASSERT( orbits[1] == 1 );
+      TEST_ASSERT( orbits[2] == 2 );
+      TEST_ASSERT( orbits[3] == 3 );
    }
    SCIPfreeBufferArray(scip, &orbitbegins);
    SCIPfreeBufferArray(scip, &orbits);
@@ -473,16 +473,16 @@ void simpleExample3(
    SCIP_CALL( SCIPgetSymmetry(scip, &symtype,
          &npermvars, &permvars, NULL, &nperms, &perms, NULL,
          &components, &componentbegins, &vartocomponent, &ncomponents) );
-   cr_assert( nperms == 2 );
-   cr_assert( ncomponents == 2 );
-   cr_assert( vartocomponent[0] == vartocomponent[1] );
-   cr_assert( vartocomponent[2] == vartocomponent[3] );
-   cr_assert( vartocomponent[0] != vartocomponent[2] );
-   cr_assert( vartocomponent[1] != vartocomponent[3] );
-   cr_assert( vartocomponent[4] == -1 );
-   cr_assert( componentbegins[0] == 0 );
-   cr_assert( componentbegins[1] == 1 );
-   cr_assert( componentbegins[2] == 2 );
+   TEST_ASSERT( nperms == 2 );
+   TEST_ASSERT( ncomponents == 2 );
+   TEST_ASSERT( vartocomponent[0] == vartocomponent[1] );
+   TEST_ASSERT( vartocomponent[2] == vartocomponent[3] );
+   TEST_ASSERT( vartocomponent[0] != vartocomponent[2] );
+   TEST_ASSERT( vartocomponent[1] != vartocomponent[3] );
+   TEST_ASSERT( vartocomponent[4] == -1 );
+   TEST_ASSERT( componentbegins[0] == 0 );
+   TEST_ASSERT( componentbegins[1] == 1 );
+   TEST_ASSERT( componentbegins[2] == 2 );
 
    /* compute orbits */
    SCIP_CALL( SCIPallocBufferArray(scip, &orbits, permlen) );
@@ -495,19 +495,19 @@ void simpleExample3(
 
    if ( detectsignedperms )
    {
-      cr_assert( norbits == 4 );
-      cr_assert( orbitbegins[0] == 0 );
-      cr_assert( orbitbegins[1] == 2 );
-      cr_assert( orbitbegins[2] == 4 );
-      cr_assert( orbitbegins[3] == 6 );
-      cr_assert( orbitbegins[4] == 8 );
+      TEST_ASSERT( norbits == 4 );
+      TEST_ASSERT( orbitbegins[0] == 0 );
+      TEST_ASSERT( orbitbegins[1] == 2 );
+      TEST_ASSERT( orbitbegins[2] == 4 );
+      TEST_ASSERT( orbitbegins[3] == 6 );
+      TEST_ASSERT( orbitbegins[4] == 8 );
    }
    else
    {
-      cr_assert( norbits == 2 );
-      cr_assert( orbitbegins[0] == 0 );
-      cr_assert( orbitbegins[1] == 2 );
-      cr_assert( orbitbegins[2] == 4 );
+      TEST_ASSERT( norbits == 2 );
+      TEST_ASSERT( orbitbegins[0] == 0 );
+      TEST_ASSERT( orbitbegins[1] == 2 );
+      TEST_ASSERT( orbitbegins[2] == 4 );
    }
    SCIPfreeBufferArray(scip, &orbitbegins);
    SCIPfreeBufferArray(scip, &orbits);
@@ -627,27 +627,27 @@ void exampleBounddisjunction(
 
    if ( detectsignedperms )
    {
-      cr_assert( nperms == 2 || nperms == 3 );
-      cr_assert( ncomponents == 1 );
-      cr_assert( vartocomponent[0] == vartocomponent[1] );
-      cr_assert( vartocomponent[1] == vartocomponent[4] );
-      cr_assert( vartocomponent[4] == vartocomponent[5] );
-      cr_assert( vartocomponent[2] == -1 );
-      cr_assert( vartocomponent[3] == -1 );
-      cr_assert( componentbegins[0] == 0 );
-      cr_assert( componentbegins[1] == nperms );
+      TEST_ASSERT( nperms == 2 || nperms == 3 );
+      TEST_ASSERT( ncomponents == 1 );
+      TEST_ASSERT( vartocomponent[0] == vartocomponent[1] );
+      TEST_ASSERT( vartocomponent[1] == vartocomponent[4] );
+      TEST_ASSERT( vartocomponent[4] == vartocomponent[5] );
+      TEST_ASSERT( vartocomponent[2] == -1 );
+      TEST_ASSERT( vartocomponent[3] == -1 );
+      TEST_ASSERT( componentbegins[0] == 0 );
+      TEST_ASSERT( componentbegins[1] == nperms );
    }
    else
    {
-      cr_assert( nperms == 1 );
-      cr_assert( ncomponents == 1 );
-      cr_assert( vartocomponent[0] == vartocomponent[1] );
-      cr_assert( vartocomponent[1] == vartocomponent[4] );
-      cr_assert( vartocomponent[4] == vartocomponent[5] );
-      cr_assert( vartocomponent[2] == -1 );
-      cr_assert( vartocomponent[3] == -1 );
-      cr_assert( componentbegins[0] == 0 );
-      cr_assert( componentbegins[1] == 1 );
+      TEST_ASSERT( nperms == 1 );
+      TEST_ASSERT( ncomponents == 1 );
+      TEST_ASSERT( vartocomponent[0] == vartocomponent[1] );
+      TEST_ASSERT( vartocomponent[1] == vartocomponent[4] );
+      TEST_ASSERT( vartocomponent[4] == vartocomponent[5] );
+      TEST_ASSERT( vartocomponent[2] == -1 );
+      TEST_ASSERT( vartocomponent[3] == -1 );
+      TEST_ASSERT( componentbegins[0] == 0 );
+      TEST_ASSERT( componentbegins[1] == 1 );
    }
 
    /* compute orbits */
@@ -661,17 +661,17 @@ void exampleBounddisjunction(
 
    if ( detectsignedperms )
    {
-      cr_assert( norbits == 2 );
-      cr_assert( orbitbegins[0] == 0 );
-      cr_assert( orbitbegins[1] == 4 );
-      cr_assert( orbitbegins[2] == 8 );
+      TEST_ASSERT( norbits == 2 );
+      TEST_ASSERT( orbitbegins[0] == 0 );
+      TEST_ASSERT( orbitbegins[1] == 4 );
+      TEST_ASSERT( orbitbegins[2] == 8 );
    }
    else
    {
-      cr_assert( norbits == 2 );
-      cr_assert( orbitbegins[0] == 0 );
-      cr_assert( orbitbegins[1] == 2 );
-      cr_assert( orbitbegins[2] == 4 );
+      TEST_ASSERT( norbits == 2 );
+      TEST_ASSERT( orbitbegins[0] == 0 );
+      TEST_ASSERT( orbitbegins[1] == 2 );
+      TEST_ASSERT( orbitbegins[2] == 4 );
    }
    SCIPfreeBufferArray(scip, &orbitbegins);
    SCIPfreeBufferArray(scip, &orbits);
@@ -791,26 +791,26 @@ void exampleCardinality(
 
    if ( detectsignedperms )
    {
-      cr_assert( nperms == 3 || nperms == 6 ); /* if more involutions are generated from existing one, then 6 */
-      cr_assert( ncomponents == 1 );
-      cr_assert( vartocomponent[0] == 0 );
-      cr_assert( vartocomponent[1] == 0 );
-      cr_assert( vartocomponent[2] == 0 );
-      cr_assert( vartocomponent[3] == 0 );
-      cr_assert( vartocomponent[4] == 0 );
-      cr_assert( vartocomponent[5] == 0 );
-      cr_assert( vartocomponent[6] == 0 );
-      cr_assert( vartocomponent[7] == 0 );
+      TEST_ASSERT( nperms == 3 || nperms == 6 ); /* if more involutions are generated from existing one, then 6 */
+      TEST_ASSERT( ncomponents == 1 );
+      TEST_ASSERT( vartocomponent[0] == 0 );
+      TEST_ASSERT( vartocomponent[1] == 0 );
+      TEST_ASSERT( vartocomponent[2] == 0 );
+      TEST_ASSERT( vartocomponent[3] == 0 );
+      TEST_ASSERT( vartocomponent[4] == 0 );
+      TEST_ASSERT( vartocomponent[5] == 0 );
+      TEST_ASSERT( vartocomponent[6] == 0 );
+      TEST_ASSERT( vartocomponent[7] == 0 );
    }
    else
    {
-      cr_assert( nperms == 2 );
-      cr_assert( ncomponents == 1 );
-      cr_assert( vartocomponent[0] == vartocomponent[2] );
-      cr_assert( vartocomponent[2] == vartocomponent[3] );
-      cr_assert( vartocomponent[1] == -1 );
-      cr_assert( componentbegins[0] == 0 );
-      cr_assert( componentbegins[1] == 2 );
+      TEST_ASSERT( nperms == 2 );
+      TEST_ASSERT( ncomponents == 1 );
+      TEST_ASSERT( vartocomponent[0] == vartocomponent[2] );
+      TEST_ASSERT( vartocomponent[2] == vartocomponent[3] );
+      TEST_ASSERT( vartocomponent[1] == -1 );
+      TEST_ASSERT( componentbegins[0] == 0 );
+      TEST_ASSERT( componentbegins[1] == 2 );
    }
 
    /* compute orbits */
@@ -824,19 +824,19 @@ void exampleCardinality(
 
    if ( detectsignedperms )
    {
-      cr_assert( norbits == 4 );
-      cr_assert( orbitbegins[0] == 0 );
-      cr_assert( orbitbegins[1] == 4 );
-      cr_assert( orbitbegins[2] == 8 );
-      cr_assert( orbitbegins[3] == 12 );
-      cr_assert( orbitbegins[4] == 16 );
+      TEST_ASSERT( norbits == 4 );
+      TEST_ASSERT( orbitbegins[0] == 0 );
+      TEST_ASSERT( orbitbegins[1] == 4 );
+      TEST_ASSERT( orbitbegins[2] == 8 );
+      TEST_ASSERT( orbitbegins[3] == 12 );
+      TEST_ASSERT( orbitbegins[4] == 16 );
    }
    else
    {
-      cr_assert( norbits == 2 );
-      cr_assert( orbitbegins[0] == 0 );
-      cr_assert( orbitbegins[1] == 3 );
-      cr_assert( orbitbegins[2] == 6 );
+      TEST_ASSERT( norbits == 2 );
+      TEST_ASSERT( orbitbegins[0] == 0 );
+      TEST_ASSERT( orbitbegins[1] == 3 );
+      TEST_ASSERT( orbitbegins[2] == 6 );
    }
    SCIPfreeBufferArray(scip, &orbitbegins);
    SCIPfreeBufferArray(scip, &orbits);
@@ -953,15 +953,15 @@ void exampleIndicator(
          &npermvars, &permvars, NULL, &nperms, &perms, NULL,
          &components, &componentbegins, &vartocomponent, &ncomponents) );
 
-   cr_assert( ncomponents == 1 );
-   cr_assert( vartocomponent[0] == 0 );
-   cr_assert( vartocomponent[1] == 0 );
-   cr_assert( vartocomponent[2] == 0 );
-   cr_assert( vartocomponent[3] == 0 );
-   cr_assert( vartocomponent[4] == 0 );
-   cr_assert( vartocomponent[5] == 0 );
-   cr_assert( vartocomponent[6] == 0 );
-   cr_assert( vartocomponent[7] == 0 );
+   TEST_ASSERT( ncomponents == 1 );
+   TEST_ASSERT( vartocomponent[0] == 0 );
+   TEST_ASSERT( vartocomponent[1] == 0 );
+   TEST_ASSERT( vartocomponent[2] == 0 );
+   TEST_ASSERT( vartocomponent[3] == 0 );
+   TEST_ASSERT( vartocomponent[4] == 0 );
+   TEST_ASSERT( vartocomponent[5] == 0 );
+   TEST_ASSERT( vartocomponent[6] == 0 );
+   TEST_ASSERT( vartocomponent[7] == 0 );
 
    /* compute orbits */
    SCIP_CALL( SCIPallocBufferArray(scip, &orbits, permlen) );
@@ -977,27 +977,27 @@ void exampleIndicator(
       int orbitlens[6];
       int i;
 
-      cr_assert( norbits == 6 );
+      TEST_ASSERT( norbits == 6 );
 
       for (i = 0; i < 6; ++i)
          orbitlens[i] = orbitbegins[i+1] - orbitbegins[i];
       SCIPsortInt(orbitlens, 6);
 
-      cr_assert( orbitlens[0] == 2 );
-      cr_assert( orbitlens[1] == 2 );
-      cr_assert( orbitlens[2] == 2 );
-      cr_assert( orbitlens[3] == 2 );
-      cr_assert( orbitlens[4] == 4 );
-      cr_assert( orbitlens[5] == 4 );
+      TEST_ASSERT( orbitlens[0] == 2 );
+      TEST_ASSERT( orbitlens[1] == 2 );
+      TEST_ASSERT( orbitlens[2] == 2 );
+      TEST_ASSERT( orbitlens[3] == 2 );
+      TEST_ASSERT( orbitlens[4] == 4 );
+      TEST_ASSERT( orbitlens[5] == 4 );
    }
    else
    {
-      cr_assert( norbits == 4 );
-      cr_assert( orbitbegins[0] == 0 );
-      cr_assert( orbitbegins[1] == 2 );
-      cr_assert( orbitbegins[2] == 4 );
-      cr_assert( orbitbegins[3] == 6 );
-      cr_assert( orbitbegins[4] == 8 );
+      TEST_ASSERT( norbits == 4 );
+      TEST_ASSERT( orbitbegins[0] == 0 );
+      TEST_ASSERT( orbitbegins[1] == 2 );
+      TEST_ASSERT( orbitbegins[2] == 4 );
+      TEST_ASSERT( orbitbegins[3] == 6 );
+      TEST_ASSERT( orbitbegins[4] == 8 );
    }
    SCIPfreeBufferArray(scip, &orbitbegins);
    SCIPfreeBufferArray(scip, &orbits);
@@ -1108,17 +1108,17 @@ void exampleSOS1(
 
    if( detectsignedperms )
    {
-      cr_assert( nperms == 2 || nperms == 3 );
+      TEST_ASSERT( nperms == 2 || nperms == 3 );
    }
    else
    {
-      cr_assert( nperms == 1 );
+      TEST_ASSERT( nperms == 1 );
    }
-   cr_assert( ncomponents == 1 );
-   cr_assert( vartocomponent[0] == 0 );
-   cr_assert( vartocomponent[1] == 0 );
-   cr_assert( vartocomponent[2] == 0 );
-   cr_assert( vartocomponent[3] == 0 );
+   TEST_ASSERT( ncomponents == 1 );
+   TEST_ASSERT( vartocomponent[0] == 0 );
+   TEST_ASSERT( vartocomponent[1] == 0 );
+   TEST_ASSERT( vartocomponent[2] == 0 );
+   TEST_ASSERT( vartocomponent[3] == 0 );
 
    /* compute orbits */
    SCIP_CALL( SCIPallocBufferArray(scip, &orbits, permlen) );
@@ -1131,17 +1131,17 @@ void exampleSOS1(
 
    if ( detectsignedperms )
    {
-      cr_assert( norbits == 2 );
-      cr_assert( orbitbegins[0] == 0 );
-      cr_assert( orbitbegins[1] == 4 );
-      cr_assert( orbitbegins[2] == 8 );
+      TEST_ASSERT( norbits == 2 );
+      TEST_ASSERT( orbitbegins[0] == 0 );
+      TEST_ASSERT( orbitbegins[1] == 4 );
+      TEST_ASSERT( orbitbegins[2] == 8 );
    }
    else
    {
-      cr_assert( norbits == 2 );
-      cr_assert( orbitbegins[0] == 0 );
-      cr_assert( orbitbegins[1] == 2 );
-      cr_assert( orbitbegins[2] == 4 );
+      TEST_ASSERT( norbits == 2 );
+      TEST_ASSERT( orbitbegins[0] == 0 );
+      TEST_ASSERT( orbitbegins[1] == 2 );
+      TEST_ASSERT( orbitbegins[2] == 4 );
    }
    SCIPfreeBufferArray(scip, &orbitbegins);
    SCIPfreeBufferArray(scip, &orbits);
@@ -1261,23 +1261,23 @@ void exampleSOS2(
 
    if( detectsignedperms )
    {
-      cr_assert( ncomponents == 1 );
-      cr_assert( vartocomponent[0] == 0 );
-      cr_assert( vartocomponent[1] == 0 );
-      cr_assert( vartocomponent[2] == 0 );
-      cr_assert( vartocomponent[3] == 0 );
-      cr_assert( vartocomponent[4] == 0 );
-      cr_assert( vartocomponent[5] == 0 );
+      TEST_ASSERT( ncomponents == 1 );
+      TEST_ASSERT( vartocomponent[0] == 0 );
+      TEST_ASSERT( vartocomponent[1] == 0 );
+      TEST_ASSERT( vartocomponent[2] == 0 );
+      TEST_ASSERT( vartocomponent[3] == 0 );
+      TEST_ASSERT( vartocomponent[4] == 0 );
+      TEST_ASSERT( vartocomponent[5] == 0 );
    }
    else
    {
-      cr_assert( ncomponents == 2 );
-      cr_assert( vartocomponent[0] == 0 );
-      cr_assert( vartocomponent[1] == -1 );
-      cr_assert( vartocomponent[2] == 0 );
-      cr_assert( vartocomponent[3] == 1 );
-      cr_assert( vartocomponent[4] == -1 );
-      cr_assert( vartocomponent[5] == 1 );
+      TEST_ASSERT( ncomponents == 2 );
+      TEST_ASSERT( vartocomponent[0] == 0 );
+      TEST_ASSERT( vartocomponent[1] == -1 );
+      TEST_ASSERT( vartocomponent[2] == 0 );
+      TEST_ASSERT( vartocomponent[3] == 1 );
+      TEST_ASSERT( vartocomponent[4] == -1 );
+      TEST_ASSERT( vartocomponent[5] == 1 );
    }
 
    /* compute orbits */
@@ -1294,23 +1294,23 @@ void exampleSOS2(
       int orbitlens[4];
       int i;
 
-      cr_assert( norbits == 4 );
+      TEST_ASSERT( norbits == 4 );
 
       for (i = 0; i < 4; ++i)
          orbitlens[i] = orbitbegins[i+1] - orbitbegins[i];
       SCIPsortInt(orbitlens, 4);
 
-      cr_assert( orbitlens[0] == 2 );
-      cr_assert( orbitlens[1] == 2 );
-      cr_assert( orbitlens[2] == 4 );
-      cr_assert( orbitlens[3] == 4 );
+      TEST_ASSERT( orbitlens[0] == 2 );
+      TEST_ASSERT( orbitlens[1] == 2 );
+      TEST_ASSERT( orbitlens[2] == 4 );
+      TEST_ASSERT( orbitlens[3] == 4 );
    }
    else
    {
-      cr_assert( norbits == 2 );
-      cr_assert( orbitbegins[0] == 0 );
-      cr_assert( orbitbegins[1] == 2 );
-      cr_assert( orbitbegins[2] == 4 );
+      TEST_ASSERT( norbits == 2 );
+      TEST_ASSERT( orbitbegins[0] == 0 );
+      TEST_ASSERT( orbitbegins[1] == 2 );
+      TEST_ASSERT( orbitbegins[2] == 4 );
    }
    SCIPfreeBufferArray(scip, &orbitbegins);
    SCIPfreeBufferArray(scip, &orbits);
@@ -1417,11 +1417,11 @@ void examplePB(
          &npermvars, &permvars, NULL, &nperms, &perms, NULL,
          &components, &componentbegins, &vartocomponent, &ncomponents) );
 
-   cr_assert( nperms == 1 );
-   cr_assert( ncomponents == 1 );
+   TEST_ASSERT( nperms == 1 );
+   TEST_ASSERT( ncomponents == 1 );
    SCIPsortInt(vartocomponent, 6);
-   cr_assert( vartocomponent[0] == -1 );
-   cr_assert( vartocomponent[2] == 0 );
+   TEST_ASSERT( vartocomponent[0] == -1 );
+   TEST_ASSERT( vartocomponent[2] == 0 );
 
    /* compute orbits */
    SCIP_CALL( SCIPallocBufferArray(scip, &orbits, permlen) );
@@ -1434,17 +1434,17 @@ void examplePB(
 
    if ( detectsignedperms )
    {
-      cr_assert( norbits == 4 );
-      cr_assert( orbitbegins[1] - orbitbegins[0] == 2 );
-      cr_assert( orbitbegins[2] - orbitbegins[1] == 2 );
-      cr_assert( orbitbegins[3] - orbitbegins[2] == 2 );
-      cr_assert( orbitbegins[4] - orbitbegins[3] == 2 );
+      TEST_ASSERT( norbits == 4 );
+      TEST_ASSERT( orbitbegins[1] - orbitbegins[0] == 2 );
+      TEST_ASSERT( orbitbegins[2] - orbitbegins[1] == 2 );
+      TEST_ASSERT( orbitbegins[3] - orbitbegins[2] == 2 );
+      TEST_ASSERT( orbitbegins[4] - orbitbegins[3] == 2 );
    }
    else
    {
-      cr_assert( norbits == 2 );
-      cr_assert( orbitbegins[1] - orbitbegins[0] == 2 );
-      cr_assert( orbitbegins[2] - orbitbegins[1] == 2 );
+      TEST_ASSERT( norbits == 2 );
+      TEST_ASSERT( orbitbegins[1] - orbitbegins[0] == 2 );
+      TEST_ASSERT( orbitbegins[2] - orbitbegins[1] == 2 );
    }
    SCIPfreeBufferArray(scip, &orbitbegins);
    SCIPfreeBufferArray(scip, &orbits);
@@ -1493,7 +1493,7 @@ void exampleExpr1(
 
    /* get nonlinear conshdlr */
    conshdlr = SCIPfindConshdlr(scip, "nonlinear");
-   cr_assert(conshdlr != NULL);
+   TEST_ASSERT(conshdlr != NULL);
 
    /* setup problem:
     * min x1 + x2 + x3
@@ -1560,11 +1560,11 @@ void exampleExpr1(
          &npermvars, &permvars, NULL, &nperms, &perms, NULL,
          &components, &componentbegins, &vartocomponent, &ncomponents) );
 
-   cr_assert( nperms == 1 );
-   cr_assert( ncomponents == 1 );
-   cr_assert( vartocomponent[0] == -1 );
-   cr_assert( vartocomponent[1] == 0 );
-   cr_assert( vartocomponent[2] == 0 );
+   TEST_ASSERT( nperms == 1 );
+   TEST_ASSERT( ncomponents == 1 );
+   TEST_ASSERT( vartocomponent[0] == -1 );
+   TEST_ASSERT( vartocomponent[1] == 0 );
+   TEST_ASSERT( vartocomponent[2] == 0 );
 
    /* compute orbits */
    SCIP_CALL( SCIPallocBufferArray(scip, &orbits, permlen) );
@@ -1577,16 +1577,16 @@ void exampleExpr1(
 
    if ( detectsignedperms )
    {
-      cr_assert( norbits == 2 );
-      cr_assert( orbitbegins[0] == 0 );
-      cr_assert( orbitbegins[1] == 2 );
-      cr_assert( orbitbegins[2] == 4 );
+      TEST_ASSERT( norbits == 2 );
+      TEST_ASSERT( orbitbegins[0] == 0 );
+      TEST_ASSERT( orbitbegins[1] == 2 );
+      TEST_ASSERT( orbitbegins[2] == 4 );
    }
    else
    {
-      cr_assert( norbits == 1 );
-      cr_assert( orbitbegins[0] == 0 );
-      cr_assert( orbitbegins[1] == 2 );
+      TEST_ASSERT( norbits == 1 );
+      TEST_ASSERT( orbitbegins[0] == 0 );
+      TEST_ASSERT( orbitbegins[1] == 2 );
    }
 
    SCIPfreeBufferArray(scip, &orbitbegins);
@@ -1647,7 +1647,7 @@ void exampleExpr2(
 
    /* get nonlinear conshdlr */
    conshdlr = SCIPfindConshdlr(scip, "nonlinear");
-   cr_assert(conshdlr != NULL);
+   TEST_ASSERT(conshdlr != NULL);
 
    /* setup problem:
     * min x1 + x2 + x3 + x4 + x5
@@ -1734,13 +1734,13 @@ void exampleExpr2(
          &npermvars, &permvars, NULL, &nperms, &perms, NULL,
          &components, &componentbegins, &vartocomponent, &ncomponents) );
 
-   cr_assert( nperms == 1 );
-   cr_assert( ncomponents == 1 );
-   cr_assert( vartocomponent[0] == 0 );
-   cr_assert( vartocomponent[1] == -1 );
-   cr_assert( vartocomponent[2] == 0 );
-   cr_assert( vartocomponent[3] == 0 );
-   cr_assert( vartocomponent[4] == 0 );
+   TEST_ASSERT( nperms == 1 );
+   TEST_ASSERT( ncomponents == 1 );
+   TEST_ASSERT( vartocomponent[0] == 0 );
+   TEST_ASSERT( vartocomponent[1] == -1 );
+   TEST_ASSERT( vartocomponent[2] == 0 );
+   TEST_ASSERT( vartocomponent[3] == 0 );
+   TEST_ASSERT( vartocomponent[4] == 0 );
 
    /* compute orbits */
    SCIP_CALL( SCIPallocBufferArray(scip, &orbits, permlen) );
@@ -1753,19 +1753,19 @@ void exampleExpr2(
 
    if ( detectsignedperms )
    {
-      cr_assert( norbits == 4 );
-      cr_assert( orbitbegins[0] == 0 );
-      cr_assert( orbitbegins[1] == 2 );
-      cr_assert( orbitbegins[2] == 4 );
-      cr_assert( orbitbegins[3] == 6 );
-      cr_assert( orbitbegins[4] == 8 );
+      TEST_ASSERT( norbits == 4 );
+      TEST_ASSERT( orbitbegins[0] == 0 );
+      TEST_ASSERT( orbitbegins[1] == 2 );
+      TEST_ASSERT( orbitbegins[2] == 4 );
+      TEST_ASSERT( orbitbegins[3] == 6 );
+      TEST_ASSERT( orbitbegins[4] == 8 );
    }
    else
    {
-      cr_assert( norbits == 2 );
-      cr_assert( orbitbegins[0] == 0 );
-      cr_assert( orbitbegins[1] == 2 );
-      cr_assert( orbitbegins[2] == 4 );
+      TEST_ASSERT( norbits == 2 );
+      TEST_ASSERT( orbitbegins[0] == 0 );
+      TEST_ASSERT( orbitbegins[1] == 2 );
+      TEST_ASSERT( orbitbegins[2] == 4 );
    }
 
    SCIPfreeBufferArray(scip, &orbitbegins);
@@ -1827,7 +1827,7 @@ void exampleExpr3(
 
    /* get nonlinear conshdlr */
    conshdlr = SCIPfindConshdlr(scip, "nonlinear");
-   cr_assert(conshdlr != NULL);
+   TEST_ASSERT(conshdlr != NULL);
 
    /* setup problem:
     * min x3 + 2*x4
@@ -1895,15 +1895,15 @@ void exampleExpr3(
 
    if ( detectsignedperms )
    {
-      cr_assert( nperms == 2 || nperms == 3 );
+      TEST_ASSERT( nperms == 2 || nperms == 3 );
    }
    else
    {
-      cr_assert( nperms == 1 );
+      TEST_ASSERT( nperms == 1 );
    }
-   cr_assert( ncomponents == 1 );
-   cr_assert( vartocomponent[0] == 0 );
-   cr_assert( vartocomponent[1] == 0 );
+   TEST_ASSERT( ncomponents == 1 );
+   TEST_ASSERT( vartocomponent[0] == 0 );
+   TEST_ASSERT( vartocomponent[1] == 0 );
 
    /* compute orbits */
    SCIP_CALL( SCIPallocBufferArray(scip, &orbits, permlen) );
@@ -1916,15 +1916,15 @@ void exampleExpr3(
 
    if ( detectsignedperms )
    {
-      cr_assert( norbits == 1 );
-      cr_assert( orbitbegins[0] == 0 );
-      cr_assert( orbitbegins[1] == 4 );
+      TEST_ASSERT( norbits == 1 );
+      TEST_ASSERT( orbitbegins[0] == 0 );
+      TEST_ASSERT( orbitbegins[1] == 4 );
    }
    else
    {
-      cr_assert( norbits == 1 );
-      cr_assert( orbitbegins[0] == 0 );
-      cr_assert( orbitbegins[1] == 2 );
+      TEST_ASSERT( norbits == 1 );
+      TEST_ASSERT( orbitbegins[0] == 0 );
+      TEST_ASSERT( orbitbegins[1] == 2 );
    }
 
    SCIPfreeBufferArray(scip, &orbitbegins);
@@ -1982,7 +1982,7 @@ void exampleExpr4(
 
    /* get nonlinear conshdlr */
    conshdlr = SCIPfindConshdlr(scip, "nonlinear");
-   cr_assert(conshdlr != NULL);
+   TEST_ASSERT(conshdlr != NULL);
 
    /* setup problem:
     * min x3 + 2*x4
@@ -2059,15 +2059,15 @@ void exampleExpr4(
 
    if ( detectsignedperms )
    {
-      cr_assert( nperms == 2 );
+      TEST_ASSERT( nperms == 2 );
    }
    else
    {
-      cr_assert( nperms == 1 );
+      TEST_ASSERT( nperms == 1 );
    }
-   cr_assert( ncomponents == 1 );
-   cr_assert( vartocomponent[0] == 0 );
-   cr_assert( vartocomponent[1] == 0 );
+   TEST_ASSERT( ncomponents == 1 );
+   TEST_ASSERT( vartocomponent[0] == 0 );
+   TEST_ASSERT( vartocomponent[1] == 0 );
 
    /* compute orbits */
    SCIP_CALL( SCIPallocBufferArray(scip, &orbits, permlen) );
@@ -2080,15 +2080,15 @@ void exampleExpr4(
 
    if ( detectsignedperms )
    {
-      cr_assert( norbits == 1 );
-      cr_assert( orbitbegins[0] == 0 );
-      cr_assert( orbitbegins[1] == 4 );
+      TEST_ASSERT( norbits == 1 );
+      TEST_ASSERT( orbitbegins[0] == 0 );
+      TEST_ASSERT( orbitbegins[1] == 4 );
    }
    else
    {
-      cr_assert( norbits == 1 );
-      cr_assert( orbitbegins[0] == 0 );
-      cr_assert( orbitbegins[1] == 2 );
+      TEST_ASSERT( norbits == 1 );
+      TEST_ASSERT( orbitbegins[0] == 0 );
+      TEST_ASSERT( orbitbegins[1] == 2 );
    }
 
    SCIPfreeBufferArray(scip, &orbitbegins);
@@ -2146,7 +2146,7 @@ void exampleExpr5(
 
    /* get nonlinear conshdlr */
    conshdlr = SCIPfindConshdlr(scip, "nonlinear");
-   cr_assert(conshdlr != NULL);
+   TEST_ASSERT(conshdlr != NULL);
 
    /* setup problem:
     * min x3 + 2*x4
@@ -2212,9 +2212,9 @@ void exampleExpr5(
          &npermvars, &permvars, NULL, &nperms, &perms, NULL,
          &components, &componentbegins, &vartocomponent, &ncomponents) );
 
-   cr_assert( ncomponents == 1 );
-   cr_assert( vartocomponent[0] == 0 );
-   cr_assert( vartocomponent[1] == 0 );
+   TEST_ASSERT( ncomponents == 1 );
+   TEST_ASSERT( vartocomponent[0] == 0 );
+   TEST_ASSERT( vartocomponent[1] == 0 );
 
    /* compute orbits */
    SCIP_CALL( SCIPallocBufferArray(scip, &orbits, permlen) );
@@ -2227,15 +2227,15 @@ void exampleExpr5(
 
    if ( detectsignedperms )
    {
-      cr_assert( norbits == 1 );
-      cr_assert( orbitbegins[0] == 0 );
-      cr_assert( orbitbegins[1] == 4 );
+      TEST_ASSERT( norbits == 1 );
+      TEST_ASSERT( orbitbegins[0] == 0 );
+      TEST_ASSERT( orbitbegins[1] == 4 );
    }
    else
    {
-      cr_assert( norbits == 1 );
-      cr_assert( orbitbegins[0] == 0 );
-      cr_assert( orbitbegins[1] == 2 );
+      TEST_ASSERT( norbits == 1 );
+      TEST_ASSERT( orbitbegins[0] == 0 );
+      TEST_ASSERT( orbitbegins[1] == 2 );
    }
 
    SCIPfreeBufferArray(scip, &orbitbegins);
@@ -2300,7 +2300,7 @@ void exampleExpr6(
 
    /* get nonlinear conshdlr */
    conshdlr = SCIPfindConshdlr(scip, "nonlinear");
-   cr_assert(conshdlr != NULL);
+   TEST_ASSERT(conshdlr != NULL);
 
    /* setup problem:
     * min -x5
@@ -2391,12 +2391,12 @@ void exampleExpr6(
          &npermvars, &permvars, NULL, &nperms, &perms, NULL,
          &components, &componentbegins, &vartocomponent, &ncomponents) );
 
-   cr_assert( ncomponents == 1 );
-   cr_assert( vartocomponent[0] == 0 );
-   cr_assert( vartocomponent[1] == 0 );
-   cr_assert( vartocomponent[2] == 0 );
-   cr_assert( vartocomponent[3] == 0 );
-   cr_assert( vartocomponent[4] == -1 );
+   TEST_ASSERT( ncomponents == 1 );
+   TEST_ASSERT( vartocomponent[0] == 0 );
+   TEST_ASSERT( vartocomponent[1] == 0 );
+   TEST_ASSERT( vartocomponent[2] == 0 );
+   TEST_ASSERT( vartocomponent[3] == 0 );
+   TEST_ASSERT( vartocomponent[4] == -1 );
 
    /* compute orbits */
    SCIP_CALL( SCIPallocBufferArray(scip, &orbits, permlen) );
@@ -2409,15 +2409,15 @@ void exampleExpr6(
 
    if ( detectsignedperms )
    {
-      cr_assert( norbits == 1 );
-      cr_assert( orbitbegins[0] == 0 );
-      cr_assert( orbitbegins[1] == 8 );
+      TEST_ASSERT( norbits == 1 );
+      TEST_ASSERT( orbitbegins[0] == 0 );
+      TEST_ASSERT( orbitbegins[1] == 8 );
    }
    else
    {
-      cr_assert( norbits == 1 );
-      cr_assert( orbitbegins[0] == 0 );
-      cr_assert( orbitbegins[1] == 4 );
+      TEST_ASSERT( norbits == 1 );
+      TEST_ASSERT( orbitbegins[0] == 0 );
+      TEST_ASSERT( orbitbegins[1] == 4 );
    }
 
    SCIPfreeBufferArray(scip, &orbitbegins);
@@ -2444,190 +2444,220 @@ void exampleExpr6(
 }
 
 /* TEST SUITE */
-TestSuite(test_compute_symmetry, .init = setup, .fini = teardown);
 
 /* TEST 1 */
-Test(test_compute_symmetry, basic1, .description = "compute permutation symmetries for a simple example with 4 variables and 2 linear constraints")
+/** @brief compute permutation symmetries for a simple example with 4 variables and 2 linear constraints */
+void test_test_compute_symmetry_basic1(void)
 {
    simpleExample1(FALSE);
 }
 
 /* TEST 2 */
-Test(test_compute_symmetry, basic2, .description = "compute signed symmetries for a simple example with 4 variables and 2 linear constraints")
+/** @brief compute signed symmetries for a simple example with 4 variables and 2 linear constraints */
+void test_test_compute_symmetry_basic2(void)
 {
    simpleExample1(TRUE);
 }
 
 /* TEST 3 */
-Test(test_compute_symmetry, basic3, .description = "compute permutation symmetry for a simple example with 4 variables and 4 linear constraints")
+/** @brief compute permutation symmetry for a simple example with 4 variables and 4 linear constraints */
+void test_test_compute_symmetry_basic3(void)
 {
    simpleExample2(FALSE);
 }
 
 /* TEST 4 */
-Test(test_compute_symmetry, basic4, .description = "compute signed permutation symmetry for a simple example with 4 variables and 4 linear constraints")
+/** @brief compute signed permutation symmetry for a simple example with 4 variables and 4 linear constraints */
+void test_test_compute_symmetry_basic4(void)
 {
    simpleExample2(TRUE);
 }
 
 /* TEST 5 */
-Test(test_compute_symmetry, basic5, .description = "compute permutation symmetries for a simple example with 5 variables and 2 linear constraints")
+/** @brief compute permutation symmetries for a simple example with 5 variables and 2 linear constraints */
+void test_test_compute_symmetry_basic5(void)
 {
    simpleExample3(FALSE);
 }
 
 /* TEST 6 */
-Test(test_compute_symmetry, basic6, .description = "compute signed permutation symmetries for a simple example with 5 variables and 2 linear constraints")
+/** @brief compute signed permutation symmetries for a simple example with 5 variables and 2 linear constraints */
+void test_test_compute_symmetry_basic6(void)
 {
    simpleExample3(TRUE);
 }
 
 /* TEST 7 */
-Test(test_compute_symmetry, special1, .description = "compute permutation symmetries for an example containing bounddisjunction constraints")
+/** @brief compute permutation symmetries for an example containing bounddisjunction constraints */
+void test_test_compute_symmetry_special1(void)
 {
    exampleBounddisjunction(FALSE);
 }
 
 /* TEST 8 */
-Test(test_compute_symmetry, special2, .description = "compute signed permutation symmetries for an example containing bounddisjunction constraints")
+/** @brief compute signed permutation symmetries for an example containing bounddisjunction constraints */
+void test_test_compute_symmetry_special2(void)
 {
    exampleBounddisjunction(TRUE);
 }
 
 /* TEST 9 */
-Test(test_compute_symmetry, special3, .description = "compute permutation symmetries for an example containing cardinality constraints")
+/** @brief compute permutation symmetries for an example containing cardinality constraints */
+void test_test_compute_symmetry_special3(void)
 {
    exampleCardinality(FALSE);
 }
 
 /* TEST 10 */
-Test(test_compute_symmetry, special4, .description = "compute signed permutation symmetries for an example containing cardinality constraints")
+/** @brief compute signed permutation symmetries for an example containing cardinality constraints */
+void test_test_compute_symmetry_special4(void)
 {
    exampleCardinality(TRUE);
 }
 
 /* TEST 11 */
-Test(test_compute_symmetry, special5, .description = "compute permutation symmetries for an example containing indicator constraints")
+/** @brief compute permutation symmetries for an example containing indicator constraints */
+void test_test_compute_symmetry_special5(void)
 {
    exampleIndicator(FALSE);
 }
 
 /* TEST 12 */
-Test(test_compute_symmetry, special6, .description = "compute signed permutation symmetries for an example containing indicator constraints")
+/** @brief compute signed permutation symmetries for an example containing indicator constraints */
+void test_test_compute_symmetry_special6(void)
 {
    exampleIndicator(TRUE);
 }
 
 /* TEST 13 */
-Test(test_compute_symmetry, special7, .description = "compute permutation symmetries for an example containing SOS1 constraints")
+/** @brief compute permutation symmetries for an example containing SOS1 constraints */
+void test_test_compute_symmetry_special7(void)
 {
    exampleSOS1(FALSE);
 }
 
 /* TEST 14 */
-Test(test_compute_symmetry, special8, .description = "compute signed permutation symmetries for an example containing SOS1 constraints")
+/** @brief compute signed permutation symmetries for an example containing SOS1 constraints */
+void test_test_compute_symmetry_special8(void)
 {
    exampleSOS1(TRUE);
 }
 
 /* TEST 15 */
-Test(test_compute_symmetry, special9, .description = "compute permutation symmetries for an example containing SOS2 constraints")
+/** @brief compute permutation symmetries for an example containing SOS2 constraints */
+void test_test_compute_symmetry_special9(void)
 {
    exampleSOS2(FALSE);
 }
 
 /* TEST 16 */
-Test(test_compute_symmetry, special10, .description = "compute signed permutation symmetries for an example containing SOS2 constraints")
+/** @brief compute signed permutation symmetries for an example containing SOS2 constraints */
+void test_test_compute_symmetry_special10(void)
 {
    exampleSOS2(TRUE);
 }
 
 /* TEST 17 */
-Test(test_compute_symmetry, special11, .description = "compute signed permutation symmetries for an example containing PB constraints")
+/** @brief compute signed permutation symmetries for an example containing PB constraints */
+void test_test_compute_symmetry_special11(void)
 {
    examplePB(FALSE);
 }
 
 /* TEST 18 */
-Test(test_compute_symmetry, special12, .description = "compute signed permutation symmetries for an example containing PB constraints")
+/** @brief compute signed permutation symmetries for an example containing PB constraints */
+void test_test_compute_symmetry_special12(void)
 {
    examplePB(TRUE);
 }
 
 /* TEST 19 */
-Test(test_compute_symmetry, expr1, .description = "compute permutation symmetries for an example containing nonlinear constraints")
+/** @brief compute permutation symmetries for an example containing nonlinear constraints */
+void test_test_compute_symmetry_expr1(void)
 {
    exampleExpr1(FALSE);
 }
 
 /* TEST 20 */
-Test(test_compute_symmetry, expr2, .description = "compute signed permutation symmetries for an example containing nonlinear constraints")
+/** @brief compute signed permutation symmetries for an example containing nonlinear constraints */
+void test_test_compute_symmetry_expr2(void)
 {
    exampleExpr1(TRUE);
 }
 
 /* TEST 21 */
-Test(test_compute_symmetry, expr3, .description = "compute permutation symmetries for an example containing nonlinear constraints")
+/** @brief compute permutation symmetries for an example containing nonlinear constraints */
+void test_test_compute_symmetry_expr3(void)
 {
    exampleExpr2(FALSE);
 }
 
 /* TEST 22 */
-Test(test_compute_symmetry, expr4, .description = "compute signed permutation symmetries for an example containing nonlinear constraints")
+/** @brief compute signed permutation symmetries for an example containing nonlinear constraints */
+void test_test_compute_symmetry_expr4(void)
 {
    exampleExpr2(TRUE);
 }
 
 /* TEST 23 */
-Test(test_compute_symmetry, expr5, .description = "compute permutation symmetries for an example containing nonlinear constraints")
+/** @brief compute permutation symmetries for an example containing nonlinear constraints */
+void test_test_compute_symmetry_expr5(void)
 {
    exampleExpr3(FALSE);
 }
 
 /* TEST 24 */
-Test(test_compute_symmetry, expr6, .description = "compute signed permutation symmetries for an example containing nonlinear constraints")
+/** @brief compute signed permutation symmetries for an example containing nonlinear constraints */
+void test_test_compute_symmetry_expr6(void)
 {
    exampleExpr3(TRUE);
 }
 
 /* TEST 25 */
-Test(test_compute_symmetry, expr7, .description = "compute permutation symmetries for an example containing nonlinear constraints")
+/** @brief compute permutation symmetries for an example containing nonlinear constraints */
+void test_test_compute_symmetry_expr7(void)
 {
    exampleExpr4(FALSE);
 }
 
 /* TEST 26 */
-Test(test_compute_symmetry, expr8, .description = "compute signed permutation symmetries for an example containing nonlinear constraints")
+/** @brief compute signed permutation symmetries for an example containing nonlinear constraints */
+void test_test_compute_symmetry_expr8(void)
 {
    exampleExpr4(TRUE);
 }
 
 /* TEST 27 */
-Test(test_compute_symmetry, expr9, .description = "compute permutation symmetries for an example containing nonlinear constraints")
+/** @brief compute permutation symmetries for an example containing nonlinear constraints */
+void test_test_compute_symmetry_expr9(void)
 {
    exampleExpr5(FALSE);
 }
 
 /* TEST 28 */
-Test(test_compute_symmetry, expr10, .description = "compute signed permutation symmetries for an example containing nonlinear constraints")
+/** @brief compute signed permutation symmetries for an example containing nonlinear constraints */
+void test_test_compute_symmetry_expr10(void)
 {
    exampleExpr5(TRUE);
 }
 
 /* TEST 29 */
-Test(test_compute_symmetry, expr11, .description = "compute permutation symmetries for an example containing nonlinear constraints")
+/** @brief compute permutation symmetries for an example containing nonlinear constraints */
+void test_test_compute_symmetry_expr11(void)
 {
    exampleExpr6(FALSE);
 }
 
 /* TEST 30 */
-Test(test_compute_symmetry, expr12, .description = "compute signed permutation symmetries for an example containing nonlinear constraints")
+/** @brief compute signed permutation symmetries for an example containing nonlinear constraints */
+void test_test_compute_symmetry_expr12(void)
 {
    exampleExpr6(TRUE);
 }
 
 /* TEST 31 (doublelex matrices) */
-Test(test_compute_symmetry, doublelex, .description = "detect action corresponding to double lex matrices")
+/** @brief detect action corresponding to double lex matrices */
+void test_test_compute_symmetry_doublelex(void)
 {
    int perm1[20] = {1,0,2,3,5,4,6,7,9,8,10,11,13,12,14,15,17,16,18,19};
    int perm2[20] = {0,1,3,2,4,5,7,6,8,9,11,10,12,13,15,14,16,17,19,18};
@@ -2662,14 +2692,14 @@ Test(test_compute_symmetry, doublelex, .description = "detect action correspondi
          &success, &isorbitope, &lexmatrix, &nrows, &ncols,
          &lexrowsbegin, &lexcolsbegin, &nrowmatrices, &ncolmatrices) );
 
-   cr_assert( success );
-   cr_assert( lexmatrix != NULL );
-   cr_assert( lexrowsbegin != NULL );
-   cr_assert( lexcolsbegin != NULL );
-   cr_assert( nrows == 5 );
-   cr_assert( ncols == 4 );
-   cr_assert( nrowmatrices == 2 );
-   cr_assert( ncolmatrices == 2 );
+   TEST_ASSERT( success );
+   TEST_ASSERT( lexmatrix != NULL );
+   TEST_ASSERT( lexrowsbegin != NULL );
+   TEST_ASSERT( lexcolsbegin != NULL );
+   TEST_ASSERT( nrows == 5 );
+   TEST_ASSERT( ncols == 4 );
+   TEST_ASSERT( nrowmatrices == 2 );
+   TEST_ASSERT( ncolmatrices == 2 );
 
    SCIPfreeBlockMemoryArray(scip, &lexcolsbegin, ncolmatrices + 1);
    SCIPfreeBlockMemoryArray(scip, &lexrowsbegin, nrowmatrices + 1);
@@ -2681,7 +2711,8 @@ Test(test_compute_symmetry, doublelex, .description = "detect action correspondi
 }
 
 /* TEST 32 symmetry computation of SDG for permutation symmetries */
-Test(test_compute_symmetry, symsdgnodes, .description = "detect symmetries of full SDG")
+/** @brief detect symmetries of full SDG */
+void test_test_compute_symmetry_symsdgnodes(void)
 {
    SCIP_VAR* vars[4];
    SYM_GRAPH* graph;
@@ -2729,16 +2760,16 @@ Test(test_compute_symmetry, symsdgnodes, .description = "detect symmetries of fu
    SCIP_CALL( SCIPcomputeSymgraphColors(scip, graph, 0) );
    SCIP_CALL( SYMcomputeSymmetryGeneratorsNode(scip, 0, graph, &nperms, &nmaxperms, &perms, &log10groupsize, &symcodetime) );
 
-   cr_assert( nperms == 1 );
+   TEST_ASSERT( nperms == 1 );
    /* check images of operator nodes */
-   cr_assert( perms[0][opnode1] == opnode1 );
-   cr_assert( perms[0][opnode2] == opnode3 );
-   cr_assert( perms[0][opnode3] == opnode2 );
+   TEST_ASSERT( perms[0][opnode1] == opnode1 );
+   TEST_ASSERT( perms[0][opnode2] == opnode3 );
+   TEST_ASSERT( perms[0][opnode3] == opnode2 );
    /* check images of variables (1 -> 3, 2 -> 4)*/
-   cr_assert( perms[0][opnode3 + 1] == opnode3 + 3 );
-   cr_assert( perms[0][opnode3 + 2] == opnode3 + 4 );
-   cr_assert( perms[0][opnode3 + 3] == opnode3 + 1 );
-   cr_assert( perms[0][opnode3 + 4] == opnode3 + 2 );
+   TEST_ASSERT( perms[0][opnode3 + 1] == opnode3 + 3 );
+   TEST_ASSERT( perms[0][opnode3 + 2] == opnode3 + 4 );
+   TEST_ASSERT( perms[0][opnode3 + 3] == opnode3 + 1 );
+   TEST_ASSERT( perms[0][opnode3 + 4] == opnode3 + 2 );
 
    SCIPfreeBlockMemoryArray(scip, &perms[0], 7);
    SCIPfreeBlockMemoryArray(scip, &perms, nmaxperms);
@@ -2750,7 +2781,8 @@ Test(test_compute_symmetry, symsdgnodes, .description = "detect symmetries of fu
 }
 
 /* TEST 33 symmetry computation of SDG for reflection symmetries */
-Test(test_compute_symmetry, symsdgnodes2, .description = "detect symmetries of full SDG")
+/** @brief detect symmetries of full SDG */
+void test_test_compute_symmetry_symsdgnodes2(void)
 {
    SCIP_VAR* vars[2];
    SYM_GRAPH* graph;
@@ -2796,16 +2828,16 @@ Test(test_compute_symmetry, symsdgnodes2, .description = "detect symmetries of f
    SCIP_CALL( SCIPcomputeSymgraphColors(scip, graph, 0) );
    SCIP_CALL( SYMcomputeSymmetryGeneratorsNode(scip, 0, graph, &nperms, &nmaxperms, &perms, &log10groupsize, &symcodetime) );
 
-   cr_assert( nperms == 1 );
+   TEST_ASSERT( nperms == 1 );
    /* check images of operator nodes */
-   cr_assert( perms[0][opnode1] == opnode1 );
-   cr_assert( perms[0][opnode2] == opnode3 );
-   cr_assert( perms[0][opnode3] == opnode2 );
+   TEST_ASSERT( perms[0][opnode1] == opnode1 );
+   TEST_ASSERT( perms[0][opnode2] == opnode3 );
+   TEST_ASSERT( perms[0][opnode3] == opnode2 );
    /* check images of variables (1 -> -2, 2 -> -1) */
-   cr_assert( perms[0][opnode3 + 1] == opnode3 + 4 );
-   cr_assert( perms[0][opnode3 + 2] == opnode3 + 3 );
-   cr_assert( perms[0][opnode3 + 3] == opnode3 + 2 );
-   cr_assert( perms[0][opnode3 + 4] == opnode3 + 1 );
+   TEST_ASSERT( perms[0][opnode3 + 1] == opnode3 + 4 );
+   TEST_ASSERT( perms[0][opnode3 + 2] == opnode3 + 3 );
+   TEST_ASSERT( perms[0][opnode3 + 3] == opnode3 + 2 );
+   TEST_ASSERT( perms[0][opnode3 + 4] == opnode3 + 1 );
 
    SCIPfreeBlockMemoryArray(scip, &perms[0], 7);
    SCIPfreeBlockMemoryArray(scip, &perms, nmaxperms);
@@ -2814,4 +2846,47 @@ Test(test_compute_symmetry, symsdgnodes2, .description = "detect symmetries of f
    {
       SCIP_CALL( SCIPreleaseVar(scip, &vars[i]) );
    }
+}
+
+void setUp(void) { setup(); }
+
+void tearDown(void) { teardown(); }
+
+int main(void)
+{
+   UNITY_BEGIN();
+   RUN_TEST(test_test_compute_symmetry_basic1);
+   RUN_TEST(test_test_compute_symmetry_basic2);
+   RUN_TEST(test_test_compute_symmetry_basic3);
+   RUN_TEST(test_test_compute_symmetry_basic4);
+   RUN_TEST(test_test_compute_symmetry_basic5);
+   RUN_TEST(test_test_compute_symmetry_basic6);
+   RUN_TEST(test_test_compute_symmetry_doublelex);
+   RUN_TEST(test_test_compute_symmetry_expr1);
+   RUN_TEST(test_test_compute_symmetry_expr10);
+   RUN_TEST(test_test_compute_symmetry_expr11);
+   RUN_TEST(test_test_compute_symmetry_expr12);
+   RUN_TEST(test_test_compute_symmetry_expr2);
+   RUN_TEST(test_test_compute_symmetry_expr3);
+   RUN_TEST(test_test_compute_symmetry_expr4);
+   RUN_TEST(test_test_compute_symmetry_expr5);
+   RUN_TEST(test_test_compute_symmetry_expr6);
+   RUN_TEST(test_test_compute_symmetry_expr7);
+   RUN_TEST(test_test_compute_symmetry_expr8);
+   RUN_TEST(test_test_compute_symmetry_expr9);
+   RUN_TEST(test_test_compute_symmetry_special1);
+   RUN_TEST(test_test_compute_symmetry_special10);
+   RUN_TEST(test_test_compute_symmetry_special11);
+   RUN_TEST(test_test_compute_symmetry_special12);
+   RUN_TEST(test_test_compute_symmetry_special2);
+   RUN_TEST(test_test_compute_symmetry_special3);
+   RUN_TEST(test_test_compute_symmetry_special4);
+   RUN_TEST(test_test_compute_symmetry_special5);
+   RUN_TEST(test_test_compute_symmetry_special6);
+   RUN_TEST(test_test_compute_symmetry_special7);
+   RUN_TEST(test_test_compute_symmetry_special8);
+   RUN_TEST(test_test_compute_symmetry_special9);
+   RUN_TEST(test_test_compute_symmetry_symsdgnodes);
+   RUN_TEST(test_test_compute_symmetry_symsdgnodes2);
+   return UNITY_END();
 }

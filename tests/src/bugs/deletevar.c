@@ -42,7 +42,7 @@
                           SCIP_RETCODE _restat_;                                          \
                           if( (_restat_ = (x)) != SCIP_OKAY )                             \
                           {                                                               \
-                             cr_assert(FALSE, "Error <%d> in function call\n", _restat_); \
+                             TEST_ASSERT(FALSE, "Error <%d> in function call\n", _restat_); \
                           }                                                               \
                        }                                                                  \
                        while( FALSE )
@@ -50,7 +50,7 @@
 SCIP* scip;
 
 /** run unittest */
-Test(deletevar, basictest)
+void test_deletevar_basictest(void)
 {
    SCIP_CONS* cons;
    SCIP_VAR* xvar;
@@ -81,7 +81,7 @@ Test(deletevar, basictest)
    SCIP_CALL( SCIPdelVar(scip, xvar, &feasible) );
 
    retcode = SCIPsolve(scip);
-   cr_assert_eq(retcode, SCIP_INVALIDDATA);
+   TEST_ASSERT_EQUAL(retcode, SCIP_INVALIDDATA);
 
    SCIP_CALL( SCIPfreeTransform(scip) );
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
@@ -89,5 +89,16 @@ Test(deletevar, basictest)
    SCIP_CALL( SCIPreleaseVar(scip, &yvar) );
    SCIP_CALL( SCIPfree(&scip) );
 
-   cr_assert_null(scip);
+   TEST_ASSERT_NULL(scip);
+}
+
+void setUp(void) { }
+
+void tearDown(void) { }
+
+int main(void)
+{
+   UNITY_BEGIN();
+   RUN_TEST(test_deletevar_basictest);
+   return UNITY_END();
 }

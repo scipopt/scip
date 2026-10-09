@@ -75,21 +75,19 @@ void teardown(void)
    SCIP_CALL( SCIPreleaseVar(scip, &x) );
    SCIP_CALL( SCIPfree(&scip) );
 
-   cr_assert_eq(BMSgetMemoryUsed(), 0, "Memory leak!!");
+   TEST_ASSERT_EQUAL(BMSgetMemoryUsed(), 0, "Memory leak!!");
 }
 
 /*
  * define test suite
  */
 
-TestSuite(presolve, .init = setup, .fini = teardown);
-
 /*
  * define tests
  */
 
 /* tests whether constraints of the form g(x) <= rhs and g(x) >= lhs are merged correctly */
-Test(presolve, mergeconss)
+void test_presolve_mergeconss(void)
 {
    SCIP_EXPR* expr;
    SCIP_CONS* conss[3];
@@ -112,12 +110,12 @@ Test(presolve, mergeconss)
 
    /* merge constraints */
    SCIP_CALL( presolveMergeConss(scip, conss, 3, &success) );
-   cr_expect(success);
-   cr_expect(SCIPgetLhsNonlinear(conss[0]) == 1.0);
-   cr_expect(SCIPgetRhsNonlinear(conss[0]) == 4.0);
-   cr_expect(!SCIPconsIsDeleted(conss[0]));
-   cr_expect(SCIPconsIsDeleted(conss[1]));
-   cr_expect(SCIPconsIsDeleted(conss[2]));
+   TEST_ASSERT(success);
+   SOFT_ASSERT(SCIPgetLhsNonlinear(conss[0]) == 1.0);
+   SOFT_ASSERT(SCIPgetRhsNonlinear(conss[0]) == 4.0);
+   SOFT_ASSERT(!SCIPconsIsDeleted(conss[0]));
+   SOFT_ASSERT(SCIPconsIsDeleted(conss[1]));
+   SOFT_ASSERT(SCIPconsIsDeleted(conss[2]));
 
    /* release constraints */
    for( c = 0; c < 3; ++c )
@@ -154,9 +152,9 @@ void checkTypes(
    SCIP_VARTYPE          vartypez            /**< target variable type of z */
    )
 {
-   cr_expect(SCIPvarGetType(SCIPvarGetTransVar(x)) == vartypex);
-   cr_expect(SCIPvarGetType(SCIPvarGetTransVar(y)) == vartypey);
-   cr_expect(SCIPvarGetType(SCIPvarGetTransVar(z)) == vartypez);
+   SOFT_ASSERT(SCIPvarGetType(SCIPvarGetTransVar(x)) == vartypex);
+   SOFT_ASSERT(SCIPvarGetType(SCIPvarGetTransVar(y)) == vartypey);
+   SOFT_ASSERT(SCIPvarGetType(SCIPvarGetTransVar(z)) == vartypez);
 }
 
 /* helper method to check implied variable types */
@@ -167,20 +165,20 @@ void checkImplTypes(
    SCIP_IMPLINTTYPE      impltypez           /**< target implied type of z */
    )
 {
-   cr_expect(SCIPvarGetImplType(SCIPvarGetTransVar(x)) == impltypex);
-   cr_expect(SCIPvarGetImplType(SCIPvarGetTransVar(y)) == impltypey);
-   cr_expect(SCIPvarGetImplType(SCIPvarGetTransVar(z)) == impltypez);
+   SOFT_ASSERT(SCIPvarGetImplType(SCIPvarGetTransVar(x)) == impltypex);
+   SOFT_ASSERT(SCIPvarGetImplType(SCIPvarGetTransVar(y)) == impltypey);
+   SOFT_ASSERT(SCIPvarGetImplType(SCIPvarGetTransVar(z)) == impltypez);
 }
 
 /* test for presolSingleLockedVars() */
-Test(presolve, singlelockedvars1)
+void test_presolve_singlelockedvars1(void)
 {
    /* -x^2 + y^2 -z^6 >= 0 implies that x and z are at their bounds */
    SCIP_CALL( addCons("+<x>^2 -<y>^2 +<z>^6 + <x>*<y> + 1/sin(20 + <y>)", 0.5, SCIPinfinity(scip)) );
 
    /* apply presolving */
    SCIP_CALL( TESTscipSetStage(scip, SCIP_STAGE_PRESOLVED, FALSE) );
-   cr_assert(SCIPgetNConss(scip) == 1);
+   TEST_ASSERT(SCIPgetNConss(scip) == 1);
 
    /* check variable types */
    checkTypes(SCIP_VARTYPE_BINARY, SCIP_VARTYPE_CONTINUOUS, SCIP_VARTYPE_BINARY);
@@ -188,7 +186,7 @@ Test(presolve, singlelockedvars1)
 }
 
 /* test for presolSingleLockedVars() */
-Test(presolve, singlelockedvars2)
+void test_presolve_singlelockedvars2(void)
 {
    /* same example as singlelockedvars1 but there is another constraint that contains x and y => only z can be at its bounds */
    SCIP_CALL( addCons("+<x>^2 -<y>^2 +<z>^6 + <x>*<y> + 1/sin(20 + <y>)", 0.5, SCIPinfinity(scip)) );
@@ -196,7 +194,7 @@ Test(presolve, singlelockedvars2)
 
    /* apply presolving */
    SCIP_CALL( TESTscipSetStage(scip, SCIP_STAGE_PRESOLVED, FALSE) );
-   cr_assert(SCIPgetNConss(scip) == 2);
+   TEST_ASSERT(SCIPgetNConss(scip) == 2);
 
    /* check variable types */
    checkTypes(SCIP_VARTYPE_CONTINUOUS, SCIP_VARTYPE_CONTINUOUS, SCIP_VARTYPE_BINARY);
@@ -204,7 +202,7 @@ Test(presolve, singlelockedvars2)
 }
 
 /* test for presolSingleLockedVars() */
-Test(presolve, singlelockedvars3)
+void test_presolve_singlelockedvars3(void)
 {
    /* change bounds of z */
    SCIP_CALL( SCIPchgVarLbGlobal(scip, z, -1.0) );
@@ -215,7 +213,7 @@ Test(presolve, singlelockedvars3)
 
    /* apply presolving */
    SCIP_CALL( TESTscipSetStage(scip, SCIP_STAGE_PRESOLVED, FALSE) );
-   cr_expect(SCIPgetNConss(scip) == 1);
+   TEST_ASSERT(SCIPgetNConss(scip) == 1);
 
    /* check variable types */
    checkTypes(SCIP_VARTYPE_BINARY, SCIP_VARTYPE_CONTINUOUS, SCIP_VARTYPE_CONTINUOUS);
@@ -223,7 +221,7 @@ Test(presolve, singlelockedvars3)
 }
 
 /* test for presolSingleLockedVars() */
-Test(presolve, singlelockedvars3a)
+void test_presolve_singlelockedvars3a(void)
 {
    /* allow creation of bound disjunction constraints */
    SCIP_CALL( SCIPsetCharParam(scip, "constraints/nonlinear/checkvarlocks", 'b') );
@@ -237,7 +235,7 @@ Test(presolve, singlelockedvars3a)
 
    /* apply presolving */
    SCIP_CALL( TESTscipSetStage(scip, SCIP_STAGE_PRESOLVED, FALSE) );
-   cr_expect(SCIPgetNConss(scip) == 2);
+   SOFT_ASSERT(SCIPgetNConss(scip) == 2);
 
    /* check variable types */
    checkTypes(SCIP_VARTYPE_BINARY, SCIP_VARTYPE_CONTINUOUS, SCIP_VARTYPE_CONTINUOUS);
@@ -248,7 +246,7 @@ Test(presolve, singlelockedvars3a)
  *
  * consider x + 2 y^2 - 3 y^3 - 4 z == 5 with x continuous, y integer, and z binary
  */
-Test(presolve, implint)
+void test_presolve_implint(void)
 {
    SCIP_Bool infeasible;
 
@@ -276,7 +274,7 @@ Test(presolve, implint)
  *
  * consider 0.5 x + 0.5 yz - 1.5 z == 5 with x continuous, y and z binary
  */
-Test(presolve, implint2)
+void test_presolve_implint2(void)
 {
    SCIP_Bool infeasible;
 
@@ -308,7 +306,7 @@ Test(presolve, implint2)
  *
  * consider 2 x^2 + 0.3 * y - z == 5 with x integer, y continuous, and z binary
  */
-Test(presolve, implint3)
+void test_presolve_implint3(void)
 {
    SCIP_Bool infeasible;
 
@@ -333,7 +331,7 @@ Test(presolve, implint3)
 }
 
 /* tests setppc upgrade */
-Test(presolve, setppcupg)
+void test_presolve_setppcupg(void)
 {
    SCIP_Bool infeasible;
 
@@ -355,5 +353,24 @@ Test(presolve, setppcupg)
    /* apply presolving */
    SCIP_CALL( TESTscipSetStage(scip, SCIP_STAGE_PRESOLVED, FALSE) );
 
-   cr_expect_eq(SCIPconshdlrGetNUpgdConss(conshdlr), 1, "got %d upgrades, but expected one", SCIPconshdlrGetNUpgdConss(conshdlr));
+   SOFT_ASSERT_EQUAL(SCIPconshdlrGetNUpgdConss(conshdlr), 1, "got %d upgrades, but expected one", SCIPconshdlrGetNUpgdConss(conshdlr));
+}
+
+void setUp(void) { setup(); }
+
+void tearDown(void) { teardown(); }
+
+int main(void)
+{
+   UNITY_BEGIN();
+   RUN_TEST(test_presolve_mergeconss);
+   RUN_TEST(test_presolve_singlelockedvars1);
+   RUN_TEST(test_presolve_singlelockedvars2);
+   RUN_TEST(test_presolve_singlelockedvars3);
+   RUN_TEST(test_presolve_singlelockedvars3a);
+   RUN_TEST(test_presolve_implint);
+   RUN_TEST(test_presolve_implint2);
+   RUN_TEST(test_presolve_implint3);
+   RUN_TEST(test_presolve_setppcupg);
+   return UNITY_END();
 }

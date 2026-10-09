@@ -35,7 +35,8 @@
 /** All conshdlrs should implement enforelax callback, otherwise relaxation solution cannot be enforced. The callback
  *  is non-mandatory only to not break the code of users who are not interested in relaxations anyways.
  */
-Test(cons, enforelaximplemented, .description = "tests if all constraint handlers implement enforelax callback")
+/** @brief tests if all constraint handlers implement enforelax callback */
+void test_cons_enforelaximplemented(void)
 {
    SCIP* scip;
    SCIP_CONSHDLR** conshdlrs;
@@ -51,9 +52,20 @@ Test(cons, enforelaximplemented, .description = "tests if all constraint handler
    conshdlrs = SCIPgetConshdlrs(scip);
    for( h = 0; h < nconshdlrs; h++ )
    {
-      cr_expect_not_null(conshdlrs[h]->consenforelax, "conshdlr %s should implement enforelax callback",
+      SOFT_ASSERT_NOT_NULL(conshdlrs[h]->consenforelax, "conshdlr %s should implement enforelax callback",
             SCIPconshdlrGetName(conshdlrs[h]));
    }
 
    SCIP_CALL( SCIPfree(&scip) );
+}
+
+void setUp(void) { }
+
+void tearDown(void) { }
+
+int main(void)
+{
+   UNITY_BEGIN();
+   RUN_TEST(test_cons_enforelaximplemented);
+   return UNITY_END();
 }

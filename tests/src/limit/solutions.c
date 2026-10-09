@@ -49,30 +49,40 @@ void teardown(void)
    /* free SCIP */
    SCIP_CALL( SCIPfree(&scip) );
    /* check for memory leaks */
-   cr_assert_eq(BMSgetMemoryUsed(), 0, "There is a memory leak!");
+   TEST_ASSERT_EQUAL(BMSgetMemoryUsed(), 0, "There is a memory leak!");
 }
 
-TestSuite(solutions, .init = setup, .fini = teardown);
-
-Test(solutions, continued, .description = "tests continued solve after solution limit")
+/** @brief tests continued solve after solution limit */
+void test_solutions_continued(void)
 {
-   cr_assert_not_null(scip);
+   TEST_ASSERT_NOT_NULL(scip);
    SCIP_CALL( SCIPsetIntParam(scip, "limits/solutions", 3) );
    SCIP_CALL( SCIPreadProb(scip, "../check/instances/MIP/MANN_a9.clq.lp", NULL) );
    SCIP_CALL( SCIPsolve(scip) );
-   cr_assert(!SCIPisInfinity(scip, -SCIPgetPrimalbound(scip)),
+   TEST_ASSERT_NOT(SCIPisInfinity(scip, -SCIPgetPrimalbound(scip)),
          "Primal bound should be finite after solution limit");
-   cr_assert(SCIPisFeasLE(scip, SCIPgetPrimalbound(scip), 16.0),
+   TEST_ASSERT(SCIPisFeasLE(scip, SCIPgetPrimalbound(scip), 16.0),
          "Primal bound is %f but should be <= 16.0", SCIPgetPrimalbound(scip));
-   cr_assert(SCIPisFeasGE(scip, SCIPgetDualbound(scip), 16.0),
+   TEST_ASSERT(SCIPisFeasGE(scip, SCIPgetDualbound(scip), 16.0),
          "Dual bound is %f but should be >= 16.0", SCIPgetDualbound(scip));
 
    SCIP_CALL( SCIPsetIntParam(scip, "limits/solutions", -1) );
    SCIP_CALL( SCIPsolve(scip) );
-   cr_assert_eq(SCIPgetStatus(scip), SCIP_STATUS_OPTIMAL,
+   TEST_ASSERT_EQUAL(SCIPgetStatus(scip), SCIP_STATUS_OPTIMAL,
          "SCIP terminated with status %d but should have terminated with status %d", SCIPgetStatus(scip), SCIP_STATUS_OPTIMAL);
-   cr_assert(SCIPisFeasEQ(scip, SCIPgetPrimalbound(scip), 16.0),
+   TEST_ASSERT(SCIPisFeasEQ(scip, SCIPgetPrimalbound(scip), 16.0),
          "Primal bound is %f but should be 16.0", SCIPgetPrimalbound(scip));
-   cr_assert(SCIPisFeasEQ(scip, SCIPgetDualbound(scip), 16.0),
+   TEST_ASSERT(SCIPisFeasEQ(scip, SCIPgetDualbound(scip), 16.0),
          "Dual bound is %f but should be 16.0", SCIPgetDualbound(scip));
+}
+
+void setUp(void) { setup(); }
+
+void tearDown(void) { teardown(); }
+
+int main(void)
+{
+   UNITY_BEGIN();
+   RUN_TEST(test_solutions_continued);
+   return UNITY_END();
 }

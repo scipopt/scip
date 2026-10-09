@@ -89,7 +89,6 @@ settings/
 
 # tests
 tests/Testing
-tests/Criterion
 tests/CTestTestfile.cmake
 tests/*.swp
 tests/*.swo

@@ -81,29 +81,28 @@ void teardown(void)
 
    /* free scip and check for memory leaks */
    SCIP_CALL( SCIPfree(&scip) );
-   cr_assert_eq(BMSgetMemoryUsed(), 0, "There are memory leaks!");
+   TEST_ASSERT_EQUAL(BMSgetMemoryUsed(), 0, "There are memory leaks!");
 }
 
-TestSuite(iterator, .init = setup, .fini = teardown);
 
 /* test BFS iterator on a tree containing single expression */
-Test(iterator, bfs_single)
+void test_iterator_bfs_single(void)
 {
    SCIP_CALL( SCIPparseExpr(scip, &expr, "<t_x>", NULL, NULL, NULL) );
 
    SCIP_CALL( SCIPexpriterInit(it, expr, SCIP_EXPRITER_BFS, TRUE) );
-   cr_expect(SCIPexpriterGetCurrent(it) == expr);
-   cr_expect(SCIPexpriterGetNext(it) == NULL);
-   cr_expect(SCIPexpriterIsEnd(it));
-   cr_expect(SCIPexpriterGetNext(it) == NULL);
+   SOFT_ASSERT(SCIPexpriterGetCurrent(it) == expr);
+   SOFT_ASSERT(SCIPexpriterGetNext(it) == NULL);
+   SOFT_ASSERT(SCIPexpriterIsEnd(it));
+   SOFT_ASSERT(SCIPexpriterGetNext(it) == NULL);
 
    /* reinitialize again */
    SCIP_CALL( SCIPexpriterInit(it, expr, SCIP_EXPRITER_BFS, TRUE) );
-   cr_expect(SCIPexpriterGetCurrent(it) == expr);
+   SOFT_ASSERT(SCIPexpriterGetCurrent(it) == expr);
 }
 
 /* test BFS iterator on a tree expression */
-Test(iterator, bfs_tree)
+void test_iterator_bfs_tree(void)
 {
    SCIP_EXPR* exprs[6];
    SCIP_EXPR* tmp;
@@ -122,13 +121,13 @@ Test(iterator, bfs_tree)
    SCIP_CALL( SCIPexpriterInit(it, expr, SCIP_EXPRITER_BFS, TRUE) );
    for( tmp = SCIPexpriterGetCurrent(it); !SCIPexpriterIsEnd(it); tmp = SCIPexpriterGetNext(it) )
    {
-      cr_expect(tmp == exprs[i]);
+      SOFT_ASSERT(tmp == exprs[i]);
       ++i;
    }
 }
 
 /* test BFS iterator on an expression with common sub-expressions */
-Test(iterator, bfs_general)
+void test_iterator_bfs_general(void)
 {
    SCIP_EXPR* expr_prod;
    SCIP_EXPR* expr_sin;
@@ -153,27 +152,27 @@ Test(iterator, bfs_general)
    SCIP_CALL( SCIPappendExprChild(scip, expr_prod, expr_sin) );
 
    SCIP_CALL( SCIPexpriterInit(it, expr_prod, SCIP_EXPRITER_BFS, TRUE) );
-   cr_expect(SCIPexpriterGetCurrent(it) == expr_prod);
-   cr_expect(SCIPexpriterGetNext(it) == expr_exp);
-   cr_expect(SCIPexpriterGetNext(it) == expr_sin);
-   cr_expect(SCIPexpriterGetNext(it) == expr_sum);
-   cr_expect(SCIPexpriterGetNext(it) == expr_sum);
-   cr_expect(SCIPexpriterGetNext(it) == expr_x);
-   cr_expect(SCIPexpriterGetNext(it) == expr_y);
-   cr_expect(SCIPexpriterGetNext(it) == expr_x);
-   cr_expect(SCIPexpriterGetNext(it) == expr_y);
-   cr_expect(SCIPexpriterGetNext(it) == NULL);
-   cr_expect(SCIPexpriterIsEnd(it));
+   SOFT_ASSERT(SCIPexpriterGetCurrent(it) == expr_prod);
+   SOFT_ASSERT(SCIPexpriterGetNext(it) == expr_exp);
+   SOFT_ASSERT(SCIPexpriterGetNext(it) == expr_sin);
+   SOFT_ASSERT(SCIPexpriterGetNext(it) == expr_sum);
+   SOFT_ASSERT(SCIPexpriterGetNext(it) == expr_sum);
+   SOFT_ASSERT(SCIPexpriterGetNext(it) == expr_x);
+   SOFT_ASSERT(SCIPexpriterGetNext(it) == expr_y);
+   SOFT_ASSERT(SCIPexpriterGetNext(it) == expr_x);
+   SOFT_ASSERT(SCIPexpriterGetNext(it) == expr_y);
+   SOFT_ASSERT(SCIPexpriterGetNext(it) == NULL);
+   SOFT_ASSERT(SCIPexpriterIsEnd(it));
 
    SCIP_CALL( SCIPexpriterInit(it, expr_prod, SCIP_EXPRITER_BFS, FALSE) );
-   cr_expect(SCIPexpriterGetCurrent(it) == expr_prod);
-   cr_expect(SCIPexpriterGetNext(it) == expr_exp);
-   cr_expect(SCIPexpriterGetNext(it) == expr_sin);
-   cr_expect(SCIPexpriterGetNext(it) == expr_sum);
-   cr_expect(SCIPexpriterGetNext(it) == expr_x);
-   cr_expect(SCIPexpriterGetNext(it) == expr_y);
-   cr_expect(SCIPexpriterGetNext(it) == NULL);
-   cr_expect(SCIPexpriterIsEnd(it));
+   SOFT_ASSERT(SCIPexpriterGetCurrent(it) == expr_prod);
+   SOFT_ASSERT(SCIPexpriterGetNext(it) == expr_exp);
+   SOFT_ASSERT(SCIPexpriterGetNext(it) == expr_sin);
+   SOFT_ASSERT(SCIPexpriterGetNext(it) == expr_sum);
+   SOFT_ASSERT(SCIPexpriterGetNext(it) == expr_x);
+   SOFT_ASSERT(SCIPexpriterGetNext(it) == expr_y);
+   SOFT_ASSERT(SCIPexpriterGetNext(it) == NULL);
+   SOFT_ASSERT(SCIPexpriterIsEnd(it));
 
    /* release expression */
    SCIP_CALL( SCIPreleaseExpr(scip, &expr_prod) );
@@ -185,23 +184,23 @@ Test(iterator, bfs_general)
 }
 
 /* test RTOPOLOGICAL iterator on a tree containing a single expression */
-Test(iterator, rtopological_single)
+void test_iterator_rtopological_single(void)
 {
    SCIP_CALL( SCIPparseExpr(scip, &expr, "<t_x>", NULL, NULL, NULL) );
 
    SCIP_CALL( SCIPexpriterInit(it, expr, SCIP_EXPRITER_RTOPOLOGIC, TRUE) );
-   cr_expect(SCIPexpriterGetCurrent(it) == expr);
-   cr_expect(SCIPexpriterGetNext(it) == NULL);
-   cr_expect(SCIPexpriterIsEnd(it));
-   cr_expect(SCIPexpriterGetNext(it) == NULL);
+   SOFT_ASSERT(SCIPexpriterGetCurrent(it) == expr);
+   SOFT_ASSERT(SCIPexpriterGetNext(it) == NULL);
+   SOFT_ASSERT(SCIPexpriterIsEnd(it));
+   SOFT_ASSERT(SCIPexpriterGetNext(it) == NULL);
 
    /* reinitialize again */
    SCIP_CALL( SCIPexpriterInit(it, expr, SCIP_EXPRITER_RTOPOLOGIC, TRUE) );
-   cr_expect(SCIPexpriterGetCurrent(it) == expr);
+   SOFT_ASSERT(SCIPexpriterGetCurrent(it) == expr);
 }
 
 /* test RTOPOLOGICAL iterator on a tree expression */
-Test(iterator, rtopological_tree)
+void test_iterator_rtopological_tree(void)
 {
    SCIP_EXPR* exprs[6];
    SCIP_EXPR* tmp;
@@ -221,8 +220,8 @@ Test(iterator, rtopological_tree)
    SCIP_CALL( SCIPexpriterInit(it, expr, SCIP_EXPRITER_RTOPOLOGIC, TRUE) );
    for( tmp = SCIPexpriterGetCurrent(it); !SCIPexpriterIsEnd(it); tmp = SCIPexpriterGetNext(it) )
    {
-      cr_assert(i < 6);
-      cr_expect(tmp == exprs[targetidx[i]]);
+      TEST_ASSERT(i < 6);
+      SOFT_ASSERT(tmp == exprs[targetidx[i]]);
       ++i;
    }
 
@@ -231,15 +230,15 @@ Test(iterator, rtopological_tree)
    SCIPexpriterSetStagesDFS(it, SCIP_EXPRITER_LEAVEEXPR);
    for( tmp = SCIPexpriterGetCurrent(it), i = 0; !SCIPexpriterIsEnd(it); tmp = SCIPexpriterGetNext(it) )
    {
-      cr_assert(i < 6);
-      cr_expect(tmp == exprs[targetidx[i]]);
+      TEST_ASSERT(i < 6);
+      SOFT_ASSERT(tmp == exprs[targetidx[i]]);
       ++i;
    }
 
 }
 
 /* test RTOPOLOGICAL iterator on an expression with common sub-expressions */
-Test(iterator, rtopological_general)
+void test_iterator_rtopological_general(void)
 {
    SCIP_EXPR* expr_prod;
    SCIP_EXPR* expr_sin;
@@ -264,27 +263,27 @@ Test(iterator, rtopological_general)
    SCIP_CALL( SCIPappendExprChild(scip, expr_prod, expr_sin) );
 
    SCIP_CALL( SCIPexpriterInit(it, expr_prod, SCIP_EXPRITER_RTOPOLOGIC, TRUE) );
-   cr_expect(SCIPexpriterGetCurrent(it) == expr_x);
-   cr_expect(SCIPexpriterGetNext(it) == expr_y);
-   cr_expect(SCIPexpriterGetNext(it) == expr_sum);
-   cr_expect(SCIPexpriterGetNext(it) == expr_exp);
-   cr_expect(SCIPexpriterGetNext(it) == expr_x);
-   cr_expect(SCIPexpriterGetNext(it) == expr_y);
-   cr_expect(SCIPexpriterGetNext(it) == expr_sum);
-   cr_expect(SCIPexpriterGetNext(it) == expr_sin);
-   cr_expect(SCIPexpriterGetNext(it) == expr_prod);
-   cr_expect(SCIPexpriterGetNext(it) == NULL);
-   cr_expect(SCIPexpriterIsEnd(it));
+   SOFT_ASSERT(SCIPexpriterGetCurrent(it) == expr_x);
+   SOFT_ASSERT(SCIPexpriterGetNext(it) == expr_y);
+   SOFT_ASSERT(SCIPexpriterGetNext(it) == expr_sum);
+   SOFT_ASSERT(SCIPexpriterGetNext(it) == expr_exp);
+   SOFT_ASSERT(SCIPexpriterGetNext(it) == expr_x);
+   SOFT_ASSERT(SCIPexpriterGetNext(it) == expr_y);
+   SOFT_ASSERT(SCIPexpriterGetNext(it) == expr_sum);
+   SOFT_ASSERT(SCIPexpriterGetNext(it) == expr_sin);
+   SOFT_ASSERT(SCIPexpriterGetNext(it) == expr_prod);
+   SOFT_ASSERT(SCIPexpriterGetNext(it) == NULL);
+   SOFT_ASSERT(SCIPexpriterIsEnd(it));
 
    SCIP_CALL( SCIPexpriterInit(it, expr_prod, SCIP_EXPRITER_RTOPOLOGIC, FALSE) );
-   cr_expect(SCIPexpriterGetCurrent(it) == expr_x);
-   cr_expect(SCIPexpriterGetNext(it) == expr_y);
-   cr_expect(SCIPexpriterGetNext(it) == expr_sum);
-   cr_expect(SCIPexpriterGetNext(it) == expr_exp);
-   cr_expect(SCIPexpriterGetNext(it) == expr_sin);
-   cr_expect(SCIPexpriterGetNext(it) == expr_prod);
-   cr_expect(SCIPexpriterGetNext(it) == NULL);
-   cr_expect(SCIPexpriterIsEnd(it));
+   SOFT_ASSERT(SCIPexpriterGetCurrent(it) == expr_x);
+   SOFT_ASSERT(SCIPexpriterGetNext(it) == expr_y);
+   SOFT_ASSERT(SCIPexpriterGetNext(it) == expr_sum);
+   SOFT_ASSERT(SCIPexpriterGetNext(it) == expr_exp);
+   SOFT_ASSERT(SCIPexpriterGetNext(it) == expr_sin);
+   SOFT_ASSERT(SCIPexpriterGetNext(it) == expr_prod);
+   SOFT_ASSERT(SCIPexpriterGetNext(it) == NULL);
+   SOFT_ASSERT(SCIPexpriterIsEnd(it));
 
    /* release expression */
    SCIP_CALL( SCIPreleaseExpr(scip, &expr_prod) );
@@ -297,37 +296,37 @@ Test(iterator, rtopological_general)
 
 
 /* test DFS iterators on a tree containing a single expression */
-Test(iterator, dfs_single)
+void test_iterator_dfs_single(void)
 {
    SCIP_CALL( SCIPparseExpr(scip, &expr, "<t_x>", NULL, NULL, NULL) );
 
    SCIP_CALL( SCIPexpriterInit(it, expr, SCIP_EXPRITER_DFS, TRUE) );
-   cr_expect(SCIPexpriterGetCurrent(it) == expr);
-   cr_expect(SCIPexpriterGetNext(it) == NULL);
-   cr_expect(SCIPexpriterIsEnd(it));
-   cr_expect(SCIPexpriterGetNext(it) == NULL);
+   SOFT_ASSERT(SCIPexpriterGetCurrent(it) == expr);
+   SOFT_ASSERT(SCIPexpriterGetNext(it) == NULL);
+   SOFT_ASSERT(SCIPexpriterIsEnd(it));
+   SOFT_ASSERT(SCIPexpriterGetNext(it) == NULL);
 
 
    SCIP_CALL( SCIPexpriterInit(it, expr, SCIP_EXPRITER_DFS, FALSE) );
-   cr_expect(SCIPexpriterGetCurrent(it) == expr);
-   cr_expect(SCIPexpriterGetNext(it) == NULL);
-   cr_expect(SCIPexpriterIsEnd(it));
-   cr_expect(SCIPexpriterGetNext(it) == NULL);
+   SOFT_ASSERT(SCIPexpriterGetCurrent(it) == expr);
+   SOFT_ASSERT(SCIPexpriterGetNext(it) == NULL);
+   SOFT_ASSERT(SCIPexpriterIsEnd(it));
+   SOFT_ASSERT(SCIPexpriterGetNext(it) == NULL);
 
    SCIP_CALL( SCIPexpriterInit(it, expr, SCIP_EXPRITER_DFS, FALSE) );
-   cr_expect(SCIPexpriterGetCurrent(it) == expr);
-   cr_expect(SCIPexpriterGetStageDFS(it) == SCIP_EXPRITER_ENTEREXPR);
+   SOFT_ASSERT(SCIPexpriterGetCurrent(it) == expr);
+   SOFT_ASSERT(SCIPexpriterGetStageDFS(it) == SCIP_EXPRITER_ENTEREXPR);
    SCIPexpriterSetStagesDFS(it, SCIP_EXPRITER_ALLSTAGES);
-   cr_expect(SCIPexpriterGetCurrent(it) == expr);
-   cr_expect(SCIPexpriterGetStageDFS(it) == SCIP_EXPRITER_ENTEREXPR);
-   cr_expect(SCIPexpriterGetNext(it) == expr);
-   cr_expect(SCIPexpriterGetStageDFS(it) == SCIP_EXPRITER_LEAVEEXPR);
-   cr_expect(SCIPexpriterGetNext(it) == NULL);
-   cr_expect(SCIPexpriterIsEnd(it));
+   SOFT_ASSERT(SCIPexpriterGetCurrent(it) == expr);
+   SOFT_ASSERT(SCIPexpriterGetStageDFS(it) == SCIP_EXPRITER_ENTEREXPR);
+   SOFT_ASSERT(SCIPexpriterGetNext(it) == expr);
+   SOFT_ASSERT(SCIPexpriterGetStageDFS(it) == SCIP_EXPRITER_LEAVEEXPR);
+   SOFT_ASSERT(SCIPexpriterGetNext(it) == NULL);
+   SOFT_ASSERT(SCIPexpriterIsEnd(it));
 }
 
 /* test DFS iterator on a tree expression */
-Test(iterator, dfs_tree)
+void test_iterator_dfs_tree(void)
 {
    SCIP_EXPR* exprs[6];
    SCIP_EXPR* tmp;
@@ -348,8 +347,8 @@ Test(iterator, dfs_tree)
    SCIP_CALL( SCIPexpriterInit(it, expr, SCIP_EXPRITER_DFS, TRUE) );
    for( tmp = SCIPexpriterGetCurrent(it); !SCIPexpriterIsEnd(it); tmp = SCIPexpriterGetNext(it) )
    {
-      cr_assert(i < 6);
-      cr_expect(tmp == exprs[targetidx[i]]);
+      TEST_ASSERT(i < 6);
+      SOFT_ASSERT(tmp == exprs[targetidx[i]]);
       ++i;
    }
 
@@ -357,8 +356,8 @@ Test(iterator, dfs_tree)
    SCIP_CALL( SCIPexpriterInit(it, expr, SCIP_EXPRITER_DFS, FALSE) );
    for( tmp = SCIPexpriterGetCurrent(it), i = 0; !SCIPexpriterIsEnd(it); tmp = SCIPexpriterGetNext(it) )
    {
-      cr_assert(i < 6);
-      cr_expect(tmp == exprs[targetidx[i]]);
+      TEST_ASSERT(i < 6);
+      SOFT_ASSERT(tmp == exprs[targetidx[i]]);
       ++i;
    }
 
@@ -367,8 +366,8 @@ Test(iterator, dfs_tree)
    SCIPexpriterSetStagesDFS(it, SCIP_EXPRITER_ENTEREXPR | SCIP_EXPRITER_LEAVEEXPR);
    for( tmp = SCIPexpriterGetCurrent(it), i = 0; !SCIPexpriterIsEnd(it); tmp = SCIPexpriterGetNext(it), ++i )
    {
-      cr_assert(i < 12);
-      cr_expect(tmp == exprs[targetidx2[i]]);
+      TEST_ASSERT(i < 12);
+      SOFT_ASSERT(tmp == exprs[targetidx2[i]]);
 
       switch( SCIPexpriterGetStageDFS(it) )
       {
@@ -380,18 +379,18 @@ Test(iterator, dfs_tree)
          }
 
          case SCIP_EXPRITER_LEAVEEXPR :
-            cr_expect(SCIPexpriterGetCurrentUserData(it).ptrval == tmp);
+            SOFT_ASSERT(SCIPexpriterGetCurrentUserData(it).ptrval == tmp);
             break;
 
          default:
-            cr_assert(0, "unexpected stage");
+            TEST_ASSERT(0, "unexpected stage");
             break;
       }
    }
 }
 
 /* test DFS iterators on an expression with common sub-expressions */
-Test(iterator, dfs_general)
+void test_iterator_dfs_general(void)
 {
    SCIP_EXPR* expr_prod;
    SCIP_EXPR* expr_sin;
@@ -416,132 +415,132 @@ Test(iterator, dfs_general)
    SCIP_CALL( SCIPappendExprChild(scip, expr_prod, expr_sin) );
 
    SCIP_CALL( SCIPexpriterInit(it, expr_prod, SCIP_EXPRITER_DFS, TRUE) );
-   cr_expect(SCIPexpriterGetCurrent(it) == expr_prod);
-   cr_expect(SCIPexpriterGetParentDFS(it) == NULL);
-   cr_expect(SCIPexpriterGetNext(it) == expr_exp);
-   cr_expect(SCIPexpriterGetParentDFS(it) == expr_prod);
-   cr_expect(SCIPexpriterGetNext(it) == expr_sum);
-   cr_expect(SCIPexpriterGetParentDFS(it) == expr_exp);
-   cr_expect(SCIPexpriterGetNext(it) == expr_x);
-   cr_expect(SCIPexpriterGetParentDFS(it) == expr_sum);
-   cr_expect(SCIPexpriterGetNext(it) == expr_y);
-   cr_expect(SCIPexpriterGetParentDFS(it) == expr_sum);
-   cr_expect(SCIPexpriterGetNext(it) == expr_sin);
-   cr_expect(SCIPexpriterGetParentDFS(it) == expr_prod);
-   cr_expect(SCIPexpriterGetNext(it) == expr_sum);
-   cr_expect(SCIPexpriterGetParentDFS(it) == expr_sin);
-   cr_expect(SCIPexpriterGetNext(it) == expr_x);
-   cr_expect(SCIPexpriterGetParentDFS(it) == expr_sum);
-   cr_expect(SCIPexpriterGetNext(it) == expr_y);
-   cr_expect(SCIPexpriterGetParentDFS(it) == expr_sum);
-   cr_expect(SCIPexpriterGetNext(it) == NULL);
-   cr_expect(SCIPexpriterIsEnd(it));
+   SOFT_ASSERT(SCIPexpriterGetCurrent(it) == expr_prod);
+   SOFT_ASSERT(SCIPexpriterGetParentDFS(it) == NULL);
+   SOFT_ASSERT(SCIPexpriterGetNext(it) == expr_exp);
+   SOFT_ASSERT(SCIPexpriterGetParentDFS(it) == expr_prod);
+   SOFT_ASSERT(SCIPexpriterGetNext(it) == expr_sum);
+   SOFT_ASSERT(SCIPexpriterGetParentDFS(it) == expr_exp);
+   SOFT_ASSERT(SCIPexpriterGetNext(it) == expr_x);
+   SOFT_ASSERT(SCIPexpriterGetParentDFS(it) == expr_sum);
+   SOFT_ASSERT(SCIPexpriterGetNext(it) == expr_y);
+   SOFT_ASSERT(SCIPexpriterGetParentDFS(it) == expr_sum);
+   SOFT_ASSERT(SCIPexpriterGetNext(it) == expr_sin);
+   SOFT_ASSERT(SCIPexpriterGetParentDFS(it) == expr_prod);
+   SOFT_ASSERT(SCIPexpriterGetNext(it) == expr_sum);
+   SOFT_ASSERT(SCIPexpriterGetParentDFS(it) == expr_sin);
+   SOFT_ASSERT(SCIPexpriterGetNext(it) == expr_x);
+   SOFT_ASSERT(SCIPexpriterGetParentDFS(it) == expr_sum);
+   SOFT_ASSERT(SCIPexpriterGetNext(it) == expr_y);
+   SOFT_ASSERT(SCIPexpriterGetParentDFS(it) == expr_sum);
+   SOFT_ASSERT(SCIPexpriterGetNext(it) == NULL);
+   SOFT_ASSERT(SCIPexpriterIsEnd(it));
 
    SCIP_CALL( SCIPexpriterInit(it, expr_prod, SCIP_EXPRITER_DFS, FALSE) );
-   cr_expect(SCIPexpriterGetCurrent(it) == expr_prod);
-   cr_expect(SCIPexpriterGetNext(it) == expr_exp);
-   cr_expect(SCIPexpriterGetNext(it) == expr_sum);
-   cr_expect(SCIPexpriterGetNext(it) == expr_x);
-   cr_expect(SCIPexpriterGetNext(it) == expr_y);
-   cr_expect(SCIPexpriterGetNext(it) == expr_sin);
-   cr_expect(SCIPexpriterGetNext(it) == NULL);
-   cr_expect(SCIPexpriterIsEnd(it));
+   SOFT_ASSERT(SCIPexpriterGetCurrent(it) == expr_prod);
+   SOFT_ASSERT(SCIPexpriterGetNext(it) == expr_exp);
+   SOFT_ASSERT(SCIPexpriterGetNext(it) == expr_sum);
+   SOFT_ASSERT(SCIPexpriterGetNext(it) == expr_x);
+   SOFT_ASSERT(SCIPexpriterGetNext(it) == expr_y);
+   SOFT_ASSERT(SCIPexpriterGetNext(it) == expr_sin);
+   SOFT_ASSERT(SCIPexpriterGetNext(it) == NULL);
+   SOFT_ASSERT(SCIPexpriterIsEnd(it));
 
    /* same again, but stop when visiting a child or visited a child only */
    SCIP_CALL( SCIPexpriterInit(it, expr_prod, SCIP_EXPRITER_DFS, FALSE) );
    SCIPexpriterSetStagesDFS(it, SCIP_EXPRITER_VISITINGCHILD | SCIP_EXPRITER_VISITEDCHILD);
 
-   cr_expect(SCIPexpriterGetCurrent(it) == expr_prod);
-   cr_expect(SCIPexpriterGetStageDFS(it) == SCIP_EXPRITER_VISITINGCHILD);
-   cr_expect(SCIPexpriterGetChildIdxDFS(it) == 0);
-   cr_expect(SCIPexpriterGetChildExprDFS(it) == expr_exp);
+   SOFT_ASSERT(SCIPexpriterGetCurrent(it) == expr_prod);
+   SOFT_ASSERT(SCIPexpriterGetStageDFS(it) == SCIP_EXPRITER_VISITINGCHILD);
+   SOFT_ASSERT(SCIPexpriterGetChildIdxDFS(it) == 0);
+   SOFT_ASSERT(SCIPexpriterGetChildExprDFS(it) == expr_exp);
 
-   cr_expect(SCIPexpriterGetNext(it) == expr_exp);
-   cr_expect(SCIPexpriterGetStageDFS(it) == SCIP_EXPRITER_VISITINGCHILD);
-   cr_expect(SCIPexpriterGetChildIdxDFS(it) == 0);
-   cr_expect(SCIPexpriterGetChildExprDFS(it) == expr_sum);
+   SOFT_ASSERT(SCIPexpriterGetNext(it) == expr_exp);
+   SOFT_ASSERT(SCIPexpriterGetStageDFS(it) == SCIP_EXPRITER_VISITINGCHILD);
+   SOFT_ASSERT(SCIPexpriterGetChildIdxDFS(it) == 0);
+   SOFT_ASSERT(SCIPexpriterGetChildExprDFS(it) == expr_sum);
 
-   cr_expect(SCIPexpriterGetNext(it) == expr_sum);
-   cr_expect(SCIPexpriterGetStageDFS(it) == SCIP_EXPRITER_VISITINGCHILD);
-   cr_expect(SCIPexpriterGetChildIdxDFS(it) == 0);
-   cr_expect(SCIPexpriterGetChildExprDFS(it) == expr_x);
+   SOFT_ASSERT(SCIPexpriterGetNext(it) == expr_sum);
+   SOFT_ASSERT(SCIPexpriterGetStageDFS(it) == SCIP_EXPRITER_VISITINGCHILD);
+   SOFT_ASSERT(SCIPexpriterGetChildIdxDFS(it) == 0);
+   SOFT_ASSERT(SCIPexpriterGetChildExprDFS(it) == expr_x);
 
    /* next will not stop at x, because it doesn't have a child */
-   cr_expect(SCIPexpriterGetNext(it) == expr_sum);
-   cr_expect(SCIPexpriterGetStageDFS(it) == SCIP_EXPRITER_VISITEDCHILD);
-   cr_expect(SCIPexpriterGetChildIdxDFS(it) == 0);
-   cr_expect(SCIPexpriterGetChildExprDFS(it) == expr_x);
+   SOFT_ASSERT(SCIPexpriterGetNext(it) == expr_sum);
+   SOFT_ASSERT(SCIPexpriterGetStageDFS(it) == SCIP_EXPRITER_VISITEDCHILD);
+   SOFT_ASSERT(SCIPexpriterGetChildIdxDFS(it) == 0);
+   SOFT_ASSERT(SCIPexpriterGetChildExprDFS(it) == expr_x);
 
-   cr_expect(SCIPexpriterGetNext(it) == expr_sum);
-   cr_expect(SCIPexpriterGetStageDFS(it) == SCIP_EXPRITER_VISITINGCHILD);
-   cr_expect(SCIPexpriterGetChildIdxDFS(it) == 1);
-   cr_expect(SCIPexpriterGetChildExprDFS(it) == expr_y);
+   SOFT_ASSERT(SCIPexpriterGetNext(it) == expr_sum);
+   SOFT_ASSERT(SCIPexpriterGetStageDFS(it) == SCIP_EXPRITER_VISITINGCHILD);
+   SOFT_ASSERT(SCIPexpriterGetChildIdxDFS(it) == 1);
+   SOFT_ASSERT(SCIPexpriterGetChildExprDFS(it) == expr_y);
 
-   cr_expect(SCIPexpriterGetNext(it) == expr_sum);
-   cr_expect(SCIPexpriterGetStageDFS(it) == SCIP_EXPRITER_VISITEDCHILD);
-   cr_expect(SCIPexpriterGetChildIdxDFS(it) == 1);
-   cr_expect(SCIPexpriterGetChildExprDFS(it) == expr_y);
+   SOFT_ASSERT(SCIPexpriterGetNext(it) == expr_sum);
+   SOFT_ASSERT(SCIPexpriterGetStageDFS(it) == SCIP_EXPRITER_VISITEDCHILD);
+   SOFT_ASSERT(SCIPexpriterGetChildIdxDFS(it) == 1);
+   SOFT_ASSERT(SCIPexpriterGetChildExprDFS(it) == expr_y);
 
-   cr_expect(SCIPexpriterGetNext(it) == expr_exp);
-   cr_expect(SCIPexpriterGetStageDFS(it) == SCIP_EXPRITER_VISITEDCHILD);
-   cr_expect(SCIPexpriterGetChildIdxDFS(it) == 0);
-   cr_expect(SCIPexpriterGetChildExprDFS(it) == expr_sum);
+   SOFT_ASSERT(SCIPexpriterGetNext(it) == expr_exp);
+   SOFT_ASSERT(SCIPexpriterGetStageDFS(it) == SCIP_EXPRITER_VISITEDCHILD);
+   SOFT_ASSERT(SCIPexpriterGetChildIdxDFS(it) == 0);
+   SOFT_ASSERT(SCIPexpriterGetChildExprDFS(it) == expr_sum);
 
-   cr_expect(SCIPexpriterGetNext(it) == expr_prod);
-   cr_expect(SCIPexpriterGetStageDFS(it) == SCIP_EXPRITER_VISITEDCHILD);
-   cr_expect(SCIPexpriterGetChildIdxDFS(it) == 0);
-   cr_expect(SCIPexpriterGetChildExprDFS(it) == expr_exp);
+   SOFT_ASSERT(SCIPexpriterGetNext(it) == expr_prod);
+   SOFT_ASSERT(SCIPexpriterGetStageDFS(it) == SCIP_EXPRITER_VISITEDCHILD);
+   SOFT_ASSERT(SCIPexpriterGetChildIdxDFS(it) == 0);
+   SOFT_ASSERT(SCIPexpriterGetChildExprDFS(it) == expr_exp);
 
-   cr_expect(SCIPexpriterGetNext(it) == expr_prod);
-   cr_expect(SCIPexpriterGetStageDFS(it) == SCIP_EXPRITER_VISITINGCHILD);
-   cr_expect(SCIPexpriterGetChildIdxDFS(it) == 1);
-   cr_expect(SCIPexpriterGetChildExprDFS(it) == expr_sin);
+   SOFT_ASSERT(SCIPexpriterGetNext(it) == expr_prod);
+   SOFT_ASSERT(SCIPexpriterGetStageDFS(it) == SCIP_EXPRITER_VISITINGCHILD);
+   SOFT_ASSERT(SCIPexpriterGetChildIdxDFS(it) == 1);
+   SOFT_ASSERT(SCIPexpriterGetChildExprDFS(it) == expr_sin);
 
    /* next will not stop at sin, since all its children have been visited already */
-   cr_expect(SCIPexpriterGetNext(it) == expr_prod);
-   cr_expect(SCIPexpriterGetStageDFS(it) == SCIP_EXPRITER_VISITEDCHILD);
-   cr_expect(SCIPexpriterGetChildIdxDFS(it) == 1);
-   cr_expect(SCIPexpriterGetChildExprDFS(it) == expr_sin);
+   SOFT_ASSERT(SCIPexpriterGetNext(it) == expr_prod);
+   SOFT_ASSERT(SCIPexpriterGetStageDFS(it) == SCIP_EXPRITER_VISITEDCHILD);
+   SOFT_ASSERT(SCIPexpriterGetChildIdxDFS(it) == 1);
+   SOFT_ASSERT(SCIPexpriterGetChildExprDFS(it) == expr_sin);
 
-   cr_expect(SCIPexpriterGetNext(it) == NULL);
-   cr_expect(SCIPexpriterIsEnd(it));
+   SOFT_ASSERT(SCIPexpriterGetNext(it) == NULL);
+   SOFT_ASSERT(SCIPexpriterIsEnd(it));
 
 
    /* now try out skip in enterexpr stage */
    SCIP_CALL( SCIPexpriterInit(it, expr_prod, SCIP_EXPRITER_DFS, FALSE) );
-   cr_expect(SCIPexpriterGetCurrent(it) == expr_prod);
-   cr_expect(SCIPexpriterGetNext(it) == expr_exp);
-   cr_expect(SCIPexpriterGetNext(it) == expr_sum);
-   cr_expect(SCIPexpriterSkipDFS(it) == expr_sin); /* if skip all children of sum (x,y), then we should be at sin next */
-   cr_expect(SCIPexpriterGetNext(it) == NULL);
-   cr_expect(SCIPexpriterIsEnd(it));
+   SOFT_ASSERT(SCIPexpriterGetCurrent(it) == expr_prod);
+   SOFT_ASSERT(SCIPexpriterGetNext(it) == expr_exp);
+   SOFT_ASSERT(SCIPexpriterGetNext(it) == expr_sum);
+   SOFT_ASSERT(SCIPexpriterSkipDFS(it) == expr_sin); /* if skip all children of sum (x,y), then we should be at sin next */
+   SOFT_ASSERT(SCIPexpriterGetNext(it) == NULL);
+   SOFT_ASSERT(SCIPexpriterIsEnd(it));
 
    /* now try out skip in enterexpr stage, allow revisits */
    SCIP_CALL( SCIPexpriterInit(it, expr_prod, SCIP_EXPRITER_DFS, TRUE) );
-   cr_expect(SCIPexpriterGetCurrent(it) == expr_prod);
-   cr_expect(SCIPexpriterGetNext(it) == expr_exp);
-   cr_expect(SCIPexpriterGetNext(it) == expr_sum);
-   cr_expect(SCIPexpriterSkipDFS(it) == expr_sin); /* if skip all children of sum (x,y), then we should be at sin next */
-   cr_expect(SCIPexpriterGetNext(it) == expr_sum);
-   cr_expect(SCIPexpriterGetNext(it) == expr_x);
-   cr_expect(SCIPexpriterGetNext(it) == expr_y);
-   cr_expect(SCIPexpriterGetNext(it) == NULL);
-   cr_expect(SCIPexpriterIsEnd(it));
+   SOFT_ASSERT(SCIPexpriterGetCurrent(it) == expr_prod);
+   SOFT_ASSERT(SCIPexpriterGetNext(it) == expr_exp);
+   SOFT_ASSERT(SCIPexpriterGetNext(it) == expr_sum);
+   SOFT_ASSERT(SCIPexpriterSkipDFS(it) == expr_sin); /* if skip all children of sum (x,y), then we should be at sin next */
+   SOFT_ASSERT(SCIPexpriterGetNext(it) == expr_sum);
+   SOFT_ASSERT(SCIPexpriterGetNext(it) == expr_x);
+   SOFT_ASSERT(SCIPexpriterGetNext(it) == expr_y);
+   SOFT_ASSERT(SCIPexpriterGetNext(it) == NULL);
+   SOFT_ASSERT(SCIPexpriterIsEnd(it));
 
    /* now try out skip in visitingchild stage */
    SCIP_CALL( SCIPexpriterInit(it, expr_prod, SCIP_EXPRITER_DFS, FALSE) );
    SCIPexpriterSetStagesDFS(it, SCIP_EXPRITER_VISITINGCHILD);
-   cr_expect(SCIPexpriterGetCurrent(it) == expr_prod);
-   cr_expect(SCIPexpriterGetChildExprDFS(it) == expr_exp);
-   cr_expect(SCIPexpriterGetNext(it) == expr_exp);
-   cr_expect(SCIPexpriterGetNext(it) == expr_sum);
-   cr_expect(SCIPexpriterGetChildExprDFS(it) == expr_x);
-   cr_expect(SCIPexpriterSkipDFS(it) == expr_sum);  /* we skip over x and so should be sum now, looking at the next child */
-   cr_expect(SCIPexpriterGetChildExprDFS(it) == expr_y);
-   cr_expect(SCIPexpriterGetNext(it) == expr_prod);
-   cr_expect(SCIPexpriterGetChildExprDFS(it) == expr_sin);
-   cr_expect(SCIPexpriterGetNext(it) == NULL);  /* sum (as child of sin) already visited, so we are done */
-   cr_expect(SCIPexpriterIsEnd(it));
+   SOFT_ASSERT(SCIPexpriterGetCurrent(it) == expr_prod);
+   SOFT_ASSERT(SCIPexpriterGetChildExprDFS(it) == expr_exp);
+   SOFT_ASSERT(SCIPexpriterGetNext(it) == expr_exp);
+   SOFT_ASSERT(SCIPexpriterGetNext(it) == expr_sum);
+   SOFT_ASSERT(SCIPexpriterGetChildExprDFS(it) == expr_x);
+   SOFT_ASSERT(SCIPexpriterSkipDFS(it) == expr_sum);  /* we skip over x and so should be sum now, looking at the next child */
+   SOFT_ASSERT(SCIPexpriterGetChildExprDFS(it) == expr_y);
+   SOFT_ASSERT(SCIPexpriterGetNext(it) == expr_prod);
+   SOFT_ASSERT(SCIPexpriterGetChildExprDFS(it) == expr_sin);
+   SOFT_ASSERT(SCIPexpriterGetNext(it) == NULL);  /* sum (as child of sin) already visited, so we are done */
+   SOFT_ASSERT(SCIPexpriterIsEnd(it));
 
 
    /* release expression */
@@ -553,7 +552,7 @@ Test(iterator, dfs_general)
    SCIP_CALL( SCIPreleaseExpr(scip, &expr_x) );
 }
 
-Test(iterator, walk_in_walk)
+void test_iterator_walk_in_walk(void)
 {
    SCIP_EXPR* expr_x;
    SCIP_EXPR* expr_y;
@@ -587,7 +586,7 @@ Test(iterator, walk_in_walk)
       ++nnodes;
       SCIPexpriterGetNext(it);
    }
-   cr_assert(nnodes == 6);
+   TEST_ASSERT(nnodes == 6);
 
    /* returns sum_{expr in expr_sum} nchild(expr) by repeatedly counting */
    nnodes = 0;
@@ -604,7 +603,7 @@ Test(iterator, walk_in_walk)
       }
       SCIPexpriterGetNext(it);
    }
-   cr_assert(nnodes == 14);
+   TEST_ASSERT(nnodes == 14);
    SCIPfreeExpriter(&it2);
 
    SCIP_CALL( SCIPreleaseExpr(scip, &expr_x) );
@@ -616,7 +615,7 @@ Test(iterator, walk_in_walk)
 
 #include "iterator_walk.sol"
 
-Test(iterator, print)
+void test_iterator_print(void)
 {
    SCIP_EXPR* expr_x;
    SCIP_EXPR* expr_y;
@@ -640,7 +639,7 @@ Test(iterator, print)
    SCIP_CALL( SCIPcreateExprSum(scip, &expr_sum, 1, &expr_x, NULL, 0, NULL, NULL) );
    SCIP_CALL( SCIPappendExprSumExpr(scip, expr_sum, expr_xy5, 1.0) );
 
-   cr_redirect_stdout();
+   TEST_CAPTURE_STDOUT();
 
    SCIP_CALL( SCIPexpriterInit(it, expr_sum, SCIP_EXPRITER_DFS, TRUE) );
    SCIPexpriterSetStagesDFS(it, SCIP_EXPRITER_ALLSTAGES);
@@ -651,13 +650,33 @@ Test(iterator, print)
          SCIPexpriterGetStageDFS(it) == SCIP_EXPRITER_VISITINGCHILD || SCIPexpriterGetStageDFS(it) == SCIP_EXPRITER_VISITEDCHILD ? SCIPexpriterGetChildIdxDFS(it) : -1,
          SCIPexprhdlrGetName(SCIPexprGetHdlr(expr)));
 
-   fflush(stdout);
-
-   cr_assert_stdout_eq_str(sol);
+   TEST_ASSERT_STDOUT_EQUAL_STRING(sol);
 
    SCIP_CALL( SCIPreleaseExpr(scip, &expr_x) );
    SCIP_CALL( SCIPreleaseExpr(scip, &expr_y) );
    SCIP_CALL( SCIPreleaseExpr(scip, &expr_5) );
    SCIP_CALL( SCIPreleaseExpr(scip, &expr_xy5) );
    SCIP_CALL( SCIPreleaseExpr(scip, &expr_sum) );
+}
+
+void setUp(void) { setup(); }
+
+void tearDown(void) { teardown(); }
+
+int main(void)
+{
+   UNITY_BEGIN();
+   RUN_TEST(test_iterator_bfs_single
+);
+   RUN_TEST(test_iterator_bfs_tree);
+   RUN_TEST(test_iterator_bfs_general);
+   RUN_TEST(test_iterator_rtopological_single);
+   RUN_TEST(test_iterator_rtopological_tree);
+   RUN_TEST(test_iterator_rtopological_general);
+   RUN_TEST(test_iterator_dfs_single);
+   RUN_TEST(test_iterator_dfs_tree);
+   RUN_TEST(test_iterator_dfs_general);
+   RUN_TEST(test_iterator_walk_in_walk);
+   RUN_TEST(test_iterator_print);
+   return UNITY_END();
 }

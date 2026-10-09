@@ -94,15 +94,25 @@ void teardown(void)
    SCIP_CALL( SCIPfree(&scip) );
 }
 
-TestSuite(arrays, .init = setup, .fini = teardown);
+void setUp(void)
+{
+   setup();
+}
 
-Test(arrays, setup_and_teardown, .description = "test that setup and teardown work correctly")
+void tearDown(void)
+{
+   teardown();
+}
+
+/** @brief test that setup and teardown work correctly */
+void test_arrays_setup_and_teardown(void)
 {
 }
 
 /* dynamic real array tests */
 
-Test(arrays, test_insertion_real, .description = "test that the dynamic real array stores entries correctly.")
+/** @brief test that the dynamic real array stores entries correctly. */
+void test_arrays_insertion_real(void)
 {
    int i;
 
@@ -110,10 +120,11 @@ Test(arrays, test_insertion_real, .description = "test that the dynamic real arr
       SCIP_CALL( SCIPsetRealarrayVal(scip, realarray, i, myrealarray[i]) );
 
    for( i = 0; i < arraylen; i++ )
-      cr_assert_eq(myrealarray[i], SCIPgetRealarrayVal(scip, realarray, i));
+      TEST_ASSERT_EQUAL(myrealarray[i], SCIPgetRealarrayVal(scip, realarray, i));
 }
 
-Test(arrays, test_increment_real, .description = "test that the dynamic real array increments entries correctly")
+/** @brief test that the dynamic real array increments entries correctly */
+void test_arrays_increment_real(void)
 {
    int i;
 
@@ -121,10 +132,11 @@ Test(arrays, test_increment_real, .description = "test that the dynamic real arr
       SCIP_CALL( SCIPincRealarrayVal(scip, realarray, i, myrealarray[i]) );
 
    for( i = 0; i < arraylen; i++ )
-      cr_assert_eq(myrealarray[i], SCIPgetRealarrayVal(scip, realarray, i));
+      TEST_ASSERT_EQUAL(myrealarray[i], SCIPgetRealarrayVal(scip, realarray, i));
 }
 
-Test(arrays, test_clear_real, .description = "test that the dynamic real array clears entries correctly")
+/** @brief test that the dynamic real array clears entries correctly */
+void test_arrays_clear_real(void)
 {
    int i;
 
@@ -134,10 +146,11 @@ Test(arrays, test_clear_real, .description = "test that the dynamic real array c
    SCIP_CALL( SCIPclearRealarray(scip, realarray) );
 
    for( i = 0; i < arraylen; i++ )
-      cr_assert_eq(0.0, SCIPgetRealarrayVal(scip, realarray, i));
+      TEST_ASSERT_EQUAL(0.0, SCIPgetRealarrayVal(scip, realarray, i));
 }
 
-Test(arrays, test_indices_real, .description = "test that the dynamic real array stores max and min indices correctly")
+/** @brief test that the dynamic real array stores max and min indices correctly */
+void test_arrays_indices_real(void)
 {
    int i;
 
@@ -146,13 +159,14 @@ Test(arrays, test_indices_real, .description = "test that the dynamic real array
    for( i = 0; i < arraylen; i++ )
       SCIP_CALL( SCIPsetRealarrayVal(scip, realarray, i, myrealarray[i]) );
 
-   cr_assert_eq(0, SCIPgetRealarrayMinIdx(scip, realarray));
-   cr_assert_eq(arraylen - 1, SCIPgetRealarrayMaxIdx(scip, realarray));
+   TEST_ASSERT_EQUAL(0, SCIPgetRealarrayMinIdx(scip, realarray));
+   TEST_ASSERT_EQUAL(arraylen - 1, SCIPgetRealarrayMaxIdx(scip, realarray));
 }
 
 /* dynamic integer array tests */
 
-Test(arrays, test_insertion_int, .description = "test that the dynamic integer array stores entries correctly.")
+/** @brief test that the dynamic integer array stores entries correctly. */
+void test_arrays_insertion_int(void)
 {
    int i;
 
@@ -160,10 +174,11 @@ Test(arrays, test_insertion_int, .description = "test that the dynamic integer a
       SCIP_CALL( SCIPsetIntarrayVal(scip, intarray, i, myintarray[i]) );
 
    for( i = 0; i < arraylen; i++ )
-      cr_assert_eq(myintarray[i], SCIPgetIntarrayVal(scip, intarray, i));
+      TEST_ASSERT_EQUAL(myintarray[i], SCIPgetIntarrayVal(scip, intarray, i));
 }
 
-Test(arrays, test_increment_int, .description = "test that the dynamic integer array increments entries correctly")
+/** @brief test that the dynamic integer array increments entries correctly */
+void test_arrays_increment_int(void)
 {
    int i;
 
@@ -171,10 +186,11 @@ Test(arrays, test_increment_int, .description = "test that the dynamic integer a
       SCIP_CALL( SCIPincIntarrayVal(scip, intarray, i, myintarray[i]) );
 
    for( i = 0; i < arraylen; i++ )
-      cr_assert_eq(myintarray[i], SCIPgetIntarrayVal(scip, intarray, i));
+      TEST_ASSERT_EQUAL(myintarray[i], SCIPgetIntarrayVal(scip, intarray, i));
 }
 
-Test(arrays, test_clear_int, .description = "test that the dynamic integer array clears entries correctly")
+/** @brief test that the dynamic integer array clears entries correctly */
+void test_arrays_clear_int(void)
 {
    int i;
 
@@ -184,10 +200,11 @@ Test(arrays, test_clear_int, .description = "test that the dynamic integer array
    SCIP_CALL( SCIPclearIntarray(scip, intarray) );
 
    for( i = 0; i < arraylen; i++ )
-      cr_assert_eq(0, SCIPgetIntarrayVal(scip, intarray, i));
+      TEST_ASSERT_EQUAL(0, SCIPgetIntarrayVal(scip, intarray, i));
 }
 
-Test(arrays, test_indices_int, .description = "test that the dynamic integer array stores max and min indices correctly")
+/** @brief test that the dynamic integer array stores max and min indices correctly */
+void test_arrays_indices_int(void)
 {
    int i;
 
@@ -196,13 +213,14 @@ Test(arrays, test_indices_int, .description = "test that the dynamic integer arr
    for( i = 0; i < arraylen; i++ )
       SCIP_CALL( SCIPsetIntarrayVal(scip, intarray, i, myintarray[i]) );
 
-   cr_assert_eq(0, SCIPgetIntarrayMinIdx(scip, intarray));
-   cr_assert_eq(arraylen - 1, SCIPgetIntarrayMaxIdx(scip, intarray));
+   TEST_ASSERT_EQUAL(0, SCIPgetIntarrayMinIdx(scip, intarray));
+   TEST_ASSERT_EQUAL(arraylen - 1, SCIPgetIntarrayMaxIdx(scip, intarray));
 }
 
 /* dynamic boolean array tests */
 
-Test(arrays, test_insertion_bool, .description = "test that the dynamic boolean array stores entries correctly.")
+/** @brief test that the dynamic boolean array stores entries correctly. */
+void test_arrays_insertion_bool(void)
 {
    int i;
 
@@ -210,10 +228,11 @@ Test(arrays, test_insertion_bool, .description = "test that the dynamic boolean 
       SCIP_CALL( SCIPsetBoolarrayVal(scip, boolarray, i, myboolarray[i]) );
 
    for( i = 0; i < arraylen; i++ )
-      cr_assert_eq(myboolarray[i], SCIPgetBoolarrayVal(scip, boolarray, i));
+      TEST_ASSERT_EQUAL(myboolarray[i], SCIPgetBoolarrayVal(scip, boolarray, i));
 }
 
-Test(arrays, test_clear_bool, .description = "test that the dynamic boolean array clears entries correctly")
+/** @brief test that the dynamic boolean array clears entries correctly */
+void test_arrays_clear_bool(void)
 {
    int i;
 
@@ -223,10 +242,11 @@ Test(arrays, test_clear_bool, .description = "test that the dynamic boolean arra
    SCIP_CALL( SCIPclearBoolarray(scip, boolarray) );
 
    for( i = 0; i < arraylen; i++ )
-      cr_assert_eq(FALSE, SCIPgetBoolarrayVal(scip, boolarray, i));
+      TEST_ASSERT_EQUAL(FALSE, SCIPgetBoolarrayVal(scip, boolarray, i));
 }
 
-Test(arrays, test_indices_bool, .description = "test that the dynamic boolean array stores max and min indices correctly")
+/** @brief test that the dynamic boolean array stores max and min indices correctly */
+void test_arrays_indices_bool(void)
 {
    int i;
 
@@ -235,13 +255,14 @@ Test(arrays, test_indices_bool, .description = "test that the dynamic boolean ar
    for( i = 0; i < arraylen; i++ )
       SCIP_CALL( SCIPsetBoolarrayVal(scip, boolarray, i, myboolarray[i]) );
 
-   cr_assert_eq(0, SCIPgetBoolarrayMinIdx(scip, boolarray));
-   cr_assert_eq(arraylen - 1, SCIPgetBoolarrayMaxIdx(scip, boolarray));
+   TEST_ASSERT_EQUAL(0, SCIPgetBoolarrayMinIdx(scip, boolarray));
+   TEST_ASSERT_EQUAL(arraylen - 1, SCIPgetBoolarrayMaxIdx(scip, boolarray));
 }
 
-/* dynamic boolean array tests */
+/* dynamic pointer array tests */
 
-Test(arrays, test_insertion_ptr, .description = "test that the dynamic pointer array stores entries correctly.")
+/** @brief test that the dynamic pointer array stores entries correctly. */
+void test_arrays_insertion_ptr(void)
 {
    int i;
 
@@ -249,10 +270,11 @@ Test(arrays, test_insertion_ptr, .description = "test that the dynamic pointer a
       SCIP_CALL( SCIPsetPtrarrayVal(scip, ptrarray, i, myptrarray[i]) );
 
    for( i = 0; i < arraylen; i++ )
-      cr_assert_eq(myptrarray[i], SCIPgetPtrarrayVal(scip, ptrarray, i));
+      TEST_ASSERT_EQUAL(myptrarray[i], SCIPgetPtrarrayVal(scip, ptrarray, i));
 }
 
-Test(arrays, test_clear_ptr, .description = "test that the dynamic pointer array clears entries correctly")
+/** @brief test that the dynamic pointer array clears entries correctly */
+void test_arrays_clear_ptr(void)
 {
    int i;
 
@@ -262,10 +284,11 @@ Test(arrays, test_clear_ptr, .description = "test that the dynamic pointer array
    SCIP_CALL( SCIPclearPtrarray(scip, ptrarray) );
 
    for( i = 0; i < arraylen; i++ )
-      cr_assert_eq(NULL, SCIPgetPtrarrayVal(scip, ptrarray, i));
+      TEST_ASSERT_EQUAL(NULL, SCIPgetPtrarrayVal(scip, ptrarray, i));
 }
 
-Test(arrays, test_indices_ptr, .description = "test that the dynamic pointer array stores max and min indices correctly")
+/** @brief test that the dynamic pointer array stores max and min indices correctly */
+void test_arrays_indices_ptr(void)
 {
    int i;
 
@@ -274,6 +297,27 @@ Test(arrays, test_indices_ptr, .description = "test that the dynamic pointer arr
    for( i = 0; i < arraylen; i++ )
       SCIP_CALL( SCIPsetPtrarrayVal(scip, ptrarray, i, myptrarray[i]) );
 
-   cr_assert_eq(0, SCIPgetPtrarrayMinIdx(scip, ptrarray));
-   cr_assert_eq(arraylen - 1, SCIPgetPtrarrayMaxIdx(scip, ptrarray));
+   TEST_ASSERT_EQUAL(0, SCIPgetPtrarrayMinIdx(scip, ptrarray));
+   TEST_ASSERT_EQUAL(arraylen - 1, SCIPgetPtrarrayMaxIdx(scip, ptrarray));
+}
+
+int main(void)
+{
+   UNITY_BEGIN();
+   RUN_TEST(test_arrays_setup_and_teardown);
+   RUN_TEST(test_arrays_insertion_real);
+   RUN_TEST(test_arrays_increment_real);
+   RUN_TEST(test_arrays_clear_real);
+   RUN_TEST(test_arrays_indices_real);
+   RUN_TEST(test_arrays_insertion_int);
+   RUN_TEST(test_arrays_increment_int);
+   RUN_TEST(test_arrays_clear_int);
+   RUN_TEST(test_arrays_indices_int);
+   RUN_TEST(test_arrays_insertion_bool);
+   RUN_TEST(test_arrays_clear_bool);
+   RUN_TEST(test_arrays_indices_bool);
+   RUN_TEST(test_arrays_insertion_ptr);
+   RUN_TEST(test_arrays_clear_ptr);
+   RUN_TEST(test_arrays_indices_ptr);
+   return UNITY_END();
 }

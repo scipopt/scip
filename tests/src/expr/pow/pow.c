@@ -69,52 +69,59 @@ void teardown(void)
    SCIP_CALL( SCIPreleaseVar(scip, &y) );
    SCIP_CALL( SCIPfree(&scip) );
 
-   cr_assert_eq(BMSgetMemoryUsed(), 0, "There is a memory leak!!");
+   TEST_ASSERT_EQUAL(BMSgetMemoryUsed(), 0, "There is a memory leak!!");
 }
 
 /* test suite */
-TestSuite(pow, .init = setup, .fini = teardown);
 
 /*
  * TESTS
  */
 
-Test(pow, creation, .description = "Tests the expression creation.")
+/** @brief Tests the expression creation. */
+void test_pow_creation(void)
 {
    /* TODO */
 }
 
-Test(pow, print, .description = "Tests the expression printing function.")
+/** @brief Tests the expression printing function. */
+void test_pow_print(void)
 {
    /* TODO */
 }
 
-Test(pow, parse, .description = "Tests the expression parsing.")
+/** @brief Tests the expression parsing. */
+void test_pow_parse(void)
 {
    /* TODO */
 }
 
-Test(pow, eval, .description = "Tests the expression evaluation.")
+/** @brief Tests the expression evaluation. */
+void test_pow_eval(void)
 {
    /* TODO */
 }
 
-Test(pow, inteval, .description = "Tests the expression interval evaluation.")
+/** @brief Tests the expression interval evaluation. */
+void test_pow_inteval(void)
 {
    /* TODO */
 }
 
-Test(pow, derivative, .description = "Tests the expression derivation.")
+/** @brief Tests the expression derivation. */
+void test_pow_derivative(void)
 {
    /* TODO */
 }
 
-Test(pow, hash, .description = "Tests the expression hash.")
+/** @brief Tests the expression hash. */
+void test_pow_hash(void)
 {
    /* TODO */
 }
 
-Test(pow, simplify, .description = "Tests the expression simplification.")
+/** @brief Tests the expression simplification. */
+void test_pow_simplify(void)
 {
    SCIP_EXPR* expr;
    SCIP_EXPR* simplified;
@@ -124,11 +131,11 @@ Test(pow, simplify, .description = "Tests the expression simplification.")
    /* binary variable to positive exponent */
    SCIP_CALL( SCIPparseExpr(scip, &expr, "<x>^17.43", NULL, NULL, NULL) );
    SCIP_CALL( SCIPsimplifyExpr(scip, expr, &simplified, &changed, &infeasible, NULL, NULL) );
-   cr_expect(changed);
-   cr_expect_not(infeasible);
-   cr_expect(SCIPisExprPower(scip, expr));
-   cr_expect(SCIPisExprVar(scip, simplified));
-   cr_expect_eq(x, SCIPgetVarExprVar(simplified));
+   SOFT_ASSERT(changed);
+   SOFT_ASSERT_NOT(infeasible);
+   SOFT_ASSERT(SCIPisExprPower(scip, expr));
+   SOFT_ASSERT(SCIPisExprVar(scip, simplified));
+   SOFT_ASSERT_EQUAL(x, SCIPgetVarExprVar(simplified));
    SCIP_CALL( SCIPreleaseExpr(scip, &expr) );
    SCIP_CALL( SCIPreleaseExpr(scip, &simplified) );
 
@@ -136,10 +143,28 @@ Test(pow, simplify, .description = "Tests the expression simplification.")
    changed = FALSE;
    SCIP_CALL( SCIPparseExpr(scip, &expr, "<x>^(-1.43)", NULL, NULL, NULL) );
    SCIP_CALL( SCIPsimplifyExpr(scip, expr, &simplified, &changed, &infeasible, NULL, NULL) );
-   cr_expect_not(changed);
-   cr_expect_not(infeasible);
-   cr_expect(SCIPisExprPower(scip, expr));
-   cr_expect(SCIPisExprPower(scip, simplified));
+   SOFT_ASSERT_NOT(changed);
+   SOFT_ASSERT_NOT(infeasible);
+   SOFT_ASSERT(SCIPisExprPower(scip, expr));
+   SOFT_ASSERT(SCIPisExprPower(scip, simplified));
    SCIP_CALL( SCIPreleaseExpr(scip, &expr) );
    SCIP_CALL( SCIPreleaseExpr(scip, &simplified) );
+}
+
+void setUp(void) { setup(); }
+
+void tearDown(void) { teardown(); }
+
+int main(void)
+{
+   UNITY_BEGIN();
+   RUN_TEST(test_pow_creation);
+   RUN_TEST(test_pow_print);
+   RUN_TEST(test_pow_parse);
+   RUN_TEST(test_pow_eval);
+   RUN_TEST(test_pow_inteval);
+   RUN_TEST(test_pow_derivative);
+   RUN_TEST(test_pow_hash);
+   RUN_TEST(test_pow_simplify);
+   return UNITY_END();
 }

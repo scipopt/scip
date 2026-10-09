@@ -109,7 +109,7 @@ void setup(void)
    SCIP_CALL( SCIPreleaseVar(scip, &x4o) );
    SCIP_CALL( SCIPreleaseVar(scip, &b1o) );
    SCIP_CALL( SCIPreleaseVar(scip, &b2o) );
-   cr_assert(x1 != NULL);
+   TEST_ASSERT(x1 != NULL);
 }
 
 /* releases variables, frees scip */
@@ -118,7 +118,7 @@ void teardown(void)
 {
    SCIP_CALL( SCIPfree(&scip) );
 
-   cr_assert_eq(BMSgetMemoryUsed(), 0, "Memory is leaking!!");
+   TEST_ASSERT_EQUAL(BMSgetMemoryUsed(), 0, "Memory is leaking!!");
 }
 
 static
@@ -130,10 +130,10 @@ void checkCut(SCIP_ROW* cut, SCIP_VAR** vars, SCIP_Real* vals, int nvars, SCIP_R
    int i;
    int j;
 
-   cr_assert(cut != NULL);
-   cr_expect_eq(SCIProwGetNNonz(cut), nvars, "\nExpected %d nonz, got %d", nvars, SCIProwGetNNonz(cut));
-   cr_expect(SCIPisEQ(scip, SCIProwGetLhs(cut), lhs));
-   cr_expect(SCIPisEQ(scip, SCIProwGetRhs(cut), rhs));
+   TEST_ASSERT(cut != NULL);
+   SOFT_ASSERT_EQUAL(SCIProwGetNNonz(cut), nvars, "\nExpected %d nonz, got %d", nvars, SCIProwGetNNonz(cut));
+   SOFT_ASSERT(SCIPisEQ(scip, SCIProwGetLhs(cut), lhs));
+   SOFT_ASSERT(SCIPisEQ(scip, SCIProwGetRhs(cut), rhs));
 
    for( i = 0; i < SCIProwGetNNonz(cut); ++i )
    {
@@ -145,17 +145,18 @@ void checkCut(SCIP_ROW* cut, SCIP_VAR** vars, SCIP_Real* vals, int nvars, SCIP_R
       {
          if( var == vars[j] )
          {
-            cr_expect(SCIPisEQ(scip, coef, vals[j]));
+            SOFT_ASSERT(SCIPisEQ(scip, coef, vals[j]));
             found = TRUE;
          }
       }
 
       if( !found )
-         cr_expect(FALSE, "found an unknown variable");
+         SOFT_ASSERT(FALSE, "found an unknown variable");
    }
 }
 
-Test(separation, sepadata, .init = setup, .fini = teardown, .description = "test creation and freeing of separator data")
+/** @brief test creation and freeing of separator data */
+void test_separation_sepadata(void)
 {
    SCIP_CONS* cons;
    SCIP_Bool success;
@@ -165,59 +166,59 @@ Test(separation, sepadata, .init = setup, .fini = teardown, .description = "test
 
    SCIP_CALL( SCIPallocBuffer(scip, &sepadata) );
    sepadata->conshdlr = conshdlr;
-   cr_assert(sepadata->conshdlr != NULL);
+   TEST_ASSERT(sepadata->conshdlr != NULL);
    sepadata->maxusedvars = DEFAULT_MAXUSEDVARS;
 
    /* create a cons with some bilinear expressions */
    SCIP_CALL( SCIPparseCons(scip, &cons, (char*)"[nonlinear] <test>: <t_x1>*<t_x2> + <t_x1>*<t_x3> + <t_x4>*<t_x2> + <t_x4>^2 <= 1",
                  TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, &success) );
-   cr_assert(success);
+   TEST_ASSERT(success);
 
    SCIP_CALL( SCIPaddCons(scip, cons) ); /* adds locks */
 
    /* creates auxvars and creates disaggregation variables and row */
    SCIP_CALL( SCIPconstructLP(scip, &infeasible) );
-   cr_assert_not(infeasible);
+   TEST_ASSERT_NOT(infeasible);
 
    SCIP_CALL( SCIPcollectBilinTermsNonlinear(scip, conshdlr, &cons, 1) );
 
    SCIP_CALL( createSepaData(scip, sepadata) );
 
-   cr_expect_eq(sepadata->nbilinvars, 4, "\nExpected 4 bilinear vars, got %d", sepadata->nbilinvars);
+   SOFT_ASSERT_EQUAL(sepadata->nbilinvars, 4, "\nExpected 4 bilinear vars, got %d", sepadata->nbilinvars);
 
-   cr_expect_eq(sepadata->varssorted[0], x4, "\nExpected varssorted[0] to be x4, got %s", SCIPvarGetName(sepadata->varssorted[0]));
-   cr_expect_eq(sepadata->varssorted[1], x1, "\nExpected varssorted[1] to be x1, got %s", SCIPvarGetName(sepadata->varssorted[1]));
-   cr_expect_eq(sepadata->varssorted[2], x2, "\nExpected varssorted[2] to be x2, got %s", SCIPvarGetName(sepadata->varssorted[2]));
-   cr_expect_eq(sepadata->varssorted[3], x3, "\nExpected varssorted[3] to be x3, got %s", SCIPvarGetName(sepadata->varssorted[3]));
+   SOFT_ASSERT_EQUAL(sepadata->varssorted[0], x4, "\nExpected varssorted[0] to be x4, got %s", SCIPvarGetName(sepadata->varssorted[0]));
+   SOFT_ASSERT_EQUAL(sepadata->varssorted[1], x1, "\nExpected varssorted[1] to be x1, got %s", SCIPvarGetName(sepadata->varssorted[1]));
+   SOFT_ASSERT_EQUAL(sepadata->varssorted[2], x2, "\nExpected varssorted[2] to be x2, got %s", SCIPvarGetName(sepadata->varssorted[2]));
+   SOFT_ASSERT_EQUAL(sepadata->varssorted[3], x3, "\nExpected varssorted[3] to be x3, got %s", SCIPvarGetName(sepadata->varssorted[3]));
 
    adjvardata = (ADJACENTVARDATA*) SCIPhashmapGetImage(sepadata->bilinvardatamap, (void*)(size_t) SCIPvarGetIndex(x1));
-   cr_assert(adjvardata != NULL);
-   cr_expect_eq(adjvardata->nadjacentvars, 2, "\nExpected 2 bilinear vars for x1, got %d", adjvardata->nadjacentvars);
-   cr_expect_eq(adjvardata->adjacentvars[0], x3, "\nBilinear var 0 for x1 should be x3, got %s",
+   TEST_ASSERT(adjvardata != NULL);
+   SOFT_ASSERT_EQUAL(adjvardata->nadjacentvars, 2, "\nExpected 2 bilinear vars for x1, got %d", adjvardata->nadjacentvars);
+   SOFT_ASSERT_EQUAL(adjvardata->adjacentvars[0], x3, "\nBilinear var 0 for x1 should be x3, got %s",
          SCIPvarGetName(adjvardata->adjacentvars[0]));
-   cr_expect_eq(adjvardata->adjacentvars[1], x2, "\nBilinear var 1 for x1 should be x2, got %s",
+   SOFT_ASSERT_EQUAL(adjvardata->adjacentvars[1], x2, "\nBilinear var 1 for x1 should be x2, got %s",
          SCIPvarGetName(adjvardata->adjacentvars[1]));
 
    adjvardata = (ADJACENTVARDATA*) SCIPhashmapGetImage(sepadata->bilinvardatamap, (void*)(size_t) SCIPvarGetIndex(x2));
-   cr_assert(adjvardata != NULL);
-   cr_expect_eq(adjvardata->nadjacentvars, 2, "\nExpected 2 bilinear vars for x2, got %d", adjvardata->nadjacentvars);
-   cr_expect_eq(adjvardata->adjacentvars[0], x4, "\nBilinear var 0 for x2 should be x4, got %s",
+   TEST_ASSERT(adjvardata != NULL);
+   SOFT_ASSERT_EQUAL(adjvardata->nadjacentvars, 2, "\nExpected 2 bilinear vars for x2, got %d", adjvardata->nadjacentvars);
+   SOFT_ASSERT_EQUAL(adjvardata->adjacentvars[0], x4, "\nBilinear var 0 for x2 should be x4, got %s",
          SCIPvarGetName(adjvardata->adjacentvars[0]));
-   cr_expect_eq(adjvardata->adjacentvars[1], x1, "\nBilinear var 1 for x2 should be x1, got %s",
+   SOFT_ASSERT_EQUAL(adjvardata->adjacentvars[1], x1, "\nBilinear var 1 for x2 should be x1, got %s",
          SCIPvarGetName(adjvardata->adjacentvars[1]));
 
    adjvardata = (ADJACENTVARDATA*) SCIPhashmapGetImage(sepadata->bilinvardatamap, (void*)(size_t) SCIPvarGetIndex(x3));
-   cr_assert(adjvardata != NULL);
-   cr_expect_eq(adjvardata->nadjacentvars, 1, "\nExpected 1 bilinear vars for x3, got %d", adjvardata->nadjacentvars);
-   cr_expect_eq(adjvardata->adjacentvars[0], x1, "\nBilinear var 0 for x3 should be x1, got %s",
+   TEST_ASSERT(adjvardata != NULL);
+   SOFT_ASSERT_EQUAL(adjvardata->nadjacentvars, 1, "\nExpected 1 bilinear vars for x3, got %d", adjvardata->nadjacentvars);
+   SOFT_ASSERT_EQUAL(adjvardata->adjacentvars[0], x1, "\nBilinear var 0 for x3 should be x1, got %s",
          SCIPvarGetName(adjvardata->adjacentvars[0]));
 
    adjvardata = (ADJACENTVARDATA*) SCIPhashmapGetImage(sepadata->bilinvardatamap, (void*)(size_t) SCIPvarGetIndex(x4));
-   cr_assert(adjvardata != NULL);
-   cr_expect_eq(adjvardata->nadjacentvars, 2, "\nExpected 2 bilinear vars for x4, got %d", adjvardata->nadjacentvars);
-   cr_expect_eq(adjvardata->adjacentvars[0], x4, "\nBilinear var 0 for x4 should be x4, got %s",
+   TEST_ASSERT(adjvardata != NULL);
+   SOFT_ASSERT_EQUAL(adjvardata->nadjacentvars, 2, "\nExpected 2 bilinear vars for x4, got %d", adjvardata->nadjacentvars);
+   SOFT_ASSERT_EQUAL(adjvardata->adjacentvars[0], x4, "\nBilinear var 0 for x4 should be x4, got %s",
          SCIPvarGetName(adjvardata->adjacentvars[0]));
-   cr_expect_eq(adjvardata->adjacentvars[1], x2, "\nBilinear var 1 for x4 should be x2, got %s",
+   SOFT_ASSERT_EQUAL(adjvardata->adjacentvars[1], x2, "\nBilinear var 1 for x4 should be x2, got %s",
          SCIPvarGetName(adjvardata->adjacentvars[1]));
 
    SCIP_CALL( freeSepaData(scip, sepadata) );
@@ -229,7 +230,8 @@ Test(separation, sepadata, .init = setup, .fini = teardown, .description = "test
    SCIP_CALL( SCIPclearCuts(scip) );
 }
 
-Test(separation, projection, .init = setup, .fini = teardown, .description = "test projection of problem")
+/** @brief test projection of problem */
+void test_separation_projection(void)
 {
    SCIP_ROW** rows;
    SCIP_SOL* sol;
@@ -247,7 +249,7 @@ Test(separation, projection, .init = setup, .fini = teardown, .description = "te
    SCIP_CALL( SCIPaddVarToRow(scip, rows[0], x1, 4.0) );
    SCIP_CALL( SCIPaddVarToRow(scip, rows[0], x2, -7.0) );
    SCIP_CALL( SCIPaddVarToRow(scip, rows[0], x3, 1.0) );
-   cr_assert(SCIProwGetNNonz(rows[0]) == 3);
+   TEST_ASSERT(SCIProwGetNNonz(rows[0]) == 3);
 
    /* specify solution (only x3 is not at bound) */
    SCIP_CALL( SCIPcreateSol(scip, &sol, NULL) );
@@ -261,12 +263,12 @@ Test(separation, projection, .init = setup, .fini = teardown, .description = "te
    /* check results */
 
    /* the projected cut should be: -72 <= x3 <= -57 */
-   cr_assert_eq(projrows[0].nnonz, 1, "\nExpected 1 non-zero in the projected row, got %d", projrows[0].nnonz);
-   cr_assert_eq(projrows[0].coefs[0], 1.0, "\nExpected coef 0 in projected row 0 to be 1.0, got %f", projrows[0].coefs[0]);
-   cr_assert_eq(projrows[0].vars[0], x3, "\nExpected var 0 in projected row 0 to be x3, got %s", SCIPvarGetName(projrows[0].vars[0]));
-   cr_assert_eq(projrows[0].cst, 0.0, "\nExpected the const in projected row to be 0.0, got %f", projrows[0].cst);
-   cr_assert_eq(projrows[0].lhs, -72.0, "\nExpected the lhs in projected row to be -72.0, got %f", projrows[0].lhs);
-   cr_assert_eq(projrows[0].rhs, -57.0, "\nExpected the rhs in projected row to be -57.0, got %f", projrows[0].rhs);
+   TEST_ASSERT_EQUAL(projrows[0].nnonz, 1, "\nExpected 1 non-zero in the projected row, got %d", projrows[0].nnonz);
+   TEST_ASSERT_EQUAL(projrows[0].coefs[0], 1.0, "\nExpected coef 0 in projected row 0 to be 1.0, got %f", projrows[0].coefs[0]);
+   TEST_ASSERT_EQUAL(projrows[0].vars[0], x3, "\nExpected var 0 in projected row 0 to be x3, got %s", SCIPvarGetName(projrows[0].vars[0]));
+   TEST_ASSERT_EQUAL(projrows[0].cst, 0.0, "\nExpected the const in projected row to be 0.0, got %f", projrows[0].cst);
+   TEST_ASSERT_EQUAL(projrows[0].lhs, -72.0, "\nExpected the lhs in projected row to be -72.0, got %f", projrows[0].lhs);
+   TEST_ASSERT_EQUAL(projrows[0].rhs, -57.0, "\nExpected the rhs in projected row to be -57.0, got %f", projrows[0].rhs);
 
    /* free memory */
    freeProjRows(scip, &projrows, 1);
@@ -277,7 +279,8 @@ Test(separation, projection, .init = setup, .fini = teardown, .description = "te
    SCIPfreeBufferArray(scip, &rows);
 }
 
-Test(separation, compute_projcut, .init = setup, .fini = teardown, .description = "test projected cut computation")
+/** @brief test projected cut computation */
+void test_separation_compute_projcut(void)
 {
    SCIP_SOL* sol;
    SCIP_VAR** vars;
@@ -308,7 +311,7 @@ Test(separation, compute_projcut, .init = setup, .fini = teardown, .description 
    /* fill in sepadata */
    SCIP_CALL( SCIPallocBuffer(scip, &sepadata) );
    sepadata->conshdlr = conshdlr;
-   cr_assert(sepadata->conshdlr != NULL);
+   TEST_ASSERT(sepadata->conshdlr != NULL);
    sepadata->maxusedvars = 4;
 
    /* create projected LP with row -10 <= x1 + 2x2 - x3 <= 20 */
@@ -333,7 +336,8 @@ Test(separation, compute_projcut, .init = setup, .fini = teardown, .description 
    SCIPfreeBufferArray(scip, &vars);
 }
 
-Test(separation, compute_clique_cuts, .init = setup, .fini = teardown, .description = "test cut computation when cliques are present")
+/** @brief test cut computation when cliques are present */
+void test_separation_compute_clique_cuts(void)
 {
    SCIP_SOL* sol;
    SCIP_VAR** vars;
@@ -370,7 +374,7 @@ Test(separation, compute_clique_cuts, .init = setup, .fini = teardown, .descript
    /* fill in sepadata */
    SCIP_CALL( SCIPallocBuffer(scip, &sepadata) );
    sepadata->conshdlr = conshdlr;
-   cr_assert(sepadata->conshdlr != NULL);
+   TEST_ASSERT(sepadata->conshdlr != NULL);
 
    /*add a clique (1-b1) + (1-b2) <= 1*/
    clique_vars[0] = b1;
@@ -402,4 +406,18 @@ Test(separation, compute_clique_cuts, .init = setup, .fini = teardown, .descript
    SCIPfreeBufferArray(scip, &vals);
    SCIPfreeBufferArray(scip, &vars);
    SCIPfreeBufferArray(scip, &rows);
+}
+
+void setUp(void) { setup(); }
+
+void tearDown(void) { teardown(); }
+
+int main(void)
+{
+   UNITY_BEGIN();
+   RUN_TEST(test_separation_sepadata);
+   RUN_TEST(test_separation_projection);
+   RUN_TEST(test_separation_compute_projcut);
+   RUN_TEST(test_separation_compute_clique_cuts);
+   return UNITY_END();
 }

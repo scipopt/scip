@@ -81,13 +81,13 @@ void teardown(void)
    SCIP_CALL( SCIPreleaseVar(scip, &w) );
    SCIP_CALL( SCIPfree(&scip) );
 
-   cr_assert_eq(BMSgetMemoryUsed(), 0, "Memory is leaking!!");
+   TEST_ASSERT_EQUAL(BMSgetMemoryUsed(), 0, "Memory is leaking!!");
 }
 
 /** tests the detection of minors; the artificial problem contains five minors: one principle minor for (x,y) and the
  * one corresponding to (x^2, xy, xz, yz), (x^2, xz, xy, yz), (xy, xz, y^2, yz), (xy, y^2, xz, yz)
  */
-Test(interminor, detect, .init = setup, .fini = teardown)
+void test_interminor_detect(void)
 {
    #define NCONSS 3
    const char* inputs[NCONSS] = {"[nonlinear] <c1>: 1<= <x> * <x> + <y> * <y> <= 2",
@@ -104,7 +104,7 @@ Test(interminor, detect, .init = setup, .fini = teardown)
    {
       SCIP_CALL( SCIPparseCons(scip, &cons, inputs[c], TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE,
          &success) );
-      cr_assert(success);
+      TEST_ASSERT(success);
 
       /* add and release constraint */
       SCIP_CALL( SCIPaddCons(scip, cons) );
@@ -113,23 +113,34 @@ Test(interminor, detect, .init = setup, .fini = teardown)
 
    /* go to solving stage */
    SCIP_CALL( TESTscipSetStage(scip, SCIP_STAGE_SOLVING, FALSE) );
-   cr_assert(SCIPgetNConss(scip) == NCONSS);
-   cr_assert(SCIPconshdlrGetNConss(conshdlr) == NCONSS);
+   TEST_ASSERT(SCIPgetNConss(scip) == NCONSS);
+   TEST_ASSERT(SCIPconshdlrGetNConss(conshdlr) == NCONSS);
 
    /* make sure INITLP has been run to get auxiliary variables */
    SCIP_CALL( SCIPconstructLP(scip, &infeasible) );
-   cr_assert(!infeasible);
+   TEST_ASSERT(!infeasible);
 
    /* get separator data */
    sepa = SCIPfindSepa(scip, SEPA_NAME);
-   cr_assert(sepa != NULL);
+   TEST_ASSERT(sepa != NULL);
    sepadata = SCIPsepaGetData(sepa);
-   cr_assert(sepadata != NULL);
+   TEST_ASSERT(sepadata != NULL);
 
    /* call minor detection */
-   cr_expect(!sepadata->detectedminors);
-   cr_expect(sepadata->nminors == 0);
+   SOFT_ASSERT(!sepadata->detectedminors);
+   SOFT_ASSERT(sepadata->nminors == 0);
    SCIP_CALL( detectMinors(scip, sepadata) );
-   cr_expect(sepadata->detectedminors);
-   cr_expect(sepadata->nminors == 5, "nminors = %d (expected 5)", sepadata->nminors);
+   SOFT_ASSERT(sepadata->detectedminors);
+   SOFT_ASSERT(sepadata->nminors == 5, "nminors = %d (expected 5)", sepadata->nminors);
+}
+
+void setUp(void) { setup(); }
+
+void tearDown(void) { teardown(); }
+
+int main(void)
+{
+   UNITY_BEGIN();
+   RUN_TEST(test_interminor_detect);
+   return UNITY_END();
 }

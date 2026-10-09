@@ -49,7 +49,15 @@ void teardown(void)
 {
 }
 
-TestSuite(normaldistribution, .init = setup, .fini = teardown);
+void setUp(void)
+{
+   setup();
+}
+
+void tearDown(void)
+{
+   teardown();
+}
 
 /* the five tested confidence levels */
 static int nclevels = 5;
@@ -70,7 +78,8 @@ static SCIP_Real onesidedprobabilities[] = {
       0.975
 };
 
-Test(normaldistribution, checkcriticalvalues, .description = "check whether the cumulative density function for standard normal works on the critical values")
+/** @brief check whether the cumulative density function for standard normal works on the critical values */
+void test_normaldistribution_checkcriticalvalues(void)
 {
    int i;
 
@@ -81,22 +90,22 @@ Test(normaldistribution, checkcriticalvalues, .description = "check whether the 
       SCIP_Real critical = SCIPnormalGetCriticalValue(clevels[i]);
       SCIP_Real between = .5 * (criticalbelow + critical);
       SCIP_Real cdf;
-      cr_assert_lt(criticalbelow, critical,
+      TEST_ASSERT_LESS_THAN(criticalbelow, critical,
             "Critical value for confidence level %d too small: %.3f <= %.3f\n", clevels[i], critical, criticalbelow);
 
       /* cdf gives the probability that a normal distribution yields a value between -infinity and the value */
       cdf = SCIPnormalCDF(0.0, 1.0, criticalbelow);
-      cr_assert_float_eq(cdf, onesidedprobabilities[i - 1], 1e-3, "Probabilities should be equal: %.4f ~= %.4f", cdf, onesidedprobabilities[i-1]);
+      TEST_ASSERT_DOUBLE_WITHIN(cdf, onesidedprobabilities[i - 1], 1e-3, "Probabilities should be equal: %.4f ~= %.4f", cdf, onesidedprobabilities[i-1]);
 
       cdf = SCIPnormalCDF(0.0, 1.0, critical);
-      cr_assert_float_eq(cdf, onesidedprobabilities[i], 1e-3, "Probabilities should be equal: %.4f ~= %.4f", cdf, onesidedprobabilities[i]);
+      TEST_ASSERT_DOUBLE_WITHIN(cdf, onesidedprobabilities[i], 1e-3, "Probabilities should be equal: %.4f ~= %.4f", cdf, onesidedprobabilities[i]);
 
       cdf = SCIPnormalCDF(0.0, 1.0, between);
 
       /* this probability should lie between the one-sided probabilities */
-      cr_assert_gt(cdf, onesidedprobabilities[i - 1], "value %.3f of cumulative density function should be in the interval (%.3f, %.3f)\n",
+      TEST_ASSERT_GREATER_THAN(cdf, onesidedprobabilities[i - 1], "value %.3f of cumulative density function should be in the interval (%.3f, %.3f)\n",
             cdf, onesidedprobabilities[i-1], onesidedprobabilities[i]);
-      cr_assert_lt(cdf, onesidedprobabilities[i], "value %.3f of cumulative density function should be in the interval (%.3f, %.3f)\n",
+      TEST_ASSERT_LESS_THAN(cdf, onesidedprobabilities[i], "value %.3f of cumulative density function should be in the interval (%.3f, %.3f)\n",
             cdf, onesidedprobabilities[i-1], onesidedprobabilities[i]);
    }
 }
@@ -147,7 +156,8 @@ static SCIP_Real sigmas[] =
    { 1.0, 10.0, 0.5, 50.0 };
 static int ndistributions = 4;
 
-Test(normaldistribution, checkcdftable, .description = "compare cumulative density function for several distribution parameters against table list")
+/** @brief compare cumulative density function for several distribution parameters against table list */
+void test_normaldistribution_checkcdftable(void)
 {
    int i;
    int negative;
@@ -182,9 +192,17 @@ Test(normaldistribution, checkcdftable, .description = "compare cumulative densi
                /* compute cumulative density for the specified distribution between - infinity and value */
                cdf = SCIPnormalCDF(mu, sigma2, val);
 
-               cr_assert_float_eq(cdf, probability, 1e-3, "Probabilities should be equal: %.4f ~= %.4f", cdf, probability);
+               TEST_ASSERT_DOUBLE_WITHIN(cdf, probability, 1e-3, "Probabilities should be equal: %.4f ~= %.4f", cdf, probability);
             }
          }
       }
    }
+}
+
+int main(void)
+{
+   UNITY_BEGIN();
+   RUN_TEST(test_normaldistribution_checkcriticalvalues);
+   RUN_TEST(test_normaldistribution_checkcdftable);
+   return UNITY_END();
 }

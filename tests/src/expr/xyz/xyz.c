@@ -67,52 +67,77 @@ void teardown(void)
    SCIP_CALL( SCIPreleaseVar(scip, &y) );
    SCIP_CALL( SCIPfree(&scip) );
 
-   cr_assert_eq(BMSgetMemoryUsed(), 0, "There is a memory leak!!");
+   TEST_ASSERT_EQUAL(BMSgetMemoryUsed(), 0, "There is a memory leak!!");
 }
 
 /* test suite */
-TestSuite(xyz, .init = setup, .fini = teardown);
 
 /*
  * TESTS
  */
 
-Test(xyz, creation, .description = "Tests the expression creation.")
+/** @brief Tests the expression creation. */
+void test_xyz_creation(void)
 {
    /* TODO */
 }
 
-Test(xyz, print, .description = "Tests the expression printing function.")
+/** @brief Tests the expression printing function. */
+void test_xyz_print(void)
 {
    /* TODO */
 }
 
-Test(xyz, parse, .description = "Tests the expression parsing.")
+/** @brief Tests the expression parsing. */
+void test_xyz_parse(void)
 {
    /* TODO */
 }
 
-Test(xyz, eval, .description = "Tests the expression evaluation.")
+/** @brief Tests the expression evaluation. */
+void test_xyz_eval(void)
 {
    /* TODO */
 }
 
-Test(xyz, inteval, .description = "Tests the expression interval evaluation.")
+/** @brief Tests the expression interval evaluation. */
+void test_xyz_inteval(void)
 {
    /* TODO */
 }
 
-Test(xyz, derivative, .description = "Tests the expression derivation.")
+/** @brief Tests the expression derivation. */
+void test_xyz_derivative(void)
 {
    /* TODO */
 }
 
-Test(xyz, hash, .description = "Tests the expression hash.")
+/** @brief Tests the expression hash. */
+void test_xyz_hash(void)
 {
    /* TODO */
 }
 
-Test(xyz, simplify, .description = "Tests the expression simplification.")
+/** @brief Tests the expression simplification. */
+void test_xyz_simplify(void)
 {
    /* TODO */
+}
+
+void setUp(void) { setup(); }
+
+void tearDown(void) { teardown(); }
+
+int main(void)
+{
+   UNITY_BEGIN();
+   RUN_TEST(test_xyz_creation);
+   RUN_TEST(test_xyz_print);
+   RUN_TEST(test_xyz_parse);
+   RUN_TEST(test_xyz_eval);
+   RUN_TEST(test_xyz_inteval);
+   RUN_TEST(test_xyz_derivative);
+   RUN_TEST(test_xyz_hash);
+   RUN_TEST(test_xyz_simplify);
+   return UNITY_END();
 }

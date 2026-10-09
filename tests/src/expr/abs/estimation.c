@@ -36,7 +36,8 @@ static SCIP_Real* coefsp[SCIP_EXPR_MAXINITESTIMATES];
 static SCIP_Real constants[SCIP_EXPR_MAXINITESTIMATES];
 static int nreturned;
 
-Test(separation, absolute, .init = setup, .fini = teardown, .description = "test separation for an absolute expression")
+/** @brief test separation for an absolute expression */
+void test_separation_absolute(void)
 {
    int i;
    for( i = 0; i < SCIP_EXPR_MAXINITESTIMATES; ++i )
@@ -46,7 +47,7 @@ Test(separation, absolute, .init = setup, .fini = teardown, .description = "test
 
    /* compute overestimating secant */
    SCIP_CALL( computeCutsAbs(scip, SCIPexprGetActivity(xexpr), TRUE, coefsp, constants, &nreturned) );
-   cr_expect_eq(nreturned, 1);
+   SOFT_ASSERT_EQUAL(nreturned, 1);
 
    /* check secant */
    EXPECTFEQ( coefs[0], 2.0 / 3.0 );
@@ -54,7 +55,7 @@ Test(separation, absolute, .init = setup, .fini = teardown, .description = "test
 
    /* compute underestimators */
    SCIP_CALL( computeCutsAbs(scip, SCIPexprGetActivity(xexpr), FALSE, coefsp, constants, &nreturned) );
-   cr_expect_eq(nreturned, 2);
+   SOFT_ASSERT_EQUAL(nreturned, 2);
 
    /* check left tangent */
    EXPECTFEQ( coefs[0], -1.0 );
@@ -64,4 +65,15 @@ Test(separation, absolute, .init = setup, .fini = teardown, .description = "test
    EXPECTFEQ( coefs[1], 1.0 );
    EXPECTFEQ( constants[1], 0.0 );
 
+}
+
+void setUp(void) { setup(); }
+
+void tearDown(void) { teardown(); }
+
+int main(void)
+{
+   UNITY_BEGIN();
+   RUN_TEST(test_separation_absolute);
+   return UNITY_END();
 }

@@ -70,11 +70,22 @@ void teardown(void)
    SCIP_CALL( SCIPfree(&sourcescip) );
 }
 
-TestSuite(copy, .init = setup, .fini = teardown);
+void setUp(void)
+{
+   SOFT_ASSERT_RESET();
+   setup();
+}
+
+void tearDown(void)
+{
+   teardown();
+   SOFT_ASSERT_CHECK();
+}
 
 /* TESTS  */
 
-Test(copy, MIP, .description="tests MIP copy")
+/** @brief tests MIP copy */
+void test_copy_MIP(void)
 {
    /* initialize validity flag */
    SCIP_PARAM** sourceparams;
@@ -98,21 +109,21 @@ Test(copy, MIP, .description="tests MIP copy")
 
    /* copy target scip */
    SCIP_CALL( SCIPcopy(sourcescip, targetscip, NULL, NULL, "", TRUE, TRUE, TRUE, TRUE, TRUE, &valid) );
-   cr_assert(valid);
+   TEST_ASSERT(valid);
    targetparams = SCIPgetParams(targetscip);
    ntargetparams = SCIPgetNParams(targetscip);
 
    /* check copy dimension */
    /* TODO: complete the copy */
-   cr_expect(ntargetparams <= nsourceparams);
-   cr_expect(SCIPgetNBinVars(targetscip) == SCIPgetNBinVars(sourcescip));
-   cr_expect(SCIPgetNIntVars(targetscip) == SCIPgetNIntVars(sourcescip));
-   cr_expect(SCIPgetNBinImplVars(targetscip) == SCIPgetNBinImplVars(sourcescip));
-   cr_expect(SCIPgetNIntImplVars(targetscip) == SCIPgetNIntImplVars(sourcescip));
-   cr_expect(SCIPgetNContImplVars(targetscip) == SCIPgetNContImplVars(sourcescip));
-   cr_expect(SCIPgetNContVars(targetscip) == SCIPgetNContVars(sourcescip));
-   cr_expect(SCIPgetNVars(targetscip) == SCIPgetNVars(sourcescip));
-   cr_expect(SCIPgetNConss(targetscip) == SCIPgetNConss(sourcescip));
+   SOFT_ASSERT(ntargetparams <= nsourceparams);
+   SOFT_ASSERT(SCIPgetNBinVars(targetscip) == SCIPgetNBinVars(sourcescip));
+   SOFT_ASSERT(SCIPgetNIntVars(targetscip) == SCIPgetNIntVars(sourcescip));
+   SOFT_ASSERT(SCIPgetNBinImplVars(targetscip) == SCIPgetNBinImplVars(sourcescip));
+   SOFT_ASSERT(SCIPgetNIntImplVars(targetscip) == SCIPgetNIntImplVars(sourcescip));
+   SOFT_ASSERT(SCIPgetNContImplVars(targetscip) == SCIPgetNContImplVars(sourcescip));
+   SOFT_ASSERT(SCIPgetNContVars(targetscip) == SCIPgetNContVars(sourcescip));
+   SOFT_ASSERT(SCIPgetNVars(targetscip) == SCIPgetNVars(sourcescip));
+   SOFT_ASSERT(SCIPgetNConss(targetscip) == SCIPgetNConss(sourcescip));
 
    /* check matching parameters */
    i = 0;
@@ -173,33 +184,40 @@ Test(copy, MIP, .description="tests MIP copy")
       }
 
       /* check target parameters */
-      cr_expect(valid, "Parameter %s not in target.", sourcename);
+      SOFT_ASSERT(valid, "Parameter %s not in target.", sourcename);
    }
 
    /* check source parameters */
-   cr_expect(j == ntargetparams, "Parameter %s not in source.", targetname);
+   SOFT_ASSERT(j == ntargetparams, "Parameter %s not in source.", targetname);
 
    /* solve both scips */
    SCIP_CALL( SCIPsolve(sourcescip) );
    SCIP_CALL( SCIPsolve(targetscip) );
 
    /* compare solved dimensions */
-   cr_expect(SCIPgetNBinVars(targetscip) == SCIPgetNBinVars(sourcescip));
-   cr_expect(SCIPgetNIntVars(targetscip) == SCIPgetNIntVars(sourcescip));
-   cr_expect(SCIPgetNBinImplVars(targetscip) == SCIPgetNBinImplVars(sourcescip));
-   cr_expect(SCIPgetNIntImplVars(targetscip) == SCIPgetNIntImplVars(sourcescip));
-   cr_expect(SCIPgetNContImplVars(targetscip) == SCIPgetNContImplVars(sourcescip));
-   cr_expect(SCIPgetNContVars(targetscip) == SCIPgetNContVars(sourcescip));
-   cr_expect(SCIPgetNVars(targetscip) == SCIPgetNVars(sourcescip));
-   cr_expect(SCIPgetNConss(targetscip) == SCIPgetNConss(sourcescip));
+   SOFT_ASSERT(SCIPgetNBinVars(targetscip) == SCIPgetNBinVars(sourcescip));
+   SOFT_ASSERT(SCIPgetNIntVars(targetscip) == SCIPgetNIntVars(sourcescip));
+   SOFT_ASSERT(SCIPgetNBinImplVars(targetscip) == SCIPgetNBinImplVars(sourcescip));
+   SOFT_ASSERT(SCIPgetNIntImplVars(targetscip) == SCIPgetNIntImplVars(sourcescip));
+   SOFT_ASSERT(SCIPgetNContImplVars(targetscip) == SCIPgetNContImplVars(sourcescip));
+   SOFT_ASSERT(SCIPgetNContVars(targetscip) == SCIPgetNContVars(sourcescip));
+   SOFT_ASSERT(SCIPgetNVars(targetscip) == SCIPgetNVars(sourcescip));
+   SOFT_ASSERT(SCIPgetNConss(targetscip) == SCIPgetNConss(sourcescip));
 
    /* compare optimal bounds */
-   cr_expect(SCIPgetDualbound(targetscip) == SCIPgetPrimalbound(targetscip));
-   cr_expect(SCIPgetDualbound(targetscip) == SCIPgetDualbound(sourcescip));
-   cr_expect(SCIPgetPrimalbound(targetscip) == SCIPgetPrimalbound(sourcescip));
+   SOFT_ASSERT(SCIPgetDualbound(targetscip) == SCIPgetPrimalbound(targetscip));
+   SOFT_ASSERT(SCIPgetDualbound(targetscip) == SCIPgetDualbound(sourcescip));
+   SOFT_ASSERT(SCIPgetPrimalbound(targetscip) == SCIPgetPrimalbound(sourcescip));
 
    /* compare solving performance */
-   cr_expect(SCIPgetNLPIterations(targetscip) == SCIPgetNLPIterations(sourcescip));
-   cr_expect(SCIPgetNTotalNodes(targetscip) == SCIPgetNTotalNodes(sourcescip));
-   cr_expect(SCIPgetNSolsFound(targetscip) == SCIPgetNSolsFound(sourcescip));
+   SOFT_ASSERT(SCIPgetNLPIterations(targetscip) == SCIPgetNLPIterations(sourcescip));
+   SOFT_ASSERT(SCIPgetNTotalNodes(targetscip) == SCIPgetNTotalNodes(sourcescip));
+   SOFT_ASSERT(SCIPgetNSolsFound(targetscip) == SCIPgetNSolsFound(sourcescip));
+}
+
+int main(void)
+{
+   UNITY_BEGIN();
+   RUN_TEST(test_copy_MIP);
+   return UNITY_END();
 }

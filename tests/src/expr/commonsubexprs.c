@@ -59,12 +59,11 @@ void teardown(void)
 {
    /* free scip and check for memory leaks */
    SCIP_CALL( SCIPfree(&scip) );
-   cr_assert_eq(BMSgetMemoryUsed(), 0, "There are memory leaks!");
+   TEST_ASSERT_EQUAL(BMSgetMemoryUsed(), 0, "There are memory leaks!");
 }
 
-TestSuite(commonSubexpr, .init = setup, .fini = teardown);
 
-Test(commonSubexpr, singleConstraints)
+void test_commonSubexpr_singleConstraints(void)
 {
    SCIP_EXPR* expr;
    SCIP_EXPR* children[2];
@@ -80,18 +79,18 @@ Test(commonSubexpr, singleConstraints)
    SCIP_CALL( SCIPreleaseExpr(scip, &children[0]) );
 
    SCIP_CALL( SCIPreplaceCommonSubexpressions(scip, &expr, 1, &replacedroot) );
-   cr_expect_not(replacedroot);
-   cr_expect_eq(SCIPexprGetChildren(expr)[0], SCIPexprGetChildren(expr)[1]);
+   SOFT_ASSERT_NOT(replacedroot);
+   SOFT_ASSERT_EQUAL(SCIPexprGetChildren(expr)[0], SCIPexprGetChildren(expr)[1]);
 
    /* this should not change anything */
    SCIP_CALL( SCIPreplaceCommonSubexpressions(scip, &expr, 1, &replacedroot) );
-   cr_expect_not(replacedroot);
-   cr_expect_eq(SCIPexprGetChildren(expr)[0], SCIPexprGetChildren(expr)[1]);
+   SOFT_ASSERT_NOT(replacedroot);
+   SOFT_ASSERT_EQUAL(SCIPexprGetChildren(expr)[0], SCIPexprGetChildren(expr)[1]);
 
    SCIP_CALL( SCIPreleaseExpr(scip, &expr) );
 }
 
-Test(commonSubexpr, multipleExprs)
+void test_commonSubexpr_multipleExprs(void)
 {
    SCIP_EXPR* exprs[4];
    SCIP_Bool replacedroot;
@@ -102,19 +101,32 @@ Test(commonSubexpr, multipleExprs)
    SCIP_CALL( SCIPparseExpr(scip, &exprs[3], "log(abs(exp(<x> * <y>)))", NULL, NULL, NULL) );
 
    SCIP_CALL( SCIPreplaceCommonSubexpressions(scip, exprs, 4, &replacedroot) );
-   cr_expect_not(replacedroot);
+   SOFT_ASSERT_NOT(replacedroot);
 
-   cr_expect_eq(exprs[0], SCIPexprGetChildren(exprs[1])[0]);
-   cr_expect_eq(exprs[0], SCIPexprGetChildren(SCIPexprGetChildren(exprs[2])[0])[0]);
-   cr_expect_eq(exprs[0], SCIPexprGetChildren(SCIPexprGetChildren(SCIPexprGetChildren(exprs[3])[0])[0])[0]);
+   SOFT_ASSERT_EQUAL(exprs[0], SCIPexprGetChildren(exprs[1])[0]);
+   SOFT_ASSERT_EQUAL(exprs[0], SCIPexprGetChildren(SCIPexprGetChildren(exprs[2])[0])[0]);
+   SOFT_ASSERT_EQUAL(exprs[0], SCIPexprGetChildren(SCIPexprGetChildren(SCIPexprGetChildren(exprs[3])[0])[0])[0]);
 
-   cr_expect_eq(exprs[1], SCIPexprGetChildren(exprs[2])[0]);
-   cr_expect_eq(exprs[1], SCIPexprGetChildren(SCIPexprGetChildren(exprs[3])[0])[0]);
+   SOFT_ASSERT_EQUAL(exprs[1], SCIPexprGetChildren(exprs[2])[0]);
+   SOFT_ASSERT_EQUAL(exprs[1], SCIPexprGetChildren(SCIPexprGetChildren(exprs[3])[0])[0]);
 
-   cr_expect_eq(exprs[2], SCIPexprGetChildren(exprs[3])[0]);
+   SOFT_ASSERT_EQUAL(exprs[2], SCIPexprGetChildren(exprs[3])[0]);
 
    SCIP_CALL( SCIPreleaseExpr(scip, &exprs[3]) );
    SCIP_CALL( SCIPreleaseExpr(scip, &exprs[2]) );
    SCIP_CALL( SCIPreleaseExpr(scip, &exprs[1]) );
    SCIP_CALL( SCIPreleaseExpr(scip, &exprs[0]) );
+}
+
+void setUp(void) { setup(); }
+
+void tearDown(void) { teardown(); }
+
+int main(void)
+{
+   UNITY_BEGIN();
+   RUN_TEST(test_commonSubexpr_singleConstraints
+);
+   RUN_TEST(test_commonSubexpr_multipleExprs);
+   return UNITY_END();
 }

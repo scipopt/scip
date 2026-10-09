@@ -75,21 +75,38 @@ void teardown(void)
    SCIP_CALL( SCIPfree(&scip) );
 }
 
+void setUp(void)
+{
+   setup();
+}
 
-TestSuite(activity, .init = setup, .fini = teardown);
+void tearDown(void)
+{
+   teardown();
+}
 
-Test(activity, setup_and_teardown, .description = "test that setup and teardown work correctly")
+/** @brief test that setup and teardown work correctly */
+void test_activity_setup_and_teardown(void)
 {
 }
 
-Test(activity, test_activity_getters, .description = "test that the resource activity returns entries correctly.")
+/** @brief test that the resource activity returns entries correctly. */
+void test_activity_getters(void)
 {
    int energy;
 
    energy = duration * demand;
 
-   cr_assert_eq(demand, SCIPactivityGetDemand(activity));
-   cr_assert_eq(duration, SCIPactivityGetDuration(activity));
-   cr_assert_eq(energy, SCIPactivityGetEnergy(activity));
-   cr_assert_eq(var, SCIPactivityGetVar(activity));
+   TEST_ASSERT_EQUAL(demand, SCIPactivityGetDemand(activity));
+   TEST_ASSERT_EQUAL(duration, SCIPactivityGetDuration(activity));
+   TEST_ASSERT_EQUAL(energy, SCIPactivityGetEnergy(activity));
+   TEST_ASSERT_EQUAL(var, SCIPactivityGetVar(activity));
+}
+
+int main(void)
+{
+   UNITY_BEGIN();
+   RUN_TEST(test_activity_setup_and_teardown);
+   RUN_TEST(test_activity_getters);
+   return UNITY_END();
 }

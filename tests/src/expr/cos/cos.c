@@ -29,6 +29,12 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
+/* MSVC only defines M_PI etc. when this is set before <math.h>; scip.h below
+ * pulls in <math.h>, so define it here ahead of the first include. */
+#ifndef _USE_MATH_DEFINES
+#define _USE_MATH_DEFINES
+#endif
+
 #include "scip/scip.h"
 #include "scip/expr.h"
 #include "scip/expr_trig.h"
@@ -94,32 +100,33 @@ void teardown(void)
    SCIP_CALL( SCIPreleaseVar(scip, &y) );
    SCIP_CALL( SCIPfree(&scip) );
 
-   cr_assert_eq(BMSgetMemoryUsed(), 0, "There is a memory leak!!");
+   TEST_ASSERT_EQUAL(BMSgetMemoryUsed(), 0, "There is a memory leak!!");
 }
 
 /* test suite */
-TestSuite(cos, .init = setup, .fini = teardown);
 
 /*
  * TESTS
  */
 
-Test(cos, creation, .description = "Tests the expression creation.")
+/** @brief Tests the expression creation. */
+void test_cos_creation(void)
 {
    SCIP_EXPR *expr;
 
    /* create cosine expression */
    SCIP_CALL( SCIPcreateExprCos(scip, &expr, xexpr, NULL, NULL) );
 
-   cr_assert(expr != NULL);
-   cr_expect(SCIPexprGetNChildren(expr) == 1);
-   cr_expect(SCIPexprGetChildren(expr)[0] == xexpr);
+   TEST_ASSERT(expr != NULL);
+   SOFT_ASSERT(SCIPexprGetNChildren(expr) == 1);
+   SOFT_ASSERT(SCIPexprGetChildren(expr)[0] == xexpr);
 
    /* release expression */
    SCIP_CALL( SCIPreleaseExpr(scip, &expr) );
 }
 
-Test(cos, parse, .description = "Tests the expression parsing.")
+/** @brief Tests the expression parsing. */
+void test_cos_parse(void)
 {
    SCIP_EXPR *expr;
    const char *input = "cos(<x>[C])";
@@ -127,16 +134,17 @@ Test(cos, parse, .description = "Tests the expression parsing.")
    /* create cosine expression */
    SCIP_CALL( SCIPparseExpr(scip, &expr, (char *) input, NULL, NULL, NULL) );
 
-   cr_assert(expr != NULL);
-   cr_expect(SCIPexprGetNChildren(expr) == 1);
-   cr_expect(SCIPisExprVar(scip, SCIPexprGetChildren(expr)[0]));
-   cr_expect(SCIPgetVarExprVar(SCIPexprGetChildren(expr)[0]) == x);
+   TEST_ASSERT(expr != NULL);
+   SOFT_ASSERT(SCIPexprGetNChildren(expr) == 1);
+   SOFT_ASSERT(SCIPisExprVar(scip, SCIPexprGetChildren(expr)[0]));
+   SOFT_ASSERT(SCIPgetVarExprVar(SCIPexprGetChildren(expr)[0]) == x);
 
    /* release expression */
    SCIP_CALL( SCIPreleaseExpr(scip, &expr) );
 }
 
-Test(cos, eval, .description = "Tests the expression evaluation.")
+/** @brief Tests the expression evaluation. */
+void test_cos_eval(void)
 {
    int i;
    SCIP_Real randnum;
@@ -149,7 +157,7 @@ Test(cos, eval, .description = "Tests the expression evaluation.")
       SCIP_CALL( SCIPsetSolVal(scip, sol, x, testvalues[i]) );
       SCIP_CALL( SCIPevalExpr(scip, cosexpr, sol, 0) );
 
-      cr_expect(SCIPisFeasEQ(scip, SCIPexprGetEvalValue(cosexpr), results[i]));
+      SOFT_ASSERT(SCIPisFeasEQ(scip, SCIPexprGetEvalValue(cosexpr), results[i]));
    }
 
    /* random part */
@@ -159,11 +167,12 @@ Test(cos, eval, .description = "Tests the expression evaluation.")
       SCIP_CALL( SCIPsetSolVal(scip, sol, x, randnum) );
       SCIP_CALL( SCIPevalExpr(scip, cosexpr, sol, 0) );
 
-      cr_expect(SCIPisFeasEQ(scip, SCIPexprGetEvalValue(cosexpr), cos(randnum)));
+      SOFT_ASSERT(SCIPisFeasEQ(scip, SCIPexprGetEvalValue(cosexpr), cos(randnum)));
    }
 }
 
-Test(cos, inteval, .description = "Tests the expression interval evaluation.")
+/** @brief Tests the expression interval evaluation. */
+void test_cos_inteval(void)
 {
    int i;
    SCIP_INTERVAL interval;
@@ -213,8 +222,8 @@ Test(cos, inteval, .description = "Tests the expression interval evaluation.")
       SCIP_CALL( SCIPevalExprActivity(scip, cosexpr) );
       interval = SCIPexprGetActivity(cosexpr);
 
-      cr_expect(SCIPisFeasEQ(scip, SCIPintervalGetInf(interval), detreslb[i]));
-      cr_expect(SCIPisFeasEQ(scip, SCIPintervalGetSup(interval), detresub[i]));
+      SOFT_ASSERT(SCIPisFeasEQ(scip, SCIPintervalGetInf(interval), detreslb[i]));
+      SOFT_ASSERT(SCIPisFeasEQ(scip, SCIPintervalGetSup(interval), detresub[i]));
    }
 
    /* random part */
@@ -226,12 +235,13 @@ Test(cos, inteval, .description = "Tests the expression interval evaluation.")
       SCIP_CALL( SCIPevalExprActivity(scip, cosexpr) );
       interval = SCIPexprGetActivity(cosexpr);
 
-      cr_expect(SCIPisFeasEQ(scip, SCIPintervalGetInf(interval), rndreslb[i]));
-      cr_expect(SCIPisFeasEQ(scip, SCIPintervalGetSup(interval), rndresub[i]));
+      SOFT_ASSERT(SCIPisFeasEQ(scip, SCIPintervalGetInf(interval), rndreslb[i]));
+      SOFT_ASSERT(SCIPisFeasEQ(scip, SCIPintervalGetSup(interval), rndresub[i]));
    }
 }
 
-Test(cos, derivative, .description = "Tests the expression derivation.")
+/** @brief Tests the expression derivation. */
+void test_cos_derivative(void)
 {
    int i;
    SCIP_Real randnum;
@@ -244,7 +254,7 @@ Test(cos, derivative, .description = "Tests the expression derivation.")
       SCIP_CALL( SCIPsetSolVal(scip, sol, x, testvalues[i]) );
       SCIP_CALL( SCIPevalExprGradient(scip, cosexpr, sol, 0) );
 
-      cr_expect(SCIPisEQ(scip, SCIPexprGetDerivative(xexpr), results[i]));
+      SOFT_ASSERT(SCIPisEQ(scip, SCIPexprGetDerivative(xexpr), results[i]));
    }
 
    /* random part */
@@ -254,11 +264,12 @@ Test(cos, derivative, .description = "Tests the expression derivation.")
       SCIP_CALL( SCIPsetSolVal(scip, sol, x, randnum) );
       SCIP_CALL( SCIPevalExprGradient(scip, cosexpr, sol, 0) );
 
-      cr_expect(SCIPisFeasEQ(scip, SCIPexprGetDerivative(xexpr), -sin(randnum)));
+      SOFT_ASSERT(SCIPisFeasEQ(scip, SCIPexprGetDerivative(xexpr), -sin(randnum)));
    }
 }
 
-Test(cos, hash, .description = "Tests the expression hash.")
+/** @brief Tests the expression hash. */
+void test_cos_hash(void)
 {
    SCIP_EXPR *expr1;
    SCIP_EXPR *expr2;
@@ -275,18 +286,19 @@ Test(cos, hash, .description = "Tests the expression hash.")
    SCIP_CALL( SCIPhashExpr(scip, expr2, &hashkey2) );
    SCIP_CALL( SCIPhashExpr(scip, expr3, &hashkey3) );
 
-   cr_expect(hashkey1 != 0);
-   cr_expect(hashkey2 != 0);
-   cr_expect(hashkey3 != 0);
-   cr_expect(hashkey1 == hashkey2);
-   cr_expect(hashkey1 != hashkey3);
+   SOFT_ASSERT(hashkey1 != 0);
+   SOFT_ASSERT(hashkey2 != 0);
+   SOFT_ASSERT(hashkey3 != 0);
+   SOFT_ASSERT(hashkey1 == hashkey2);
+   SOFT_ASSERT(hashkey1 != hashkey3);
 
    SCIP_CALL( SCIPreleaseExpr(scip, &expr3) );
    SCIP_CALL( SCIPreleaseExpr(scip, &expr2) );
    SCIP_CALL( SCIPreleaseExpr(scip, &expr1) );
 }
 
-Test(cos, simplify, .description = "Tests the expression simplification.")
+/** @brief Tests the expression simplification. */
+void test_cos_simplify(void)
 {
    SCIP_EXPR *expr1;
    SCIP_EXPR *expr2;
@@ -300,10 +312,27 @@ Test(cos, simplify, .description = "Tests the expression simplification.")
    SCIP_CALL( SCIPsimplifyExpr(scip, expr2, &expr3, &changed, &infeasible, NULL, NULL) );
    SCIP_CALL( SCIPevalExpr(scip, expr2, sol, 0) );
 
-   cr_expect(SCIPisExprValue(scip, expr3));
-   cr_expect(SCIPisFeasEQ(scip, SCIPexprGetEvalValue(expr2), cos(5.0)));
+   SOFT_ASSERT(SCIPisExprValue(scip, expr3));
+   SOFT_ASSERT(SCIPisFeasEQ(scip, SCIPexprGetEvalValue(expr2), cos(5.0)));
 
    SCIP_CALL( SCIPreleaseExpr(scip, &expr3) );
    SCIP_CALL( SCIPreleaseExpr(scip, &expr2) );
    SCIP_CALL( SCIPreleaseExpr(scip, &expr1) );
+}
+
+void setUp(void) { setup(); }
+
+void tearDown(void) { teardown(); }
+
+int main(void)
+{
+   UNITY_BEGIN();
+   RUN_TEST(test_cos_creation);
+   RUN_TEST(test_cos_parse);
+   RUN_TEST(test_cos_eval);
+   RUN_TEST(test_cos_inteval);
+   RUN_TEST(test_cos_derivative);
+   RUN_TEST(test_cos_hash);
+   RUN_TEST(test_cos_simplify);
+   return UNITY_END();
 }

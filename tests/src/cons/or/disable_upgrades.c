@@ -65,15 +65,15 @@ void teardown(void)
 }
 
 
-TestSuite(disable_upgrades, .init = setup, .fini = teardown);
 
 /* TESTS  */
-Test(disable_upgrades, create_and_free)
+void test_disable_upgrades_create_and_free(void)
 {
    /* calls setup and teardown */
 }
 
-Test(disable_upgrades, disable_upgrades_or, .description="disable upgrades of or-constraints to and-constraints to keep or-constraints during solution process")
+/** @brief disable upgrades of or-constraints to and-constraints to keep or-constraints during solution process */
+void test_disable_upgrades_disable_upgrades_or(void)
 {
    SCIP_CONSHDLR* conshdlr;
    SCIP_CONS** conss;
@@ -87,7 +87,7 @@ Test(disable_upgrades, disable_upgrades_or, .description="disable upgrades of or
    nconss = SCIPgetNOrigConss(scip);
    conss = SCIPgetOrigConss(scip);
 
-   cr_assert_eq(nconss, 8);
+   TEST_ASSERT_EQUAL(nconss, 8);
 
    /* set or-constraints to be modifiable */
    for( i = 0; i < nconss; ++i )
@@ -106,14 +106,16 @@ Test(disable_upgrades, disable_upgrades_or, .description="disable upgrades of or
    SCIP_CALL( SCIPsolve(scip) );
 }
 
-Test(disable_upgrades, write_problem, .description="test that CIP write method works for or constraints")
+/** @brief test that CIP write method works for or constraints */
+void test_disable_upgrades_write_problem(void)
 {
    SCIP_CALL( SCIPreadProb(scip, "../check/instances/Or/or_constraint.cip", "cip") );
 
    SCIP_CALL( SCIPwriteOrigProblem(scip, NULL, "cip", FALSE) );
 }
 
-Test(disable_upgrades, copy_problem, .description="test copying of or-constraints")
+/** @brief test copying of or-constraints */
+void test_disable_upgrades_copy_problem(void)
 {
    SCIP* targetscip;
    SCIP_Bool valid;
@@ -123,22 +125,23 @@ Test(disable_upgrades, copy_problem, .description="test copying of or-constraint
 
    SCIP_CALL( SCIPcopy(scip, targetscip, NULL, NULL, "copy_of_prob", TRUE, TRUE, FALSE, FALSE, FALSE, &valid) );
 
-   cr_assert(valid);
+   TEST_ASSERT(valid);
 
    SCIP_CALL( SCIPsolve(targetscip) );
 
    SCIP_CALL( SCIPfree(&targetscip) );
 }
 
-Test(disable_upgrades, test_basic_creation, .description="test SCIPcreateConsBasicOr")
+/** @brief test SCIPcreateConsBasicOr */
+void test_disable_upgrades_test_basic_creation(void)
 {
    SCIP_CONS* newcons;
    SCIP_VAR** origvars;
 
    SCIP_CALL( SCIPreadProb(scip, "../check/instances/Or/or_constraint.cip", "cip") );
 
-   cr_assert(SCIPgetNVars(scip) == 24);
-   cr_assert(SCIPgetNBinVars(scip) == 24);
+   TEST_ASSERT(SCIPgetNVars(scip) == 24);
+   TEST_ASSERT(SCIPgetNBinVars(scip) == 24);
 
    origvars = SCIPgetOrigVars(scip);
 
@@ -152,4 +155,19 @@ Test(disable_upgrades, test_basic_creation, .description="test SCIPcreateConsBas
 
    SCIP_CALL( SCIPprintBestSol(scip, NULL, TRUE) );
 
+}
+
+void setUp(void) { setup(); }
+
+void tearDown(void) { teardown(); }
+
+int main(void)
+{
+   UNITY_BEGIN();
+   RUN_TEST(test_disable_upgrades_create_and_free);
+   RUN_TEST(test_disable_upgrades_disable_upgrades_or);
+   RUN_TEST(test_disable_upgrades_write_problem);
+   RUN_TEST(test_disable_upgrades_copy_problem);
+   RUN_TEST(test_disable_upgrades_test_basic_creation);
+   return UNITY_END();
 }

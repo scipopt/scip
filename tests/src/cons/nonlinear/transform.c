@@ -62,10 +62,10 @@ void teardown(void)
    SCIP_CALL( SCIPreleaseVar(scip, &z) );
    SCIP_CALL( SCIPfree(&scip) );
 
-   cr_assert_eq(BMSgetMemoryUsed(), 0, "Memory is leaking!!");
+   TEST_ASSERT_EQUAL(BMSgetMemoryUsed(), 0, "Memory is leaking!!");
 }
 
-Test(transform, transform, .init = setup, .fini = teardown)
+void test_transform_transform(void)
 {
    SCIP_CONS* cons;
    SCIP_CONS* transcons;
@@ -76,7 +76,7 @@ Test(transform, transform, .init = setup, .fini = teardown)
    success = FALSE;
    SCIP_CALL( SCIPparseCons(scip, &cons, input,
             TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, &success) );
-   cr_assert(success);
+   TEST_ASSERT(success);
 
    /* goto transformed stage */
    SCIP_CALL( TESTscipSetStage(scip, SCIP_STAGE_TRANSFORMED, FALSE) );
@@ -85,15 +85,26 @@ Test(transform, transform, .init = setup, .fini = teardown)
    SCIP_CALL( SCIPtransformCons(scip, cons, &transcons) );
 
    /* check that the transformation went well */
-   cr_redirect_stdout();
+   TEST_CAPTURE_STDOUT();
    SCIP_CALL( SCIPprintCons(scip, transcons, NULL) );
    SCIPinfoMessage(scip, NULL, "\n");
    fflush(stdout);
 
-   cr_assert_stdout_eq_str("  [nonlinear] <test>: 1.1*<t_x>*<t_y>*(<t_z>)^(-1)+3.2*(<t_x>)^2*(<t_y>)^(-5)*<t_z>+0.5*(<t_z>)^3 == 2\n");
+   TEST_ASSERT_STDOUT_EQUAL_STRING("  [nonlinear] <test>: 1.1*<t_x>*<t_y>*(<t_z>)^(-1)+3.2*(<t_x>)^2*(<t_y>)^(-5)*<t_z>+0.5*(<t_z>)^3 == 2\n");
 
    /* release constraints and transformed problem */
    SCIP_CALL( SCIPreleaseCons(scip, &transcons) );
    SCIP_CALL( SCIPfreeTransform(scip) );
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
+}
+
+void setUp(void) { setup(); }
+
+void tearDown(void) { teardown(); }
+
+int main(void)
+{
+   UNITY_BEGIN();
+   RUN_TEST(test_transform_transform);
+   return UNITY_END();
 }

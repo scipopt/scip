@@ -107,10 +107,10 @@ void teardown(void)
    SCIPfree(&scip);
 }
 
-TestSuite(upgradexor, .init = setup, .fini = teardown);
 
 /* TESTS  */
-Test(upgradexor, intvariables1, .description = "test upgrading method of XOR constraints with two variables")
+/** @brief test upgrading method of XOR constraints with two variables */
+void test_upgradexor_intvariables1(void)
 {
    SCIP_CONS* cons;
    SCIP_CONS* xorcons;
@@ -132,22 +132,23 @@ Test(upgradexor, intvariables1, .description = "test upgrading method of XOR con
 
    SCIP_CALL( TESTscipSetStage(scip, SCIP_STAGE_PRESOLVING, FALSE) );
    SCIP_CALL( SCIPupgradeConsLinear(scip, cons, &xorcons) );
-   cr_assert( xorcons != NULL );
+   TEST_ASSERT( xorcons != NULL );
 
    /* check xor constraint */
-   cr_assert( SCIPgetNVarsXor(scip, xorcons) == 2 );
-   cr_assert( SCIPgetRhsXor(scip, xorcons) == FALSE );
+   TEST_ASSERT( SCIPgetNVarsXor(scip, xorcons) == 2 );
+   TEST_ASSERT( SCIPgetRhsXor(scip, xorcons) == FALSE );
 
    SCIP_CALL( SCIPgetTransformedVar(scip, xvars[0], &xvars_t[0]) );
    SCIP_CALL( SCIPgetTransformedVar(scip, xvars[1], &xvars_t[1]) );
 
-   cr_assert( compareVariableLists(xvars_t, SCIPgetVarsXor(scip, xorcons), 2) );
+   TEST_ASSERT( compareVariableLists(xvars_t, SCIPgetVarsXor(scip, xorcons), 2) );
 
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
    SCIP_CALL( SCIPreleaseCons(scip, &xorcons) );
 }
 
-Test(upgradexor, intvariables2, .description = "test upgrading method of XOR constraints with three variables")
+/** @brief test upgrading method of XOR constraints with three variables */
+void test_upgradexor_intvariables2(void)
 {
    SCIP_CONS* cons;
    SCIP_CONS* xorcons;
@@ -172,25 +173,26 @@ Test(upgradexor, intvariables2, .description = "test upgrading method of XOR con
 
    SCIP_CALL( TESTscipSetStage(scip, SCIP_STAGE_PRESOLVING, FALSE) );
    SCIP_CALL( SCIPupgradeConsLinear(scip, cons, &xorcons) );
-   cr_assert( xorcons != NULL );
+   TEST_ASSERT( xorcons != NULL );
 
    /* check xor constraint */
-   cr_assert( SCIPgetNVarsXor(scip, xorcons) == 3 );
-   cr_assert( SCIPgetRhsXor(scip, xorcons) == FALSE );
+   TEST_ASSERT( SCIPgetNVarsXor(scip, xorcons) == 3 );
+   TEST_ASSERT( SCIPgetRhsXor(scip, xorcons) == FALSE );
 
    SCIP_CALL( SCIPgetTransformedVar(scip, xvars[0], &xvars_t[0]) );
    SCIP_CALL( SCIPgetTransformedVar(scip, xvars[1], &xvars_t[1]) );
    SCIP_CALL( SCIPgetTransformedVar(scip, xvars[2], &xvars_t[2]) );
    SCIP_CALL( SCIPgetTransformedVar(scip, ivar, &ivar_t) );
 
-   cr_assert( compareVariableLists(xvars_t, SCIPgetVarsXor(scip, xorcons), 3) );
-   cr_assert( SCIPvarGetAggrVar(ivar_t) == SCIPgetIntVarXor(scip, xorcons) ); /* the integer variable should be aggregated */
+   TEST_ASSERT( compareVariableLists(xvars_t, SCIPgetVarsXor(scip, xorcons), 3) );
+   TEST_ASSERT( SCIPvarGetAggrVar(ivar_t) == SCIPgetIntVarXor(scip, xorcons) ); /* the integer variable should be aggregated */
 
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
    SCIP_CALL( SCIPreleaseCons(scip, &xorcons) );
 }
 
-Test(upgradexor, intvariables3, .description = "test upgrading method of XOR constraints with three variables and -2.0 coefficient ")
+/** @brief test upgrading method of XOR constraints with three variables and -2.0 coefficient  */
+void test_upgradexor_intvariables3(void)
 {
    SCIP_CONS* cons;
    SCIP_CONS* xorcons;
@@ -215,25 +217,26 @@ Test(upgradexor, intvariables3, .description = "test upgrading method of XOR con
 
    SCIP_CALL( TESTscipSetStage(scip, SCIP_STAGE_PRESOLVING, FALSE) );
    SCIP_CALL( SCIPupgradeConsLinear(scip, cons, &xorcons) );
-   cr_assert( xorcons != NULL );
+   TEST_ASSERT( xorcons != NULL );
 
    /* check xor constraint */
-   cr_assert( SCIPgetNVarsXor(scip, xorcons) == 3 );
-   cr_assert( SCIPgetRhsXor(scip, xorcons) == FALSE );
+   TEST_ASSERT( SCIPgetNVarsXor(scip, xorcons) == 3 );
+   TEST_ASSERT( SCIPgetRhsXor(scip, xorcons) == FALSE );
 
    SCIP_CALL( SCIPgetTransformedVar(scip, xvars[0], &xvars_t[0]) );
    SCIP_CALL( SCIPgetTransformedVar(scip, xvars[1], &xvars_t[1]) );
    SCIP_CALL( SCIPgetTransformedVar(scip, xvars[2], &xvars_t[2]) );
    SCIP_CALL( SCIPgetTransformedVar(scip, ivar, &ivar_t) );
 
-   cr_assert( compareVariableLists(xvars_t, SCIPgetVarsXor(scip, xorcons), 3) );
-   cr_assert( SCIPgetIntVarXor(scip, xorcons) == ivar_t ); /* the integer variable should remain unchanged */
+   TEST_ASSERT( compareVariableLists(xvars_t, SCIPgetVarsXor(scip, xorcons), 3) );
+   TEST_ASSERT( SCIPgetIntVarXor(scip, xorcons) == ivar_t ); /* the integer variable should remain unchanged */
 
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
    SCIP_CALL( SCIPreleaseCons(scip, &xorcons) );
 }
 
-Test(upgradexor, intvariables4, .description = "test solving of upgraded XOR constraints")
+/** @brief test solving of upgraded XOR constraints */
+void test_upgradexor_intvariables4(void)
 {
    SCIP_VAR* zvars[4];
    SCIP_VAR* ivars[4];
@@ -333,8 +336,8 @@ Test(upgradexor, intvariables4, .description = "test solving of upgraded XOR con
    /* solve */
    SCIP_CALL( SCIPsolve(scip) );
 
-   cr_assert( SCIPgetStatus(scip) == SCIP_STATUS_OPTIMAL );
-   cr_assert_float_eq(SCIPgetPrimalbound(scip), 4.0, 1e-6, "Wrong optimal value.\n");
+   TEST_ASSERT( SCIPgetStatus(scip) == SCIP_STATUS_OPTIMAL );
+   TEST_ASSERT_DOUBLE_WITHIN(SCIPgetPrimalbound(scip), 4.0, 1e-6, "Wrong optimal value.\n");
 
    SCIP_CALL( SCIPreleaseVar(scip, &zvars[0]) );
    SCIP_CALL( SCIPreleaseVar(scip, &zvars[1]) );
@@ -344,4 +347,18 @@ Test(upgradexor, intvariables4, .description = "test solving of upgraded XOR con
    SCIP_CALL( SCIPreleaseVar(scip, &ivars[1]) );
    SCIP_CALL( SCIPreleaseVar(scip, &ivars[2]) );
    SCIP_CALL( SCIPreleaseVar(scip, &ivars[3]) );
+}
+
+void setUp(void) { setup(); }
+
+void tearDown(void) { teardown(); }
+
+int main(void)
+{
+   UNITY_BEGIN();
+   RUN_TEST(test_upgradexor_intvariables1);
+   RUN_TEST(test_upgradexor_intvariables2);
+   RUN_TEST(test_upgradexor_intvariables3);
+   RUN_TEST(test_upgradexor_intvariables4);
+   return UNITY_END();
 }

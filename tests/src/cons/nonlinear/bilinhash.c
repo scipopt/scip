@@ -47,7 +47,7 @@ void setup(void)
 
    /* store nonlinear constraint handler */
    conshdlr = SCIPfindConshdlr(scip, "nonlinear");
-   cr_assert(conshdlr != NULL);
+   TEST_ASSERT(conshdlr != NULL);
 
    /* create problem */
    SCIP_CALL( SCIPcreateProbBasic(scip, "test_problem") );
@@ -75,14 +75,12 @@ void teardown(void)
    /* free SCIP */
    SCIP_CALL( SCIPfree(&scip) );
 
-   cr_assert_eq(BMSgetMemoryUsed(), 0, "Memory leak!!");
+   TEST_ASSERT_EQUAL(BMSgetMemoryUsed(), 0, "Memory leak!!");
 }
 
 /* define test test suite */
-TestSuite(bilinhash, .init = setup, .fini = teardown);
-
 /* tests the creating and release of the hash table using non-API methods from cons_nonlinear.c */
-Test(bilinhash, createInsert)
+void test_bilinhash_createInsert(void)
 {
    SCIP_CONSNONLINEAR_BILINTERM* bilinterms;
 
@@ -92,17 +90,18 @@ Test(bilinhash, createInsert)
    SCIP_CALL( SCIPinsertBilinearTermExistingNonlinear(scip, conshdlr, x, y, NULL, 0, 0) );
    SCIP_CALL( SCIPinsertBilinearTermExistingNonlinear(scip, conshdlr, y, z, NULL, 0, 0) );
 
-   cr_assert_eq(SCIPgetNBilinTermsNonlinear(conshdlr), 2);
+   TEST_ASSERT_EQUAL(SCIPgetNBilinTermsNonlinear(conshdlr), 2);
 
    bilinterms = SCIPgetBilinTermsNonlinear(conshdlr);
-   cr_expect_eq(bilinterms[0].x, x);
-   cr_expect_eq(bilinterms[0].y, y);
-   cr_expect_eq(bilinterms[1].x, y);
-   cr_expect_eq(bilinterms[1].y, z);
+
+   SOFT_ASSERT_EQUAL(bilinterms[0].x, x);
+   SOFT_ASSERT_EQUAL(bilinterms[0].y, y);
+   SOFT_ASSERT_EQUAL(bilinterms[1].x, y);
+   SOFT_ASSERT_EQUAL(bilinterms[1].y, z);
 }
 
 /* tests API methods for a simple problem containing two nonlinear constraints */
-Test(bilinhash, api_methods)
+void test_bilinhash_api_methods(void)
 {
    const char* inputs[2] = {"[nonlinear] <c1>: (<x>[C])^2 + <x>[C] * <y>[C] <= 4;",
       "[nonlinear] <c2>: abs(<y>[C] * <z>[C] + <x>[C] * <y>[C]) - (log(<x>[C] + <z>[C]))^2 <= 1;"};
@@ -121,7 +120,7 @@ Test(bilinhash, api_methods)
 
       SCIP_CALL( SCIPparseCons(scip, &cons, inputs[i],
          TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, &success) );
-      cr_expect(success);
+      TEST_ASSERT(success);
       SCIP_CALL( SCIPaddCons(scip, cons) );
       SCIP_CALL( SCIPreleaseCons(scip, &cons) );
    }
@@ -136,41 +135,53 @@ Test(bilinhash, api_methods)
 
    /* collect all bilinear terms by getting CONSINITLP called */
    SCIP_CALL( SCIPconstructLP(scip, &cutoff) );
-   cr_expect_not(cutoff);
+   SOFT_ASSERT_NOT(cutoff);
 
    /*
     * because auxiliary variables are present, there are four bilinear terms: xx, xy, yz, log()^2
     */
-   cr_expect_eq(SCIPgetNBilinTermsNonlinear(conshdlr), 4);
+   SOFT_ASSERT_EQUAL(SCIPgetNBilinTermsNonlinear(conshdlr), 4);
 
    bilinterms = SCIPgetBilinTermsNonlinear(conshdlr);
-   cr_assert(bilinterms != NULL);
-   cr_expect_eq(bilinterms[0].x, tx);
-   cr_expect_eq(bilinterms[0].y, tx);
-   cr_expect_not_null(bilinterms[0].aux.var);
-   cr_expect_eq(bilinterms[1].x, tx);
-   cr_expect_eq(bilinterms[1].y, ty);
-   cr_expect_not_null(bilinterms[1].aux.var);
-   cr_expect_eq(bilinterms[2].x, ty);
-   cr_expect_eq(bilinterms[2].y, tz);
-   cr_expect_not_null(bilinterms[2].aux.var);
-   cr_expect_eq(bilinterms[3].x, bilinterms[3].y);
+   TEST_ASSERT(bilinterms != NULL);
+   SOFT_ASSERT_EQUAL(bilinterms[0].x, tx);
+   SOFT_ASSERT_EQUAL(bilinterms[0].y, tx);
+   SOFT_ASSERT_NOT_NULL(bilinterms[0].aux.var);
+   SOFT_ASSERT_EQUAL(bilinterms[1].x, tx);
+   SOFT_ASSERT_EQUAL(bilinterms[1].y, ty);
+   SOFT_ASSERT_NOT_NULL(bilinterms[1].aux.var);
+   SOFT_ASSERT_EQUAL(bilinterms[2].x, ty);
+   SOFT_ASSERT_EQUAL(bilinterms[2].y, tz);
+   SOFT_ASSERT_NOT_NULL(bilinterms[2].aux.var);
+   SOFT_ASSERT_EQUAL(bilinterms[3].x, bilinterms[3].y);
 
    /* xx exists */
-   cr_expect_not_null(SCIPgetBilinTermNonlinear(conshdlr, tx, tx));
+   SOFT_ASSERT_NOT_NULL(SCIPgetBilinTermNonlinear(conshdlr, tx, tx));
 
    /* xy exists */
-   cr_expect_not_null(SCIPgetBilinTermNonlinear(conshdlr, tx, ty));
+   SOFT_ASSERT_NOT_NULL(SCIPgetBilinTermNonlinear(conshdlr, tx, ty));
 
    /* yx = xy exists */
-   cr_expect_not_null(SCIPgetBilinTermNonlinear(conshdlr, ty, tx));
+   SOFT_ASSERT_NOT_NULL(SCIPgetBilinTermNonlinear(conshdlr, ty, tx));
 
    /* yz exists */
-   cr_expect_not_null(SCIPgetBilinTermNonlinear(conshdlr, ty, tz));
+   SOFT_ASSERT_NOT_NULL(SCIPgetBilinTermNonlinear(conshdlr, ty, tz));
 
    /* xz does not exist */
-   cr_expect_null(SCIPgetBilinTermNonlinear(conshdlr, tx, tz));
+   SOFT_ASSERT_NULL(SCIPgetBilinTermNonlinear(conshdlr, tx, tz));
 
    /* zz does not exist */
-   cr_expect_null(SCIPgetBilinTermNonlinear(conshdlr, tz, tz));
+   SOFT_ASSERT_NULL(SCIPgetBilinTermNonlinear(conshdlr, tz, tz));
+}
+
+void setUp(void) { setup(); }
+
+void tearDown(void) { teardown(); }
+
+int main(void)
+{
+   UNITY_BEGIN();
+   RUN_TEST(test_bilinhash_createInsert);
+   RUN_TEST(test_bilinhash_api_methods);
+   return UNITY_END();
 }

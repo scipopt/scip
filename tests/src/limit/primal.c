@@ -49,17 +49,17 @@ void teardown(void)
    /* free SCIP */
    SCIP_CALL( SCIPfree(&scip) );
    /* check for memory leaks */
-   cr_assert_eq(BMSgetMemoryUsed(), 0, "There is a memory leak!");
+   TEST_ASSERT_EQUAL(BMSgetMemoryUsed(), 0, "There is a memory leak!");
 }
 
-TestSuite(primal, .init = setup, .fini = teardown);
 
-Test(primal, primallimit_min, .description = "tests primal limit for minimization")
+/** @brief tests primal limit for minimization */
+void test_primal_primallimit_min(void)
 {
    const SCIP_Real target = 6040;
    SCIP_Real primallimit;
 
-   cr_assert_not_null(scip);
+   TEST_ASSERT_NOT_NULL(scip);
    SCIP_CALL( SCIPsetRealParam(scip, "limits/primal", target) );
    /* turn on aggressive heuristics to get more limit candidates */
    SCIP_CALL( SCIPsetHeuristics(scip, SCIP_PARAMSETTING_AGGRESSIVE, TRUE) );
@@ -68,19 +68,20 @@ Test(primal, primallimit_min, .description = "tests primal limit for minimizatio
    SCIP_CALL( SCIPreadProb(scip, "../check/instances/MIP/rgn.mps", NULL) );
    SCIP_CALL( SCIPsolve(scip) );
 
-   cr_assert_eq(SCIPgetStatus(scip), SCIP_STATUS_PRIMALLIMIT, "SCIP terminated with status %d but should have terminated with status %d", SCIPgetStatus(scip), SCIP_STATUS_PRIMALLIMIT);
+   TEST_ASSERT_EQUAL(SCIPgetStatus(scip), SCIP_STATUS_PRIMALLIMIT, "SCIP terminated with status %d but should have terminated with status %d", SCIPgetStatus(scip), SCIP_STATUS_PRIMALLIMIT);
    primallimit = SCIPgetPrimalbound(scip);
-   cr_assert_leq(primallimit, target, "Primal bound is %f but should be at most %f", primallimit, target);
+   TEST_ASSERT_LESS_OR_EQUAL(primallimit, target, "Primal bound is %f but should be at most %f", primallimit, target);
    SCIP_CALL( SCIPgetRealParam(scip, "limits/primal", &primallimit) );
-   cr_assert_eq(primallimit, target, "Primal limit is %f but should be %f", primallimit, target);
+   TEST_ASSERT_EQUAL(primallimit, target, "Primal limit is %f but should be %f", primallimit, target);
 }
 
-Test(primal, primallimit_max, .description = "tests primal limit for maximization")
+/** @brief tests primal limit for maximization */
+void test_primal_primallimit_max(void)
 {
    const SCIP_Real target = 14;
    SCIP_Real primallimit;
 
-   cr_assert_not_null(scip);
+   TEST_ASSERT_NOT_NULL(scip);
    SCIP_CALL( SCIPsetRealParam(scip, "limits/primal", target) );
    /* turn on aggressive heuristics to get more limit candidates */
    SCIP_CALL( SCIPsetHeuristics(scip, SCIP_PARAMSETTING_AGGRESSIVE, TRUE) );
@@ -89,9 +90,22 @@ Test(primal, primallimit_max, .description = "tests primal limit for maximizatio
    SCIP_CALL( SCIPreadProb(scip, "../check/instances/Symmetry/packorb_1-FullIns_3.cip", NULL) );
    SCIP_CALL( SCIPsolve(scip) );
 
-   cr_assert_eq(SCIPgetStatus(scip), SCIP_STATUS_PRIMALLIMIT, "SCIP terminated with status %d but should have terminated with status %d", SCIPgetStatus(scip), SCIP_STATUS_PRIMALLIMIT);
+   TEST_ASSERT_EQUAL(SCIPgetStatus(scip), SCIP_STATUS_PRIMALLIMIT, "SCIP terminated with status %d but should have terminated with status %d", SCIPgetStatus(scip), SCIP_STATUS_PRIMALLIMIT);
    primallimit = SCIPgetPrimalbound(scip);
-   cr_assert_geq(primallimit, target, "Primal bound is %f but should be at least %f", primallimit, target);
+   TEST_ASSERT_GREATER_OR_EQUAL(primallimit, target, "Primal bound is %f but should be at least %f", primallimit, target);
    SCIP_CALL( SCIPgetRealParam(scip, "limits/primal", &primallimit) );
-   cr_assert_eq(primallimit, target, "Primal limit is %f but should be %f", primallimit, target);
+   TEST_ASSERT_EQUAL(primallimit, target, "Primal limit is %f but should be %f", primallimit, target);
+}
+
+void setUp(void) { setup(); }
+
+void tearDown(void) { teardown(); }
+
+int main(void)
+{
+   UNITY_BEGIN();
+   RUN_TEST(test_primal_primallimit_min
+);
+   RUN_TEST(test_primal_primallimit_max);
+   return UNITY_END();
 }

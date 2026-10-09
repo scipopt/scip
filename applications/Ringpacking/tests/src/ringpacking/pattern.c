@@ -67,7 +67,7 @@ void setup(void)
    /* create problem data */
    SCIP_CALL( SCIPprobdataCreate(scip, "unit test", demands, rints, rexts, 3, 100.0, 100.0) );
    probdata = SCIPgetProbData(scip);
-   cr_assert(probdata != NULL);
+   TEST_ASSERT(probdata != NULL);
 
    /* creates circular and rectangular pattern */
    SCIP_CALL( SCIPpatternCreateCircular(scip, &cpattern, 1) );
@@ -85,51 +85,61 @@ void teardown(void)
    /* free SCIP */
    SCIP_CALL( SCIPfree(&scip) );
 
-   cr_assert_null(scip);
-   cr_assert_eq(BMSgetMemoryUsed(), 0, "There is a memory leak!!");
+   TEST_ASSERT_NULL(scip);
+   TEST_ASSERT_EQUAL(0, BMSgetMemoryUsed(), "There is a memory leak!!");
 }
 
-/* test suite */
-TestSuite(pattern, .init = setup, .fini = teardown);
+void setUp(void) { setup(); }
+void tearDown(void) { teardown(); }
 
 /* checks the pattern */
-Test(pattern, patterntype)
+void test_pattern_patterntype(void)
 {
-   cr_expect(SCIPpatternGetPatternType(cpattern) == SCIP_PATTERNTYPE_CIRCULAR);
-   cr_expect(SCIPpatternGetPatternType(rpattern) == SCIP_PATTERNTYPE_RECTANGULAR);
+   SOFT_ASSERT(SCIPpatternGetPatternType(cpattern) == SCIP_PATTERNTYPE_CIRCULAR);
+   SOFT_ASSERT(SCIPpatternGetPatternType(rpattern) == SCIP_PATTERNTYPE_RECTANGULAR);
 }
 
 /* checks the type of a circular pattern */
-Test(pattern, type)
+void test_pattern_type(void)
 {
-   cr_expect(SCIPpatternGetCircleType(cpattern) == 1);
+   SOFT_ASSERT(SCIPpatternGetCircleType(cpattern) == 1);
 }
 
 /* checks the position of an element */
-Test(pattern, position)
+void test_pattern_position(void)
 {
    SCIP_CALL( SCIPpatternAddElement(cpattern, 0, -1.0, 1.0) );
-   cr_expect(SCIPpatternGetElementPosX(cpattern, 0) == -1.0);
-   cr_expect(SCIPpatternGetElementPosY(cpattern, 0) == 1.0);
+   SOFT_ASSERT(SCIPpatternGetElementPosX(cpattern, 0) == -1.0);
+   SOFT_ASSERT(SCIPpatternGetElementPosY(cpattern, 0) == 1.0);
 
    SCIP_CALL( SCIPpatternAddElement(cpattern, 0, -2.0, 2.0) );
-   cr_expect(SCIPpatternGetElementPosX(cpattern, 1) == -2.0);
-   cr_expect(SCIPpatternGetElementPosY(cpattern, 1) == 2.0);
+   SOFT_ASSERT(SCIPpatternGetElementPosX(cpattern, 1) == -2.0);
+   SOFT_ASSERT(SCIPpatternGetElementPosY(cpattern, 1) == 2.0);
 }
 
 /* checks the packable status */
-Test(pattern, packable)
+void test_pattern_packable(void)
 {
-   cr_expect(SCIPpatternGetPackableStatus(rpattern) == SCIP_PACKABLE_UNKNOWN);
+   SOFT_ASSERT(SCIPpatternGetPackableStatus(rpattern) == SCIP_PACKABLE_UNKNOWN);
 
    SCIPpatternSetPackableStatus(rpattern, SCIP_PACKABLE_YES);
-   cr_expect(SCIPpatternGetPackableStatus(rpattern) == SCIP_PACKABLE_YES);
+   SOFT_ASSERT(SCIPpatternGetPackableStatus(rpattern) == SCIP_PACKABLE_YES);
 
    /* adding an element does not change packable status */
    SCIP_CALL( SCIPpatternAddElement(rpattern, 0, 0.0, 0.0) );
-   cr_expect(SCIPpatternGetPackableStatus(rpattern) == SCIP_PACKABLE_YES);
+   SOFT_ASSERT(SCIPpatternGetPackableStatus(rpattern) == SCIP_PACKABLE_YES);
 
    /* removing an element does not change packable status */
    SCIPpatternRemoveLastElements(rpattern, 1);
-   cr_expect(SCIPpatternGetPackableStatus(rpattern) == SCIP_PACKABLE_YES);
+   SOFT_ASSERT(SCIPpatternGetPackableStatus(rpattern) == SCIP_PACKABLE_YES);
+}
+
+int main(void)
+{
+   UNITY_BEGIN();
+   RUN_TEST(test_pattern_patterntype);
+   RUN_TEST(test_pattern_type);
+   RUN_TEST(test_pattern_position);
+   RUN_TEST(test_pattern_packable);
+   return UNITY_END();
 }

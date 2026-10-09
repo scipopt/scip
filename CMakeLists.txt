@@ -1016,14 +1016,6 @@ if((CHECKNAME STREQUAL "AUTO" AND CMAKE_BUILD_TYPE STREQUAL "Debug") OR (NOT CHE
     set(SCIP_CHECK_NAME on)
 endif()
 
-message(STATUS "Finding CRITERION")
-find_package(CRITERION)
-if(CRITERION_FOUND)
-    message(STATUS "Finding CRITERION - found")
-else()
-    message(STATUS "Finding CRITERION - not found")
-endif()
-
 
 # export compilation settings to header file
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/src/scip/config.h.in ${PROJECT_BINARY_DIR}/scip/config.h @ONLY)

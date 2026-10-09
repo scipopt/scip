@@ -55,7 +55,7 @@ static SCIP_NLROW* nlrow3 = NULL;
 static SCIP_VAR* x;
 static SCIP_VAR* y;
 
-/* This test computes the projection of x = 0.75, y = 0.25 onto 
+/* This test computes the projection of x = 0.75, y = 0.25 onto
  * log(exp(x) + exp(y)) <= 1
  * x^2 <= y
  * 1.1*x+2.4*x^2 + 0.01*x*y + 0.3*y^2 + 0.2*log(0.5*exp(0.12*x+0.1)+2*exp(0.1*y)+0.7)  <= 0.5
@@ -181,18 +181,18 @@ void setup_sepadata(void)
    SCIP_NLROW* nlrows[3] = {nlrow1, nlrow2, nlrow3};
 
    sepadata = SCIPsepaGetData(sepa);
-   cr_assert(sepadata != NULL);
+   TEST_ASSERT(sepadata != NULL);
 
    SCIP_CALL( storeNonlinearConvexNlrows(scip, sepadata, nlrows, 3) );
-   cr_assert_eq(sepadata->nnlrows, 3, "error: received %d nlrows", sepadata->nnlrows);
+   TEST_ASSERT_EQUAL(sepadata->nnlrows, 3, "error: received %d nlrows", sepadata->nnlrows);
 
    /* initialize some of the sepadata */
    sepadata->nlpinvars = SCIPgetNVars(scip);
-   cr_assert_eq(sepadata->nlpinvars, 2, "error: received %d vars", sepadata->nlpinvars);
+   TEST_ASSERT_EQUAL(sepadata->nlpinvars, 2, "error: received %d vars", sepadata->nlpinvars);
 
    /* create nlpi problem */
    sepadata->nlpi = SCIPgetNlpis(scip)[0];
-   cr_assert_not_null(sepadata->nlpi);
+   TEST_ASSERT_NOT_NULL(sepadata->nlpi);
 
    SCIP_CALL( SCIPhashmapCreate(&sepadata->var2nlpiidx, SCIPblkmem(scip), sepadata->nlpinvars) );
    SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &sepadata->nlpivars, SCIPgetVars(scip), sepadata->nlpinvars) );
@@ -234,7 +234,7 @@ void test_setup(void)
    /* include convexproj separator and get it */
    SCIP_CALL( SCIPincludeSepaConvexproj(scip) );
    sepa = SCIPfindSepa(scip, "convexproj");
-   cr_assert(sepa != NULL);
+   TEST_ASSERT(sepa != NULL);
 
    /* create a problem */
    SCIP_CALL( SCIPcreateProbBasic(scip, "problem") );
@@ -272,7 +272,7 @@ void teardown(void)
    SCIP_CALL( SCIPfree(&scip) );
 
    /* check for memory leaks */
-   cr_assert_eq(BMSgetMemoryUsed(), 0, "There is a memory leak!!");
+   TEST_ASSERT_EQUAL(BMSgetMemoryUsed(), 0, "There is a memory leak!!");
 }
 
 static
@@ -307,29 +307,29 @@ void project(SCIP_Bool* isrhsconvex)
 
    /* compute violations */
    SCIP_CALL( computeMaxViolation(scip, sepadata, toseparate_sol, &maxvio) );
-   cr_expect_float_eq(0.224076984, sepadata->constraintviolation[0], EPS, "got %f\n", sepadata->constraintviolation[0]);
-   cr_expect_float_eq(0.3125, sepadata->constraintviolation[1], EPS, "got %f\n", sepadata->constraintviolation[1]);
-   cr_expect_float_eq(1.937730557, sepadata->constraintviolation[2], EPS, "got %f\n", sepadata->constraintviolation[2]);
+   SOFT_ASSERT_DOUBLE_WITHIN(0.224076984, sepadata->constraintviolation[0], EPS, "got %f\n", sepadata->constraintviolation[0]);
+   SOFT_ASSERT_DOUBLE_WITHIN(0.3125, sepadata->constraintviolation[1], EPS, "got %f\n", sepadata->constraintviolation[1]);
+   SOFT_ASSERT_DOUBLE_WITHIN(1.937730557, sepadata->constraintviolation[2], EPS, "got %f\n", sepadata->constraintviolation[2]);
 
    /* project and compute cuts */
    SCIP_CALL( separateCuts(scip, sepa, toseparate_sol, &result) );
 
    /* check cut */
-   cr_assert_eq(result, SCIP_SEPARATED, "result is %d instead of SEPARATED", result);
-   cr_assert_eq(SCIPgetNCuts(scip), 1, "got %d cuts", SCIPgetNCuts(scip));
+   TEST_ASSERT_EQUAL(result, SCIP_SEPARATED, "result is %d instead of SEPARATED", result);
+   TEST_ASSERT_EQUAL(SCIPgetNCuts(scip), 1, "got %d cuts", SCIPgetNCuts(scip));
    gradcut = SCIPgetCuts(scip)[0];
    coefs = SCIProwGetVals(gradcut);
    if( isrhsconvex[2] )
    {
-      cr_expect_float_eq(1.900159674905818, coefs[0], EPS, "for x got %f\n", coefs[0]);
-      cr_expect_float_eq(0.138455761838885, coefs[1], EPS, "for y got %f\n", coefs[1]);
-      cr_expect_float_eq(0.343035343633182, SCIProwGetRhs(gradcut), EPS, "wrong rhs got %f\n", SCIProwGetRhs(gradcut));
+      SOFT_ASSERT_DOUBLE_WITHIN(1.900159674905818, coefs[0], EPS, "for x got %f\n", coefs[0]);
+      SOFT_ASSERT_DOUBLE_WITHIN(0.138455761838885, coefs[1], EPS, "for y got %f\n", coefs[1]);
+      SOFT_ASSERT_DOUBLE_WITHIN(0.343035343633182, SCIProwGetRhs(gradcut), EPS, "wrong rhs got %f\n", SCIProwGetRhs(gradcut));
    }
    else
    {
-      cr_expect_float_eq(-1.900159674905818, coefs[0], EPS, "for x got %f\n", coefs[0]);
-      cr_expect_float_eq(-0.138455761838885, coefs[1], EPS, "for y got %f\n", coefs[1]);
-      cr_expect_float_eq(-0.343035343633182, SCIProwGetLhs(gradcut), EPS, "wrong rhs got %f\n", SCIProwGetLhs(gradcut));
+      SOFT_ASSERT_DOUBLE_WITHIN(-1.900159674905818, coefs[0], EPS, "for x got %f\n", coefs[0]);
+      SOFT_ASSERT_DOUBLE_WITHIN(-0.138455761838885, coefs[1], EPS, "for y got %f\n", coefs[1]);
+      SOFT_ASSERT_DOUBLE_WITHIN(-0.343035343633182, SCIProwGetLhs(gradcut), EPS, "wrong rhs got %f\n", SCIProwGetLhs(gradcut));
    }
 
    /* to remove the added cuts */
@@ -338,15 +338,32 @@ void project(SCIP_Bool* isrhsconvex)
    teardown();
 }
 
-TheoryDataPoints(evaluation, convex_is_minus_concave) =
+/** Test all 8 combinations of convex sides */
+void test_evaluation_convex_is_minus_concave(void)
 {
-   DataPoints(SCIP_Bool, TRUE, FALSE),
-   DataPoints(SCIP_Bool, TRUE, FALSE),
-   DataPoints(SCIP_Bool, TRUE, FALSE)
-};
+   SCIP_Bool boolvals[2] = {TRUE, FALSE};
+   int i, j, k;
 
-Theory((SCIP_Bool is1convex, SCIP_Bool is2convex, SCIP_Bool is3convex), evaluation, convex_is_minus_concave)
+   for( i = 0; i < 2; i++ )
+   {
+      for( j = 0; j < 2; j++ )
+      {
+         for( k = 0; k < 2; k++ )
+         {
+            fprintf(stderr, "calling projection with %d %d %d\n", boolvals[i], boolvals[j], boolvals[k]);
+            project((SCIP_Bool[]){boolvals[i], boolvals[j], boolvals[k]});
+         }
+      }
+   }
+}
+
+void setUp(void) { }
+
+void tearDown(void) { }
+
+int main(void)
 {
-   fprintf(stderr, "calling projection with %d %d %d\n",is1convex, is2convex, is3convex);
-   project((SCIP_Bool[]){is1convex, is2convex, is3convex});
+   UNITY_BEGIN();
+   RUN_TEST(test_evaluation_convex_is_minus_concave);
+   return UNITY_END();
 }

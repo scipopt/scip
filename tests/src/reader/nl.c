@@ -57,7 +57,6 @@ void teardown(void)
 }
 
 /* TEST SUITE */
-TestSuite(readernl, .init = setup, .fini = teardown);
 
 /* read .nl file, print as .cip, compare with .cip file on stock */
 static
@@ -80,7 +79,7 @@ void compareNlToCip(
    SCIP_CALL( SCIPreadProb(scip, filename, NULL) );
 
    /* write cip file to stdout, but capture stdout output */
-   cr_redirect_stdout();
+   TEST_CAPTURE_STDOUT();
    SCIP_CALL( SCIPwriteOrigProblem(scip, NULL, "cip", FALSE) );
    fflush(stdout);
 
@@ -88,10 +87,10 @@ void compareNlToCip(
    TESTsetTestfilename(filename, __FILE__, filestub);
    strcat(filename, ".cip");
    reffile = fopen(filename, "r");
-   cr_assert_not_null(reffile);
+   TEST_ASSERT_NOT_NULL(reffile);
 
    /* check that problem is as expected */
-   cr_assert_stdout_eq(reffile, "Problem from reading %s.nl not as expected (%s.cip)", filename, filename);
+   TEST_ASSERT_STDOUT_EQUAL_FILE(reffile, "Problem from reading %s.nl not as expected (%s.cip)", filename, filename);
    fclose(reffile);
 }
 
@@ -99,19 +98,22 @@ void compareNlToCip(
  * makes stdout unusable for a second run
  */
 /* check that we can read a .nl file with common exprs and get the problem as expected */
-Test(readernl, read1, .description = "check reading .nl file with common expression")
+/** @brief check reading .nl file with common expression */
+void test_readernl_read1(void)
 {
    compareNlToCip("commonexpr1");
 }
 
 /* check that we can read a .nl file with common exprs and get the problem as expected */
-Test(readernl, read2, .description = "check reading .nl file with common expression")
+/** @brief check reading .nl file with common expression */
+void test_readernl_read2(void)
 {
    compareNlToCip("commonexpr2");
 }
 
 /* read a .nl file with suffixes and check that they arrive as expected; also solve and check optimal value */
-Test(readernl, read3, .description = "check reading .nl file with suffixes")
+/** @brief check reading .nl file with suffixes */
+void test_readernl_read3(void)
 {
    char filename[SCIP_MAXSTRLEN];
    SCIP_VAR* x;
@@ -131,8 +133,8 @@ Test(readernl, read3, .description = "check reading .nl file with suffixes")
    /* read nl file */
    SCIP_CALL( SCIPreadProb(scip, filename, NULL) );
 
-   cr_assert_eq(SCIPgetNVars(scip), 3);
-   cr_assert_eq(SCIPgetNConss(scip), 3);
+   TEST_ASSERT_EQUAL(SCIPgetNVars(scip), 3);
+   TEST_ASSERT_EQUAL(SCIPgetNConss(scip), 3);
 
    x = SCIPgetVars(scip)[0];
    y = SCIPgetVars(scip)[1];
@@ -143,42 +145,43 @@ Test(readernl, read3, .description = "check reading .nl file with suffixes")
    sos = SCIPgetConss(scip)[2];
 
    /* read .nl file without names from accompanying col/row files */
-   cr_expect_str_eq(SCIPvarGetName(x), "x0");
-   cr_expect_str_eq(SCIPvarGetName(y), "x1");
-   cr_expect_str_eq(SCIPvarGetName(z), "x2");
-   cr_expect_str_eq(SCIPconsGetName(e1), "lc0");
-   cr_expect_str_eq(SCIPconsGetName(e2), "lc1");
-   cr_expect_str_eq(SCIPconsGetName(sos), "sos1_1");
+   SOFT_ASSERT_EQUAL_STRING(SCIPvarGetName(x), "x0");
+   SOFT_ASSERT_EQUAL_STRING(SCIPvarGetName(y), "x1");
+   SOFT_ASSERT_EQUAL_STRING(SCIPvarGetName(z), "x2");
+   SOFT_ASSERT_EQUAL_STRING(SCIPconsGetName(e1), "lc0");
+   SOFT_ASSERT_EQUAL_STRING(SCIPconsGetName(e2), "lc1");
+   SOFT_ASSERT_EQUAL_STRING(SCIPconsGetName(sos), "sos1_1");
 
-   cr_expect_not(SCIPvarIsInitial(x));
-   cr_expect(SCIPvarIsRemovable(x));
+   SOFT_ASSERT_NOT(SCIPvarIsInitial(x));
+   SOFT_ASSERT(SCIPvarIsRemovable(x));
 
-   cr_expect(SCIPvarIsInitial(y));
-   cr_expect_not(SCIPvarIsRemovable(y));
+   SOFT_ASSERT(SCIPvarIsInitial(y));
+   SOFT_ASSERT_NOT(SCIPvarIsRemovable(y));
 
-   cr_expect(SCIPconsIsInitial(e1));
-   cr_expect(SCIPconsIsSeparated(e1));
-   cr_expect(SCIPconsIsEnforced(e1));
-   cr_expect(SCIPconsIsChecked(e1));
-   cr_expect(SCIPconsIsPropagated(e1));
-   cr_expect_not(SCIPconsIsDynamic(e1));
-   cr_expect_not(SCIPconsIsRemovable(e1));
+   SOFT_ASSERT(SCIPconsIsInitial(e1));
+   SOFT_ASSERT(SCIPconsIsSeparated(e1));
+   SOFT_ASSERT(SCIPconsIsEnforced(e1));
+   SOFT_ASSERT(SCIPconsIsChecked(e1));
+   SOFT_ASSERT(SCIPconsIsPropagated(e1));
+   SOFT_ASSERT_NOT(SCIPconsIsDynamic(e1));
+   SOFT_ASSERT_NOT(SCIPconsIsRemovable(e1));
 
-   cr_expect_not(SCIPconsIsInitial(e2));
-   cr_expect_not(SCIPconsIsSeparated(e2));
-   cr_expect_not(SCIPconsIsEnforced(e2));
-   cr_expect_not(SCIPconsIsChecked(e2));
-   cr_expect_not(SCIPconsIsPropagated(e2));
-   cr_expect(SCIPconsIsDynamic(e2));
-   cr_expect(SCIPconsIsRemovable(e2));
+   SOFT_ASSERT_NOT(SCIPconsIsInitial(e2));
+   SOFT_ASSERT_NOT(SCIPconsIsSeparated(e2));
+   SOFT_ASSERT_NOT(SCIPconsIsEnforced(e2));
+   SOFT_ASSERT_NOT(SCIPconsIsChecked(e2));
+   SOFT_ASSERT_NOT(SCIPconsIsPropagated(e2));
+   SOFT_ASSERT(SCIPconsIsDynamic(e2));
+   SOFT_ASSERT(SCIPconsIsRemovable(e2));
 
    SCIP_CALL( SCIPsolve(scip) );
-   cr_expect_eq(SCIPgetStatus(scip), SCIP_STATUS_OPTIMAL);
-   cr_expect_float_eq(SCIPgetPrimalbound(scip), 110.0, SCIPfeastol(scip));
+   SOFT_ASSERT_EQUAL(SCIPgetStatus(scip), SCIP_STATUS_OPTIMAL);
+   SOFT_ASSERT_DOUBLE_WITHIN(SCIPgetPrimalbound(scip), 110.0, SCIPfeastol(scip));
 }
 
 /* check whether running shell with -AMPL flag works */
-Test(readernl, run, .description = "check running SCIP with -AMPL")
+/** @brief check running SCIP with -AMPL */
+void test_readernl_run(void)
 {
    const char* args[3];
    char solfile[SCIP_MAXSTRLEN];
@@ -211,13 +214,19 @@ Test(readernl, run, .description = "check running SCIP with -AMPL")
     */
    SCIP_CALL( SCIPrunShell(3, (char**)args, NULL) );
 
+   /* drop the option again: Criterion ran every test in its own process, but all
+    * tests of a Unity binary share one, so a leftover scip_options would also
+    * apply to every later test (a time limit of 0 makes them give up at once)
+    */
+   unsetenv("scip_options");
+
    /* check that a solfile that can be opened exists now */
    sol = fopen(solfile, "r");
-   cr_expect_not_null(sol);
+   SOFT_ASSERT_NOT_NULL(sol);
 
    /* check that first line of solfile is the SCIP status, which should be that the timelimit has been reached */
-   cr_expect_not_null(fgets(scipstatus, sizeof(scipstatus), sol));
-   cr_expect_str_eq(scipstatus, "time limit reached\n");
+   SOFT_ASSERT_NOT_NULL(fgets(scipstatus, sizeof(scipstatus), sol));
+   SOFT_ASSERT_EQUAL_STRING(scipstatus, "time limit reached\n");
 
    /* cleanup */
    fclose(sol);
@@ -227,7 +236,8 @@ Test(readernl, run, .description = "check running SCIP with -AMPL")
 }
 
 /* check whether solving a LP without presolve gives a dual solution in the AMPL solution file */
-Test(readernl, dualsol, .description = "check whether solving a LP without presolve gives a dual solution")
+/** @brief check whether solving a LP without presolve gives a dual solution */
+void test_readernl_dualsol(void)
 {
    char* args[3];
    char solfilename[SCIP_MAXSTRLEN];
@@ -255,7 +265,7 @@ Test(readernl, dualsol, .description = "check whether solving a LP without preso
    remove(solfilename);
 
    setfile = fopen("nopresolve.set", "w");
-   cr_assert_not_null(setfile);
+   TEST_ASSERT_NOT_NULL(setfile);
    fprintf(setfile, "emphasis:presolving:off\n");
    fprintf(setfile, "emphasis:heuristics:off\n");
    fclose(setfile);
@@ -265,7 +275,7 @@ Test(readernl, dualsol, .description = "check whether solving a LP without preso
 
    /* check that a solfile that can be opened exists now */
    solfile = fopen(solfilename, "r");
-   cr_assert_not_null(solfile);
+   TEST_ASSERT_NOT_NULL(solfile);
 
    /* dual solution is not unique; the one we compare with seems to be the one given by CPLEX and SoPlex at the moment (2021) */
    if( strncmp(SCIPlpiGetSolverName(), "CPLEX", 5) == 0 || strncmp(SCIPlpiGetSolverName(), "SoPlex", 6) == 0 )
@@ -275,8 +285,9 @@ Test(readernl, dualsol, .description = "check whether solving a LP without preso
 
       /* open reference solfile */
       refsolfile = fopen(refsolfilename, "r");
-      cr_assert_not_null(refsolfile);
-      cr_expect_file_contents_eq(solfile, refsolfile);
+      TEST_ASSERT_NOT_NULL(refsolfile);
+      SOFT_ASSERT_FILES_EQUAL(solfile, refsolfile);
+      fclose(refsolfile);
    }
 
    /* cleanup */
@@ -288,7 +299,8 @@ Test(readernl, dualsol, .description = "check whether solving a LP without preso
 }
 
 /* check whether initial value of introduced nlobjvar is set */
-Test(readernl, nlobjvar, .description = "check whether initial value of introduced nlobjvar is set")
+/** @brief check whether initial value of introduced nlobjvar is set */
+void test_readernl_nlobjvar(void)
 {
    char filename[SCIP_MAXSTRLEN];
 
@@ -303,15 +315,16 @@ Test(readernl, nlobjvar, .description = "check whether initial value of introduc
    SCIP_CALL( SCIPreadProb(scip, filename, NULL) );
 
    /* we should have an initial solution as well */
-   cr_expect(SCIPgetNSols(scip) == 1);
+   SOFT_ASSERT(SCIPgetNSols(scip) == 1);
 
    /* only if the solution is feasible, it will be available in the transformed problem, too */
    SCIP_CALL( SCIPtransformProb(scip) );
-   cr_expect(SCIPgetNSols(scip) == 1);
+   SOFT_ASSERT(SCIPgetNSols(scip) == 1);
 }
 
 /* check writing of nl file with negative variable in expression */
-Test(readernl, writenegvar, .description = "check writing of nl file with negated variable")
+/** @brief check writing of nl file with negated variable */
+void test_readernl_writenegvar(void)
 {
    SCIP_CONS* cons;
    SCIP_VAR* x;
@@ -352,26 +365,43 @@ Test(readernl, writenegvar, .description = "check writing of nl file with negate
    /* SCIP_CALL( SCIPprintOrigProblem(scip, NULL, NULL, FALSE) ); */
 
    /* we expect to see a constraint sin(1-x) == 1 */
-   cr_expect(SCIPgetNVars(scip) == 1);
-   cr_expect(SCIPgetNConss(scip) == 1);
+   SOFT_ASSERT(SCIPgetNVars(scip) == 1);
+   SOFT_ASSERT(SCIPgetNConss(scip) == 1);
    cons = SCIPgetConss(scip)[0];
-   cr_expect(strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), "nonlinear") == 0);
+   SOFT_ASSERT(strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), "nonlinear") == 0);
 
    /* bring into standard form sum(1, -1*x) for checks */
    SCIP_CALL( SCIPsimplifyExpr(scip, SCIPgetExprNonlinear(cons), &expr1, &changed, &infeasible, NULL, NULL) );
 
-   cr_expect(SCIPisExprSin(scip, expr1));
+   SOFT_ASSERT(SCIPisExprSin(scip, expr1));
    expr2 = SCIPexprGetChildren(expr1)[0];
-   cr_expect(SCIPisExprSum(scip, expr2));
-   cr_expect(SCIPexprGetNChildren(expr2) == 1);
-   cr_expect(SCIPgetConstantExprSum(expr2) == 1.0);
-   cr_expect(SCIPgetCoefsExprSum(expr2)[0] == -1.0);
-   cr_expect(SCIPisExprVar(scip, SCIPexprGetChildren(expr2)[0]));
-   cr_expect(SCIPgetVarExprVar(SCIPexprGetChildren(expr2)[0]) == SCIPgetVars(scip)[0]);
+   SOFT_ASSERT(SCIPisExprSum(scip, expr2));
+   SOFT_ASSERT(SCIPexprGetNChildren(expr2) == 1);
+   SOFT_ASSERT(SCIPgetConstantExprSum(expr2) == 1.0);
+   SOFT_ASSERT(SCIPgetCoefsExprSum(expr2)[0] == -1.0);
+   SOFT_ASSERT(SCIPisExprVar(scip, SCIPexprGetChildren(expr2)[0]));
+   SOFT_ASSERT(SCIPgetVarExprVar(SCIPexprGetChildren(expr2)[0]) == SCIPgetVars(scip)[0]);
 
    SCIP_CALL( SCIPreleaseExpr(scip, &expr1) );
 
    remove("readernl_writenegvartest.nl");
    remove("readernl_writenegvartest.col");
    remove("readernl_writenegvartest.row");
+}
+
+void setUp(void) { setup(); }
+
+void tearDown(void) { teardown(); }
+
+int main(void)
+{
+   UNITY_BEGIN();
+   RUN_TEST(test_readernl_read1);
+   RUN_TEST(test_readernl_read2);
+   RUN_TEST(test_readernl_read3);
+   RUN_TEST(test_readernl_run);
+   RUN_TEST(test_readernl_dualsol);
+   RUN_TEST(test_readernl_nlobjvar);
+   RUN_TEST(test_readernl_writenegvar);
+   return UNITY_END();
 }
