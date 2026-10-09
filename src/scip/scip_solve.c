@@ -3278,14 +3278,13 @@ SCIP_RETCODE SCIPsolveConcurrent(
          memorylimit -= SCIPgetMemExternEstim(scip)/1048576.0;
 
          /* estimate maximum number of copies that be created based on memory limit */
-         if( !scip->set->misc_avoidmemout )
+         if( scip->set->misc_avoidmemout )
          {
             nthreads = MAX(1, memorylimit / (4.0*SCIPgetMemExternEstim(scip)/1048576.0));  /*lint !e666 !e524*/
             SCIPverbMessage(scip, SCIP_VERBLEVEL_FULL, NULL, "Estimated a maximum of %d threads based on memory limit.\n", nthreads);
          }
          else
          {
-            nthreads = minnthreads;
             SCIPverbMessage(scip, SCIP_VERBLEVEL_FULL, NULL, "Ignoring memory limit; all threads can be created.\n");
          }
       }
