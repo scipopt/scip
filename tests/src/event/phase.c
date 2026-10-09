@@ -45,7 +45,7 @@ void setup(void)
 {
    char filename[SCIP_MAXSTRLEN];
 
-   cr_assert(scip_test == NULL);
+   TEST_ASSERT(scip_test == NULL);
 
    SCIP_CALL( SCIPcreate(&scip_test) );
    SCIP_CALL( SCIPincludeDefaultPlugins(scip_test) );
@@ -60,27 +60,27 @@ void teardown(void)
 {
    SCIP_CALL( SCIPfree(&scip_test) );
 
-   cr_assert(scip_test == NULL);
-   cr_assert(BMSgetMemoryUsed() == 0, "There is a memory leak!");
+   TEST_ASSERT(scip_test == NULL);
+   TEST_ASSERT(BMSgetMemoryUsed() == 0, "There is a memory leak!");
 }
-
-TestSuite(solvingphase, .init = setup, .fini = teardown);
 
 /* TESTS */
 
-Test(solvingphase, disabled, .description = "solving phase getters report uninitialized state when the event handler is disabled")
+/** @brief solving phase getters report uninitialized state when the event handler is disabled */
+void test_solvingphase_disabled(void)
 {
    SCIP_CALL( SCIPsolve(scip_test) );
 
-   cr_assert_eq(SCIPgetStatus(scip_test), SCIP_STATUS_OPTIMAL, "expected optimal status");
+   TEST_ASSERT_EQUAL(SCIPgetStatus(scip_test), SCIP_STATUS_OPTIMAL, "expected optimal status");
 
-   cr_expect_eq(SCIPgetSolvingPhase(scip_test), SCIP_SOLVINGPHASE_UNINITIALIZED,
+   SOFT_ASSERT_EQUAL(SCIPgetSolvingPhase(scip_test), SCIP_SOLVINGPHASE_UNINITIALIZED,
       "phase should remain uninitialized while the event handler is disabled");
-   cr_expect_eq(SCIPgetSolvingPhaseFlags(scip_test), SCIP_SOLVINGPHASEFLAG_NONE,
+   SOFT_ASSERT_EQUAL(SCIPgetSolvingPhaseFlags(scip_test), SCIP_SOLVINGPHASEFLAG_NONE,
       "no transition flags should be set while the event handler is disabled");
 }
 
-Test(solvingphase, incumbent, .description = "enabled mode tracks the solving phase and populates the transition flag bit-field")
+/** @brief enabled mode tracks the solving phase and populates the transition flag bit-field */
+void test_solvingphase_incumbent(void)
 {
    SCIP_SOLVINGPHASEFLAG flags;
 
@@ -91,20 +91,21 @@ Test(solvingphase, incumbent, .description = "enabled mode tracks the solving ph
 
    SCIP_CALL( SCIPsolve(scip_test) );
 
-   cr_assert_eq(SCIPgetStatus(scip_test), SCIP_STATUS_OPTIMAL, "expected optimal status");
-   cr_assert(SCIPisEQ(scip_test, SCIPgetPrimalbound(scip_test), OPTIMAL_VALUE),
+   TEST_ASSERT_EQUAL(SCIPgetStatus(scip_test), SCIP_STATUS_OPTIMAL, "expected optimal status");
+   TEST_ASSERT(SCIPisEQ(scip_test, SCIPgetPrimalbound(scip_test), OPTIMAL_VALUE),
       "primal bound %.15g does not match expected optimum %.15g",
       SCIPgetPrimalbound(scip_test), OPTIMAL_VALUE);
 
-   cr_expect_eq(SCIPgetSolvingPhase(scip_test), SCIP_SOLVINGPHASE_PROOF,
+   SOFT_ASSERT_EQUAL(SCIPgetSolvingPhase(scip_test), SCIP_SOLVINGPHASE_PROOF,
       "expected SCIP_SOLVINGPHASE_PROOF, got %d", (int)SCIPgetSolvingPhase(scip_test));
 
    flags = SCIPgetSolvingPhaseFlags(scip_test);
-   cr_expect((flags & SCIP_SOLVINGPHASEFLAG_OPTIMAL) != 0,
+   SOFT_ASSERT((flags & SCIP_SOLVINGPHASEFLAG_OPTIMAL) != 0,
       "expected SCIP_SOLVINGPHASEFLAG_OPTIMAL bit to be set under enabled mode, got flags = %#04x", (unsigned)flags);
 }
 
-Test(solvingphase, reachesproof, .description = "solving phase reaches SCIP_SOLVINGPHASE_PROOF when the optimal value is provided")
+/** @brief solving phase reaches SCIP_SOLVINGPHASE_PROOF when the optimal value is provided */
+void test_solvingphase_reachesproof(void)
 {
    SCIP_SOLVINGPHASEFLAG flags;
 
@@ -115,15 +116,28 @@ Test(solvingphase, reachesproof, .description = "solving phase reaches SCIP_SOLV
 
    SCIP_CALL( SCIPsolve(scip_test) );
 
-   cr_assert_eq(SCIPgetStatus(scip_test), SCIP_STATUS_OPTIMAL, "expected optimal status");
-   cr_assert(SCIPisEQ(scip_test, SCIPgetPrimalbound(scip_test), OPTIMAL_VALUE),
+   TEST_ASSERT_EQUAL(SCIPgetStatus(scip_test), SCIP_STATUS_OPTIMAL, "expected optimal status");
+   TEST_ASSERT(SCIPisEQ(scip_test, SCIPgetPrimalbound(scip_test), OPTIMAL_VALUE),
       "primal bound %.15g does not match expected optimum %.15g",
       SCIPgetPrimalbound(scip_test), OPTIMAL_VALUE);
 
-   cr_expect_eq(SCIPgetSolvingPhase(scip_test), SCIP_SOLVINGPHASE_PROOF,
+   SOFT_ASSERT_EQUAL(SCIPgetSolvingPhase(scip_test), SCIP_SOLVINGPHASE_PROOF,
       "expected SCIP_SOLVINGPHASE_PROOF, got %d", (int)SCIPgetSolvingPhase(scip_test));
 
    flags = SCIPgetSolvingPhaseFlags(scip_test);
-   cr_expect((flags & SCIP_SOLVINGPHASEFLAG_OPTIMAL) != 0,
+   SOFT_ASSERT((flags & SCIP_SOLVINGPHASEFLAG_OPTIMAL) != 0,
       "expected SCIP_SOLVINGPHASEFLAG_OPTIMAL bit to be set, got flags = %#04x", (unsigned)flags);
+}
+
+void setUp(void) { setup(); }
+
+void tearDown(void) { teardown(); }
+
+int main(void)
+{
+   UNITY_BEGIN();
+   RUN_TEST(test_solvingphase_disabled);
+   RUN_TEST(test_solvingphase_incumbent);
+   RUN_TEST(test_solvingphase_reachesproof);
+   return UNITY_END();
 }

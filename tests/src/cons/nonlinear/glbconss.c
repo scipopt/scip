@@ -694,7 +694,7 @@ void teardown(void)
    /* free SCIP */
    SCIP_CALL( SCIPfree(&scip) );
 
-   cr_assert_eq(BMSgetMemoryUsed(), 0, "Memory leak!!");
+   TEST_ASSERT_EQUAL(BMSgetMemoryUsed(), 0, "Memory leak!!");
 }
 
 /** helper method to create x- and y-variables */
@@ -729,13 +729,11 @@ SCIP_RETCODE createVars(
 }
 
 /* define test suite */
-TestSuite(glbconss, .init = setup, .fini = teardown);
-
 /*
  * define tests
  */
 
-Test(glbconss, cpp1)
+void test_glbconss_cpp1(void)
 {
    SCIP_CONS* cons;
    SCIP_VAR* xs[4];
@@ -760,10 +758,10 @@ Test(glbconss, cpp1)
 
    /* solve problem */
    SCIP_CALL( SCIPsolve(scip) );
-   cr_expect(SCIPgetStatus(scip) == SCIP_STATUS_OPTIMAL);
-   cr_expect_float_eq(SCIPgetPrimalbound(scip), -3.60000003185305e+01, 1e-4);
+   SOFT_ASSERT(SCIPgetStatus(scip) == SCIP_STATUS_OPTIMAL);
+   SOFT_ASSERT_DOUBLE_WITHIN(SCIPgetPrimalbound(scip), -3.60000003185305e+01, 1e-4);
    sol = SCIPgetBestSol(scip);
-   cr_assert(sol != NULL);
+   TEST_ASSERT(sol != NULL);
 
    /* check whether all circles satisfy the distance requirements */
    for( i = 0; i < ncircles - 1; ++i )
@@ -779,7 +777,7 @@ Test(glbconss, cpp1)
          SCIP_Real dist;
 
          dist = SQR(xi - xj) + SQR(yi - yj);
-         cr_expect(SCIPisFeasGE(scip, dist, SQR(rs[i] + rs[j])));
+         SOFT_ASSERT(SCIPisFeasGE(scip, dist, SQR(rs[i] + rs[j])));
       }
    }
 
@@ -789,4 +787,15 @@ Test(glbconss, cpp1)
       SCIP_CALL( SCIPreleaseVar(scip, &xs[i]) );
       SCIP_CALL( SCIPreleaseVar(scip, &ys[i]) );
    }
+}
+
+void setUp(void) { setup(); }
+
+void tearDown(void) { teardown(); }
+
+int main(void)
+{
+   UNITY_BEGIN();
+   RUN_TEST(test_glbconss_cpp1);
+   return UNITY_END();
 }

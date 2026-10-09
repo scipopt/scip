@@ -55,12 +55,9 @@ void sine_setup(void)
  * when overestimating 2. and 3. are swapped
  */
 
-TestSuite(separation, .init = sine_setup, .fini = teardown);
-
 /* tests for interval [-1,5] */
-Test(separation, sine_x,
-   .description = "test separation for a sine expression in large range"
-   )
+/** @brief test separation for a sine expression in large range */
+void test_separation_sine_x(void)
 {
    SCIP_EXPR* expr;
    SCIP_Real newtonpoint;
@@ -105,7 +102,7 @@ Test(separation, sine_x,
     */
 
    SCIP_CALL( computeInitialCutsTrig(scip, expr, childlb, childub, FALSE, coefsp, constants, &nreturned) );
-   cr_expect_eq(nreturned, 2, "expected %d, got %d\n", 2, nreturned);
+   SOFT_ASSERT_EQUAL(nreturned, 2, "expected %d, got %d\n", 2, nreturned);
 
    /* check right secant */
    newtonpoint = 2.2544608804;
@@ -123,7 +120,7 @@ Test(separation, sine_x,
     */
 
    SCIP_CALL( computeInitialCutsTrig(scip, expr, childlb, childub, TRUE, coefsp, constants, &nreturned) );
-   cr_expect_eq(nreturned, 2, "expected %d, got %d\n", 2, nreturned);
+   SOFT_ASSERT_EQUAL(nreturned, 2, "expected %d, got %d\n", 2, nreturned);
 
    /* check left secant */
    newtonpoint = 4.6845658560;
@@ -140,7 +137,7 @@ Test(separation, sine_x,
     */
 
    success = computeEstimatorsTrig(scip, expr, &lincoef, &linconst, 1.5, childlb, childub, FALSE);
-   cr_expect(success);
+   TEST_ASSERT(success);
    EXPECTFEQ(linconst, -1.5 * cos(1.5) + sin(1.5));
    EXPECTFEQ(lincoef, cos(1.5));
 
@@ -149,7 +146,7 @@ Test(separation, sine_x,
     */
 
    success = computeEstimatorsTrig(scip, expr, &lincoef, &linconst, 4.8, childlb, childub, TRUE);
-   cr_expect(success);
+   TEST_ASSERT(success);
    EXPECTFEQ(linconst, -4.8 * cos(4.8) + sin(4.8));
    EXPECTFEQ(lincoef, cos(4.8));
 
@@ -158,21 +155,20 @@ Test(separation, sine_x,
     */
 
    success = computeEstimatorsTrig(scip, expr, &lincoef, &linconst, 4.0, childlb, childub, TRUE);
-   cr_expect(success);
+   TEST_ASSERT(success);
 
    /* check left tangent */
    newtonpoint = 4.6845658560;
-   cr_expect_float_eq(linconst, cos(newtonpoint) + sin(-1), 1e-10);
-   cr_expect_float_eq(lincoef, cos(newtonpoint), 1e-10);
+   SOFT_ASSERT_DOUBLE_WITHIN(linconst, cos(newtonpoint) + sin(-1), 1e-10);
+   SOFT_ASSERT_DOUBLE_WITHIN(lincoef, cos(newtonpoint), 1e-10);
 
    /* release expression */
    SCIP_CALL( SCIPreleaseExpr(scip, &expr) );
 }
 
 /* tests for interval [-6,-3] */
-Test(separation, sine_y,
-   .description = "test separation for a sine expression in mid size range"
-)
+/** @brief test separation for a sine expression in mid size range */
+void test_separation_sine_y(void)
 {
    SCIP_EXPR* expr;
    SCIP_Real newtonpoint;
@@ -217,7 +213,7 @@ Test(separation, sine_y,
     */
 
    SCIP_CALL( computeInitialCutsTrig(scip, expr, childlb, childub, FALSE, coefsp, constants, &nreturned) );
-   cr_expect_eq(nreturned, 2, "expected %d, got %d\n", 2, nreturned);
+   SOFT_ASSERT_EQUAL(nreturned, 2, "expected %d, got %d\n", 2, nreturned);
 
    /* check right secant */
    newtonpoint = -3.2123712333;
@@ -234,7 +230,7 @@ Test(separation, sine_y,
     */
 
    SCIP_CALL( computeInitialCutsTrig(scip, expr, childlb, childub, TRUE, coefsp, constants, &nreturned) );
-   cr_expect_eq(nreturned, 1, "expected %d, got %d\n", 1, nreturned);
+   SOFT_ASSERT_EQUAL(nreturned, 1, "expected %d, got %d\n", 1, nreturned);
 
    /* check secant */
    EXPECTFEQ( coefs[0], (sin(-3) - sin(-6)) / 3.0 );
@@ -245,7 +241,7 @@ Test(separation, sine_y,
     */
 
    success = computeEstimatorsTrig(scip, expr, &lincoef, &linconst, -4.0, childlb, childub, FALSE);
-   cr_expect(success);
+   TEST_ASSERT(success);
    EXPECTFEQ(linconst, 4 * cos(-4) + sin(-4));
    EXPECTFEQ(lincoef, cos(-4));
 
@@ -254,7 +250,7 @@ Test(separation, sine_y,
     */
 
    success = computeEstimatorsTrig(scip, expr, &lincoef, &linconst, -3.1, childlb, childub, TRUE);
-   cr_expect(success);
+   TEST_ASSERT(success);
    EXPECTFEQ(linconst, -sin(-6) + 2.0 * sin(-3));
    EXPECTFEQ(lincoef, (sin(-3) - sin(-6)) / 3.0);
 
@@ -263,21 +259,20 @@ Test(separation, sine_y,
     */
 
    success = computeEstimatorsTrig(scip, expr, &lincoef, &linconst, -3.2, childlb, childub, FALSE);
-   cr_expect(success);
+   TEST_ASSERT(success);
 
    /* check rmidtangent */
    newtonpoint = -3.2123712333;
-   cr_expect_float_eq(linconst, 3 * cos(newtonpoint) + sin(-3), 1e-11);
-   cr_expect_float_eq(lincoef, cos(newtonpoint), 1e-11);
+   SOFT_ASSERT_DOUBLE_WITHIN(linconst, 3 * cos(newtonpoint) + sin(-3), 1e-11);
+   SOFT_ASSERT_DOUBLE_WITHIN(lincoef, cos(newtonpoint), 1e-11);
 
    /* release expression */
    SCIP_CALL( SCIPreleaseExpr(scip, &expr) );
 }
 
 /* tests for interval [1,3] */
-Test(separation, sine_z,
-   .description = "test separation for a sine expression in short range"
-)
+/** @brief test separation for a sine expression in short range */
+void test_separation_sine_z(void)
 {
    SCIP_EXPR* expr;
    SCIP_Real childlb;
@@ -321,7 +316,7 @@ Test(separation, sine_z,
     * test initial overestimation
     */
    SCIP_CALL( computeInitialCutsTrig(scip, expr, childlb, childub, FALSE, coefsp, constants, &nreturned) );
-   cr_expect_eq(nreturned, 2, "expected %d, got %d\n", 2, nreturned);
+   SOFT_ASSERT_EQUAL(nreturned, 2, "expected %d, got %d\n", 2, nreturned);
 
    /* check right tangent */
    EXPECTFEQ( coefs[0], cos(3) );
@@ -336,7 +331,7 @@ Test(separation, sine_z,
     */
 
    SCIP_CALL( computeInitialCutsTrig(scip, expr, childlb, childub, TRUE, coefsp, constants, &nreturned) );
-   cr_expect_eq(nreturned, 1, "expected %d, got %d\n", 1, nreturned);
+   SOFT_ASSERT_EQUAL(nreturned, 1, "expected %d, got %d\n", 1, nreturned);
 
    /* check secant */
    EXPECTFEQ( coefs[0], 0.5 * (sin(3) - sin(1)) );
@@ -347,7 +342,7 @@ Test(separation, sine_z,
     */
 
    success = computeEstimatorsTrig(scip, expr, &lincoef, &linconst, 2.0, childlb, childub, FALSE);
-   cr_expect(success);
+   TEST_ASSERT(success);
    EXPECTFEQ(linconst, -2 * cos(2) + sin(2));
    EXPECTFEQ(lincoef, cos(2));
 
@@ -357,7 +352,7 @@ Test(separation, sine_z,
     * test point where solution tangent is not underestimating
     */
    success = computeEstimatorsTrig(scip, expr, &lincoef, &linconst, 2.0, childlb, childub, TRUE);
-   cr_expect(success);
+   TEST_ASSERT(success);
 
    /* check secant */
    EXPECTFEQ(linconst, -0.5 * sin(3) + 1.5 * sin(1));
@@ -369,9 +364,8 @@ Test(separation, sine_z,
 
 
 /* tests for interval [-pi,pi] */
-Test(separation, sine_v,
-   .description = "test separation for a sine expression in large range"
-   )
+/** @brief test separation for a sine expression in large range */
+void test_separation_sine_v(void)
 {
    SCIP_EXPR* expr;
    SCIP_Real childlb;
@@ -411,7 +405,7 @@ Test(separation, sine_v,
     */
 
    SCIP_CALL( computeInitialCutsTrig(scip, expr, childlb, childub, FALSE, coefsp, constants, &nreturned) );
-   cr_expect_eq(nreturned, 2, "expected %d, got %d\n", 2, nreturned);
+   SOFT_ASSERT_EQUAL(nreturned, 2, "expected %d, got %d\n", 2, nreturned);
 
    /* check right tangent */
    EXPECTFEQ( coefs[0], -1.0 );
@@ -426,7 +420,7 @@ Test(separation, sine_v,
     */
 
    SCIP_CALL( computeInitialCutsTrig(scip, expr, childlb, childub, TRUE, coefsp, constants, &nreturned) );
-   cr_expect_eq(nreturned, 2, "expected %d, got %d\n", 2, nreturned);
+   SOFT_ASSERT_EQUAL(nreturned, 2, "expected %d, got %d\n", 2, nreturned);
 
    /* check left tangent */
    EXPECTFEQ( coefs[0], -1.0 );
@@ -439,4 +433,18 @@ Test(separation, sine_v,
 
    /* release expression */
    SCIP_CALL( SCIPreleaseExpr(scip, &expr) );
+}
+
+void setUp(void) { sine_setup(); }
+
+void tearDown(void) { teardown(); }
+
+int main(void)
+{
+   UNITY_BEGIN();
+   RUN_TEST(test_separation_sine_x);
+   RUN_TEST(test_separation_sine_y);
+   RUN_TEST(test_separation_sine_z);
+   RUN_TEST(test_separation_sine_v);
+   return UNITY_END();
 }

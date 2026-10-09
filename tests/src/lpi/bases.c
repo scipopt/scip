@@ -78,8 +78,8 @@ void setup_simple(void)
    /* check size */
    SCIP_CALL( SCIPlpiGetNRows(lpi, &nrows) );
    SCIP_CALL( SCIPlpiGetNCols(lpi, &ncols) );
-   cr_assert( nrows == 1 );
-   cr_assert( ncols == 1 );
+   TEST_ASSERT( nrows == 1 );
+   TEST_ASSERT( ncols == 1 );
 
 #ifdef SCIP_DEBUG
    /* turn on output */
@@ -91,15 +91,16 @@ static
 void teardown(void)
 {
    SCIP_CALL( SCIPlpiFree(&lpi) );
-   cr_assert_eq(BMSgetMemoryUsed(), 0, "There is a memory leak!");
+   TEST_ASSERT_EQUAL(BMSgetMemoryUsed(), 0, "There is a memory leak!");
 }
-TestSuite(simple, .init = setup_simple, .fini = teardown);
 
 /*** TESTS ***/
-Test(simple, test1)
+void test_simple_test1(void)
 {
    int cstat;
    int rstat;
+
+   setup_simple();
 
    /* solve problem */
    SCIP_CALL( SCIPlpiSolvePrimal(lpi) );
@@ -112,10 +113,12 @@ Test(simple, test1)
    assert( rstat == SCIP_BASESTAT_UPPER );
 }
 
-Test(simple, test2)
+void test_simple_test2(void)
 {
    int cstat;
    int rstat;
+
+   setup_simple();
 
    /* modify LP to:
     *   min x
@@ -136,13 +139,15 @@ Test(simple, test2)
    assert( rstat == SCIP_BASESTAT_LOWER );
 }
 
-Test(simple, test3)
+void test_simple_test3(void)
 {
    int cstat;
    int rstat;
    SCIP_Real lhs = 1.0;
    SCIP_Real rhs;
    int ind = 0;
+
+   setup_simple();
 
    /* modify LP to:
     *   min x
@@ -167,13 +172,15 @@ Test(simple, test3)
    assert( rstat == SCIP_BASESTAT_LOWER );
 }
 
-Test(simple, test4)
+void test_simple_test4(void)
 {
    int cstat;
    int rstat;
    SCIP_Real lhs;
    SCIP_Real rhs = 1.0;
    int ind = 0;
+
+   setup_simple();
 
    /* modify LP to:
     *   max x
@@ -258,18 +265,17 @@ void setup_complex(void)
    /* check size */
    SCIP_CALL( SCIPlpiGetNRows(lpi, &nrows) );
    SCIP_CALL( SCIPlpiGetNCols(lpi, &ncols) );
-   cr_assert_eq(nrows, 3);
-   cr_assert_eq(ncols, 3);
+   TEST_ASSERT_EQUAL(nrows, 3);
+   TEST_ASSERT_EQUAL(ncols, 3);
 
 #ifdef SCIP_DEBUG
    /* turn on output */
    SCIP_CALL( SCIPlpiSetIntpar(lpi, SCIP_LPPAR_LPINFO, 1) );
 #endif
 }
-TestSuite(complex, .init = setup_complex, .fini = teardown);
 
 /*** TESTS ***/
-Test(complex, test1)
+void test_complex_test1(void)
 {
    SCIP_Real binvrow[3];
    SCIP_Real binvcol[3];
@@ -286,6 +292,8 @@ Test(complex, test1)
    int entry;
    int i;
 
+   setup_complex();
+
    /* expected values for the first column of BInv with corresponding variables */
    int exp_vars[] = {-2, 1, 2};
    float exp_vals[] = {0.0, 0.0, -1.0};
@@ -298,17 +306,17 @@ Test(complex, test1)
    SCIP_CALL( SCIPlpiSolvePrimal(lpi) );
 
    SCIP_CALL( SCIPlpiGetObjval(lpi, &objval) );
-   cr_assert_float_eq(objval, 14.0, EPS);
+   TEST_ASSERT_DOUBLE_WITHIN(objval, 14.0, EPS);
 
    /* the optimal basis should be: {x2, x3, slack for second row} */
    SCIP_CALL( SCIPlpiGetBase(lpi, cstats, rstats) );
-   cr_assert(cstats[0] == SCIP_BASESTAT_LOWER);
-   cr_assert(cstats[1] == SCIP_BASESTAT_BASIC);
-   cr_assert(cstats[2] == SCIP_BASESTAT_BASIC);
+   TEST_ASSERT(cstats[0] == SCIP_BASESTAT_LOWER);
+   TEST_ASSERT(cstats[1] == SCIP_BASESTAT_BASIC);
+   TEST_ASSERT(cstats[2] == SCIP_BASESTAT_BASIC);
 
-   cr_assert(rstats[0] == SCIP_BASESTAT_LOWER);
-   cr_assert(rstats[1] == SCIP_BASESTAT_BASIC);
-   cr_assert(rstats[2] == SCIP_BASESTAT_UPPER);
+   TEST_ASSERT(rstats[0] == SCIP_BASESTAT_LOWER);
+   TEST_ASSERT(rstats[1] == SCIP_BASESTAT_BASIC);
+   TEST_ASSERT(rstats[2] == SCIP_BASESTAT_UPPER);
 
    /* get basis indices */
    SCIP_CALL( SCIPlpiGetBasisInd(lpi, basinds) );
@@ -321,26 +329,26 @@ Test(complex, test1)
          break;
    }
    /* assert that we found the slack variable in the basis */
-   cr_assert_lt(i, nrows);
+   TEST_ASSERT_LESS_THAN(i, nrows);
 
    /* check basis inverse for the row corresponding to the basic slack variable */
    SCIP_CALL( SCIPlpiGetBInvRow(lpi, i, binvrow, NULL, NULL) );
 
    /* row of basis inverse should be (0, 1, 0.5) */
-   cr_expect_float_eq(binvrow[0], 0.0, EPS, "BInvRow[%d] = %g != %g\n", 0, binvrow[0], 0.0);
-   cr_expect_float_eq(binvrow[1], 1.0, EPS, "BInvRow[%d] = %g != %g\n", 1, binvrow[1], 1.0);
-   cr_expect_float_eq(binvrow[2], 0.5, EPS, "BInvRow[%d] = %g != %g\n", 2, binvrow[2], 0.5);
+   SOFT_ASSERT_DOUBLE_WITHIN(binvrow[0], 0.0, EPS, "BInvRow[%d] = %g != %g\n", 0, binvrow[0], 0.0);
+   SOFT_ASSERT_DOUBLE_WITHIN(binvrow[1], 1.0, EPS, "BInvRow[%d] = %g != %g\n", 1, binvrow[1], 1.0);
+   SOFT_ASSERT_DOUBLE_WITHIN(binvrow[2], 0.5, EPS, "BInvRow[%d] = %g != %g\n", 2, binvrow[2], 0.5);
 
    /* check whether sparse version is available and the same */
    SCIP_CALL( SCIPlpiGetBInvRow(lpi, i, coef, inds, &ninds) );
    if ( ninds >= 0 )
    {
-      cr_assert( ninds == 2 );
+      TEST_ASSERT( ninds == 2 );
       for (entry = 0; entry < ninds; ++entry)
       {
          idx = inds[entry];
-         cr_assert( 0 <= idx && idx < 3 );
-         cr_expect_float_eq(coef[idx], binvrow[idx], EPS);
+         TEST_ASSERT( 0 <= idx && idx < 3 );
+         SOFT_ASSERT_DOUBLE_WITHIN(coef[idx], binvrow[idx], EPS);
       }
    }
 
@@ -358,7 +366,7 @@ Test(complex, test1)
          /* Check that the value is the expected one if the column corresponds to the current variable given in exp_vars. */
          if ( exp_vars[idx] == basinds[entry] )
          {
-            cr_expect_float_eq(binvcol[entry], exp_vals[idx], EPS);
+            SOFT_ASSERT_DOUBLE_WITHIN(binvcol[entry], exp_vals[idx], EPS);
          }
       }
    }
@@ -367,29 +375,29 @@ Test(complex, test1)
    SCIP_CALL( SCIPlpiGetBInvCol(lpi, 0, coef, inds, &ninds) );
    if ( ninds >= 0 )
    {
-      cr_assert( ninds == 1 );
+      TEST_ASSERT( ninds == 1 );
    }
 
    /* check basis inverse times nonbasic matrix for row corresponding to the basic slack variable */
-   cr_assert_geq(i, 0);
-   cr_assert_lt(i, nrows);
+   TEST_ASSERT_GREATER_OR_EQUAL(i, 0);
+   TEST_ASSERT_LESS_THAN(i, nrows);
    SCIP_CALL( SCIPlpiGetBInvARow(lpi, i, NULL, coef, NULL, NULL) );
 
    /* row of basis inverse times nonbasic matrix should be (-0.5, 0, 0) */
-   cr_expect_float_eq(coef[0], -0.5, EPS, "BInvARow[%d] = %g != %g\n", 0, coef[0], -0.5);
-   cr_expect_float_eq(coef[1], 0.0, EPS, "BInvARow[%d] = %g != %g\n", 1, coef[1], 0.0);
-   cr_expect_float_eq(coef[2], 0.0, EPS, "BInvARow[%d] = %g != %g\n", 2, coef[2], 0.0);
+   SOFT_ASSERT_DOUBLE_WITHIN(coef[0], -0.5, EPS, "BInvARow[%d] = %g != %g\n", 0, coef[0], -0.5);
+   SOFT_ASSERT_DOUBLE_WITHIN(coef[1], 0.0, EPS, "BInvARow[%d] = %g != %g\n", 1, coef[1], 0.0);
+   SOFT_ASSERT_DOUBLE_WITHIN(coef[2], 0.0, EPS, "BInvARow[%d] = %g != %g\n", 2, coef[2], 0.0);
 
    /* check nonzeros */
    SCIP_CALL( SCIPlpiGetBInvARow(lpi, i, NULL, coeftwo, inds, &ninds) );
    if ( ninds >= 0 )
    {
-      cr_assert( ninds == 1 );
+      TEST_ASSERT( ninds == 1 );
       for (entry = 0; entry < ninds; ++entry)
       {
          idx = inds[entry];
-         cr_assert( 0 <= idx && idx < 3 );
-         cr_expect_float_eq(coeftwo[idx], coef[idx], EPS);
+         TEST_ASSERT( 0 <= idx && idx < 3 );
+         SOFT_ASSERT_DOUBLE_WITHIN(coeftwo[idx], coef[idx], EPS);
       }
    }
 
@@ -407,7 +415,7 @@ Test(complex, test1)
          /* Check that the value is the expected one if the column corresponds to the current variable given in exp_vars. */
          if ( exp_vars[idx] == basinds[entry] )
          {
-            cr_expect_float_eq(coef[entry], exp_avals[idx], EPS);
+            SOFT_ASSERT_DOUBLE_WITHIN(coef[entry], exp_avals[idx], EPS);
          }
       }
    }
@@ -416,7 +424,7 @@ Test(complex, test1)
    SCIP_CALL( SCIPlpiGetBInvACol(lpi, 0, coef, inds, &ninds) );
    if ( ninds >= 0 )
    {
-      cr_assert( ninds == 3 );
+      TEST_ASSERT( ninds == 3 );
    }
 }
 
@@ -477,18 +485,17 @@ void setup_more_vars(void)
    /* check size */
    SCIP_CALL( SCIPlpiGetNRows(lpi, &nrows) );
    SCIP_CALL( SCIPlpiGetNCols(lpi, &ncols) );
-   cr_assert_eq(nrows, 3);
-   cr_assert_eq(ncols, 4);
+   TEST_ASSERT_EQUAL(nrows, 3);
+   TEST_ASSERT_EQUAL(ncols, 4);
 
 #ifdef SCIP_DEBUG
    /* turn on output */
    SCIP_CALL( SCIPlpiSetIntpar(lpi, SCIP_LPPAR_LPINFO, 1) );
 #endif
 }
-TestSuite(more_vars, .init = setup_more_vars, .fini = teardown);
 
 /*** TESTS ***/
-Test(more_vars, test1)
+void test_more_vars_test1(void)
 {
    SCIP_Real binvarow[4];
    SCIP_Real objval;
@@ -496,6 +503,8 @@ Test(more_vars, test1)
    int rstats[3];
    int basinds[3];
    int basicvarpos;
+
+   setup_more_vars();
 
 #ifdef SCIP_DEBUG
    SCIP* scip;
@@ -509,18 +518,18 @@ Test(more_vars, test1)
    SCIP_CALL( SCIPlpiSolvePrimal(lpi) );
 
    SCIP_CALL( SCIPlpiGetObjval(lpi, &objval) );
-   cr_assert_float_eq(objval, 23.0, EPS);
+   TEST_ASSERT_DOUBLE_WITHIN(objval, 23.0, EPS);
 
    /* the optimal basis should be: {x1, x3, s1 = slack for first row} */
    SCIP_CALL( SCIPlpiGetBase(lpi, cstats, rstats) );
-   cr_assert(cstats[0] == SCIP_BASESTAT_BASIC);
-   cr_assert(cstats[1] == SCIP_BASESTAT_LOWER);
-   cr_assert(cstats[2] == SCIP_BASESTAT_BASIC);
-   cr_assert(cstats[3] == SCIP_BASESTAT_LOWER);
+   TEST_ASSERT(cstats[0] == SCIP_BASESTAT_BASIC);
+   TEST_ASSERT(cstats[1] == SCIP_BASESTAT_LOWER);
+   TEST_ASSERT(cstats[2] == SCIP_BASESTAT_BASIC);
+   TEST_ASSERT(cstats[3] == SCIP_BASESTAT_LOWER);
 
-   cr_assert(rstats[0] == SCIP_BASESTAT_BASIC);
-   cr_assert(rstats[1] == SCIP_BASESTAT_LOWER);
-   cr_assert(rstats[2] == SCIP_BASESTAT_LOWER);
+   TEST_ASSERT(rstats[0] == SCIP_BASESTAT_BASIC);
+   TEST_ASSERT(rstats[1] == SCIP_BASESTAT_LOWER);
+   TEST_ASSERT(rstats[2] == SCIP_BASESTAT_LOWER);
 
    /* binvarow should be
     * 1.0   2.0  0.0   3.0  <- basic var x1
@@ -537,13 +546,13 @@ Test(more_vars, test1)
       if( basinds[basicvarpos] == 0 )
          break;
    }
-   cr_assert(basicvarpos < 3); /* assert that we found the variable */
+   TEST_ASSERT(basicvarpos < 3); /* assert that we found the variable */
 
    SCIP_CALL( SCIPlpiGetBInvARow(lpi, basicvarpos, NULL, binvarow, NULL, NULL) );
-   cr_expect_float_eq(binvarow[0], 1.0, EPS);
-   cr_expect_float_eq(binvarow[1], 2.0, EPS);
-   cr_expect_float_eq(binvarow[2], 0.0, EPS);
-   cr_expect_float_eq(binvarow[3], 3.0, EPS);
+   SOFT_ASSERT_DOUBLE_WITHIN(binvarow[0], 1.0, EPS);
+   SOFT_ASSERT_DOUBLE_WITHIN(binvarow[1], 2.0, EPS);
+   SOFT_ASSERT_DOUBLE_WITHIN(binvarow[2], 0.0, EPS);
+   SOFT_ASSERT_DOUBLE_WITHIN(binvarow[3], 3.0, EPS);
 
    /* find position of x3 in basis indices; check binvarow of row where x3 is basic */
    for( basicvarpos = 0; basicvarpos < 3; ++basicvarpos )
@@ -551,13 +560,13 @@ Test(more_vars, test1)
       if( basinds[basicvarpos] == 2 )
          break;
    }
-   cr_assert(basicvarpos < 3); /* assert that we found the variable */
+   TEST_ASSERT(basicvarpos < 3); /* assert that we found the variable */
 
    SCIP_CALL( SCIPlpiGetBInvARow(lpi, basicvarpos, NULL, binvarow, NULL, NULL) );
-   cr_expect_float_eq(binvarow[0], 0.0, EPS, "BInvARow[%d] = %g != %g\n", 0, binvarow[0], 0.0);
-   cr_expect_float_eq(binvarow[1], 1.0, EPS, "BInvARow[%d] = %g != %g\n", 1, binvarow[1], 0.0);
-   cr_expect_float_eq(binvarow[2], 1.0, EPS, "BInvARow[%d] = %g != %g\n", 2, binvarow[2], 0.0);
-   cr_expect_float_eq(binvarow[3], 4.0, EPS, "BInvARow[%d] = %g != %g\n", 3, binvarow[3], 0.0);
+   SOFT_ASSERT_DOUBLE_WITHIN(binvarow[0], 0.0, EPS, "BInvARow[%d] = %g != %g\n", 0, binvarow[0], 0.0);
+   SOFT_ASSERT_DOUBLE_WITHIN(binvarow[1], 1.0, EPS, "BInvARow[%d] = %g != %g\n", 1, binvarow[1], 0.0);
+   SOFT_ASSERT_DOUBLE_WITHIN(binvarow[2], 1.0, EPS, "BInvARow[%d] = %g != %g\n", 2, binvarow[2], 0.0);
+   SOFT_ASSERT_DOUBLE_WITHIN(binvarow[3], 4.0, EPS, "BInvARow[%d] = %g != %g\n", 3, binvarow[3], 0.0);
 
    /* find position of s1 in basis indices; check binvarow of row where s1 is basic */
    for( basicvarpos = 0; basicvarpos < 3; ++basicvarpos )
@@ -565,19 +574,19 @@ Test(more_vars, test1)
       if( basinds[basicvarpos] == -1 )
          break;
    }
-   cr_assert(basicvarpos < 3); /* assert that we found the variable */
+   TEST_ASSERT(basicvarpos < 3); /* assert that we found the variable */
 
    SCIP_CALL( SCIPlpiGetBInvARow(lpi, basicvarpos, NULL, binvarow, NULL, NULL) );
-   cr_expect_float_eq(binvarow[0], 0.0, EPS, "BInvARow[%d] = %g != %g\n", 0, binvarow[0], 0.0);
-   cr_expect_float_eq(binvarow[1], -3.0, EPS, "BInvARow[%d] = %g != %g\n", 1, binvarow[1], -3.0);
-   cr_expect_float_eq(binvarow[2], 0.0, EPS, "BInvARow[%d] = %g != %g\n", 2, binvarow[2], 0.0);
-   cr_expect_float_eq(binvarow[3], -6.0, EPS, "BInvARow[%d] = %g != %g\n", 3, binvarow[3], -6.0);
+   SOFT_ASSERT_DOUBLE_WITHIN(binvarow[0], 0.0, EPS, "BInvARow[%d] = %g != %g\n", 0, binvarow[0], 0.0);
+   SOFT_ASSERT_DOUBLE_WITHIN(binvarow[1], -3.0, EPS, "BInvARow[%d] = %g != %g\n", 1, binvarow[1], -3.0);
+   SOFT_ASSERT_DOUBLE_WITHIN(binvarow[2], 0.0, EPS, "BInvARow[%d] = %g != %g\n", 2, binvarow[2], 0.0);
+   SOFT_ASSERT_DOUBLE_WITHIN(binvarow[3], -6.0, EPS, "BInvARow[%d] = %g != %g\n", 3, binvarow[3], -6.0);
 }
 
 
 
 /*** TEST SUITE: Check slack variables ***/
-Test(slack_var, test1)
+void test_slack_var_test1(void)
 {
    int ncols;
    int beg = 0;
@@ -652,8 +661,8 @@ Test(slack_var, test1)
    /* check size */
    SCIP_CALL( SCIPlpiGetNRows(lpi, &nrows) );
    SCIP_CALL( SCIPlpiGetNCols(lpi, &ncols) );
-   cr_assert_eq(nrows, 3);
-   cr_assert_eq(ncols, 3);
+   TEST_ASSERT_EQUAL(nrows, 3);
+   TEST_ASSERT_EQUAL(ncols, 3);
 
 #ifdef SCIP_DEBUG
    /* turn on output */
@@ -665,7 +674,7 @@ Test(slack_var, test1)
    SCIP_CALL( SCIPlpiSolvePrimal(lpi) );
 
    SCIP_CALL( SCIPlpiGetObjval(lpi, &objval) );
-   cr_assert_float_eq(objval, 13.0, EPS);
+   TEST_ASSERT_DOUBLE_WITHIN(objval, 13.0, EPS);
 
    /* get basis indices */
    SCIP_CALL( SCIPlpiGetBasisInd(lpi, basinds) );
@@ -676,7 +685,7 @@ Test(slack_var, test1)
       if( basinds[j] == -2 )
          break;
    }
-   cr_assert(j < 3); /* assert that we found the variable */
+   TEST_ASSERT(j < 3); /* assert that we found the variable */
 
    /* find positions of basis index for x0 */
    for (j = 0; j < 3; ++j)
@@ -684,7 +693,7 @@ Test(slack_var, test1)
       if( basinds[j] == 0 )
          break;
    }
-   cr_assert(j < 3); /* assert that we found the variable */
+   TEST_ASSERT(j < 3); /* assert that we found the variable */
 
    /* find positions of basis index for x2 */
    for (j = 0; j < 3; ++j)
@@ -692,20 +701,20 @@ Test(slack_var, test1)
       if( basinds[j] == 0 )
          break;
    }
-   cr_assert(j < 3); /* assert that we found the variable */
+   TEST_ASSERT(j < 3); /* assert that we found the variable */
 
    /* the optimal basis should be: {x5 = slack for second row, x0, x2 */
    SCIP_CALL( SCIPlpiGetBase(lpi, cstats, rstats) );
 
    /* check column status */
-   cr_assert(cstats[0] == SCIP_BASESTAT_BASIC);
-   cr_assert(cstats[1] == SCIP_BASESTAT_LOWER);
-   cr_assert(cstats[2] == SCIP_BASESTAT_BASIC);
+   TEST_ASSERT(cstats[0] == SCIP_BASESTAT_BASIC);
+   TEST_ASSERT(cstats[1] == SCIP_BASESTAT_LOWER);
+   TEST_ASSERT(cstats[2] == SCIP_BASESTAT_BASIC);
 
    /* check row status */
-   cr_assert(rstats[0] == SCIP_BASESTAT_UPPER);
-   cr_assert(rstats[1] == SCIP_BASESTAT_BASIC);
-   cr_assert(rstats[2] == SCIP_BASESTAT_UPPER);
+   TEST_ASSERT(rstats[0] == SCIP_BASESTAT_UPPER);
+   TEST_ASSERT(rstats[1] == SCIP_BASESTAT_BASIC);
+   TEST_ASSERT(rstats[2] == SCIP_BASESTAT_UPPER);
 
    /* set up basis matrix */
    for (i = 0; i < 3; ++i)
@@ -781,9 +790,9 @@ Test(slack_var, test1)
             sum += binvarow[i] * B[3 * i + j];
 
          if ( j == r )
-            cr_assert_float_eq(sum, 1.0, EPS);
+            TEST_ASSERT_DOUBLE_WITHIN(sum, 1.0, EPS);
          else
-            cr_assert_float_eq(sum, 0.0, EPS);
+            TEST_ASSERT_DOUBLE_WITHIN(sum, 0.0, EPS);
       }
    }
 
@@ -801,9 +810,27 @@ Test(slack_var, test1)
             sum +=  B[3 * i + j] * binvacol[j];
 
          if ( i == c )
-            cr_assert_float_eq(sum, 1.0, EPS);
+            TEST_ASSERT_DOUBLE_WITHIN(sum, 1.0, EPS);
          else
-            cr_assert_float_eq(sum, 0.0, EPS);
+            TEST_ASSERT_DOUBLE_WITHIN(sum, 0.0, EPS);
       }
    }
+}
+
+void setUp(void) { lpi = NULL; }
+
+void tearDown(void) { if( lpi != NULL ) teardown(); }
+
+int main(void)
+{
+   UNITY_BEGIN();
+   RUN_TEST(test_simple_test1
+);
+   RUN_TEST(test_simple_test2);
+   RUN_TEST(test_simple_test3);
+   RUN_TEST(test_simple_test4);
+   RUN_TEST(test_complex_test1);
+   RUN_TEST(test_more_vars_test1);
+   RUN_TEST(test_slack_var_test1);
+   return UNITY_END();
 }

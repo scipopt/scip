@@ -58,31 +58,30 @@ void teardown(void)
 {
    SCIP_CALL( SCIPfree(&scip) );
 
-   cr_assert_null(scip);
-   cr_assert_eq(BMSgetMemoryUsed(), 0, "There is a memory leak!!");
+   TEST_ASSERT_NULL(scip);
+   TEST_ASSERT_EQUAL(BMSgetMemoryUsed(), 0, "There is a memory leak!!");
 }
 
-TestSuite(iisplugin, .init = setup, .fini = teardown);
 
 
 /* test that the IIS functionality works */
-Test(iisplugin, valid)
+void test_iisplugin_valid(void)
 {
    SCIP_IIS* iis;
 
    SCIP_CALL( SCIPsolve(scip) );
    iis = SCIPgetIIS(scip);
    /** ensure that the original problem is infeasible */
-   cr_expect_eq(SCIPgetStatus(scip), SCIP_STATUS_INFEASIBLE, "got status %d, expected %d", SCIPgetStatus(scip), SCIP_STATUS_INFEASIBLE);
+   SOFT_ASSERT_EQUAL(SCIPgetStatus(scip), SCIP_STATUS_INFEASIBLE, "got status %d, expected %d", SCIPgetStatus(scip), SCIP_STATUS_INFEASIBLE);
    /** ensure that the iis does not yet exist and is therefore invalid */
-   cr_expect_eq(SCIPiisIsSubscipInfeasible(iis), FALSE, "iis is valid before doing any computations");
+   SOFT_ASSERT_EQUAL(SCIPiisIsSubscipInfeasible(iis), FALSE, "iis is valid before doing any computations");
    SCIP_CALL( SCIPgenerateIIS(scip) );
    /** ensure that the iis exists and is therefore valid */
-   cr_expect_eq(SCIPiisIsSubscipInfeasible(iis), TRUE, "iis is not valid");
+   SOFT_ASSERT_EQUAL(SCIPiisIsSubscipInfeasible(iis), TRUE, "iis is not valid");
 
    SCIP* subscip = SCIPiisGetSubscip(iis);
    int nOrigVars = SCIPgetNOrigVars(scip);
-   cr_expect(nOrigVars > SCIPgetNOrigConss(subscip), "original has more variables than iis");
+   SOFT_ASSERT(nOrigVars > SCIPgetNOrigConss(subscip), "original has more variables than iis");
 
    /** test a removed and a preserved variable */
    SCIP_VAR** origVars = SCIPgetOrigVars(scip);
@@ -96,13 +95,13 @@ Test(iisplugin, valid)
       else if( strcmp(SCIPvarGetName(var), "x6") == 0 )
          x6 = var;
    }
-   cr_assert(x2 != NULL);
-   cr_assert(x6 != NULL);
+   TEST_ASSERT(x2 != NULL);
+   TEST_ASSERT(x6 != NULL);
    SCIP_VAR* x2IIS = SCIPiisGetSubscipVar(iis, x2);
-   cr_assert(x2IIS != NULL);
-   cr_assert(strcmp(SCIPvarGetName(x2), SCIPvarGetName(x2IIS)) == 0);
+   TEST_ASSERT(x2IIS != NULL);
+   TEST_ASSERT(strcmp(SCIPvarGetName(x2), SCIPvarGetName(x2IIS)) == 0);
    SCIP_VAR* x6IIS = SCIPiisGetSubscipVar(iis, x6);
-   cr_assert(x6IIS == NULL);
+   TEST_ASSERT(x6IIS == NULL);
 
    /** test a removed and preserved constraint */
    int nOrigConss = SCIPgetNOrigConss(scip);
@@ -120,14 +119,25 @@ Test(iisplugin, valid)
       else if( strcmp(SCIPconsGetName(cons), "c5") == 0 )
          c5 = cons;
    }
-   cr_assert(c1 != NULL);
-   cr_assert(c2 != NULL);
-   cr_assert(c5 != NULL);
+   TEST_ASSERT(c1 != NULL);
+   TEST_ASSERT(c2 != NULL);
+   TEST_ASSERT(c5 != NULL);
    SCIP_CONS* c1IIS = SCIPiisGetSubscipCons(iis, c1);
    SCIP_CONS* c2IIS = SCIPiisGetSubscipCons(iis, c2);
    SCIP_CONS* c5IIS = SCIPiisGetSubscipCons(iis, c5);
-   cr_assert(c1IIS == NULL);
-   cr_assert(c2IIS != NULL || c5IIS != NULL);
-   cr_assert(c2IIS == NULL || strcmp(SCIPconsGetName(c2), SCIPconsGetName(c2IIS)) == 0);
-   cr_assert(c5IIS == NULL || strcmp(SCIPconsGetName(c5), SCIPconsGetName(c5IIS)) == 0);
+   TEST_ASSERT(c1IIS == NULL);
+   TEST_ASSERT(c2IIS != NULL || c5IIS != NULL);
+   TEST_ASSERT(c2IIS == NULL || strcmp(SCIPconsGetName(c2), SCIPconsGetName(c2IIS)) == 0);
+   TEST_ASSERT(c5IIS == NULL || strcmp(SCIPconsGetName(c5), SCIPconsGetName(c5IIS)) == 0);
+}
+
+void setUp(void) { setup(); }
+
+void tearDown(void) { teardown(); }
+
+int main(void)
+{
+   UNITY_BEGIN();
+   RUN_TEST(test_iisplugin_valid);
+   return UNITY_END();
 }

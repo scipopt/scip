@@ -53,12 +53,21 @@ void teardown(void)
 {
    SCIP_CALL( SCIPfree(&scip) );
 
-   cr_assert_null(scip);
-   cr_assert_eq(BMSgetMemoryUsed(), 0, "There is a memory leak!!");
+   TEST_ASSERT_NULL(scip);
+   TEST_ASSERT_EQUAL(BMSgetMemoryUsed(), 0, "There is a memory leak!!");
 }
 
-TestSuite(stages, .init = setup, .fini = teardown);
+void setUp(void)
+{
+   SOFT_ASSERT_RESET();
+   setup();
+}
 
+void tearDown(void)
+{
+   teardown();
+   SOFT_ASSERT_CHECK();
+}
 
 /* test that we get to each of the following stages:
  *  SCIP_STAGE_TRANSFORMED
@@ -73,39 +82,51 @@ static
 void gotoStage(SCIP_STAGE stage)
 {
    SCIP_CALL( TESTscipSetStage(scip, stage, FALSE) );
-   cr_expect_eq(SCIPgetStage(scip), stage, "got stage %d, expected %d", SCIPgetStage(scip), stage);
+   SOFT_ASSERT_EQUAL(SCIPgetStage(scip), stage, "got stage %d, expected %d", SCIPgetStage(scip), stage);
 }
 
-Test(stages, transformed)
+void test_stages_transformed(void)
 {
    gotoStage(SCIP_STAGE_TRANSFORMED);
 }
 
-Test(stages, presolving)
+void test_stages_presolving(void)
 {
    gotoStage(SCIP_STAGE_PRESOLVING);
 }
 
-Test(stages, presolved)
+void test_stages_presolved(void)
 {
    gotoStage(SCIP_STAGE_PRESOLVED);
 }
 
-Test(stages, solving)
+void test_stages_solving(void)
 {
    gotoStage(SCIP_STAGE_SOLVING);
 }
 
-Test(stages, solved)
+void test_stages_solved(void)
 {
    gotoStage(SCIP_STAGE_SOLVED);
 }
 
-Test(stages, solving_with_nlp)
+void test_stages_solving_with_nlp(void)
 {
    SCIP_CALL( TESTscipSetStage(scip, SCIP_STAGE_SOLVING, TRUE) );
-   cr_expect_eq(SCIPgetStage(scip), SCIP_STAGE_SOLVING, "got stage %d, expected %d", SCIPgetStage(scip), SCIP_STAGE_SOLVING);
+   SOFT_ASSERT_EQUAL(SCIPgetStage(scip), SCIP_STAGE_SOLVING, "got stage %d, expected %d", SCIPgetStage(scip), SCIP_STAGE_SOLVING);
 
    /* check that NLP is created */
-   cr_expect(SCIPisNLPConstructed(scip), "NLP is not constructed");
+   SOFT_ASSERT(SCIPisNLPConstructed(scip), "NLP is not constructed");
+}
+
+int main(void)
+{
+   UNITY_BEGIN();
+   RUN_TEST(test_stages_transformed);
+   RUN_TEST(test_stages_presolving);
+   RUN_TEST(test_stages_presolved);
+   RUN_TEST(test_stages_solving);
+   RUN_TEST(test_stages_solved);
+   RUN_TEST(test_stages_solving_with_nlp);
+   return UNITY_END();
 }

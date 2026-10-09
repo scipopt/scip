@@ -67,10 +67,9 @@ void teardown(void)
    SCIP_CALL( SCIPreleaseVar(scip, &x) );
    SCIP_CALL( SCIPfree(&scip) );
 
-   cr_assert_eq(BMSgetMemoryUsed(), 0, "Memory leak!!");
+   TEST_ASSERT_EQUAL(BMSgetMemoryUsed(), 0, "Memory leak!!");
 }
 
-TestSuite(curvature, .init = setup, .fini = teardown);
 
 /** auxiliary function for creating an expression and checking its curvature */
 static
@@ -87,7 +86,7 @@ SCIP_RETCODE checkCurvature(
    SCIP_Bool infeasible;
 
    /* create and print expression */
-   cr_expect_eq(SCIPparseExpr(scip, &origexpr, (char*)input, NULL, NULL, NULL), SCIP_OKAY);
+   SOFT_ASSERT_EQUAL(SCIPparseExpr(scip, &origexpr, (char*)input, NULL, NULL, NULL), SCIP_OKAY);
 
    /* simplify expression */
    SCIP_CALL( SCIPsimplifyExpr(scip, origexpr, &expr, &changed, &infeasible, NULL, NULL) );
@@ -99,15 +98,15 @@ SCIP_RETCODE checkCurvature(
 
    /* check name of the corresponding expression handler */
    exprhdlr = SCIPexprGetHdlr(expr);
-   cr_assert(exprhdlr != NULL);
-   cr_expect(strcmp(SCIPexprhdlrGetName(exprhdlr), exprhdlrname) == 0, "expect expression handler %s, got %s\n",
+   TEST_ASSERT(exprhdlr != NULL);
+   SOFT_ASSERT(strcmp(SCIPexprhdlrGetName(exprhdlr), exprhdlrname) == 0, "expect expression handler %s, got %s\n",
       exprhdlrname, SCIPexprhdlrGetName(exprhdlr));
 
    /* compute curvature */
    SCIP_CALL( SCIPcomputeExprCurvature(scip, expr) );
 
    /* check curvature */
-   cr_expect(SCIPexprGetCurvature(expr) == expectedcur, "expect %s, got %s", SCIPexprcurvGetName(expectedcur), SCIPexprcurvGetName(SCIPexprGetCurvature(expr)));
+   SOFT_ASSERT(SCIPexprGetCurvature(expr) == expectedcur, "expect %s, got %s", SCIPexprcurvGetName(expectedcur), SCIPexprcurvGetName(SCIPexprGetCurvature(expr)));
 
    /* release expression */
    SCIP_CALL( SCIPreleaseExpr(scip, &expr) );
@@ -116,13 +115,13 @@ SCIP_RETCODE checkCurvature(
 }
 
 /* check for absolute expression */
-Test(curvature, absolute)
+void test_curvature_absolute(void)
 {
    SCIP_CALL( checkCurvature("abs(<x>[C])", "abs", SCIP_EXPRCURV_CONVEX) );
 }
 
 /* check for cosine expression */
-Test(curvature, cosine)
+void test_curvature_cosine(void)
 {
    SCIP_CALL(checkCurvature("cos(<x>[C])", "cos", SCIP_EXPRCURV_UNKNOWN));
    SCIP_CALL(checkCurvature("cos(<y>[C])", "cos", SCIP_EXPRCURV_UNKNOWN));
@@ -131,19 +130,19 @@ Test(curvature, cosine)
 }
 
 /* check for exponential expression */
-Test(curvature, exponential)
+void test_curvature_exponential(void)
 {
    SCIP_CALL( checkCurvature("exp(<x>[C])", "exp", SCIP_EXPRCURV_CONVEX) );
 }
 
 /* check for logarithm expression */
-Test(curvature, logarithm)
+void test_curvature_logarithm(void)
 {
    SCIP_CALL( checkCurvature("log(<x>[C])", "log", SCIP_EXPRCURV_CONCAVE) );
 }
 
 /* check for power expression */
-Test(curvature, power)
+void test_curvature_power(void)
 {
    SCIP_CALL( checkCurvature("(<x>[C])^2", "pow", SCIP_EXPRCURV_CONVEX) );
 
@@ -163,7 +162,7 @@ Test(curvature, power)
 }
 
 /* check for signpower expression */
-Test(curvature, signpower)
+void test_curvature_signpower(void)
 {
    /* 0 is contained in the interior of x -> neither convex nor concave */
    SCIP_CALL( checkCurvature("signpower(<x>[C],2)", "signpower", SCIP_EXPRCURV_UNKNOWN) );
@@ -178,14 +177,14 @@ Test(curvature, signpower)
 }
 
 /* check for product expression */
-Test(curvature, product)
+void test_curvature_product(void)
 {
    SCIP_CALL( checkCurvature("(<x>[C] * <y>[C])", "prod", SCIP_EXPRCURV_UNKNOWN) );
    SCIP_CALL( checkCurvature("(<x>[C] * <y>[C] * <z>[C])", "prod", SCIP_EXPRCURV_UNKNOWN) );
 }
 
 /* check for sine expression */
-Test(curvature, sine)
+void test_curvature_sine(void)
 {
    SCIP_CALL( checkCurvature("sin(<x>[C])", "sin", SCIP_EXPRCURV_UNKNOWN) );
    SCIP_CALL( checkCurvature("sin(<y>[C])", "sin", SCIP_EXPRCURV_CONCAVE) );
@@ -194,7 +193,7 @@ Test(curvature, sine)
 }
 
 /* check for sum expression */
-Test(curvature, sum)
+void test_curvature_sum(void)
 {
    /* sum of linear expressions -> linear */
    SCIP_CALL( checkCurvature("<x>[C] + <y>[C] + <z>[C]", "sum", SCIP_EXPRCURV_LINEAR) );
@@ -216,13 +215,35 @@ Test(curvature, sum)
 }
 
 /* check for value expression */
-Test(curvature, value)
+void test_curvature_value(void)
 {
    SCIP_CALL( checkCurvature("5.2", "val", SCIP_EXPRCURV_LINEAR) );
 }
 
 /* check for variable expression */
-Test(curvature, variable)
+void test_curvature_variable(void)
 {
    SCIP_CALL( checkCurvature("<x>[C]", "var", SCIP_EXPRCURV_LINEAR) );
+}
+
+void setUp(void) { setup(); }
+
+void tearDown(void) { teardown(); }
+
+int main(void)
+{
+   UNITY_BEGIN();
+   RUN_TEST(test_curvature_absolute
+);
+   RUN_TEST(test_curvature_cosine);
+   RUN_TEST(test_curvature_exponential);
+   RUN_TEST(test_curvature_logarithm);
+   RUN_TEST(test_curvature_power);
+   RUN_TEST(test_curvature_signpower);
+   RUN_TEST(test_curvature_product);
+   RUN_TEST(test_curvature_sine);
+   RUN_TEST(test_curvature_sum);
+   RUN_TEST(test_curvature_value);
+   RUN_TEST(test_curvature_variable);
+   return UNITY_END();
 }

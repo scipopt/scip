@@ -77,7 +77,7 @@ void setAndTestObjsense(SCIP_OBJSENSE sense)
 {
    SCIP_CALL( SCIPsetObjsense(scip, sense) );
 
-   cr_assert_eq(sense, SCIPgetObjsense(scip));
+   TEST_ASSERT_EQUAL(sense, SCIPgetObjsense(scip));
 }
 
 /* TEST SUITES */
@@ -88,7 +88,7 @@ void setup(void)
    /* initialize SCIP */
    scip = NULL;
    SCIP_CALL( SCIPcreate(&scip) );
-   cr_assert_not_null(scip);
+   TEST_ASSERT_NOT_NULL(scip);
 
    SCIP_CALL( SCIPincludeDefaultPlugins(scip) );
 
@@ -102,22 +102,30 @@ void teardown(void)
 {
    SCIP_CALL( SCIPfree(&scip) );
 
-   cr_assert_null(scip);
-   cr_assert_eq(BMSgetMemoryUsed(), 0, "There is a memory leak!!");
+   TEST_ASSERT_NULL(scip);
+   TEST_ASSERT_EQUAL(BMSgetMemoryUsed(), 0, "There is a memory leak!!");
 }
 
-TestSuite(setters, .init = setup, .fini = teardown);
+void setUp(void)
+{
+   setup();
+}
+
+void tearDown(void)
+{
+   teardown();
+}
 
 /* TESTS */
-Test(setters, setProbNameTest)
+void test_setters_setProbNameTest(void)
 {
    char name[SCIP_MAXSTRLEN] = "new_na-me";
    SCIP_CALL( SCIPsetProbName(scip, name) );
 
-   cr_assert_str_eq(name, SCIPgetProbName(scip));
+   TEST_ASSERT_EQUAL_STRING(name, SCIPgetProbName(scip));
 }
 
-Test(setters, setObjsenseTest)
+void test_setters_setObjsenseTest(void)
 {
    setAndTestObjsense(SCIP_OBJSENSE_MAXIMIZE);
    setAndTestObjsense(SCIP_OBJSENSE_MINIMIZE);
@@ -149,7 +157,7 @@ Test(setters, setObjsenseTest)
       for( i = 0; i < nobjs; ++i )                                                        \
       {                                                                                   \
          SCIP_CALL(setpriority(scip, objs[i], priority));                                 \
-         cr_assert_eq(priority, getpriority(objs[i]));                                    \
+         TEST_ASSERT_EQUAL(priority, getpriority(objs[i]));                                    \
       }                                                                                   \
                                                                                           \
       /* add some vars and test priorities again */                                       \
@@ -157,7 +165,7 @@ Test(setters, setObjsenseTest)
                                                                                           \
       for( i=0; i < nobjs; ++i)                                                           \
       {                                                                                   \
-         cr_assert_eq(priority, getpriority(objs[i]));                                    \
+         TEST_ASSERT_EQUAL(priority, getpriority(objs[i]));                                    \
       }                                                                                   \
                                                                                           \
                                                                                           \
@@ -166,56 +174,74 @@ Test(setters, setObjsenseTest)
       for( i = 0; i < nobjs; ++i )                                                        \
       {                                                                                   \
          SCIP_CALL(setpriority(scip, objs[i], priority));                                 \
-         cr_assert_eq(priority, getpriority(objs[i]));                                    \
+         TEST_ASSERT_EQUAL(priority, getpriority(objs[i]));                                    \
       }                                                                                   \
    } while(FALSE)                                                                         \
 
-Test(setters, setConflicthdlrPriorityTest)
+void test_setters_setConflicthdlrPriorityTest(void)
 {
    TEST_PRIORITY( SCIP_CONFLICTHDLR**, SCIPgetConflicthdlrs, SCIPgetNConflicthdlrs, SCIPsetConflicthdlrPriority, SCIPconflicthdlrGetPriority );
 }
 
-Test(setters, setPresolPriorityTest)
+void test_setters_setPresolPriorityTest(void)
 {
    TEST_PRIORITY( SCIP_PRESOL**, SCIPgetPresols, SCIPgetNPresols, SCIPsetPresolPriority, SCIPpresolGetPriority );
 }
 
-Test(setters, setPricerPriorityTest)
+void test_setters_setPricerPriorityTest(void)
 {
    TEST_PRIORITY( SCIP_PRICER**, SCIPgetPricers, SCIPgetNPricers, SCIPsetPricerPriority, SCIPpricerGetPriority );
 }
 
-Test(setters, setRelaxPriorityTest)
+void test_setters_setRelaxPriorityTest(void)
 {
    TEST_PRIORITY( SCIP_RELAX**, SCIPgetRelaxs, SCIPgetNRelaxs, SCIPsetRelaxPriority, SCIPrelaxGetPriority );
 }
 
-Test(setters, setSepaPriorityTest)
+void test_setters_setSepaPriorityTest(void)
 {
    TEST_PRIORITY( SCIP_SEPA**, SCIPgetSepas, SCIPgetNSepas, SCIPsetSepaPriority, SCIPsepaGetPriority );
 }
 
-Test(setters, setPropPriorityTest)
+void test_setters_setPropPriorityTest(void)
 {
    TEST_PRIORITY( SCIP_PROP**, SCIPgetProps, SCIPgetNProps, SCIPsetPropPriority, SCIPpropGetPriority );
 }
 
-Test(setters, setHeurPriorityTest)
+void test_setters_setHeurPriorityTest(void)
 {
    TEST_PRIORITY( SCIP_HEUR**, SCIPgetHeurs, SCIPgetNHeurs, SCIPsetHeurPriority, SCIPheurGetPriority );
 }
 
-Test(setters, setNodeselStdPriorityTest)
+void test_setters_setNodeselStdPriorityTest(void)
 {
    TEST_PRIORITY( SCIP_NODESEL**, SCIPgetNodesels, SCIPgetNNodesels, SCIPsetNodeselStdPriority, SCIPnodeselGetStdPriority );
 }
 
-Test(setters, setNodeselMemsavePriorityTest)
+void test_setters_setNodeselMemsavePriorityTest(void)
 {
    TEST_PRIORITY( SCIP_NODESEL**, SCIPgetNodesels, SCIPgetNNodesels, SCIPsetNodeselMemsavePriority, SCIPnodeselGetMemsavePriority );
 }
 
-Test(setters, setBranchrulePriorityTest)
+void test_setters_setBranchrulePriorityTest(void)
 {
    TEST_PRIORITY( SCIP_BRANCHRULE**, SCIPgetBranchrules, SCIPgetNBranchrules, SCIPsetBranchrulePriority, SCIPbranchruleGetPriority );
+}
+
+int main(void)
+{
+   UNITY_BEGIN();
+   RUN_TEST(test_setters_setProbNameTest);
+   RUN_TEST(test_setters_setObjsenseTest);
+   RUN_TEST(test_setters_setConflicthdlrPriorityTest);
+   RUN_TEST(test_setters_setPresolPriorityTest);
+   RUN_TEST(test_setters_setPricerPriorityTest);
+   RUN_TEST(test_setters_setRelaxPriorityTest);
+   RUN_TEST(test_setters_setSepaPriorityTest);
+   RUN_TEST(test_setters_setPropPriorityTest);
+   RUN_TEST(test_setters_setHeurPriorityTest);
+   RUN_TEST(test_setters_setNodeselStdPriorityTest);
+   RUN_TEST(test_setters_setNodeselMemsavePriorityTest);
+   RUN_TEST(test_setters_setBranchrulePriorityTest);
+   return UNITY_END();
 }

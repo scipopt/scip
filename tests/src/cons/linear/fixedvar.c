@@ -34,7 +34,7 @@
 #include <stdio.h>
 
 /* TESTS  */
-Test(fixedvar, addconswithfixedvar)
+void test_fixedvar_addconswithfixedvar(void)
 {
    SCIP* scip;
    SCIP_VAR* var;
@@ -87,4 +87,15 @@ Test(fixedvar, addconswithfixedvar)
 
    /** free SCIP */
    SCIP_CALL( SCIPfree(&scip) );
+}
+
+void setUp(void) { }
+
+void tearDown(void) { }
+
+int main(void)
+{
+   UNITY_BEGIN();
+   RUN_TEST(test_fixedvar_addconswithfixedvar);
+   return UNITY_END();
 }

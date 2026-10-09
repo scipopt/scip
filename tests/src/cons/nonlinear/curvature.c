@@ -64,13 +64,11 @@ void teardown(void)
    SCIP_CALL( SCIPreleaseVar(scip, &x) );
    SCIP_CALL( SCIPfree(&scip) );
 
-   cr_assert_eq(BMSgetMemoryUsed(), 0, "Memory leak!!");
+   TEST_ASSERT_EQUAL(BMSgetMemoryUsed(), 0, "Memory leak!!");
 }
 
-TestSuite(curvature, .init = setup, .fini = teardown);
-
 /* check curvature in the constraint data and in the nonlinear rows */
-Test(curvature, cons_and_nlrows)
+void test_curvature_cons_and_nlrows(void)
 {
    const char* inputs[3] = {
       "[nonlinear] <c1>: (<y>[C] + <z>[C])^2 <= 12;",
@@ -98,15 +96,15 @@ Test(curvature, cons_and_nlrows)
 
       SCIP_CALL( SCIPparseCons(scip, &cons, inputs[i],
          TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, &success) );
-      cr_expect(success);
+      TEST_ASSERT(success);
       SCIP_CALL( SCIPaddCons(scip, cons) );
       SCIP_CALL( SCIPreleaseCons(scip, &cons) );
    }
 
    /* go to the solving stage; this should have triggered CONSINITSOL */
    SCIP_CALL( TESTscipSetStage(scip, SCIP_STAGE_SOLVING, FALSE) );
-   cr_assert(SCIPgetNConss(scip) == ninputs);
-   cr_assert(SCIPgetNNLPNlRows(scip) == ninputs);
+   TEST_ASSERT(SCIPgetNConss(scip) == ninputs);
+   TEST_ASSERT(SCIPgetNNLPNlRows(scip) == ninputs);
 
    for( i = 0; i < ninputs; ++i )
    {
@@ -117,18 +115,18 @@ Test(curvature, cons_and_nlrows)
       assert(cons != NULL);
 
       /* check curvature that is stored in the constraint data */
-      cr_expect(SCIPgetCurvatureNonlinear(cons) == targetcurvs[i], "for cons %d (%s): expected %d got %d", i,
+      SOFT_ASSERT(SCIPgetCurvatureNonlinear(cons) == targetcurvs[i], "for cons %d (%s): expected %d got %d", i,
          SCIPconsGetName(cons), targetcurvs[i], SCIPgetCurvatureNonlinear(cons));
 
       /* check curvature that is stored in the nonlinear row */
       nlrow = SCIPgetNLPNlRows(scip)[i];
       assert(nlrow != NULL);
-      cr_expect(SCIPnlrowGetCurvature(nlrow) == targetcurvs[i]);
+      SOFT_ASSERT(SCIPnlrowGetCurvature(nlrow) == targetcurvs[i]);
    }
 }
 
 /* assume convenient curvature in the constraint data and in the nonlinear rows */
-Test(curvature, assumeconvex)
+void test_curvature_assumeconvex(void)
 {
    const char* inputs[3] = {
       "[nonlinear] <c1>: (<y>[C] + <z>[C])^2 <= 12;",
@@ -153,15 +151,15 @@ Test(curvature, assumeconvex)
 
       SCIP_CALL( SCIPparseCons(scip, &cons, inputs[i],
          TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, &success) );
-      cr_expect(success);
+      TEST_ASSERT(success);
       SCIP_CALL( SCIPaddCons(scip, cons) );
       SCIP_CALL( SCIPreleaseCons(scip, &cons) );
    }
 
    /* go to the solving stage; this should have triggered CONSINITSOL */
    SCIP_CALL( TESTscipSetStage(scip, SCIP_STAGE_SOLVING, FALSE) );
-   cr_assert(SCIPgetNConss(scip) == ninputs);
-   cr_assert(SCIPgetNNLPNlRows(scip) == ninputs);
+   TEST_ASSERT(SCIPgetNConss(scip) == ninputs);
+   TEST_ASSERT(SCIPgetNNLPNlRows(scip) == ninputs);
 
    for( i = 0; i < ninputs; ++i )
    {
@@ -172,12 +170,24 @@ Test(curvature, assumeconvex)
       assert(cons != NULL);
 
       /* check curvature that is stored in the constraint data */
-      cr_expect(SCIPgetCurvatureNonlinear(cons) == targetcurvs[i], "for cons %d (%s): expected %d got %d", i,
+      SOFT_ASSERT(SCIPgetCurvatureNonlinear(cons) == targetcurvs[i], "for cons %d (%s): expected %d got %d", i,
          SCIPconsGetName(cons), targetcurvs[i], SCIPgetCurvatureNonlinear(cons));
 
       /* check curvature that is stored in the nonlinear row */
       nlrow = SCIPgetNLPNlRows(scip)[i];
       assert(nlrow != NULL);
-      cr_expect(SCIPnlrowGetCurvature(nlrow) == targetcurvs[i]);
+      SOFT_ASSERT(SCIPnlrowGetCurvature(nlrow) == targetcurvs[i]);
    }
+}
+
+void setUp(void) { setup(); }
+
+void tearDown(void) { teardown(); }
+
+int main(void)
+{
+   UNITY_BEGIN();
+   RUN_TEST(test_curvature_cons_and_nlrows);
+   RUN_TEST(test_curvature_assumeconvex);
+   return UNITY_END();
 }

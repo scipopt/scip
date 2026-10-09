@@ -278,6 +278,12 @@ Interface changes
 - exchanged definition of SYM_SPEC_BINARY and SYM_SPEC_INTEGER
 - removed SYM_TIMING_DURINGPRESOL and SYM_COMPUTETIMING_DURINGPRESOL, and replaced definition of SYM_TIMING_AFTERPRESOL
 
+Unit tests
+----------
+
+- migrated the unit test framework from Criterion to Unity; the `TEST_ASSERT*` and `SOFT_ASSERT*` macros
+  provided by `tests/include/scip_test.h` replace the former Criterion `cr_*` assertions
+
 @page RN10 Release notes for SCIP 10
 
 @section RN1020 SCIP 10.2.0

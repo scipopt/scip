@@ -87,8 +87,8 @@ void setup(void)
    tosort[6] = 6;
    tosort[7] = 0;
 
-   cr_assert_not_null(scip);
-   cr_assert_not_null(tosort);
+   TEST_ASSERT_NOT_NULL(scip);
+   TEST_ASSERT_NOT_NULL(tosort);
 }
 
 static
@@ -101,22 +101,34 @@ void teardown(void)
    SCIP_CALL( SCIPfree(&scip) );
 
    /* check for memory leaks */
-   cr_assert_eq(BMSgetMemoryUsed(), 0, "There is a memory leak!");
+   TEST_ASSERT_EQUAL(BMSgetMemoryUsed(), 0, "There is a memory leak!");
 }
 
-TestSuite(sort, .init = setup, .fini = teardown);
+/* Unity setUp/tearDown */
+void setUp(void)
+{
+   setup();
+}
 
-Test(sort, create_and_free)
+void tearDown(void)
+{
+   teardown();
+}
+
+/* TESTS */
+
+void test_sort_create_and_free(void)
 {
    /* calls setup and teardown */
 }
 
-Test(sort, asc_sort_up, .description = "tests SCIPsort by checking that the permutation is sorted ascending")
+/** @brief tests SCIPsort by checking that the permutation is sorted ascending */
+void test_sort_asc_sort_up(void)
 {
    int* perm;
    int i;
 
-   cr_assert_not_null(scip);
+   TEST_ASSERT_NOT_NULL(scip);
 
    SCIP_CALL( SCIPallocBufferArray(scip, &perm, ntosort) );
 
@@ -124,18 +136,19 @@ Test(sort, asc_sort_up, .description = "tests SCIPsort by checking that the perm
 
    for( i = 0; i < ntosort-1; i++ )
    {
-      cr_assert_lt(tosort[perm[i]], tosort[perm[i+1]]);
+      TEST_ASSERT_LESS_THAN(tosort[perm[i]], tosort[perm[i+1]]);
    }
 
    SCIPfreeBufferArray(scip, &perm);
 }
 
-Test(sort, asc_sort_down, .description = "tests SCIPsortDown by checking that the permutation is sorted descending")
+/** @brief tests SCIPsortDown by checking that the permutation is sorted descending */
+void test_sort_asc_sort_down(void)
 {
    int* perm;
    int i;
 
-   cr_assert_not_null(scip);
+   TEST_ASSERT_NOT_NULL(scip);
 
    SCIP_CALL( SCIPallocBufferArray(scip, &perm, ntosort) );
 
@@ -143,18 +156,19 @@ Test(sort, asc_sort_down, .description = "tests SCIPsortDown by checking that th
 
    for( i = 0; i < ntosort-1; i++ )
    {
-      cr_assert_gt(tosort[perm[i]], tosort[perm[i+1]]);
+      TEST_ASSERT_GREATER_THAN(tosort[perm[i]], tosort[perm[i+1]]);
    }
 
    SCIPfreeBufferArray(scip, &perm);
 }
 
-Test(sort, desc_sort_up, .description = "tests SCIPsort by checking that the permutation is sorted descending")
+/** @brief tests SCIPsort by checking that the permutation is sorted descending */
+void test_sort_desc_sort_up(void)
 {
    int* perm;
    int i;
 
-   cr_assert_not_null(scip);
+   TEST_ASSERT_NOT_NULL(scip);
 
    SCIP_CALL( SCIPallocBufferArray(scip, &perm, ntosort) );
 
@@ -162,18 +176,19 @@ Test(sort, desc_sort_up, .description = "tests SCIPsort by checking that the per
 
    for( i = 0; i < ntosort-1; i++ )
    {
-      cr_assert_gt(tosort[perm[i]], tosort[perm[i+1]]);
+      TEST_ASSERT_GREATER_THAN(tosort[perm[i]], tosort[perm[i+1]]);
    }
 
    SCIPfreeBufferArray(scip, &perm);
 }
 
-Test(sort, desc_sort_down, .description = "tests SCIPsortDown by checking that the permutation is sorted ascending")
+/** @brief tests SCIPsortDown by checking that the permutation is sorted ascending */
+void test_sort_desc_sort_down(void)
 {
    int* perm;
    int i;
 
-   cr_assert_not_null(scip);
+   TEST_ASSERT_NOT_NULL(scip);
 
    SCIP_CALL( SCIPallocBufferArray(scip, &perm, ntosort) );
 
@@ -181,8 +196,19 @@ Test(sort, desc_sort_down, .description = "tests SCIPsortDown by checking that t
 
    for( i = 0; i < ntosort-1; i++ )
    {
-      cr_assert_lt(tosort[perm[i]], tosort[perm[i+1]]);
+      TEST_ASSERT_LESS_THAN(tosort[perm[i]], tosort[perm[i+1]]);
    }
 
    SCIPfreeBufferArray(scip, &perm);
+}
+
+int main(void)
+{
+   UNITY_BEGIN();
+   RUN_TEST(test_sort_create_and_free);
+   RUN_TEST(test_sort_asc_sort_up);
+   RUN_TEST(test_sort_asc_sort_down);
+   RUN_TEST(test_sort_desc_sort_up);
+   RUN_TEST(test_sort_desc_sort_down);
+   return UNITY_END();
 }

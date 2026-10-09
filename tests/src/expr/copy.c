@@ -62,10 +62,10 @@ void teardown(void)
    SCIP_CALL( SCIPreleaseVar(scip, &z) );
    SCIP_CALL( SCIPfree(&scip) );
 
-   cr_assert_eq(BMSgetMemoryUsed(), 0, "Memory is leaking!!");
+   TEST_ASSERT_EQUAL(BMSgetMemoryUsed(), 0, "Memory is leaking!!");
 }
 
-Test(duplicate, duplicate, .init = setup, .fini = teardown)
+void test_duplicate_duplicate(void)
 {
    SCIP_EXPR* expr;
    SCIP_EXPR* duplicate;
@@ -78,9 +78,20 @@ Test(duplicate, duplicate, .init = setup, .fini = teardown)
    SCIP_CALL( SCIPduplicateExpr(scip, expr, &duplicate, NULL, NULL, NULL, NULL) );
 
    /* check that they are the same */
-   cr_assert_eq(SCIPcompareExpr(scip, expr, duplicate), 0);
+   TEST_ASSERT_EQUAL(SCIPcompareExpr(scip, expr, duplicate), 0);
 
    /* release expressions */
    SCIP_CALL( SCIPreleaseExpr(scip, &expr) );
    SCIP_CALL( SCIPreleaseExpr(scip, &duplicate) );
+}
+
+void setUp(void) { setup(); }
+
+void tearDown(void) { teardown(); }
+
+int main(void)
+{
+   UNITY_BEGIN();
+   RUN_TEST(test_duplicate_duplicate);
+   return UNITY_END();
 }

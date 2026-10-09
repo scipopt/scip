@@ -55,12 +55,9 @@ void cosine_setup(void)
       coefsp[i] = &coefs[i];
 }
 
-TestSuite(separation, .init = cosine_setup, .fini = teardown);
-
 /* tests for interval [-1,5] */
-Test(separation, cosine_x,
-   .description = "test separation for a cosine expression in large range"
-   )
+/** @brief test separation for a cosine expression in large range */
+void test_separation_cosine_x(void)
 {
    SCIP_EXPR* expr;
    SCIP_Real newtonpoint;
@@ -105,7 +102,7 @@ Test(separation, cosine_x,
     * test initial overestimation
     */
    SCIP_CALL( computeInitialCutsTrig(scip, expr, childlb, childub, FALSE, coefsp, constants, &nreturned) );
-   cr_expect_eq(nreturned, 2, "expected %d, got %d\n", 2, nreturned);
+   SOFT_ASSERT_EQUAL(nreturned, 2, "expected %d, got %d\n", 2, nreturned);
 
    /* check right secant */
    newtonpoint = 0.145902085052;
@@ -121,7 +118,7 @@ Test(separation, cosine_x,
     */
 
    SCIP_CALL( computeInitialCutsTrig(scip, expr, childlb, childub, TRUE, coefsp, constants, &nreturned) );
-   cr_expect_eq(nreturned, 2, "expected %d, got %d\n", 2, nreturned);
+   SOFT_ASSERT_EQUAL(nreturned, 2, "expected %d, got %d\n", 2, nreturned);
 
    /* check left secant */
    newtonpoint = 2.740339007021;
@@ -138,28 +135,28 @@ Test(separation, cosine_x,
     */
 
    success = computeEstimatorsTrig(scip, expr, &lincoef, &linconst, -0.5, childlb, childub, FALSE);
-   cr_expect(success);
-   cr_expect_float_eq(linconst, -0.5 * sin(-0.5) + cos(-0.5), 1e-12);
-   cr_expect_float_eq(lincoef, -sin(-0.5), 1e-12);
+   TEST_ASSERT(success);
+   SOFT_ASSERT_DOUBLE_WITHIN(linconst, -0.5 * sin(-0.5) + cos(-0.5), 1e-12);
+   SOFT_ASSERT_DOUBLE_WITHIN(lincoef, -sin(-0.5), 1e-12);
 
    /*
     * test underestimation
     */
    success = computeEstimatorsTrig(scip, expr, &lincoef, &linconst, 4.0, childlb, childub, TRUE);
-   cr_expect(success);
-   cr_expect_float_eq(linconst, 4.0 * sin(4.0) + cos(4.0), 1e-12);
-   cr_expect_float_eq(lincoef, -sin(4.0), 1e-12);
+   TEST_ASSERT(success);
+   SOFT_ASSERT_DOUBLE_WITHIN(linconst, 4.0 * sin(4.0) + cos(4.0), 1e-12);
+   SOFT_ASSERT_DOUBLE_WITHIN(lincoef, -sin(4.0), 1e-12);
 
    /*
     * test point where solution tangent is not overestimating
     */
    success = computeEstimatorsTrig(scip, expr, &lincoef, &linconst, 1.7, childlb, childub, TRUE);
-   cr_expect(success);
+   TEST_ASSERT(success);
 
    /* check lmidtangent */
    newtonpoint = 2.740339007021;
-   cr_expect_float_eq(linconst, -sin(newtonpoint) + cos(-1), 1e-12);
-   cr_expect_float_eq(lincoef, -sin(newtonpoint), 1e-12);
+   SOFT_ASSERT_DOUBLE_WITHIN(linconst, -sin(newtonpoint) + cos(-1), 1e-12);
+   SOFT_ASSERT_DOUBLE_WITHIN(lincoef, -sin(newtonpoint), 1e-12);
 
    /* release expression */
    SCIP_CALL( SCIPreleaseExpr(scip, &expr) );
@@ -168,9 +165,8 @@ Test(separation, cosine_x,
 /* tests for interval [-6,-3] */
 //TODO: reenable test. the problem is that the left tangent is not computed because it is wrongly identified as nonoverestimating
 // see TODO in expr_sin.c:computeRightTangentSin
-Test(separation, cosine_y,
-   .description = "test separation for a cosine expression in mid size range", .disabled = TRUE
-)
+/** @brief test separation for a cosine expression in mid size range */
+void test_separation_cosine_y(void)
 {
    SCIP_EXPR* expr;
    SCIP_Real newtonpoint;
@@ -179,6 +175,14 @@ Test(separation, cosine_y,
    SCIP_Real linconst;
    SCIP_Real lincoef;
    SCIP_Bool success;
+
+   /* This test is known to fail and was marked ".disabled = TRUE" while the
+    * suite still used Criterion; the attribute was lost in the migration.
+    * Ignoring it keeps that state visible in the test output instead of
+    * dropping the test silently. computeInitialCutsTrig returns one cut here
+    * where the test expects two.
+    */
+   TEST_IGNORE_MESSAGE("disabled: separation for a cosine expression in mid size range");
 
    SCIP_CALL( SCIPcreateExprCos(scip, &expr, yexpr, NULL ,NULL) );
 
@@ -216,7 +220,7 @@ Test(separation, cosine_y,
     */
 
    SCIP_CALL( computeInitialCutsTrig(scip, expr, childlb, childub, FALSE, coefsp, constants, &nreturned) );
-   cr_expect_eq(nreturned, 2, "expected %d, got %d\n", 2, nreturned);
+   SOFT_ASSERT_EQUAL(nreturned, 2, "expected %d, got %d\n", 2, nreturned);
 
    /* check right secant */
    newtonpoint = -5.535897406992;
@@ -232,7 +236,7 @@ Test(separation, cosine_y,
     */
 
    SCIP_CALL( computeInitialCutsTrig(scip, expr, childlb, childub, TRUE, coefsp, constants, &nreturned) );
-   cr_expect_eq(nreturned, 2, "expected %d, got %d\n", 2, nreturned);
+   SOFT_ASSERT_EQUAL(nreturned, 2, "expected %d, got %d\n", 2, nreturned);
 
    /* check left secant */
    newtonpoint = -4.082240818442;
@@ -249,37 +253,36 @@ Test(separation, cosine_y,
     */
 
    success = computeEstimatorsTrig(scip, expr, &lincoef, &linconst, -5.7, childlb, childub, FALSE);
-   cr_expect(success);
-   cr_expect_float_eq(linconst, -5.7 * sin(-5.7) + cos(-5.7), 1e-12);
-   cr_expect_float_eq(lincoef, -sin(-5.7), 1e-12);
+   TEST_ASSERT(success);
+   SOFT_ASSERT_DOUBLE_WITHIN(linconst, -5.7 * sin(-5.7) + cos(-5.7), 1e-12);
+   SOFT_ASSERT_DOUBLE_WITHIN(lincoef, -sin(-5.7), 1e-12);
 
    /*
     * test underestimation
     */
 
    success = computeEstimatorsTrig(scip, expr, &lincoef, &linconst, -3.5, childlb, childub, TRUE);
-   cr_expect(success);
-   cr_expect_float_eq(linconst, -3.5 * sin(-3.5) + cos(-3.5), 1e-12);
-   cr_expect_float_eq(lincoef, -sin(-3.5), 1e-12);
+   TEST_ASSERT(success);
+   SOFT_ASSERT_DOUBLE_WITHIN(linconst, -3.5 * sin(-3.5) + cos(-3.5), 1e-12);
+   SOFT_ASSERT_DOUBLE_WITHIN(lincoef, -sin(-3.5), 1e-12);
 
    /*
     * test point where solution tangent in not overestimating
     */
 
    success = computeEstimatorsTrig(scip, expr, &lincoef, &linconst, -4.8, childlb, childub, FALSE);
-   cr_expect(success);
+   TEST_ASSERT(success);
    newtonpoint = -5.535897406992;
-   cr_expect_float_eq(linconst, -3 * sin(newtonpoint) + cos(-3), 1e-11);
-   cr_expect_float_eq(lincoef, -sin(newtonpoint), 1e-12);
+   SOFT_ASSERT_DOUBLE_WITHIN(linconst, -3 * sin(newtonpoint) + cos(-3), 1e-11);
+   SOFT_ASSERT_DOUBLE_WITHIN(lincoef, -sin(newtonpoint), 1e-12);
 
    /* release expression */
    SCIP_CALL( SCIPreleaseExpr(scip, &expr) );
 }
 
 /* tests for interval [2,4] */
-Test(separation, cosine_w,
-   .description = "test separation for a cosine expression in short range"
-)
+/** @brief test separation for a cosine expression in short range */
+void test_separation_cosine_w(void)
 {
    SCIP_EXPR* expr;
    SCIP_Real childlb;
@@ -325,7 +328,7 @@ Test(separation, cosine_w,
     */
 
    SCIP_CALL( computeInitialCutsTrig(scip, expr, childlb, childub, FALSE, coefsp, constants, &nreturned) );
-   cr_expect_eq(nreturned, 1, "expected %d, got %d\n", 1, nreturned);
+   SOFT_ASSERT_EQUAL(nreturned, 1, "expected %d, got %d\n", 1, nreturned);
 
    /* check secant */
    EXPECTFEQ( coefs[0], 0.5 * (cos(4) - cos(2)) );
@@ -336,7 +339,7 @@ Test(separation, cosine_w,
     */
 
    SCIP_CALL( computeInitialCutsTrig(scip, expr, childlb, childub, TRUE, coefsp, constants, &nreturned) );
-   cr_expect_eq(nreturned, 2, "expected %d, got %d\n", 2, nreturned);
+   SOFT_ASSERT_EQUAL(nreturned, 2, "expected %d, got %d\n", 2, nreturned);
 
    /* check left tangent */
    EXPECTFEQ( coefs[0], -sin(2) );
@@ -352,19 +355,32 @@ Test(separation, cosine_w,
     */
 
    success = computeEstimatorsTrig(scip, expr, &lincoef, &linconst, 3.0, childlb, childub, TRUE);
-   cr_expect(success);
-   cr_expect_float_eq(linconst, 3 * sin(3) + cos(3), 1e-12);
-   cr_expect_float_eq(lincoef, -sin(3), 1e-12);
+   TEST_ASSERT(success);
+   SOFT_ASSERT_DOUBLE_WITHIN(linconst, 3 * sin(3) + cos(3), 1e-12);
+   SOFT_ASSERT_DOUBLE_WITHIN(lincoef, -sin(3), 1e-12);
 
    /*
     * test point where solution tangent is not overestimating
     */
 
    success = computeEstimatorsTrig(scip, expr, &lincoef, &linconst, 3.0, childlb, childub, FALSE);
-   cr_expect(success);
-   cr_expect_float_eq(linconst, -cos(4) + 2 * cos(2), 1e-12);
-   cr_expect_float_eq(lincoef, 0.5 * (cos(4) - cos(2)), 1e-12);
+   TEST_ASSERT(success);
+   SOFT_ASSERT_DOUBLE_WITHIN(linconst, -cos(4) + 2 * cos(2), 1e-12);
+   SOFT_ASSERT_DOUBLE_WITHIN(lincoef, 0.5 * (cos(4) - cos(2)), 1e-12);
 
    /* release expression */
    SCIP_CALL( SCIPreleaseExpr(scip, &expr) );
+}
+
+void setUp(void) { cosine_setup(); }
+
+void tearDown(void) { teardown(); }
+
+int main(void)
+{
+   UNITY_BEGIN();
+   RUN_TEST(test_separation_cosine_x);
+   RUN_TEST(test_separation_cosine_y);
+   RUN_TEST(test_separation_cosine_w);
+   return UNITY_END();
 }

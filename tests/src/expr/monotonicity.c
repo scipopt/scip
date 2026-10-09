@@ -76,7 +76,7 @@ void teardown(void)
    SCIP_CALL( SCIPreleaseVar(scip, &x) );
    SCIP_CALL( SCIPfree(&scip) );
 
-   cr_assert_eq(BMSgetMemoryUsed(), 0, "Memory leak!!");
+   TEST_ASSERT_EQUAL(BMSgetMemoryUsed(), 0, "Memory leak!!");
 }
 
 /** helper function to create an expression */
@@ -98,7 +98,7 @@ SCIP_RETCODE createExpr(
    }
 
    /* create and print expression */
-   cr_expect_eq(SCIPparseExpr(scip, &origexpr, (char*)input, NULL, NULL, NULL), SCIP_OKAY);
+   SOFT_ASSERT_EQUAL(SCIPparseExpr(scip, &origexpr, (char*)input, NULL, NULL, NULL), SCIP_OKAY);
 
    /* simplify expression */
    SCIP_CALL( SCIPsimplifyExpr(scip, origexpr, &expr, &changed, &infeasible, NULL, NULL) );
@@ -106,8 +106,8 @@ SCIP_RETCODE createExpr(
 
    /* check name of the corresponding expression handler */
    exprhdlr = SCIPexprGetHdlr(expr);
-   cr_assert(exprhdlr != NULL);
-   cr_expect(strcmp(SCIPexprhdlrGetName(exprhdlr), exprhdlrname) == 0, "expect expression handler %s, got %s\n",
+   TEST_ASSERT(exprhdlr != NULL);
+   SOFT_ASSERT(strcmp(SCIPexprhdlrGetName(exprhdlr), exprhdlrname) == 0, "expect expression handler %s, got %s\n",
       exprhdlrname, SCIPexprhdlrGetName(exprhdlr));
 
    /* print simplified expression */
@@ -125,7 +125,7 @@ SCIP_RETCODE chgBounds(
    SCIP_Real            ub                  /**< new upper bound */
    )
 {
-   cr_assert(lb <= ub);
+   TEST_ASSERT(lb <= ub);
    SCIP_CALL( SCIPchgVarLbGlobal(scip, var, lb) );
    SCIP_CALL( SCIPchgVarUbGlobal(scip, var, ub) );
 
@@ -141,21 +141,20 @@ SCIP_RETCODE testMonotonicity(
 {
    SCIP_MONOTONE monotonicity;
 
-   cr_assert(i < SCIPexprGetNChildren(expr));
+   TEST_ASSERT(i < SCIPexprGetNChildren(expr));
 
    /* evaluate monotonicity */
    SCIP_CALL( SCIPcallExprMonotonicity(scip, expr, i, &monotonicity) );
 
    /* check monotonicity */
-   cr_expect(monotonicity == expectedres, "got %d, expected %d", monotonicity, expectedres);
+   SOFT_ASSERT(monotonicity == expectedres, "got %d, expected %d", monotonicity, expectedres);
 
    return SCIP_OKAY;
 }
 
-TestSuite(monotonicity, .init = setup, .fini = teardown);
 
 /* check for abs expression */
-Test(monotonicity, abs)
+void test_monotonicity_abs(void)
 {
    SCIP_CALL( createExpr("abs(<x>[C])", "abs") );
 
@@ -170,7 +169,7 @@ Test(monotonicity, abs)
 }
 
 /* check for cosine expression */
-Test(monotonicity, cos)
+void test_monotonicity_cos(void)
 {
    SCIP_CALL( createExpr("cos(<x>[C])", "cos") );
 
@@ -188,7 +187,7 @@ Test(monotonicity, cos)
 }
 
 /* check for entropy expression */
-Test(monotonicity, entropy)
+void test_monotonicity_entropy(void)
 {
    SCIP_CALL( createExpr("entropy(<x>[C])", "entropy") );
 
@@ -203,7 +202,7 @@ Test(monotonicity, entropy)
 }
 
 /* check for exp expression */
-Test(monotonicity, exp)
+void test_monotonicity_exp(void)
 {
    SCIP_CALL( createExpr("exp(<x>[C])", "exp") );
 
@@ -212,7 +211,7 @@ Test(monotonicity, exp)
 }
 
 /* check for log expression */
-Test(monotonicity, log)
+void test_monotonicity_log(void)
 {
    SCIP_CALL( createExpr("log(<x>[C])", "log") );
 
@@ -221,7 +220,7 @@ Test(monotonicity, log)
 }
 
 /* check for pow expressions */
-Test(monotonicity, pow)
+void test_monotonicity_pow(void)
 {
    SCIP_CALL( createExpr("<x>[C]^2", "pow") );
 
@@ -284,7 +283,7 @@ Test(monotonicity, pow)
 }
 
 /* check for product expression with two factors */
-Test(monotonicity, prod_two)
+void test_monotonicity_prod_two(void)
 {
    SCIP_CALL( createExpr("<x>[C] * <y>[C]", "prod") );
 
@@ -314,7 +313,7 @@ Test(monotonicity, prod_two)
 }
 
 /* check for product expression with three factors */
-Test(monotonicity, prod_three)
+void test_monotonicity_prod_three(void)
 {
    SCIP_CALL( createExpr("<x>[C] * <y>[C] * <z>[C]", "prod") );
 
@@ -361,7 +360,7 @@ Test(monotonicity, prod_three)
 }
 
 /* check for sin expression */
-Test(monotonicity, sin)
+void test_monotonicity_sin(void)
 {
    SCIP_CALL( createExpr("sin(<x>[C])", "sin") );
 
@@ -388,7 +387,7 @@ Test(monotonicity, sin)
 }
 
 /* check for sum expression */
-Test(monotonicity, sum)
+void test_monotonicity_sum(void)
 {
    SCIP_CALL( createExpr("(<x>[C])^2 + 2.0 * <y>[C] - 3.0 * <z>[C]", "sum") );
 
@@ -398,15 +397,38 @@ Test(monotonicity, sum)
 }
 
 /* check for value expression */
-Test(monotonicity, value)
+void test_monotonicity_value(void)
 {
    SCIP_CALL( createExpr("-1.3", "val") );
    SCIP_CALL( testMonotonicity(-1, SCIP_MONOTONE_CONST) );
 }
 
 /* check for var expression */
-Test(monotonicity, var)
+void test_monotonicity_var(void)
 {
    SCIP_CALL( createExpr("<x>[C]", "var") );
    SCIP_CALL( testMonotonicity(-1, SCIP_MONOTONE_INC) );
+}
+
+void setUp(void) { setup(); }
+
+void tearDown(void) { teardown(); }
+
+int main(void)
+{
+   UNITY_BEGIN();
+   RUN_TEST(test_monotonicity_abs
+);
+   RUN_TEST(test_monotonicity_cos);
+   RUN_TEST(test_monotonicity_entropy);
+   RUN_TEST(test_monotonicity_exp);
+   RUN_TEST(test_monotonicity_log);
+   RUN_TEST(test_monotonicity_pow);
+   RUN_TEST(test_monotonicity_prod_two);
+   RUN_TEST(test_monotonicity_prod_three);
+   RUN_TEST(test_monotonicity_sin);
+   RUN_TEST(test_monotonicity_sum);
+   RUN_TEST(test_monotonicity_value);
+   RUN_TEST(test_monotonicity_var);
+   return UNITY_END();
 }

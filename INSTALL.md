@@ -244,7 +244,7 @@ and to perform a memory check, run
 ctest -T MemCheck
 ```
 
-If [Criterion](https://criterion.readthedocs.io/en/master/) is installed (set custom path with `-DCRITERION_DIR=<path>`) the target `unittests` can be used to compile and run the available unit tests.
+The target `unittests` can be used to compile and run the available unit tests.
 
 A coverage report for the entire test suite can be generated.
 This requires a modification of the compilation process.
@@ -274,7 +274,7 @@ For detailed instructions see the [installation instructions for applications an
 | scip            | build SCIP executable                                 |                                       |
 | applications    | build executables for all applications                |                                       |
 | examples        | build executables for all examples                    |                                       |
-| unittests       | build unit tests                                      | the Criterion package                 |
+| unittests       | build unit tests                                      |                                       |
 | all_executables | build all of the above                                |                                       |
 | libscip         | build the SCIP library                                |                                       |
 | install         | install SCIP                                          |                                       |

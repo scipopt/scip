@@ -57,7 +57,7 @@ static
 void teardown(void)
 {
    SCIP_CALL( SCIPfree(&scip) );
-   cr_assert_eq(BMSgetMemoryUsed(), 0, "Memory leak!");
+   TEST_ASSERT_EQUAL(BMSgetMemoryUsed(), 0, "Memory leak!");
 }
 
 /** simple example with 4 variables and 2 linear constraints */
@@ -216,9 +216,9 @@ void hypergraph1flower(
 
    SCIP_Real rootbound = SCIPgetDualboundRoot(scip);
    if( separate )
-      cr_assert_float_eq(rootbound, -5.5, 1.0e-8);
+      TEST_ASSERT_DOUBLE_WITHIN(rootbound, -5.5, 1.0e-8);
    else
-      cr_assert_float_eq(rootbound, -6.0, 1.0e-8);
+      TEST_ASSERT_DOUBLE_WITHIN(rootbound, -6.0, 1.0e-8);
 
    SCIP_CALL( SCIPreleaseVar(scip, &z3) );
    SCIP_CALL( SCIPreleaseVar(scip, &z2) );
@@ -238,13 +238,24 @@ void hypergraph1flower(
 
 
 /* TEST SUITE */
-TestSuite(test_sepa_flower, .init = setup, .fini = teardown);
 
 /* TEST 1 */
-Test(test_sepa_flower, 1flower, .description = "trigger separation for a simple hypergraph")
+/** @brief trigger separation for a simple hypergraph */
+void test_test_sepa_flower_1flower(void)
 {
    hypergraph1flower(false);
 
    hypergraph1flower(true);
 }
 
+
+void setUp(void) { setup(); }
+
+void tearDown(void) { teardown(); }
+
+int main(void)
+{
+   UNITY_BEGIN();
+   RUN_TEST(test_test_sepa_flower_1flower);
+   return UNITY_END();
+}

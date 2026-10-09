@@ -62,15 +62,15 @@ void teardown(void)
    /* free SCIP */
    SCIP_CALL( SCIPfree(&scip) );
 
-   cr_assert_null(scip);
-   cr_assert_eq(BMSgetMemoryUsed(), 0, "There is a memory leak!!");
+   TEST_ASSERT_NULL(scip);
+   TEST_ASSERT_EQUAL(0, BMSgetMemoryUsed(), "There is a memory leak!!");
 }
 
-/* test suite */
-TestSuite(enumerate, .init = setup, .fini = teardown);
+void setUp(void) { setup(); }
+void tearDown(void) { teardown(); }
 
 /** single empty pattern */
-Test(enumerate, empty)
+void test_enumerate_empty(void)
 {
    SCIP_Real rexts[1] = {1.0};
    SCIP_Real rints[1] = {0.0};
@@ -81,7 +81,7 @@ Test(enumerate, empty)
    /* create problem data */
    SCIP_CALL( SCIPprobdataCreate(scip, "unit test", demands, rints, rexts, 1, 100.0, 100.0) );
    probdata = SCIPgetProbData(scip);
-   cr_assert(probdata != NULL);
+   TEST_ASSERT(probdata != NULL);
 
    /* compute circular patterns */
    SCIP_CALL( SCIPprobdataEnumeratePatterns(scip, probdata, SCIPinfinity(scip), SCIPinfinity(scip), SCIPinfinity(scip),
@@ -89,14 +89,14 @@ Test(enumerate, empty)
 
    /* get circular pattern information */
    SCIPprobdataGetCInfos(probdata, &patterns, NULL, &npatterns);
-   cr_assert(patterns != NULL);
-   cr_expect(npatterns == 1);
-   cr_expect(SCIPpatternGetCircleType(patterns[0]) == 0);
-   cr_expect(SCIPpatternGetNElemens(patterns[0]) == 0);
+   TEST_ASSERT(patterns != NULL);
+   SOFT_ASSERT(npatterns == 1);
+   SOFT_ASSERT(SCIPpatternGetCircleType(patterns[0]) == 0);
+   SOFT_ASSERT(SCIPpatternGetNElemens(patterns[0]) == 0);
 }
 
 /** two ring types */
-Test(enumerate, two)
+void test_enumerate_two(void)
 {
    SCIP_Real rexts[2] = {1.2, 0.5};
    SCIP_Real rints[2] = {1.0, 0.0};
@@ -107,7 +107,7 @@ Test(enumerate, two)
    /* create problem data */
    SCIP_CALL( SCIPprobdataCreate(scip, "unit test", demands, rints, rexts, 2, 100.0, 100.0) );
    probdata = SCIPgetProbData(scip);
-   cr_assert(probdata != NULL);
+   TEST_ASSERT(probdata != NULL);
 
    /* compute circular patterns */
    SCIP_CALL( SCIPprobdataEnumeratePatterns(scip, probdata, SCIPinfinity(scip), SCIPinfinity(scip), SCIPinfinity(scip),
@@ -115,18 +115,18 @@ Test(enumerate, two)
 
    /* get circular pattern information */
    SCIPprobdataGetCInfos(probdata, &patterns, NULL, &npatterns);
-   cr_assert(patterns != NULL);
-   cr_expect(npatterns == 2);
-   cr_expect(SCIPpatternGetCircleType(patterns[0]) == 0);
-   cr_expect(SCIPpatternGetNElemens(patterns[0]) == 2);
-   cr_expect(SCIPpatternGetElementType(patterns[0], 0) == 1);
-   cr_expect(SCIPpatternGetElementType(patterns[0], 1) == 1);
-   cr_expect(SCIPpatternGetCircleType(patterns[1]) == 1);
-   cr_expect(SCIPpatternGetNElemens(patterns[1]) == 0);
+   TEST_ASSERT(patterns != NULL);
+   SOFT_ASSERT(npatterns == 2);
+   SOFT_ASSERT(SCIPpatternGetCircleType(patterns[0]) == 0);
+   SOFT_ASSERT(SCIPpatternGetNElemens(patterns[0]) == 2);
+   SOFT_ASSERT(SCIPpatternGetElementType(patterns[0], 0) == 1);
+   SOFT_ASSERT(SCIPpatternGetElementType(patterns[0], 1) == 1);
+   SOFT_ASSERT(SCIPpatternGetCircleType(patterns[1]) == 1);
+   SOFT_ASSERT(SCIPpatternGetNElemens(patterns[1]) == 0);
 }
 
 /** three ring types */
-Test(enumerate, three)
+void test_enumerate_three(void)
 {
    SCIP_Real rexts[3] = {3.0, 1.0, 0.45};
    SCIP_Real rints[3] = {2.414213562373095, 0.9, 0.0};
@@ -137,7 +137,7 @@ Test(enumerate, three)
    /* create problem data */
    SCIP_CALL( SCIPprobdataCreate(scip, "unit test", demands, rints, rexts, 3, 100.0, 100.0) );
    probdata = SCIPgetProbData(scip);
-   cr_assert(probdata != NULL);
+   TEST_ASSERT(probdata != NULL);
 
    /* compute circular patterns */
    SCIP_CALL( SCIPprobdataEnumeratePatterns(scip, probdata, SCIPinfinity(scip), SCIPinfinity(scip), SCIPinfinity(scip),
@@ -145,12 +145,21 @@ Test(enumerate, three)
 
    /* get circular pattern information */
    SCIPprobdataGetCInfos(probdata, &patterns, NULL, &npatterns);
-   cr_assert(patterns != NULL);
-   cr_expect(npatterns == 3);
-   cr_expect(SCIPpatternGetCircleType(patterns[0]) == 0);
-   cr_expect(SCIPpatternGetNElemens(patterns[0]) == 6);
-   cr_expect(SCIPpatternGetCircleType(patterns[1]) == 1);
-   cr_expect(SCIPpatternGetNElemens(patterns[1]) == 2);
-   cr_expect(SCIPpatternGetCircleType(patterns[2]) == 2);
-   cr_expect(SCIPpatternGetNElemens(patterns[2]) == 0);
+   TEST_ASSERT(patterns != NULL);
+   SOFT_ASSERT(npatterns == 3);
+   SOFT_ASSERT(SCIPpatternGetCircleType(patterns[0]) == 0);
+   SOFT_ASSERT(SCIPpatternGetNElemens(patterns[0]) == 6);
+   SOFT_ASSERT(SCIPpatternGetCircleType(patterns[1]) == 1);
+   SOFT_ASSERT(SCIPpatternGetNElemens(patterns[1]) == 2);
+   SOFT_ASSERT(SCIPpatternGetCircleType(patterns[2]) == 2);
+   SOFT_ASSERT(SCIPpatternGetNElemens(patterns[2]) == 0);
+}
+
+int main(void)
+{
+   UNITY_BEGIN();
+   RUN_TEST(test_enumerate_empty);
+   RUN_TEST(test_enumerate_two);
+   RUN_TEST(test_enumerate_three);
+   return UNITY_END();
 }

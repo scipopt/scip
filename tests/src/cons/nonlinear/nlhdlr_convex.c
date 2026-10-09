@@ -60,11 +60,11 @@ void setup(void)
    SCIP_CALL( SCIPincludeDefaultPlugins(scip) );
 
    conshdlr = SCIPfindConshdlr(scip, "nonlinear");
-   cr_assert_not_null(conshdlr);
+   TEST_ASSERT_NOT_NULL(conshdlr);
 
    /* get nlhdlr */
    nlhdlr = SCIPfindNlhdlrNonlinear(conshdlr, CONVEX_NLHDLR_NAME);
-   cr_assert_not_null(nlhdlr);
+   TEST_ASSERT_NOT_NULL(nlhdlr);
 
    /* create problem */
    SCIP_CALL( SCIPcreateProbBasic(scip, "test_problem") );
@@ -97,7 +97,7 @@ void teardown(void)
    SCIP_CALL( SCIPfree(&scip) );
 
    BMSdisplayMemory();
-   cr_assert_eq(BMSgetMemoryUsed(), 0, "Memory is leaking!!");
+   TEST_ASSERT_EQUAL(BMSgetMemoryUsed(), 0, "Memory is leaking!!");
 }
 
 /** given a string for f(x) and its curvature, run nlhdlr_convex detect on f(x) = 0 and see whether that gives correct flags */
@@ -122,7 +122,7 @@ SCIP_RETCODE detect(
    if( simplify )
    {
       SCIP_CALL( SCIPsimplifyExpr(scip, oexpr, &expr, &changed, &infeas, NULL, NULL) );
-      cr_expect(!infeas);
+      SOFT_ASSERT(!infeas);
       SCIP_CALL( SCIPreleaseExpr(scip, &oexpr) );
    }
    else
@@ -139,20 +139,20 @@ SCIP_RETCODE detect(
    participating = SCIP_NLHDLR_METHOD_NONE;
    SCIP_CALL( nlhdlrDetectConvex(scip, conshdlr, nlhdlr, expr, cons, &enforcing, &participating, &nlhdlrexprdata) );
 
-   cr_expect_eq(enforcing, participating);
+   SOFT_ASSERT_EQUAL(enforcing, participating);
    if( (exprrootcurv & SCIP_EXPRCURV_CONVEX) != 0 )
    {
-      cr_expect(enforcing & SCIP_NLHDLR_METHOD_SEPABELOW);
+      SOFT_ASSERT(enforcing & SCIP_NLHDLR_METHOD_SEPABELOW);
    }
 
    if( (exprrootcurv & SCIP_EXPRCURV_CONCAVE) != 0 )
    {
-      cr_expect(enforcing & SCIP_NLHDLR_METHOD_SEPAABOVE);
+      SOFT_ASSERT(enforcing & SCIP_NLHDLR_METHOD_SEPAABOVE);
    }
 
    if( participating != SCIP_NLHDLR_METHOD_NONE )
    {
-      cr_assert_not_null(nlhdlrexprdata);
+      TEST_ASSERT_NOT_NULL(nlhdlrexprdata);
       SCIP_CALL( nlhdlrfreeExprDataConvexConcave(scip, nlhdlr, expr, &nlhdlrexprdata) );
    }
 
@@ -162,7 +162,7 @@ SCIP_RETCODE detect(
 }
 
 /* tests detection of convex/concave subexpressions */
-Test(nlhdlrconvex, detect, .init = setup, .fini = teardown)
+void test_nlhdlrconvex_detect(void)
 {
    SCIP_CALL( SCIPsetBoolParam(scip, "nlhdlr/convex/extendedform", FALSE) );
 
@@ -200,7 +200,7 @@ Test(nlhdlrconvex, detect, .init = setup, .fini = teardown)
 }
 
 /** test detection for block-decomposable quadratic */
-Test(nlhdlrconvex, detectquad, .init = setup, .fini = teardown)
+void test_nlhdlrconvex_detectquad(void)
 {
    SCIP_NLHDLREXPRDATA* nlhdlrexprdata = NULL;
    SCIP_EXPR* oexpr;
@@ -221,7 +221,7 @@ Test(nlhdlrconvex, detectquad, .init = setup, .fini = teardown)
    /* create expression and constraint */
    SCIP_CALL( SCIPparseExpr(scip, &oexpr, "<x1>^2+2*<x1>*<x2>+<x2>^2+5*<x3>^2", NULL, NULL, NULL) );
    SCIP_CALL( SCIPsimplifyExpr(scip, oexpr, &expr, &changed, &infeas, NULL, NULL) );
-   cr_expect(!infeas);
+   SOFT_ASSERT(!infeas);
    SCIP_CALL( SCIPreleaseExpr(scip, &oexpr) );
    SCIP_CALL( SCIPcreateConsBasicNonlinear(scip, &cons, (char*)"nlin", expr, 0.0, 0.0)  );
    SCIP_CALL( SCIPreleaseExpr(scip, &expr) );
@@ -235,14 +235,14 @@ Test(nlhdlrconvex, detectquad, .init = setup, .fini = teardown)
    participating = SCIP_NLHDLR_METHOD_NONE;
    SCIP_CALL( nlhdlrDetectConvex(scip, conshdlr, nlhdlr, expr, cons, &enforcing, &participating, &nlhdlrexprdata) );
 
-   cr_expect_eq(enforcing, participating);
-   cr_expect(enforcing == SCIP_NLHDLR_METHOD_SEPABELOW);
-   cr_assert_not_null(nlhdlrexprdata);
+   SOFT_ASSERT_EQUAL(enforcing, participating);
+   SOFT_ASSERT(enforcing == SCIP_NLHDLR_METHOD_SEPABELOW);
+   TEST_ASSERT_NOT_NULL(nlhdlrexprdata);
 
    SCIP_CALL( SCIPcheckExprQuadratic(scip, expr, &isquadratic) );
-   cr_expect(isquadratic);
+   SOFT_ASSERT(isquadratic);
    SCIPexprGetQuadraticData(expr, NULL, NULL, NULL, NULL, &nquadexprs, NULL, NULL, NULL);
-   cr_expect(nquadexprs == 3);
+   SOFT_ASSERT(nquadexprs == 3);
 
    for( i = 0; i < nquadexprs; ++i )
    {
@@ -251,12 +251,12 @@ Test(nlhdlrconvex, detectquad, .init = setup, .fini = teardown)
       SCIP_VAR* var;
 
       SCIPexprGetQuadraticQuadTerm(expr, i, &varexpr, NULL, NULL, NULL, NULL, &sqrexpr);
-      cr_assert(SCIPisExprVar(scip, varexpr));
-      cr_assert_not_null(sqrexpr);
+      TEST_ASSERT(SCIPisExprVar(scip, varexpr));
+      TEST_ASSERT_NOT_NULL(sqrexpr);
 
       var = SCIPgetVarExprVar(varexpr);
-      cr_expect(var != x_3 || SCIPgetExprNAuxvarUsesNonlinear(sqrexpr) == 1);
-      cr_expect(var == x_3 || SCIPgetExprNAuxvarUsesNonlinear(sqrexpr) == 0);
+      SOFT_ASSERT(var != x_3 || SCIPgetExprNAuxvarUsesNonlinear(sqrexpr) == 1);
+      SOFT_ASSERT(var == x_3 || SCIPgetExprNAuxvarUsesNonlinear(sqrexpr) == 0);
    }
 
    SCIP_CALL( nlhdlrfreeExprDataConvexConcave(scip, nlhdlr, expr, &nlhdlrexprdata) );
@@ -302,7 +302,7 @@ SCIP_RETCODE estimate(
    if( simplify )
    {
       SCIP_CALL( SCIPsimplifyExpr(scip, oexpr, &expr, &changed, &infeas, NULL, NULL) );
-      cr_expect(!infeas);
+      SOFT_ASSERT(!infeas);
       SCIP_CALL( SCIPreleaseExpr(scip, &oexpr) );
    }
    else
@@ -321,8 +321,8 @@ SCIP_RETCODE estimate(
    enforcing = SCIP_NLHDLR_METHOD_NONE;
    participating = SCIP_NLHDLR_METHOD_NONE;
    SCIP_CALL( nlhdlrDetectConvex(scip, conshdlr, nlhdlr, expr, cons, &enforcing, &participating, &nlhdlrexprdata) );
-   cr_expect_eq(enforcing, participating);
-   cr_expect((participating & SCIP_NLHDLR_METHOD_SEPABOTH) != 0);
+   SOFT_ASSERT_EQUAL(enforcing, participating);
+   SOFT_ASSERT((participating & SCIP_NLHDLR_METHOD_SEPABOTH) != 0);
    enforceabove = (participating & SCIP_NLHDLR_METHOD_SEPAABOVE) != 0;
 
    SCIP_CALL( initSepa(scip, conshdlr, &cons, 1, &infeas) );
@@ -335,11 +335,11 @@ SCIP_RETCODE estimate(
    SCIP_CALL( nlhdlrEstimateConvex(scip, conshdlr, nlhdlr, expr, nlhdlrexprdata, sol, auxvalue, enforceabove,
          targetvalue, FALSE, rowpreps, &success, &addedbranchscores) );
 
-   cr_assert(success);
-   cr_expect(SCIPgetPtrarrayMinIdx(scip, rowpreps) == 0);
-   cr_expect(SCIPgetPtrarrayMaxIdx(scip, rowpreps) == 0);
+   TEST_ASSERT(success);
+   SOFT_ASSERT(SCIPgetPtrarrayMinIdx(scip, rowpreps) == 0);
+   SOFT_ASSERT(SCIPgetPtrarrayMaxIdx(scip, rowpreps) == 0);
    rowprep = (SCIP_ROWPREP*) SCIPgetPtrarrayVal(scip, rowpreps, 0);
-   cr_assert(!SCIProwprepIsLocal(rowprep));  /* nlhdlr should have set rowprep->local to FALSE */
+   TEST_ASSERT(!SCIProwprepIsLocal(rowprep));  /* nlhdlr should have set rowprep->local to FALSE */
 
    SCIPmergeRowprepTerms(scip, rowprep);
    constant = -SCIProwprepGetSide(rowprep);
@@ -354,19 +354,19 @@ SCIP_RETCODE estimate(
       else
       {
          SCIPerrorMessage("unexpected variable in rowprep");
-         cr_assert(0);
+         TEST_ASSERT(0);
       }
    }
 
-   cr_expect_float_eq(x1coef, x1coef_expected, 1e-9, "x1 coef wrong. Expected %g, but got %g", x1coef_expected, x1coef);
-   cr_expect_float_eq(x2coef, x2coef_expected, 1e-9, "x2 coef wrong. Expected %g, but got %g", x2coef_expected, x2coef);
-   cr_expect_float_eq(x3coef, x3coef_expected, 1e-9, "x3 coef wrong. Expected %g, but got %g", x3coef_expected, x3coef);
-   cr_expect_float_eq(constant, constant_expected, 1e-9, "Constant wrong. Expected %g, but got %g", constant_expected, constant);
+   SOFT_ASSERT_DOUBLE_WITHIN(x1coef, x1coef_expected, 1e-9, "x1 coef wrong. Expected %g, but got %g", x1coef_expected, x1coef);
+   SOFT_ASSERT_DOUBLE_WITHIN(x2coef, x2coef_expected, 1e-9, "x2 coef wrong. Expected %g, but got %g", x2coef_expected, x2coef);
+   SOFT_ASSERT_DOUBLE_WITHIN(x3coef, x3coef_expected, 1e-9, "x3 coef wrong. Expected %g, but got %g", x3coef_expected, x3coef);
+   SOFT_ASSERT_DOUBLE_WITHIN(constant, constant_expected, 1e-9, "Constant wrong. Expected %g, but got %g", constant_expected, constant);
 
    SCIPfreeRowprep(scip, &rowprep);
 
    SCIP_CALL( SCIPfreePtrarray(scip, &rowpreps) );
-   cr_assert_not_null(nlhdlrexprdata);
+   TEST_ASSERT_NOT_NULL(nlhdlrexprdata);
    SCIP_CALL( nlhdlrfreeExprDataConvexConcave(scip, nlhdlr, expr, &nlhdlrexprdata) );
 
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
@@ -419,7 +419,7 @@ void secantest(
 }
 
 /* tests detection of convex/concave subexpressions */
-Test(nlhdlrconvex, estimate, .init = setup, .fini = teardown)
+void test_nlhdlrconvex_estimate(void)
 {
    SCIP_Real x1coef = 0.0;
    SCIP_Real x2coef = 0.0;
@@ -448,4 +448,17 @@ Test(nlhdlrconvex, estimate, .init = setup, .fini = teardown)
    estimate("<x3>*exp(<x3>)", FALSE, sol, 0.0, 0.0, x3coef, constant);
 
    SCIPfreeSol(scip, &sol);
+}
+
+void setUp(void) { setup(); }
+
+void tearDown(void) { teardown(); }
+
+int main(void)
+{
+   UNITY_BEGIN();
+   RUN_TEST(test_nlhdlrconvex_detect);
+   RUN_TEST(test_nlhdlrconvex_detectquad);
+   RUN_TEST(test_nlhdlrconvex_estimate);
+   return UNITY_END();
 }

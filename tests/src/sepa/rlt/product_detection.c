@@ -117,7 +117,7 @@ void teardown(void)
 {
    SCIP_CALL( SCIPfree(&scip) );
 
-   cr_assert_eq(BMSgetMemoryUsed(), 0, "Memory is leaking!!");
+   TEST_ASSERT_EQUAL(BMSgetMemoryUsed(), 0, "Memory is leaking!!");
 }
 
 /* check an auxiliary expression by comparing simplified expressions */
@@ -134,24 +134,25 @@ void checkAuxExpr(
 {
    int i;
 
-   cr_expect_eq(auxvar, term.aux.exprs[auxidx]->auxvar);
+   SOFT_ASSERT_EQUAL(auxvar, term.aux.exprs[auxidx]->auxvar);
 
    for( i = 0; i < 3; ++i )
    {
-      cr_expect(SCIPisEQ(scip, vals[i], term.aux.exprs[auxidx]->coefs[i]), "\ni = %d: expected != given: %g != %g", i,
+      SOFT_ASSERT(SCIPisEQ(scip, vals[i], term.aux.exprs[auxidx]->coefs[i]), "\ni = %d: expected != given: %g != %g", i,
                                                                            vals[i],
                                                                            term.aux.exprs[auxidx]->coefs[i]);
    }
-   cr_expect(SCIPisEQ(scip, cst, term.aux.exprs[auxidx]->cst), "\nexpected != given: %g != %g", cst,
+   SOFT_ASSERT(SCIPisEQ(scip, cst, term.aux.exprs[auxidx]->cst), "\nexpected != given: %g != %g", cst,
                                                                term.aux.exprs[auxidx]->cst);
 
-   cr_expect(term.aux.exprs[auxidx]->underestimate == underestimate,
+   SOFT_ASSERT(term.aux.exprs[auxidx]->underestimate == underestimate,
              "auxiliary expression [%d] should %sunderestimate", auxidx, underestimate ? "" : "NOT ");
-   cr_expect(term.aux.exprs[auxidx]->overestimate == overestimate,
+   SOFT_ASSERT(term.aux.exprs[auxidx]->overestimate == overestimate,
              "auxiliary expression [%d] should %soverestimate", auxidx, overestimate ? "" : "NOT ");
 }
 
-Test(product_detection, implrels, .init = setup, .fini = teardown, .description = "test extracting products from two implied relations")
+/** @brief test extracting products from two implied relations */
+void test_product_detection_implrels(void)
 {
    SCIP_CONS* cons1;
    SCIP_CONS* cons2;
@@ -178,7 +179,7 @@ Test(product_detection, implrels, .init = setup, .fini = teardown, .description 
    sepadata->conshdlr = conshdlr;
    sepadata->isinitialround = TRUE;
    sepadata->detecthidden = TRUE;
-   cr_assert(sepadata->conshdlr != NULL);
+   TEST_ASSERT(sepadata->conshdlr != NULL);
 
    /* create linear constraints */
 
@@ -210,25 +211,25 @@ Test(product_detection, implrels, .init = setup, .fini = teardown, .description 
     */
 
    /* check the numbers */
-   cr_expect_eq(sepadata->nbilinvars, 3, "\nExpected 3 bilinear vars, got %d", sepadata->nbilinvars);
-   cr_expect_eq(SCIPgetNBilinTermsNonlinear(conshdlr), 2, "\nExpected 2 bilinear terms, got %d",
+   SOFT_ASSERT_EQUAL(sepadata->nbilinvars, 3, "\nExpected 3 bilinear vars, got %d", sepadata->nbilinvars);
+   SOFT_ASSERT_EQUAL(SCIPgetNBilinTermsNonlinear(conshdlr), 2, "\nExpected 2 bilinear terms, got %d",
                                                           SCIPgetNBilinTermsNonlinear(conshdlr));
 
    terms = SCIPgetBilinTermsNonlinear(conshdlr);
-   cr_assert(terms != NULL);
+   TEST_ASSERT(terms != NULL);
 
-   cr_expect_eq(terms[0].nauxexprs, 4, "\nExpected 4 auxiliary expressions for product 0, got %d", terms[0].nauxexprs);
-   cr_expect_eq(terms[1].nauxexprs, 4, "\nExpected 4 auxiliary expressions for product 1, got %d", terms[1].nauxexprs);
+   SOFT_ASSERT_EQUAL(terms[0].nauxexprs, 4, "\nExpected 4 auxiliary expressions for product 0, got %d", terms[0].nauxexprs);
+   SOFT_ASSERT_EQUAL(terms[1].nauxexprs, 4, "\nExpected 4 auxiliary expressions for product 1, got %d", terms[1].nauxexprs);
 
    /* check the product expressions */
-   cr_expect_eq(terms[0].x, bvar1, "x var of product 0 should be bvar1, got %s", SCIPvarGetName(terms[0].x));
-   cr_expect_eq(terms[0].y, x2, "y var of product 0 should be x2, got %s", SCIPvarGetName(terms[0].y));
-   cr_expect_eq(terms[1].x, bvar1, "x var of product 1 should be bvar1, got %s", SCIPvarGetName(terms[1].x));
-   cr_expect_eq(terms[1].y, x1, "y var of product 1 should be x1, got %s", SCIPvarGetName(terms[1].y));
+   SOFT_ASSERT_EQUAL(terms[0].x, bvar1, "x var of product 0 should be bvar1, got %s", SCIPvarGetName(terms[0].x));
+   SOFT_ASSERT_EQUAL(terms[0].y, x2, "y var of product 0 should be x2, got %s", SCIPvarGetName(terms[0].y));
+   SOFT_ASSERT_EQUAL(terms[1].x, bvar1, "x var of product 1 should be bvar1, got %s", SCIPvarGetName(terms[1].x));
+   SOFT_ASSERT_EQUAL(terms[1].y, x1, "y var of product 1 should be x1, got %s", SCIPvarGetName(terms[1].y));
 
    /* check the (sorted) auxiliary expressions and sides */
-   cr_assert(terms[0].aux.exprs[0] != NULL);
-   cr_assert(terms[1].aux.exprs[0] != NULL);
+   TEST_ASSERT(terms[0].aux.exprs[0] != NULL);
+   TEST_ASSERT(terms[1].aux.exprs[0] != NULL);
 
    /* first product: bvar1 * x2 */
    /* check 4 expressions with binary variable = bvar1:
@@ -252,7 +253,8 @@ Test(product_detection, implrels, .init = setup, .fini = teardown, .description 
    SCIPfreeBuffer(scip, &sepadata);
 }
 
-Test(product_detection, implrelbnd, .init = setup, .fini = teardown, .description = "test extracting products from an implied relation and an implied bound")
+/** @brief test extracting products from an implied relation and an implied bound */
+void test_product_detection_implrelbnd(void)
 {
    SCIP_CONS* cons;
    SCIP_SEPADATA* sepadata;
@@ -275,7 +277,7 @@ Test(product_detection, implrelbnd, .init = setup, .fini = teardown, .descriptio
    sepadata->conshdlr = conshdlr;
    sepadata->isinitialround = TRUE;
    sepadata->detecthidden = TRUE;
-   cr_assert(sepadata->conshdlr != NULL);
+   TEST_ASSERT(sepadata->conshdlr != NULL);
 
    /* create linear relations */
 
@@ -302,20 +304,20 @@ Test(product_detection, implrelbnd, .init = setup, .fini = teardown, .descriptio
     */
 
    /* check the numbers */
-   cr_expect_eq(sepadata->nbilinvars, 3, "\nExpected 3 bilinear vars, got %d", sepadata->nbilinvars);
-   cr_expect_eq(SCIPgetNBilinTermsNonlinear(conshdlr), 2, "\nExpected 2 bilinear terms, got %d",
+   SOFT_ASSERT_EQUAL(sepadata->nbilinvars, 3, "\nExpected 3 bilinear vars, got %d", sepadata->nbilinvars);
+   SOFT_ASSERT_EQUAL(SCIPgetNBilinTermsNonlinear(conshdlr), 2, "\nExpected 2 bilinear terms, got %d",
                                                           SCIPgetNBilinTermsNonlinear(conshdlr));
 
    terms = SCIPgetBilinTermsNonlinear(conshdlr);
 
    /* check the product expressions */
-   cr_expect_eq(terms[0].x, bvar1, "x var of product 0 should be bvar1, got %s", SCIPvarGetName(terms[0].x));
-   cr_expect_eq(terms[0].y, x2, "y var of product 0 should be x2, got %s", SCIPvarGetName(terms[0].y));
-   cr_expect_eq(terms[1].x, bvar1, "x var of product 1 should be bvar1, got %s", SCIPvarGetName(terms[1].x));
-   cr_expect_eq(terms[1].y, x1, "y var of product 1 should be x1, got %s", SCIPvarGetName(terms[1].y));
+   SOFT_ASSERT_EQUAL(terms[0].x, bvar1, "x var of product 0 should be bvar1, got %s", SCIPvarGetName(terms[0].x));
+   SOFT_ASSERT_EQUAL(terms[0].y, x2, "y var of product 0 should be x2, got %s", SCIPvarGetName(terms[0].y));
+   SOFT_ASSERT_EQUAL(terms[1].x, bvar1, "x var of product 1 should be bvar1, got %s", SCIPvarGetName(terms[1].x));
+   SOFT_ASSERT_EQUAL(terms[1].y, x1, "y var of product 1 should be x1, got %s", SCIPvarGetName(terms[1].y));
 
-   cr_expect_eq(terms[0].nauxexprs, 3, "\nExpected 3 auxiliary expressions for product bvar1*x2, got %d", terms[0].nauxexprs);
-   cr_expect_eq(terms[1].nauxexprs, 2, "\nExpected 2 auxiliary expressions for product bvar1*x1, got %d", terms[1].nauxexprs);
+   SOFT_ASSERT_EQUAL(terms[0].nauxexprs, 3, "\nExpected 3 auxiliary expressions for product bvar1*x2, got %d", terms[0].nauxexprs);
+   SOFT_ASSERT_EQUAL(terms[1].nauxexprs, 2, "\nExpected 2 auxiliary expressions for product bvar1*x1, got %d", terms[1].nauxexprs);
 
    /* product relation derived from an implied relation and an implied bound */
    checkAuxExpr(terms[0], 1, x1, (SCIP_Real[3]) {-1.0, -4.0, 0.0}, 3.0, FALSE, TRUE);
@@ -326,7 +328,8 @@ Test(product_detection, implrelbnd, .init = setup, .fini = teardown, .descriptio
    SCIPfreeBuffer(scip, &sepadata);
 }
 
-Test(product_detection, implrelclique, .init = setup, .fini = teardown, .description = "test extracting products from an implied relation and a clique")
+/** @brief test extracting products from an implied relation and a clique */
+void test_product_detection_implrelclique(void)
 {
    SCIP_CONS* cons1;
    SCIP_SEPADATA* sepadata;
@@ -351,7 +354,7 @@ Test(product_detection, implrelclique, .init = setup, .fini = teardown, .descrip
    sepadata->conshdlr = conshdlr;
    sepadata->isinitialround = TRUE;
    sepadata->detecthidden = TRUE;
-   cr_assert(sepadata->conshdlr != NULL);
+   TEST_ASSERT(sepadata->conshdlr != NULL);
 
    /* create linear relations */
 
@@ -389,20 +392,20 @@ Test(product_detection, implrelclique, .init = setup, .fini = teardown, .descrip
    terms = SCIPgetBilinTermsNonlinear(conshdlr);
 
    /* check the numbers */
-   cr_expect_eq(sepadata->nbilinvars, 3, "\nExpected 3 bilinear vars, got %d", sepadata->nbilinvars);
-   cr_expect_eq(SCIPgetNBilinTermsNonlinear(conshdlr), 3, "\nExpected 3 bilinear terms, got %d",
+   SOFT_ASSERT_EQUAL(sepadata->nbilinvars, 3, "\nExpected 3 bilinear vars, got %d", sepadata->nbilinvars);
+   SOFT_ASSERT_EQUAL(SCIPgetNBilinTermsNonlinear(conshdlr), 3, "\nExpected 3 bilinear terms, got %d",
                                                           SCIPgetNBilinTermsNonlinear(conshdlr));
-   cr_expect_eq(terms[0].nauxexprs, 3, "\nExpected 3 auxiliary expressions for product 0, got %d", terms[0].nauxexprs);
-   cr_expect_eq(terms[1].nauxexprs, 4, "\nExpected 4 auxiliary expressions for product 1, got %d", terms[1].nauxexprs);
-   cr_expect_eq(terms[2].nauxexprs, 3, "\nExpected 3 auxiliary expressions for product 2, got %d", terms[2].nauxexprs);
+   SOFT_ASSERT_EQUAL(terms[0].nauxexprs, 3, "\nExpected 3 auxiliary expressions for product 0, got %d", terms[0].nauxexprs);
+   SOFT_ASSERT_EQUAL(terms[1].nauxexprs, 4, "\nExpected 4 auxiliary expressions for product 1, got %d", terms[1].nauxexprs);
+   SOFT_ASSERT_EQUAL(terms[2].nauxexprs, 3, "\nExpected 3 auxiliary expressions for product 2, got %d", terms[2].nauxexprs);
 
    /* check the product expressions */
-   cr_expect_eq(terms[0].x, bvar1, "Var 0 of product 0 should be bvar1, got %s", SCIPvarGetName(terms[0].x));
-   cr_expect_eq(terms[0].y, x1, "Var 1 of product 0 should be x1, got %s", SCIPvarGetName(terms[0].y));
-   cr_expect_eq(terms[1].x, bvar1, "Var 0 of product 1 should be bvar1, got %s", SCIPvarGetName(terms[1].x));
-   cr_expect_eq(terms[1].y, bvar2, "Var 1 of product 1 should be bvar2, got %s", SCIPvarGetName(terms[1].y));
-   cr_expect_eq(terms[2].x, bvar2, "Var 0 of product 2 should be bvar2, got %s", SCIPvarGetName(terms[2].x));
-   cr_expect_eq(terms[2].y, x1, "Var 1 of product 2 should be x1, got %s", SCIPvarGetName(terms[2].y));
+   SOFT_ASSERT_EQUAL(terms[0].x, bvar1, "Var 0 of product 0 should be bvar1, got %s", SCIPvarGetName(terms[0].x));
+   SOFT_ASSERT_EQUAL(terms[0].y, x1, "Var 1 of product 0 should be x1, got %s", SCIPvarGetName(terms[0].y));
+   SOFT_ASSERT_EQUAL(terms[1].x, bvar1, "Var 0 of product 1 should be bvar1, got %s", SCIPvarGetName(terms[1].x));
+   SOFT_ASSERT_EQUAL(terms[1].y, bvar2, "Var 1 of product 1 should be bvar2, got %s", SCIPvarGetName(terms[1].y));
+   SOFT_ASSERT_EQUAL(terms[2].x, bvar2, "Var 0 of product 2 should be bvar2, got %s", SCIPvarGetName(terms[2].x));
+   SOFT_ASSERT_EQUAL(terms[2].y, x1, "Var 1 of product 2 should be x1, got %s", SCIPvarGetName(terms[2].y));
 
    /* bvar1*x1 <= 1.5bvar2 - 1.5bvar1 + x1 (from constraint and clique, (x,w,y) = (bvar1,bvar2,x1)) */
    checkAuxExpr(terms[0], 1, bvar2, (SCIP_Real[3]) {1.5, -1.5, 1.0}, 0.0, FALSE, TRUE);
@@ -416,7 +419,8 @@ Test(product_detection, implrelclique, .init = setup, .fini = teardown, .descrip
    SCIPfreeBuffer(scip, &sepadata);
 }
 
-Test(product_detection, implbnd, .init = setup, .fini = teardown, .description = "test extracting products from an implied bound and an unconditional relation")
+/** @brief test extracting products from an implied bound and an unconditional relation */
+void test_product_detection_implbnd(void)
 {
    SCIP_CONS* cons;
    SCIP_SEPADATA* sepadata;
@@ -437,7 +441,7 @@ Test(product_detection, implbnd, .init = setup, .fini = teardown, .description =
    sepadata->conshdlr = conshdlr;
    sepadata->isinitialround = TRUE;
    sepadata->detecthidden = TRUE;
-   cr_assert(sepadata->conshdlr != NULL);
+   TEST_ASSERT(sepadata->conshdlr != NULL);
 
    /* create linear relations */
 
@@ -486,20 +490,20 @@ Test(product_detection, implbnd, .init = setup, .fini = teardown, .description =
    terms = SCIPgetBilinTermsNonlinear(conshdlr);
 
    /* check the numbers */
-   cr_expect_eq(sepadata->nbilinvars, 3, "\nExpected 3 bilinear vars, got %d", sepadata->nbilinvars);
-   cr_expect_eq(SCIPgetNBilinTermsNonlinear(conshdlr), 3, "\nExpected 3 bilinear terms, got %d",
+   SOFT_ASSERT_EQUAL(sepadata->nbilinvars, 3, "\nExpected 3 bilinear vars, got %d", sepadata->nbilinvars);
+   SOFT_ASSERT_EQUAL(SCIPgetNBilinTermsNonlinear(conshdlr), 3, "\nExpected 3 bilinear terms, got %d",
                                                           SCIPgetNBilinTermsNonlinear(conshdlr));
-   cr_expect_eq(terms[0].nauxexprs, 2, "\nExpected 2 auxiliary expressions for product 0, got %d", terms[0].nauxexprs);
-   cr_expect_eq(terms[1].nauxexprs, 1, "\nExpected 1 auxiliary expressions for product 1, got %d", terms[1].nauxexprs);
-   cr_expect_eq(terms[2].nauxexprs, 1, "\nExpected 1 auxiliary expressions for product 2, got %d", terms[2].nauxexprs);
+   SOFT_ASSERT_EQUAL(terms[0].nauxexprs, 2, "\nExpected 2 auxiliary expressions for product 0, got %d", terms[0].nauxexprs);
+   SOFT_ASSERT_EQUAL(terms[1].nauxexprs, 1, "\nExpected 1 auxiliary expressions for product 1, got %d", terms[1].nauxexprs);
+   SOFT_ASSERT_EQUAL(terms[2].nauxexprs, 1, "\nExpected 1 auxiliary expressions for product 2, got %d", terms[2].nauxexprs);
 
    /* check the product expressions */
-   cr_expect_eq(terms[0].x, bvar1, "x var of product 0 should be bvar1, got %s", SCIPvarGetName(terms[0].x));
-   cr_expect_eq(terms[0].y, bvar2, "y var of product 0 should be bvar2, got %s", SCIPvarGetName(terms[0].y));
-   cr_expect_eq(terms[1].x, bvar1, "x var of product 1 should be bvar1, got %s", SCIPvarGetName(terms[1].x));
-   cr_expect_eq(terms[1].y, x2, "y var of product 1 should be x2, got %s", SCIPvarGetName(terms[1].y));
-   cr_expect_eq(terms[2].x, bvar2, "x var of product 1 should be bvar2, got %s", SCIPvarGetName(terms[2].x));
-   cr_expect_eq(terms[2].y, x2, "y var of product 1 should be x2, got %s", SCIPvarGetName(terms[2].y));
+   SOFT_ASSERT_EQUAL(terms[0].x, bvar1, "x var of product 0 should be bvar1, got %s", SCIPvarGetName(terms[0].x));
+   SOFT_ASSERT_EQUAL(terms[0].y, bvar2, "y var of product 0 should be bvar2, got %s", SCIPvarGetName(terms[0].y));
+   SOFT_ASSERT_EQUAL(terms[1].x, bvar1, "x var of product 1 should be bvar1, got %s", SCIPvarGetName(terms[1].x));
+   SOFT_ASSERT_EQUAL(terms[1].y, x2, "y var of product 1 should be x2, got %s", SCIPvarGetName(terms[1].y));
+   SOFT_ASSERT_EQUAL(terms[2].x, bvar2, "x var of product 1 should be bvar2, got %s", SCIPvarGetName(terms[2].x));
+   SOFT_ASSERT_EQUAL(terms[2].y, x2, "y var of product 1 should be x2, got %s", SCIPvarGetName(terms[2].y));
 
    /* check the auxiliary expressions obtained from the implied relation and the implied bound */
 
@@ -521,7 +525,8 @@ Test(product_detection, implbnd, .init = setup, .fini = teardown, .description =
    SCIPfreeBuffer(scip, &sepadata);
 }
 
-Test(product_detection, reltables, .init = setup, .fini = teardown, .description = "test creating relation tables")
+/** @brief test creating relation tables */
+void test_product_detection_reltables(void)
 {
    SCIP_CONS* conss[5];
    SCIP_VAR* vars[3];
@@ -589,14 +594,14 @@ Test(product_detection, reltables, .init = setup, .fini = teardown, .description
    SCIP_CALL( fillRelationTables(scip, prob_rows, nrows, hashtable2, hashtable3, vars_in_2rels, row_list) );
 
    /* check the linked list of rows (should correspond to 3 -> 2 -> 1 and 4 -> 0) */
-   cr_expect_eq(row_list[0], -1);
-   cr_expect_eq(row_list[1], -1);
-   cr_expect_eq(row_list[2], 1);
-   cr_expect_eq(row_list[3], 2);
-   cr_expect_eq(row_list[4], 0);
+   SOFT_ASSERT_EQUAL(row_list[0], -1);
+   SOFT_ASSERT_EQUAL(row_list[1], -1);
+   SOFT_ASSERT_EQUAL(row_list[2], 1);
+   SOFT_ASSERT_EQUAL(row_list[3], 2);
+   SOFT_ASSERT_EQUAL(row_list[4], 0);
 
    /* check the hashtable for 3-variable relations */
-   cr_expect_eq(SCIPhashtableGetNElements(hashtable3), 1, "expected 1 var triple, got %" SCIP_LONGINT_FORMAT,
+   SOFT_ASSERT_EQUAL(SCIPhashtableGetNElements(hashtable3), 1, "expected 1 var triple, got %" SCIP_LONGINT_FORMAT,
          SCIPhashtableGetNElements(hashtable3));
 
    for( i = 0; i < SCIPhashtableGetNEntries(hashtable3); ++i )
@@ -605,19 +610,19 @@ Test(product_detection, reltables, .init = setup, .fini = teardown, .description
       if( foundhashdata == NULL )
          continue;
 
-      cr_expect_eq(foundhashdata->nvars, 3, "expected 3 vars in an element of hashtable3, got %d", foundhashdata->nvars);
-      cr_expect_eq(foundhashdata->vars[0], bvar1, "expected first var in the triple to be bvar1, got %s",
+      SOFT_ASSERT_EQUAL(foundhashdata->nvars, 3, "expected 3 vars in an element of hashtable3, got %d", foundhashdata->nvars);
+      SOFT_ASSERT_EQUAL(foundhashdata->vars[0], bvar1, "expected first var in the triple to be bvar1, got %s",
             SCIPvarGetName(foundhashdata->vars[0]));
-      cr_expect_eq(foundhashdata->vars[1], x1, "expected second var in the triple to be x1, got %s",
+      SOFT_ASSERT_EQUAL(foundhashdata->vars[1], x1, "expected second var in the triple to be x1, got %s",
             SCIPvarGetName(foundhashdata->vars[1]));
-      cr_expect_eq(foundhashdata->vars[2], x2, "expected third var in the triple to be x2, got %s",
+      SOFT_ASSERT_EQUAL(foundhashdata->vars[2], x2, "expected third var in the triple to be x2, got %s",
             SCIPvarGetName(foundhashdata->vars[2]));
 
-      cr_expect_eq(foundhashdata->firstrow, 3);
+      SOFT_ASSERT_EQUAL(foundhashdata->firstrow, 3);
    }
 
    /* check the hashtable for 2-variable relations */
-   cr_expect_eq(SCIPhashtableGetNElements(hashtable2), 1, "expected 1 var pair, got %" SCIP_LONGINT_FORMAT,
+   SOFT_ASSERT_EQUAL(SCIPhashtableGetNElements(hashtable2), 1, "expected 1 var pair, got %" SCIP_LONGINT_FORMAT,
          SCIPhashtableGetNElements(hashtable2));
 
    for( i = 0; i < SCIPhashtableGetNEntries(hashtable2); ++i )
@@ -626,29 +631,29 @@ Test(product_detection, reltables, .init = setup, .fini = teardown, .description
       if( foundhashdata == NULL )
          continue;
 
-      cr_expect_eq(foundhashdata->nvars, 2, "expected 2 vars in an element of hashtable2, got %d", foundhashdata->nvars);
-      cr_expect_eq(foundhashdata->vars[0], x1, "expected first var in the triple to be x1, got %s",
+      SOFT_ASSERT_EQUAL(foundhashdata->nvars, 2, "expected 2 vars in an element of hashtable2, got %d", foundhashdata->nvars);
+      SOFT_ASSERT_EQUAL(foundhashdata->vars[0], x1, "expected first var in the triple to be x1, got %s",
             SCIPvarGetName(foundhashdata->vars[0]));
-      cr_expect_eq(foundhashdata->vars[1], x2, "expected second var in the triple to be x2, got %s",
+      SOFT_ASSERT_EQUAL(foundhashdata->vars[1], x2, "expected second var in the triple to be x2, got %s",
             SCIPvarGetName(foundhashdata->vars[1]));
 
       SCIPdebugMsg(scip, "(%s, %s): ", SCIPvarGetName(foundhashdata->vars[0]),
       SCIPvarGetName(foundhashdata->vars[1]));
 
-      cr_expect_eq(foundhashdata->firstrow, 4);
+      SOFT_ASSERT_EQUAL(foundhashdata->firstrow, 4);
    }
 
    /* check the data structure storing variables participating together in 2-variable relations */
    adjvardata = (ADJACENTVARDATA*) SCIPhashmapGetImage(vars_in_2rels, (void*)(size_t) SCIPvarGetIndex(x1));
-   cr_assert(adjvardata != NULL);
-   cr_expect_eq(adjvardata->nadjacentvars, 1, "expected 1 vars adjacent to x1, got %d", adjvardata->nadjacentvars);
-   cr_expect_eq(adjvardata->adjacentvars[0], x2, "expected x2 to be adjacent to x1, got %s",
+   TEST_ASSERT(adjvardata != NULL);
+   SOFT_ASSERT_EQUAL(adjvardata->nadjacentvars, 1, "expected 1 vars adjacent to x1, got %d", adjvardata->nadjacentvars);
+   SOFT_ASSERT_EQUAL(adjvardata->adjacentvars[0], x2, "expected x2 to be adjacent to x1, got %s",
         SCIPvarGetName(adjvardata->adjacentvars[0]));
 
    adjvardata = (ADJACENTVARDATA*) SCIPhashmapGetImage(vars_in_2rels, (void*)(size_t) SCIPvarGetIndex(x2));
-   cr_assert(adjvardata != NULL);
-   cr_expect_eq(adjvardata->nadjacentvars, 1, "expected 1 vars adjacent to x2, got %d", adjvardata->nadjacentvars);
-   cr_expect_eq(adjvardata->adjacentvars[0], x1, "expected x1 to be adjacent to x2, got %s",
+   TEST_ASSERT(adjvardata != NULL);
+   SOFT_ASSERT_EQUAL(adjvardata->nadjacentvars, 1, "expected 1 vars adjacent to x2, got %d", adjvardata->nadjacentvars);
+   SOFT_ASSERT_EQUAL(adjvardata->adjacentvars[0], x1, "expected x1 to be adjacent to x2, got %s",
         SCIPvarGetName(adjvardata->adjacentvars[0]));
 
    /* free memory */
@@ -684,4 +689,19 @@ Test(product_detection, reltables, .init = setup, .fini = teardown, .description
    {
       SCIP_CALL( SCIPreleaseCons(scip, &conss[i]) );
    }
+}
+
+void setUp(void) { setup(); }
+
+void tearDown(void) { teardown(); }
+
+int main(void)
+{
+   UNITY_BEGIN();
+   RUN_TEST(test_product_detection_implrels);
+   RUN_TEST(test_product_detection_implrelbnd);
+   RUN_TEST(test_product_detection_implrelclique);
+   RUN_TEST(test_product_detection_implbnd);
+   RUN_TEST(test_product_detection_reltables);
+   return UNITY_END();
 }

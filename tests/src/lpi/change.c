@@ -51,11 +51,13 @@
  *
  *  Some LPIs use std::numeric_limits<SCIP_Real>::infinity() as infinity value. Comparing two infinty values then yields
  *  nan. This is a workaround. */
-#define cr_assert_float_eq_inf(Actual, Expected, Epsilon) \
+#undef TEST_ASSERT_DOUBLE_WITHIN_INF
+#undef TEST_ASSERT_DOUBLE_WITHIN_INF_
+#define TEST_ASSERT_DOUBLE_WITHIN_INF(Actual, Expected, Epsilon) \
    if ( fabs(Actual) > 1e30 || fabs(Expected) > 1e30 )    \
-      cr_assert( Actual == Expected );                    \
+      TEST_ASSERT( Actual == Expected );                    \
    else                                                   \
-      cr_assert_float_eq(Actual, Expected, Epsilon);
+      TEST_ASSERT_DOUBLE_WITHIN(Actual, Expected, Epsilon);
 
 #define EPS 1e-6
 
@@ -98,15 +100,6 @@ SCIP_Bool initProb(int pos, int* ncols, int* nrows, int* nnonz, SCIP_OBJSEN* obj
    switch ( pos )
    {
    case 0:
-      /* unbounded - infeasible
-       * (P):  max x
-       * -x <= 1 (constr)
-       *  0 <= x (bound)
-       *
-       * (D):  min y
-       * 1 <= -y (constr)
-       * 0 <= y (bound)
-       * */
       *ncols = 1;
       *nrows = 1;
       *nnonz = 1;
@@ -115,15 +108,6 @@ SCIP_Bool initProb(int pos, int* ncols, int* nrows, int* nnonz, SCIP_OBJSEN* obj
       break;
 
    case 1:
-      /* optimal - optimal
-       * (P):  max x
-       *  x <= 0 (constr)
-       *  0 <= x (bound)
-       *
-       * (D):  min 0
-       * 1 <= y (constr)
-       * 0 <= y (bound)
-       * */
       *ncols = 1;
       *nrows = 1;
       *nnonz = 1;
@@ -132,7 +116,6 @@ SCIP_Bool initProb(int pos, int* ncols, int* nrows, int* nnonz, SCIP_OBJSEN* obj
       break;
 
    case 2:
-      /* minimization problems (duals of the above) */
       *ncols = 1;
       *nrows = 1;
       *nnonz = 1;
@@ -153,22 +136,6 @@ SCIP_Bool initProb(int pos, int* ncols, int* nrows, int* nnonz, SCIP_OBJSEN* obj
       break;
 
    case 4:
-      /* maximization problems, ncols is 2, *nrows is 2 */
-      /* unbounded - infeasible
-       * (P):  max x+y
-       * -x    <= 1 (constr)
-       *    -y <= 1 (constr)
-       *
-       *  0 <= x (bound)
-       *  0 <= y (bound)
-       *
-       * (D):  min x+y
-       * 1 <= -x   (constr)
-       * 1 <=   -y (constr)
-       *
-       * 0 <= x (bound)
-       * 0 <= y (bound)
-       * */
       *ncols = 2;
       *nrows = 2;
       *nnonz = 2;
@@ -178,21 +145,6 @@ SCIP_Bool initProb(int pos, int* ncols, int* nrows, int* nnonz, SCIP_OBJSEN* obj
       break;
 
    case 5:
-      /* optimal - optimal
-       * (P):  max x+y
-       * x     <= 1 (constr)
-       *     y <= 1 (constr)
-       *
-       *  0 <= x (bound)
-       *  0 <= y (bound)
-       *
-       * (D):  min x+y
-       * 1 <= x    (constr)
-       * 1 <=    y (constr)
-       *
-       * 0 <= x (bound)
-       * 0 <= y (bound)
-       j* */
       *ncols = 2;
       *nrows = 2;
       *nnonz = 2;
@@ -200,21 +152,6 @@ SCIP_Bool initProb(int pos, int* ncols, int* nrows, int* nnonz, SCIP_OBJSEN* obj
       break;
 
    case 6:
-      /* infeasible - infeasible
-       * (P):  max x+y
-       * -x    <= -1 (constr)
-       *     y <= -1 (constr)
-       *
-       *  0 <= x (bound)
-       *  0 <= y (bound)
-       *
-       * (D):  min -x-y
-       * 1 <= -x    (constr)
-       * 1 <=     y (constr)
-       *
-       * 0 <= x (bound)
-       * 0 <= y (bound)
-       */
       *ncols = 2;
       *nrows = 2;
       *nnonz = 2;
@@ -225,7 +162,6 @@ SCIP_Bool initProb(int pos, int* ncols, int* nrows, int* nnonz, SCIP_OBJSEN* obj
       break;
 
    case 7:
-      /* minimization problems (duals of the above) */
       *ncols = 2;
       *nrows = 2;
       *nnonz = 2;
@@ -270,9 +206,9 @@ SCIP_Bool initProb(int pos, int* ncols, int* nrows, int* nnonz, SCIP_OBJSEN* obj
    SCIP_CALL( SCIPlpiChgObjsen(lpi, *objsen) );
    SCIP_CALL( SCIPlpiAddCols(lpi, *ncols, obj, lb, ub, (char**) colnames, 0, NULL, NULL, NULL) );
    SCIP_CALL( SCIPlpiAddRows(lpi, *nrows, lhs, rhs, (char**) rownames, *nnonz, beg, ind, val) );
-   cr_assert( !SCIPlpiWasSolved(lpi) );
+   TEST_ASSERT( !SCIPlpiWasSolved(lpi) );
    SCIP_CALL( SCIPlpiSolvePrimal(lpi) );
-   cr_assert( SCIPlpiWasSolved(lpi) );
+   TEST_ASSERT( SCIPlpiWasSolved(lpi) );
 
    return TRUE;
 }
@@ -287,24 +223,44 @@ void setup(void)
 
    /* create LPI */
    SCIP_CALL( SCIPlpiCreate(&lpi, messagehdlr, "prob", SCIP_OBJSEN_MAXIMIZE) );
-   cr_assert( !SCIPlpiWasSolved(lpi) );
+   TEST_ASSERT( !SCIPlpiWasSolved(lpi) );
 }
 
 static
 void teardown(void)
 {
-   cr_assert( !SCIPlpiWasSolved(lpi) );
-   SCIP_CALL( SCIPlpiFree(&lpi) );
+   /* theory-loop tests call theoryCleanup() which already frees lpi/messagehdlr */
+   if( lpi != NULL )
+   {
+      TEST_ASSERT( !SCIPlpiWasSolved(lpi) );
+      SCIP_CALL( SCIPlpiFree(&lpi) );
+   }
 
    if ( messagehdlr != NULL )
    {
       SCIP_CALL( SCIPmessagehdlrRelease(&messagehdlr) );
    }
 
-   cr_assert_eq(BMSgetMemoryUsed(), 0, "There is a memory leak!");
+   TEST_ASSERT_EQUAL(BMSgetMemoryUsed(), 0, "There is a memory leak!");
 }
 
-TestSuite(change, .init = setup, .fini = teardown);
+/** cleanup helper for theory-loop functions */
+static
+void theoryCleanup(void)
+{
+   if( lpi != NULL )
+   {
+      SCIPlpiFree(&lpi);
+      lpi = NULL;
+   }
+   if( messagehdlr != NULL )
+   {
+      SCIPmessagehdlrRelease(&messagehdlr);
+      messagehdlr = NULL;
+   }
+   TEST_ASSERT_EQUAL(BMSgetMemoryUsed(), 0, "Memory leak!");
+}
+
 
 /* TESTS **/
 
@@ -327,30 +283,49 @@ void checkChgCoef(int row, int col, SCIP_Real newval)
    SCIP_Real val;
 
    SCIP_CALL( SCIPlpiChgCoef(lpi, row, col, newval) );
-   cr_assert( !SCIPlpiWasSolved(lpi) );
+   TEST_ASSERT( !SCIPlpiWasSolved(lpi) );
 
    SCIP_CALL( SCIPlpiGetCoef(lpi, row, col, &val) );
-   cr_assert_float_eq_inf(newval, val, EPS);
+   TEST_ASSERT_DOUBLE_WITHIN_INF(newval, val, EPS);
 }
 
-TheoryDataPoints(change, testchgcoef) =
+/** Test SCIPlpiChgCoef: 2 rows x 2 cols x 3 values x 10 problems = 120 combos */
+void test_change_testchgcoef(void)
 {
-   DataPoints(int, 0, 1),
-   DataPoints(int, 0, 1),
-   DataPoints(SCIP_Real, 0, 1, -1),
-   DataPoints(int, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9),
-};
+   int rowvals[2] = {0, 1};
+   int colvals[2] = {0, 1};
+   SCIP_Real newvalvals[3] = {0, 1, -1};
+   int probvals[10] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
+   int ri, ci, vi, pi;
 
-Theory((int row, int col, SCIP_Real newval, int prob), change, testchgcoef)
-{
-   int nrows, ncols, nnonz;
-   SCIP_OBJSEN sense;
+   for( ri = 0; ri < 2; ri++ )
+   {
+      for( ci = 0; ci < 2; ci++ )
+      {
+         for( vi = 0; vi < 3; vi++ )
+         {
+            for( pi = 0; pi < 10; pi++ )
+            {
+               int row = rowvals[ri];
+               int col = colvals[ci];
+               SCIP_Real newval = newvalvals[vi];
+               int prob = probvals[pi];
+               int nrows, ncols, nnonz;
+               SCIP_OBJSEN sense;
 
-   cr_assume( initProb(prob, &ncols, &nrows, &nnonz, &sense) );
-   cr_assume_lt( row, nrows );
-   cr_assume_lt( col, ncols );
-   newval = substituteInfinity( newval );
-   checkChgCoef( row, col, newval );
+               if( !initProb(prob, &ncols, &nrows, &nnonz, &sense) )
+                  continue;
+               if( !(row < nrows) )
+                  continue;
+               if( !(col < ncols) )
+                  continue;
+               newval = substituteInfinity(newval);
+               checkChgCoef(row, col, newval);
+            }
+         }
+      }
+   }
+   theoryCleanup();
 }
 
 /** Test SCIPlpiChgObj */
@@ -361,33 +336,46 @@ void checkChgObj(int dim, int* ind, SCIP_Real* setobj)
 
    assert( dim < 100 );
    SCIP_CALL( SCIPlpiChgObj(lpi, dim, ind, setobj) );
-   cr_assert( !SCIPlpiWasSolved(lpi) );
+   TEST_ASSERT( !SCIPlpiWasSolved(lpi) );
    SCIP_CALL( SCIPlpiGetObj(lpi, 0, dim-1, obj) );
 
-   cr_assert_arr_eq(obj, setobj, dim*sizeof(SCIP_Real));
+   TEST_ASSERT_EQUAL_MEMORY(obj, setobj, dim*sizeof(SCIP_Real));
 }
 
-TheoryDataPoints(change, testchgobjectives) =
+/** Test SCIPlpiChgObj: 5 x 5 x 10 = 250 combos */
+void test_change_testchgobjectives(void)
 {
-   DataPoints(SCIP_Real, 0, 1, -1, 2, -2),
-   DataPoints(SCIP_Real, 0, 1, -1, 2, -2),
-   DataPoints(int, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9),
-};
+   SCIP_Real firstvals[5] = {0, 1, -1, 2, -2};
+   SCIP_Real secondvals[5] = {0, 1, -1, 2, -2};
+   int probvals[10] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
+   int fi, si, pi;
 
-Theory((SCIP_Real first, SCIP_Real second, int prob), change, testchgobjectives)
-{
-   int nrows, ncols, nnonz;
-   SCIP_OBJSEN sense;
-   int ind[2] = { 0, 1 };
-   SCIP_Real setobj[2];
+   for( fi = 0; fi < 5; fi++ )
+   {
+      for( si = 0; si < 5; si++ )
+      {
+         for( pi = 0; pi < 10; pi++ )
+         {
+            SCIP_Real first = firstvals[fi];
+            SCIP_Real second = secondvals[si];
+            int prob = probvals[pi];
+            int nrows, ncols, nnonz;
+            SCIP_OBJSEN sense;
+            int ind[2] = {0, 1};
+            SCIP_Real setobj[2];
 
-   first = substituteInfinity( first );
-   second = substituteInfinity( second );
-   cr_assume( initProb(prob, &ncols, &nrows, &nnonz, &sense) );
+            first = substituteInfinity(first);
+            second = substituteInfinity(second);
+            if( !initProb(prob, &ncols, &nrows, &nnonz, &sense) )
+               continue;
 
-   setobj[0] = first;
-   setobj[1] = second;
-   checkChgObj(ncols, ind, setobj);
+            setobj[0] = first;
+            setobj[1] = second;
+            checkChgObj(ncols, ind, setobj);
+         }
+      }
+   }
+   theoryCleanup();
 }
 
 /** Test SCIPlpiChgBounds */
@@ -399,45 +387,65 @@ void checkChgBounds(int dim, int* ind, SCIP_Real* setlb, SCIP_Real* setub)
 
    assert( dim < 100 );
    SCIP_CALL( SCIPlpiChgBounds(lpi, dim, ind, setlb, setub) );
-   cr_assert( !SCIPlpiWasSolved(lpi) );
+   TEST_ASSERT( !SCIPlpiWasSolved(lpi) );
    SCIP_CALL( SCIPlpiGetBounds(lpi, 0, dim - 1, lb, ub) );
 
-   cr_assert_arr_eq(ub, setub, dim*sizeof(SCIP_Real));
-   cr_assert_arr_eq(lb, setlb, dim*sizeof(SCIP_Real));
+   TEST_ASSERT_EQUAL_MEMORY(ub, setub, dim*sizeof(SCIP_Real));
+   TEST_ASSERT_EQUAL_MEMORY(lb, setlb, dim*sizeof(SCIP_Real));
 }
 
-TheoryDataPoints(change, testchgbounds) =
+/** Test SCIPlpiChgBounds: 5^4 x 10 = 6250 combos (with filters) */
+void test_change_testchgbounds(void)
 {
-   DataPoints(SCIP_Real, 0, 1, -1, 2, -2),
-   DataPoints(SCIP_Real, 0, 1, -1, 2, -2),
-   DataPoints(SCIP_Real, 0, 1, -1, 2, -2),
-   DataPoints(SCIP_Real, 0, 1, -1, 2, -2),
-   DataPoints(int, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9),
-};
+   SCIP_Real vals[5] = {0, 1, -1, 2, -2};
+   int probvals[10] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
+   int u1i, u2i, l1i, l2i, pi;
 
-Theory((SCIP_Real upper1, SCIP_Real upper2, SCIP_Real lower1, SCIP_Real lower2, int prob), change, testchgbounds)
-{
-   int nrows, ncols, nnonz;
-   int ind[2] = {0, 1};
-   SCIP_OBJSEN sense;
-   SCIP_Real setub[2];
-   SCIP_Real setlb[2];
+   for( u1i = 0; u1i < 5; u1i++ )
+   {
+      for( u2i = 0; u2i < 5; u2i++ )
+      {
+         for( l1i = 0; l1i < 5; l1i++ )
+         {
+            for( l2i = 0; l2i < 5; l2i++ )
+            {
+               for( pi = 0; pi < 10; pi++ )
+               {
+                  SCIP_Real upper1 = vals[u1i];
+                  SCIP_Real upper2 = vals[u2i];
+                  SCIP_Real lower1 = vals[l1i];
+                  SCIP_Real lower2 = vals[l2i];
+                  int prob = probvals[pi];
+                  int nrows, ncols, nnonz;
+                  int ind[2] = {0, 1};
+                  SCIP_OBJSEN sense;
+                  SCIP_Real setub[2];
+                  SCIP_Real setlb[2];
 
-   lower1 = substituteInfinity( lower1 );
-   lower2 = substituteInfinity( lower2 );
-   upper1 = substituteInfinity( upper1 );
-   upper2 = substituteInfinity( upper2 );
-   cr_assume_lt(lower1, upper1);
-   cr_assume_lt(lower2, upper2);
+                  lower1 = substituteInfinity(lower1);
+                  lower2 = substituteInfinity(lower2);
+                  upper1 = substituteInfinity(upper1);
+                  upper2 = substituteInfinity(upper2);
+                  if( !(lower1 < upper1) )
+                     continue;
+                  if( !(lower2 < upper2) )
+                     continue;
 
-   setub[0] = upper1;
-   setub[1] = upper2;
-   setlb[0] = lower1;
-   setlb[1] = lower2;
+                  setub[0] = upper1;
+                  setub[1] = upper2;
+                  setlb[0] = lower1;
+                  setlb[1] = lower2;
 
-   cr_assume( initProb(prob, &ncols, &nrows, &nnonz, &sense) );
+                  if( !initProb(prob, &ncols, &nrows, &nnonz, &sense) )
+                     continue;
 
-   checkChgBounds(ncols, ind, setlb, setub);
+                  checkChgBounds(ncols, ind, setlb, setub);
+               }
+            }
+         }
+      }
+   }
+   theoryCleanup();
 }
 
 /** Test SCIPlpiChgSides */
@@ -449,69 +457,97 @@ void checkChgSides(int dim, int* ind, SCIP_Real* setls, SCIP_Real* setrs)
 
    assert( dim < 100 );
    SCIP_CALL( SCIPlpiChgSides(lpi, dim, ind, setls, setrs) );
-   cr_assert( !SCIPlpiWasSolved(lpi) );
+   TEST_ASSERT( !SCIPlpiWasSolved(lpi) );
    SCIP_CALL( SCIPlpiGetSides(lpi, 0, dim - 1, ls, rs) );
 
-   cr_assert_arr_eq(ls, setls, dim*sizeof(SCIP_Real));
-   cr_assert_arr_eq(rs, setrs, dim*sizeof(SCIP_Real));
+   TEST_ASSERT_EQUAL_MEMORY(ls, setls, dim*sizeof(SCIP_Real));
+   TEST_ASSERT_EQUAL_MEMORY(rs, setrs, dim*sizeof(SCIP_Real));
 }
 
-TheoryDataPoints(change, testchgsides) =
+/** Test SCIPlpiChgSides: 5^4 x 10 = 6250 combos (with filters) */
+void test_change_testchgsides(void)
 {
-   DataPoints(SCIP_Real, 0, 1, -1, 2, -2),
-   DataPoints(SCIP_Real, 0, 1, -1, 2, -2),
-   DataPoints(SCIP_Real, 0, 1, -1, 2, -2),
-   DataPoints(SCIP_Real, 0, 1, -1, 2, -2),
-   DataPoints(int, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9),
-};
+   SCIP_Real vals[5] = {0, 1, -1, 2, -2};
+   int probvals[10] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
+   int l1i, l2i, r1i, r2i, pi;
 
-Theory((SCIP_Real left1, SCIP_Real left2, SCIP_Real right1, SCIP_Real right2, int prob), change, testchgsides)
-{
-   int nrows, ncols, nnonz;
-   SCIP_OBJSEN sense;
-   SCIP_Real setrhs[2];
-   SCIP_Real setlhs[2];
-   int ind[2] = { 0, 1 };
+   for( l1i = 0; l1i < 5; l1i++ )
+   {
+      for( l2i = 0; l2i < 5; l2i++ )
+      {
+         for( r1i = 0; r1i < 5; r1i++ )
+         {
+            for( r2i = 0; r2i < 5; r2i++ )
+            {
+               for( pi = 0; pi < 10; pi++ )
+               {
+                  SCIP_Real left1 = vals[l1i];
+                  SCIP_Real left2 = vals[l2i];
+                  SCIP_Real right1 = vals[r1i];
+                  SCIP_Real right2 = vals[r2i];
+                  int prob = probvals[pi];
+                  int nrows, ncols, nnonz;
+                  SCIP_OBJSEN sense;
+                  SCIP_Real setrhs[2];
+                  SCIP_Real setlhs[2];
+                  int ind[2] = {0, 1};
 
-   left1 = substituteInfinity( left1 );
-   left2 = substituteInfinity( left2 );
-   right1 = substituteInfinity( right1 );
-   right2 = substituteInfinity( right2 );
+                  left1 = substituteInfinity(left1);
+                  left2 = substituteInfinity(left2);
+                  right1 = substituteInfinity(right1);
+                  right2 = substituteInfinity(right2);
 
-   setrhs[0] = left1;
-   setrhs[1] = left2;
-   setlhs[0] = right1;
-   setlhs[1] = right2;
+                  setrhs[0] = left1;
+                  setrhs[1] = left2;
+                  setlhs[0] = right1;
+                  setlhs[1] = right2;
 
-   cr_assume_lt(right1, left1);
-   cr_assume_lt(right2, left2);
+                  if( !(right1 < left1) )
+                     continue;
+                  if( !(right2 < left2) )
+                     continue;
 
-   cr_assume( initProb(prob, &ncols, &nrows, &nnonz, &sense) );
+                  if( !initProb(prob, &ncols, &nrows, &nnonz, &sense) )
+                     continue;
 
-   checkChgSides(nrows, ind, setlhs, setrhs);
+                  checkChgSides(nrows, ind, setlhs, setrhs);
+               }
+            }
+         }
+      }
+   }
+   theoryCleanup();
 }
 
-/** Test SCIPlpiChgObjsen */
-TheoryDataPoints(change, testchgobjsen) =
+/** Test SCIPlpiChgObjsen: 2 x 10 = 20 combos */
+void test_change_testchgobjsen(void)
 {
-   DataPoints(SCIP_OBJSEN, SCIP_OBJSEN_MAXIMIZE, SCIP_OBJSEN_MINIMIZE),
-   DataPoints(int, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9),
-};
+   SCIP_OBJSEN sensvals[2] = {SCIP_OBJSEN_MAXIMIZE, SCIP_OBJSEN_MINIMIZE};
+   int probvals[10] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
+   int si, pi;
 
-Theory((SCIP_OBJSEN newsense, int prob), change, testchgobjsen)
-{
-   int nrows, ncols, nnonz;
-   SCIP_OBJSEN sense;
-   SCIP_OBJSEN probsense;
+   for( si = 0; si < 2; si++ )
+   {
+      for( pi = 0; pi < 10; pi++ )
+      {
+         SCIP_OBJSEN newsense = sensvals[si];
+         int prob = probvals[pi];
+         int nrows, ncols, nnonz;
+         SCIP_OBJSEN sense;
+         SCIP_OBJSEN probsense;
 
-   cr_assume( initProb(prob, &ncols, &nrows, &nnonz, &sense) );
+         if( !initProb(prob, &ncols, &nrows, &nnonz, &sense) )
+            continue;
 
-   SCIP_CALL( SCIPlpiChgObjsen(lpi, newsense) );
-   cr_assert( !SCIPlpiWasSolved(lpi) );
+         SCIP_CALL( SCIPlpiChgObjsen(lpi, newsense) );
+         TEST_ASSERT( !SCIPlpiWasSolved(lpi) );
 
-   SCIP_CALL( SCIPlpiGetObjsen(lpi, &probsense) );
+         SCIP_CALL( SCIPlpiGetObjsen(lpi, &probsense) );
 
-   cr_assert_eq( newsense, probsense, "Expected: %d, got %d\n", newsense, probsense );
+         TEST_ASSERT_EQUAL(newsense, probsense, "Expected: %d, got %d\n", newsense, probsense);
+      }
+   }
+   theoryCleanup();
 }
 
 /** Helper method that is used in the scaling tests */
@@ -523,13 +559,13 @@ void assertScaledBounds(SCIP_Real boundbefore, SCIP_Real boundafter, SCIP_Real o
       /* if infinite, check for equality */
       if( scale > 0 )
       {
-         cr_assert_eq( boundbefore, boundafter,
+         TEST_ASSERT_EQUAL( boundbefore, boundafter,
          "bound before scaling %.20f, bound after scaling %.20f, scale %.20f\n",
          boundbefore, boundafter, scale );
       }
       else
       {
-         cr_assert_eq( -boundbefore, oppositeboundafter,
+         TEST_ASSERT_EQUAL( -boundbefore, oppositeboundafter,
          "bound before scaling %.20f, bound after scaling %.20f, scale %.20f\n",
          boundbefore, oppositeboundafter, scale );
       }
@@ -539,13 +575,13 @@ void assertScaledBounds(SCIP_Real boundbefore, SCIP_Real boundafter, SCIP_Real o
       /* if finite, check for correct scaling */
       if( scale > 0 )
       {
-         cr_assert_float_eq( boundbefore / scale, boundafter, EPS,
+         TEST_ASSERT_DOUBLE_WITHIN( boundbefore / scale, boundafter, EPS,
          "bound before scaling %.20f, bound after scaling %.20f, scale %.20f\n",
          boundbefore, boundafter, scale );
       }
       else
       {
-         cr_assert_float_eq( boundbefore / scale, oppositeboundafter, EPS,
+         TEST_ASSERT_DOUBLE_WITHIN( boundbefore / scale, oppositeboundafter, EPS,
          "bound before scaling %.20f, bound after scaling %.20f, scale %.20f\n",
          boundbefore, oppositeboundafter, scale );
       }
@@ -561,13 +597,13 @@ void assertScaledSides(SCIP_Real sidebefore, SCIP_Real sideafter, SCIP_Real oppo
       /* if infinite, check for equality */
       if( scale > 0 )
       {
-         cr_assert_eq( sidebefore, sideafter,
+         TEST_ASSERT_EQUAL( sidebefore, sideafter,
          "side before scaling %.20f, side after scaling %.20f, scale %.20f\n",
          sidebefore, sideafter, scale );
       }
       else
       {
-         cr_assert_eq( -sidebefore, oppositesideafter,
+         TEST_ASSERT_EQUAL( -sidebefore, oppositesideafter,
          "side before scaling %.20f, side after scaling %.20f, scale %.20f\n",
          sidebefore, oppositesideafter, scale );
       }
@@ -577,148 +613,161 @@ void assertScaledSides(SCIP_Real sidebefore, SCIP_Real sideafter, SCIP_Real oppo
       /* if finite, check for correct scaling */
       if( scale > 0 )
       {
-         cr_assert_float_eq( sidebefore * scale, sideafter, EPS,
+         TEST_ASSERT_DOUBLE_WITHIN( sidebefore * scale, sideafter, EPS,
          "side before scaling %.20f, side after scaling %.20f, scale %.20f\n",
          sidebefore, sideafter, scale );
       }
       else
       {
-         cr_assert_float_eq( sidebefore * scale, oppositesideafter, EPS,
+         TEST_ASSERT_DOUBLE_WITHIN( sidebefore * scale, oppositesideafter, EPS,
          "side before scaling %.20f, side after scaling %.20f, scale %.20f\n",
          sidebefore, oppositesideafter, scale );
       }
    }
 }
 
-/** Test SCIPlpiScaleCol */
-TheoryDataPoints(change, testscalecol) =
+/** Test SCIPlpiScaleCol: 6 x 10 = 60 combos */
+void test_change_testscalecol(void)
 {
-   DataPoints(SCIP_Real, 1e10, 1e-10, 1, -1, 2, -2),
-   /* @todo on the current problems we cannot test the effect of column scaling on bounds, because all problems have
-    * bounds zero or infinity; add new problems with finite bounds not zero
-    */
-   DataPoints(int, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9),
-};
+   SCIP_Real scalevals[6] = {1e10, 1e-10, 1, -1, 2, -2};
+   int probvals[10] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
+   int sci, pi;
 
-Theory((SCIP_Real scale, int prob), change, testscalecol)
-{
-   int nrows, ncols, cols, rows, nnonz;
-   SCIP_OBJSEN sense;
-   int col;
-   int i;
-
-   cr_assume( initProb(prob, &ncols, &nrows, &nnonz, &sense) );
-
-   SCIP_CALL( SCIPlpiGetNCols(lpi, &cols) );
-   SCIP_CALL( SCIPlpiGetNRows(lpi, &rows) );
-   cr_assert_eq(ncols, cols);
-   cr_assert_eq(nrows, rows);
-
-   assert( nrows < 100 );
-   for( col = 0; col < ncols; col++ )
+   for( sci = 0; sci < 6; sci++ )
    {
-      SCIP_Real colbefore[100];
-      SCIP_Real objbefore;
-      SCIP_Real lbbefore;
-      SCIP_Real ubbefore;
-      SCIP_Real objafter;
-      SCIP_Real lbafter;
-      SCIP_Real ubafter;
-
-      for( i = 0; i < nrows; i++ )
+      for( pi = 0; pi < 10; pi++ )
       {
-         SCIP_Real coef;
+         SCIP_Real scale = scalevals[sci];
+         int prob = probvals[pi];
+         int nrows, ncols, cols, rows, nnonz;
+         SCIP_OBJSEN sense;
+         int col;
+         int i;
 
-         SCIP_CALL( SCIPlpiGetCoef(lpi, i, col, &coef) );
-         colbefore[i] = coef;
+         if( !initProb(prob, &ncols, &nrows, &nnonz, &sense) )
+            continue;
+
+         SCIP_CALL( SCIPlpiGetNCols(lpi, &cols) );
+         SCIP_CALL( SCIPlpiGetNRows(lpi, &rows) );
+         TEST_ASSERT_EQUAL(ncols, cols);
+         TEST_ASSERT_EQUAL(nrows, rows);
+
+         assert( nrows < 100 );
+         for( col = 0; col < ncols; col++ )
+         {
+            SCIP_Real colbefore[100];
+            SCIP_Real objbefore;
+            SCIP_Real lbbefore;
+            SCIP_Real ubbefore;
+            SCIP_Real objafter;
+            SCIP_Real lbafter;
+            SCIP_Real ubafter;
+
+            for( i = 0; i < nrows; i++ )
+            {
+               SCIP_Real coef;
+
+               SCIP_CALL( SCIPlpiGetCoef(lpi, i, col, &coef) );
+               colbefore[i] = coef;
+            }
+
+            SCIP_CALL( SCIPlpiGetObj(lpi, col, col, &objbefore) );
+
+            SCIP_CALL( SCIPlpiGetBounds(lpi, col, col, &lbbefore, &ubbefore) );
+
+            SCIP_CALL( SCIPlpiScaleCol(lpi, col, scale) );
+            for( i = 0; i < nrows; i++ )
+            {
+               SCIP_Real colafter;
+
+               SCIP_CALL( SCIPlpiGetCoef(lpi, i, col, &colafter) );
+               TEST_ASSERT_DOUBLE_WITHIN( colbefore[i] * scale, colafter, EPS,
+                  "Found values: scale %.20f, colbefore[i] %.20f, colafter %.20f, i %d\n",
+                  scale, colbefore[i], colafter, i );
+            }
+
+            SCIP_CALL( SCIPlpiGetObj(lpi, col, col, &objafter) );
+
+            TEST_ASSERT_DOUBLE_WITHIN( objbefore * scale, objafter, EPS,
+                  "Found values: scale %.20f, objbefore %.20f, objafter %.20f",
+                  scale, objbefore, objafter );
+
+            SCIP_CALL( SCIPlpiGetBounds(lpi, col, col, &lbafter, &ubafter) );
+
+            assertScaledBounds(lbbefore, lbafter, ubafter, scale);
+            assertScaledBounds(ubbefore, ubafter, lbafter, scale);
+         }
       }
-
-      SCIP_CALL( SCIPlpiGetObj(lpi, col, col, &objbefore) );
-
-      SCIP_CALL( SCIPlpiGetBounds(lpi, col, col, &lbbefore, &ubbefore) );
-
-      SCIP_CALL( SCIPlpiScaleCol(lpi, col, scale) );
-      for( i = 0; i < nrows; i++ )
-      {
-         SCIP_Real colafter;
-
-         SCIP_CALL( SCIPlpiGetCoef(lpi, i, col, &colafter) );
-         cr_assert_float_eq( colbefore[i] * scale, colafter, EPS,
-            "Found values: scale %.20f, colbefore[i] %.20f, colafter %.20f, i %d\n",
-            scale, colbefore[i], colafter, i );
-      }
-
-      SCIP_CALL( SCIPlpiGetObj(lpi, col, col, &objafter) );
-
-      cr_assert_float_eq( objbefore * scale, objafter, EPS,
-            "Found values: scale %.20f, objbefore %.20f, objafter %.20f",
-            scale, objbefore, objafter );
-
-      SCIP_CALL( SCIPlpiGetBounds(lpi, col, col, &lbafter, &ubafter) );
-
-      assertScaledBounds(lbbefore, lbafter, ubafter, scale);
-      assertScaledBounds(ubbefore, ubafter, lbafter, scale);
    }
+   theoryCleanup();
 }
 
-/** Test SCIPlpiScaleRow */
-TheoryDataPoints(change, testscalerow) =
+/** Test SCIPlpiScaleRow: 6 x 10 = 60 combos */
+void test_change_testscalerow(void)
 {
-   DataPoints(SCIP_Real, 1e10, 1e-10, 1, -1, 2, -2),
-   DataPoints(int, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9),
-};
+   SCIP_Real scalevals[6] = {1e10, 1e-10, 1, -1, 2, -2};
+   int probvals[10] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
+   int sci, pi;
 
-Theory((SCIP_Real scale, int prob), change, testscalerow)
-{
-   int ncols, nrows, rows, cols, nnonz;
-   SCIP_OBJSEN sense;
-   int row;
-   int i;
-
-   cr_assume( initProb(prob, &ncols, &nrows, &nnonz, &sense) );
-
-   SCIP_CALL( SCIPlpiGetNRows(lpi, &rows) );
-   SCIP_CALL( SCIPlpiGetNCols(lpi, &cols) );
-   cr_assert_eq(nrows, rows);
-   cr_assert_eq(ncols, cols);
-
-   assert( nrows < 100 );
-   for( row = 0; row < nrows; row++ )
+   for( sci = 0; sci < 6; sci++ )
    {
-      SCIP_Real rowbefore[100];
-      SCIP_Real lhsbefore;
-      SCIP_Real rhsbefore;
-      SCIP_Real lhsafter;
-      SCIP_Real rhsafter;
-
-      for( i = 0; i < ncols; i++ )
+      for( pi = 0; pi < 10; pi++ )
       {
-         SCIP_CALL( SCIPlpiGetCoef(lpi, row, i, &rowbefore[i]) );
+         SCIP_Real scale = scalevals[sci];
+         int prob = probvals[pi];
+         int ncols, nrows, rows, cols, nnonz;
+         SCIP_OBJSEN sense;
+         int row;
+         int i;
+
+         if( !initProb(prob, &ncols, &nrows, &nnonz, &sense) )
+            continue;
+
+         SCIP_CALL( SCIPlpiGetNRows(lpi, &rows) );
+         SCIP_CALL( SCIPlpiGetNCols(lpi, &cols) );
+         TEST_ASSERT_EQUAL(nrows, rows);
+         TEST_ASSERT_EQUAL(ncols, cols);
+
+         assert( nrows < 100 );
+         for( row = 0; row < nrows; row++ )
+         {
+            SCIP_Real rowbefore[100];
+            SCIP_Real lhsbefore;
+            SCIP_Real rhsbefore;
+            SCIP_Real lhsafter;
+            SCIP_Real rhsafter;
+
+            for( i = 0; i < ncols; i++ )
+            {
+               SCIP_CALL( SCIPlpiGetCoef(lpi, row, i, &rowbefore[i]) );
+            }
+
+            SCIP_CALL( SCIPlpiGetSides(lpi, row, row, &lhsbefore, &rhsbefore) );
+
+            SCIP_CALL( SCIPlpiScaleRow(lpi, row, scale) );
+
+            for( i = 0; i < ncols; i++ )
+            {
+               SCIP_Real rowafter;
+
+               SCIP_CALL( SCIPlpiGetCoef(lpi, row, i, &rowafter) );
+               TEST_ASSERT_DOUBLE_WITHIN( rowbefore[i] * scale, rowafter, EPS,
+                  "Found values: scale %.20f, rowbefore[i] %.20f, rowafter %.20f, i %d\n",
+                  scale, rowbefore[i], rowafter, i );
+            }
+
+            SCIP_CALL( SCIPlpiGetSides(lpi, row, row, &lhsafter, &rhsafter) );
+
+            assertScaledSides(lhsbefore, lhsafter, rhsafter, scale);
+            assertScaledSides(rhsbefore, rhsafter, lhsafter, scale);
+         }
       }
-
-      SCIP_CALL( SCIPlpiGetSides(lpi, row, row, &lhsbefore, &rhsbefore) );
-
-      SCIP_CALL( SCIPlpiScaleRow(lpi, row, scale) );
-
-      for( i = 0; i < ncols; i++ )
-      {
-         SCIP_Real rowafter;
-
-         SCIP_CALL( SCIPlpiGetCoef(lpi, row, i, &rowafter) );
-         cr_assert_float_eq( rowbefore[i] * scale, rowafter, EPS,
-            "Found values: scale %.20f, rowbefore[i] %.20f, rowafter %.20f, i %d\n",
-            scale, rowbefore[i], rowafter, i );
-      }
-
-      SCIP_CALL( SCIPlpiGetSides(lpi, row, row, &lhsafter, &rhsafter) );
-
-      assertScaledSides(lhsbefore, lhsafter, rhsafter, scale);
-      assertScaledSides(rhsbefore, rhsafter, lhsafter, scale);
    }
+   theoryCleanup();
 }
 
 /** Test for SCIPlpiAddRows, SCIPlpiDelRowset, SCIPlpiDelRows */
-Test(change, testrowmethods)
+void test_change_testrowmethods(void)
 {
    /* problem data */
    SCIP_Real obj[5] = { 1.0, 1.0, 1.0, 1.0, 1.0 };
@@ -797,9 +846,9 @@ Test(change, testrowmethods)
 
          /* checks */
          SCIP_CALL( SCIPlpiGetRows(lpi, nrowsbefore, nrowsbefore - 1 + nrows, newlhs, newrhs, &newnnonz, newbeg, newind, newval) );
-         cr_assert_eq(nnonz, newnnonz, "expecting %d, got %d\n", nnonz, newnnonz);
+         TEST_ASSERT_EQUAL(nnonz, newnnonz, "expecting %d, got %d\n", nnonz, newnnonz);
 
-         cr_assert_arr_eq(beg, newbeg, nrows*sizeof(int));
+         TEST_ASSERT_EQUAL_MEMORY(beg, newbeg, nrows*sizeof(int));
 
          beg[nrows] = nnonz;
          newbeg[nrows] = newnnonz;
@@ -807,8 +856,8 @@ Test(change, testrowmethods)
          /* check each row seperately */
          for( j = 0; j < nrows; j++ )
          {
-            cr_assert_float_eq_inf(lhs[j], newlhs[j], 1e-16);
-            cr_assert_float_eq_inf(rhs[j], newrhs[j], 1e-16);
+            TEST_ASSERT_DOUBLE_WITHIN_INF(lhs[j], newlhs[j], 1e-16);
+            TEST_ASSERT_DOUBLE_WITHIN_INF(rhs[j], newrhs[j], 1e-16);
 
             /* We add a row where the indices are not sorted, some lp solvers give them back sorted (e.g. soplex), some others don't (e.g. cplex).
              * Therefore we cannot simply assert the ind and val arrays to be equal, but have to search for and check each value individually. */
@@ -822,31 +871,31 @@ Test(change, testrowmethods)
                   if( ind[indold] == newind[indnew] )
                   {
                      occurrences = occurrences + 1;
-                     cr_assert_float_eq( val[indold], newval[indnew], 1e-16, "expected %g got %g\n", val[indold], newval[indnew] );
+                     TEST_ASSERT_DOUBLE_WITHIN( val[indold], newval[indnew], 1e-16, "expected %g got %g\n", val[indold], newval[indnew] );
                   }
                }
                /* assert that we found only one occurrence in the current row */
-               cr_assert_eq(occurrences, 1);
+               TEST_ASSERT_EQUAL(occurrences, 1);
             }
          }
       }
 
       /* checks */
       SCIP_CALL( SCIPlpiGetNRows(lpi, &nrowsafter) );
-      cr_assert_eq(nrowsbefore + nrows, nrowsafter);
+      TEST_ASSERT_EQUAL(nrowsbefore + nrows, nrowsafter);
 
       SCIP_CALL( SCIPlpiGetNNonz(lpi, &nnonzsafter) );
-      cr_assert_eq(nnonzsbefore + nnonzsdiff[i], nnonzsafter, "nnonzsbefore %d, nnonzsafter %d, nnonzsdiff[i] %d, in iteration %d\n",
+      TEST_ASSERT_EQUAL(nnonzsbefore + nnonzsdiff[i], nnonzsafter, "nnonzsbefore %d, nnonzsafter %d, nnonzsdiff[i] %d, in iteration %d\n",
          nnonzsbefore, nnonzsafter, nnonzsdiff[i], i);
 
       SCIP_CALL( SCIPlpiGetNCols(lpi, &ncolsafter) );
-      cr_assert_eq(ncolsbefore, ncolsafter);
+      TEST_ASSERT_EQUAL(ncolsbefore, ncolsafter);
    }
 
    /* delete rowsets */
    /* should have 8 rows now */
    SCIP_CALL( SCIPlpiGetNRows(lpi, &nrowsbefore) );
-   cr_assert_eq(8, nrowsbefore);
+   TEST_ASSERT_EQUAL(8, nrowsbefore);
    for( i = 3; i > 0; i-- )
    {
       int rows[8] = { 0, 0, 0, 0, 0, 0, 0, 0 };
@@ -858,13 +907,13 @@ Test(change, testrowmethods)
       SCIP_CALL( SCIPlpiDelRowset(lpi, rows) );
       SCIP_CALL( SCIPlpiGetNRows(lpi, &nrowsafter) );
 
-      cr_assert_eq(nrowsbefore - i, nrowsafter);
+      TEST_ASSERT_EQUAL(nrowsbefore - i, nrowsafter);
       /* assert that the rows that are left are the ones I intended */
    }
 }
 
 /** Test for SCIPlpiAddCols, SCIPlpiDelColset, SCIPlpiDelCols */
-Test(change, testcolmethods)
+void test_change_testcolmethods(void)
 {
    /* problem data */
    SCIP_Real lhs[5] = { -1.0, -SCIPlpiInfinity(lpi), 0.0, -SCIPlpiInfinity(lpi), 0.0 };
@@ -942,31 +991,31 @@ Test(change, testcolmethods)
 
          /* checks */
          SCIP_CALL( SCIPlpiGetCols(lpi, ncolsbefore, ncolsbefore-1+ncols, newlb, newub, &newnnonz, newbeg, newind, newval) );
-         cr_assert_eq(nnonz, newnnonz, "expecting %d, got %d\n", nnonz, newnnonz);
+         TEST_ASSERT_EQUAL(nnonz, newnnonz, "expecting %d, got %d\n", nnonz, newnnonz);
 
-         cr_assert_arr_eq(lb, newlb, ncols*sizeof(SCIP_Real));
-         cr_assert_arr_eq(ub, newub, ncols*sizeof(SCIP_Real));
-         cr_assert_arr_eq(beg, newbeg, ncols*sizeof(int));
-         cr_assert_arr_eq(ind, newind, nnonz*sizeof(int));
-         cr_assert_arr_eq(val, newval, nnonz*sizeof(SCIP_Real));
+         TEST_ASSERT_EQUAL_MEMORY(lb, newlb, ncols*sizeof(SCIP_Real));
+         TEST_ASSERT_EQUAL_MEMORY(ub, newub, ncols*sizeof(SCIP_Real));
+         TEST_ASSERT_EQUAL_MEMORY(beg, newbeg, ncols*sizeof(int));
+         TEST_ASSERT_EQUAL_MEMORY(ind, newind, nnonz*sizeof(int));
+         TEST_ASSERT_EQUAL_MEMORY(val, newval, nnonz*sizeof(SCIP_Real));
       }
 
       /* checks */
       SCIP_CALL( SCIPlpiGetNRows(lpi, &nrowsafter) );
-      cr_assert_eq(nrowsbefore, nrowsafter);
+      TEST_ASSERT_EQUAL(nrowsbefore, nrowsafter);
 
       SCIP_CALL( SCIPlpiGetNNonz(lpi, &nnonzsafter) );
-      cr_assert_eq(nnonzsbefore+nnonzsdiff[i], nnonzsafter, "nnonzsbefore %d, nnonzsafter %d, nnonzsdiff[i] %d, in iteration %d\n",
+      TEST_ASSERT_EQUAL(nnonzsbefore+nnonzsdiff[i], nnonzsafter, "nnonzsbefore %d, nnonzsafter %d, nnonzsdiff[i] %d, in iteration %d\n",
          nnonzsbefore, nnonzsafter, nnonzsdiff[i], i);
 
       SCIP_CALL( SCIPlpiGetNCols(lpi, &ncolsafter) );
-      cr_assert_eq(ncolsbefore+ncols, ncolsafter);
+      TEST_ASSERT_EQUAL(ncolsbefore+ncols, ncolsafter);
    }
 
    /* delete rowsets */
    /* should have 8 rows now */
    SCIP_CALL( SCIPlpiGetNCols(lpi, &ncolsbefore) );
-   cr_assert_eq(8, ncolsbefore);
+   TEST_ASSERT_EQUAL(8, ncolsbefore);
    for( i = 3; i > 0; i-- )
    {
       int cols[8] = { 0, 0, 0, 0, 0, 0, 0, 0 };
@@ -978,13 +1027,13 @@ Test(change, testcolmethods)
       SCIP_CALL( SCIPlpiDelColset(lpi, cols) );
       SCIP_CALL( SCIPlpiGetNCols(lpi, &ncolsafter) );
 
-      cr_assert_eq(ncolsbefore - i, ncolsafter);
+      TEST_ASSERT_EQUAL(ncolsbefore - i, ncolsafter);
       /* assert that the rows that are left are the ones I intended */
    }
 }
 
 /** Test adding zero coeffs cols */
-Test(change, testzerosincols, .signal = SIGABRT)
+void test_change_testzerosincols(void)
 {
    int nrows;
    int ncols;
@@ -998,9 +1047,12 @@ Test(change, testzerosincols, .signal = SIGABRT)
    SCIP_Real obj[1] = { 1 };
 
    /* 2x2 problem */
-   cr_assume( initProb(4, &ncols, &nrows, &nnonz, &sense) );
-   cr_assume_eq( 2, nrows );
-   cr_assume_eq( 2, ncols );
+   if( !initProb(4, &ncols, &nrows, &nnonz, &sense) )
+      return;
+   if( 2 != nrows )
+      return;
+   if( 2 != ncols )
+      return;
 
    SCIP_CALL( SCIPlpiAddCols(lpi, 1, obj, lb, ub, NULL, nnonz, beg, ind, val) );
 
@@ -1014,7 +1066,7 @@ Test(change, testzerosincols, .signal = SIGABRT)
  *
  *  This test should fail with an assert from the LPI, which causes SIGABRT to be issued. Thus, this test should pass.
  */
-Test(change, testzerosinrows, .signal = SIGABRT)
+void test_change_testzerosinrows(void)
 {
    int nrows;
    int ncols;
@@ -1027,9 +1079,12 @@ Test(change, testzerosinrows, .signal = SIGABRT)
    SCIP_Real val[2] = { 0, 3 };
 
    /* 2x2 problem */
-   cr_assume( initProb(4, &ncols, &nrows, &nnonz, &sense) );
-   cr_assume_eq( 2, nrows );
-   cr_assume_eq( 2, ncols );
+   if( !initProb(4, &ncols, &nrows, &nnonz, &sense) )
+      return;
+   if( 2 != nrows )
+      return;
+   if( 2 != ncols )
+      return;
 
    SCIP_CALL( SCIPlpiAddRows(lpi, 1, lhs, rhs, NULL, nnonz, beg, ind, val) );
 
@@ -1040,7 +1095,7 @@ Test(change, testzerosinrows, .signal = SIGABRT)
 }
 
 /** test SCIPlpiWriteState, SCIPlpiClearState */
-Test(change, testlpiwritestatemethods)
+void test_change_testlpiwritestatemethods(void)
 {
    int nrows, ncols, nnonz;
    int cstat[2];
@@ -1049,7 +1104,8 @@ Test(change, testlpiwritestatemethods)
    SCIP_RETCODE retcode;
 
    /* 2x2 problem */
-   cr_assume( initProb(5, &ncols, &nrows, &nnonz, &sense) );
+   if( !initProb(5, &ncols, &nrows, &nnonz, &sense) )
+      return;
 
    SCIP_CALL( SCIPlpiSolvePrimal(lpi) );
 
@@ -1069,7 +1125,7 @@ Test(change, testlpiwritestatemethods)
 }
 
 /** test SCIPlpiWriteLP, SCIPlpiReadLP, SCIPlpiClear */
-Test(change, testlpiwritereadlpmethods)
+void test_change_testlpiwritereadlpmethods(void)
 {
    int nrows, ncols, nnonz;
    SCIP_Real objval;
@@ -1085,7 +1141,8 @@ Test(change, testlpiwritereadlpmethods)
    SCIP_OBJSEN sense;
 
    /* 2x2 problem */
-   cr_assume( initProb(5, &ncols, &nrows, &nnonz, &sense) );
+   if( !initProb(5, &ncols, &nrows, &nnonz, &sense) )
+      return;
 
    SCIP_CALL( SCIPlpiSolvePrimal(lpi) );
    SCIP_CALL( SCIPlpiGetSol(lpi, &objval, primsol, dualsol, activity, redcost) );
@@ -1097,11 +1154,11 @@ Test(change, testlpiwritereadlpmethods)
 
    SCIP_CALL( SCIPlpiSolvePrimal(lpi) );
    SCIP_CALL( SCIPlpiGetSol(lpi, &objval2, primsol2, dualsol2, activity2, redcost2) );
-   cr_assert_float_eq( objval, objval2, EPS );
-   cr_assert_arr_eq( primsol, primsol2, 2*sizeof(SCIP_Real) );
-   cr_assert_arr_eq( dualsol, dualsol2, 2*sizeof(SCIP_Real) );
-   cr_assert_arr_eq( activity, activity2, 2*sizeof(SCIP_Real) );
-   cr_assert_arr_eq( redcost, redcost2, 2*sizeof(SCIP_Real) );
+   TEST_ASSERT_DOUBLE_WITHIN( objval, objval2, EPS );
+   TEST_ASSERT_EQUAL_MEMORY( primsol, primsol2, 2*sizeof(SCIP_Real) );
+   TEST_ASSERT_EQUAL_MEMORY( dualsol, dualsol2, 2*sizeof(SCIP_Real) );
+   TEST_ASSERT_EQUAL_MEMORY( activity, activity2, 2*sizeof(SCIP_Real) );
+   TEST_ASSERT_EQUAL_MEMORY( redcost, redcost2, 2*sizeof(SCIP_Real) );
 
    SCIP_CALL( SCIPlpiWriteLP(lpi, "lpi_change_test_problem2.lp") );
    SCIP_CALL( SCIPlpiClear(lpi) );
@@ -1117,7 +1174,7 @@ Test(change, testlpiwritereadlpmethods)
 
       file = fopen("lpi_change_test_problem.lp", "r");
       file2 = fopen("lpi_change_test_problem2.lp", "r");
-      cr_assert_file_contents_eq(file, file2);
+      TEST_ASSERT_FILES_EQUAL(file, file2);
 
       fclose(file);
       fclose(file2);
@@ -1125,4 +1182,26 @@ Test(change, testlpiwritereadlpmethods)
 
    remove("lpi_change_test_problem.lp");
    remove("lpi_change_test_problem2.lp");
+}
+
+void setUp(void) { setup(); }
+
+void tearDown(void) { teardown(); }
+
+int main(void)
+{
+   UNITY_BEGIN();
+   RUN_TEST(test_change_testrowmethods);
+   RUN_TEST(test_change_testcolmethods);
+   /* testzerosincols and testzerosinrows expect SIGABRT which Unity can't handle */
+   RUN_TEST(test_change_testlpiwritestatemethods);
+   RUN_TEST(test_change_testlpiwritereadlpmethods);
+   RUN_TEST(test_change_testchgcoef);
+   RUN_TEST(test_change_testchgobjectives);
+   RUN_TEST(test_change_testchgbounds);
+   RUN_TEST(test_change_testchgsides);
+   RUN_TEST(test_change_testchgobjsen);
+   RUN_TEST(test_change_testscalecol);
+   RUN_TEST(test_change_testscalerow);
+   return UNITY_END();
 }

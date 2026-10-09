@@ -50,17 +50,29 @@ void teardown(void)
    SCIPfreeRandom(scip, &randnumgen);
    SCIP_CALL( SCIPfree(&scip) );
 
-   cr_assert_eq(BMSgetMemoryUsed(), 0, "There is a memory leak!");
+   TEST_ASSERT_EQUAL(BMSgetMemoryUsed(), 0, "There is a memory leak!");
 }
 
-TestSuite(bilinenvelope, .init = setup, .fini = teardown);
+void setUp(void)
+{
+   SOFT_ASSERT_RESET();
+   setup();
+}
+
+void tearDown(void)
+{
+   teardown();
+   SOFT_ASSERT_CHECK();
+}
+
+/* TESTS */
 
 /* test xy for
  *    x <= y
  *    x in [0,1]
  *    y in [0,1]
  */
-Test(bilinenvelope, gradcut1)
+void test_bilinenvelope_gradcut1(void)
 {
    SCIP_Real bilincoefs[6] = {1.0,   1.0,          1.0,             1.0,          -2.0,         -2.0};
    SCIP_Real refpointxs[6] = {0.5,   0.0,          0.02,            0.6,          0.5,          0.02};
@@ -82,10 +94,10 @@ Test(bilinenvelope, gradcut1)
       SCIPcomputeBilinEnvelope1(scip, bilincoefs[i], 0.0, 1.0, refpointxs[i], 0.0, 1.0, refpointys[i], overests[i], 1.0,
          1.0, 0.0, &coefx, &coefy, &constant, &success);
 
-      cr_expect(success == successs[i], "%d: got %u expect %u", i, success, successs[i]);
-      cr_expect(SCIPisEQ(scip, coefx, coefxs[i]));
-      cr_expect(SCIPisEQ(scip, coefy, coefys[i]));
-      cr_expect(SCIPisEQ(scip, constant, constants[i]));
+      SOFT_ASSERT(success == successs[i], "%d: got %u expect %u", i, success, successs[i]);
+      SOFT_ASSERT(SCIPisEQ(scip, coefx, coefxs[i]));
+      SOFT_ASSERT(SCIPisEQ(scip, coefy, coefys[i]));
+      SOFT_ASSERT(SCIPisEQ(scip, constant, constants[i]));
    }
 }
 
@@ -94,7 +106,7 @@ Test(bilinenvelope, gradcut1)
  *    x in [0.132186,0.434925]
  *    y in [0.471176,0.542986]
  */
-Test(bilinenvelope, gradcut2)
+void test_bilinenvelope_gradcut2(void)
 {
    SCIP_Real bilincoefs[6] = {1.0, 1.0, 1.0, 1.0, -3.0, 1.0};
    SCIP_Real refpointxs[6] = {0.25, 0.2, 0.25, 0.25, 0.25, 0.35};
@@ -115,15 +127,15 @@ Test(bilinenvelope, gradcut2)
       SCIPcomputeBilinEnvelope1(scip, bilincoefs[i], 0.132186, 0.434925, refpointxs[i], 0.471176, 0.542986, refpointys[i],
 	 overests[i], -1.0, 2.16749, -1.30287, &coefx, &coefy, &constant, &success);
 
-      cr_expect(success == successs[i]);
-      cr_expect(SCIPisEQ(scip, coefx, coefxs[i]));
-      cr_expect(SCIPisEQ(scip, coefy, coefys[i]));
-      cr_expect(SCIPisEQ(scip, constant, constants[i]));
+      SOFT_ASSERT(success == successs[i]);
+      SOFT_ASSERT(SCIPisEQ(scip, coefx, coefxs[i]));
+      SOFT_ASSERT(SCIPisEQ(scip, coefy, coefys[i]));
+      SOFT_ASSERT(SCIPisEQ(scip, constant, constants[i]));
    }
 }
 
 /* a numerically more challenging example */
-Test(bilinenvelope, numerics)
+void test_bilinenvelope_numerics(void)
 {
    SCIP_Real lbx, ubx, lby, uby;
    SCIP_Real alpha, beta, gamma;
@@ -149,14 +161,14 @@ Test(bilinenvelope, numerics)
    SCIPcomputeBilinEnvelope1(scip, -325.08, lbx, ubx, refpointx, lby, uby, refpointy, FALSE, alpha, beta, gamma,
       &coefx, &coefy, &constant, &success);
 
-   cr_expect(success);
-   cr_expect(SCIPisEQ(scip, coefx, -71.50944001201063));
-   cr_expect(SCIPisEQ(scip, coefy, -1449.1811847849826));
-   cr_expect(SCIPisEQ(scip, constant, 250.66525223781193));
+   TEST_ASSERT(success);
+   SOFT_ASSERT(SCIPisEQ(scip, coefx, -71.50944001201063));
+   SOFT_ASSERT(SCIPisEQ(scip, coefy, -1449.1811847849826));
+   SOFT_ASSERT(SCIPisEQ(scip, constant, 250.66525223781193));
 }
 
 /* tests bilinear envelope computation for underestimating c*xy when given two linear inequalities */
-Test(bilinenvelope, twoineqs_underestimate)
+void test_bilinenvelope_twoineqs_underestimate(void)
 {
    SCIP_Real lbx = -1.0;
    SCIP_Real ubx = 2.0;
@@ -189,20 +201,20 @@ Test(bilinenvelope, twoineqs_underestimate)
             alpha1, beta1, gamma1, alpha2, beta2, gamma2, &coefx, &coefy, &constant, &success);
 
       /* check status */
-      cr_expect(success == ressuccess[i], "%d: got %u expect %u\n", i, success, ressuccess[i]);
+      SOFT_ASSERT(success == ressuccess[i], "%d: got %u expect %u\n", i, success, ressuccess[i]);
 
       /* check coefficients and the constant if successful */
       if( success )
       {
-	 cr_expect(SCIPisEQ(scip, coefx, resx[i]*bilincoefs[i]));
-	 cr_expect(SCIPisEQ(scip, coefy, resy[i]*bilincoefs[i]));
-	 cr_expect(SCIPisEQ(scip, constant, resconst[i]*bilincoefs[i]));
+	 SOFT_ASSERT(SCIPisEQ(scip, coefx, resx[i]*bilincoefs[i]));
+	 SOFT_ASSERT(SCIPisEQ(scip, coefy, resy[i]*bilincoefs[i]));
+	 SOFT_ASSERT(SCIPisEQ(scip, constant, resconst[i]*bilincoefs[i]));
       }
    }
 }
 
 /* tests bilinear envelope computation for overestimating c*xy when given two linear inequalities */
-Test(bilinenvelope, twoineqs_overestimate)
+void test_bilinenvelope_twoineqs_overestimate(void)
 {
    SCIP_Real lbx = -10.0;
    SCIP_Real ubx = 20.0;
@@ -235,14 +247,25 @@ Test(bilinenvelope, twoineqs_overestimate)
             alpha1, beta1, gamma1, alpha2, beta2, gamma2, &coefx, &coefy, &constant, &success);
 
       /* check status */
-      cr_expect(success == ressuccess[i]);
+      SOFT_ASSERT(success == ressuccess[i]);
 
       /* check coefficients and the constant if successful */
       if( success )
       {
-	 cr_expect(SCIPisEQ(scip, coefx, resx[i]*bilincoefs[i]));
-	 cr_expect(SCIPisEQ(scip, coefy, resy[i]*bilincoefs[i]));
-	 cr_expect(SCIPisEQ(scip, constant, resconst[i]*bilincoefs[i]));
+	 SOFT_ASSERT(SCIPisEQ(scip, coefx, resx[i]*bilincoefs[i]));
+	 SOFT_ASSERT(SCIPisEQ(scip, coefy, resy[i]*bilincoefs[i]));
+	 SOFT_ASSERT(SCIPisEQ(scip, constant, resconst[i]*bilincoefs[i]));
       }
    }
+}
+
+int main(void)
+{
+   UNITY_BEGIN();
+   RUN_TEST(test_bilinenvelope_gradcut1);
+   RUN_TEST(test_bilinenvelope_gradcut2);
+   RUN_TEST(test_bilinenvelope_numerics);
+   RUN_TEST(test_bilinenvelope_twoineqs_underestimate);
+   RUN_TEST(test_bilinenvelope_twoineqs_overestimate);
+   return UNITY_END();
 }

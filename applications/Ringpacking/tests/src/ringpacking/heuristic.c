@@ -52,15 +52,15 @@ void teardown(void)
    /* free SCIP */
    SCIP_CALL( SCIPfree(&scip) );
 
-   cr_assert_null(scip);
-   cr_assert_eq(BMSgetMemoryUsed(), 0, "There is a memory leak!!");
+   TEST_ASSERT_NULL(scip);
+   TEST_ASSERT_EQUAL(0, BMSgetMemoryUsed(), "There is a memory leak!!");
 }
 
-/* test suite */
-TestSuite(heuristic, .init = setup, .fini = teardown);
+void setUp(void) { setup(); }
+void tearDown(void) { teardown(); }
 
 /* tests heuristic for a single circle */
-Test(heuristic, single)
+void test_heuristic_single(void)
 {
    SCIP_Real rext = 1.0;
    SCIP_Bool ispacked;
@@ -72,22 +72,22 @@ Test(heuristic, single)
    /* pack element into rectangle */
    SCIPpackCirclesGreedy(scip, &rext, &x, &y, -1.0, 2.0, 2.0, &ispacked, &elements, 1,
       SCIP_PATTERNTYPE_RECTANGULAR, &npacked, 0);
-   cr_expect(npacked == 1);
-   cr_expect(ispacked);
-   cr_expect(x == 1.0);
-   cr_expect(y == 1.0);
+   SOFT_ASSERT(npacked == 1);
+   SOFT_ASSERT(ispacked);
+   SOFT_ASSERT(x == 1.0);
+   SOFT_ASSERT(y == 1.0);
 
    /* pack element into ring */
    SCIPpackCirclesGreedy(scip, &rext, &x, &y, 2.0, -1.0, -1.0, &ispacked, &elements, 1,
       SCIP_PATTERNTYPE_CIRCULAR, &npacked, 0);
-   cr_expect(npacked == 1);
-   cr_expect(ispacked);
-   cr_expect(x == -1.0);
-   cr_expect(y == 0.0);
+   SOFT_ASSERT(npacked == 1);
+   SOFT_ASSERT(ispacked);
+   SOFT_ASSERT(x == -1.0);
+   SOFT_ASSERT(y == 0.0);
 }
 
 /* packs two different circle types into a rectangle */
-Test(heuristic, rectangle_two_types)
+void test_heuristic_rectangle_two_types(void)
 {
    SCIP_Real rexts[2] = {3.0, 0.45};
    SCIP_Real xs[5];
@@ -99,14 +99,14 @@ Test(heuristic, rectangle_two_types)
 
    SCIPpackCirclesGreedy(scip, rexts, xs, ys, -1.0, 6.0, 6.0, ispacked, elements, 5,
       SCIP_PATTERNTYPE_RECTANGULAR, &npacked, 0);
-   cr_expect(npacked == 5);
+   SOFT_ASSERT(npacked == 5);
 
    for( k = 0; k < 5; ++k )
-      cr_expect(ispacked[k]);
+      SOFT_ASSERT(ispacked[k]);
 }
 
 /* test optimal packing with two identical circles */
-Test(heuristic, opt_two)
+void test_heuristic_opt_two(void)
 {
    SCIP_Real rext = 1.0;
    SCIP_Real xs[2];
@@ -118,16 +118,16 @@ Test(heuristic, opt_two)
    /* pack into a ring */
    SCIPpackCirclesGreedy(scip, &rext, xs, ys, 2.0, -1.0, -1.0, ispacked, elements, 2,
       SCIP_PATTERNTYPE_CIRCULAR, &npacked, 0);
-   cr_expect(npacked == 2);
+   SOFT_ASSERT(npacked == 2);
 
    /* pack into a square */
    SCIPpackCirclesGreedy(scip, &rext, xs, ys, -1.0, 3.414213562373095, 3.414213562373095, ispacked, elements, 2,
       SCIP_PATTERNTYPE_RECTANGULAR, &npacked, 0);
-   cr_expect(npacked == 2);
+   SOFT_ASSERT(npacked == 2);
 }
 
 /* test optimal packing with three identical circles */
-Test(heuristic, opt_three)
+void test_heuristic_opt_three(void)
 {
    SCIP_Real rext = 1.0;
    SCIP_Real xs[3];
@@ -139,16 +139,16 @@ Test(heuristic, opt_three)
    /* pack into a ring */
    SCIPpackCirclesGreedy(scip, &rext, xs, ys, 2.1547005383792515, -1.0, -1.0, ispacked, elements, 3,
       SCIP_PATTERNTYPE_CIRCULAR, &npacked, 0);
-   cr_expect(npacked == 3);
+   SOFT_ASSERT(npacked == 3);
 
    /* pack into a square */
    SCIPpackCirclesGreedy(scip, &rext, xs, ys, -1.0, 3.9318516525781364, 3.9318516525781364, ispacked, elements, 3,
       SCIP_PATTERNTYPE_RECTANGULAR, &npacked, 0);
-   cr_expect(npacked == 3);
+   SOFT_ASSERT(npacked == 3);
 }
 
 /* test optimal packing with four identical circles */
-Test(heuristic, opt_four)
+void test_heuristic_opt_four(void)
 {
    SCIP_Real rext = 1.0;
    SCIP_Real xs[4];
@@ -160,16 +160,16 @@ Test(heuristic, opt_four)
    /* pack into a ring */
    SCIPpackCirclesGreedy(scip, &rext, xs, ys, 2.414213562373095, -1.0, -1.0, ispacked, elements, 4,
       SCIP_PATTERNTYPE_CIRCULAR, &npacked, 0);
-   cr_expect(npacked == 4);
+   SOFT_ASSERT(npacked == 4);
 
    /* pack into a square */
    SCIPpackCirclesGreedy(scip, &rext, xs, ys, -1.0, 4.0, 4.0, ispacked, elements, 4,
       SCIP_PATTERNTYPE_RECTANGULAR, &npacked, 0);
-   cr_expect(npacked >= 3); /* note that greedy fails for this example */
+   SOFT_ASSERT(npacked >= 3); /* note that greedy fails for this example */
 }
 
 /* test optimal packing with five identical circles */
-Test(heuristic, opt_five)
+void test_heuristic_opt_five(void)
 {
    SCIP_Real rext = 1.0;
    SCIP_Real xs[5];
@@ -181,16 +181,16 @@ Test(heuristic, opt_five)
    /* pack into a ring */
    SCIPpackCirclesGreedy(scip, &rext, xs, ys, 2.7013016167040798, -1.0, -1.0, ispacked, elements, 5,
       SCIP_PATTERNTYPE_CIRCULAR, &npacked, 0);
-   cr_expect(npacked >= 4); /* note that the greedy packing fails for the case of 5 circles */
+   SOFT_ASSERT(npacked >= 4); /* note that the greedy packing fails for the case of 5 circles */
 
    /* pack into a square */
    SCIPpackCirclesGreedy(scip, &rext, xs, ys, -1.0, 4.82842712474619, 4.82842712474619, ispacked, elements, 5,
       SCIP_PATTERNTYPE_RECTANGULAR, &npacked, 0);
-   cr_expect(npacked >= 4); /* note that greedy fails for this example */
+   SOFT_ASSERT(npacked >= 4); /* note that greedy fails for this example */
 }
 
 /* test optimal packing with fix identical circles */
-Test(heuristic, opt_six)
+void test_heuristic_opt_six(void)
 {
    SCIP_Real rext = 1.0;
    SCIP_Real xs[6];
@@ -202,16 +202,16 @@ Test(heuristic, opt_six)
    /* pack into a ring */
    SCIPpackCirclesGreedy(scip, &rext, xs, ys, 3.0, -1.0, -1.0, ispacked, elements, 6,
       SCIP_PATTERNTYPE_CIRCULAR, &npacked, 0);
-   cr_expect(npacked == 6);
+   SOFT_ASSERT(npacked == 6);
 
    /* pack into a square */
    SCIPpackCirclesGreedy(scip, &rext, xs, ys, -1.0, 5.328201177351374, 5.328201177351374, ispacked, elements, 6,
       SCIP_PATTERNTYPE_RECTANGULAR, &npacked, 0);
-   cr_expect(npacked >= 5); /* note that greedy fails for this example */
+   SOFT_ASSERT(npacked >= 5); /* note that greedy fails for this example */
 }
 
 /* test optimal packing with seven identical circles */
-Test(heuristic, opt_seven)
+void test_heuristic_opt_seven(void)
 {
    SCIP_Real rext = 1.0;
    SCIP_Real xs[7];
@@ -223,16 +223,16 @@ Test(heuristic, opt_seven)
    /* pack into a ring */
    SCIPpackCirclesGreedy(scip, &rext, xs, ys, 3.0, -1.0, -1.0, ispacked, elements, 7,
       SCIP_PATTERNTYPE_CIRCULAR, &npacked, 0);
-   cr_expect(npacked == 7);
+   SOFT_ASSERT(npacked == 7);
 
    /* pack into a square */
    SCIPpackCirclesGreedy(scip, &rext, xs, ys, -1.0, 5.732050807568877, 5.732050807568877, ispacked, elements, 7,
       SCIP_PATTERNTYPE_RECTANGULAR, &npacked, 0);
-   cr_expect(npacked >= 6); /* note that greedy fails for this example */
+   SOFT_ASSERT(npacked >= 6); /* note that greedy fails for this example */
 }
 
-/* test optimal packing with seven identical circles */
-Test(heuristic, opt_twenty)
+/* test optimal packing with twenty identical circles */
+void test_heuristic_opt_twenty(void)
 {
    SCIP_Real rext = 1.0;
    SCIP_Real xs[20];
@@ -244,16 +244,16 @@ Test(heuristic, opt_twenty)
    /* pack into a ring */
    SCIPpackCirclesGreedy(scip, &rext, xs, ys, 5.123, -1.0, -1.0, ispacked, elements, 20,
       SCIP_PATTERNTYPE_CIRCULAR, &npacked, 0);
-   cr_expect(npacked >= 18);
+   SOFT_ASSERT(npacked >= 18);
 
    /* pack into a square */
    SCIPpackCirclesGreedy(scip, &rext, xs, ys, -1.0, 8.978083352821738, 8.978083352821738, ispacked, elements, 20,
       SCIP_PATTERNTYPE_RECTANGULAR, &npacked, 0);
-   cr_expect(npacked >= 18); /* note that greedy fails for this example */
+   SOFT_ASSERT(npacked >= 18); /* note that greedy fails for this example */
 }
 
 /* tests a more complicated example */
-Test(heuristic, complex_1)
+void test_heuristic_complex_1(void)
 {
    SCIP_Real rexts[3] = {2.0, 1.0, 0.3};
    SCIP_Real xs[24];
@@ -265,10 +265,26 @@ Test(heuristic, complex_1)
    /* pack into a ring */
    SCIPpackCirclesGreedy(scip, rexts, xs, ys, 4.0, -1.0, -1.0, ispacked, elements, 24,
       SCIP_PATTERNTYPE_CIRCULAR, &npacked, 0);
-   cr_expect(npacked >= 24);
+   SOFT_ASSERT(npacked >= 24);
 
    /* pack into a square */
    SCIPpackCirclesGreedy(scip, rexts, xs, ys, -1.0, 7.7, 7.7, ispacked, elements, 24,
       SCIP_PATTERNTYPE_RECTANGULAR, &npacked, 0);
-   cr_expect(npacked >= 24);
+   SOFT_ASSERT(npacked >= 24);
+}
+
+int main(void)
+{
+   UNITY_BEGIN();
+   RUN_TEST(test_heuristic_single);
+   RUN_TEST(test_heuristic_rectangle_two_types);
+   RUN_TEST(test_heuristic_opt_two);
+   RUN_TEST(test_heuristic_opt_three);
+   RUN_TEST(test_heuristic_opt_four);
+   RUN_TEST(test_heuristic_opt_five);
+   RUN_TEST(test_heuristic_opt_six);
+   RUN_TEST(test_heuristic_opt_seven);
+   RUN_TEST(test_heuristic_opt_twenty);
+   RUN_TEST(test_heuristic_complex_1);
+   return UNITY_END();
 }

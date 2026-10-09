@@ -31,9 +31,8 @@
 #include "scip/expr_exp.c"
 #include "../estimation.h"
 
-Test(estimation, exponential, .init = setup, .fini = teardown,
-   .description = "test estimation for an exponential expression"
-   )
+/** @brief test estimation for an exponential expression */
+void test_estimation_exponential(void)
 {
    SCIP_EXPR* expr;
    SCIP_Real coef;
@@ -56,11 +55,11 @@ Test(estimation, exponential, .init = setup, .fini = teardown,
    branchcand = TRUE;
    SCIP_CALL( estimateExp(scip, expr, &bnd, &bnd, &xval, TRUE, -SCIPinfinity(scip), &coef, &constant, &local, &success, &branchcand) );
 
-   cr_assert(success);
-   cr_assert_float_eq(constant, (exp(5) + 5 * exp(-1)) / 6.0, SCIPepsilon(scip));
-   cr_assert_float_eq(coef, (exp(5) - exp(-1)) / 6.0, SCIPepsilon(scip));
-   cr_assert(local);
-   cr_assert(branchcand);
+   TEST_ASSERT(success);
+   SOFT_ASSERT_DOUBLE_WITHIN(constant, (exp(5) + 5 * exp(-1)) / 6.0, SCIPepsilon(scip));
+   SOFT_ASSERT_DOUBLE_WITHIN(coef, (exp(5) - exp(-1)) / 6.0, SCIPepsilon(scip));
+   SOFT_ASSERT(local);
+   SOFT_ASSERT(branchcand);
 
    /* compute an underestimation (linearization) */
    xval = 2.0;
@@ -68,12 +67,23 @@ Test(estimation, exponential, .init = setup, .fini = teardown,
    branchcand = TRUE;
    SCIP_CALL( estimateExp(scip, expr, &bnd, &bnd, &xval, FALSE, SCIPinfinity(scip), &coef, &constant, &local, &success, &branchcand) );
 
-   cr_assert(success);
-   cr_assert_float_eq(constant, -exp(2), SCIPepsilon(scip));
-   cr_assert_float_eq(coef, exp(2), SCIPepsilon(scip));
-   cr_assert(!local);
-   cr_assert(!branchcand);
+   TEST_ASSERT(success);
+   SOFT_ASSERT_DOUBLE_WITHIN(constant, -exp(2), SCIPepsilon(scip));
+   SOFT_ASSERT_DOUBLE_WITHIN(coef, exp(2), SCIPepsilon(scip));
+   SOFT_ASSERT(!local);
+   SOFT_ASSERT(!branchcand);
 
    /* release expression */
    SCIP_CALL( SCIPreleaseExpr(scip, &expr) );
+}
+
+void setUp(void) { setup(); }
+
+void tearDown(void) { teardown(); }
+
+int main(void)
+{
+   UNITY_BEGIN();
+   RUN_TEST(test_estimation_exponential);
+   return UNITY_END();
 }

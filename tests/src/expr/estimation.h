@@ -30,9 +30,6 @@
 
 #define _USE_MATH_DEFINES   /* to get M_PI on Windows */
 
-#define EXPECTFEQ(a,b) cr_expect_float_eq(a, b, 1e-6, "%s = %g != %g (dif %g)", #a, a, b, ABS(a-b))
-
-#include <strings.h>
 #include <math.h>
 
 #include "scip/scip.h"
@@ -121,5 +118,5 @@ void teardown(void)
    SCIP_CALL( SCIPreleaseVar(scip, &x) );
    SCIP_CALL( SCIPfree(&scip) );
 
-   cr_assert_eq(BMSgetMemoryUsed(), 0, "Memory is leaking!!");
+   TEST_ASSERT_EQUAL(BMSgetMemoryUsed(), 0, "Memory is leaking!!");
 }

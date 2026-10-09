@@ -61,12 +61,10 @@ void teardown(void)
    SCIP_CALL( SCIPreleaseVar(scip, &y) );
    SCIP_CALL( SCIPfree(&scip) );
 
-   cr_assert_eq(BMSgetMemoryUsed(), 0, "Memory leak!!");
+   TEST_ASSERT_EQUAL(BMSgetMemoryUsed(), 0, "Memory leak!!");
 }
 
-TestSuite(parse, .init = setup, .fini = teardown);
-
-Test(parse, constraint_with_spaces)
+void test_parse_constraint_with_spaces(void)
 {
    SCIP_CONS* cons;
    SCIP_Bool success;
@@ -76,10 +74,10 @@ Test(parse, constraint_with_spaces)
    success = FALSE;
    SCIP_CALL( SCIPparseCons(scip, &cons, input,
       TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, &success) );
-   cr_assert(success);
+   TEST_ASSERT(success);
 
-   cr_expect_eq(SCIPgetLhsNonlinear(cons), 1.0);
-   cr_expect_eq(SCIPgetRhsNonlinear(cons), SCIPinfinity(scip));
+   SOFT_ASSERT_EQUAL(SCIPgetLhsNonlinear(cons), 1.0);
+   SOFT_ASSERT_EQUAL(SCIPgetRhsNonlinear(cons), SCIPinfinity(scip));
    /* TODO there should be some test that the expression was parsed ok, too */
 
    /* print constraint */
@@ -91,7 +89,7 @@ Test(parse, constraint_with_spaces)
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
 }
 
-Test(parse, constraint_with_sides)
+void test_parse_constraint_with_sides(void)
 {
    SCIP_CONS* cons;
    SCIP_Bool success;
@@ -101,10 +99,10 @@ Test(parse, constraint_with_sides)
    success = FALSE;
    SCIP_CALL( SCIPparseCons(scip, &cons, input,
       TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, &success) );
-   cr_assert(success);
+   TEST_ASSERT(success);
 
-   cr_expect_eq(SCIPgetLhsNonlinear(cons), 1.0);
-   cr_expect_eq(SCIPgetRhsNonlinear(cons), 2.0);
+   SOFT_ASSERT_EQUAL(SCIPgetLhsNonlinear(cons), 1.0);
+   SOFT_ASSERT_EQUAL(SCIPgetRhsNonlinear(cons), 2.0);
    /* TODO there should be some test that the expression was parsed ok, too */
 
    /* print constraint */
@@ -114,4 +112,16 @@ Test(parse, constraint_with_sides)
 
    /* release constraint */
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
+}
+
+void setUp(void) { setup(); }
+
+void tearDown(void) { teardown(); }
+
+int main(void)
+{
+   UNITY_BEGIN();
+   RUN_TEST(test_parse_constraint_with_spaces);
+   RUN_TEST(test_parse_constraint_with_sides);
+   return UNITY_END();
 }

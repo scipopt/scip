@@ -59,11 +59,11 @@ void setup(void)
    SCIP_CALL( SCIPincludeDefaultPlugins(scip) );
 
    conshdlr = SCIPfindConshdlr(scip, "nonlinear");
-   cr_assert_not_null(conshdlr);
+   TEST_ASSERT_NOT_NULL(conshdlr);
 
    /* get nlhdlr */
    nlhdlr = SCIPfindNlhdlrNonlinear(conshdlr, CONCAVE_NLHDLR_NAME);
-   cr_assert_not_null(nlhdlr);
+   TEST_ASSERT_NOT_NULL(nlhdlr);
 
    /* enable quadratic convexity check */
    SCIP_CALL( SCIPsetBoolParam(scip, "nlhdlr/concave/cvxquadratic", TRUE) );
@@ -95,7 +95,7 @@ void teardown(void)
    SCIP_CALL( SCIPfree(&scip) );
 
    BMSdisplayMemory();
-   cr_assert_eq(BMSgetMemoryUsed(), 0, "Memory is leaking!!");
+   TEST_ASSERT_EQUAL(BMSgetMemoryUsed(), 0, "Memory is leaking!!");
 }
 
 /** given a string for f(x) and its curvature, run nlhdlr_concave detect on f(x) = 0 and see whether that gives correct flags */
@@ -120,7 +120,7 @@ SCIP_RETCODE detect(
    if( simplify )
    {
       SCIP_CALL( SCIPsimplifyExpr(scip, oexpr, &expr, &changed, &infeas, NULL, NULL) );
-      cr_expect(!infeas);
+      SOFT_ASSERT(!infeas);
       SCIP_CALL( SCIPreleaseExpr(scip, &oexpr) );
    }
    else
@@ -137,20 +137,20 @@ SCIP_RETCODE detect(
    participating = SCIP_NLHDLR_METHOD_NONE;
    SCIP_CALL( nlhdlrDetectConcave(scip, conshdlr, nlhdlr, expr, cons, &enforcing, &participating, &nlhdlrexprdata) );
 
-   cr_expect_eq(enforcing, participating);
+   SOFT_ASSERT_EQUAL(enforcing, participating);
    if( (exprrootcurv & SCIP_EXPRCURV_CONVEX) != 0 )
    {
-      cr_expect((enforcing & SCIP_NLHDLR_METHOD_SEPAABOVE) != 0);
+      SOFT_ASSERT((enforcing & SCIP_NLHDLR_METHOD_SEPAABOVE) != 0);
    }
 
    if( (exprrootcurv & SCIP_EXPRCURV_CONCAVE) != 0 )
    {
-      cr_expect((enforcing & SCIP_NLHDLR_METHOD_SEPABELOW) != 0);
+      SOFT_ASSERT((enforcing & SCIP_NLHDLR_METHOD_SEPABELOW) != 0);
    }
 
    if( participating != SCIP_NLHDLR_METHOD_NONE )
    {
-      cr_assert_not_null(nlhdlrexprdata);
+      TEST_ASSERT_NOT_NULL(nlhdlrexprdata);
       SCIP_CALL( nlhdlrfreeExprDataConvexConcave(scip, nlhdlr, expr, &nlhdlrexprdata) );
    }
 
@@ -160,7 +160,7 @@ SCIP_RETCODE detect(
 }
 
 /* tests detection of convex/concave subexpressions */
-Test(nlhdlrconcave, detect, .init = setup, .fini = teardown)
+void test_nlhdlrconcave_detect(void)
 {
    detect("exp(exp(<x1>))", SCIP_EXPRCURV_CONVEX, FALSE);
    detect("exp(exp(log(<x1>)))", SCIP_EXPRCURV_CONVEX, FALSE);
@@ -187,4 +187,15 @@ Test(nlhdlrconcave, detect, .init = setup, .fini = teardown)
    detect("log(-<x1>^2-<x2>^2-2*<x1>*<x2>-<x3>^2)", SCIP_EXPRCURV_CONCAVE, FALSE);
    if( SCIPisIpoptAvailableIpopt() )
       detect("-2*<x1>^2+<x1>*<x2>-2*<x2>^2", SCIP_EXPRCURV_CONCAVE, TRUE);
+}
+
+void setUp(void) { setup(); }
+
+void tearDown(void) { teardown(); }
+
+int main(void)
+{
+   UNITY_BEGIN();
+   RUN_TEST(test_nlhdlrconcave_detect);
+   return UNITY_END();
 }

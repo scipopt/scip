@@ -49,17 +49,17 @@ void teardown(void)
    /* free SCIP */
    SCIP_CALL( SCIPfree(&scip) );
    /* check for memory leaks */
-   cr_assert_eq(BMSgetMemoryUsed(), 0, "There is a memory leak!");
+   TEST_ASSERT_EQUAL(BMSgetMemoryUsed(), 0, "There is a memory leak!");
 }
 
-TestSuite(dual, .init = setup, .fini = teardown);
 
-Test(dual, duallimit_min, .description = "tests dual limit for minimization")
+/** @brief tests dual limit for minimization */
+void test_dual_duallimit_min(void)
 {
    const SCIP_Real target = 66;
    SCIP_Real duallimit;
 
-   cr_assert_not_null(scip);
+   TEST_ASSERT_NOT_NULL(scip);
    SCIP_CALL( SCIPsetRealParam(scip, "limits/dual", target) );
    /* turn on aggressive separators to get more limit candidates */
    SCIP_CALL( SCIPsetSeparating(scip, SCIP_PARAMSETTING_AGGRESSIVE, TRUE) );
@@ -68,19 +68,20 @@ Test(dual, duallimit_min, .description = "tests dual limit for minimization")
    SCIP_CALL( SCIPreadProb(scip, "../check/instances/MIP/rgn.mps", NULL) );
    SCIP_CALL( SCIPsolve(scip) );
 
-   cr_assert_eq(SCIPgetStatus(scip), SCIP_STATUS_DUALLIMIT, "SCIP terminated with status %d but should have terminated with status %d", SCIPgetStatus(scip), SCIP_STATUS_DUALLIMIT);
+   TEST_ASSERT_EQUAL(SCIPgetStatus(scip), SCIP_STATUS_DUALLIMIT, "SCIP terminated with status %d but should have terminated with status %d", SCIPgetStatus(scip), SCIP_STATUS_DUALLIMIT);
    duallimit = SCIPgetDualbound(scip);
-   cr_assert_geq(duallimit, target, "Dual bound is %f but should be at least %f", duallimit, target);
+   TEST_ASSERT_GREATER_OR_EQUAL(duallimit, target, "Dual bound is %f but should be at least %f", duallimit, target);
    SCIP_CALL( SCIPgetRealParam(scip, "limits/dual", &duallimit) );
-   cr_assert_eq(duallimit, target, "Dual limit is %f but should be %f", duallimit, target);
+   TEST_ASSERT_EQUAL(duallimit, target, "Dual limit is %f but should be %f", duallimit, target);
 }
 
-Test(dual, duallimit_max, .description = "tests dual limit for maximization")
+/** @brief tests dual limit for maximization */
+void test_dual_duallimit_max(void)
 {
    const SCIP_Real target = 30;
    SCIP_Real duallimit;
 
-   cr_assert_not_null(scip);
+   TEST_ASSERT_NOT_NULL(scip);
    SCIP_CALL( SCIPsetRealParam(scip, "limits/dual", target) );
    /* turn on aggressive separators to get more limit candidates */
    SCIP_CALL( SCIPsetSeparating(scip, SCIP_PARAMSETTING_AGGRESSIVE, TRUE) );
@@ -89,9 +90,22 @@ Test(dual, duallimit_max, .description = "tests dual limit for maximization")
    SCIP_CALL( SCIPreadProb(scip, "../check/instances/Symmetry/packorb_1-FullIns_3.cip", NULL) );
    SCIP_CALL( SCIPsolve(scip) );
 
-   cr_assert_eq(SCIPgetStatus(scip), SCIP_STATUS_DUALLIMIT, "SCIP terminated with status %d but should have terminated with status %d", SCIPgetStatus(scip), SCIP_STATUS_DUALLIMIT);
+   TEST_ASSERT_EQUAL(SCIPgetStatus(scip), SCIP_STATUS_DUALLIMIT, "SCIP terminated with status %d but should have terminated with status %d", SCIPgetStatus(scip), SCIP_STATUS_DUALLIMIT);
    duallimit = SCIPgetDualbound(scip);
-   cr_assert_leq(duallimit, target, "Dual bound is %f but should be at most %f", duallimit, target);
+   TEST_ASSERT_LESS_OR_EQUAL(duallimit, target, "Dual bound is %f but should be at most %f", duallimit, target);
    SCIP_CALL( SCIPgetRealParam(scip, "limits/dual", &duallimit) );
-   cr_assert_eq(duallimit, target, "Dual limit is %f but should be %f", duallimit, target);
+   TEST_ASSERT_EQUAL(duallimit, target, "Dual limit is %f but should be %f", duallimit, target);
+}
+
+void setUp(void) { setup(); }
+
+void tearDown(void) { teardown(); }
+
+int main(void)
+{
+   UNITY_BEGIN();
+   RUN_TEST(test_dual_duallimit_min
+);
+   RUN_TEST(test_dual_duallimit_max);
+   return UNITY_END();
 }

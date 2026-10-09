@@ -34,7 +34,7 @@
 
 /* TESTS  */
 
-Test(fixedvar, check)
+void test_fixedvar_check(void)
 {
    SCIP* scip;
    SCIP_VAR* x;
@@ -64,9 +64,9 @@ Test(fixedvar, check)
 
    /* aggregate x = 1.0 + 2e5 y */
    SCIP_CALL( SCIPaggregateVars(scip, x, y, 1.0, -0.2 / SCIPfeastol(scip), 1.0, &infeas, &redundant, &aggregated) );
-   cr_expect(!infeas);
-   cr_expect(redundant);
-   cr_expect(aggregated);
+   SOFT_ASSERT(!infeas);
+   SOFT_ASSERT(redundant);
+   SOFT_ASSERT(aggregated);
 
    /* SCIP_CALL( SCIPprintTransProblem(scip, NULL, NULL, FALSE) ); */
 
@@ -77,12 +77,12 @@ Test(fixedvar, check)
    /* without cons_fixedvar, this solution is feasible */
    SCIP_CALL( SCIPsetBoolParam(scip, "constraints/fixedvar/enabled", FALSE) );
    SCIP_CALL( SCIPcheckSol(scip, sol, TRUE, TRUE, TRUE, TRUE, TRUE, &feasible) );
-   cr_expect(feasible);
+   SOFT_ASSERT(feasible);
 
    /* with cons_fixedvar, it is not feasible */
    SCIP_CALL( SCIPsetBoolParam(scip, "constraints/fixedvar/enabled", TRUE) );
    SCIP_CALL( SCIPcheckSol(scip, sol, TRUE, TRUE, TRUE, TRUE, TRUE, &feasible) );
-   cr_expect(!feasible);
+   SOFT_ASSERT(!feasible);
 
    /* free */
    SCIP_CALL( SCIPfreeSol(scip, &sol) );
@@ -93,7 +93,7 @@ Test(fixedvar, check)
    SCIP_CALL( SCIPfree(&scip) );
 }
 
-Test(fixedvar, enforce)
+void test_fixedvar_enforce(void)
 {
    SCIP* scip;
    SCIP_VAR* x;
@@ -140,9 +140,9 @@ Test(fixedvar, enforce)
 
    /* aggregate x = 1.0 + 2e5 y */
    SCIP_CALL( SCIPaggregateVars(scip, x, y, 1.0, -0.2 / SCIPfeastol(scip), 1.0, &infeas, &redundant, &aggregated) );
-   cr_expect(!infeas);
-   cr_expect(redundant);
-   cr_expect(aggregated);
+   SOFT_ASSERT(!infeas);
+   SOFT_ASSERT(redundant);
+   SOFT_ASSERT(aggregated);
 
    /* SCIP_CALL( SCIPprintTransProblem(scip, NULL, NULL, FALSE) ); */
 
@@ -160,25 +160,25 @@ Test(fixedvar, enforce)
 
    /* due to cons_fixedvar, this is not feasible */
    SCIP_CALL( SCIPcheckSol(scip, sol, TRUE, TRUE, TRUE, TRUE, TRUE, &feasible) );
-   cr_expect(!feasible);
-   cr_expect(SCIPgetNCuts(scip) == 0);
+   SOFT_ASSERT(!feasible);
+   SOFT_ASSERT(SCIPgetNCuts(scip) == 0);
 
    /* enforce solution via the enforelax callback of cons_fixedvar */
    conshdlr = SCIPfindConshdlr(scip, "fixedvar");
-   cr_assert_not_null(conshdlr);
+   TEST_ASSERT_NOT_NULL(conshdlr);
    SCIP_CALL( conshdlr->consenforelax(scip, sol, conshdlr, NULL, 0, 0, FALSE, &result) );
 
    /* we should now have 1 cut to enforce bounds [0,1] on x: 0 <= 2e5 y + 1 <= 1 */
-   cr_expect_eq(result, SCIP_SEPARATED);
-   cr_assert(SCIPgetNCuts(scip) == 1);
+   SOFT_ASSERT_EQUAL(result, SCIP_SEPARATED);
+   TEST_ASSERT(SCIPgetNCuts(scip) == 1);
    cut = SCIPgetCuts(scip)[0];
    SCIP_CALL( SCIPprintRow(scip, cut, NULL) );
-   cr_expect_eq(SCIProwGetLhs(cut), 0.0);
-   cr_expect_eq(SCIProwGetConstant(cut), 1.0);
-   cr_expect_eq(SCIProwGetRhs(cut), 1.0);
-   cr_assert(SCIProwGetNNonz(cut) == 1);
-   cr_expect_float_eq(SCIProwGetVals(cut)[0], 0.2 / SCIPfeastol(scip), SCIPepsilon(scip));
-   cr_expect_eq(SCIProwGetCols(cut)[0], SCIPvarGetCol(SCIPvarGetTransVar(y)));
+   SOFT_ASSERT_EQUAL(SCIProwGetLhs(cut), 0.0);
+   SOFT_ASSERT_EQUAL(SCIProwGetConstant(cut), 1.0);
+   SOFT_ASSERT_EQUAL(SCIProwGetRhs(cut), 1.0);
+   TEST_ASSERT(SCIProwGetNNonz(cut) == 1);
+   SOFT_ASSERT_DOUBLE_WITHIN(SCIProwGetVals(cut)[0], 0.2 / SCIPfeastol(scip), SCIPepsilon(scip));
+   SOFT_ASSERT_EQUAL(SCIProwGetCols(cut)[0], SCIPvarGetCol(SCIPvarGetTransVar(y)));
 
    /* free */
    SCIP_CALL( SCIPclearCuts(scip) );
@@ -190,4 +190,16 @@ Test(fixedvar, enforce)
    SCIP_CALL( SCIPreleaseVar(scip , &x) );
 
    SCIP_CALL( SCIPfree(&scip) );
+}
+
+void setUp(void) { }
+
+void tearDown(void) { }
+
+int main(void)
+{
+   UNITY_BEGIN();
+   RUN_TEST(test_fixedvar_check);
+   RUN_TEST(test_fixedvar_enforce);
+   return UNITY_END();
 }

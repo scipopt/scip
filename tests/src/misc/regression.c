@@ -44,7 +44,7 @@ void testRegressionSlope(
    SCIP_Real regression_slope = SCIPregressionGetSlope(regression);
 
    /* test slope of regression */
-   cr_assert_float_eq(value, regression_slope, EPS,
+   TEST_ASSERT_DOUBLE_WITHIN(regression_slope, value, EPS,
          "Slope <%.1f> and regression slope <%.4f> are not equal within tolerance.\n", value, regression_slope);
 }
 
@@ -57,7 +57,7 @@ void testRegressionIntercept(
    SCIP_Real regression_intercept = SCIPregressionGetIntercept(regression);
 
    /* test intercept of regression */
-   cr_assert_float_eq(value, regression_intercept, EPS,
+   TEST_ASSERT_DOUBLE_WITHIN(regression_intercept, value, EPS,
          "Y intercept <%.1f> and regression intercept <%.4f> are not equal within tolerance.\n", value, regression_intercept);
 }
 
@@ -81,7 +81,7 @@ void setup(void)
 {
    regression = NULL;
    SCIP_CALL( SCIPregressionCreate(&regression) );
-   cr_assert_not_null(regression);
+   TEST_ASSERT_NOT_NULL(regression);
 }
 
 static
@@ -89,19 +89,28 @@ void teardown(void)
 {
    SCIPregressionFree(&regression);
 
-   cr_assert_null(regression);
-   cr_assert_eq(BMSgetMemoryUsed(), 0, "There is are memory leak!!");
+   TEST_ASSERT_NULL(regression);
+   TEST_ASSERT_EQUAL(BMSgetMemoryUsed(), 0, "There is are memory leak!!");
 }
 
-TestSuite(reg, .init = setup, .fini = teardown);
+void setUp(void)
+{
+   setup();
+}
+
+void tearDown(void)
+{
+   teardown();
+}
 
 /* TESTS  */
-Test(reg, create_and_free)
+void test_reg_create_and_free(void)
 {
    /* calls setup and teardown */
 }
 
-Test(reg, line_properties, .description = "determine regression of a cloud of points that is actually a line")
+/** @brief determine regression of a cloud of points that is actually a line */
+void test_reg_line_properties(void)
 {
    int x;
    SCIP_Real slope = .5;
@@ -118,7 +127,8 @@ Test(reg, line_properties, .description = "determine regression of a cloud of po
    testRegressionSlopeAndIntercept(regression, slope, yintercept);
 }
 
-Test(reg, all_point_equal, .description = "tests that there is no best-fit line when all points are equal")
+/** @brief tests that there is no best-fit line when all points are equal */
+void test_reg_all_point_equal(void)
 {
    int i;
    SCIP_Real x = 0;
@@ -134,7 +144,8 @@ Test(reg, all_point_equal, .description = "tests that there is no best-fit line 
 /* test for same Y's over many observations. In this case, the best fit line is horizontal, i.e. it has zero slope
  * and a y-intercept equal to the average y-value
  */
-Test(reg, horizontal_line, .description = "tests properties of regression on a horizontal line")
+/** @brief tests properties of regression on a horizontal line */
+void test_reg_horizontal_line(void)
 {
    int i;
    SCIP_Real x = 0;
@@ -155,7 +166,8 @@ Test(reg, horizontal_line, .description = "tests properties of regression on a h
 /* test for same X values over many points. In this case, a best fit line is the vertical line going through
  * the mean value of the X observations, with infinite slope and no y-intercept
  */
-Test(reg, vertical_line, .description = "tests properties of regression on a horizontal line")
+/** @brief tests properties of regression on a horizontal line */
+void test_reg_vertical_line(void)
 {
    int i;
    SCIP_Real x = 42;
@@ -173,7 +185,8 @@ Test(reg, vertical_line, .description = "tests properties of regression on a hor
    testRegressionSlopeAndIntercept(regression, SCIP_INVALID, SCIP_INVALID);
 }
 
-Test(reg, zero_one_obs, .description = "tests that slope and intercept are SCIP_INVALID for zero or one observation")
+/** @brief tests that slope and intercept are SCIP_INVALID for zero or one observation */
+void test_reg_zero_one_obs(void)
 {
    do
    {
@@ -186,7 +199,8 @@ Test(reg, zero_one_obs, .description = "tests that slope and intercept are SCIP_
 /* test that observations on a straight line from which you remove some observations still fits
  * the remaining points
  */
-Test(reg, removing_points, .description = "tests removal of regression observations")
+/** @brief tests removal of regression observations */
+void test_reg_removing_points(void)
 {
    int i;
    SCIP_Real slope = 0.4;
@@ -202,4 +216,17 @@ Test(reg, removing_points, .description = "tests removal of regression observati
       SCIPregressionRemoveObservation(regression, i, slope * i + intercept);
 
    testRegressionSlopeAndIntercept(regression, slope, intercept);
+}
+
+int main(void)
+{
+   UNITY_BEGIN();
+   RUN_TEST(test_reg_create_and_free);
+   RUN_TEST(test_reg_line_properties);
+   RUN_TEST(test_reg_all_point_equal);
+   RUN_TEST(test_reg_horizontal_line);
+   RUN_TEST(test_reg_vertical_line);
+   RUN_TEST(test_reg_zero_one_obs);
+   RUN_TEST(test_reg_removing_points);
+   return UNITY_END();
 }

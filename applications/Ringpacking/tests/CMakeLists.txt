@@ -34,111 +34,105 @@ include(CTest)
 set(CMAKE_C_STANDARD 99)
 set(CMAKE_C_STANDARD_REQUIRED on)
 
-# path to CMake modules
-list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/../../../cmake/Modules)
-
-# find Criterion
-find_package(CRITERION)
+#
+# Unity test framework source file
+#
+set(UNITY_SRC ${CMAKE_CURRENT_SOURCE_DIR}/../../../tests/unity/unity.c)
 
 #
-# unit tests depend on the presence of the Criterion framework
+# glob recurse into the src/ subdirectory and collect all C-files
 #
-if( CRITERION_FOUND )
+file(GLOB_RECURSE TEST_SRCS RELATIVE ${CMAKE_CURRENT_SOURCE_DIR}/src
+  ${CMAKE_CURRENT_SOURCE_DIR}/src/*.c)
+
+#
+# include the current source directory for test specific implementations,
+# and the source directory of the parent SCIP directory to be able to include C-sources of SCIP
+# into our unittests
+#
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}
+  ${CMAKE_CURRENT_SOURCE_DIR}/../src
+  ${CMAKE_CURRENT_SOURCE_DIR}/../../../src
+  ${CMAKE_CURRENT_SOURCE_DIR}/../../../tests)
+
+# link to math library if it is available
+find_library(LIBM m)
+if(NOT LIBM)
+  set(LIBM "")
+endif()
+
+#
+# Prepare unit test executable for every source file
+#
+foreach(testSrc ${TEST_SRCS})
+  #
+  # extract the filename without an extension and directory (NAME_WE)
+  # and extract the directory name (DIRECTORY) in dedicated variables.
+  #
+  get_filename_component(testName ${testSrc} NAME_WE)
+  get_filename_component(dir ${testSrc} DIRECTORY)
 
   #
-  # glob recurse into the src/ subdirectory and collect all C-files
+  # replace forward slashes by hyphens
   #
-  file(GLOB_RECURSE TEST_SRCS RELATIVE ${CMAKE_CURRENT_SOURCE_DIR}/src
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/*.c)
+  string(REPLACE "/" "-" dirhyphen ${dir})
+  set(testName "unittest-${dirhyphen}-${testName}")
 
   #
-  # besides Criterion, we also include the current source directory for test specific implementations,
-  # and the source directory of the parent SCIP directory to be able to include C-sources of SCIP
-  # into our unittests
+  # add compile target (include Unity source)
   #
-  include_directories(${CRITERION_INCLUDE_DIRS} ${CMAKE_CURRENT_SOURCE_DIR}
-    ${CMAKE_CURRENT_SOURCE_DIR}/../src
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../../src
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../../tests)
-
-  # link to math library if it is available
-  find_library(LIBM m)
-  if(NOT LIBM)
-    set(LIBM "")
-  endif()
+  add_executable(${testName} src/${testSrc}
+    ${UNITY_SRC}
+    ../src/reader_rpa.c
+    ../src/probdata_rpa.c
+    ../src/pricer_rpa.c
+    ../src/cons_rpa.c
+    ../src/pattern.c
+  )
 
   #
-  # Prepare unit test executable for every source file
+  # link the executable against the SCIP library target
   #
-  foreach(testSrc ${TEST_SRCS})
-    #
-    # extract the filename without an extension and directory (NAME_WE)
-    # and extract the directory name (DIRECTORY) in dedicated variables.
-    #
-    get_filename_component(testName ${testSrc} NAME_WE)
-    get_filename_component(dir ${testSrc} DIRECTORY)
+  target_link_libraries(${testName} ${SCIP_LIBRARIES} ${LIBM})
 
-    #
-    # replace forward slashes by hyphens
-    #
-    string(REPLACE "/" "-" dirhyphen ${dir})
-    set(testName "unittest-${dirhyphen}-${testName}")
+  #
+  # use the directory name (relative to src/) to build the executable
+  #
+  set_target_properties(${testName} PROPERTIES
+    RUNTIME_OUTPUT_DIRECTORY ${dir})
 
-    #
-    # add compile target
-    #
-    add_executable(${testName} src/${testSrc}
-      ../src/reader_rpa.c
-      ../src/probdata_rpa.c
-      ../src/pricer_rpa.c
-      ../src/cons_rpa.c
-      ../src/pattern.c
+  #
+  # add a test to build this unit test
+  #
+  add_test(NAME ${testName}-build
+    COMMAND ${CMAKE_COMMAND} --build ${CMAKE_BINARY_DIR} --target ${testName}
     )
 
-    #
-    # link the executable against both criterion and the SCIP library target
-    #
-    target_link_libraries(${testName} ${CRITERION_LIBRARIES} ${SCIP_LIBRARIES} ${LIBM})
+  #
+  # avoid that several build jobs try to concurrently build the SCIP library
+  # note that this ressource lock name is not the actual libscip target
+  #
+  set_tests_properties(${testName}-build
+    PROPERTIES
+    RESOURCE_LOCK libscip
+    )
 
-    #
-    # use the directory name (relative to src/) to build the executable
-    #
-    set_target_properties(${testName} PROPERTIES
-      RUNTIME_OUTPUT_DIRECTORY ${dir})
+  #
+  # Finally, add the executable as a test to the test framework
+  #
+  if( COVERAGE )
+    set( ADDITIONAL_FLAGS "--no-early-exit" )
+  else()
+    set( ADDITIONAL_FLAGS "" )
+  endif()
 
-    #
-    # add a test to build this unit test
-    #
-    add_test(NAME ${testName}-build
-      COMMAND ${CMAKE_COMMAND} --build ${CMAKE_BINARY_DIR} --target ${testName}
-      )
-
-    #
-    # avoid that several build jobs try to concurrently build the SCIP library
-    # note that this ressource lock name is not the actual libscip target
-    #
-    set_tests_properties(${testName}-build
-      PROPERTIES
-      RESOURCE_LOCK libscip
-      )
-
-    #
-    # Finally, add the executable as a test to the test framework
-    #
-    if( COVERAGE )
-      set( ADDITIONAL_FLAGS "--no-early-exit" )
-    else()
-      set( ADDITIONAL_FLAGS "" )
-    endif()
-
-    add_test(NAME ${testName}
-      COMMAND $<TARGET_FILE:${testName}> ${ADDITIONAL_FLAGS}
-      WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-      )
-    set_tests_properties(${testName}
-      PROPERTIES
-      DEPENDS ${testName}-build
-      RESOURCE_LOCK libscip
-      )
-  endforeach(testSrc)
-endif()
+  add_test(NAME ${testName}
+    COMMAND $<TARGET_FILE:${testName}> ${ADDITIONAL_FLAGS}
+    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+    )
+  set_tests_properties(${testName}
+    PROPERTIES
+    DEPENDS ${testName}-build
+    RESOURCE_LOCK libscip
+    )
+endforeach(testSrc)

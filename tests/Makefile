@@ -137,9 +137,7 @@ UNITTESTSEXECS	=	$(addsuffix $(BASESUFFIX), $(UNITTESTS))
 
 #-----------------------------------------------------------------------------
 # Flags
-# filter out some flags to make criterion compile without warnings with gcc
-# and make the tests run with clang.
-# TODO: in newer version, check if we still need this
+# filter out some flags for compatibility with Unity and clang
 #-----------------------------------------------------------------------------
 
 CFLAGS 		:=	$(filter-out -Wdeclaration-after-statement -Wstrict-prototypes, $(CFLAGS))
@@ -147,15 +145,14 @@ ifeq ($(COMP), clang)
 CFLAGS 		:=	$(filter-out -Wcast-align, $(CFLAGS))
 endif
 CFLAGS 		+=	-std=c99
-# to find include/scip_test.h
-FLAGS 		+= 	-I.
+# to find include/scip_test.h and unity/unity.h
+FLAGS 		+= 	-I. -Iinclude
 
 #-----------------------------------------------------------------------------
-# Criterion Framework
+# Unity Test Framework
 #-----------------------------------------------------------------------------
-CR_INC		=	$(wildcard Criterion/include)
-CR_LIBDIR	=	$(wildcard Criterion/lib)
-CR_LIB		=	criterion
+UNITY_DIR	=	unity
+UNITY_SRC	=	$(UNITY_DIR)/unity.c
 
 #-----------------------------------------------------------------------------
 # Rules
@@ -171,16 +168,10 @@ ifeq ($(VERBOSE),false)
 .SILENT:	$(UNITTESTSBIN) $(UNITTESTSOBJ)
 endif
 
-# Disable ASLR (address space layout randomization) on Linux via setarch -R
-# as this is not compatible with Criterions parametrized tests (https://github.com/Snaipe/Criterion/issues/208)
-ifeq ($(OSTYPE),linux)
-DISABLE_ASLR := setarch `uname -m` -R
-endif
-
 .PHONY: all
-all:            Criterion $(OBJDIR) $(OBJDIRS) $(BINDIRS) $(UNITTESTSBIN)
+all:            $(OBJDIR) $(OBJDIRS) $(BINDIRS) $(UNITTESTSBIN)
 		make ctestrunner
-		$(DISABLE_ASLR) ctest --output-on-failure $(if $(FILTER), -R $(FILTER))
+		ctest --output-on-failure $(if $(FILTER), -R $(FILTER))
 
 .PHONY: lint
 lint:		$(UNITTESTSSRC)
@@ -205,7 +196,7 @@ $(BINDIRS):
 .PHONY: test
 test:           $(UNITTESTSBIN)
 		make ctestrunner
-		$(DISABLE_ASLR) ctest --output-on-failure $(if $(FILTER), -R $(FILTER))
+		ctest --output-on-failure $(if $(FILTER), -R $(FILTER))
 
 .PHONY: ctestrunner
 ctestrunner: 	$(UNITTESTSBIN)
@@ -238,14 +229,11 @@ depend:		$(SCIPDIR)
 -include	$(UNITTESTSDEP)
 
 
-$(BINDIR)/%$(BASESUFFIX): $(OBJDIR)/%.o $(SCIPLIBFILE) $(LPILIBFILE) $(TPILIBFILE)
+$(BINDIR)/%$(BASESUFFIX): $(OBJDIR)/%.o $(OBJDIR)/unity.o $(SCIPLIBFILE) $(LPILIBFILE) $(TPILIBFILE)
 		@echo "-> linking $@"
-		$(LINKCXX) $< $(LINKCXXSCIPALL) \
+		$(LINKCXX) $< $(OBJDIR)/unity.o $(LINKCXXSCIPALL) \
 		$(LINKCXX_l)$(TPILIB) \
-		$(addprefix $(LINKCXX_L),$(CR_LIBDIR)) \
-		$(LINKCXX_l)$(CR_LIB) \
 		$(LINKRPATH)$(realpath $(SCIPDIR)/lib/shared) \
-		$(addprefix $(LINKRPATH),$(realpath $(CR_LIBDIR))) \
 		$(SANITIZERFLAGS) \
 		$(LINKCXX_o)$@
 
@@ -256,24 +244,17 @@ $(SCIPLIBFILE):
 $(TPILIBFILE):
 		$(error $@ not available. SCIP must be compiled with OPT=$(OPT) SHARED=$(SHARED) TPI=$(TPI))
 
--include	$(UNITTESTSDEP)
+# Compile Unity test framework
+$(OBJDIR)/unity.o: $(UNITY_SRC) | $(OBJDIR)
+		@echo "-> compiling Unity framework"
+		$(CC) $(FLAGS) $(OFLAGS) $(CFLAGS) -c $< $(CC_o)$@
 
 $(OBJDIR)/%.o : $(SRCDIR)/%.c | $(OBJDIR) $(OBJDIRS) $(BINDIRS)
 		@echo "-> compiling $@"
-		$(CC) $(addprefix -I,$(CR_INC)) $(FLAGS) $(OFLAGS) $(BINOFLAGS) $(CFLAGS) $(DFLAGS) -c $< $(CC_o)$@
+		$(CC) $(FLAGS) $(OFLAGS) $(BINOFLAGS) $(CFLAGS) $(DFLAGS) -c $< $(CC_o)$@
 
 $(OBJDIR)/%.o:	%.cpp
 		@echo "-> compiling $@"
-		$(CXX) $(addprefix -I,$(CR_INC)) $(FLAGS) $(OFLAGS) $(BINOFLAGS) $(CXXFLAGS) $(DFLAGS) -c $< $(CXX_o)$@
+		$(CXX) $(FLAGS) $(OFLAGS) $(BINOFLAGS) $(CXXFLAGS) $(DFLAGS) -c $< $(CXX_o)$@
 
-Criterion:
-	@echo -n "Criterion not found, downloading and building it in"
-	@for (( count=3; $$count ; count-- )) do echo -n " $$count" ; sleep 1 ; done ; echo
-	git clone --depth 1 -b v2.3.3 https://github.com/Snaipe/Criterion
-	cd Criterion; \
-	mkdir build; \
-	cd build; \
-	cmake .. -DCMAKE_INSTALL_PREFIX=..; \
-	make; \
-	make install
 #---- EOF --------------------------------------------------------------------

@@ -99,12 +99,11 @@ void teardown(void)
    SCIP_CALL( SCIPreleaseVar(scip, &z) );
    SCIP_CALL( SCIPfree(&scip) );
 
-   cr_assert_eq(BMSgetMemoryUsed(), 0, "Memory leak!!");
+   TEST_ASSERT_EQUAL(BMSgetMemoryUsed(), 0, "Memory leak!!");
 }
 
-TestSuite(derivative, .init = setup, .fini = teardown);
 
-Test(derivative, value)
+void test_derivative_value(void)
 {
    SCIP_EXPR* expr;
 
@@ -112,12 +111,12 @@ Test(derivative, value)
    SCIP_CALL( SCIPcreateExprValue(scip, &expr, 1.0, NULL, NULL) );
 
    SCIP_CALL( SCIPevalExprGradient(scip, expr, sol, 0) );
-   cr_expect_eq(getPartialDiff(expr, x), 0.0);
+   SOFT_ASSERT_EQUAL(getPartialDiff(expr, x), 0.0);
 
    SCIP_CALL( SCIPreleaseExpr(scip, &expr) );
 }
 
-Test(derivative, var)
+void test_derivative_var(void)
 {
    SCIP_EXPR* expr;
 
@@ -125,33 +124,33 @@ Test(derivative, var)
    SCIP_CALL( SCIPcreateExprVar(scip, &expr, x, NULL, NULL) );
 
    SCIP_CALL( SCIPevalExprGradient(scip, expr, sol, 0) );
-   cr_expect_eq(getPartialDiff(expr, x), 1.0);
+   SOFT_ASSERT_EQUAL(getPartialDiff(expr, x), 1.0);
 
    SCIP_CALL( SCIPreleaseExpr(scip, &expr) );
 }
 
-Test(derivative, sum)
+void test_derivative_sum(void)
 {
    SCIP_EXPR* expr;
    const char* input = "5*<x>[C] -2.2 * <y>[I]";
 
    /* create expression */
-   cr_expect_eq(SCIPparseExpr(scip, &expr, (char*)input, NULL, NULL, NULL), SCIP_OKAY);
+   SOFT_ASSERT_EQUAL(SCIPparseExpr(scip, &expr, (char*)input, NULL, NULL, NULL), SCIP_OKAY);
 
    SCIP_CALL( SCIPevalExprGradient(scip, expr, sol, 0) );
-   cr_expect_eq(getPartialDiff(expr, x), 5.0);
-   cr_expect_eq(getPartialDiff(expr, y), -2.2);
+   SOFT_ASSERT_EQUAL(getPartialDiff(expr, x), 5.0);
+   SOFT_ASSERT_EQUAL(getPartialDiff(expr, y), -2.2);
 
    SCIP_CALL( SCIPreleaseExpr(scip, &expr) );
 }
 
-Test(derivative, product)
+void test_derivative_product(void)
 {
    SCIP_EXPR* expr;
    const char* input = "<x>[C] * <y>[I] * <z>[I]";
 
    /* create expression */
-   cr_expect_eq(SCIPparseExpr(scip, &expr, (char*)input, NULL, NULL, NULL), SCIP_OKAY);
+   SOFT_ASSERT_EQUAL(SCIPparseExpr(scip, &expr, (char*)input, NULL, NULL, NULL), SCIP_OKAY);
 
    /* set solution values */
    SCIP_CALL( SCIPsetSolVal(scip, sol, x, 2.3) );
@@ -159,127 +158,127 @@ Test(derivative, product)
    SCIP_CALL( SCIPsetSolVal(scip, sol, z, -3.5) );
 
    SCIP_CALL( SCIPevalExprGradient(scip, expr, sol, 0) );
-   cr_expect_eq(getPartialDiff(expr, x), 4.0 * 3.5);
-   cr_expect_eq(getPartialDiff(expr, y), -2.3 * 3.5);
-   cr_expect_eq(getPartialDiff(expr, z), -2.3 * 4.0);
+   SOFT_ASSERT_EQUAL(getPartialDiff(expr, x), 4.0 * 3.5);
+   SOFT_ASSERT_EQUAL(getPartialDiff(expr, y), -2.3 * 3.5);
+   SOFT_ASSERT_EQUAL(getPartialDiff(expr, z), -2.3 * 4.0);
 
    SCIP_CALL( SCIPreleaseExpr(scip, &expr) );
 }
 
-Test(derivative, pow)
+void test_derivative_pow(void)
 {
    SCIP_EXPR* expr;
    const char* input = "<x>[C]^(-3)";
 
    /* create expression */
-   cr_expect_eq(SCIPparseExpr(scip, &expr, (char*)input, NULL, NULL, NULL), SCIP_OKAY);
+   SOFT_ASSERT_EQUAL(SCIPparseExpr(scip, &expr, (char*)input, NULL, NULL, NULL), SCIP_OKAY);
 
    SCIP_CALL( SCIPsetSolVal(scip, sol, x, 2.3) );
    SCIP_CALL( SCIPevalExprGradient(scip, expr, sol, 0) );
-   cr_expect_eq(getPartialDiff(expr, x), -3.0 * pow(2.3, -4));
+   SOFT_ASSERT_EQUAL(getPartialDiff(expr, x), -3.0 * pow(2.3, -4));
 
    /* try an undefined point */
    SCIP_CALL( SCIPsetSolVal(scip, sol, x, 0.0) );
    SCIP_CALL( SCIPevalExprGradient(scip, expr, sol, 0) );
-   cr_expect_eq(SCIPexprGetDerivative(expr), SCIP_INVALID);
+   SOFT_ASSERT_EQUAL(SCIPexprGetDerivative(expr), SCIP_INVALID);
 
    SCIP_CALL( SCIPreleaseExpr(scip, &expr) );
 }
 
-Test(derivative, signpow)
+void test_derivative_signpow(void)
 {
    SCIP_EXPR* expr;
    const char* input = "signpower(<x>[C],2.5)";
 
    /* create expression */
-   cr_expect_eq(SCIPparseExpr(scip, &expr, (char*)input, NULL, NULL, NULL), SCIP_OKAY);
+   SOFT_ASSERT_EQUAL(SCIPparseExpr(scip, &expr, (char*)input, NULL, NULL, NULL), SCIP_OKAY);
 
    /* try positive */
    SCIP_CALL( SCIPsetSolVal(scip, sol, x, 2.3) );
    SCIP_CALL( SCIPevalExprGradient(scip, expr, sol, 0) );
-   cr_expect_eq(getPartialDiff(expr, x), 2.5 * pow(2.3, 1.5));
+   SOFT_ASSERT_EQUAL(getPartialDiff(expr, x), 2.5 * pow(2.3, 1.5));
 
    /* try 0 */
    SCIP_CALL( SCIPsetSolVal(scip, sol, x, 0.0) );
    SCIP_CALL( SCIPevalExprGradient(scip, expr, sol, 0) );
-   cr_expect_eq(getPartialDiff(expr, x), 0.0);
+   SOFT_ASSERT_EQUAL(getPartialDiff(expr, x), 0.0);
 
    /* try negative */
    SCIP_CALL( SCIPsetSolVal(scip, sol, x, -1.42) );
    SCIP_CALL( SCIPevalExprGradient(scip, expr, sol, 0) );
-   cr_expect_eq(getPartialDiff(expr, x), 2.5 * pow(1.42, 1.5));
+   SOFT_ASSERT_EQUAL(getPartialDiff(expr, x), 2.5 * pow(1.42, 1.5));
 
    SCIP_CALL( SCIPreleaseExpr(scip, &expr) );
 }
 
-Test(derivative, exp)
+void test_derivative_exp(void)
 {
    SCIP_EXPR* expr;
    const char* input = "exp(<x>[C])";
 
    /* create expression */
-   cr_expect_eq(SCIPparseExpr(scip, &expr, (char*)input, NULL, NULL, NULL), SCIP_OKAY);
+   SOFT_ASSERT_EQUAL(SCIPparseExpr(scip, &expr, (char*)input, NULL, NULL, NULL), SCIP_OKAY);
 
    SCIP_CALL( SCIPsetSolVal(scip, sol, x, -2.0) );
    SCIP_CALL( SCIPevalExprGradient(scip, expr, sol, 0) );
-   cr_expect_eq(getPartialDiff(expr, x), exp(-2.0));
+   SOFT_ASSERT_EQUAL(getPartialDiff(expr, x), exp(-2.0));
 
    SCIP_CALL( SCIPreleaseExpr(scip, &expr) );
 }
 
-Test(derivative, log)
+void test_derivative_log(void)
 {
    SCIP_EXPR* expr;
    const char* input = "log(<x>[C])";
 
    /* create expression */
-   cr_expect_eq(SCIPparseExpr(scip, &expr, (char*)input, NULL, NULL, NULL), SCIP_OKAY);
+   SOFT_ASSERT_EQUAL(SCIPparseExpr(scip, &expr, (char*)input, NULL, NULL, NULL), SCIP_OKAY);
 
    SCIP_CALL( SCIPsetSolVal(scip, sol, x, 2.0) );
    SCIP_CALL( SCIPevalExprGradient(scip, expr, sol, 0) );
-   cr_expect_eq(getPartialDiff(expr, x), 0.5);
+   SOFT_ASSERT_EQUAL(getPartialDiff(expr, x), 0.5);
 
    /* try an undefined point */
    SCIP_CALL( SCIPsetSolVal(scip, sol, x, 0.0) );
    SCIP_CALL( SCIPevalExprGradient(scip, expr, sol, 0) );
-   cr_expect_eq(SCIPexprGetDerivative(expr), SCIP_INVALID);
+   SOFT_ASSERT_EQUAL(SCIPexprGetDerivative(expr), SCIP_INVALID);
 
    SCIP_CALL( SCIPreleaseExpr(scip, &expr) );
 }
 
-Test(derivative, abs)
+void test_derivative_abs(void)
 {
    SCIP_EXPR* expr;
    const char* input = "abs(<x>[C])";
 
    /* create expression */
-   cr_expect_eq(SCIPparseExpr(scip, &expr, (char*)input, NULL, NULL, NULL), SCIP_OKAY);
+   SOFT_ASSERT_EQUAL(SCIPparseExpr(scip, &expr, (char*)input, NULL, NULL, NULL), SCIP_OKAY);
 
    SCIP_CALL( SCIPsetSolVal(scip, sol, x, -5.0) );
    SCIP_CALL( SCIPevalExprGradient(scip, expr, sol, 0) );
-   cr_expect_eq(getPartialDiff(expr, x), -1.0);
+   SOFT_ASSERT_EQUAL(getPartialDiff(expr, x), -1.0);
 
    SCIP_CALL( SCIPsetSolVal(scip, sol, x, 5.0) );
    SCIP_CALL( SCIPevalExprGradient(scip, expr, sol, 0) );
-   cr_expect_eq(getPartialDiff(expr, x), 1.0);
+   SOFT_ASSERT_EQUAL(getPartialDiff(expr, x), 1.0);
 
    /* for x = 0 the gradient should can be everything in [-1,1] */
    SCIP_CALL( SCIPsetSolVal(scip, sol, x, 0.0) );
    SCIP_CALL( SCIPevalExprGradient(scip, expr, sol, 0) );
-   cr_expect(getPartialDiff(expr, x) >= -1.0);
-   cr_expect(getPartialDiff(expr, x) <= 1.0);
+   SOFT_ASSERT(getPartialDiff(expr, x) >= -1.0);
+   SOFT_ASSERT(getPartialDiff(expr, x) <= 1.0);
 
    SCIP_CALL( SCIPreleaseExpr(scip, &expr) );
 }
 
-Test(derivative, quadratic)
+void test_derivative_quadratic(void)
 {
    SCIP_EXPR* expr;
    const char* input = "3.0*<x>[C]^2 -4.0*<y>[C] * <x>[C] + <z>[C] * <x>[C] -7.0*<z>[C]";
    int i;
 
    /* create expression */
-   cr_expect_eq(SCIPparseExpr(scip, &expr, (char*)input, NULL, NULL, NULL), SCIP_OKAY);
+   SOFT_ASSERT_EQUAL(SCIPparseExpr(scip, &expr, (char*)input, NULL, NULL, NULL), SCIP_OKAY);
 
    for( i = 0; i < 100; ++i )
    {
@@ -294,22 +293,22 @@ Test(derivative, quadratic)
       SCIP_CALL( SCIPsetSolVal(scip, sol, z, zval) );
 
       SCIP_CALL( SCIPevalExprGradient(scip, expr, sol, 0) );
-      cr_expect(SCIPisEQ(scip, getPartialDiff(expr, x), 6.0 * xval - 4.0 * yval + zval));
-      cr_expect(SCIPisEQ(scip, getPartialDiff(expr, y), -4.0 * xval));
-      cr_expect(SCIPisEQ(scip, getPartialDiff(expr, z), xval - 7.0));
+      SOFT_ASSERT(SCIPisEQ(scip, getPartialDiff(expr, x), 6.0 * xval - 4.0 * yval + zval));
+      SOFT_ASSERT(SCIPisEQ(scip, getPartialDiff(expr, y), -4.0 * xval));
+      SOFT_ASSERT(SCIPisEQ(scip, getPartialDiff(expr, z), xval - 7.0));
    }
 
    SCIP_CALL( SCIPreleaseExpr(scip, &expr) );
 }
 
-Test(derivative, complex1)
+void test_derivative_complex1(void)
 {
    SCIP_EXPR* expr;
    const char* input = "<x>[C] * <y>[C] * exp(<x>[C]^2 + <z>[C]^2 - 5)";
    int i;
 
    /* create expression */
-   cr_expect_eq(SCIPparseExpr(scip, &expr, (char*)input, NULL, NULL, NULL), SCIP_OKAY);
+   SOFT_ASSERT_EQUAL(SCIPparseExpr(scip, &expr, (char*)input, NULL, NULL, NULL), SCIP_OKAY);
 
    for( i = 0; i < 100; ++i )
    {
@@ -324,22 +323,22 @@ Test(derivative, complex1)
       SCIP_CALL( SCIPsetSolVal(scip, sol, z, zval) );
 
       SCIP_CALL( SCIPevalExprGradient(scip, expr, sol, 0) );
-      cr_expect(SCIPisEQ(scip, getPartialDiff(expr, x), (yval + 2*pow(xval,2) * yval) * exp(pow(xval,2) + pow(zval,2) -5)));
-      cr_expect(SCIPisEQ(scip, getPartialDiff(expr, y), xval * exp(pow(xval,2) + pow(zval,2) - 5)));
-      cr_expect(SCIPisEQ(scip, getPartialDiff(expr, z), 2*xval*yval*zval*exp(pow(xval,2) + pow(zval,2) - 5)));
+      SOFT_ASSERT(SCIPisEQ(scip, getPartialDiff(expr, x), (yval + 2*pow(xval,2) * yval) * exp(pow(xval,2) + pow(zval,2) -5)));
+      SOFT_ASSERT(SCIPisEQ(scip, getPartialDiff(expr, y), xval * exp(pow(xval,2) + pow(zval,2) - 5)));
+      SOFT_ASSERT(SCIPisEQ(scip, getPartialDiff(expr, z), 2*xval*yval*zval*exp(pow(xval,2) + pow(zval,2) - 5)));
    }
 
    SCIP_CALL( SCIPreleaseExpr(scip, &expr) );
 }
 
-Test(derivative, complex2)
+void test_derivative_complex2(void)
 {
    SCIP_EXPR* expr;
    const char* input = "-2*<x>[C] * (<x>[C]^2 - 9)^(-2)";
    int i;
 
    /* create expression */
-   cr_expect_eq(SCIPparseExpr(scip, &expr, (char*)input, NULL, NULL, NULL), SCIP_OKAY);
+   SOFT_ASSERT_EQUAL(SCIPparseExpr(scip, &expr, (char*)input, NULL, NULL, NULL), SCIP_OKAY);
 
    for( i = 0; i < 100; ++i )
    {
@@ -352,39 +351,41 @@ Test(derivative, complex2)
       SCIP_CALL( SCIPevalExprGradient(scip, expr, sol, 0) );
 
       if( xval == 3.0 )
-         cr_expect(SCIPisEQ(scip, getPartialDiff(expr, x), SCIP_INVALID));
+         SOFT_ASSERT(SCIPisEQ(scip, getPartialDiff(expr, x), SCIP_INVALID));
       else
-         cr_expect(SCIPisEQ(scip, getPartialDiff(expr, x), (6*pow(xval,2) + 18) / pow(pow(xval,2)-9, 3)), "expected %g, got %g", (6*pow(xval,2) + 18) / pow(pow(xval,2)-9, 3), getPartialDiff(expr, x));
+         SOFT_ASSERT(SCIPisEQ(scip, getPartialDiff(expr, x), (6*pow(xval,2) + 18) / pow(pow(xval,2)-9, 3)), "expected %g, got %g", (6*pow(xval,2) + 18) / pow(pow(xval,2)-9, 3), getPartialDiff(expr, x));
    }
 
    SCIP_CALL( SCIPreleaseExpr(scip, &expr) );
 }
 
 #define K 40
-Test(performance, rosenbrock)
+void test_performance_rosenbrock(void)
 {
+   SCIP* localscip;
+   SCIP_SOL* localsol;
    SCIP_VAR* vars[K];
    SCIP_EXPR* exprx[K];
    SCIP_EXPR* rosenbrock;
 
-   SCIP_CALL( SCIPcreate(&scip) );
-   SCIP_CALL( SCIPincludeDefaultPlugins(scip) );
+   SCIP_CALL( SCIPcreate(&localscip) );
+   SCIP_CALL( SCIPincludeDefaultPlugins(localscip) );
 
    /* create problem */
-   SCIP_CALL( SCIPcreateProbBasic(scip, "test_problem") );
+   SCIP_CALL( SCIPcreateProbBasic(localscip, "test_problem") );
 
    for( int i = 0; i < K; ++i )
    {
       char name[100];
 
       snprintf(name, 100, "x%d", i);
-      SCIP_CALL( SCIPcreateVarBasic(scip, &vars[i], name, -SCIPinfinity(scip), SCIPinfinity(scip), 0.0, SCIP_VARTYPE_CONTINUOUS) );
-      SCIP_CALL( SCIPaddVar(scip, vars[i]) );
+      SCIP_CALL( SCIPcreateVarBasic(localscip, &vars[i], name, -SCIPinfinity(localscip), SCIPinfinity(localscip), 0.0, SCIP_VARTYPE_CONTINUOUS) );
+      SCIP_CALL( SCIPaddVar(localscip, vars[i]) );
    }
 
    SCIP_EXPR* sum;
-   SCIP_CALL( SCIPcreateExprSum(scip, &sum, 0, NULL, NULL, 0.0, NULL, NULL) );
-   SCIP_CALL( SCIPcreateExprVar(scip, &exprx[0], vars[0], NULL, NULL) );
+   SCIP_CALL( SCIPcreateExprSum(localscip, &sum, 0, NULL, NULL, 0.0, NULL, NULL) );
+   SCIP_CALL( SCIPcreateExprVar(localscip, &exprx[0], vars[0], NULL, NULL) );
    for( int i = 1; i < K; ++i )
    {
       SCIP_EXPR* sqr;
@@ -393,50 +394,50 @@ Test(performance, rosenbrock)
       SCIP_EXPR* diff1;
       SCIP_EXPR* diff2;
 
-      SCIP_CALL( SCIPcreateExprVar(scip, &exprx[i], vars[i], NULL, NULL) );
-      SCIP_CALL( SCIPcreateExprPow(scip, &sqr, exprx[i-1], 2.0, NULL, NULL) );
+      SCIP_CALL( SCIPcreateExprVar(localscip, &exprx[i], vars[i], NULL, NULL) );
+      SCIP_CALL( SCIPcreateExprPow(localscip, &sqr, exprx[i-1], 2.0, NULL, NULL) );
 
-      SCIP_CALL( SCIPcreateExprSum(scip, &diff1, 0, NULL, NULL, 0.0, NULL, NULL) );
-      SCIP_CALL( SCIPcreateExprSum(scip, &diff2, 0, NULL, NULL, 0.0, NULL, NULL) );
+      SCIP_CALL( SCIPcreateExprSum(localscip, &diff1, 0, NULL, NULL, 0.0, NULL, NULL) );
+      SCIP_CALL( SCIPcreateExprSum(localscip, &diff2, 0, NULL, NULL, 0.0, NULL, NULL) );
 
       /* diff1 = x_i - x_{i-1}^2 */
-      SCIP_CALL( SCIPappendExprSumExpr(scip, diff1, exprx[i], 1.0) );
-      SCIP_CALL( SCIPappendExprSumExpr(scip, diff1, sqr, -1.0) );
+      SCIP_CALL( SCIPappendExprSumExpr(localscip, diff1, exprx[i], 1.0) );
+      SCIP_CALL( SCIPappendExprSumExpr(localscip, diff1, sqr, -1.0) );
 
       /* pow1 = (x_i - x_{i-1}^2)^2 */
-      SCIP_CALL( SCIPcreateExprPow(scip, &pow1, diff1, 2.0, NULL, NULL) );
+      SCIP_CALL( SCIPcreateExprPow(localscip, &pow1, diff1, 2.0, NULL, NULL) );
 
       /* diff2 = 1 - x_{i-1} */
       SCIPsetConstantExprSum(diff2, 1.0);
-      SCIP_CALL( SCIPappendExprSumExpr(scip, diff2, exprx[i-1], -1.0) );
+      SCIP_CALL( SCIPappendExprSumExpr(localscip, diff2, exprx[i-1], -1.0) );
 
       /* pow2 = (1 - x_{i-1})^2 */
-      SCIP_CALL( SCIPcreateExprPow(scip, &pow2, diff2, 2.0, NULL, NULL) );
+      SCIP_CALL( SCIPcreateExprPow(localscip, &pow2, diff2, 2.0, NULL, NULL) );
 
       /* sum += 100(x_i - x_{i-1}^2)^2 + (1 - x_{i-1})^2 */
-      SCIP_CALL( SCIPappendExprSumExpr(scip, sum, pow1, 100.0) );
-      SCIP_CALL( SCIPappendExprSumExpr(scip, sum, pow2, 1.0) );
+      SCIP_CALL( SCIPappendExprSumExpr(localscip, sum, pow1, 100.0) );
+      SCIP_CALL( SCIPappendExprSumExpr(localscip, sum, pow2, 1.0) );
 
       /* release */
-      SCIP_CALL( SCIPreleaseExpr(scip, &sqr) );
-      SCIP_CALL( SCIPreleaseExpr(scip, &pow1) );
-      SCIP_CALL( SCIPreleaseExpr(scip, &pow2) );
-      SCIP_CALL( SCIPreleaseExpr(scip, &diff1) );
-      SCIP_CALL( SCIPreleaseExpr(scip, &diff2) );
+      SCIP_CALL( SCIPreleaseExpr(localscip, &sqr) );
+      SCIP_CALL( SCIPreleaseExpr(localscip, &pow1) );
+      SCIP_CALL( SCIPreleaseExpr(localscip, &pow2) );
+      SCIP_CALL( SCIPreleaseExpr(localscip, &diff1) );
+      SCIP_CALL( SCIPreleaseExpr(localscip, &diff2) );
    }
 
    /* simplify is incredibly slow for large k! */
-   //SCIP_CALL( SCIPsimplifyExpr(scip, conshdlr, sum, &rosenbrock) );
-   //SCIP_CALL( SCIPreleaseExpr(scip, &sum) );
+   //SCIP_CALL( SCIPsimplifyExpr(localscip, conshdlr, sum, &rosenbrock) );
+   //SCIP_CALL( SCIPreleaseExpr(localscip, &sum) );
    rosenbrock = sum;
 
-   SCIP_CALL( SCIPcreateSol(scip, &sol, NULL) );
+   SCIP_CALL( SCIPcreateSol(localscip, &localsol, NULL) );
    for( int i = 0; i < K; ++i )
    {
-      SCIP_CALL( SCIPsetSolVal(scip, sol, vars[i], (SCIP_Real)i) );
+      SCIP_CALL( SCIPsetSolVal(localscip, localsol, vars[i], (SCIP_Real)i) );
    }
 
-   SCIP_CALL( SCIPevalExprGradient(scip, rosenbrock, sol, 0) );
+   SCIP_CALL( SCIPevalExprGradient(localscip, rosenbrock, localsol, 0) );
 
    for( int i = 1; i < K - 1; ++i )
    {
@@ -451,10 +452,10 @@ Test(performance, rosenbrock)
 
    for( int i = 0; i < K; ++i )
    {
-      SCIP_CALL( SCIPsetSolVal(scip, sol, vars[i], 0.0) );
+      SCIP_CALL( SCIPsetSolVal(localscip, localsol, vars[i], 0.0) );
    }
 
-   SCIP_CALL( SCIPevalExprGradient(scip, rosenbrock, sol, 0) );
+   SCIP_CALL( SCIPevalExprGradient(localscip, rosenbrock, localsol, 0) );
 
    for( int i = 0; i < K - 1; ++i )
    {
@@ -465,16 +466,40 @@ Test(performance, rosenbrock)
       }
    }
 
-   SCIP_CALL( SCIPreleaseExpr(scip, &rosenbrock) );
+   SCIP_CALL( SCIPreleaseExpr(localscip, &rosenbrock) );
 
-   SCIP_CALL( SCIPfreeSol(scip, &sol) );
+   SCIP_CALL( SCIPfreeSol(localscip, &localsol) );
 
    for( int i = 0; i < K; ++i )
    {
-      SCIP_CALL( SCIPreleaseExpr(scip, &exprx[i]) );
-      SCIP_CALL( SCIPreleaseVar(scip, &vars[i]) );
+      SCIP_CALL( SCIPreleaseExpr(localscip, &exprx[i]) );
+      SCIP_CALL( SCIPreleaseVar(localscip, &vars[i]) );
    }
-   SCIP_CALL( SCIPfree(&scip) );
+   SCIP_CALL( SCIPfree(&localscip) );
 
-   cr_assert_eq(BMSgetMemoryUsed(), 0, "Memory leak!!");
+   TEST_ASSERT_EQUAL(BMSgetMemoryUsed(), 0, "Memory leak!!");
+}
+
+void setUp(void) { setup(); }
+
+void tearDown(void) { teardown(); }
+
+int main(void)
+{
+   UNITY_BEGIN();
+   RUN_TEST(test_derivative_value
+);
+   RUN_TEST(test_derivative_var);
+   RUN_TEST(test_derivative_sum);
+   RUN_TEST(test_derivative_product);
+   RUN_TEST(test_derivative_pow);
+   RUN_TEST(test_derivative_signpow);
+   RUN_TEST(test_derivative_exp);
+   RUN_TEST(test_derivative_log);
+   RUN_TEST(test_derivative_abs);
+   RUN_TEST(test_derivative_quadratic);
+   RUN_TEST(test_derivative_complex1);
+   RUN_TEST(test_derivative_complex2);
+   RUN_TEST(test_performance_rosenbrock);
+   return UNITY_END();
 }

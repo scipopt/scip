@@ -89,11 +89,11 @@ void setup(void)
    SCIP_CALL( SCIPallocMemoryArray(scip, &solitems, MEMSIZE) );
    SCIP_CALL( SCIPallocMemoryArray(scip, &nonsolitems, MEMSIZE) );
    SCIP_CALL( SCIPcreateRandom(scip, &randnumgen, INITIALSEED, TRUE) );
-   cr_assert_not_null(items);
-   cr_assert_not_null(weights);
-   cr_assert_not_null(profits);
-   cr_assert_not_null(solitems);
-   cr_assert_not_null(nonsolitems);
+   TEST_ASSERT_NOT_NULL(items);
+   TEST_ASSERT_NOT_NULL(weights);
+   TEST_ASSERT_NOT_NULL(profits);
+   TEST_ASSERT_NOT_NULL(solitems);
+   TEST_ASSERT_NOT_NULL(nonsolitems);
 
    /* initialize items to be numbered through */
    for( i = 0; i < MEMSIZE; ++i )
@@ -116,7 +116,7 @@ void testassignment(void)
    solitemsprofit = 0;
    solitemsweight = 0;
 
-   cr_assert_eq(nsolitems + nnonsolitems, nitems, "Mismatch in the number of solution items: %d + %d ~= %d\n", nsolitems, nnonsolitems, nitems);
+   TEST_ASSERT_EQUAL(nsolitems + nnonsolitems, nitems, "Mismatch in the number of solution items: %d + %d ~= %d\n", nsolitems, nnonsolitems, nitems);
 
    /* Dantzig's algorithm currently sorts items and other data by their cost/weight ratio, so that we have to reestablish the original sorting */
    SCIPsortIntRealLong(items, profits, weights, nitems);
@@ -128,14 +128,14 @@ void testassignment(void)
       solitemsprofit += profits[solitems[i]];
    }
 
-   cr_assert_leq(solitemsweight, capacity, "Capacity exceeded: %" SCIP_LONGINT_FORMAT " > %" SCIP_LONGINT_FORMAT "\n", solitemsweight, capacity);
-   cr_assert_float_eq(profit, solitemsprofit, 1e-4, "Profit is different from recomputed profit: %.1f ~= %.1f\n", profit, solitemsprofit);
+   TEST_ASSERT_LESS_OR_EQUAL(solitemsweight, capacity, "Capacity exceeded: %" SCIP_LONGINT_FORMAT " > %" SCIP_LONGINT_FORMAT "\n", solitemsweight, capacity);
+   TEST_ASSERT_DOUBLE_WITHIN(profit, solitemsprofit, 1e-4, "Profit is different from recomputed profit: %.1f ~= %.1f\n", profit, solitemsprofit);
 
 
 /*    loop over non-solution items to verify that none of them fully fits into the knapsack anymore
    for( i = 0; i < nnonsolitems; ++i )
    {
-      cr_assert_gt(solitemsweight + weights[nonsolitems[i]], capacity, "item %d fits into the knapsack: %" SCIP_LONGINT_FORMAT " + %" SCIP_LONGINT_FORMAT " <= %" SCIP_LONGINT_FORMAT "\n", nonsolitems[i], solitemsweight, weights[nonsolitems[i]], capacity);
+      TEST_ASSERT_GREATER_THAN(solitemsweight + weights[nonsolitems[i]], capacity, "item %d fits into the knapsack: %" SCIP_LONGINT_FORMAT " + %" SCIP_LONGINT_FORMAT " <= %" SCIP_LONGINT_FORMAT "\n", nonsolitems[i], solitemsweight, weights[nonsolitems[i]], capacity);
    }
 */
 }
@@ -162,18 +162,17 @@ void teardown(void)
 
    SCIPfree(&scip);
 
-   cr_assert_eq(BMSgetMemoryUsed(), 0, "There is a memory leak!!");
+   TEST_ASSERT_EQUAL(BMSgetMemoryUsed(), 0, "There is a memory leak!!");
 }
 
-TestSuite(knapprox, .init = setup, .fini = teardown);
-
 /* TESTS  */
-Test(knapprox, create_and_free)
+void test_knapprox_create_and_free(void)
 {
    /* calls setup and teardown */
 }
 
-Test(knapprox, single_call, .description = "tests single call of approximation algorithm")
+/** @brief tests single call of approximation algorithm */
+void test_knapprox_single_call(void)
 {
    nitems = 30; /* more than 25 items to call Balas Zemel algorithm */
 
@@ -184,18 +183,20 @@ Test(knapprox, single_call, .description = "tests single call of approximation a
    callAndTestSolveKnapsackApproximately();
 }
 
-Test(knapprox, trivialrandom, .description = "tests random data where all items fit")
+/** @brief tests random data where all items fit */
+void test_knapprox_trivialrandom(void)
 {
    nitems = 30; /* more than 25 items to call Balas Zemel algorithm */
 
    randomDataInit(randnumgen, 1);
 
    callAndTestSolveKnapsackApproximately();
-   cr_assert_eq(nsolitems, nitems, "Not all items were selected from trivial random data\n");
+   TEST_ASSERT_EQUAL(nsolitems, nitems, "Not all items were selected from trivial random data\n");
 
 }
 
-Test(knapprox, noitemfits, .description = "tests corner case where no single item fits")
+/** @brief tests corner case where no single item fits */
+void test_knapprox_noitemfits(void)
 {
    int i;
    nitems = 30; /* more than 25 items to call Balas Zemel algorithm */
@@ -214,10 +215,11 @@ Test(knapprox, noitemfits, .description = "tests corner case where no single ite
 
    callAndTestSolveKnapsackApproximately();
 
-   cr_assert_eq(nnonsolitems, nitems, "At least one item was selected despite too small capacity\n");
+   TEST_ASSERT_EQUAL(nnonsolitems, nitems, "At least one item was selected despite too small capacity\n");
 }
 
-Test(knapprox, biginstance, .description = "tests big random data")
+/** @brief tests big random data */
+void test_knapprox_biginstance(void)
 {
    nitems = 500; /* more than 25 items to call Balas Zemel algorithm */
 
@@ -229,7 +231,8 @@ Test(knapprox, biginstance, .description = "tests big random data")
    callAndTestSolveKnapsackApproximately();
 }
 
-Test(knapprox, equalratios, .description = "tests small instance with all ratios being equal")
+/** @brief tests small instance with all ratios being equal */
+void test_knapprox_equalratios(void)
 {
    int i;
    nitems = 100; /* more than 25 items to call Balas Zemel algorithm */
@@ -246,7 +249,8 @@ Test(knapprox, equalratios, .description = "tests small instance with all ratios
    callAndTestSolveKnapsackApproximately();
 }
 
-Test(knapprox, bigandbad, .description = "tests big instance that is already sorted (which should yield almost worst case run time)")
+/** @brief tests big instance that is already sorted (which should yield almost worst case run time) */
+void test_knapprox_bigandbad(void)
 {
    int i;
    SCIP_Real expectedprofit;
@@ -264,13 +268,14 @@ Test(knapprox, bigandbad, .description = "tests big instance that is already sor
 
    callAndTestSolveKnapsackApproximately();
 
-   cr_assert_eq(nsolitems, 49, "Wrong number of solution items");
+   TEST_ASSERT_EQUAL(nsolitems, 49, "Wrong number of solution items");
 
    expectedprofit = ((nitems + 1)/ 3.0) * nsolitems - (SCIP_Real)(nsolitems - 1)*nsolitems / 6.0;
-   cr_assert_float_eq(profit, expectedprofit, 1e-4, "Expectedprofit %g ~= profit %g\n", expectedprofit, profit);
+   TEST_ASSERT_DOUBLE_WITHIN(profit, expectedprofit, 1e-4, "Expectedprofit %g ~= profit %g\n", expectedprofit, profit);
 }
 
-Test(knapprox, manybiginstances, .description = "tests many big instances for timing")
+/** @brief tests many big instances for timing */
+void test_knapprox_manybiginstances(void)
 {
    int ntries = 20;
    int trial = 1;
@@ -285,4 +290,22 @@ Test(knapprox, manybiginstances, .description = "tests many big instances for ti
       callAndTestSolveKnapsackApproximately();
 
    } while( trial++ <= ntries );
+}
+
+void setUp(void) { setup(); }
+
+void tearDown(void) { teardown(); }
+
+int main(void)
+{
+   UNITY_BEGIN();
+   RUN_TEST(test_knapprox_create_and_free);
+   RUN_TEST(test_knapprox_single_call);
+   RUN_TEST(test_knapprox_trivialrandom);
+   RUN_TEST(test_knapprox_noitemfits);
+   RUN_TEST(test_knapprox_biginstance);
+   RUN_TEST(test_knapprox_equalratios);
+   RUN_TEST(test_knapprox_bigandbad);
+   RUN_TEST(test_knapprox_manybiginstances);
+   return UNITY_END();
 }

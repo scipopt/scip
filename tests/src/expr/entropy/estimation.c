@@ -31,9 +31,8 @@
 #include "scip/expr_entropy.c"
 #include "../estimation.h"
 
-Test(separation, entropy, .init = setup, .fini = teardown,
-   .description = "test separation for an entropy expression"
-   )
+/** @brief test separation for an entropy expression */
+void test_separation_entropy(void)
 {
    SCIP_EXPR* expr;
    SCIP_Real coef;
@@ -58,11 +57,11 @@ Test(separation, entropy, .init = setup, .fini = teardown,
    SCIP_CALL( estimateEntropy(scip, expr, &localbounds, &globalbounds, &refpoint, TRUE, -SCIPinfinity(scip), &coef,
          &constant, &local, &success, &branchcand) );
 
-   cr_assert(success);
-   cr_assert_float_eq(constant, 2.0, SCIPepsilon(scip));
-   cr_assert_float_eq(coef, -log(2.0) - 1.0, SCIPepsilon(scip));
-   cr_assert(!local);
-   cr_assert(!branchcand);
+   TEST_ASSERT(success);
+   SOFT_ASSERT_DOUBLE_WITHIN(constant, 2.0, SCIPepsilon(scip));
+   SOFT_ASSERT_DOUBLE_WITHIN(coef, -log(2.0) - 1.0, SCIPepsilon(scip));
+   SOFT_ASSERT(!local);
+   SOFT_ASSERT(!branchcand);
 
    /* compute an underestimation (secant) */
    refpoint = 2.0;
@@ -70,12 +69,23 @@ Test(separation, entropy, .init = setup, .fini = teardown,
    SCIP_CALL( estimateEntropy(scip, expr, &localbounds, &globalbounds, &refpoint, FALSE, SCIPinfinity(scip), &coef,
          &constant, &local, &success, &branchcand) );
 
-   cr_assert(success);
-   cr_assert_float_eq(constant, 1.5 * log(3.0) - 1.5 * log(1.0), SCIPepsilon(scip));
-   cr_assert_float_eq(coef, 0.5 * (-3.0 * log(3.0) + log(1.0)), SCIPepsilon(scip));
-   cr_assert(local);
-   cr_assert(branchcand);
+   TEST_ASSERT(success);
+   SOFT_ASSERT_DOUBLE_WITHIN(constant, 1.5 * log(3.0) - 1.5 * log(1.0), SCIPepsilon(scip));
+   SOFT_ASSERT_DOUBLE_WITHIN(coef, 0.5 * (-3.0 * log(3.0) + log(1.0)), SCIPepsilon(scip));
+   SOFT_ASSERT(local);
+   SOFT_ASSERT(branchcand);
 
    /* release expression */
    SCIP_CALL( SCIPreleaseExpr(scip, &expr) );
+}
+
+void setUp(void) { setup(); }
+
+void tearDown(void) { teardown(); }
+
+int main(void)
+{
+   UNITY_BEGIN();
+   RUN_TEST(test_separation_entropy);
+   return UNITY_END();
 }

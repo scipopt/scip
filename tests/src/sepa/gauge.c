@@ -236,7 +236,7 @@ void teardown(void)
    SCIP_CALL( SCIPfree(&scip) );
 
    /* check for memory leaks */
-   cr_assert_eq(BMSgetMemoryUsed(), 0, "There is are memory leak!!");
+   TEST_ASSERT_EQUAL(BMSgetMemoryUsed(), 0, "There is are memory leak!!");
 }
 
 static
@@ -276,15 +276,15 @@ void evaluate_gauge(CONVEXSIDE* convexsides)
    position = EXTERIOR;
    SCIP_CALL( SCIPcreateSol(scip, &boundary_sol, NULL) );
    SCIP_CALL( findBoundaryPoint(scip, nlrows, nlrowsidx, nnlrowsidx, convexsides, interior_sol, toseparate_sol, boundary_sol, &position) );
-   cr_expect_eq(position, BOUNDARY, "position of boundary sol is %d, expected boundary", position);
+   SOFT_ASSERT_EQUAL(position, BOUNDARY, "position of boundary sol is %d, expected boundary", position);
 
-   cr_expect_float_eq(SCIPgetSolVal(scip, boundary_sol, x), 0.265033442069232, EPS, "for x got %f\n", SCIPgetSolVal(scip, boundary_sol, x));
-   cr_expect_float_eq(SCIPgetSolVal(scip, boundary_sol, y), 0.346993311586154, EPS, "for y got %f\n", SCIPgetSolVal(scip, boundary_sol, y));
+   SOFT_ASSERT_DOUBLE_WITHIN(SCIPgetSolVal(scip, boundary_sol, x), 0.265033442069232, EPS, "for x got %f\n", SCIPgetSolVal(scip, boundary_sol, x));
+   SOFT_ASSERT_DOUBLE_WITHIN(SCIPgetSolVal(scip, boundary_sol, y), 0.346993311586154, EPS, "for y got %f\n", SCIPgetSolVal(scip, boundary_sol, y));
 
    SCIP_CALL( SCIPgetNlRowSolFeasibility(scip, nlrow1, boundary_sol, &feas) );
-   cr_expect_float_eq(feas, 0.0, EPS, "nlrow1 is not active: feas %f\n", feas);
+   SOFT_ASSERT_DOUBLE_WITHIN(feas, 0.0, EPS, "nlrow1 is not active: feas %f\n", feas);
    SCIP_CALL( SCIPgetNlRowSolFeasibility(scip, nlrow2, boundary_sol, &feas) );
-   cr_expect_float_neq(feas, 0.0, EPS, "nlrow2 is active: feas %f\n", feas);
+   SOFT_ASSERT_DOUBLE_NOT_WITHIN(feas, 0.0, EPS, "nlrow2 is active: feas %f\n", feas);
 
    /** second point active on both **/
    /* set interior point */
@@ -297,15 +297,15 @@ void evaluate_gauge(CONVEXSIDE* convexsides)
    /* find boundary point */
    position = EXTERIOR;
    SCIP_CALL( findBoundaryPoint(scip, nlrows, nlrowsidx, nnlrowsidx, convexsides, interior_sol, toseparate_sol, boundary_sol, &position) );
-   cr_expect_eq(position, BOUNDARY, "position of boundary sol is %d, expected boundary", position);
+   SOFT_ASSERT_EQUAL(position, BOUNDARY, "position of boundary sol is %d, expected boundary", position);
 
-   cr_expect_float_eq(SCIPgetSolVal(scip, boundary_sol, x), 0.4213473910790077, EPS, "for x got %f\n", SCIPgetSolVal(scip, boundary_sol, x));
-   cr_expect_float_eq(SCIPgetSolVal(scip, boundary_sol, y), 0.1775336239690863, EPS, "for y got %f\n", SCIPgetSolVal(scip, boundary_sol, y));
+   SOFT_ASSERT_DOUBLE_WITHIN(SCIPgetSolVal(scip, boundary_sol, x), 0.4213473910790077, EPS, "for x got %f\n", SCIPgetSolVal(scip, boundary_sol, x));
+   SOFT_ASSERT_DOUBLE_WITHIN(SCIPgetSolVal(scip, boundary_sol, y), 0.1775336239690863, EPS, "for y got %f\n", SCIPgetSolVal(scip, boundary_sol, y));
 
    SCIP_CALL( SCIPgetNlRowSolFeasibility(scip, nlrow1, boundary_sol, &feas) );
-   cr_expect_float_eq(feas, 0.0, EPS, "nlrow1 is not active: feas %f\n", feas);
+   SOFT_ASSERT_DOUBLE_WITHIN(feas, 0.0, EPS, "nlrow1 is not active: feas %f\n", feas);
    SCIP_CALL( SCIPgetNlRowSolFeasibility(scip, nlrow2, boundary_sol, &feas) );
-   cr_expect_float_eq(feas, 0.0, EPS, "nlrow2 is not active: feas %f\n", feas);
+   SOFT_ASSERT_DOUBLE_WITHIN(feas, 0.0, EPS, "nlrow2 is not active: feas %f\n", feas);
 
    /** third point active on nlrow2 **/
    /* set interior point */
@@ -318,15 +318,15 @@ void evaluate_gauge(CONVEXSIDE* convexsides)
    /* find boundary point */
    position = EXTERIOR;
    SCIP_CALL( findBoundaryPoint(scip, nlrows, nlrowsidx, nnlrowsidx, convexsides, interior_sol, toseparate_sol, boundary_sol, &position) );
-   cr_expect_eq(position, BOUNDARY, "position of boundary sol is %d, expected boundary", position);
+   SOFT_ASSERT_EQUAL(position, BOUNDARY, "position of boundary sol is %d, expected boundary", position);
 
-   cr_expect_float_eq(SCIPgetSolVal(scip, boundary_sol, x), -0.618033988749895, EPS, "for x got %f\n", SCIPgetSolVal(scip, boundary_sol, x));
-   cr_expect_float_eq(SCIPgetSolVal(scip, boundary_sol, y),  0.381966011250105, EPS, "for y got %f\n", SCIPgetSolVal(scip, boundary_sol, y));
+   SOFT_ASSERT_DOUBLE_WITHIN(SCIPgetSolVal(scip, boundary_sol, x), -0.618033988749895, EPS, "for x got %f\n", SCIPgetSolVal(scip, boundary_sol, x));
+   SOFT_ASSERT_DOUBLE_WITHIN(SCIPgetSolVal(scip, boundary_sol, y),  0.381966011250105, EPS, "for y got %f\n", SCIPgetSolVal(scip, boundary_sol, y));
 
    SCIP_CALL( SCIPgetNlRowSolFeasibility(scip, nlrow1, boundary_sol, &feas) );
-   cr_expect_float_neq(feas, 0.0, EPS, "nlrow1 is active: feas %f\n", feas);
+   SOFT_ASSERT_DOUBLE_NOT_WITHIN(feas, 0.0, EPS, "nlrow1 is active: feas %f\n", feas);
    SCIP_CALL( SCIPgetNlRowSolFeasibility(scip, nlrow2, boundary_sol, &feas) );
-   cr_expect_float_eq(feas, 0.0, EPS, "nlrow2 is not active: feas %f\n", feas);
+   SOFT_ASSERT_DOUBLE_WITHIN(feas, 0.0, EPS, "nlrow2 is not active: feas %f\n", feas);
 
    SCIP_CALL( SCIPfreeSol(scip, &interior_sol) );
    SCIP_CALL( SCIPfreeSol(scip, &toseparate_sol) );
@@ -334,28 +334,27 @@ void evaluate_gauge(CONVEXSIDE* convexsides)
 }
 
 /* TEST SUITE */
-TestSuite(evaluation, .init = evaluation_setup, .fini = teardown);
 
 /* Test: with nlrows having different convexity */
-Test(evaluation, convex_convex)
+void test_evaluation_convex_convex(void)
 {
    evaluate_gauge((CONVEXSIDE[]){RHS, RHS});
 }
-Test(evaluation, concave_convex)
+void test_evaluation_concave_convex(void)
 {
    evaluate_gauge((CONVEXSIDE[]){LHS, RHS});
 }
-Test(evaluation, concave_concave)
+void test_evaluation_concave_concave(void)
 {
    evaluate_gauge((CONVEXSIDE[]){LHS, LHS});
 }
-Test(evaluation, convex_concave)
+void test_evaluation_convex_concave(void)
 {
    evaluate_gauge((CONVEXSIDE[]){RHS, LHS});
 }
 
 /* test that we get the correct gradient cut for convex regions, defined as both, convex <= rhs and concave >= lhs */
-Test(evaluation, gradient_cut_convex)
+void test_evaluation_gradient_cut_convex(void)
 {
    SCIP_SOL* x0;
    SCIP_ROW* gradcut;
@@ -379,20 +378,20 @@ Test(evaluation, gradient_cut_convex)
    SCIP_CALL( SCIPcreateEmptyRowUnspec(scip, &gradcut, "gradcut", -SCIPinfinity(scip), SCIPinfinity(scip),
             FALSE, FALSE , FALSE) );
    SCIP_CALL( generateCut(scip, x0, nlrow1, convex, exprit, gradcut, &success) );
-   cr_assert(success);
+   TEST_ASSERT(success);
 
    /* check coefficients */
    coefs = SCIProwGetVals(gradcut);
-   cr_expect_eq(SCIProwGetNNonz(gradcut), 2);
-   cr_expect_float_eq(0.268941421369995, coefs[0], EPS, "for x got %f\n", coefs[0]);
-   cr_expect_float_eq(0.731058578630005, coefs[1], EPS, "for y got %f\n", coefs[1]);
-   cr_expect_float_eq(0.417796891111782, SCIProwGetRhs(gradcut), EPS, "wrong rhs\n");
+   SOFT_ASSERT_EQUAL(SCIProwGetNNonz(gradcut), 2);
+   SOFT_ASSERT_DOUBLE_WITHIN(0.268941421369995, coefs[0], EPS, "for x got %f\n", coefs[0]);
+   SOFT_ASSERT_DOUBLE_WITHIN(0.731058578630005, coefs[1], EPS, "for y got %f\n", coefs[1]);
+   SOFT_ASSERT_DOUBLE_WITHIN(0.417796891111782, SCIProwGetRhs(gradcut), EPS, "wrong rhs\n");
 
    SCIP_CALL( SCIPfreeSol(scip, &x0) );
    SCIP_CALL( SCIPreleaseRow(scip, &gradcut) );
 }
 
-Test(evaluation, gradient_cut_concave)
+void test_evaluation_gradient_cut_concave(void)
 {
    SCIP_SOL* x0;
    SCIP_ROW* gradcut;
@@ -416,20 +415,20 @@ Test(evaluation, gradient_cut_concave)
    SCIP_CALL( SCIPcreateEmptyRowUnspec(scip, &gradcut, "gradcut", -SCIPinfinity(scip), SCIPinfinity(scip),
             FALSE, FALSE , FALSE) );
    SCIP_CALL( generateCut(scip, x0, nlrow1, convex, exprit, gradcut, &success) );
-   cr_assert(success);
+   TEST_ASSERT(success);
 
    /* check coefficients */
    coefs = SCIProwGetVals(gradcut);
-   cr_expect_eq(SCIProwGetNNonz(gradcut), 2);
-   cr_expect_float_eq(-0.268941421369995, coefs[0], EPS, "for x got %f\n", coefs[0]);
-   cr_expect_float_eq(-0.731058578630005, coefs[1], EPS, "for y got %f\n", coefs[1]);
-   cr_expect_float_eq(-0.417796891111782, SCIProwGetLhs(gradcut), EPS, "wrong rhs\n");
+   SOFT_ASSERT_EQUAL(SCIProwGetNNonz(gradcut), 2);
+   SOFT_ASSERT_DOUBLE_WITHIN(-0.268941421369995, coefs[0], EPS, "for x got %f\n", coefs[0]);
+   SOFT_ASSERT_DOUBLE_WITHIN(-0.731058578630005, coefs[1], EPS, "for y got %f\n", coefs[1]);
+   SOFT_ASSERT_DOUBLE_WITHIN(-0.417796891111782, SCIProwGetLhs(gradcut), EPS, "wrong rhs\n");
 
    SCIP_CALL( SCIPfreeSol(scip, &x0) );
    SCIP_CALL( SCIPreleaseRow(scip, &gradcut) );
 }
 
-Test(evaluation, gradient_complicated_convex)
+void test_evaluation_gradient_complicated_convex(void)
 {
    SCIP_SOL* x0;
    SCIP_ROW* gradcut;
@@ -453,20 +452,20 @@ Test(evaluation, gradient_complicated_convex)
    SCIP_CALL( SCIPcreateEmptyRowUnspec(scip, &gradcut, "gradcut", -SCIPinfinity(scip), SCIPinfinity(scip),
             FALSE, FALSE , FALSE) );
    SCIP_CALL( generateCut(scip, x0, nlrow3, convex, exprit, gradcut, &success) );
-   cr_assert(success);
+   TEST_ASSERT(success);
 
    /* check coefficients */
    coefs = SCIProwGetVals(gradcut);
-   cr_expect_eq(SCIProwGetNNonz(gradcut), 2);
-   cr_expect_float_eq(-1.29124137035262, coefs[0], EPS, "for x got %f\n", coefs[0]);
-   cr_expect_float_eq(0.307654681677814, coefs[1], EPS, "for y got %f\n", coefs[1]);
-   cr_expect_float_eq(0.936777583155184, SCIProwGetRhs(gradcut), EPS, "wrong rhs\n");
+   SOFT_ASSERT_EQUAL(SCIProwGetNNonz(gradcut), 2);
+   SOFT_ASSERT_DOUBLE_WITHIN(-1.29124137035262, coefs[0], EPS, "for x got %f\n", coefs[0]);
+   SOFT_ASSERT_DOUBLE_WITHIN(0.307654681677814, coefs[1], EPS, "for y got %f\n", coefs[1]);
+   SOFT_ASSERT_DOUBLE_WITHIN(0.936777583155184, SCIProwGetRhs(gradcut), EPS, "wrong rhs\n");
 
    SCIP_CALL( SCIPfreeSol(scip, &x0) );
    SCIP_CALL( SCIPreleaseRow(scip, &gradcut) );
 }
 
-Test(evaluation, gradient_complicated_concave)
+void test_evaluation_gradient_complicated_concave(void)
 {
    SCIP_SOL* x0;
    SCIP_ROW* gradcut;
@@ -490,21 +489,21 @@ Test(evaluation, gradient_complicated_concave)
    SCIP_CALL( SCIPcreateEmptyRowUnspec(scip, &gradcut, "gradcut", -SCIPinfinity(scip), SCIPinfinity(scip),
             FALSE, FALSE , FALSE) );
    SCIP_CALL( generateCut(scip, x0, nlrow3, convex, exprit, gradcut, &success) );
-   cr_assert(success);
+   TEST_ASSERT(success);
 
    /* check coefficients */
    coefs = SCIProwGetVals(gradcut);
-   cr_expect_eq(SCIProwGetNNonz(gradcut), 2);
-   cr_expect_float_eq(1.29124137035262, coefs[0], EPS, "for x got %f\n", coefs[0]);
-   cr_expect_float_eq(-0.307654681677814, coefs[1], EPS, "for y got %f\n", coefs[1]);
-   cr_expect_float_eq(-0.936777583155184, SCIProwGetLhs(gradcut), EPS, "wrong rhs\n");
+   SOFT_ASSERT_EQUAL(SCIProwGetNNonz(gradcut), 2);
+   SOFT_ASSERT_DOUBLE_WITHIN(1.29124137035262, coefs[0], EPS, "for x got %f\n", coefs[0]);
+   SOFT_ASSERT_DOUBLE_WITHIN(-0.307654681677814, coefs[1], EPS, "for y got %f\n", coefs[1]);
+   SOFT_ASSERT_DOUBLE_WITHIN(-0.936777583155184, SCIProwGetLhs(gradcut), EPS, "wrong rhs\n");
 
    SCIP_CALL( SCIPfreeSol(scip, &x0) );
    SCIP_CALL( SCIPreleaseRow(scip, &gradcut) );
 }
 
 /* test that check interior point, notice that it doesn't belong to the test suite evaluation evaluation */
-Test(interior_point, compute_interior_point)
+void test_interior_point_compute_interior_point(void)
 {
    SCIP_SEPADATA* sepadata;
 
@@ -564,13 +563,13 @@ Test(interior_point, compute_interior_point)
    SCIP_CALL( computeInteriorPoint(scip, sepadata) );
 
    /* check sepadata stuff changed in call */
-   cr_assert_not(sepadata->skipsepa);
-   cr_assert(sepadata->isintsolavailable);
-   cr_assert_not_null(sepadata->intsol);
+   TEST_ASSERT_NOT(sepadata->skipsepa);
+   TEST_ASSERT(sepadata->isintsolavailable);
+   TEST_ASSERT_NOT_NULL(sepadata->intsol);
 
    /* check interior solution */
-   cr_expect_float_eq(-0.275971168224138, SCIPgetSolVal(scip, sepadata->intsol, x), 1e-5, "received %.10f instead", SCIPgetSolVal(scip, sepadata->intsol, x));
-   cr_expect_float_eq( 0.318323856389092, SCIPgetSolVal(scip, sepadata->intsol, y), 1e-5, "received %g instead", SCIPgetSolVal(scip, sepadata->intsol, y));
+   SOFT_ASSERT_DOUBLE_WITHIN(-0.275971168224138, SCIPgetSolVal(scip, sepadata->intsol, x), 1e-5, "received %.10f instead", SCIPgetSolVal(scip, sepadata->intsol, x));
+   SOFT_ASSERT_DOUBLE_WITHIN( 0.318323856389092, SCIPgetSolVal(scip, sepadata->intsol, y), 1e-5, "received %g instead", SCIPgetSolVal(scip, sepadata->intsol, y));
 
    /* free memory */
    SCIP_CALL( SCIPreleaseVar(scip, &x) );
@@ -580,5 +579,24 @@ Test(interior_point, compute_interior_point)
    SCIP_CALL( SCIPfree(&scip) );
 
    /* check for memory leaks */
-   cr_assert_eq(BMSgetMemoryUsed(), 0, "There is a memory leak!!");
+   TEST_ASSERT_EQUAL(BMSgetMemoryUsed(), 0, "There is a memory leak!!");
+}
+
+void setUp(void) { }
+
+void tearDown(void) { teardown(); }
+
+int main(void)
+{
+   UNITY_BEGIN();
+   RUN_TEST(test_evaluation_convex_convex);
+   RUN_TEST(test_evaluation_concave_convex);
+   RUN_TEST(test_evaluation_concave_concave);
+   RUN_TEST(test_evaluation_convex_concave);
+   RUN_TEST(test_evaluation_gradient_cut_convex);
+   RUN_TEST(test_evaluation_gradient_cut_concave);
+   RUN_TEST(test_evaluation_gradient_complicated_convex);
+   RUN_TEST(test_evaluation_gradient_complicated_concave);
+   RUN_TEST(test_interior_point_compute_interior_point);
+   return UNITY_END();
 }

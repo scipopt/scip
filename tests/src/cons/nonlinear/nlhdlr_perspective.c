@@ -66,16 +66,16 @@ void setup(void)
    SCIP_CALL( SCIPincludeDefaultPlugins(scip) );
 
    conshdlr = SCIPfindConshdlr(scip, "nonlinear");
-   cr_assert_not_null(conshdlr);
+   TEST_ASSERT_NOT_NULL(conshdlr);
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
-   cr_assert_not_null(conshdlrdata);
+   TEST_ASSERT_NOT_NULL(conshdlrdata);
 
    /* get perspective and convex nlhdlrs */
    nlhdlr = SCIPfindNlhdlrNonlinear(conshdlr, NLHDLR_NAME);
    nlhdlr_conv = SCIPfindNlhdlrNonlinear(conshdlr, "convex");
 
-   cr_assert_not_null(nlhdlr);
-   cr_assert_not_null(nlhdlr_conv);
+   TEST_ASSERT_NOT_NULL(nlhdlr);
+   TEST_ASSERT_NOT_NULL(nlhdlr_conv);
 
    /* create problem */
    SCIP_CALL( SCIPcreateProbBasic(scip, "test_problem") );
@@ -125,7 +125,7 @@ void teardown(void)
    SCIP_CALL( SCIPfree(&scip) );
 
    BMSdisplayMemory();
-   cr_assert_eq(BMSgetMemoryUsed(), 0, "Memory is leaking!!");
+   TEST_ASSERT_EQUAL(BMSgetMemoryUsed(), 0, "Memory is leaking!!");
 }
 
 static
@@ -137,10 +137,10 @@ void checkCut(SCIP_ROW* cut, SCIP_VAR** vars, SCIP_Real* vals, int nvars, SCIP_R
    int i;
    int j;
 
-   cr_assert(cut != NULL);
-   cr_expect_eq(SCIProwGetNNonz(cut), nvars, "\nExpected %d vars, got %d", nvars, SCIProwGetNNonz(cut));
-   cr_expect(SCIPisEQ(scip, SCIProwGetLhs(cut), lhs));
-   cr_expect(SCIPisEQ(scip, SCIProwGetRhs(cut), rhs));
+   TEST_ASSERT(cut != NULL);
+   SOFT_ASSERT_EQUAL(SCIProwGetNNonz(cut), nvars, "\nExpected %d vars, got %d", nvars, SCIProwGetNNonz(cut));
+   SOFT_ASSERT(SCIPisEQ(scip, SCIProwGetLhs(cut), lhs));
+   SOFT_ASSERT(SCIPisEQ(scip, SCIProwGetRhs(cut), rhs));
 
    for( i = 0; i < SCIProwGetNNonz(cut); ++i )
    {
@@ -152,17 +152,17 @@ void checkCut(SCIP_ROW* cut, SCIP_VAR** vars, SCIP_Real* vals, int nvars, SCIP_R
       {
          if( var == vars[j] )
          {
-            cr_expect(SCIPisEQ(scip, coef, vals[j]));
+            SOFT_ASSERT(SCIPisEQ(scip, coef, vals[j]));
             found = TRUE;
          }
       }
 
-      cr_expect(found, "variable %s must be in the cut", SCIPvarGetName(var));
+      SOFT_ASSERT(found, "variable %s must be in the cut", SCIPvarGetName(var));
    }
 }
 
 /* tests the detection of semicontinuous variables */
-Test(nlhdlrperspective, varissc, .init = setup, .fini = teardown)
+void test_nlhdlrperspective_varissc(void)
 {
    SCIP_HASHMAP* scvars;
    SCIP_HASHMAPENTRY* entry;
@@ -189,16 +189,16 @@ Test(nlhdlrperspective, varissc, .init = setup, .fini = teardown)
    SCIP_CALL( varIsSemicontinuous(scip, x_1, scvars, &result) );
 
    /* check result */
-   cr_expect_eq(SCIPhashmapGetNElements(scvars), 1, "Expected 1 semicontinuous variable, got %d", SCIPhashmapGetNElements(scvars));
+   SOFT_ASSERT_EQUAL(SCIPhashmapGetNElements(scvars), 1, "Expected 1 semicontinuous variable, got %d", SCIPhashmapGetNElements(scvars));
    scvdata = (SCVARDATA*) SCIPhashmapGetImage(scvars, (void*)x_1);
-   cr_expect_eq(scvdata->nbnds, 3, "Expected 3 on/off bounds for variable x1, got %d", scvdata->nbnds);
+   SOFT_ASSERT_EQUAL(scvdata->nbnds, 3, "Expected 3 on/off bounds for variable x1, got %d", scvdata->nbnds);
 
-   cr_expect_eq(scvdata->bvars[0], (void*)z_1, "bvars[0] expected to be z1, got %s", SCIPvarGetName(scvdata->bvars[0]));
-   cr_expect_eq(scvdata->vals0[0], 0.0, "vals0[0] expected to be 0.0, got %f", scvdata->vals0[0]);
-   cr_expect_eq(scvdata->bvars[1], (void*)z_2, "bvars[1] expected to be z2, got %s", SCIPvarGetName(scvdata->bvars[1]));
-   cr_expect_eq(scvdata->vals0[1], 0.0, "vals0[1] expected to be 0.0, got %f", scvdata->vals0[1]);
-   cr_expect_eq(scvdata->bvars[2], (void*)z_3, "bvars[2] expected to be z3, got %s", SCIPvarGetName(scvdata->bvars[2]));
-   cr_expect_eq(scvdata->vals0[2], 1.0, "vals0[2] expected to be 1.0, got %f", scvdata->vals0[2]);
+   SOFT_ASSERT_EQUAL(scvdata->bvars[0], (void*)z_1, "bvars[0] expected to be z1, got %s", SCIPvarGetName(scvdata->bvars[0]));
+   SOFT_ASSERT_EQUAL(scvdata->vals0[0], 0.0, "vals0[0] expected to be 0.0, got %f", scvdata->vals0[0]);
+   SOFT_ASSERT_EQUAL(scvdata->bvars[1], (void*)z_2, "bvars[1] expected to be z2, got %s", SCIPvarGetName(scvdata->bvars[1]));
+   SOFT_ASSERT_EQUAL(scvdata->vals0[1], 0.0, "vals0[1] expected to be 0.0, got %f", scvdata->vals0[1]);
+   SOFT_ASSERT_EQUAL(scvdata->bvars[2], (void*)z_3, "bvars[2] expected to be z3, got %s", SCIPvarGetName(scvdata->bvars[2]));
+   SOFT_ASSERT_EQUAL(scvdata->vals0[2], 1.0, "vals0[2] expected to be 1.0, got %f", scvdata->vals0[2]);
 
    /* free memory */
    for( c = 0; c < SCIPhashmapGetNEntries(scvars); ++c )
@@ -218,7 +218,7 @@ Test(nlhdlrperspective, varissc, .init = setup, .fini = teardown)
 }
 
 /* detects x1^2 + x1y1 + x2^2 as an on/off expression with 2 indicator variables */
-Test(nlhdlrperspective, detectandfree1, .init = setup, .fini = teardown)
+void test_nlhdlrperspective_detectandfree1(void)
 {
    SCIP_NLHDLREXPRDATA* nlhdlrexprdata = NULL;
    SCIP_EXPR* expr;
@@ -273,19 +273,19 @@ Test(nlhdlrperspective, detectandfree1, .init = setup, .fini = teardown)
    enforcing = SCIP_NLHDLR_METHOD_NONE;
    participating = SCIP_NLHDLR_METHOD_NONE;
    SCIP_CALL( nlhdlrDetectPerspective(scip, conshdlr, nlhdlr, expr, cons, &enforcing, &participating, &nlhdlrexprdata) );
-   cr_expect_eq(participating, SCIP_NLHDLR_METHOD_SEPABELOW, "expecting sepabelow, got %d\n", participating);
-   cr_assert_eq(enforcing, SCIP_NLHDLR_METHOD_NONE);
-   cr_assert_not_null(nlhdlrexprdata);
+   SOFT_ASSERT_EQUAL(participating, SCIP_NLHDLR_METHOD_SEPABELOW, "expecting sepabelow, got %d\n", participating);
+   TEST_ASSERT_EQUAL(enforcing, SCIP_NLHDLR_METHOD_NONE);
+   TEST_ASSERT_NOT_NULL(nlhdlrexprdata);
 
-   cr_expect_eq(nlhdlrexprdata->nindicators, 2, "Expecting 2 indicator variables, got %d\n", nlhdlrexprdata->nindicators);
+   SOFT_ASSERT_EQUAL(nlhdlrexprdata->nindicators, 2, "Expecting 2 indicator variables, got %d\n", nlhdlrexprdata->nindicators);
 
    /* compute and check the 'off' values */
    SCIP_CALL( nlhdlrInitSepaPerspective(scip, conshdlr, cons, nlhdlr, expr, nlhdlrexprdata, TRUE, TRUE, &infeas) );
-   cr_assert_eq(nlhdlrexprdata->indicators[0], z_1, "Expecting the first indicator to be z_1, got %s\n", SCIPvarGetName(nlhdlrexprdata->indicators[0]));
-   cr_assert_eq(nlhdlrexprdata->exprvals0[0], 9.0, "Expecting off value = 9.0, got %f\n", nlhdlrexprdata->exprvals0[0]);
+   TEST_ASSERT_EQUAL(nlhdlrexprdata->indicators[0], z_1, "Expecting the first indicator to be z_1, got %s\n", SCIPvarGetName(nlhdlrexprdata->indicators[0]));
+   TEST_ASSERT_EQUAL(nlhdlrexprdata->exprvals0[0], 9.0, "Expecting off value = 9.0, got %f\n", nlhdlrexprdata->exprvals0[0]);
 
-   cr_assert_eq(nlhdlrexprdata->indicators[1], z_2, "Expecting the second indicator to be z_2, got %s\n", SCIPvarGetName(nlhdlrexprdata->indicators[1]));
-   cr_assert_eq(nlhdlrexprdata->exprvals0[1], 0.0, "Expecting off value = 0.0, got %f\n", nlhdlrexprdata->exprvals0[1]);
+   TEST_ASSERT_EQUAL(nlhdlrexprdata->indicators[1], z_2, "Expecting the second indicator to be z_2, got %s\n", SCIPvarGetName(nlhdlrexprdata->indicators[1]));
+   TEST_ASSERT_EQUAL(nlhdlrexprdata->exprvals0[1], 0.0, "Expecting off value = 0.0, got %f\n", nlhdlrexprdata->exprvals0[1]);
 
    SCIP_CALL( freeNlhdlrExprData(scip, nlhdlrexprdata) );
    SCIPfreeBlockMemory(scip, &nlhdlrexprdata);
@@ -299,7 +299,7 @@ Test(nlhdlrperspective, detectandfree1, .init = setup, .fini = teardown)
 }
 
 /* detects x1^2 as an on/off expression */
-Test(nlhdlrperspective, detectandfree2, .init = setup, .fini = teardown)
+void test_nlhdlrperspective_detectandfree2(void)
 {
    SCIP_NLHDLREXPRDATA* nlhdlrexprdata = NULL;
    SCIP_EXPR* expr;
@@ -339,12 +339,12 @@ Test(nlhdlrperspective, detectandfree2, .init = setup, .fini = teardown)
    enforcing = SCIP_NLHDLR_METHOD_NONE;
    participating = SCIP_NLHDLR_METHOD_NONE;
    SCIP_CALL( nlhdlrDetectPerspective(scip, conshdlr, nlhdlr, expr, cons, &enforcing, &participating, &nlhdlrexprdata) );
-   cr_expect_eq(participating, SCIP_NLHDLR_METHOD_SEPABELOW, "expecting participating = sepabelow, got %d\n",
+   SOFT_ASSERT_EQUAL(participating, SCIP_NLHDLR_METHOD_SEPABELOW, "expecting participating = sepabelow, got %d\n",
          participating);
-   cr_assert_eq(enforcing, SCIP_NLHDLR_METHOD_NONE);
-   cr_assert_not_null(nlhdlrexprdata);
+   TEST_ASSERT_EQUAL(enforcing, SCIP_NLHDLR_METHOD_NONE);
+   TEST_ASSERT_NOT_NULL(nlhdlrexprdata);
 
-   cr_expect_eq(nlhdlrexprdata->nindicators, 2, "Expecting 2 indicator variables, got %d\n", nlhdlrexprdata->nindicators);
+   SOFT_ASSERT_EQUAL(nlhdlrexprdata->nindicators, 2, "Expecting 2 indicator variables, got %d\n", nlhdlrexprdata->nindicators);
 
    SCIP_CALL( freeNlhdlrExprData(scip, nlhdlrexprdata) );
    SCIPfreeBlockMemory(scip, &nlhdlrexprdata);
@@ -358,7 +358,7 @@ Test(nlhdlrperspective, detectandfree2, .init = setup, .fini = teardown)
 }
 
 /* detects log(x1+x2+1) as an on/off expression */
-Test(nlhdlrperspective, detectandfree3, .init = setup, .fini = teardown)
+void test_nlhdlrperspective_detectandfree3(void)
 {
    SCIP_NLHDLREXPRDATA* nlhdlrexprdata = NULL;
    SCIP_EXPR* expr;
@@ -407,11 +407,11 @@ Test(nlhdlrperspective, detectandfree3, .init = setup, .fini = teardown)
    enforcing = SCIP_NLHDLR_METHOD_NONE;
    participating = SCIP_NLHDLR_METHOD_NONE;
    SCIP_CALL( nlhdlrDetectPerspective(scip, conshdlr, nlhdlr, expr, cons, &enforcing, &participating, &nlhdlrexprdata) );
-   cr_expect_eq(participating, SCIP_NLHDLR_METHOD_SEPAABOVE, "expecting sepaabove, got %d\n", participating);
-   cr_assert_eq(enforcing, SCIP_NLHDLR_METHOD_NONE);
-   cr_assert_not_null(nlhdlrexprdata);
+   SOFT_ASSERT_EQUAL(participating, SCIP_NLHDLR_METHOD_SEPAABOVE, "expecting sepaabove, got %d\n", participating);
+   TEST_ASSERT_EQUAL(enforcing, SCIP_NLHDLR_METHOD_NONE);
+   TEST_ASSERT_NOT_NULL(nlhdlrexprdata);
 
-   cr_expect_eq(nlhdlrexprdata->nindicators, 2, "Expecting 2 indicator vars, got %d\n", nlhdlrexprdata->nindicators);
+   SOFT_ASSERT_EQUAL(nlhdlrexprdata->nindicators, 2, "Expecting 2 indicator vars, got %d\n", nlhdlrexprdata->nindicators);
 
    SCIP_CALL( freeNlhdlrExprData(scip, nlhdlrexprdata) );
    SCIPfreeBlockMemory(scip, &nlhdlrexprdata);
@@ -425,7 +425,7 @@ Test(nlhdlrperspective, detectandfree3, .init = setup, .fini = teardown)
 }
 
 /* separates x1^2 + x1y1 + x2^2 for 2 indicator variables */
-Test(nlhdlrperspective, sepa, .init = setup, .fini = teardown)
+void test_nlhdlrperspective_sepa(void)
 {
    SCIP_NLHDLREXPRDATA* nlhdlrexprdata = NULL;
    SCIP_NLHDLREXPRDATA* nlhdlrexprdata_conv = NULL;
@@ -479,10 +479,10 @@ Test(nlhdlrperspective, sepa, .init = setup, .fini = teardown)
    participating_conv = SCIP_NLHDLR_METHOD_NONE;
    SCIP_CALL( SCIPnlhdlrDetect(scip, conshdlr, nlhdlr_conv, expr, cons, &enforcing_conv, &participating_conv,
          &nlhdlrexprdata_conv) );
-   cr_expect_eq(participating_conv, SCIP_NLHDLR_METHOD_SEPABELOW, "expecting participating_conv = sepabelow, got %d\n",
+   SOFT_ASSERT_EQUAL(participating_conv, SCIP_NLHDLR_METHOD_SEPABELOW, "expecting participating_conv = sepabelow, got %d\n",
          participating);
-   cr_assert_eq(enforcing_conv, SCIP_NLHDLR_METHOD_SEPABELOW);
-   cr_assert_not_null(nlhdlrexprdata_conv);
+   TEST_ASSERT_EQUAL(enforcing_conv, SCIP_NLHDLR_METHOD_SEPABELOW);
+   TEST_ASSERT_NOT_NULL(nlhdlrexprdata_conv);
 
    /* although convex has already detected, it doesn't fill the ownerdata, so we do it here */
    ownerdata = SCIPexprGetOwnerData(expr);
@@ -498,19 +498,19 @@ Test(nlhdlrperspective, sepa, .init = setup, .fini = teardown)
    /* detect by perspective handler */
    participating = SCIP_NLHDLR_METHOD_NONE;
    SCIP_CALL( nlhdlrDetectPerspective(scip, conshdlr, nlhdlr, expr, cons, &enforcing, &participating, &nlhdlrexprdata) );
-   cr_expect_eq(participating, SCIP_NLHDLR_METHOD_SEPABELOW, "expecting sepabelow, got %d\n", participating);
-   cr_assert_not_null(nlhdlrexprdata);
+   SOFT_ASSERT_EQUAL(participating, SCIP_NLHDLR_METHOD_SEPABELOW, "expecting sepabelow, got %d\n", participating);
+   TEST_ASSERT_NOT_NULL(nlhdlrexprdata);
    ownerdata->enfos[1]->nlhdlrexprdata = nlhdlrexprdata;
 
-   cr_expect_eq(nlhdlrexprdata->nindicators, 2, "Expecting 2 indicator variables, got %d\n", nlhdlrexprdata->nindicators);
+   SOFT_ASSERT_EQUAL(nlhdlrexprdata->nindicators, 2, "Expecting 2 indicator variables, got %d\n", nlhdlrexprdata->nindicators);
 
    /* compute and check the 'off' values */
    SCIP_CALL( nlhdlrInitSepaPerspective(scip, conshdlr, cons, nlhdlr, expr, nlhdlrexprdata, TRUE, TRUE, &infeas) );
-   cr_assert_eq(nlhdlrexprdata->indicators[0], z_1, "Expecting the first indicator to be z_1, got %s\n", SCIPvarGetName(nlhdlrexprdata->indicators[0]));
-   cr_assert_eq(nlhdlrexprdata->exprvals0[0], 9.0, "Expecting off value = 9.0, got %f\n", nlhdlrexprdata->exprvals0[0]);
+   TEST_ASSERT_EQUAL(nlhdlrexprdata->indicators[0], z_1, "Expecting the first indicator to be z_1, got %s\n", SCIPvarGetName(nlhdlrexprdata->indicators[0]));
+   TEST_ASSERT_EQUAL(nlhdlrexprdata->exprvals0[0], 9.0, "Expecting off value = 9.0, got %f\n", nlhdlrexprdata->exprvals0[0]);
 
-   cr_assert_eq(nlhdlrexprdata->indicators[1], z_2, "Expecting the second indicator to be z_2, got %s\n", SCIPvarGetName(nlhdlrexprdata->indicators[1]));
-   cr_assert_eq(nlhdlrexprdata->exprvals0[1], 0.0, "Expecting off value = 0.0, got %f\n", nlhdlrexprdata->exprvals0[1]);
+   TEST_ASSERT_EQUAL(nlhdlrexprdata->indicators[1], z_2, "Expecting the second indicator to be z_2, got %s\n", SCIPvarGetName(nlhdlrexprdata->indicators[1]));
+   TEST_ASSERT_EQUAL(nlhdlrexprdata->exprvals0[1], 0.0, "Expecting off value = 0.0, got %f\n", nlhdlrexprdata->exprvals0[1]);
 
    /* make sure there is an auxvar; since expr is not part of a constraint, we cannot lean on cons_nonlinear to do that for us TODO but it is part of a constraint? */
    SCIP_CALL( createAuxVar(scip, expr) );
@@ -530,14 +530,14 @@ Test(nlhdlrperspective, sepa, .init = setup, .fini = teardown)
    SCIP_CALL( SCIPsetSolVal(scip, sol, auxvar, 10) );
 
    SCIP_CALL( SCIPnlhdlrEvalaux(scip, nlhdlr, expr, nlhdlrexprdata, &(ownerdata->enfos[1]->auxvalue), sol) );
-   cr_expect_eq(ownerdata->enfos[1]->auxvalue, 16.0);
+   SOFT_ASSERT_EQUAL(ownerdata->enfos[1]->auxvalue, 16.0);
 
    SCIP_CALL( SCIPcreatePtrarray(scip, &rowpreps) );
 
    SCIP_CALL( nlhdlrEnfoPerspective(scip, conshdlr, cons, nlhdlr, expr, nlhdlrexprdata, sol, ownerdata->enfos[1]->auxvalue,
          FALSE, FALSE, FALSE, FALSE, FALSE, &result) );
-   cr_expect_eq(result, SCIP_SEPARATED, "Expected enfo result = %d, got %d", SCIP_SEPARATED, result);
-   cr_assert(SCIPgetNCuts(scip) == 2);
+   SOFT_ASSERT_EQUAL(result, SCIP_SEPARATED, "Expected enfo result = %d, got %d", SCIP_SEPARATED, result);
+   TEST_ASSERT(SCIPgetNCuts(scip) == 2);
 
    /* check the cuts */
    cutvars = (SCIP_VAR*[4]) {z_1, x_2, x_1, auxvar};
@@ -555,4 +555,19 @@ Test(nlhdlrperspective, sepa, .init = setup, .fini = teardown)
 
    SCIP_CALL( SCIPaddConsLocks(scip, cons, -1, 0) );
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
+}
+
+void setUp(void) { setup(); }
+
+void tearDown(void) { teardown(); }
+
+int main(void)
+{
+   UNITY_BEGIN();
+   RUN_TEST(test_nlhdlrperspective_varissc);
+   RUN_TEST(test_nlhdlrperspective_detectandfree1);
+   RUN_TEST(test_nlhdlrperspective_detectandfree2);
+   RUN_TEST(test_nlhdlrperspective_detectandfree3);
+   RUN_TEST(test_nlhdlrperspective_sepa);
+   return UNITY_END();
 }

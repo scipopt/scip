@@ -66,9 +66,11 @@ while ( FALSE )
  *
  *  Some LPIs use std::numeric_limits<SCIP_Real>::infinity() as finity value. Comparing two infinty values then yields
  *  nan. This is a workaround. */
-#define cr_assert_float_eq_inf(Actual, Expected, Epsilon, FormatString, ...) \
+#undef TEST_ASSERT_DOUBLE_WITHIN_INF
+#undef TEST_ASSERT_DOUBLE_WITHIN_INF_
+#define TEST_ASSERT_DOUBLE_WITHIN_INF(Actual, Expected, Epsilon, FormatString, ...) \
    if ( fabs(Actual) < 1e30 && fabs(Expected) < 1e30 )                       \
-      cr_assert_float_eq(Actual, Expected, Epsilon, FormatString, __VA_ARGS__);
+      TEST_ASSERT_DOUBLE_WITHIN(Actual, Expected, Epsilon);
 
 /** setup of test suite */
 static
@@ -88,10 +90,8 @@ static
 void teardown(void)
 {
    SCIP_CALL( SCIPlpiFree(&lpi) );
-   cr_assert_eq(BMSgetMemoryUsed(), 0, "There is a memory leak!");
+   TEST_ASSERT_EQUAL(BMSgetMemoryUsed(), 0, "There is a memory leak!");
 }
-
-TestSuite(solve, .init = setup, .fini = teardown);
 
 /* local functions */
 
@@ -127,8 +127,8 @@ SCIP_RETCODE solveTest(
    /* check size */
    SCIP_CALL( SCIPlpiGetNRows(lpi, &ntmprows) );
    SCIP_CALL( SCIPlpiGetNCols(lpi, &ntmpcols) );
-   cr_assert( nrows == ntmprows );
-   cr_assert( ncols == ntmpcols );
+   TEST_ASSERT( nrows == ntmprows );
+   TEST_ASSERT( ncols == ntmpcols );
 
    /* solve problem */
    switch ( lpalgo )
@@ -154,10 +154,10 @@ SCIP_RETCODE solveTest(
    }
 
    /* check status */
-   cr_assert( SCIPlpiWasSolved(lpi) );
-   cr_assert( ! SCIPlpiIsObjlimExc(lpi) );
-   cr_assert( ! SCIPlpiIsIterlimExc(lpi) );
-   cr_assert( ! SCIPlpiIsTimelimExc(lpi) );
+   TEST_ASSERT( SCIPlpiWasSolved(lpi) );
+   TEST_ASSERT( ! SCIPlpiIsObjlimExc(lpi) );
+   TEST_ASSERT( ! SCIPlpiIsIterlimExc(lpi) );
+   TEST_ASSERT( ! SCIPlpiIsTimelimExc(lpi) );
 
    /* check feasibility status */
    SCIP_CALL( SCIPlpiGetSolFeasibility(lpi, &primalfeasible, &dualfeasible) );
@@ -165,42 +165,42 @@ SCIP_RETCODE solveTest(
    /* if we are feasible, we should be optimal */
    if ( exp_primalfeas == SCIPfeas && exp_dualfeas == SCIPfeas )
    {
-      cr_assert( SCIPlpiIsOptimal(lpi) );
+      TEST_ASSERT( SCIPlpiIsOptimal(lpi) );
    }
 
    /* check more primal statuses */
    switch ( exp_primalfeas )
    {
    case SCIPfeas:
-      cr_assert( primalfeasible );
-      cr_assert( ! SCIPlpiExistsPrimalRay(lpi) );
-      cr_assert( ! SCIPlpiHasPrimalRay(lpi) );
-      cr_assert( ! SCIPlpiIsPrimalUnbounded(lpi) );
-      cr_assert( ! SCIPlpiIsPrimalInfeasible(lpi) );
-      cr_assert( SCIPlpiIsPrimalFeasible(lpi) );
+      TEST_ASSERT( primalfeasible );
+      TEST_ASSERT( ! SCIPlpiExistsPrimalRay(lpi) );
+      TEST_ASSERT( ! SCIPlpiHasPrimalRay(lpi) );
+      TEST_ASSERT( ! SCIPlpiIsPrimalUnbounded(lpi) );
+      TEST_ASSERT( ! SCIPlpiIsPrimalInfeasible(lpi) );
+      TEST_ASSERT( SCIPlpiIsPrimalFeasible(lpi) );
       break;
 
    case SCIPunbounded:
       /* Because of SoPlex, cannot always determine feasibility status here, even if we want to apply the primal
        * simplex. In any case, the results of primalfeasible and SCIPlpiIsPrimalFeasible(lpi) should coincide. */
-      cr_assert( primalfeasible == SCIPlpiIsPrimalFeasible(lpi) );
+      TEST_ASSERT( primalfeasible == SCIPlpiIsPrimalFeasible(lpi) );
 
       /* It seems that we cannot guarantee that the primal is shown to be unbounded. */
-      /* cr_assert( SCIPlpiIsPrimalUnbounded(lpi) ); */
+      /* TEST_ASSERT( SCIPlpiIsPrimalUnbounded(lpi) ); */
 
       /* primal ray should exist if the primal simplex ran */
-      cr_assert( lpalgo != SCIP_LPALGO_PRIMALSIMPLEX || SCIPlpiExistsPrimalRay(lpi) );
-      cr_assert( ! SCIPlpiIsPrimalInfeasible(lpi) );
+      TEST_ASSERT( lpalgo != SCIP_LPALGO_PRIMALSIMPLEX || SCIPlpiExistsPrimalRay(lpi) );
+      TEST_ASSERT( ! SCIPlpiIsPrimalInfeasible(lpi) );
       break;
 
    case SCIPinfeas:
-      cr_assert( ! primalfeasible );
+      TEST_ASSERT( ! primalfeasible );
       /* It seems that we cannot always prove that primal is infeasible. */
-      /* cr_assert( SCIPlpiIsPrimalInfeasible(lpi) ); */
+      /* TEST_ASSERT( SCIPlpiIsPrimalInfeasible(lpi) ); */
 
       /* It seems that we cannot always prove that primal is not unbounded. */
-      /* cr_assert( ! SCIPlpiIsPrimalUnbounded(lpi) ); */
-      cr_assert( ! SCIPlpiIsPrimalFeasible(lpi) );
+      /* TEST_ASSERT( ! SCIPlpiIsPrimalUnbounded(lpi) ); */
+      TEST_ASSERT( ! SCIPlpiIsPrimalFeasible(lpi) );
       break;
 
    default:
@@ -211,33 +211,33 @@ SCIP_RETCODE solveTest(
    switch ( exp_dualfeas )
    {
    case SCIPfeas:
-      cr_assert( dualfeasible );
-      cr_assert( ! SCIPlpiExistsDualRay(lpi) );
-      cr_assert( ! SCIPlpiHasDualRay(lpi) );
-      cr_assert( ! SCIPlpiIsDualUnbounded(lpi) );
-      cr_assert( ! SCIPlpiIsDualInfeasible(lpi) );
-      cr_assert( SCIPlpiIsDualFeasible(lpi) );
+      TEST_ASSERT( dualfeasible );
+      TEST_ASSERT( ! SCIPlpiExistsDualRay(lpi) );
+      TEST_ASSERT( ! SCIPlpiHasDualRay(lpi) );
+      TEST_ASSERT( ! SCIPlpiIsDualUnbounded(lpi) );
+      TEST_ASSERT( ! SCIPlpiIsDualInfeasible(lpi) );
+      TEST_ASSERT( SCIPlpiIsDualFeasible(lpi) );
       break;
 
    case SCIPunbounded:
       /* Because of SoPlex, cannot always determine feasibility status here, even if we want to apply the dual
        * simplex. In any case, the results of dualfeasible and SCIPlpiIsDualFeasible(lpi) should coincide. */
-      cr_assert( dualfeasible == SCIPlpiIsDualFeasible(lpi) );
+      TEST_ASSERT( dualfeasible == SCIPlpiIsDualFeasible(lpi) );
 
       /* It seems that we cannot guarantee that the dual is shown to be unbounded. */
-      /* cr_assert( SCIPlpiIsDualUnbounded(lpi) ); */
+      /* TEST_ASSERT( SCIPlpiIsDualUnbounded(lpi) ); */
 
       /* dual ray should exist if the dual simplex ran */
-      cr_assert( lpalgo != SCIP_LPALGO_DUALSIMPLEX || SCIPlpiExistsDualRay(lpi) );
-      cr_assert( ! SCIPlpiIsDualInfeasible(lpi) );
+      TEST_ASSERT( lpalgo != SCIP_LPALGO_DUALSIMPLEX || SCIPlpiExistsDualRay(lpi) );
+      TEST_ASSERT( ! SCIPlpiIsDualInfeasible(lpi) );
       break;
 
    case SCIPinfeas:
-      cr_assert( ! dualfeasible );
-      cr_assert( ! SCIPlpiIsDualUnbounded(lpi) );
+      TEST_ASSERT( ! dualfeasible );
+      TEST_ASSERT( ! SCIPlpiIsDualUnbounded(lpi) );
       /* It seems that we cannot always prove that dual is infeasible. */
-      /* cr_assert( SCIPlpiIsDualInfeasible(lpi) ); */
-      cr_assert( ! SCIPlpiIsDualFeasible(lpi) );
+      /* TEST_ASSERT( SCIPlpiIsDualInfeasible(lpi) ); */
+      TEST_ASSERT( ! SCIPlpiIsDualFeasible(lpi) );
       break;
 
    default:
@@ -259,8 +259,8 @@ SCIP_RETCODE solveTest(
       assert( exp_primsol != NULL && exp_redcost != NULL );
       for (j = 0; j < ncols; ++j)
       {
-         cr_assert_float_eq(primsol[j], exp_primsol[j], EPS, "Violation of primal solution %d: %g != %g\n", j, primsol[j], exp_primsol[j]);
-         cr_assert_float_eq(redcost[j], exp_redcost[j], EPS, "Violation of reduced cost of solution %d: %g != %g\n", j, redcost[j], exp_redcost[j]);
+         TEST_ASSERT_DOUBLE_WITHIN(primsol[j], exp_primsol[j], EPS, "Violation of primal solution %d: %g != %g\n", j, primsol[j], exp_primsol[j]);
+         TEST_ASSERT_DOUBLE_WITHIN(redcost[j], exp_redcost[j], EPS, "Violation of reduced cost of solution %d: %g != %g\n", j, redcost[j], exp_redcost[j]);
       }
    }
    else if ( exp_primalfeas == SCIPunbounded )
@@ -277,7 +277,7 @@ SCIP_RETCODE solveTest(
          for (j = 0; j < ncols; ++j)
          {
             if ( REALABS(exp_primsol[j]) < EPS )
-               cr_assert_float_eq(primsol[j], exp_primsol[j], EPS, "Violation of primal ray %d: %g != %g\n", j, primsol[j], exp_primsol[j]);
+               TEST_ASSERT_DOUBLE_WITHIN(primsol[j], exp_primsol[j], EPS, "Violation of primal ray %d: %g != %g\n", j, primsol[j], exp_primsol[j]);
             else
             {
                scalingfactor = primsol[j]/exp_primsol[j];
@@ -288,7 +288,7 @@ SCIP_RETCODE solveTest(
          /* again loop over ray */
          for (j = 0; j < ncols; ++j)
          {
-            cr_assert_float_eq(primsol[j], scalingfactor * exp_primsol[j], EPS, "Violation of primal ray %d: %g != %g\n", j, primsol[j], scalingfactor * exp_primsol[j]);
+            TEST_ASSERT_DOUBLE_WITHIN(primsol[j], scalingfactor * exp_primsol[j], EPS, "Violation of primal ray %d: %g != %g\n", j, primsol[j], scalingfactor * exp_primsol[j]);
          }
       }
    }
@@ -301,8 +301,8 @@ SCIP_RETCODE solveTest(
       assert( exp_dualsol != NULL && exp_activity != NULL );
       for (i = 0; i < nrows; ++i)
       {
-         cr_assert_float_eq(dualsol[i], exp_dualsol[i], EPS, "Violation of dual solution %d: %g != %g\n", i, dualsol[i], exp_dualsol[i]);
-         cr_assert_float_eq(activity[i], exp_activity[i], EPS, "Violation of activity of solution %d: %g != %g\n", i, activity[i], exp_activity[i]);
+         TEST_ASSERT_DOUBLE_WITHIN(dualsol[i], exp_dualsol[i], EPS, "Violation of dual solution %d: %g != %g\n", i, dualsol[i], exp_dualsol[i]);
+         TEST_ASSERT_DOUBLE_WITHIN(activity[i], exp_activity[i], EPS, "Violation of activity of solution %d: %g != %g\n", i, activity[i], exp_activity[i]);
       }
    }
    else if ( exp_dualfeas == SCIPunbounded )
@@ -327,7 +327,7 @@ SCIP_RETCODE solveTest(
          for (i = 0; i < nrows; ++i)
          {
             if ( REALABS(exp_dualsol[i]) < EPS )
-               cr_assert_float_eq(dualsol[i], exp_dualsol[i], EPS, "Violation of dual ray %d: %g != %g\n", i, dualsol[i], exp_dualsol[i]);
+               TEST_ASSERT_DOUBLE_WITHIN(dualsol[i], exp_dualsol[i], EPS, "Violation of dual ray %d: %g != %g\n", i, dualsol[i], exp_dualsol[i]);
             else
             {
                scalingfactor = dualsol[i]/exp_dualsol[i];
@@ -338,9 +338,9 @@ SCIP_RETCODE solveTest(
          /* again loop over ray */
          for (i = 0; i < nrows; ++i)
          {
-            cr_assert_float_eq(dualsol[i], scalingfactor * exp_dualsol[i], EPS, "Violation of dual ray %d: %g != %g\n", i, dualsol[i], scalingfactor * exp_dualsol[i]);
-            cr_assert( ! SCIPlpiIsInfinity(lpi, -lhs[i]) || dualsol[i] <= -EPS );
-            cr_assert( ! SCIPlpiIsInfinity(lpi, rhs[i]) || dualsol[i] >= EPS );
+            TEST_ASSERT_DOUBLE_WITHIN(dualsol[i], scalingfactor * exp_dualsol[i], EPS, "Violation of dual ray %d: %g != %g\n", i, dualsol[i], scalingfactor * exp_dualsol[i]);
+            TEST_ASSERT( ! SCIPlpiIsInfinity(lpi, -lhs[i]) || dualsol[i] <= -EPS );
+            TEST_ASSERT( ! SCIPlpiIsInfinity(lpi, rhs[i]) || dualsol[i] >= EPS );
          }
 
          BMSfreeMemoryArray(&rhs);
@@ -382,7 +382,7 @@ SCIP_RETCODE performTest(
 {
    /* load problem */
    SCIP_CALL( SCIPlpiLoadColLP(lpi, objsen, 2, obj, lb, ub, NULL, 2, lhs, rhs, NULL, 4, beg, ind, val) );
-   cr_assert( ! SCIPlpiWasSolved(lpi) );
+   TEST_ASSERT( ! SCIPlpiWasSolved(lpi) );
 
    /* solve problem */
    SCIP_CALL( solveTest(lpalgo, ncols, nrows, exp_primalfeas, exp_dualfeas, exp_primsol, exp_dualsol, exp_activity, exp_redcost) );
@@ -426,16 +426,16 @@ SCIP_RETCODE checkData(
    /* check number of rows and columns */
    SCIP_CALL( SCIPlpiGetNRows(lpi, &lpinrows) );
    SCIP_CALL( SCIPlpiGetNCols(lpi, &lpincols) );
-   cr_assert( lpinrows == nrows );
-   cr_assert( lpincols == ncols );
+   TEST_ASSERT( lpinrows == nrows );
+   TEST_ASSERT( lpincols == ncols );
 
    /* check objective sense */
    SCIP_CALL( SCIPlpiGetObjsen(lpi, &lpiobjsen) ) ;
-   cr_assert( objsen == lpiobjsen );
+   TEST_ASSERT( objsen == lpiobjsen );
 
    /* get number of nonzeros in matrix */
    SCIP_CALL( SCIPlpiGetNNonz(lpi, &lpinnonz) );
-   cr_assert( lpinnonz == nnonz );
+   TEST_ASSERT( lpinnonz == nnonz );
 
    /* allocate storage for data */
    BMSallocMemoryArray(&lpilb, ncols);
@@ -452,12 +452,12 @@ SCIP_RETCODE checkData(
    /* compare data */
    for (j = 0; j < ncols; ++j)
    {
-      cr_assert_float_eq_inf(lpilb[j], lb[j], EPS, "Violation of lower bound %d: %g != %g\n", j, lpilb[j], lb[j]);
-      cr_assert_float_eq_inf(lpiub[j], ub[j], EPS, "Violation of upper bound %d: %g != %g\n", j, lpiub[j], ub[j]);
+      TEST_ASSERT_DOUBLE_WITHIN_INF(lpilb[j], lb[j], EPS, "Violation of lower bound %d: %g != %g\n", j, lpilb[j], lb[j]);
+      TEST_ASSERT_DOUBLE_WITHIN_INF(lpiub[j], ub[j], EPS, "Violation of upper bound %d: %g != %g\n", j, lpiub[j], ub[j]);
 
-      cr_assert_float_eq(lpiobj[j], obj[j], EPS, "Violation of objective coefficient %d: %g != %g\n", j, lpiobj[j], obj[j]);
+      TEST_ASSERT_DOUBLE_WITHIN(lpiobj[j], obj[j], EPS, "Violation of objective coefficient %d: %g != %g\n", j, lpiobj[j], obj[j]);
 
-      cr_assert( lpibeg[j] == beg[j] );
+      TEST_ASSERT( lpibeg[j] == beg[j] );
 
       /* LP-solvers sometimes permute the nonzero entries per column (e.g., XPRESS with barrier) - we therefore sort them */
       if ( j < ncols - 1 )
@@ -470,8 +470,8 @@ SCIP_RETCODE checkData(
    /* compare matrix */
    for (j = 0; j < nnonz; ++j)
    {
-      cr_assert( lpiind[j] == ind[j] );
-      cr_assert_float_eq(lpival[j], val[j], EPS, "Violation of matrix entry (%d, %d): %g != %g\n", ind[j], j, lpival[j], val[j]);
+      TEST_ASSERT( lpiind[j] == ind[j] );
+      TEST_ASSERT_DOUBLE_WITHIN(lpival[j], val[j], EPS, "Violation of matrix entry (%d, %d): %g != %g\n", ind[j], j, lpival[j], val[j]);
    }
 
    BMSfreeMemoryArray(&lpiobj);
@@ -489,8 +489,8 @@ SCIP_RETCODE checkData(
 
    for (i = 0; i < nrows; ++i)
    {
-      cr_assert_float_eq_inf(lpilhs[i], lhs[i], EPS, "Violation of lhs %d: %g != %g\n", i, lpilhs[i], lhs[i]);
-      cr_assert_float_eq_inf(lpirhs[i], rhs[i], EPS, "Violation of rhs %d: %g != %g\n", i, lpirhs[i], rhs[i]);
+      TEST_ASSERT_DOUBLE_WITHIN_INF(lpilhs[i], lhs[i], EPS, "Violation of lhs %d: %g != %g\n", i, lpilhs[i], lhs[i]);
+      TEST_ASSERT_DOUBLE_WITHIN_INF(lpirhs[i], rhs[i], EPS, "Violation of rhs %d: %g != %g\n", i, lpirhs[i], rhs[i]);
    }
 
    BMSfreeMemoryArray(&lpirhs);
@@ -502,18 +502,8 @@ SCIP_RETCODE checkData(
 
 /** TESTS **/
 
-/** Test 1
- *
- * max 3 x1 +   x2
- *     2 x1 +   x2 <= 10
- *       x1 + 3 x2 <= 15
- *       x1,    x2 >= 0
- *
- * with primal optimal solution (5, 0), dual optimal solution (1.5, 0), activity (10, 5), and redcost (0, -0.5).
- *
- * Then use objective (1, 1) with primal optimal solution (3,4), dual optimal solution (0.4, 0.2), activity (10, 15), and redcost (0, 0).
- */
-Test(solve, test1)
+/** Test 1 */
+void test_solve_test1(void)
 {
    /* data with fixed values: */
    SCIP_Real obj[2] = {3, 1};
@@ -593,18 +583,8 @@ Test(solve, test1)
 }
 
 
-/** Test 2
- *
- * max 3 x1 +   x2
- *     2 x1 +   x2 <= 10
- *       x1 + 3 x2 <= 15
- *       x1, x2 free
- *
- * which is unbounded (the only difference to Test 1 is that the variables are free).
- *
- * Then use objective (1, 1) with primal optimal solution (3,4), dual optimal solution (0.4, 0.2), activity (10, 15), and redcost (0, 0).
- */
-Test(solve, test2)
+/** Test 2 */
+void test_solve_test2(void)
 {
    /* data with fixed values: */
    SCIP_Real obj[2] = {3, 1};
@@ -679,18 +659,8 @@ Test(solve, test2)
 }
 
 
-/** Test 3
- *
- * min 10 y1 + 15 y2
- *      2 y1 +   y2 == 3
- *        y1 + 3 y2 == 1
- *        y1,    y2 >= 0
- *
- * which is dual unbounded (this is the dual of the problem in Test 2).
- *
- * Then use rhs (1, 1) with primal optimal solution (0.4,0.2), dual optimal solution (3, 4), activity (0, 0), and redcost (0, 0).
- */
-Test(solve, test3)
+/** Test 3 */
+void test_solve_test3(void)
 {
    /* data with fixed values: */
    SCIP_Real obj[2] = {10, 15};
@@ -760,16 +730,8 @@ Test(solve, test3)
 }
 
 
-/** Test 4
- *
- * max x1 + x2
- *     x1 - x2 <= 0
- *   - x1 + x2 <= -1
- *     x1,  x2 free
- *
- * which primal and dual infeasible.
- */
-Test(solve, test4)
+/** Test 4 */
+void test_solve_test4(void)
 {
    /* data with fixed values: */
    SCIP_Real obj[2] = {1, 1};
@@ -826,13 +788,8 @@ Test(solve, test4)
 }
 
 
-/** Test 5: Test objective limit
- *
- * Use second problem from Test 1 and set objective limit.
- *
- * This is quite weak test. For instance SoPlex directly finishes with the optimal solution.
- */
-Test(solve, test5)
+/** Test 5: Test objective limit */
+void test_solve_test5(void)
 {
    /* data with fixed values: */
    SCIP_Real obj[2] = {1, 1};
@@ -871,14 +828,14 @@ Test(solve, test5)
    SCIP_CALL( SCIPlpiSolveDual(lpi) );
 
    /* check status */
-   cr_assert( SCIPlpiWasSolved(lpi) );
-   cr_assert( SCIPlpiIsObjlimExc(lpi) || SCIPlpiIsOptimal(lpi) );
-   cr_assert( ! SCIPlpiIsIterlimExc(lpi) );
-   cr_assert( ! SCIPlpiIsTimelimExc(lpi) );
+   TEST_ASSERT( SCIPlpiWasSolved(lpi) );
+   TEST_ASSERT( SCIPlpiIsObjlimExc(lpi) || SCIPlpiIsOptimal(lpi) );
+   TEST_ASSERT( ! SCIPlpiIsIterlimExc(lpi) );
+   TEST_ASSERT( ! SCIPlpiIsTimelimExc(lpi) );
 
    /* the objective should be equal to the objective limit */
    SCIP_CALL( SCIPlpiGetObjval(lpi, &objval) );
-   cr_assert_geq(objval, exp_objval, "Objective value not equal to objective limit: %g != %g\n", objval, exp_objval);
+   TEST_ASSERT_GREATER_OR_EQUAL(objval, exp_objval, "Objective value not equal to objective limit: %g != %g\n", objval, exp_objval);
 
    /* check that data stored in lpi is still the same */
    SCIP_CALL( checkData(SCIP_OBJSEN_MAXIMIZE, 2, obj, lb, ub, 2, lhs, rhs, 4, beg, ind, val) );
@@ -891,14 +848,14 @@ Test(solve, test5)
       SCIP_CALL( SCIPlpiSolveBarrier(lpi, TRUE) );
 
       /* check status */
-      cr_assert( SCIPlpiWasSolved(lpi) );
-      cr_assert( SCIPlpiIsObjlimExc(lpi) || SCIPlpiIsOptimal(lpi) );
-      cr_assert( ! SCIPlpiIsIterlimExc(lpi) );
-      cr_assert( ! SCIPlpiIsTimelimExc(lpi) );
+      TEST_ASSERT( SCIPlpiWasSolved(lpi) );
+      TEST_ASSERT( SCIPlpiIsObjlimExc(lpi) || SCIPlpiIsOptimal(lpi) );
+      TEST_ASSERT( ! SCIPlpiIsIterlimExc(lpi) );
+      TEST_ASSERT( ! SCIPlpiIsTimelimExc(lpi) );
 
       /* the objective should be equal to the objective limit */
       SCIP_CALL( SCIPlpiGetObjval(lpi, &objval) );
-      cr_assert_geq(objval, exp_objval, "Objective value not equal to objective limit: %g != %g\n", objval, exp_objval);
+      TEST_ASSERT_GREATER_OR_EQUAL(objval, exp_objval, "Objective value not equal to objective limit: %g != %g\n", objval, exp_objval);
 
       /* check that data stored in lpi is still the same */
       SCIP_CALL( checkData(SCIP_OBJSEN_MAXIMIZE, 2, obj, lb, ub, 2, lhs, rhs, 4, beg, ind, val) );
@@ -906,50 +863,8 @@ Test(solve, test5)
 }
 
 
-/** Test 6: More complex example
- *
- * The original problem was the following (arising from the qpkktref unit test), which displays a bug in CPLEX 12.7.0
- * w.r.t. scaling:
- *   Minimize t_objvar
- *   Subject To
- *     KKTBinary1_y:                 - t_dual_y_bin1 + t_dual_y_bin2 + t_dual_y_slackbin1 = 0
- *     KKTlin_lower_1:               - t_x - t_y + t_slack_lhs_lower + t_slack_ub_z       = 0.75
- *     KKTBinary1_x:                 - t_dual_x_bin1 + t_dual_x_bin2 + t_dual_x_slackbin1 = 0
- *     KKTlin_lower_0:               - t_x - t_y + t_slack_ub_z - t_slack_rhs_lower       = 0.25
- *     quadratic_side1_estimation_0: 2.75 t_x - 3.75 t_y + t_objvar + 2.28 t_slack_ub_z  <= 5.0496
- *     quadratic_side0_estimation_0: 1.25 t_x - 0.25 t_y + t_objvar + 2 t_slack_ub_z     >= 2.6875
- *     quadratic_side1_estimation_0: 0.75 t_x - 0.25 t_y + t_objvar + 0.68 t_slack_ub_z  <= 4.2056
- *     quadratic_side0_estimation_0: 2.75 t_x - 0.25 t_y + t_objvar + 3 t_slack_ub_z     >= 4.4375
- *   Bounds
- *     t_x = 1
- *     t_y = 0
- *     -2.562500001 <= t_objvar <= -0.0624999989999999
- *     0 <= t_slack_lhs_lower <= 0.5
- *     t_dual_x_bin1 Free
- *     t_dual_x_bin2 Free
- *     t_dual_x_slackbin1 = 0
- *     t_dual_y_bin1 = 0
- *     t_dual_y_bin2 Free
- *     t_dual_y_slackbin1 Free
- *     1.25 <= t_slack_ub_z <= 1.75
- *     0 <= t_slack_rhs_lower <= 0.5
- *   End
- *
- *  We use the following mapping between variables and indices:
- *  0:  t_x = 1
- *  1:  t_y = 0
- *  2:  t_objvar
- *  3:  t_slack_lhs_lower
- *  4:  t_dual_x_bin1
- *  5:  t_dual_x_bin2
- *  6:  t_dual_x_slackbin1
- *  7:  t_dual_y_bin1
- *  8:  t_dual_y_bin2
- *  9:  t_dual_y_slackbin1
- *  10: t_slack_ub_z
- *  11: t_slack_rhs_lower
- */
-Test(solve, test6)
+/** Test 6: More complex example */
+void test_solve_test6(void)
 {
    SCIP_Real exp_objval = -2.0625;
    SCIP_Real objval;
@@ -1008,11 +923,11 @@ Test(solve, test6)
    SCIP_CALL( SCIPlpiSolveDual(lpi) );
 
    /* check status */
-   cr_assert( SCIPlpiWasSolved(lpi) );
+   TEST_ASSERT( SCIPlpiWasSolved(lpi) );
 
    /* the objective should be equal to the objective limit */
    SCIP_CALL( SCIPlpiGetObjval(lpi, &objval) );
-   cr_assert_float_eq(objval, exp_objval, EPS, "Objective value not equal to objective limit: %g != %g\n", objval, exp_objval);
+   TEST_ASSERT_DOUBLE_WITHIN(objval, exp_objval, EPS, "Objective value not equal to objective limit: %g != %g\n", objval, exp_objval);
 
    /* check that data stored in lpi is still the same */
    SCIP_CALL( checkData(SCIP_OBJSEN_MINIMIZE, 12, obj, lb, ub, 8, lhs, rhs, 30, beg, ind, val) );
@@ -1049,22 +964,8 @@ Test(solve, test6)
 }
 
 
-/** Test 7
- *
- *  min 10 x1 + 15 x2
- *       2 x1 +   x2 >= 3
- *         x1 + 3 x2 <= 1
- *         x1,    x2 >= 0
- *
- *  which is dual unbounded (this is a variant of Test 3 in which the equations have been replaced by inequalities).
- *
- *  The dual is:
- *  max  3 y1 +   y2
- *       2 y1 +   y2 <= 10
- *         y1 + 3 y2 <= 15
- *         y1 >= 0, y2 <= 0
- */
-Test(solve, test7)
+/** Test 7 */
+void test_solve_test7(void)
 {
    /* data with fixed values: */
    SCIP_Real obj[2] = {10, 15};
@@ -1114,4 +1015,21 @@ Test(solve, test7)
       /* check that data stored in lpi is still the same */
       SCIP_CALL( checkData(SCIP_OBJSEN_MINIMIZE, 2, obj, lb, ub, 2, lhs, rhs, 4, beg, ind, val) );
    }
+}
+
+void setUp(void) { setup(); }
+
+void tearDown(void) { teardown(); }
+
+int main(void)
+{
+   UNITY_BEGIN();
+   RUN_TEST(test_solve_test1);
+   RUN_TEST(test_solve_test2);
+   RUN_TEST(test_solve_test3);
+   RUN_TEST(test_solve_test4);
+   RUN_TEST(test_solve_test5);
+   RUN_TEST(test_solve_test6);
+   RUN_TEST(test_solve_test7);
+   return UNITY_END();
 }

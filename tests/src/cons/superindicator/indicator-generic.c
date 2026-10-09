@@ -42,7 +42,7 @@
                           SCIP_RETCODE _restat_;                                          \
                           if( (_restat_ = (x)) != SCIP_OKAY )                             \
                           {                                                               \
-                             cr_assert(FALSE, "Error <%d> in function call\n", _restat_); \
+                             TEST_ASSERT(FALSE, "Error <%d> in function call\n", _restat_); \
                           }                                                               \
                        }                                                                  \
                        while( FALSE )
@@ -84,14 +84,11 @@ void teardown(void)
    SCIP_CALL( SCIPfree(&scip) );
 
    /* check for memory leaks */
-   cr_assert_eq(BMSgetMemoryUsed(), 0, "There are memory leaks!");
+   TEST_ASSERT_EQUAL(BMSgetMemoryUsed(), 0, "There are memory leaks!");
 }
 
-TestSuite(indicator, .init = setup, .fini = teardown);
-
-Test(indicator, feasiblezero1, .init = setup, .fini = teardown,
-   .description = "MIP with two indicator constraints"
-   )
+/** @brief MIP with two indicator constraints */
+void test_indicator_feasiblezero1(void)
 {
    /*
       Unit test inspired by MathOptInterface.jl
@@ -149,19 +146,19 @@ Test(indicator, feasiblezero1, .init = setup, .fini = teardown,
    SCIP_CALL( SCIPsolve(scip) );
 
    sol = SCIPgetBestSol( scip );
-   cr_assert_not_null(sol);
+   TEST_ASSERT_NOT_NULL(sol);
 
-   cr_assert_eq(SCIPgetStatus(scip), SCIP_STATUS_OPTIMAL);
+   TEST_ASSERT_EQUAL(SCIPgetStatus(scip), SCIP_STATUS_OPTIMAL);
 
    xval = SCIPgetSolVal(scip, sol, x1);
-   cr_assert_eq(xval, 1.25);
+   TEST_ASSERT_EQUAL(xval, 1.25);
    xval = SCIPgetSolVal(scip, sol, x2);
-   cr_assert_eq(xval, 8.75);
+   TEST_ASSERT_EQUAL(xval, 8.75);
 
    zval = SCIPgetSolVal(scip, sol, z1);
-   cr_assert_eq(zval, 0.0);
+   TEST_ASSERT_EQUAL(zval, 0.0);
    zval = SCIPgetSolVal(scip, sol, z2);
-   cr_assert_eq(zval, 1.0);
+   TEST_ASSERT_EQUAL(zval, 1.0);
 
    SCIP_CALL( SCIPreleaseCons(scip, &ic1) );
    SCIP_CALL( SCIPreleaseCons(scip, &ic2) );
@@ -173,9 +170,8 @@ Test(indicator, feasiblezero1, .init = setup, .fini = teardown,
    SCIP_CALL( SCIPreleaseVar(scip, &z2) );
 }
 
-Test(indicator, feasibleone1, .init = setup, .fini = teardown,
-   .description = "MIP with two indicator constraints, one negated variable"
-   )
+/** @brief MIP with two indicator constraints, one negated variable */
+void test_indicator_feasibleone1(void)
 {
    /*
       Unit test inspired by MathOptInterface.jl
@@ -236,19 +232,19 @@ Test(indicator, feasibleone1, .init = setup, .fini = teardown,
    SCIP_CALL( SCIPsolve(scip) );
 
    sol = SCIPgetBestSol( scip );
-   cr_assert_not_null(sol);
+   TEST_ASSERT_NOT_NULL(sol);
 
-   cr_assert_eq(SCIPgetStatus(scip), SCIP_STATUS_OPTIMAL);
+   TEST_ASSERT_EQUAL(SCIPgetStatus(scip), SCIP_STATUS_OPTIMAL);
 
    xval = SCIPgetSolVal(scip, sol, x1);
-   cr_assert(EPSEQ(xval, 1.249999));
+   TEST_ASSERT(EPSEQ(xval, 1.249999));
    xval = SCIPgetSolVal(scip, sol, x2);
-   cr_assert(EPSEQ(xval, 8.75));
+   TEST_ASSERT(EPSEQ(xval, 8.75));
 
    zval = SCIPgetSolVal(scip, sol, z1);
-   cr_assert(EPSEQ(zval, 0.0));
+   TEST_ASSERT(EPSEQ(zval, 0.0));
    zval = SCIPgetSolVal(scip, sol, z2);
-   cr_assert(EPSEQ(zval, 1.0));
+   TEST_ASSERT(EPSEQ(zval, 1.0));
 
    SCIP_CALL( SCIPreleaseCons(scip, &ic1) );
    SCIP_CALL( SCIPreleaseCons(scip, &ic2) );
@@ -260,9 +256,8 @@ Test(indicator, feasibleone1, .init = setup, .fini = teardown,
    SCIP_CALL( SCIPreleaseVar(scip, &z2) );
 }
 
-Test(indicator, feasibleone2, .init = setup, .fini = teardown,
-   .description = "MIP with two indicator constraints, one negated variable, actual var activated on 0"
-   )
+/** @brief MIP with two indicator constraints, one negated variable, actual var activated on 0 */
+void test_indicator_feasibleone2(void)
 {
    /*
       Unit test inspired by MathOptInterface.jl
@@ -318,17 +313,17 @@ Test(indicator, feasibleone2, .init = setup, .fini = teardown,
    SCIP_CALL( SCIPsolve(scip) );
 
    sol = SCIPgetBestSol( scip );
-   cr_assert_not_null(sol);
+   TEST_ASSERT_NOT_NULL(sol);
 
-   cr_assert_eq(SCIPgetStatus(scip), SCIP_STATUS_OPTIMAL);
+   TEST_ASSERT_EQUAL(SCIPgetStatus(scip), SCIP_STATUS_OPTIMAL);
 
    xval = SCIPgetSolVal(scip, sol, x1);
-   cr_assert(EPSEQ(xval, 1.25));
+   TEST_ASSERT(EPSEQ(xval, 1.25));
    xval = SCIPgetSolVal(scip, sol, x2);
-   cr_assert(EPSEQ(xval, 8.75));
+   TEST_ASSERT(EPSEQ(xval, 8.75));
 
    zval = SCIPgetSolVal(scip, sol, z1);
-   cr_assert(EPSEQ(zval, 1.0));
+   TEST_ASSERT(EPSEQ(zval, 1.0));
 
    SCIP_CALL( SCIPreleaseCons(scip, &ic1) );
    SCIP_CALL( SCIPreleaseCons(scip, &ic2) );
@@ -340,9 +335,8 @@ Test(indicator, feasibleone2, .init = setup, .fini = teardown,
    SCIP_CALL( SCIPreleaseVar(scip, &z2) );
 }
 
-Test(indicator, flippedindicator1, .init = setup, .fini = teardown,
-   .description = "Indicator constraint with flipped inequality"
-   )
+/** @brief Indicator constraint with flipped inequality */
+void test_indicator_flippedindicator1(void)
 {
    /*
       Unit test inspired by MathOptInterface.jl
@@ -400,19 +394,19 @@ Test(indicator, flippedindicator1, .init = setup, .fini = teardown,
    SCIP_CALL( SCIPsolve(scip) );
 
    sol = SCIPgetBestSol( scip );
-   cr_assert_not_null(sol);
+   TEST_ASSERT_NOT_NULL(sol);
 
-   cr_assert_eq(SCIPgetStatus(scip), SCIP_STATUS_OPTIMAL);
+   TEST_ASSERT_EQUAL(SCIPgetStatus(scip), SCIP_STATUS_OPTIMAL);
 
    xval = SCIPgetSolVal(scip, sol, x1);
-   cr_assert_eq(xval, 1.25);
+   TEST_ASSERT_EQUAL(xval, 1.25);
    xval = SCIPgetSolVal(scip, sol, x2);
-   cr_assert_eq(xval, 8.75);
+   TEST_ASSERT_EQUAL(xval, 8.75);
 
    zval = SCIPgetSolVal(scip, sol, z1);
-   cr_assert_eq(zval, 0.0);
+   TEST_ASSERT_EQUAL(zval, 0.0);
    zval = SCIPgetSolVal(scip, sol, z2);
-   cr_assert_eq(zval, 1.0);
+   TEST_ASSERT_EQUAL(zval, 1.0);
 
    SCIP_CALL( SCIPreleaseCons(scip, &ic1) );
    SCIP_CALL( SCIPreleaseCons(scip, &ic2) );
@@ -422,4 +416,18 @@ Test(indicator, flippedindicator1, .init = setup, .fini = teardown,
    SCIP_CALL( SCIPreleaseVar(scip, &x2) );
    SCIP_CALL( SCIPreleaseVar(scip, &z1) );
    SCIP_CALL( SCIPreleaseVar(scip, &z2) );
+}
+
+void setUp(void) { setup(); }
+
+void tearDown(void) { teardown(); }
+
+int main(void)
+{
+   UNITY_BEGIN();
+   RUN_TEST(test_indicator_feasiblezero1);
+   RUN_TEST(test_indicator_feasibleone1);
+   RUN_TEST(test_indicator_feasibleone2);
+   RUN_TEST(test_indicator_flippedindicator1);
+   return UNITY_END();
 }

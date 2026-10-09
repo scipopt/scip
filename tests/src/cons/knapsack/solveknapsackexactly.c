@@ -92,8 +92,8 @@ SCIP_Bool checkSetContainment(
    int j;
    int sortedset2 [MAX_ARRAYLEN];
 
-   cr_assert(len1 <= MAX_ARRAYLEN);
-   cr_assert(len2 <= MAX_ARRAYLEN);
+   TEST_ASSERT(len1 <= MAX_ARRAYLEN);
+   TEST_ASSERT(len2 <= MAX_ARRAYLEN);
 
    if( len1 > len2 )
       return FALSE;
@@ -112,14 +112,13 @@ SCIP_Bool checkSetContainment(
    return TRUE;
 }
 
-TestSuite(solveknapsackexactly, .init = setup, .fini = teardown);
-
 /* TESTS  */
 
 /*
  * test trivial cases
  */
-Test(solveknapsackexactly, test1, .description="check whether the case that all items are redundant is caught correctly")
+/** @brief check whether the case that all items are redundant is caught correctly */
+void test_solveknapsackexactly_test1(void)
 {
    nitems = 2;
    capacity = 1LL;
@@ -130,13 +129,14 @@ Test(solveknapsackexactly, test1, .description="check whether the case that all 
 
    solveKnapsack();
 
-   cr_assert( success );
-   cr_assert( nsolitems == 0 );
-   cr_assert( nnonsolitems == 2 );
-   cr_assert_float_eq(solval, 0.0, EPS);
+   TEST_ASSERT( success );
+   TEST_ASSERT( nsolitems == 0 );
+   TEST_ASSERT( nnonsolitems == 2 );
+   TEST_ASSERT_DOUBLE_WITHIN(solval, 0.0, EPS);
 }
 
-Test(solveknapsackexactly, test2, .description="test whether the correct items are sorted out (weight == 0 or negative profit)")
+/** @brief test whether the correct items are sorted out (weight == 0 or negative profit) */
+void test_solveknapsackexactly_test2(void)
 {
    /* also tests whether the case of all items fitting into the knapsack is caught correctly. */
    nitems = 5;
@@ -155,18 +155,19 @@ Test(solveknapsackexactly, test2, .description="test whether the correct items a
 
    solveKnapsack();
 
-   cr_assert( success );
-   cr_assert( nsolitems == 2 );
-   cr_assert( nnonsolitems == 3 );
-   cr_assert( solitems[0] == 0 );
-   cr_assert( solitems[1] == 4 );
-   cr_assert( nonsolitems[0] == 1 );
-   cr_assert( nonsolitems[1] == 2 );
-   cr_assert( nonsolitems[2] == 3 );
-   cr_assert_float_eq(solval, 2.0, EPS);
+   TEST_ASSERT( success );
+   TEST_ASSERT( nsolitems == 2 );
+   TEST_ASSERT( nnonsolitems == 3 );
+   TEST_ASSERT( solitems[0] == 0 );
+   TEST_ASSERT( solitems[1] == 4 );
+   TEST_ASSERT( nonsolitems[0] == 1 );
+   TEST_ASSERT( nonsolitems[1] == 2 );
+   TEST_ASSERT( nonsolitems[2] == 3 );
+   TEST_ASSERT_DOUBLE_WITHIN(solval, 2.0, EPS);
 }
 
-Test(solveknapsackexactly, test3, .description="test whether the case of all equal weights is handled correctly")
+/** @brief test whether the case of all equal weights is handled correctly */
+void test_solveknapsackexactly_test3(void)
 {
    nitems = 4;
    capacity = 4LL;
@@ -182,15 +183,16 @@ Test(solveknapsackexactly, test3, .description="test whether the case of all equ
 
    solveKnapsack();
 
-   cr_assert( success );
-   cr_assert( nsolitems == 2 );
-   cr_assert( nnonsolitems == 2 );
-   cr_assert( (solitems[0] == 2 && solitems[1] == 3) || (solitems[0] == 3 && solitems[1] == 2) );
-   cr_assert( (nonsolitems[0] == 0 && nonsolitems[1] == 1) || (nonsolitems[0] == 1 && nonsolitems[1] == 0) );
-   cr_assert_float_eq(solval, 7.0, EPS);
+   TEST_ASSERT( success );
+   TEST_ASSERT( nsolitems == 2 );
+   TEST_ASSERT( nnonsolitems == 2 );
+   TEST_ASSERT( (solitems[0] == 2 && solitems[1] == 3) || (solitems[0] == 3 && solitems[1] == 2) );
+   TEST_ASSERT( (nonsolitems[0] == 0 && nonsolitems[1] == 1) || (nonsolitems[0] == 1 && nonsolitems[1] == 0) );
+   TEST_ASSERT_DOUBLE_WITHIN(solval, 7.0, EPS);
 }
 
-Test(solveknapsackexactly, test4, .description="test whether the case that only one item fits into the knapsack is handled correctly")
+/** @brief test whether the case that only one item fits into the knapsack is handled correctly */
+void test_solveknapsackexactly_test4(void)
 {
    nitems = 3;
    capacity = 3LL;
@@ -204,15 +206,16 @@ Test(solveknapsackexactly, test4, .description="test whether the case that only 
 
    solveKnapsack();
 
-   cr_assert( success );
-   cr_assert( nsolitems == 1 );
-   cr_assert( nnonsolitems == 2 );
-   cr_assert( solitems[0] == 0 );
-   cr_assert( (nonsolitems[0] == 1 && nonsolitems[1] == 2) || (nonsolitems[0] == 2 && nonsolitems[1] == 1) );
-   cr_assert_float_eq(solval, 3.0, EPS);
+   TEST_ASSERT( success );
+   TEST_ASSERT( nsolitems == 1 );
+   TEST_ASSERT( nnonsolitems == 2 );
+   TEST_ASSERT( solitems[0] == 0 );
+   TEST_ASSERT( (nonsolitems[0] == 1 && nonsolitems[1] == 2) || (nonsolitems[0] == 2 && nonsolitems[1] == 1) );
+   TEST_ASSERT_DOUBLE_WITHIN(solval, 3.0, EPS);
 }
 
-Test(solveknapsackexactly, test_greedy1, .description="test greedy algorithm")
+/** @brief test greedy algorithm */
+void test_solveknapsackexactly_test_greedy1(void)
 {
    nitems = 3;
    capacity = 3LL;
@@ -230,15 +233,16 @@ Test(solveknapsackexactly, test_greedy1, .description="test greedy algorithm")
     * debugger has to be used. */
    solveKnapsack();
 
-   cr_assert( success );
-   cr_assert( nsolitems == 2 );
-   cr_assert( nnonsolitems == 1 );
-   cr_assert( (solitems[0] == 0 && solitems[1] == 1) || (solitems[0] == 1 && solitems[1] == 0) );
-   cr_assert( nonsolitems[0] == 2 );
-   cr_assert_float_eq(solval, 5, EPS);
+   TEST_ASSERT( success );
+   TEST_ASSERT( nsolitems == 2 );
+   TEST_ASSERT( nnonsolitems == 1 );
+   TEST_ASSERT( (solitems[0] == 0 && solitems[1] == 1) || (solitems[0] == 1 && solitems[1] == 0) );
+   TEST_ASSERT( nonsolitems[0] == 2 );
+   TEST_ASSERT_DOUBLE_WITHIN(solval, 5, EPS);
 }
 
-Test(solveknapsackexactly, test_greedy2, .description="test whether greedy solution is equal to the rounded LP value")
+/** @brief test whether greedy solution is equal to the rounded LP value */
+void test_solveknapsackexactly_test_greedy2(void)
 {
    nitems = 3;
    capacity = 4LL;
@@ -253,13 +257,14 @@ Test(solveknapsackexactly, test_greedy2, .description="test whether greedy solut
    solveKnapsack();
 
    /* the solution packs two items and is optimal, since the LP optimal value is 4.5 */
-   cr_assert( success );
-   cr_assert( nsolitems == 2 );
-   cr_assert( nnonsolitems == 1 );
-   cr_assert_float_eq(solval, 4.0, EPS);
+   TEST_ASSERT( success );
+   TEST_ASSERT( nsolitems == 2 );
+   TEST_ASSERT( nnonsolitems == 1 );
+   TEST_ASSERT_DOUBLE_WITHIN(solval, 4.0, EPS);
 }
 
-Test(solveknapsackexactly, test_general, .description="general test")
+/** @brief general test */
+void test_solveknapsackexactly_test_general(void)
 {
    nitems = 6;
    capacity = 13LL;
@@ -279,15 +284,16 @@ Test(solveknapsackexactly, test_general, .description="general test")
 
    solveKnapsack();
 
-   cr_assert( success );
-   cr_assert( nsolitems == 4 );
-   cr_assert( nnonsolitems == 2 );
-   cr_assert( (nonsolitems[0] == 0 && nonsolitems[1] == 2) || (nonsolitems[0] == 2 && nonsolitems[1] == 0) );
-   cr_assert_float_eq(solval, 4.0, EPS);
+   TEST_ASSERT( success );
+   TEST_ASSERT( nsolitems == 4 );
+   TEST_ASSERT( nnonsolitems == 2 );
+   TEST_ASSERT( (nonsolitems[0] == 0 && nonsolitems[1] == 2) || (nonsolitems[0] == 2 && nonsolitems[1] == 0) );
+   TEST_ASSERT_DOUBLE_WITHIN(solval, 4.0, EPS);
 }
 
 /* large test */
-Test(solveknapsackexactly, test_large, .description="large test")
+/** @brief large test */
+void test_solveknapsackexactly_test_large(void)
 {
    int j;
 
@@ -310,10 +316,28 @@ Test(solveknapsackexactly, test_large, .description="large test")
 
    solveKnapsack();
 
-   cr_assert( success );
-   cr_assert( nsolitems == 750 ); /* the 500 latter items with higher profit, and 250 of the less profitable items */
-   cr_assert( nnonsolitems == nitems - 750 );
-   cr_assert( checkSetContainment(&items[nitems/2], solitems, nitems / 2, nsolitems) );
-   cr_assert( checkSetContainment(&items[250], solitems, 250, nsolitems) );
-   cr_assert( checkSetContainment(items, nonsolitems, 250, nnonsolitems) );
+   TEST_ASSERT( success );
+   TEST_ASSERT( nsolitems == 750 ); /* the 500 latter items with higher profit, and 250 of the less profitable items */
+   TEST_ASSERT( nnonsolitems == nitems - 750 );
+   TEST_ASSERT( checkSetContainment(&items[nitems/2], solitems, nitems / 2, nsolitems) );
+   TEST_ASSERT( checkSetContainment(&items[250], solitems, 250, nsolitems) );
+   TEST_ASSERT( checkSetContainment(items, nonsolitems, 250, nnonsolitems) );
+}
+
+void setUp(void) { setup(); }
+
+void tearDown(void) { teardown(); }
+
+int main(void)
+{
+   UNITY_BEGIN();
+   RUN_TEST(test_solveknapsackexactly_test1);
+   RUN_TEST(test_solveknapsackexactly_test2);
+   RUN_TEST(test_solveknapsackexactly_test3);
+   RUN_TEST(test_solveknapsackexactly_test4);
+   RUN_TEST(test_solveknapsackexactly_test_greedy1);
+   RUN_TEST(test_solveknapsackexactly_test_greedy2);
+   RUN_TEST(test_solveknapsackexactly_test_general);
+   RUN_TEST(test_solveknapsackexactly_test_large);
+   return UNITY_END();
 }

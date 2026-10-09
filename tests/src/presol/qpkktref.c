@@ -271,7 +271,7 @@ SCIP_RETCODE createProbLinear1(
    /* create nonlinear constraint */
    SCIP_CALL( SCIPparseCons(scip, &cons, "[nonlinear] <c>: <objvar> -3 * <z> + 2 * <x>^2 -1 * <y>^2 + 1 * <z>^2 - 2 * <x> * <y> + 1 * <x> * <z> + 1 * <y> * <z> == 2;",
       TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, &success) );
-   cr_expect(success);
+   TEST_ASSERT(success);
 
    SCIP_CALL( SCIPaddCons(scip, cons) );
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
@@ -336,7 +336,7 @@ SCIP_RETCODE createProbLinear2(
    /* create nonlinear constraint */
    SCIP_CALL( SCIPparseCons(scip, &cons, "[nonlinear] <c>: <objvar> -3 * <z> + 2 * <x>^2 -1 * <y>^2 + 1 * <z>^2 - 2 * <x> * <y> + 1 * <x> * <z> + 1 * <y> * <z> == 2;",
       TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, &success) );
-   cr_expect(success);
+   TEST_ASSERT(success);
 
    SCIP_CALL( SCIPaddCons(scip, cons) );
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
@@ -401,7 +401,7 @@ SCIP_RETCODE createProbKnapsack(
    /* create nonlinear constraint */
    SCIP_CALL( SCIPparseCons(scip, &cons, "[nonlinear] <c>: <objvar> -3 * <z> + 2 * <x>^2 -1 * <y>^2 + 1 * <z>^2 - 2 * <x> * <y> + 1 * <x> * <z> + 1 * <y> * <z> == 2;",
       TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, &success) );
-   cr_expect(success);
+   TEST_ASSERT(success);
 
    SCIP_CALL( SCIPaddCons(scip, cons) );
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
@@ -461,7 +461,7 @@ SCIP_RETCODE createProbSetppc(
    /* create nonlinear constraint */
    SCIP_CALL( SCIPparseCons(scip, &cons, "[nonlinear] <c>: <objvar> -3 * <z> + 2 * <x>^2 -1 * <y>^2 + 1 * <z>^2 - 2 * <x> * <y> + 1 * <x> * <z> + 1 * <y> * <z> == 2;",
       TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, &success) );
-   cr_expect(success);
+   TEST_ASSERT(success);
 
    SCIP_CALL( SCIPaddCons(scip, cons) );
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
@@ -516,7 +516,7 @@ SCIP_RETCODE createProbLogicor(
    /* create nonlinear constraint */
    SCIP_CALL( SCIPparseCons(scip, &cons, "[nonlinear] <c>: <objvar> -1 * <z> + 1 * <x>^2 -1 * <y>^2 - 2 * <z>^2 + 2 * <x> * <y> + 1 * <x> * <z> + 1 * <y> * <z> == 2;",
       TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, &success) );
-   cr_expect(success);
+   TEST_ASSERT(success);
 
    SCIP_CALL( SCIPaddCons(scip, cons) );
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
@@ -572,7 +572,7 @@ SCIP_RETCODE createProbVarbound(
    /* create nonlinear constraint */
    SCIP_CALL( SCIPparseCons(scip, &cons, "[nonlinear] <c>: <objvar> -3 * <z> + 2 * <x>^2 -1 * <y>^2 + 1 * <z>^2 - 2 * <x> * <y> + 1 * <x> * <z> + 1 * <y> * <z> == 2;",
       TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, &success) );
-   cr_expect(success);
+   TEST_ASSERT(success);
 
    SCIP_CALL( SCIPaddCons(scip, cons) );
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
@@ -667,10 +667,9 @@ SCIP_RETCODE includeKKTSettings(
 }
 
 /* test suite */
-TestSuite(qpkktref);
 
 /** run unittest */
-Test(qpkktref, runUnittest)
+void test_qpkktref_runUnittest(void)
 {
    SCIP* scip1 = NULL;
    SCIP* scip2 = NULL;
@@ -714,9 +713,20 @@ Test(qpkktref, runUnittest)
       SCIP_CALL( SCIPfree(&scip1) );
       SCIP_CALL( SCIPfree(&scip2) );
 
-      cr_assert( equal );
+      TEST_ASSERT( equal );
 
       /* check for memory leaks */
       BMScheckEmptyMemory();
    }
+}
+
+void setUp(void) { }
+
+void tearDown(void) { }
+
+int main(void)
+{
+   UNITY_BEGIN();
+   RUN_TEST(test_qpkktref_runUnittest);
+   return UNITY_END();
 }
