@@ -1889,7 +1889,7 @@ void SCIPrationalVPrintf(
             break;
          case 'l':
             lval = va_arg(arguments, SCIP_Longint);
-            printf("%lld", lval);
+            printf("%" SCIP_LONGINT_FORMAT, lval);
             break;
          case 'u':
             ival = va_arg(arguments, int);
@@ -2520,7 +2520,7 @@ void SCIPrationalComputeApproximation(
    tn = numerator(src->val);
    td = denominator(src->val);
 
-   /* as long as the rational is small enough, we can do everythin we need in long long */
+   /* as long as the rational is small enough, we can do everything we need in 64bit */
    if( (tn * tn.sign() <= SCIP_LONGINT_MAX) && (td * td.sign() <= SCIP_LONGINT_MAX) )
    {
       SCIPrationalComputeApproximationLong(res, src, maxdenom, forcegreater);

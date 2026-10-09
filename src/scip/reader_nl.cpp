@@ -100,13 +100,12 @@
 #define READER_EXTENSION        "nl"
 
 // a variant of SCIP_CALL that throws a std::logic_error if not SCIP_OKAY
-// (using cast to long long to work around issues with old MSVC)
 #define SCIP_CALL_THROW(x) \
    do                                                                                                   \
    {                                                                                                    \
       SCIP_RETCODE throw_retcode;                                                                       \
       if( ((throw_retcode) = (x)) != SCIP_OKAY )                                                        \
-         throw std::logic_error("Error <" + std::to_string((long long)throw_retcode) + "> in function call at reader_nl.cpp:" + std::to_string(__LINE__)); \
+         throw std::logic_error("Error <" + std::to_string((int)throw_retcode) + "> in function call at reader_nl.cpp:" + std::to_string(__LINE__)); \
    }                                                                                                    \
    while( false )
 
@@ -1360,7 +1359,7 @@ public:
             SCIP_VAR* resvar;
             SCIP_CONS* cons;
 
-            std::string name = std::string("_logic") + std::to_string((long long)logiccount++);
+            std::string name = std::string("_logic") + std::to_string(logiccount++);
             SCIP_CALL_THROW( SCIPcreateVarBasic(scip, &resvar, name.c_str(), 0.0, 1.0, 0.0, SCIP_VARTYPE_BINARY) );
             SCIP_CALL_THROW( SCIPaddVar(scip, resvar) );
             SCIP_CALL_THROW( SCIPcreateExprVar(scip, &expr, resvar, NULL, NULL) );
@@ -1416,7 +1415,7 @@ public:
             SCIP_VAR* resvar;
             SCIP_CONS* cons;
 
-            std::string name = std::string("_logic") + std::to_string((long long)logiccount++);
+            std::string name = std::string("_logic") + std::to_string(logiccount++);
             SCIP_CALL_THROW( SCIPcreateVarBasic(scip, &resvar, name.c_str(), 0.0, 1.0, 0.0, SCIP_VARTYPE_BINARY) );
             SCIP_CALL_THROW( SCIPaddVar(scip, resvar) );
             SCIP_CALL_THROW( SCIPcreateExprVar(scip, &expr, resvar, NULL, NULL) );
@@ -1475,7 +1474,7 @@ public:
             // to ensure auxvar = (lhsvar == rhsvar)
             SCIP_VAR* vars[3];
             SCIP_CONS* cons;
-            std::string name = std::string("_logic") + std::to_string((long long)logiccount++);
+            std::string name = std::string("_logic") + std::to_string(logiccount++);
             SCIP_CALL_THROW( SCIPcreateVarBasic(scip, &vars[0], name.c_str(), 0.0, 1.0, 0.0, SCIP_VARTYPE_BINARY) );
             SCIP_CALL_THROW( SCIPaddVar(scip, vars[0]) );
             SCIP_CALL_THROW( SCIPcreateExprVar(scip, &expr, vars[0], NULL, NULL) );
@@ -1565,7 +1564,7 @@ public:
 
             SCIP_VAR* vars[3];
             SCIP_CONS* cons;
-            std::string name = std::string("_logic") + std::to_string((long long)logiccount++);
+            std::string name = std::string("_logic") + std::to_string(logiccount++);
             SCIP_CALL_THROW( SCIPcreateVarBasic(scip, &vars[0], name.c_str(), 0.0, 1.0, 0.0, SCIP_VARTYPE_BINARY) );
             SCIP_CALL_THROW( SCIPaddVar(scip, vars[0]) );
             SCIP_CALL_THROW( SCIPcreateExprVar(scip, &expr, vars[0], NULL, NULL) );

@@ -275,7 +275,7 @@ SCIP_RETCODE branchCons(
 
       /* add constraints to nodes */
       SCIP_CALL( SCIPaddConsNode(scip, child, conss[i], NULL) );
-      SCIPdebugMsg(scip, "add cons %s to node %lld from %lld\n", SCIPconsGetName(conss[i]), SCIPnodeGetNumber(child),
+      SCIPdebugMsg(scip, "add cons %s to node %" SCIP_LONGINT_FORMAT " from %" SCIP_LONGINT_FORMAT "\n", SCIPconsGetName(conss[i]), SCIPnodeGetNumber(child),
          SCIPnodeGetNumber(SCIPgetCurrentNode(scip)));
 
       /* remove disjunction constraint, from child node */

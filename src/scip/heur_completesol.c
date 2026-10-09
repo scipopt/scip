@@ -547,7 +547,7 @@ SCIP_RETCODE tightenVariables(
                   tightened[SCIPvarGetProbindex(vars[v])] = TRUE;
                   ++nbndtightenings;
 #ifdef SCIP_MORE_DEBUG
-                  SCIPdebugMsg(scip, "> fix variable <%s> = [%g,%g] to %g (ndomreds=%lld)\n", SCIPvarGetName(vars[v]),
+                  SCIPdebugMsg(scip, "> fix variable <%s> = [%g,%g] to %g (ndomreds=%" SCIP_LONGINT_FORMAT ")\n", SCIPvarGetName(vars[v]),
                         SCIPvarGetLbGlobal(vars[v]), SCIPvarGetUbGlobal(vars[v]), solval, ndomreds);
 #endif
                }
@@ -628,7 +628,7 @@ SCIP_RETCODE tightenVariables(
                      tightened[SCIPvarGetProbindex(vars[v])] = TRUE;
                      ++nbndtightenings;
 #ifdef SCIP_MORE_DEBUG
-                     SCIPdebugMsg(scip, "> tighten upper bound of variable <%s>: %g to %g (ndomreds=%lld)\n",
+                     SCIPdebugMsg(scip, "> tighten upper bound of variable <%s>: %g to %g (ndomreds=%" SCIP_LONGINT_FORMAT ")\n",
                            SCIPvarGetName(vars[v]), SCIPvarGetUbGlobal(vars[v]), newub, ndomreds);
 #endif
                   }
@@ -686,7 +686,7 @@ SCIP_RETCODE tightenVariables(
                      tightened[SCIPvarGetProbindex(vars[v])] = TRUE;
                      ++nbndtightenings;
 #ifdef SCIP_MORE_DEBUG
-                     SCIPdebugMsg(scip, "> tighten lower bound of variable <%s>: %g to %g (ndomreds=%lld)\n",
+                     SCIPdebugMsg(scip, "> tighten lower bound of variable <%s>: %g to %g (ndomreds=%" SCIP_LONGINT_FORMAT ")\n",
                            SCIPvarGetName(vars[v]), SCIPvarGetLbGlobal(vars[v]), newlb, ndomreds);
 #endif
                   }
@@ -701,7 +701,7 @@ SCIP_RETCODE tightenVariables(
       ndomredssum += ndomreds;
    }
 
-   SCIPdebugMsg(scip, "> found %d bound tightenings and %lld induced domain reductions (abort=%u).\n", nbndtightenings,
+   SCIPdebugMsg(scip, "> found %d bound tightenings and %" SCIP_LONGINT_FORMAT " induced domain reductions (abort=%u).\n", nbndtightenings,
          ndomredssum, abortearly);
 
    return SCIP_OKAY;

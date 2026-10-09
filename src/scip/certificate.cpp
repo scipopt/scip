@@ -148,7 +148,7 @@ SCIP_Longint printBoundAssumption(
 #endif
 
    /** @todo it could be better to separate the printing from insertion of variable bound */
-   SCIPcertificatePrintProofMessage(certificate, "A%lld %c ", certificate->indexcounter, (boundtype == SCIP_BOUNDTYPE_LOWER) ? 'G' : 'L');
+   SCIPcertificatePrintProofMessage(certificate, "A%" SCIP_LONGINT_FORMAT " %c ", certificate->indexcounter, (boundtype == SCIP_BOUNDTYPE_LOWER) ? 'G' : 'L');
 
    SCIP_CALL( SCIPcertificatePrintProofRational(certificate, boundval) );
    SCIPcertificatePrintProofMessage(certificate, " 1 %d 1 { asm } -1\n", SCIPvarGetCertificateIndex(var));
@@ -2244,7 +2244,7 @@ SCIP_RETCODE SCIPcertificatePrintDualboundExactLP(
    if( !SCIPcertificateIsEnabled(certificate) )
       return SCIP_OKAY;
 
-   SCIPdebugMessage("Printing dual bound from exact LP. Certificate index %lld \n", certificate->indexcounter);
+   SCIPdebugMessage("Printing dual bound from exact LP. Certificate index %" SCIP_LONGINT_FORMAT " \n", certificate->indexcounter);
 
    SCIP_CALL( SCIPrationalCreateBuffer(set->buffer, &tmp) );
    SCIPlpExactGetObjval(lpexact, set, tmp);
@@ -3201,7 +3201,7 @@ SCIP_RETCODE SCIPcertificatePrintUnsplitting(
    }
    else
    {
-      SCIPdebugMessage("Node %lld is a leaf! \n", SCIPnodeGetNumber(node));
+      SCIPdebugMessage("Node %" SCIP_LONGINT_FORMAT " is a leaf! \n", SCIPnodeGetNumber(node));
       /* if a leaf has an inherited bound, we need to print a bound for it and update the parent data
          don't do it if we interrupted the solve, e.g. due to timeout */
       if( nodedata->inheritedbound && nodedata->assumptionindex_self != - 1 )

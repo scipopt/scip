@@ -2821,7 +2821,7 @@ void SCIPprintPresolverStatistics(
       {
          SCIPmessageFPrintInfo(scip->messagehdlr, file, "  %-17.17s:", SCIPsymhdlrGetName(symhdlr));
          SCIPmessageFPrintInfo(scip->messagehdlr, file,
-            " %10.2f %10.2f %6lld %10d %10d %10d %10d %10d %10d %10d %10d %10d\n",
+            " %10.2f %10.2f %6" SCIP_LONGINT_FORMAT " %10d %10d %10d %10d %10d %10d %10d %10d %10d\n",
             SCIPsymhdlrGetPresolTime(symhdlr),
             SCIPsymhdlrGetSetupTime(symhdlr),
             SCIPsymhdlrGetNPresolCalls(symhdlr),
@@ -5787,18 +5787,18 @@ void SCIPprintExpressionHandlerStatistics(
       }
 
       SCIPmessageFPrintInfo(scip->messagehdlr, file, "  %-17s:", SCIPexprhdlrGetName(exprhdlr));
-      SCIPmessageFPrintInfo(scip->messagehdlr, file, " %10lld", SCIPexprhdlrGetNIntevalCalls(exprhdlr));
+      SCIPmessageFPrintInfo(scip->messagehdlr, file, " %10" SCIP_LONGINT_FORMAT, SCIPexprhdlrGetNIntevalCalls(exprhdlr));
       SCIPmessageFPrintInfo(scip->messagehdlr, file, " %10.2f", SCIPexprhdlrGetIntevalTime(exprhdlr));
-      SCIPmessageFPrintInfo(scip->messagehdlr, file, " %10lld", SCIPexprhdlrGetNReversepropCalls(exprhdlr));
+      SCIPmessageFPrintInfo(scip->messagehdlr, file, " %10" SCIP_LONGINT_FORMAT, SCIPexprhdlrGetNReversepropCalls(exprhdlr));
       SCIPmessageFPrintInfo(scip->messagehdlr, file, " %10.2f", SCIPexprhdlrGetReversepropTime(exprhdlr));
-      SCIPmessageFPrintInfo(scip->messagehdlr, file, " %10lld", SCIPexprhdlrGetNDomainReductions(exprhdlr));
-      SCIPmessageFPrintInfo(scip->messagehdlr, file, " %10lld", SCIPexprhdlrGetNCutoffs(exprhdlr));
-      SCIPmessageFPrintInfo(scip->messagehdlr, file, " %10lld", SCIPexprhdlrGetNEstimateCalls(exprhdlr));
+      SCIPmessageFPrintInfo(scip->messagehdlr, file, " %10" SCIP_LONGINT_FORMAT, SCIPexprhdlrGetNDomainReductions(exprhdlr));
+      SCIPmessageFPrintInfo(scip->messagehdlr, file, " %10" SCIP_LONGINT_FORMAT, SCIPexprhdlrGetNCutoffs(exprhdlr));
+      SCIPmessageFPrintInfo(scip->messagehdlr, file, " %10" SCIP_LONGINT_FORMAT, SCIPexprhdlrGetNEstimateCalls(exprhdlr));
       SCIPmessageFPrintInfo(scip->messagehdlr, file, " %10.2f", SCIPexprhdlrGetEstimateTime(exprhdlr));
-      SCIPmessageFPrintInfo(scip->messagehdlr, file, " %10lld", SCIPexprhdlrGetNBranchings(exprhdlr));
-      SCIPmessageFPrintInfo(scip->messagehdlr, file, " %10lld", SCIPexprhdlrGetNSimplifyCalls(exprhdlr));
+      SCIPmessageFPrintInfo(scip->messagehdlr, file, " %10" SCIP_LONGINT_FORMAT, SCIPexprhdlrGetNBranchings(exprhdlr));
+      SCIPmessageFPrintInfo(scip->messagehdlr, file, " %10" SCIP_LONGINT_FORMAT, SCIPexprhdlrGetNSimplifyCalls(exprhdlr));
       SCIPmessageFPrintInfo(scip->messagehdlr, file, " %10.2f", SCIPexprhdlrGetSimplifyTime(exprhdlr));
-      SCIPmessageFPrintInfo(scip->messagehdlr, file, " %10lld", SCIPexprhdlrGetNSimplifications(exprhdlr));
+      SCIPmessageFPrintInfo(scip->messagehdlr, file, " %10" SCIP_LONGINT_FORMAT, SCIPexprhdlrGetNSimplifications(exprhdlr));
       SCIPmessageFPrintInfo(scip->messagehdlr, file, "\n");
    }
 }

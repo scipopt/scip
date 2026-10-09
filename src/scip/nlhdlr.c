@@ -775,22 +775,22 @@ void SCIPnlhdlrPrintStatistics(
          continue;
 
       SCIPinfoMessage(scip, file, "  %-17s:", nlhdlrs[i]->name);
-      SCIPinfoMessage(scip, file, " %10lld", nlhdlrs[i]->ndetectionslast);
-      SCIPinfoMessage(scip, file, " %10lld", nlhdlrs[i]->ndetections);
+      SCIPinfoMessage(scip, file, " %10" SCIP_LONGINT_FORMAT, nlhdlrs[i]->ndetectionslast);
+      SCIPinfoMessage(scip, file, " %10" SCIP_LONGINT_FORMAT, nlhdlrs[i]->ndetections);
       SCIPinfoMessage(scip, file, " %10.2f", SCIPgetClockTime(scip, nlhdlrs[i]->detecttime));
 
-      SCIPinfoMessage(scip, file, " %10lld", nlhdlrs[i]->nintevalcalls);
+      SCIPinfoMessage(scip, file, " %10" SCIP_LONGINT_FORMAT, nlhdlrs[i]->nintevalcalls);
       SCIPinfoMessage(scip, file, " %10.2f", SCIPgetClockTime(scip, nlhdlrs[i]->intevaltime));
 
-      SCIPinfoMessage(scip, file, " %10lld", nlhdlrs[i]->npropcalls);
+      SCIPinfoMessage(scip, file, " %10" SCIP_LONGINT_FORMAT, nlhdlrs[i]->npropcalls);
       SCIPinfoMessage(scip, file, " %10.2f", SCIPgetClockTime(scip, nlhdlrs[i]->proptime));
-      SCIPinfoMessage(scip, file, " %10lld", nlhdlrs[i]->ndomreds);
-      SCIPinfoMessage(scip, file, " %10lld", nlhdlrs[i]->ncutoffs);
+      SCIPinfoMessage(scip, file, " %10" SCIP_LONGINT_FORMAT, nlhdlrs[i]->ndomreds);
+      SCIPinfoMessage(scip, file, " %10" SCIP_LONGINT_FORMAT, nlhdlrs[i]->ncutoffs);
 
-      SCIPinfoMessage(scip, file, " %10lld", nlhdlrs[i]->nenfocalls);
+      SCIPinfoMessage(scip, file, " %10" SCIP_LONGINT_FORMAT, nlhdlrs[i]->nenfocalls);
       SCIPinfoMessage(scip, file, " %10.2f", SCIPgetClockTime(scip, nlhdlrs[i]->enfotime));
-      SCIPinfoMessage(scip, file, " %10lld", nlhdlrs[i]->nseparated);
-      SCIPinfoMessage(scip, file, " %10lld", nlhdlrs[i]->nbranchscores);
+      SCIPinfoMessage(scip, file, " %10" SCIP_LONGINT_FORMAT, nlhdlrs[i]->nseparated);
+      SCIPinfoMessage(scip, file, " %10" SCIP_LONGINT_FORMAT, nlhdlrs[i]->nbranchscores);
 
       SCIPinfoMessage(scip, file, "\n");
    }

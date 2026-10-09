@@ -766,7 +766,7 @@ SCIP_Bool transitionPhase3(
          /* check rank-1 transition */
          if( checkRankOneTransition(scip, eventhdlrdata) )
          {
-            SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL, "reached rank-1 transition: nodes: %lld, rank-1: %d bound: %9.5g time: %.2f\n",
+            SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL, "reached rank-1 transition: nodes: %" SCIP_LONGINT_FORMAT ", rank-1: %d bound: %9.5g time: %.2f\n",
                   SCIPgetNNodes(scip), getNRank1Nodes(scip), SCIPgetPrimalbound(scip), SCIPgetSolvingTime(scip));
             return TRUE;
          }
@@ -776,7 +776,7 @@ SCIP_Bool transitionPhase3(
          /* cheat and use knowledge about optimal solution */
          if( checkOptimalSolution(scip, eventhdlrdata) )
          {
-            SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL, "optimal solution found: %lld, bound: %9.5g time: %.2f\n",
+            SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL, "optimal solution found: %" SCIP_LONGINT_FORMAT ", bound: %9.5g time: %.2f\n",
                   SCIPgetNNodes(scip), SCIPgetPrimalbound(scip), SCIPgetSolvingTime(scip));
             return TRUE;
          }
@@ -786,7 +786,7 @@ SCIP_Bool transitionPhase3(
          /* check best-estimate transition */
          if( checkEstimateCriterion(scip, eventhdlrdata) )
          {
-            SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL, "reached best-estimate transition: nodes: %lld, estimate: %d bound: %9.5g time: %.2f\n",
+            SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL, "reached best-estimate transition: nodes: %" SCIP_LONGINT_FORMAT ", estimate: %d bound: %9.5g time: %.2f\n",
                   SCIPgetNNodes(scip), eventhdlrdata->nnodesbelowincumbent, SCIPgetPrimalbound(scip), SCIPgetSolvingTime(scip));
             return TRUE;
          }
@@ -1178,7 +1178,7 @@ void testCriteria(
       eventhdlrdata->phaseflags |= SCIP_SOLVINGPHASEFLAG_LOG;
       if( eventhdlrdata->testmode )
       {
-         SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL, "  Log criterion reached after %lld nodes, %.2f sec.\n",
+         SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL, "  Log criterion reached after %" SCIP_LONGINT_FORMAT " nodes, %.2f sec.\n",
                SCIPgetNNodes(scip), SCIPgetSolvingTime(scip));
       }
    }
@@ -1187,7 +1187,7 @@ void testCriteria(
       eventhdlrdata->phaseflags |= SCIP_SOLVINGPHASEFLAG_RANK1;
       if( eventhdlrdata->testmode )
       {
-         SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL, "  Rank 1 criterion reached after %lld nodes, %.2f sec.\n",
+         SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL, "  Rank 1 criterion reached after %" SCIP_LONGINT_FORMAT " nodes, %.2f sec.\n",
                SCIPgetNNodes(scip), SCIPgetSolvingTime(scip));
       }
    }
@@ -1197,7 +1197,7 @@ void testCriteria(
       eventhdlrdata->phaseflags |= SCIP_SOLVINGPHASEFLAG_ESTIMATE;
       if( eventhdlrdata->testmode )
       {
-         SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL, "  Estimate criterion reached after %lld nodes, %.2f sec.\n",
+         SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL, "  Estimate criterion reached after %" SCIP_LONGINT_FORMAT " nodes, %.2f sec.\n",
                SCIPgetNNodes(scip), SCIPgetSolvingTime(scip));
       }
    }
@@ -1207,7 +1207,7 @@ void testCriteria(
       eventhdlrdata->phaseflags |= SCIP_SOLVINGPHASEFLAG_OPTIMAL;
       if( eventhdlrdata->testmode )
       {
-         SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL, "  Optimum reached after %lld nodes, %.2f sec.\n",
+         SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL, "  Optimum reached after %" SCIP_LONGINT_FORMAT " nodes, %.2f sec.\n",
                SCIPgetNNodes(scip), SCIPgetSolvingTime(scip));
       }
    }

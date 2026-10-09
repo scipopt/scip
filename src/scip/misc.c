@@ -10464,8 +10464,8 @@ unsigned int SCIPcalcFibHash(
    )
 {
    if( v >= 0 )
-      return ((unsigned long long)(v * 2654435769)) % UINT_MAX;
-   return ((unsigned long long)(-v * 683565275)) % UINT_MAX;
+      return ((uint64_t)(v * 2654435769)) % UINT_MAX;
+   return ((uint64_t)(-v * 683565275)) % UINT_MAX;
 }
 #endif
 

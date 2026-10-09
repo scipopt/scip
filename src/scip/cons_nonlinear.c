@@ -8526,7 +8526,7 @@ SCIP_RETCODE consEnfo(
 
    if( *result == SCIP_FEASIBLE )
    {
-      ENFOLOG( SCIPinfoMessage(scip, enfologfile, "node %lld: all expr-constraints feasible, skip enforcing\n",
+      ENFOLOG( SCIPinfoMessage(scip, enfologfile, "node %" SCIP_LONGINT_FORMAT ": all expr-constraints feasible, skip enforcing\n",
                SCIPnodeGetNumber(SCIPgetCurrentNode(scip))); )
       return SCIP_OKAY;
    }
@@ -8534,7 +8534,7 @@ SCIP_RETCODE consEnfo(
    SCIP_CALL( analyzeViolation(scip, conss, nconss, sol, soltag, &maxabsconsviol, &maxrelconsviol,
             &minauxviol, &maxauxviol, &maxvarboundviol) );
 
-   ENFOLOG( SCIPinfoMessage(scip, enfologfile, "node %lld: enforcing constraints with max conssviol=%e (rel=%e), "\
+   ENFOLOG( SCIPinfoMessage(scip, enfologfile, "node %" SCIP_LONGINT_FORMAT ": enforcing constraints with max conssviol=%e (rel=%e), "\
             "auxviolations in %g..%g, variable bounds violated by at most %g, LP feastol=%e\n",
             SCIPnodeGetNumber(SCIPgetCurrentNode(scip)), maxabsconsviol, maxrelconsviol, minauxviol, maxauxviol,
             maxvarboundviol, SCIPgetLPFeastol(scip)); )
@@ -8745,11 +8745,11 @@ SCIP_RETCODE consSepa(
    /* if none of our constraints are violated, don't attempt separation */
    if( !haveviol )
    {
-      ENFOLOG( SCIPinfoMessage(scip, enfologfile, "node %lld: skip separation of non-violated constraints\n", SCIPnodeGetNumber(SCIPgetCurrentNode(scip))); )
+      ENFOLOG( SCIPinfoMessage(scip, enfologfile, "node %" SCIP_LONGINT_FORMAT ": skip separation of non-violated constraints\n", SCIPnodeGetNumber(SCIPgetCurrentNode(scip))); )
       return SCIP_OKAY;
    }
 
-   ENFOLOG( SCIPinfoMessage(scip, enfologfile, "node %lld: separation\n", SCIPnodeGetNumber(SCIPgetCurrentNode(scip))); )
+   ENFOLOG( SCIPinfoMessage(scip, enfologfile, "node %" SCIP_LONGINT_FORMAT ": separation\n", SCIPnodeGetNumber(SCIPgetCurrentNode(scip))); )
 
    /* call separation */
    SCIP_CALL( enforceConstraints(scip, conshdlr, conss, nconss, sol, soltag, FALSE, FALSE, SCIP_INVALID, result) );
@@ -12409,12 +12409,12 @@ SCIP_DECL_TABLEOUTPUT(tableOutputNonlinear)
    /* print statistics for constraint handler */
    SCIPinfoMessage(scip, file, "Nonlinear Conshdlr : %10s %10s %10s %10s %10s %10s %10s\n", "WeakSepa", "TightenLP", "DespTghtLP", "DespBranch", "DespCutoff", "ForceLP", "CanonTime");
    SCIPinfoMessage(scip, file, "  enforce%-10s:", "");
-   SCIPinfoMessage(scip, file, " %10lld", conshdlrdata->nweaksepa);
-   SCIPinfoMessage(scip, file, " %10lld", conshdlrdata->ntightenlp);
-   SCIPinfoMessage(scip, file, " %10lld", conshdlrdata->ndesperatetightenlp);
-   SCIPinfoMessage(scip, file, " %10lld", conshdlrdata->ndesperatebranch);
-   SCIPinfoMessage(scip, file, " %10lld", conshdlrdata->ndesperatecutoff);
-   SCIPinfoMessage(scip, file, " %10lld", conshdlrdata->nforcelp);
+   SCIPinfoMessage(scip, file, " %10" SCIP_LONGINT_FORMAT, conshdlrdata->nweaksepa);
+   SCIPinfoMessage(scip, file, " %10" SCIP_LONGINT_FORMAT, conshdlrdata->ntightenlp);
+   SCIPinfoMessage(scip, file, " %10" SCIP_LONGINT_FORMAT, conshdlrdata->ndesperatetightenlp);
+   SCIPinfoMessage(scip, file, " %10" SCIP_LONGINT_FORMAT, conshdlrdata->ndesperatebranch);
+   SCIPinfoMessage(scip, file, " %10" SCIP_LONGINT_FORMAT, conshdlrdata->ndesperatecutoff);
+   SCIPinfoMessage(scip, file, " %10" SCIP_LONGINT_FORMAT, conshdlrdata->nforcelp);
    SCIPinfoMessage(scip, file, "\n");
    SCIPinfoMessage(scip, file, "  presolve%-9s: %-65s", "", "");
    SCIPinfoMessage(scip, file, " %10.2f", SCIPgetClockTime(scip, conshdlrdata->canonicalizetime));

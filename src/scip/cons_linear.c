@@ -6019,7 +6019,7 @@ SCIP_RETCODE rangedRowPropagation(
    }
    assert(!minactinfvarsinvalid && !maxactinfvarsinvalid);
 
-   SCIPdebugMsg(scip, "minactinfvarsinvalid = %u, minactinfvars = %g, maxactinfvarsinvalid = %u, maxactinfvars = %g, gcd = %lld, ninfcheckvars = %d, ncontvars = %d\n",
+   SCIPdebugMsg(scip, "minactinfvarsinvalid = %u, minactinfvars = %g, maxactinfvarsinvalid = %u, maxactinfvars = %g, gcd = %" SCIP_LONGINT_FORMAT ", ninfcheckvars = %d, ncontvars = %d\n",
       minactinfvarsinvalid, minactinfvars, maxactinfvarsinvalid, maxactinfvars, gcd, ninfcheckvars, ncontvars);
 
    /* @todo maybe we took the wrong variables as infcheckvars - we could try to exchange integer variables */
@@ -6064,7 +6064,7 @@ SCIP_RETCODE rangedRowPropagation(
       else if( gcdisone )
          gcdinfvars = 1;
 
-      SCIPdebugMsg(scip, "gcdinfvars =%lld, possiblegcd = %u\n", gcdinfvars, possiblegcd);
+      SCIPdebugMsg(scip, "gcdinfvars =%" SCIP_LONGINT_FORMAT ", possiblegcd = %u\n", gcdinfvars, possiblegcd);
 
       /* compute solutions for this ranged row, if all variables are of integral type with integral coefficients */
       if( gcdinfvars >= 1 )
@@ -6141,7 +6141,7 @@ SCIP_RETCODE rangedRowPropagation(
          /* no possible solution found */
          if( nsols == 0 )
          {
-            SCIPdebugMsg(scip, "gcdinfvars = %lld, gcd = %lld, correctedlhs = %g, correctedrhs = %g\n",
+            SCIPdebugMsg(scip, "gcdinfvars = %" SCIP_LONGINT_FORMAT ", gcd = %" SCIP_LONGINT_FORMAT ", correctedlhs = %g, correctedrhs = %g\n",
                gcdinfvars, gcd, lhs, rhs);
             SCIPdebugMsg(scip, "no solution found; constraint <%s> leads to infeasibility\n", SCIPconsGetName(cons));
             SCIPdebugPrintCons(scip, cons, NULL);

@@ -189,7 +189,7 @@ Test(datatree, test_insert_long_array)
    cr_assert_eq(datatree->items[0].value.nvalues, 3, "Array size is not 3");
    for (int i = 0; i < 3; ++i) {
       cr_assert_eq(datatree->items[0].value.data.as_longarray[i],
-                   long_values[i], "Value is not %lld but %lld", long_values[i],
+                   long_values[i], "Value is not %" SCIP_LONGINT_FORMAT " but %" SCIP_LONGINT_FORMAT, long_values[i],
                    datatree->items[0].value.data.as_longarray[i]);
    }
 
@@ -210,7 +210,7 @@ Test(datatree, test_insert_int_array)
    cr_assert_eq(datatree->items[0].value.nvalues, 3, "Array size is not 3");
    for (int i = 0; i < 3; ++i) {
       cr_assert_eq(datatree->items[0].value.data.as_longarray[i],
-                   int_values[i], "Value is not %d but %lld", int_values[i],
+                   int_values[i], "Value is not %d but %" SCIP_LONGINT_FORMAT, int_values[i],
                    datatree->items[0].value.data.as_longarray[i]);
    }
 
@@ -474,7 +474,7 @@ Test(datatree, test_long_array_getter)
    // Correct usage
    SCIP_CALL( SCIPdatatreeGetLongArray(datatree, "long_array", &long_array, &nvalues) );
    for (int i = 0; i < 3; ++i) {
-      cr_assert_eq(long_array[i], long_values[i], "Value is not %lld", long_values[i]);
+      cr_assert_eq(long_array[i], long_values[i], "Value is not %" SCIP_LONGINT_FORMAT, long_values[i]);
    }
 
    // Wrong usage

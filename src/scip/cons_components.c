@@ -1173,7 +1173,7 @@ SCIP_RETCODE solveComponent(
    component->laststatus = status;
    ++component->ncalls;
 
-   SCIPdebugMsg(scip, "--> (status = %d, nodes = %lld, time = %.2f): gap = %.5g%%, absgap = %.9g\n",
+   SCIPdebugMsg(scip, "--> (status = %d, nodes = %" SCIP_LONGINT_FORMAT ", time = %.2f): gap = %.5g%%, absgap = %.9g\n",
       status, SCIPgetNNodes(subscip), SCIPgetSolvingTime(subscip), 100.0*SCIPgetGap(subscip),
       SCIPgetPrimalbound(subscip) - SCIPgetDualbound(subscip));
 
@@ -1665,7 +1665,7 @@ SCIP_RETCODE createAndSplitProblem(
             else
                ++ncontvars;
          }
-         SCIPdebugMsg(scip, "component %d at node %lld, depth %d (%d): %d vars (%d bin, %d int, %d cont), %d conss\n",
+         SCIPdebugMsg(scip, "component %d at node %" SCIP_LONGINT_FORMAT ", depth %d (%d): %d vars (%d bin, %d int, %d cont), %d conss\n",
             comp, SCIPnodeGetNumber(SCIPgetCurrentNode(scip)), SCIPgetDepth(scip), SCIPgetDepth(scip) + conshdlrdata->subscipdepth,
             component->nvars, nbinvars, nintvars, ncontvars, ncompconss);
       }
@@ -2029,7 +2029,7 @@ SCIP_RETCODE findComponents(
                nvars = *nsortedvars;
 
                SCIPverbMessage(scip, SCIP_VERBLEVEL_FULL, NULL,
-                  "cons components found %d undirected components at node %lld, depth %d (%d)\n",
+                  "cons components found %d undirected components at node %" SCIP_LONGINT_FORMAT ", depth %d (%d)\n",
                   *ncomponents, SCIPnodeGetNumber(SCIPgetCurrentNode(scip)), SCIPgetDepth(scip), SCIPgetDepth(scip) + conshdlrdata->subscipdepth);
 
                /* sort components by size and sort variables and constraints by component number */
@@ -2211,7 +2211,7 @@ SCIP_DECL_CONSPROP(consPropComponents)
       {
          SCIP_CONS* cons;
 
-         SCIPdebugMsg(scip, "found %d components (%d fulfilling the minsize requirement) at node %lld at depth %d (%d)\n",
+         SCIPdebugMsg(scip, "found %d components (%d fulfilling the minsize requirement) at node %" SCIP_LONGINT_FORMAT " at depth %d (%d)\n",
             ncomponents, ncompsminsize, SCIPnodeGetNumber(SCIPgetCurrentNode(scip)), SCIPgetDepth(scip),
             SCIPgetDepth(scip) + conshdlrdata->subscipdepth);
 

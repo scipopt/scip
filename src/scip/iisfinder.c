@@ -640,7 +640,7 @@ SCIP_RETCODE SCIPiisGenerate(
          SCIPinfoMessage(set->scip, NULL, "IIS irreducible       : no\n");
       assert( iis->subscip != NULL );
       SCIPinfoMessage(set->scip, NULL, "Generation Time (sec) : %.2f\n", SCIPiisGetTime(iis));
-      SCIPinfoMessage(set->scip, NULL, "Generation Nodes      : %lld\n", SCIPiisGetNNodes(iis));
+      SCIPinfoMessage(set->scip, NULL, "Generation Nodes      : %" SCIP_LONGINT_FORMAT "\n", SCIPiisGetNNodes(iis));
       SCIPinfoMessage(set->scip, NULL, "Num. Cons. in IIS     : %d\n", SCIPgetNOrigConss(iis->subscip));
       nvars = SCIPgetNOrigVars(iis->subscip);
       vars = SCIPgetOrigVars(iis->subscip);
@@ -858,7 +858,7 @@ void SCIPiisfinderInfoMessage(
       if( !SCIPisInfinity(scip, SCIPvarGetUbOriginal(vars[i])) )
          ++nbounds;
    }
-   SCIPinfoMessage(scip, NULL, "%7.1f|%7lld|%7d|%7d|%7d| %10s\n", SCIPiisGetTime(iis), SCIPiisGetNNodes(iis), SCIPgetNOrigConss(scip), nvars, nbounds, infeasible);
+   SCIPinfoMessage(scip, NULL, "%7.1f|%7" SCIP_LONGINT_FORMAT "|%7d|%7d|%7d| %10s\n", SCIPiisGetTime(iis), SCIPiisGetNNodes(iis), SCIPgetNOrigConss(scip), nvars, nbounds, infeasible);
 }
 
 /** creates and captures a new IIS */

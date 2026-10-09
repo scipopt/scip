@@ -1175,13 +1175,13 @@ SCIP_RETCODE setObjective(
 
 #ifndef NDEBUG
       /* check intsize validity for small int instances */
-      if( opbinput->intsize >= 0 && opbinput->intsize <= CHAR_BIT * (int)sizeof(unsigned long long) )
+      if( opbinput->intsize >= 0 && opbinput->intsize <= CHAR_BIT * (int)sizeof(uint64_t) )
       {
          SCIP_Real summand = SCIPgetOrigObjoffset(scip);
          summand = SCIPceil(scip, ABS(summand));
          assert(summand <= (SCIP_Real)ULLONG_MAX);
-         unsigned long long presum;
-         unsigned long long intsum = (unsigned long long)summand;
+         uint64_t presum;
+         uint64_t intsum = (uint64_t)summand;
 
          for( v = 0; v < ncoefs; ++v )
          {
@@ -1189,7 +1189,7 @@ SCIP_RETCODE setObjective(
             summand = SCIPceil(scip, ABS(summand));
             assert(summand <= (SCIP_Real)ULLONG_MAX);
             presum = intsum;
-            intsum += (unsigned long long)summand;
+            intsum += (uint64_t)summand;
             assert(intsum > presum);
          }
 
@@ -1199,7 +1199,7 @@ SCIP_RETCODE setObjective(
             summand = SCIPceil(scip, ABS(summand));
             assert(summand <= (SCIP_Real)ULLONG_MAX);
             presum = intsum;
-            intsum += (unsigned long long)summand;
+            intsum += (uint64_t)summand;
             assert(intsum > presum);
          }
 
@@ -1487,19 +1487,19 @@ SCIP_RETCODE readConstraints(
 
 #ifndef NDEBUG
    /* check intsize validity for small int instances */
-   if( opbinput->intsize >= 0 && opbinput->intsize <= CHAR_BIT * (int)sizeof(unsigned long long) )
+   if( opbinput->intsize >= 0 && opbinput->intsize <= CHAR_BIT * (int)sizeof(uint64_t) )
    {
       SCIP_Real summand = SCIPceil(scip, ABS(sidevalue));
       assert(summand <= (SCIP_Real)ULLONG_MAX);
-      unsigned long long presum;
-      unsigned long long intsum = (unsigned long long)summand;
+      uint64_t presum;
+      uint64_t intsum = (uint64_t)summand;
 
       for( t = 0; t < nlincoefs; ++t )
       {
          summand = SCIPceil(scip, ABS(lincoefs[t]));
          assert(summand <= (SCIP_Real)ULLONG_MAX);
          presum = intsum;
-         intsum += (unsigned long long)summand;
+         intsum += (uint64_t)summand;
          assert(intsum > presum);
       }
 
@@ -1508,7 +1508,7 @@ SCIP_RETCODE readConstraints(
          summand = SCIPceil(scip, ABS(termcoefs[t]));
          assert(summand <= (SCIP_Real)ULLONG_MAX);
          presum = intsum;
-         intsum += (unsigned long long)summand;
+         intsum += (uint64_t)summand;
          assert(intsum > presum);
       }
 

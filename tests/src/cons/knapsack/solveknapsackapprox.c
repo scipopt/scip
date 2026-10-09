@@ -128,14 +128,14 @@ void testassignment(void)
       solitemsprofit += profits[solitems[i]];
    }
 
-   cr_assert_leq(solitemsweight, capacity, "Capacity exceeded: %lld > %lld\n", solitemsweight, capacity);
+   cr_assert_leq(solitemsweight, capacity, "Capacity exceeded: %" SCIP_LONGINT_FORMAT " > %" SCIP_LONGINT_FORMAT "\n", solitemsweight, capacity);
    cr_assert_float_eq(profit, solitemsprofit, 1e-4, "Profit is different from recomputed profit: %.1f ~= %.1f\n", profit, solitemsprofit);
 
 
 /*    loop over non-solution items to verify that none of them fully fits into the knapsack anymore
    for( i = 0; i < nnonsolitems; ++i )
    {
-      cr_assert_gt(solitemsweight + weights[nonsolitems[i]], capacity, "item %d fits into the knapsack: %lld + %lld <= %lld\n", nonsolitems[i], solitemsweight, weights[nonsolitems[i]], capacity);
+      cr_assert_gt(solitemsweight + weights[nonsolitems[i]], capacity, "item %d fits into the knapsack: %" SCIP_LONGINT_FORMAT " + %" SCIP_LONGINT_FORMAT " <= %" SCIP_LONGINT_FORMAT "\n", nonsolitems[i], solitemsweight, weights[nonsolitems[i]], capacity);
    }
 */
 }

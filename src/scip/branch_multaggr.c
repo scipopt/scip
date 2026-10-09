@@ -979,13 +979,13 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpMultAggr)
             SCIP_CALL( SCIPaddConsNode(scip, upchild, multaggrconsup, NULL) );
 
 #ifdef PRINTNODECONS
-            SCIPdebugMsg(scip, "branching at node %lld\n", SCIPnodeGetNumber(SCIPgetCurrentNode(scip)));
+            SCIPdebugMsg(scip, "branching at node %" SCIP_LONGINT_FORMAT "\n", SCIPnodeGetNumber(SCIPgetCurrentNode(scip)));
 
-            SCIPdebugMsg(scip, "created child node %lld with constraint:\n", SCIPnodeGetNumber(downchild));
+            SCIPdebugMsg(scip, "created child node %" SCIP_LONGINT_FORMAT " with constraint:\n", SCIPnodeGetNumber(downchild));
             SCIP_CALL( SCIPprintCons(scip, multaggrconsdown, NULL) );
             SCIPinfoMessage(scip, NULL, "\n");
 
-            SCIPdebugMsg(scip, "created child node %lld with constraint:\n", SCIPnodeGetNumber(upchild));
+            SCIPdebugMsg(scip, "created child node %" SCIP_LONGINT_FORMAT " with constraint:\n", SCIPnodeGetNumber(upchild));
             SCIP_CALL( SCIPprintCons(scip, multaggrconsup, NULL) );
             SCIPinfoMessage(scip, NULL, "\n");
 #endif

@@ -107,14 +107,10 @@
 #define MIN(x,y) ((x) <= (y) ? (x) : (y))
 #endif
 
-#ifndef SCIP_LONGINT_FORMAT
 #ifdef _MSC_VER
 #define LONGINT_FORMAT           "I64d"
 #else
 #define LONGINT_FORMAT           "lld"
-#endif
-#else
-#define LONGINT_FORMAT SCIP_LONGINT_FORMAT
 #endif
 
 #ifndef SCIP_MAXMEMSIZE

@@ -3682,7 +3682,7 @@ SCIP_RETCODE SCIPbendersExtractIISMasterSolution(
    /* the DFBS algorithm is restricted to use less than 5% of the total subproblem solving nodes. If the subproblem is
     * NULL, this check is meaningless.
     */
-   SCIPsetDebugMsg(set, "dfbsnodes %lld totalsubprobnodes %lld\n", benders->dfbsdata->totalnodes, totalsubprobnodes);
+   SCIPsetDebugMsg(set, "dfbsnodes %" SCIP_LONGINT_FORMAT " totalsubprobnodes %" SCIP_LONGINT_FORMAT "\n", benders->dfbsdata->totalnodes, totalsubprobnodes);
    if( subproblem != NULL && benders->dfbsdata->totalnodes > 0.05*totalsubprobnodes )
       return SCIP_OKAY;
 
@@ -3928,7 +3928,7 @@ SCIP_RETCODE SCIPbendersExtractIISMasterSolution(
 
    } while( TRUE ); /*lint !e506*/
 
-   SCIPsetDebugMsg(set, "DFBS -- Number of nodes processed: %lld %lld\n", nodesprocessed, nodebudget);
+   SCIPsetDebugMsg(set, "DFBS -- Number of nodes processed: %" SCIP_LONGINT_FORMAT " %" SCIP_LONGINT_FORMAT "\n", nodesprocessed, nodebudget);
    SCIPsetDebugMsg(set, "DFBS -- Numkeep %d Numcands %d\n", numkeep, numcands);
    SCIPsetDebugMsg(set, "DFBS -- Original %d Reduced %d\n", initnumcands, numkeep + numcands);
 
