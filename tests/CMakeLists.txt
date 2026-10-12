@@ -154,5 +154,13 @@ foreach(testSrc ${TEST_SRCS})
                             DEPENDS ${testName}-build
                             RESOURCE_LOCK libscip
                         )
+    if(WIN32)
+        # on windows we need to execute the unittest executables from the directory containing the libscip.dll,
+        # on other systems this directory does not exist.
+        set_tests_properties(${testName}
+                            PROPERTIES
+                                WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/bin/$<CONFIG>
+                            )
+    endif()
     endif()  # LP Error: Xpress returned 120, #3724 (LPS=xprs, unittest-cons-nonlinear-vertexpolyhedral)
 endforeach(testSrc)
