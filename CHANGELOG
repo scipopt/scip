@@ -341,6 +341,11 @@ Fixed bugs
 - fixed that with constraints/nonlinear/checkvarlocks = b bound disjunction constraints were created also when it was possible
   to just change the variable type
 
+Examples and applications
+-------------------------
+
+- in application Coloring initialize coloring in heur_init to avoid non-deterministic behavior
+
 @section RN1010 SCIP 10.1.0
 ***************************
 
