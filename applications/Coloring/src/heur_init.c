@@ -605,6 +605,8 @@ SCIP_DECL_HEUREXEC(heurExecInit)
 
       /* compute an initial coloring with a greedy method */
       SCIP_CALL( greedyInitialColoring(scip, graph, bestcolors, &ncolors) );
+      for( i = 0; i < nnodes; ++i )
+         colors[i] = bestcolors[i];
 
       if( heurdata->usetabu )
       {
