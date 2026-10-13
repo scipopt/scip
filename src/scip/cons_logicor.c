@@ -137,6 +137,13 @@ struct SCIP_ConshdlrData
    int                   nlastimplsneg;      /**< number of implications after last negated clique presolving round */
    int                   nlastcliquesshorten;/**< number of cliques after last shortening of constraints */
    int                   nlastimplsshorten;  /**< number of implications after last shortening of constraints */
+   int*                  implpass;           /**< by variable index: shortenConss() pass before which the implications,
+                                              *   variable bounds or cliques of the variable last changed */
+   uint64_t*             implsig;            /**< by variable index: signature of the implications, variable bounds and
+                                              *   cliques of the variable at the last shortenConss() pass */
+   int                   nimplpass;          /**< length of implpass and implsig; variables with a larger index count as
+                                              *   changed */
+   int                   nshortenpasses;     /**< number of shortenConss() passes in the current presolving run */
 };
 
 /* @todo it might speed up exit-presolve to remember all positions for variables when catching the varfixed event, or we
@@ -156,6 +163,8 @@ struct SCIP_ConsData
    int                   watchedvar2;        /**< position of the second watched variable */
    int                   filterpos1;         /**< event filter position of first watched variable */
    int                   filterpos2;         /**< event filter position of second watched variable */
+   int                   shortenpass;        /**< shortenConss() pass in which the constraint was shortened, or -1 if it
+                                              *   changed since */
    unsigned int          signature;          /**< constraint signature which is need for pairwise comparison */
    unsigned int          presolved:1;        /**< flag indicates if we have some fixed, aggregated or multi-aggregated
                                               *   variables
@@ -217,6 +226,10 @@ SCIP_RETCODE conshdlrdataCreate(
    (*conshdlrdata)->nlastimplsneg = 0;
    (*conshdlrdata)->nlastcliquesshorten = 0;
    (*conshdlrdata)->nlastimplsshorten = 0;
+   (*conshdlrdata)->implpass = NULL;
+   (*conshdlrdata)->implsig = NULL;
+   (*conshdlrdata)->nimplpass = 0;
+   (*conshdlrdata)->nshortenpasses = 0;
 
    /* set event handler for catching events on watched variables */
    (*conshdlrdata)->eventhdlr = eventhdlr;
@@ -233,6 +246,8 @@ void conshdlrdataFree(
 {
    assert(conshdlrdata != NULL);
    assert(*conshdlrdata != NULL);
+   assert((*conshdlrdata)->implpass == NULL);
+   assert((*conshdlrdata)->implsig == NULL);
 
    SCIPfreeBlockMemory(scip, conshdlrdata);
 }
@@ -295,6 +310,7 @@ SCIP_RETCODE consdataCreate(
    (*consdata)->watchedvar2 = -1;
    (*consdata)->filterpos1 = -1;
    (*consdata)->filterpos2 = -1;
+   (*consdata)->shortenpass = -1;
    (*consdata)->presolved = FALSE;
    (*consdata)->impladded = FALSE;
    (*consdata)->changed = TRUE;
@@ -518,6 +534,7 @@ SCIP_RETCODE addCoef(
 
    consdata->sorted = (consdata->nvars == 1);
    consdata->changed = TRUE;
+   consdata->shortenpass = -1;
    consdata->validsignature = FALSE;
 
    /* install the rounding locks for the new variable */
@@ -595,6 +612,7 @@ SCIP_RETCODE delCoefPos(
       consdata->watchedvar2 = pos;
 
    consdata->changed = TRUE;
+   consdata->shortenpass = -1;
    consdata->validsignature = FALSE;
 
    SCIP_CALL( SCIPenableConsPropagation(scip, cons) );
@@ -3223,6 +3241,103 @@ SCIP_RETCODE removeRedundantConssAndNonzeros(
 
 #define MAX_CONSLENGTH 200
 
+/** checks whether a constraint has to be shortened: it was not shortened since it changed, or one of its variables got
+ *  new implications or cliques since its shortening
+ */
+static
+SCIP_Bool implicsAddedSinceShortening(
+   SCIP_CONSHDLRDATA*    conshdlrdata,       /**< logic or constraint handler data */
+   SCIP_CONSDATA*        consdata            /**< logic or constraint data */
+   )
+{
+   int v;
+
+   assert(conshdlrdata != NULL);
+   assert(consdata != NULL);
+
+   if( consdata->shortenpass < 0 )
+      return TRUE;
+
+   for( v = consdata->nvars - 1; v >= 0; --v )
+   {
+      int idx;
+
+      /* implications and cliques are stored at the active variable, for a negated variable at its negation */
+      idx = SCIPvarGetIndex(SCIPvarGetProbvar(consdata->vars[v]));
+
+      if( idx >= conshdlrdata->nimplpass || conshdlrdata->implpass[idx] >= consdata->shortenpass )
+         return TRUE;
+   }
+
+   return FALSE;
+}
+
+/** returns the hash of one implication, variable bound or clique entry of a signature (64 bit FNV-1a) */
+static
+uint64_t signatureEntry(
+   uint64_t              kind,               /**< kind of entry and the side it belongs to */
+   uint64_t              index,              /**< index of the other variable or of the clique */
+   uint64_t              value               /**< hash of the bound or coefficients, or 0 */
+   )
+{
+   uint64_t hash = 14695981039346656037ULL;
+
+   hash = (hash ^ kind) * 1099511628211ULL;
+   hash = (hash ^ index) * 1099511628211ULL;
+   hash = (hash ^ value) * 1099511628211ULL;
+
+   return hash;
+}
+
+/** returns a signature of the implications, variable bounds and cliques of an active binary variable, which changes when
+ *  they change; comparing signatures needs no events (new cliques issue none) and leaves the event filters untouched
+ *
+ *  The signature is the sum of the hashes of the entries, so it does not depend on their order.
+ */
+static
+uint64_t implicationSignature(
+   SCIP_VAR*             var                 /**< active binary variable */
+   )
+{
+   uint64_t signature = 0;
+   SCIP_VAR** vbvars;
+   SCIP_Real* vbcoefs;
+   SCIP_Real* vbconsts;
+   int nvbs;
+   int b;
+   int i;
+
+   assert(SCIPvarIsActive(var));
+
+   for( b = 0; b <= 1; ++b )
+   {
+      SCIP_CLIQUE** cliques = SCIPvarGetCliques(var, (SCIP_Bool)b);
+      SCIP_VAR** implvars = SCIPvarGetImplVars(var, (SCIP_Bool)b);
+      SCIP_BOUNDTYPE* impltypes = SCIPvarGetImplTypes(var, (SCIP_Bool)b);
+      SCIP_Real* implbounds = SCIPvarGetImplBounds(var, (SCIP_Bool)b);
+      int ncliques = SCIPvarGetNCliques(var, (SCIP_Bool)b);
+      int nimpls = SCIPvarGetNImpls(var, (SCIP_Bool)b);
+
+      for( i = 0; i < ncliques; ++i )
+         signature += signatureEntry((uint64_t)b, (uint64_t)SCIPcliqueGetId(cliques[i]), 0);
+
+      for( i = 0; i < nimpls; ++i )
+         signature += signatureEntry(2 + (uint64_t)b, 2 * (uint64_t)SCIPvarGetIndex(implvars[i]) + (uint64_t)impltypes[i],
+               SCIPrealHashCode(implbounds[i]));
+
+      vbvars = b == 0 ? SCIPvarGetVlbVars(var) : SCIPvarGetVubVars(var);
+      vbcoefs = b == 0 ? SCIPvarGetVlbCoefs(var) : SCIPvarGetVubCoefs(var);
+      vbconsts = b == 0 ? SCIPvarGetVlbConstants(var) : SCIPvarGetVubConstants(var);
+      nvbs = b == 0 ? SCIPvarGetNVlbs(var) : SCIPvarGetNVubs(var);
+
+      for( i = 0; i < nvbs; ++i )
+         signature += signatureEntry(4 + (uint64_t)b, (uint64_t)SCIPvarGetIndex(vbvars[i]),
+               ((uint64_t)SCIPrealHashCode(vbcoefs[i]) << 32) | SCIPrealHashCode(vbconsts[i]));
+   }
+
+   return signature;
+}
+
 /** try to tighten constraints by reducing the number of variables in the constraints using implications and cliques,
  *  also derive fixations through them, @see SCIPshrinkDisjunctiveVarSet()
  */
@@ -3243,6 +3358,7 @@ SCIP_RETCODE shortenConss(
    )
 {
    SCIP_VAR** probvars;
+   SCIP_VAR** vars;
    SCIP_VAR* var;
    SCIP_Real* bounds;
    SCIP_Bool* boundtypes;
@@ -3273,6 +3389,31 @@ SCIP_RETCODE shortenConss(
 
    conshdlrdata->nlastcliquesshorten = SCIPgetNCliques(scip);
    conshdlrdata->nlastimplsshorten = SCIPgetNImplications(scip);
+   ++conshdlrdata->nshortenpasses;
+
+   /* mark the variables whose implications, variable bounds or cliques changed since the last pass as changed in the last
+    * pass
+    */
+   vars = SCIPgetVars(scip);
+   for( v = SCIPgetNVars(scip) - 1; v >= 0; --v )
+   {
+      uint64_t signature;
+      int idx;
+
+      var = vars[v];
+      idx = SCIPvarGetIndex(var);
+
+      if( idx >= conshdlrdata->nimplpass || !SCIPvarIsBinary(var) )
+         continue;
+
+      signature = implicationSignature(var);
+
+      if( signature != conshdlrdata->implsig[idx] )
+      {
+         conshdlrdata->implsig[idx] = signature;
+         conshdlrdata->implpass[idx] = conshdlrdata->nshortenpasses - 1;
+      }
+   }
 
    nbinprobvars = SCIPgetNVars(scip) - SCIPgetNContVars(scip);
 
@@ -3312,8 +3453,10 @@ SCIP_RETCODE shortenConss(
 
       assert(consdata->nvars >= 2);
 
-      /* do not try to shorten too long constraints */
-      if( consdata->nvars > MAX_CONSLENGTH )
+      /* do not try to shorten too long constraints, nor constraints that were shortened and whose variables did not get
+       * new implications or cliques since
+       */
+      if( consdata->nvars > MAX_CONSLENGTH || !implicsAddedSinceShortening(conshdlrdata, consdata) )
          continue;
 
       /* form necessary data */
@@ -3363,6 +3506,10 @@ SCIP_RETCODE shortenConss(
          BMSclearMemoryArray(redundants, consdata->nvars);
          continue;
       }
+
+      /* without removed variables, the constraint is shortened with the current implications and cliques */
+      if( nredvars == 0 )
+         consdata->shortenpass = conshdlrdata->nshortenpasses;
 
       /* remove redundant variables */
       if( nredvars > 0 )
@@ -4150,6 +4297,8 @@ SCIP_DECL_CONSINITPRE(consInitpreLogicor)
 {  /*lint --e{715}*/
    SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONSDATA* consdata;
+   SCIP_VAR** vars;
+   int nvars;
    int c;
    int v;
 
@@ -4162,11 +4311,31 @@ SCIP_DECL_CONSINITPRE(consInitpreLogicor)
    conshdlrdata->nlastcliquesshorten = 0;
    conshdlrdata->nlastimplsshorten = 0;
 
+   /* record the implications, variable bounds and cliques of all binary variables, so that shortenConss() shortens a
+    * constraint again only if those of one of its variables changed since its last shortening
+    */
+   assert(conshdlrdata->implpass == NULL);
+   vars = SCIPgetVars(scip);
+   nvars = SCIPgetNVars(scip);
+   conshdlrdata->nimplpass = 0;
+   for( v = 0; v < nvars; ++v )
+      conshdlrdata->nimplpass = MAX(conshdlrdata->nimplpass, SCIPvarGetIndex(vars[v]) + 1);
+   SCIP_CALL( SCIPallocClearBlockMemoryArray(scip, &conshdlrdata->implpass, conshdlrdata->nimplpass) );
+   SCIP_CALL( SCIPallocClearBlockMemoryArray(scip, &conshdlrdata->implsig, conshdlrdata->nimplpass) );
+   conshdlrdata->nshortenpasses = 0;
+   for( v = 0; v < nvars; ++v )
+   {
+      if( SCIPvarIsBinary(vars[v]) )
+         conshdlrdata->implsig[SCIPvarGetIndex(vars[v])] = implicationSignature(vars[v]);
+   }
+
    /* catch all variable event for deleted variables, which is only used in presolving */
    for( c = nconss - 1; c >= 0; --c )
    {
       consdata = SCIPconsGetData(conss[c]);
       assert(consdata != NULL);
+
+      consdata->shortenpass = -1;
 
       for( v = consdata->nvars - 1; v >= 0; --v )
       {
@@ -4231,6 +4400,11 @@ SCIP_DECL_CONSEXITPRE(consExitpreLogicor)
       }
    }
 
+
+   /* free the records of consInitpreLogicor() */
+   SCIPfreeBlockMemoryArrayNull(scip, &conshdlrdata->implsig, conshdlrdata->nimplpass);
+   SCIPfreeBlockMemoryArrayNull(scip, &conshdlrdata->implpass, conshdlrdata->nimplpass);
+   conshdlrdata->nimplpass = 0;
    return SCIP_OKAY;
 }
 
@@ -5258,6 +5432,7 @@ SCIP_DECL_EVENTEXEC(eventExecLogicor)
    SCIP_STRINGEQ( SCIPeventhdlrGetName(eventhdlr), EVENTHDLR_NAME, SCIP_INVALIDCALL );
 
    SCIPdebugMsg(scip, "exec method of event handler for logic or constraints\n");
+
 
    if( SCIPeventGetType(event) == SCIP_EVENTTYPE_LBRELAXED )
    {
