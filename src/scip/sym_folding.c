@@ -258,7 +258,6 @@ SCIP_RETCODE applyFolding(
    int* orbitbegins;
    int norbits;
    int first;
-   int nvars;
    int oidx;
    int i;
 
@@ -273,8 +272,6 @@ SCIP_RETCODE applyFolding(
 
    *naddedconss = 0;
    *naggrvars = 0;
-   nvars = SCIPgetNVars(scip);
-   assert(nvars >= npermvars);
 
    /* allocate memory for component data and create constraints  */
    SCIP_CALL( SCIPallocBlockMemory(scip, symcompdata) );
@@ -282,8 +279,8 @@ SCIP_RETCODE applyFolding(
    (*symcompdata)->nconss = 0;
 
    /* compute orbits of symmetry component */
-   SCIP_CALL( SCIPallocBufferArray(scip, &orbits, nvars) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &orbitbegins, nvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &orbits, npermvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &orbitbegins, npermvars) );
    SCIP_CALL( SCIPcomputeOrbitsSym(scip, FALSE, permvars, npermvars, perms, nperms, orbits, orbitbegins, &norbits) );
    assert(norbits > 0);
 
