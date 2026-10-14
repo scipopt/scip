@@ -139,9 +139,9 @@ struct SCIP_ConshdlrData
    int                   nlastimplsshorten;  /**< number of implications after last shortening of constraints */
    int*                  implpass;           /**< by variable index: shortenConss() pass before which the implications,
                                               *   variable bounds or cliques of the variable last changed */
-   uint64_t*             implsig;            /**< by variable index: signature of the implications, variable bounds and
+   uint64_t*             implhash;           /**< by variable index: hash of the implications, variable bounds and
                                               *   cliques of the variable at the last shortenConss() pass */
-   int                   nimplpass;          /**< length of implpass and implsig; variables with a larger index count as
+   int                   nimplpass;          /**< length of implpass and implhash; variables with a larger index count as
                                               *   changed */
    int                   nshortenpasses;     /**< number of shortenConss() passes in the current presolving run */
 };
@@ -227,7 +227,7 @@ SCIP_RETCODE conshdlrdataCreate(
    (*conshdlrdata)->nlastcliquesshorten = 0;
    (*conshdlrdata)->nlastimplsshorten = 0;
    (*conshdlrdata)->implpass = NULL;
-   (*conshdlrdata)->implsig = NULL;
+   (*conshdlrdata)->implhash = NULL;
    (*conshdlrdata)->nimplpass = 0;
    (*conshdlrdata)->nshortenpasses = 0;
 
@@ -247,7 +247,7 @@ void conshdlrdataFree(
    assert(conshdlrdata != NULL);
    assert(*conshdlrdata != NULL);
    assert((*conshdlrdata)->implpass == NULL);
-   assert((*conshdlrdata)->implsig == NULL);
+   assert((*conshdlrdata)->implhash == NULL);
 
    SCIPfreeBlockMemory(scip, conshdlrdata);
 }
@@ -3272,34 +3272,44 @@ SCIP_Bool implicsAddedSinceShortening(
    return FALSE;
 }
 
-/** returns the hash of one implication, variable bound or clique entry of a signature (64 bit FNV-1a) */
+/** returns the hash of one clique, implication or variable bound entry of a variable, see implicationHash()
+ *
+ *  implicationHash() sums the hashes of the entries, so the entry hash must not be close to linear in its arguments:
+ *  with SCIPhashFour() alone, moving the variable indices of two entries by +1 and -1 would leave the sum unchanged.
+ *  The finalizer of MurmurHash3 (fmix64) mixes the result to avoid this.
+ */
 static
-uint64_t signatureEntry(
-   uint64_t              kind,               /**< kind of entry and the side it belongs to */
-   uint64_t              index,              /**< index of the other variable or of the clique */
-   uint64_t              value               /**< hash of the bound or coefficients, or 0 */
+uint64_t implicationHashEntry(
+   uint32_t              kind,               /**< 0/1: clique, 2/3: implication (for the variable's value 0 or 1),
+                                              *   4/5: variable lower or upper bound */
+   uint32_t              index,              /**< index of the clique or of the other variable */
+   uint32_t              value1,             /**< hash of the implied bound or the variable bound coefficient, or 0 */
+   uint32_t              value2              /**< type of the implied bound, the hash of the variable bound constant, or 0 */
    )
 {
-   uint64_t hash = 14695981039346656037ULL;
+   uint64_t hash = SCIPhashFour(kind, index, value1, value2);
 
-   hash = (hash ^ kind) * 1099511628211ULL;
-   hash = (hash ^ index) * 1099511628211ULL;
-   hash = (hash ^ value) * 1099511628211ULL;
+   hash ^= hash >> 33;
+   hash *= UINT64_C(0xff51afd7ed558ccd);
+   hash ^= hash >> 33;
+   hash *= UINT64_C(0xc4ceb9fe1a85ec53);
+   hash ^= hash >> 33;
 
    return hash;
 }
 
-/** returns a signature of the implications, variable bounds and cliques of an active binary variable, which changes when
- *  they change; comparing signatures needs no events (new cliques issue none) and leaves the event filters untouched
+/** returns a hash of the implications, variable bounds and cliques of an active binary variable, which changes when
+ *  they change; comparing hashes needs no events (new cliques issue none) and leaves the event filters untouched
  *
- *  The signature is the sum of the hashes of the entries, so it does not depend on their order.
+ *  The hash is the sum of the hashes of the entries, so it does not depend on their order. Two different sets of
+ *  entries with the same hash only mean that a constraint is not shortened again in this round.
  */
 static
-uint64_t implicationSignature(
+uint64_t implicationHash(
    SCIP_VAR*             var                 /**< active binary variable */
    )
 {
-   uint64_t signature = 0;
+   uint64_t hash = 0;
    SCIP_VAR** vbvars;
    SCIP_Real* vbcoefs;
    SCIP_Real* vbconsts;
@@ -3319,11 +3329,11 @@ uint64_t implicationSignature(
       int nimpls = SCIPvarGetNImpls(var, (SCIP_Bool)b);
 
       for( i = 0; i < ncliques; ++i )
-         signature += signatureEntry((uint64_t)b, (uint64_t)SCIPcliqueGetId(cliques[i]), 0);
+         hash += implicationHashEntry((uint32_t)b, (uint32_t)SCIPcliqueGetId(cliques[i]), 0, 0);
 
       for( i = 0; i < nimpls; ++i )
-         signature += signatureEntry(2 + (uint64_t)b, 2 * (uint64_t)SCIPvarGetIndex(implvars[i]) + (uint64_t)impltypes[i],
-               SCIPrealHashCode(implbounds[i]));
+         hash += implicationHashEntry(2 + (uint32_t)b, (uint32_t)SCIPvarGetIndex(implvars[i]),
+               SCIPrealHashCode(implbounds[i]), (uint32_t)impltypes[i]);
 
       vbvars = b == 0 ? SCIPvarGetVlbVars(var) : SCIPvarGetVubVars(var);
       vbcoefs = b == 0 ? SCIPvarGetVlbCoefs(var) : SCIPvarGetVubCoefs(var);
@@ -3331,11 +3341,11 @@ uint64_t implicationSignature(
       nvbs = b == 0 ? SCIPvarGetNVlbs(var) : SCIPvarGetNVubs(var);
 
       for( i = 0; i < nvbs; ++i )
-         signature += signatureEntry(4 + (uint64_t)b, (uint64_t)SCIPvarGetIndex(vbvars[i]),
-               ((uint64_t)SCIPrealHashCode(vbcoefs[i]) << 32) | SCIPrealHashCode(vbconsts[i]));
+         hash += implicationHashEntry(4 + (uint32_t)b, (uint32_t)SCIPvarGetIndex(vbvars[i]),
+               SCIPrealHashCode(vbcoefs[i]), SCIPrealHashCode(vbconsts[i]));
    }
 
-   return signature;
+   return hash;
 }
 
 /** try to tighten constraints by reducing the number of variables in the constraints using implications and cliques,
@@ -3397,7 +3407,7 @@ SCIP_RETCODE shortenConss(
    vars = SCIPgetVars(scip);
    for( v = SCIPgetNVars(scip) - 1; v >= 0; --v )
    {
-      uint64_t signature;
+      uint64_t hash;
       int idx;
 
       var = vars[v];
@@ -3406,11 +3416,11 @@ SCIP_RETCODE shortenConss(
       if( idx >= conshdlrdata->nimplpass || !SCIPvarIsBinary(var) )
          continue;
 
-      signature = implicationSignature(var);
+      hash = implicationHash(var);
 
-      if( signature != conshdlrdata->implsig[idx] )
+      if( hash != conshdlrdata->implhash[idx] )
       {
-         conshdlrdata->implsig[idx] = signature;
+         conshdlrdata->implhash[idx] = hash;
          conshdlrdata->implpass[idx] = conshdlrdata->nshortenpasses - 1;
       }
    }
@@ -4321,12 +4331,12 @@ SCIP_DECL_CONSINITPRE(consInitpreLogicor)
    for( v = 0; v < nvars; ++v )
       conshdlrdata->nimplpass = MAX(conshdlrdata->nimplpass, SCIPvarGetIndex(vars[v]) + 1);
    SCIP_CALL( SCIPallocClearBlockMemoryArray(scip, &conshdlrdata->implpass, conshdlrdata->nimplpass) );
-   SCIP_CALL( SCIPallocClearBlockMemoryArray(scip, &conshdlrdata->implsig, conshdlrdata->nimplpass) );
+   SCIP_CALL( SCIPallocClearBlockMemoryArray(scip, &conshdlrdata->implhash, conshdlrdata->nimplpass) );
    conshdlrdata->nshortenpasses = 0;
    for( v = 0; v < nvars; ++v )
    {
       if( SCIPvarIsBinary(vars[v]) )
-         conshdlrdata->implsig[SCIPvarGetIndex(vars[v])] = implicationSignature(vars[v]);
+         conshdlrdata->implhash[SCIPvarGetIndex(vars[v])] = implicationHash(vars[v]);
    }
 
    /* catch all variable event for deleted variables, which is only used in presolving */
@@ -4402,7 +4412,7 @@ SCIP_DECL_CONSEXITPRE(consExitpreLogicor)
 
 
    /* free the records of consInitpreLogicor() */
-   SCIPfreeBlockMemoryArrayNull(scip, &conshdlrdata->implsig, conshdlrdata->nimplpass);
+   SCIPfreeBlockMemoryArrayNull(scip, &conshdlrdata->implhash, conshdlrdata->nimplpass);
    SCIPfreeBlockMemoryArrayNull(scip, &conshdlrdata->implpass, conshdlrdata->nimplpass);
    conshdlrdata->nimplpass = 0;
    return SCIP_OKAY;
