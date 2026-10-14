@@ -55,9 +55,7 @@ void test_fixedvar_addconswithfixedvar(void)
    SCIP_CALL( SCIPsetIntParam(scip, "constraints/linear/propfreq", 3) );
 
    /* we take bell5.mps as our initial instance */
-   strcpy(testfile, __FILE__);
-   testfile[strlen(testfile) - 10] = '\0';  /* cutoff "fixedvar.c" */
-   strcat(testfile, "../../../../check/instances/MIP/bell5.mps");
+   TESTsetTestfilename(testfile, __FILE__, "../../../../check/instances/MIP/bell5.mps");
    SCIP_CALL( SCIPreadProb(scip, testfile, NULL) );
 
    /* the variable we want to SCIP to fix */
