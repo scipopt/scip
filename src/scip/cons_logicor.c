@@ -3282,12 +3282,12 @@ static
 uint64_t implicationHashEntry(
    uint32_t              kind,               /**< 0/1: clique, 2/3: implication (for the variable's value 0 or 1),
                                               *   4/5: variable lower or upper bound */
-   uint32_t              index,              /**< index of the clique or of the other variable */
+   uint32_t              idx,                /**< index of the clique or of the other variable */
    uint32_t              value1,             /**< hash of the implied bound or the variable bound coefficient, or 0 */
    uint32_t              value2              /**< type of the implied bound, the hash of the variable bound constant, or 0 */
    )
 {
-   uint64_t hash = SCIPhashFour(kind, index, value1, value2);
+   uint64_t hash = SCIPhashFour(kind, idx, value1, value2);
 
    hash ^= hash >> 33;
    hash *= UINT64_C(0xff51afd7ed558ccd);
@@ -4329,7 +4329,11 @@ SCIP_DECL_CONSINITPRE(consInitpreLogicor)
    nvars = SCIPgetNVars(scip);
    conshdlrdata->nimplpass = 0;
    for( v = 0; v < nvars; ++v )
-      conshdlrdata->nimplpass = MAX(conshdlrdata->nimplpass, SCIPvarGetIndex(vars[v]) + 1);
+   {
+      int idx = SCIPvarGetIndex(vars[v]);
+
+      conshdlrdata->nimplpass = MAX(conshdlrdata->nimplpass, idx + 1);
+   }
    SCIP_CALL( SCIPallocClearBlockMemoryArray(scip, &conshdlrdata->implpass, conshdlrdata->nimplpass) );
    SCIP_CALL( SCIPallocClearBlockMemoryArray(scip, &conshdlrdata->implhash, conshdlrdata->nimplpass) );
    conshdlrdata->nshortenpasses = 0;
