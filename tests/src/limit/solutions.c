@@ -55,9 +55,13 @@ void teardown(void)
 /** @brief tests continued solve after solution limit */
 void test_solutions_continued(void)
 {
+   char filename[SCIP_MAXSTRLEN];
+
+   TESTsetTestfilename(filename, __FILE__, "../../../check/instances/MIP/MANN_a9.clq.lp");
+
    TEST_ASSERT_NOT_NULL(scip);
    SCIP_CALL( SCIPsetIntParam(scip, "limits/solutions", 3) );
-   SCIP_CALL( SCIPreadProb(scip, "../check/instances/MIP/MANN_a9.clq.lp", NULL) );
+   SCIP_CALL( SCIPreadProb(scip, filename, NULL) );
    SCIP_CALL( SCIPsolve(scip) );
    TEST_ASSERT_NOT(SCIPisInfinity(scip, -SCIPgetPrimalbound(scip)),
          "Primal bound should be finite after solution limit");

@@ -31,8 +31,6 @@
 #include "scip/scipdefplugins.h"
 #include "include/scip_test.h"
 
-static const char* testfilename = "../check/instances/Tests/decomp/decomptest.cip";
-static const char* testdecname = "../check/instances/Tests/decomp/decomptest.dec";
 #define NVARS 7
 #define NCONSS 3
 /** GLOBAL VARIABLES **/
@@ -84,11 +82,13 @@ void testData(void)
 static
 void setup(void)
 {
+   char filename[SCIP_MAXSTRLEN];
+
    SCIP_CALL( SCIPcreate(&scip) );
    SCIP_CALL( SCIPincludeDefaultPlugins(scip) );
 
-
-   SCIP_CALL( SCIPreadProb(scip, testfilename, NULL) );
+   TESTsetTestfilename(filename, __FILE__, "../../../check/instances/Tests/decomp/decomptest.cip");
+   SCIP_CALL( SCIPreadProb(scip, filename, NULL) );
    SCIP_CALL( SCIPcreateDecomp(scip, &decomp, nblocks, TRUE, FALSE) );
 
    setupData();
@@ -240,8 +240,10 @@ void test_decomptest_test_dec_reader(void)
    int returnedlabels[NVARS];
    int v;
    SCIP_Bool original = TRUE;
+   char filename[SCIP_MAXSTRLEN];
 
-   SCIP_CALL( SCIPreadProb(scip, testdecname, "dec") );
+   TESTsetTestfilename(filename, __FILE__, "../../../check/instances/Tests/decomp/decomptest.dec");
+   SCIP_CALL( SCIPreadProb(scip, filename, "dec") );
 
    SCIPgetDecomps(scip, &scip_decomps, &n_decomps, original);
    TEST_ASSERT_EQUAL(n_decomps, 1);

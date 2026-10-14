@@ -31,9 +31,6 @@
 #include "scip/scipdefplugins.h"
 #include "include/scip_test.h"
 
-static const char* testfilename1 = "../check/instances/MIP/flugpl.mps";
-static const char* testfilename2 = "../check/instances/MIP/MANN_a9.clq.lp";
-
 static SCIP* scip;
 static SCIP* reoptscip;
 static SCIP_RANDNUMGEN* randgen;
@@ -78,6 +75,7 @@ void teardown(void)
 /* TEST 1: changing objective */
 void test_reopt_objective(void)
 {
+   char filename[SCIP_MAXSTRLEN];
    SCIP_VAR** reoptvars;
    SCIP_VAR** vars;
    SCIP_Real newobj;
@@ -94,8 +92,9 @@ void test_reopt_objective(void)
    int j;
 
    /* read problem */
-   SCIP_CALL( SCIPreadProb(scip, testfilename1, NULL) );
-   SCIP_CALL( SCIPreadProb(reoptscip, testfilename1, NULL) );
+   TESTsetTestfilename(filename, __FILE__, "../../../check/instances/MIP/flugpl.mps");
+   SCIP_CALL( SCIPreadProb(scip, filename, NULL) );
+   SCIP_CALL( SCIPreadProb(reoptscip, filename, NULL) );
 
    nvars = SCIPgetNOrigVars(scip);
    vars = SCIPgetOrigVars(scip);
@@ -310,6 +309,7 @@ void test_reopt_objectivesmall(void)
 void test_reopt_conss(void)
 {
    char name[SCIP_MAXSTRLEN];
+   char filename[SCIP_MAXSTRLEN];
    SCIP_VAR** reoptvars;
    SCIP_VAR** vars;
    SCIP_STATUS status;
@@ -325,8 +325,9 @@ void test_reopt_conss(void)
    int j;
 
    /* read problem */
-   SCIP_CALL( SCIPreadProb(scip, testfilename2, NULL) );
-   SCIP_CALL( SCIPreadProb(reoptscip, testfilename2, NULL) );
+   TESTsetTestfilename(filename, __FILE__, "../../../check/instances/MIP/MANN_a9.clq.lp");
+   SCIP_CALL( SCIPreadProb(scip, filename, NULL) );
+   SCIP_CALL( SCIPreadProb(reoptscip, filename, NULL) );
 
    nvars = SCIPgetNOrigVars(scip);
    vars = SCIPgetOrigVars(scip);

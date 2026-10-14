@@ -75,12 +75,14 @@ void test_disable_upgrades_create_and_free(void)
 /** @brief disable upgrades of or-constraints to and-constraints to keep or-constraints during solution process */
 void test_disable_upgrades_disable_upgrades_or(void)
 {
+   char filename[SCIP_MAXSTRLEN];
    SCIP_CONSHDLR* conshdlr;
    SCIP_CONS** conss;
    int nconss;
    int i;
 
-   SCIP_CALL( SCIPreadProb(scip, "../check/instances/Or/or_constraint.cip", "cip") );
+   TESTsetTestfilename(filename, __FILE__, "../../../../check/instances/Or/or_constraint.cip");
+   SCIP_CALL( SCIPreadProb(scip, filename, "cip") );
 
    conshdlr = SCIPfindConshdlr(scip, "or");
 
@@ -109,7 +111,10 @@ void test_disable_upgrades_disable_upgrades_or(void)
 /** @brief test that CIP write method works for or constraints */
 void test_disable_upgrades_write_problem(void)
 {
-   SCIP_CALL( SCIPreadProb(scip, "../check/instances/Or/or_constraint.cip", "cip") );
+   char filename[SCIP_MAXSTRLEN];
+
+   TESTsetTestfilename(filename, __FILE__, "../../../../check/instances/Or/or_constraint.cip");
+   SCIP_CALL( SCIPreadProb(scip, filename, "cip") );
 
    SCIP_CALL( SCIPwriteOrigProblem(scip, NULL, "cip", FALSE) );
 }
@@ -119,7 +124,10 @@ void test_disable_upgrades_copy_problem(void)
 {
    SCIP* targetscip;
    SCIP_Bool valid;
-   SCIP_CALL( SCIPreadProb(scip, "../check/instances/Or/or_constraint.cip", "cip") );
+   char filename[SCIP_MAXSTRLEN];
+
+   TESTsetTestfilename(filename, __FILE__, "../../../../check/instances/Or/or_constraint.cip");
+   SCIP_CALL( SCIPreadProb(scip, filename, "cip") );
 
    SCIP_CALL( SCIPcreate(&targetscip) );
 
@@ -137,8 +145,10 @@ void test_disable_upgrades_test_basic_creation(void)
 {
    SCIP_CONS* newcons;
    SCIP_VAR** origvars;
+   char filename[SCIP_MAXSTRLEN];
 
-   SCIP_CALL( SCIPreadProb(scip, "../check/instances/Or/or_constraint.cip", "cip") );
+   TESTsetTestfilename(filename, __FILE__, "../../../../check/instances/Or/or_constraint.cip");
+   SCIP_CALL( SCIPreadProb(scip, filename, "cip") );
 
    TEST_ASSERT(SCIPgetNVars(scip) == 24);
    TEST_ASSERT(SCIPgetNBinVars(scip) == 24);

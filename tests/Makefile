@@ -165,7 +165,7 @@ UNITY_SRC	=	$(UNITY_DIR)/unity.c
 #-----------------------------------------------------------------------------
 
 ifeq ($(VERBOSE),false)
-.SILENT:	$(UNITTESTSBIN) $(UNITTESTSOBJ)
+.SILENT:	$(UNITTESTSBIN) $(UNITTESTSOBJ) $(OBJDIR)/unity.o
 endif
 
 .PHONY: all

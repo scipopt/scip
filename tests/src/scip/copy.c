@@ -87,9 +87,10 @@ void tearDown(void)
 /** @brief tests MIP copy */
 void test_copy_MIP(void)
 {
-   /* initialize validity flag */
+   char filename[SCIP_MAXSTRLEN];
    SCIP_PARAM** sourceparams;
    SCIP_PARAM** targetparams;
+   /* initialize validity flag */
    SCIP_Bool valid = FALSE;
    const char* sourcename;
    const char* targetname;
@@ -103,7 +104,8 @@ void test_copy_MIP(void)
    SCIP_CALL( SCIPincludeDefaultPlugins(sourcescip) );
    /* TODO: remove symmetry restriction */
    SCIP_CALL( SCIPsetBoolParam(sourcescip, "symmetries/enabled", FALSE) );
-   SCIP_CALL( SCIPreadProb(sourcescip, "../check/instances/MIP/misc03.mps", NULL) );
+   TESTsetTestfilename(filename, __FILE__, "../../../check/instances/MIP/misc03.mps");
+   SCIP_CALL( SCIPreadProb(sourcescip, filename, NULL) );
    sourceparams = SCIPgetParams(sourcescip);
    nsourceparams = SCIPgetNParams(sourcescip);
 

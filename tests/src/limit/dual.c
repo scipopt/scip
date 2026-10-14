@@ -56,8 +56,11 @@ void teardown(void)
 /** @brief tests dual limit for minimization */
 void test_dual_duallimit_min(void)
 {
+   char filename[SCIP_MAXSTRLEN];
    const SCIP_Real target = 66;
    SCIP_Real duallimit;
+
+   TESTsetTestfilename(filename, __FILE__, "../../../check/instances/MIP/rgn.mps");
 
    TEST_ASSERT_NOT_NULL(scip);
    SCIP_CALL( SCIPsetRealParam(scip, "limits/dual", target) );
@@ -65,7 +68,7 @@ void test_dual_duallimit_min(void)
    SCIP_CALL( SCIPsetSeparating(scip, SCIP_PARAMSETTING_AGGRESSIVE, TRUE) );
    /* turn off heuristics to oppose optimality before the limit */
    SCIP_CALL( SCIPsetHeuristics(scip, SCIP_PARAMSETTING_OFF, TRUE) );
-   SCIP_CALL( SCIPreadProb(scip, "../check/instances/MIP/rgn.mps", NULL) );
+   SCIP_CALL( SCIPreadProb(scip, filename, NULL) );
    SCIP_CALL( SCIPsolve(scip) );
 
    TEST_ASSERT_EQUAL(SCIPgetStatus(scip), SCIP_STATUS_DUALLIMIT, "SCIP terminated with status %d but should have terminated with status %d", SCIPgetStatus(scip), SCIP_STATUS_DUALLIMIT);
@@ -78,8 +81,11 @@ void test_dual_duallimit_min(void)
 /** @brief tests dual limit for maximization */
 void test_dual_duallimit_max(void)
 {
+   char filename[SCIP_MAXSTRLEN];
    const SCIP_Real target = 30;
    SCIP_Real duallimit;
+
+   TESTsetTestfilename(filename, __FILE__, "../../../check/instances/Symmetry/packorb_1-FullIns_3.cip");
 
    TEST_ASSERT_NOT_NULL(scip);
    SCIP_CALL( SCIPsetRealParam(scip, "limits/dual", target) );
@@ -87,7 +93,7 @@ void test_dual_duallimit_max(void)
    SCIP_CALL( SCIPsetSeparating(scip, SCIP_PARAMSETTING_AGGRESSIVE, TRUE) );
    /* turn off heuristics to oppose optimality before the limit */
    SCIP_CALL( SCIPsetHeuristics(scip, SCIP_PARAMSETTING_OFF, TRUE) );
-   SCIP_CALL( SCIPreadProb(scip, "../check/instances/Symmetry/packorb_1-FullIns_3.cip", NULL) );
+   SCIP_CALL( SCIPreadProb(scip, filename, NULL) );
    SCIP_CALL( SCIPsolve(scip) );
 
    TEST_ASSERT_EQUAL(SCIPgetStatus(scip), SCIP_STATUS_DUALLIMIT, "SCIP terminated with status %d but should have terminated with status %d", SCIPgetStatus(scip), SCIP_STATUS_DUALLIMIT);
