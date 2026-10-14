@@ -5781,7 +5781,9 @@ SCIP_RETCODE rangedRowPropagation(
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
 
-   addartconss = conshdlrdata->rangedrowartcons && SCIPgetDepth(scip) < 1 && !SCIPinProbing(scip) && !SCIPinRepropagation(scip);
+   /* only checked constraints may add artificial constraints to avoid recursive cascade of unchecked constraints */
+   addartconss = conshdlrdata->rangedrowartcons && SCIPgetDepth(scip) < 1 && !SCIPinProbing(scip)
+         && !SCIPinRepropagation(scip) && SCIPconsIsChecked(cons);
 
    /* we may add artificial constraints */
    if( addartconss )
