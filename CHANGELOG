@@ -22,6 +22,8 @@ Fixed bugs
   could be restricted to be on their bound even though this is disabled by default (constraints/nonlinear/checkvarlocks = t)
 - fixed that with constraints/nonlinear/checkvarlocks = b bound disjunction constraints were created also when it was possible
   to just change the variable type
+- ranged row propagation no longer creates artificial constraints from unchecked linear constraints, in particular
+  from artificial constraints themselves, which could cascade into many redundant constraints causing memory exhaustion
 
 Examples and applications
 -------------------------
