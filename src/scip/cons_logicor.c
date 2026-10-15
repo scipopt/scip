@@ -139,7 +139,7 @@ struct SCIP_ConshdlrData
    int                   nlastimplsshorten;  /**< number of implications after last shortening of constraints */
    int*                  implpass;           /**< by variable index: shortenConss() pass before which the implications,
                                               *   variable bounds or cliques of the variable last changed */
-   uint64_t*             implhash;           /**< by variable index: hash of the implications, variable bounds and
+   uint32_t*             implhash;           /**< by variable index: hash of the implications, variable bounds and
                                               *   cliques of the variable at the last shortenConss() pass */
    int                   nimplpass;          /**< length of implpass and implhash; variables with a larger index count as
                                               *   changed */
@@ -3272,44 +3272,19 @@ SCIP_Bool implicsAddedSinceShortening(
    return FALSE;
 }
 
-/** returns the hash of one clique, implication or variable bound entry of a variable, see implicationHash()
- *
- *  implicationHash() sums the hashes of the entries, so the entry hash must not be close to linear in its arguments:
- *  with SCIPhashFour() alone, moving the variable indices of two entries by +1 and -1 would leave the sum unchanged.
- *  The finalizer of MurmurHash3 (fmix64) mixes the result to avoid this.
- */
-static
-uint64_t implicationHashEntry(
-   uint32_t              kind,               /**< 0/1: clique, 2/3: implication (for the variable's value 0 or 1),
-                                              *   4/5: variable lower or upper bound */
-   uint32_t              idx,                /**< index of the clique or of the other variable */
-   uint32_t              value1,             /**< hash of the implied bound or the variable bound coefficient, or 0 */
-   uint32_t              value2              /**< type of the implied bound, the hash of the variable bound constant, or 0 */
-   )
-{
-   uint64_t hash = SCIPhashFour(kind, idx, value1, value2);
-
-   hash ^= hash >> 33;
-   hash *= UINT64_C(0xff51afd7ed558ccd);
-   hash ^= hash >> 33;
-   hash *= UINT64_C(0xc4ceb9fe1a85ec53);
-   hash ^= hash >> 33;
-
-   return hash;
-}
-
 /** returns a hash of the implications, variable bounds and cliques of an active binary variable, which changes when
  *  they change; comparing hashes needs no events (new cliques issue none) and leaves the event filters untouched
  *
- *  The hash is the sum of the hashes of the entries, so it does not depend on their order. Two different sets of
- *  entries with the same hash only mean that a constraint is not shortened again in this round.
+ *  The entries are hashed in the order in which they are stored, which is sorted: implications and variable bounds by
+ *  variable, cliques by id. Two different sets of entries with the same hash only mean that a constraint is not
+ *  shortened again in this round.
  */
 static
-uint64_t implicationHash(
+uint32_t implicationHash(
    SCIP_VAR*             var                 /**< active binary variable */
    )
 {
-   uint64_t hash = 0;
+   uint32_t hash = 0;
    SCIP_VAR** vbvars;
    SCIP_Real* vbcoefs;
    SCIP_Real* vbconsts;
@@ -3329,11 +3304,10 @@ uint64_t implicationHash(
       int nimpls = SCIPvarGetNImpls(var, (SCIP_Bool)b);
 
       for( i = 0; i < ncliques; ++i )
-         hash += implicationHashEntry((uint32_t)b, (uint32_t)SCIPcliqueGetId(cliques[i]), 0, 0);
+         hash = SCIPhashFive(hash, b, SCIPcliqueGetId(cliques[i]), 0, 0);
 
       for( i = 0; i < nimpls; ++i )
-         hash += implicationHashEntry(2 + (uint32_t)b, (uint32_t)SCIPvarGetIndex(implvars[i]),
-               SCIPrealHashCode(implbounds[i]), (uint32_t)impltypes[i]);
+         hash = SCIPhashFive(hash, 2 + b, SCIPvarGetIndex(implvars[i]), SCIPrealHashCode(implbounds[i]), impltypes[i]);
 
       vbvars = b == 0 ? SCIPvarGetVlbVars(var) : SCIPvarGetVubVars(var);
       vbcoefs = b == 0 ? SCIPvarGetVlbCoefs(var) : SCIPvarGetVubCoefs(var);
@@ -3341,8 +3315,8 @@ uint64_t implicationHash(
       nvbs = b == 0 ? SCIPvarGetNVlbs(var) : SCIPvarGetNVubs(var);
 
       for( i = 0; i < nvbs; ++i )
-         hash += implicationHashEntry(4 + (uint32_t)b, (uint32_t)SCIPvarGetIndex(vbvars[i]),
-               SCIPrealHashCode(vbcoefs[i]), SCIPrealHashCode(vbconsts[i]));
+         hash = SCIPhashFive(hash, 4 + b, SCIPvarGetIndex(vbvars[i]), SCIPrealHashCode(vbcoefs[i]),
+               SCIPrealHashCode(vbconsts[i]));
    }
 
    return hash;
@@ -3407,7 +3381,7 @@ SCIP_RETCODE shortenConss(
    vars = SCIPgetVars(scip);
    for( v = SCIPgetNVars(scip) - 1; v >= 0; --v )
    {
-      uint64_t hash;
+      uint32_t hash;
       int idx;
 
       var = vars[v];
