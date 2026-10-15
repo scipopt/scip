@@ -3304,7 +3304,7 @@ uint32_t implicationHash(
       int nimpls = SCIPvarGetNImpls(var, (SCIP_Bool)b);
 
       for( i = 0; i < ncliques; ++i )
-         hash = SCIPhashFive(hash, b, SCIPcliqueGetId(cliques[i]), 0, 0);
+         hash = SCIPhashThree(hash, b, SCIPcliqueGetId(cliques[i]));
 
       for( i = 0; i < nimpls; ++i )
          hash = SCIPhashFive(hash, 2 + b, SCIPvarGetIndex(implvars[i]), SCIPrealHashCode(implbounds[i]), impltypes[i]);
