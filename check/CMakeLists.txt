@@ -1406,8 +1406,9 @@ if(SCIP_WITH_EXACTSOLVE)
         endforeach(extension)
     endforeach(instance)
     #
-    # append ZIMPL instances with objective constant (not compatible with the readertest)
+    # append instances with objective constant (not compatible with the readertest)
     #
+    list(APPEND instances_MIPEX "instances/MIPEX/original-offset.lp\;8")
     if(SCIP_WITH_ZIMPL)
         list(APPEND
             instances_MIPEX
