@@ -6,6 +6,7 @@
 Fixed bugs
 ----------
 
+- fixed compilation of SCIPprintSysError() on macOS when _GNU_SOURCE is defined
 - corrected memory allocation condition for storing column swaps in symmetry_orbitopal
 - change header include order for PaPILO presolver to avoid template instantiation issues with Boost headers on some systems
 - avoid use of %I64d format specifier on Windows when not using Microsoft-compatible compiler
