@@ -21,6 +21,10 @@ Features
 - in opportunistic concurrent solving, new incumbents are shared immediately through a solution pool and tightened
   global variable bounds through a bound pool that is applied at every node, instead of only at the synchronization
   points
+- code that cannot use a message handler (e.g., the memory shell, tclique, the XML parser, the CTRL-C handler) now
+  writes to stdout and stderr and terminates via SCIPioPrintStdout(), SCIPioPrintStderr(), SCIPioExit(), and
+  SCIPioAbort(); with the new CMake option CUSTOMIO, the program that links SCIP defines these functions, so that the
+  library does not reference stdout, stderr, printf(), exit(), or abort() itself
 
 ### Benders Decomposition
 - the no-good and integer optimality cuts for Benders' decomposition are generated per subproblem. Previously, only a
@@ -94,6 +98,9 @@ Interface changes
 - new method SCIPsyncstoreGetWinnerStatus() to get the terminal status of the winning concurrent solver
 - new method SCIPextractBendersIISMasterSolution() can be called to identify an irreducible master solution that achieves the same subproblem result, i.e. infeasible or feasible with the same objective.
 - new method SCIPgetProbvarBinary() and SCIPgetProbvarsBinary()	as interfaces to SCIPvarGetProbvarBinary()/SCIPvarsGetProbvarBinary()
+- new methods SCIPioPrintStdout(), SCIPioPrintStderr(), SCIPioVPrintStdout(), SCIPioVPrintStderr(), SCIPioExit(),
+  SCIPioAbort(), SCIPioGetStdout(), SCIPioGetStderr() for output to the standard streams and termination; these are
+  macros for the C library unless SCIP is built with CUSTOMIO
 
 ### New parameters
 
@@ -284,6 +291,16 @@ Interface changes
 - enum SCIP_BOUNDCHGTYPE got extended by new type SCIP_BOUNDCHGTYPE_SYMINFER
 - exchanged definition of SYM_SPEC_BINARY and SYM_SPEC_INTEGER
 - removed SYM_TIMING_DURINGPRESOL and SYM_COMPUTETIMING_DURINGPRESOL, and replaced definition of SYM_TIMING_AFTERPRESOL
+
+Build system
+------------
+
+### Cmake
+
+- new option CUSTOMIO (requires SHARED=off): the library does not contain message_default.c, scipshell.c, or the C
+  library implementations of SCIPioVPrintStdout(), SCIPioVPrintStderr(), SCIPioExit(), SCIPioAbort(),
+  SCIPioGetStdout(), SCIPioGetStderr() (io_default.c); the program that links SCIP defines these functions and
+  SCIPcreateMessagehdlrDefault(); the scip executable is built with message_default.c, scipshell.c, and io_default.c
 
 Unit tests
 ----------

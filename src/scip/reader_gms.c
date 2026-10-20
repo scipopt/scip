@@ -982,7 +982,7 @@ SCIP_RETCODE printExpr(
    assert(expr != NULL);
 
    if( file == NULL )
-      file = stdout;
+      file = SCIPioGetStdout();
 
    appendLine(scip, file, linebuffer, linecnt, " ");
 

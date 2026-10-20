@@ -40,6 +40,9 @@
 #include "tclique/tclique.h"
 #include "tclique/tclique_def.h"
 #include "blockmemshell/memory.h"
+#ifdef WITH_SCIPDEF
+#include "scip/pub_misc.h"
+#endif
 
 
 typedef struct _HEAD_ADJ

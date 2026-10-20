@@ -44,6 +44,9 @@
 #include "scip/intervalarith.h"
 #include "scip/set.h"
 #include <iostream>
+#ifdef SCIP_CUSTOM_IO
+#include <sstream>
+#endif
 #include <time.h>
 #include <stdlib.h>
 #include <numeric>
@@ -1833,10 +1836,20 @@ void SCIPrationalPrint(
    SCIP_RATIONAL*        rational            /**< the rational to print */
    )
 {
+#ifdef SCIP_CUSTOM_IO
+   std::ostringstream os;
+
+   if( rational == NULL )
+      os << "unknown";
+   else
+      os << *rational;
+   SCIPioPrintStdout("%s", os.str().c_str());
+#else
    if( rational == NULL )
       std::cout << "unknown" << std::flush;
    else
       std::cout << *rational << std::flush;
+#endif
 }
 
 /** printf extension for rationals (not supporting all format options) */
@@ -1868,49 +1881,49 @@ void SCIPrationalVPrintf(
             break;
          case 's':
             for( sval = va_arg(arguments, char *); *sval; sval++ )
-               (void) putchar(*sval);
+               (void) SCIPioPrintStdout("%c", *sval);
             break;
          case 'f':
             dval = va_arg(arguments, SCIP_Real);
-            printf("%f", dval);
+            SCIPioPrintStdout("%f", dval);
             break;
          case 'g':
             dval = va_arg(arguments, SCIP_Real);
-            printf("%g", dval);
+            SCIPioPrintStdout("%g", dval);
             break;
          case 'e':
             dval = va_arg(arguments, SCIP_Real);
-            printf("%e", dval);
+            SCIPioPrintStdout("%e", dval);
             break;
          case 'd':
          case 'i':
             ival = va_arg(arguments, int);
-            printf("%d", ival);
+            SCIPioPrintStdout("%d", ival);
             break;
          case 'l':
             lval = va_arg(arguments, SCIP_Longint);
-            printf("%" SCIP_LONGINT_FORMAT, lval);
+            SCIPioPrintStdout("%" SCIP_LONGINT_FORMAT, lval);
             break;
          case 'u':
             ival = va_arg(arguments, int);
-            printf("%d", ival);
+            SCIPioPrintStdout("%d", ival);
             break;
          case 'c':
             cval = (char) va_arg(arguments, int);
-            printf("%c", cval);
+            SCIPioPrintStdout("%c", cval);
             break;
          case 'p':
             pval = va_arg(arguments, void*);
-            printf("%p", pval);
+            SCIPioPrintStdout("%p", pval);
             break;
          default:
-            (void) putchar(*formatstr);
+            (void) SCIPioPrintStdout("%c", *formatstr);
             break;
          }
       }
       else
       {
-         (void) putchar(*formatstr);
+         (void) SCIPioPrintStdout("%c", *formatstr);
       }
       ++formatstr;
    }
@@ -1955,7 +1968,7 @@ void SCIPrationalPrintDebugMessage(
    else
       ++filename;
 
-   printf("[%s:%d] debug: ", filename, sourceline);
+   SCIPioPrintStdout("[%s:%d] debug: ", filename, sourceline);
 
    va_start(ap, formatstr); /*lint !e838*/
    SCIPrationalVPrintf(formatstr, ap);
@@ -2809,12 +2822,12 @@ SCIP_RETCODE SCIPrationalarrayPrint(
    SCIP_RATIONALARRAY*   rationalarray       /**< dynamic rational array */
    )
 {
-   printf("Array with firstidx %d, length %d \n", rationalarray->firstidx, (int) rationalarray->vals.size());
+   SCIPioPrintStdout("Array with firstidx %d, length %d \n", rationalarray->firstidx, (int) rationalarray->vals.size());
    for( auto val : rationalarray->vals )
    {
       SCIPrationalPrint(&val);
    }
-   printf("\n");
+   SCIPioPrintStdout("\n");
 
    return SCIP_OKAY;
 }

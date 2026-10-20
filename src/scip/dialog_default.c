@@ -397,7 +397,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecChangeAddCons)
       {
          SCIP_Bool success;
 
-         printf("<%s>\n", str);
+         SCIPdialogMessage(scip, NULL, "<%s>\n", str);
 
          SCIP_CALL( SCIPparseCons(scip, &cons, str, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, &success) );
 
@@ -485,7 +485,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecChangeBounds)
                bound = strtod(boundstr, &endptr);
                if( endptr == boundstr || *endptr != '\0' )
                {
-                  printf("<%s> <%s>\n", endptr, boundstr);
+                  SCIPdialogMessage(scip, NULL, "<%s> <%s>\n", endptr, boundstr);
                   SCIPdialogMessage(scip, NULL, "ignore none value string\n");
                }
                else if( SCIPisGT(scip, bound, SCIPvarGetUbGlobal(var)) )

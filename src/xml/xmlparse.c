@@ -122,42 +122,40 @@ void xmlErrmsg(
 
    if ( ! msg_only )
    {
-      ret = fprintf(stderr, "%s(%d) Error in file %s line %d\n", file, line, ppos->filename, ppos->lineno);
+      ret = SCIPioPrintStderr("%s(%d) Error in file %s line %d\n", file, line, ppos->filename, ppos->lineno);
       assert(ret >= 0);
 
-      ret = fprintf(stderr, "%s", ppos->buf);
+      ret = SCIPioPrintStderr("%s", ppos->buf);
       assert(ret >= 0);
 
       if ( strchr(ppos->buf, '\n') == NULL )
       {
-         int retc;
-
-         retc = fputc('\n', stderr);
-         assert(retc != EOF);
+         ret = SCIPioPrintStderr("\n");
+         assert(ret >= 0);
       }
 
-      ret = fprintf(stderr, "%*s\n", ppos->pos, "^");
+      ret = SCIPioPrintStderr("%*s\n", ppos->pos, "^");
       assert(ret >= 0);
    }
-   ret = fprintf(stderr, "%s\n\n", msg);
+   ret = SCIPioPrintStderr("%s\n\n", msg);
    assert(ret >= 0);
 
 #else
 
    if ( ! msg_only )
    {
-      (void) fprintf(stderr, "%s(%d) Error in file %s line %d\n", file, line, ppos->filename, ppos->lineno);
+      (void) SCIPioPrintStderr("%s(%d) Error in file %s line %d\n", file, line, ppos->filename, ppos->lineno);
 
-      (void) fprintf(stderr, "%s", ppos->buf);
+      (void) SCIPioPrintStderr("%s", ppos->buf);
 
       if ( strchr(ppos->buf, '\n') == NULL )
       {
-         (void) fputc('\n', stderr);
+         (void) SCIPioPrintStderr("\n");
       }
 
-      (void) fprintf(stderr, "%*s\n", ppos->pos, "^");
+      (void) SCIPioPrintStderr("%*s\n", ppos->pos, "^");
    }
-   (void) fprintf(stderr, "%s\n\n", msg);
+   (void) SCIPioPrintStderr("%s\n\n", msg);
 #endif
 }
 
@@ -749,7 +747,7 @@ void handleDecl(
       case IS_DOCTYPE :
          break;
       default :
-         abort();
+         SCIPioAbort();
       }
    }
 }

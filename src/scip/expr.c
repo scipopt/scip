@@ -2327,7 +2327,7 @@ SCIP_RETCODE SCIPexprPrintDotInit(
    assert(printdata != NULL);
 
    if( file == NULL )
-      file = stdout;
+      file = SCIPioGetStdout();
 
    SCIP_ALLOC( BMSallocBlockMemory(blkmem, printdata) );
 

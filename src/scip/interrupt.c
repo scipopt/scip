@@ -37,6 +37,7 @@
 
 #include "scip/def.h"
 #include "scip/pub_message.h"
+#include "scip/pub_misc.h"
 #include "blockmemshell/memory.h"
 #include "scip/interrupt.h"
 
@@ -78,12 +79,12 @@ void interruptHandler(
    ninterrupts++;
    if( ninterrupts >= 5 )
    {
-      printf("pressed CTRL-C %d times. forcing termination.\n", ninterrupts);
-      exit(1);
+      SCIPioPrintStdout("pressed CTRL-C %d times. forcing termination.\n", ninterrupts);
+      SCIPioExit(1);
    }
    else
    {
-      printf("pressed CTRL-C %d times (5 times for forcing termination)\n", ninterrupts);
+      SCIPioPrintStdout("pressed CTRL-C %d times (5 times for forcing termination)\n", ninterrupts);
    }
 }
 
