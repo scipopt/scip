@@ -154,3 +154,13 @@ if( CRITERION_FOUND )
         endif()  # LP Error: Xpress returned 120, #3724 (LPS=xprs, unittest-cons-nonlinear-vertexpolyhedral)
     endforeach(testSrc)
 endif()
+
+# Fault injection uses ELF symbol interposition and does not require Criterion.
+if(CMAKE_SYSTEM_NAME STREQUAL "Linux" AND SHARED)
+    add_executable(test_problem_array_allocation_failure problem_array_allocation_failure.cpp)
+    target_link_libraries(test_problem_array_allocation_failure PRIVATE libscip ${CMAKE_DL_LIBS})
+    target_compile_features(test_problem_array_allocation_failure PRIVATE cxx_std_11)
+    target_compile_options(test_problem_array_allocation_failure PRIVATE -UNDEBUG)
+    add_test(NAME problem_array_allocation_failure COMMAND test_problem_array_allocation_failure)
+    set_tests_properties(problem_array_allocation_failure PROPERTIES TIMEOUT 20)
+endif()
