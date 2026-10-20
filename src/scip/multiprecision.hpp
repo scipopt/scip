@@ -32,6 +32,7 @@
 #ifndef __SCIP_MULTIPRECISION_HPP_
 #define __SCIP_MULTIPRECISION_HPP_
 
+#include <cstdlib>
 #include <numeric>
 #include <vector>
 #include <string>
