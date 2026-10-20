@@ -585,7 +585,7 @@ SCIP_RETCODE SCIPtpiCollectJobs(
    else
    {
       /* given jobid was not submitted */
-      printf("err1");
+      SCIPerrorMessage("job id %d was not submitted\n", jobid);
       retcode = SCIP_ERROR;
    }
 
