@@ -137,13 +137,13 @@ struct SCIP_ConshdlrData
    int                   nlastimplsneg;      /**< number of implications after last negated clique presolving round */
    int                   nlastcliquesshorten;/**< number of cliques after last shortening of constraints */
    int                   nlastimplsshorten;  /**< number of implications after last shortening of constraints */
-   int*                  implpass;           /**< by variable index: shortenConss() pass before which the implications,
-                                              *   variable bounds or cliques of the variable last changed */
+   int*                  implpass;           /**< by variable index: shortenConss() pass at whose start a change of the
+                                              *   implications, variable bounds or cliques of the variable was detected */
    uint32_t*             implhash;           /**< by variable index: hash of the implications, variable bounds and
                                               *   cliques of the variable at the last shortenConss() pass */
    int                   nimplpass;          /**< length of implpass and implhash; variables with a larger index count as
                                               *   changed */
-   int                   nshortenpasses;     /**< number of shortenConss() passes in the current presolving run */
+   int                   nshortenpasses;     /**< number of shortenConss() passes over all presolving runs */
 };
 
 /* @todo it might speed up exit-presolve to remember all positions for variables when catching the varfixed event, or we
@@ -3245,7 +3245,7 @@ SCIP_RETCODE removeRedundantConssAndNonzeros(
  *  new implications or cliques since its shortening
  */
 static
-SCIP_Bool implicsAddedSinceShortening(
+SCIP_Bool changedSinceShortening(
    SCIP_CONSHDLRDATA*    conshdlrdata,       /**< logic or constraint handler data */
    SCIP_CONSDATA*        consdata            /**< logic or constraint data */
    )
@@ -3265,7 +3265,8 @@ SCIP_Bool implicsAddedSinceShortening(
       /* implications and cliques are stored at the active variable, for a negated variable at its negation */
       idx = SCIPvarGetIndex(SCIPvarGetProbvar(consdata->vars[v]));
 
-      if( idx >= conshdlrdata->nimplpass || conshdlrdata->implpass[idx] >= consdata->shortenpass )
+      /* variables created after consInitpreLogicor() have no record and count as changed */
+      if( idx >= conshdlrdata->nimplpass || conshdlrdata->implpass[idx] > consdata->shortenpass )
          return TRUE;
    }
 
@@ -3375,7 +3376,7 @@ SCIP_RETCODE shortenConss(
    conshdlrdata->nlastimplsshorten = SCIPgetNImplications(scip);
    ++conshdlrdata->nshortenpasses;
 
-   /* mark the variables whose implications, variable bounds or cliques changed since the last pass as changed in the last
+   /* mark the variables whose implications, variable bounds or cliques changed since the last pass as changed in this
     * pass
     */
    vars = SCIPgetVars(scip);
@@ -3395,7 +3396,7 @@ SCIP_RETCODE shortenConss(
       if( hash != conshdlrdata->implhash[idx] )
       {
          conshdlrdata->implhash[idx] = hash;
-         conshdlrdata->implpass[idx] = conshdlrdata->nshortenpasses - 1;
+         conshdlrdata->implpass[idx] = conshdlrdata->nshortenpasses;
       }
    }
 
@@ -3440,7 +3441,7 @@ SCIP_RETCODE shortenConss(
       /* do not try to shorten too long constraints, nor constraints that were shortened and whose variables did not get
        * new implications or cliques since
        */
-      if( consdata->nvars > MAX_CONSLENGTH || !implicsAddedSinceShortening(conshdlrdata, consdata) )
+      if( consdata->nvars > MAX_CONSLENGTH || !changedSinceShortening(conshdlrdata, consdata) )
          continue;
 
       /* form necessary data */
@@ -4296,7 +4297,8 @@ SCIP_DECL_CONSINITPRE(consInitpreLogicor)
    conshdlrdata->nlastimplsshorten = 0;
 
    /* record the implications, variable bounds and cliques of all binary variables, so that shortenConss() shortens a
-    * constraint again only if those of one of its variables changed since its last shortening
+    * constraint again only if those of one of its variables changed since its last shortening; all variables count as
+    * changed in the first pass of this presolving run, which shortens again the constraints shortened in earlier runs
     */
    assert(conshdlrdata->implpass == NULL);
    vars = SCIPgetVars(scip);
@@ -4308,9 +4310,10 @@ SCIP_DECL_CONSINITPRE(consInitpreLogicor)
 
       conshdlrdata->nimplpass = MAX(conshdlrdata->nimplpass, idx + 1);
    }
-   SCIP_CALL( SCIPallocClearBlockMemoryArray(scip, &conshdlrdata->implpass, conshdlrdata->nimplpass) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &conshdlrdata->implpass, conshdlrdata->nimplpass) );
    SCIP_CALL( SCIPallocClearBlockMemoryArray(scip, &conshdlrdata->implhash, conshdlrdata->nimplpass) );
-   conshdlrdata->nshortenpasses = 0;
+   for( v = 0; v < conshdlrdata->nimplpass; ++v )
+      conshdlrdata->implpass[v] = conshdlrdata->nshortenpasses + 1;
    for( v = 0; v < nvars; ++v )
    {
       if( SCIPvarIsBinary(vars[v]) )
@@ -4322,8 +4325,6 @@ SCIP_DECL_CONSINITPRE(consInitpreLogicor)
    {
       consdata = SCIPconsGetData(conss[c]);
       assert(consdata != NULL);
-
-      consdata->shortenpass = -1;
 
       for( v = consdata->nvars - 1; v >= 0; --v )
       {
@@ -4387,7 +4388,6 @@ SCIP_DECL_CONSEXITPRE(consExitpreLogicor)
          }
       }
    }
-
 
    /* free the records of consInitpreLogicor() */
    SCIPfreeBlockMemoryArrayNull(scip, &conshdlrdata->implhash, conshdlrdata->nimplpass);
@@ -5420,7 +5420,6 @@ SCIP_DECL_EVENTEXEC(eventExecLogicor)
    SCIP_STRINGEQ( SCIPeventhdlrGetName(eventhdlr), EVENTHDLR_NAME, SCIP_INVALIDCALL );
 
    SCIPdebugMsg(scip, "exec method of event handler for logic or constraints\n");
-
 
    if( SCIPeventGetType(event) == SCIP_EVENTTYPE_LBRELAXED )
    {
