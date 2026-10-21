@@ -35,6 +35,8 @@ Features
 Performance improvements
 ------------------------
 
+- logic or constraints are shortened by implications and cliques again only when those of one of their variables
+  changed since the last attempt (a hash per variable), instead of in every presolving round that added any
 - in opportunistic concurrent solving, signal early termination as soon as one solver reaches a terminal status, so the others stop at their next per-node check rather than running until their next sync point
 - in opportunistic concurrent solving, a solver no longer waits at a synchronization point until all other solvers
   have synchronized, but only reads the synchronization data that is already complete, so that a slow solver does not
