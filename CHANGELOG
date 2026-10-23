@@ -60,6 +60,7 @@ Fixed bugs
 - ranged row propagation no longer creates artificial constraints from unchecked linear constraints, in particular
   from artificial constraints themselves, which could cascade into many redundant constraints causing memory exhaustion
 - reset coefficient state after setting objective offset in LP reader
+- use SCIPcalcMemGrowSize() in distribution branching and diving heuristic to avoid integer overflow
 
 Examples and applications
 -------------------------

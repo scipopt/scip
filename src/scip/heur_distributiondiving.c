@@ -140,8 +140,8 @@ SCIP_RETCODE heurdataEnsureArraySize(
    if( maxindex < heurdata->memsize )
       return SCIP_OKAY;
 
-   /* new memory size is the max index + 1 plus 10% additional space */
-   newsize = (int)SCIPfeasCeil(scip, (maxindex + 1) * 1.1);
+   /* compute new size */
+   newsize = SCIPcalcMemGrowSize(scip, maxindex + 1);
    assert(newsize > heurdata->memsize);
    assert(heurdata->memsize >= 0);
 
