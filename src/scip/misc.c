@@ -10766,6 +10766,40 @@ void SCIPprintSysError(
 #endif
 }
 
+#ifdef SCIP_CUSTOM_IO
+/** prints to the standard output, acting like the printf() command */
+int SCIPioPrintStdout(
+   const char*           formatstr,          /**< format string like in printf() function */
+   ...                                       /**< format arguments line in printf() function */
+   )
+{
+   va_list ap;
+   int n;
+
+   va_start(ap, formatstr); /*lint !e838*/
+   n = SCIPioVPrintStdout(formatstr, ap);
+   va_end(ap);
+
+   return n;
+}
+
+/** prints to the standard error, acting like the fprintf(stderr, ...) command */
+int SCIPioPrintStderr(
+   const char*           formatstr,          /**< format string like in printf() function */
+   ...                                       /**< format arguments line in printf() function */
+   )
+{
+   va_list ap;
+   int n;
+
+   va_start(ap, formatstr); /*lint !e838*/
+   n = SCIPioVPrintStderr(formatstr, ap);
+   va_end(ap);
+
+   return n;
+}
+#endif
+
 /** extracts tokens from strings - wrapper method for strtok_r() */
 char* SCIPstrtok(
    char*                 s,                  /**< string to parse */

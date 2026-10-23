@@ -3023,7 +3023,7 @@ SCIP_RETCODE SCIPnlpiOraclePrintProblem(
    SCIPdebugMessage("%p print problem\n", (void*)oracle);
 
    if( file == NULL )
-      file = stdout;
+      file = SCIPioGetStdout();
 
    SCIPinfoMessage(scip, file, "NLPI Oracle %s: %d variables and %d constraints\n", oracle->name ? oracle->name : "", oracle->nvars, oracle->nconss);
    for( i = 0; i < oracle->nvars; ++i )
@@ -3096,7 +3096,7 @@ SCIP_RETCODE SCIPnlpiOraclePrintProblemGams(
    assert(oracle != NULL);
 
    if( file == NULL )
-      file = stdout;
+      file = SCIPioGetStdout();
 
    nllevel = 0;
 

@@ -481,7 +481,10 @@ SCIP_RETCODE SCIPdispPrintLine(
       {
          SCIPmessageFPrintInfo(messagehdlr, file, "\n");
       }
+#ifndef SCIP_CUSTOM_IO
+      /* with SCIP_CUSTOM_IO, flushing is left to the message handler */
       fflush(stdout);
+#endif
 
       stat->lastdispnode = stat->nnodes;
       stat->ndisplines++;

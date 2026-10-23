@@ -40,6 +40,9 @@
 
 #ifdef WITH_SCIPDEF
 #include "scip/def.h"
+#else
+#define SCIPioPrintStdout printf
+#define SCIPioAbort abort
 #endif
 
 #ifdef __cplusplus
@@ -51,8 +54,8 @@ extern "C" {
    {                                                                    \
       if( NULL == (x) )                                                 \
       {                                                                 \
-         printf("[%s:%d] No memory in function call\n", __FILE__, __LINE__); \
-         abort();                                                       \
+         SCIPioPrintStdout("[%s:%d] No memory in function call\n", __FILE__, __LINE__); \
+         SCIPioAbort();                                                 \
       }                                                                 \
    }                                                                    \
    while( FALSE )
@@ -63,7 +66,7 @@ extern "C" {
    {                                                                    \
       if( NULL == (x) )                                                 \
       {                                                                 \
-         printf("[%s:%d] No memory in function call\n", __FILE__, __LINE__); \
+         SCIPioPrintStdout("[%s:%d] No memory in function call\n", __FILE__, __LINE__); \
          return FALSE;                                                  \
       }                                                                 \
    }                                                                    \
@@ -83,7 +86,7 @@ extern "C" {
 #endif
 
 #ifndef infoMessage
-#define infoMessage printf
+#define infoMessage SCIPioPrintStdout
 #endif
 
 #ifndef MAX

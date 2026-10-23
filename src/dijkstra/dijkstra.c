@@ -48,27 +48,27 @@ DIJKSTRA_Bool dijkstraGraphIsValid(
    unsigned int k;
 
    if ( G == NULL || G->outbeg == NULL || G->outcnt == NULL || G->weight == NULL || G->head == NULL )
-      abort();
+      return FALSE;
 
    for (i = 0; i < G->nodes; ++i)
    {
       for (k = G->outbeg[i]; k < G->outbeg[i] + G->outcnt[i]; ++k)
       {
          if ( G->head[k] >= G->nodes )
-            abort();
+            return FALSE;
 
          if ( G->weight[k] > G->maxweight || G->weight[k] < G->minweight )
-            abort();
+            return FALSE;
 
          ++count;
       }
       if ( G->head[k] != DIJKSTRA_UNUSED )
-         abort();
+         return FALSE;
 
       ++count;
    }
    if ( count > G->arcs )
-      abort();
+      return FALSE;
 
    return TRUE;
 }

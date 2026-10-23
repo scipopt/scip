@@ -4259,7 +4259,7 @@ SCIP_RETCODE SCIPnlpWrite(
       }
    }
    else
-      file = stdout;
+      file = SCIPioGetStdout();
 
    SCIPmessageFPrintInfo(messagehdlr, file, "STATISTICS\n");
    SCIPmessageFPrintInfo(messagehdlr, file, "  NLP name: %s\n", nlp->name);

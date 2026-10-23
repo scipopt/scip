@@ -929,12 +929,12 @@ void SCIPstatPrintDebugMessage(
       ++filename;
 
    if ( stat->subscipdepth > 0 )
-      printf("%d: [%s:%d] debug: ", stat->subscipdepth, filename, sourceline);
+      SCIPioPrintStdout("%d: [%s:%d] debug: ", stat->subscipdepth, filename, sourceline);
    else
-      printf("[%s:%d] debug: ", filename, sourceline);
+      SCIPioPrintStdout("[%s:%d] debug: ", filename, sourceline);
 
    va_start(ap, formatstr); /*lint !e838*/
-   (void)vprintf(formatstr, ap);
+   (void)SCIPioVPrintStdout(formatstr, ap);
    va_end(ap);
 }
 
@@ -950,6 +950,6 @@ void SCIPstatDebugMessagePrint(
    assert(stat != NULL);
 
    va_start(ap, formatstr); /*lint !e838*/
-   printf(formatstr, ap);
+   (void)SCIPioVPrintStdout(formatstr, ap);
    va_end(ap);
 }

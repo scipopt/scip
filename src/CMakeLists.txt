@@ -422,6 +422,17 @@ set(scipsources
     ${amplsrc}
 )
 
+# with CUSTOMIO, the default message handler, the interactive shell, and the C library implementations of the
+# standard stream and termination methods (see pub_misc.h) are not part of the library, but of the scip executable
+if(SCIP_CUSTOM_IO)
+    list(REMOVE_ITEM scipsources scip/message_default.c scip/scipshell.c)
+    set(customiosources
+        scip/io_default.c
+        scip/message_default.c
+        scip/scipshell.c
+    )
+endif()
+
 set(objscipsources
     objscip/objbenders.cpp
     objscip/objbenderscut.cpp
@@ -1120,7 +1131,7 @@ set(xmlheaders
 
 # all source files should be compiled with a c++ compiler
 if(CXXONLY)
-    set_source_files_properties(main.c ${scipsources} ${objscipsources} ${lpisources} ${lpiexactsources} ${rectlusources} ${tpisources} ${symsources} PROPERTIES LANGUAGE CXX)
+    set_source_files_properties(main.c ${scipsources} ${objscipsources} ${lpisources} ${lpiexactsources} ${rectlusources} ${tpisources} ${symsources} ${customiosources} PROPERTIES LANGUAGE CXX)
 
     # for the clang compiler this suppresses the warnings about treating 'c' input as 'c++' when CXXONLY is enabled
     if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
@@ -1181,7 +1192,7 @@ set(SOPLEX_NEEDED 0)
 set(ZIMPL_NEEDED 0)
 if(SHARED)
     target_link_libraries(libscip PRIVATE ${ZIMPL_PIC_LIBRARIES} ${LPS_PIC_LIBRARIES})
-    add_executable(scip main.c ${scipsources} ${objscipsources} ${lpisources} ${lpiexactsources} ${rectlusources} ${tpisources} ${symsources})
+    add_executable(scip main.c ${scipsources} ${objscipsources} ${lpisources} ${lpiexactsources} ${rectlusources} ${tpisources} ${symsources} ${customiosources})
 else()
     if(SOPLEX_FOUND)
         set(SOPLEX_NEEDED 1)
@@ -1190,7 +1201,7 @@ else()
         set(ZIMPL_NEEDED 1)
     endif()
     target_link_libraries(libscip PRIVATE ${ZIMPL_LIBRARIES} ${LPS_LIBRARIES})
-    add_executable(scip main.c)
+    add_executable(scip main.c ${customiosources})
     target_link_libraries(scip PUBLIC libscip)
 endif()
 set_property(TARGET scip PROPERTY INTERPROCEDURAL_OPTIMIZATION ${LTO_AVAILABLE})

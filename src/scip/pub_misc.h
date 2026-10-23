@@ -48,6 +48,7 @@
 #include <ieeefp.h>
 #endif
 #include <math.h>
+#include <stdarg.h>
 
 #include "scip/def.h"
 #include "blockmemshell/memory.h"
@@ -2164,6 +2165,122 @@ void SCIPcomputeArraysSetminusInt(
    int*                  nsetminusarray      /**< pointer to store number of entries of setminus array
                                               *   (note: it is possible to use narray1 for this input argument) */
    );
+
+/**@} */
+
+
+/*
+ * Standard streams and termination
+ */
+
+/**@defgroup StandardStreams Standard Streams and Termination
+ * @ingroup MiscellaneousMethods
+ * @brief output to the standard streams and termination for code that cannot use a message handler
+ *
+ * By default, these are macros for the corresponding functions and streams of the C library.
+ *
+ * If SCIP is built with SCIP_CUSTOM_IO defined (CMake option CUSTOMIO), they are functions that the SCIP library
+ * declares but does not define. The program that links the library has to define SCIPioVPrintStdout(),
+ * SCIPioVPrintStderr(), SCIPioExit(), SCIPioAbort(), SCIPioGetStdout(), SCIPioGetStderr(), and also
+ * SCIPcreateMessagehdlrDefault(), because the default message handler (message_default.c) and the interactive shell
+ * (scipshell.c) are not part of the library in this case. The scip executable is built with these two files and with
+ * the C library implementations in io_default.c.
+ *
+ * The streams returned by SCIPioGetStdout() and SCIPioGetStderr() are passed to message handlers and compared to
+ * other streams. A program that returns values other than stdout and stderr must handle them in its message handler.
+ * SCIPexprPrintDotInit() and the GAMS writer write directly to SCIPioGetStdout() if they are given no file.
+ *
+ *@{
+ */
+
+#ifdef SCIP_CUSTOM_IO
+
+/** prints to the standard output, acting like the printf() command */
+#ifdef __GNUC__
+__attribute__((format(printf, 1, 2)))
+#endif
+SCIP_EXPORT
+int SCIPioPrintStdout(
+   const char*           formatstr,          /**< format string like in printf() function */
+   ...                                       /**< format arguments line in printf() function */
+   );
+
+/** prints to the standard error, acting like the fprintf(stderr, ...) command */
+#ifdef __GNUC__
+__attribute__((format(printf, 1, 2)))
+#endif
+SCIP_EXPORT
+int SCIPioPrintStderr(
+   const char*           formatstr,          /**< format string like in printf() function */
+   ...                                       /**< format arguments line in printf() function */
+   );
+
+/** prints to the standard output, acting like the vprintf() command; to be defined by the program that links SCIP */
+SCIP_EXPORT
+int SCIPioVPrintStdout(
+   const char*           formatstr,          /**< format string like in printf() function */
+   va_list               ap                  /**< variable argument list */
+   );
+
+/** prints to the standard error, acting like the vfprintf(stderr, ...) command; to be defined by the program that
+ *  links SCIP
+ */
+SCIP_EXPORT
+int SCIPioVPrintStderr(
+   const char*           formatstr,          /**< format string like in printf() function */
+   va_list               ap                  /**< variable argument list */
+   );
+
+/** terminates the program, acting like the exit() command; must not return; to be defined by the program that links
+ *  SCIP
+ */
+#if defined(__GNUC__)
+__attribute__((noreturn))
+#elif defined(_MSC_VER)
+__declspec(noreturn)
+#endif
+SCIP_EXPORT
+void SCIPioExit(
+   int                   status              /**< exit status */
+   );
+
+/** terminates the program abnormally, acting like the abort() command; must not return; to be defined by the program
+ *  that links SCIP
+ */
+#if defined(__GNUC__)
+__attribute__((noreturn))
+#elif defined(_MSC_VER)
+__declspec(noreturn)
+#endif
+SCIP_EXPORT
+void SCIPioAbort(
+   void
+   );
+
+/** returns the stream that stands for the standard output; to be defined by the program that links SCIP */
+SCIP_EXPORT
+FILE* SCIPioGetStdout(
+   void
+   );
+
+/** returns the stream that stands for the standard error; to be defined by the program that links SCIP */
+SCIP_EXPORT
+FILE* SCIPioGetStderr(
+   void
+   );
+
+#else
+
+#define SCIPioPrintStdout                  printf
+#define SCIPioPrintStderr(...)             fprintf(stderr, __VA_ARGS__)
+#define SCIPioVPrintStdout                 vprintf
+#define SCIPioVPrintStderr(formatstr, ap)  vfprintf(stderr, formatstr, ap)
+#define SCIPioExit                         exit
+#define SCIPioAbort                        abort
+#define SCIPioGetStdout()                  stdout
+#define SCIPioGetStderr()                  stderr
+
+#endif
 
 /**@} */
 

@@ -138,6 +138,15 @@ void handleMessage(
 static
 SCIP_DECL_ERRORPRINTING(errorPrintingDefault)
 {  /*lint --e{715}*/
+#ifdef SCIP_CUSTOM_IO
+   if ( msg != NULL )
+   {
+      if ( file != NULL && file != SCIPioGetStderr() )
+         fputs(msg, file);
+      else
+         (void) SCIPioPrintStderr("%s", msg);
+   }
+#else
    if ( msg != NULL )
    {
       if ( file != NULL )
@@ -146,6 +155,7 @@ SCIP_DECL_ERRORPRINTING(errorPrintingDefault)
          fputs(msg, stderr);
    }
    fflush(stderr);
+#endif
 }
 
 /** static variable which holds the error printing method */
@@ -174,7 +184,7 @@ void messagePrintWarning(
 {  /*lint --e{715}*/
    if ( messagehdlr != NULL && messagehdlr->messagewarning != NULL && (! messagehdlr->quiet || messagehdlr->logfile != NULL) )
    {
-      handleMessage(messagehdlr, messagehdlr->messagewarning, stderr, ! messagehdlr->quiet, messagehdlr->logfile, (messagehdlr->logfile != NULL),
+      handleMessage(messagehdlr, messagehdlr->messagewarning, SCIPioGetStderr(), ! messagehdlr->quiet, messagehdlr->logfile, (messagehdlr->logfile != NULL),
          msg, messagehdlr->warningbuffer, &messagehdlr->warningbufferlen);
    }
 }
@@ -189,9 +199,9 @@ void messagePrintDialog(
 {  /*lint --e{715}*/
    if ( messagehdlr != NULL && messagehdlr->messagedialog != NULL )
    {
-      if ( (file == NULL || file == stdout) && ! messagehdlr->quiet )
+      if ( (file == NULL || file == SCIPioGetStdout()) && ! messagehdlr->quiet )
       {
-         handleMessage(messagehdlr, messagehdlr->messagedialog, (file == NULL) ? stdout : file, TRUE, messagehdlr->logfile, (messagehdlr->logfile != NULL),
+         handleMessage(messagehdlr, messagehdlr->messagedialog, (file == NULL) ? SCIPioGetStdout() : file, TRUE, messagehdlr->logfile, (messagehdlr->logfile != NULL),
             msg, messagehdlr->dialogbuffer, &messagehdlr->dialogbufferlen);
       }
       else if ( msg != NULL )
@@ -199,7 +209,7 @@ void messagePrintDialog(
          /* file output cannot be buffered because the output file may change */
          if ( *msg != '\0' )
          {
-            handleMessage(messagehdlr, messagehdlr->messagedialog, file, !messagehdlr->quiet || (file != NULL && file != stdout), messagehdlr->logfile, (messagehdlr->logfile != NULL), msg, NULL, NULL);
+            handleMessage(messagehdlr, messagehdlr->messagedialog, file, !messagehdlr->quiet || (file != NULL && file != SCIPioGetStdout()), messagehdlr->logfile, (messagehdlr->logfile != NULL), msg, NULL, NULL);
          }
       }
    }
@@ -215,9 +225,9 @@ void messagePrintInfo(
 {  /*lint --e{715}*/
    if ( messagehdlr != NULL && messagehdlr->messageinfo != NULL )
    {
-      if ( (file == NULL || file == stdout) && ! messagehdlr->quiet )
+      if ( (file == NULL || file == SCIPioGetStdout()) && ! messagehdlr->quiet )
       {
-         handleMessage(messagehdlr, messagehdlr->messageinfo, (file == NULL) ? stdout : file, TRUE, messagehdlr->logfile, (messagehdlr->logfile != NULL),
+         handleMessage(messagehdlr, messagehdlr->messageinfo, (file == NULL) ? SCIPioGetStdout() : file, TRUE, messagehdlr->logfile, (messagehdlr->logfile != NULL),
             msg, messagehdlr->infobuffer, &messagehdlr->infobufferlen);
       }
       else if ( msg != NULL )
@@ -225,7 +235,7 @@ void messagePrintInfo(
          /* file output cannot be buffered because the output file may change or the message is to long */
          if ( *msg != '\0' )
          {
-            handleMessage(messagehdlr, messagehdlr->messagedialog, file, !messagehdlr->quiet || (file != NULL && file != stdout), messagehdlr->logfile, (messagehdlr->logfile != NULL), msg, NULL, NULL);
+            handleMessage(messagehdlr, messagehdlr->messagedialog, file, !messagehdlr->quiet || (file != NULL && file != SCIPioGetStdout()), messagehdlr->logfile, (messagehdlr->logfile != NULL), msg, NULL, NULL);
          }
       }
    }

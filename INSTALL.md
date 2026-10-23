@@ -201,6 +201,7 @@ e.g., `cmake </path/to/SCIP> -DSOPLEX_DIR=<path/to/SoPlex/build/or/install>`.
 | `COVERAGE`             | `on`, `off`                        | --                         | use with gcc, lcov, gcov in **debug** mode                         |
 | `COVERAGE_CTEST_ARGS`  | ctest argument string              | --                         | see `ctest --help` for arguments                                   |
 | `DEBUGSOL`             | `on`, `off`                        | `DEBUGSOL=[true,false]`    | specify a debugging solution by setting the "misc/debugsol" parameter of SCIP |
+| `CUSTOMIO`             | `on`, `off`                        | --                         | route output to stdout/stderr, exit, and abort to functions defined by the program that links SCIP (see `pub_misc.h`); requires `SHARED=off` |
 | `LPSCHECK`             | `on`, `off`                        | `LPSCHECK=[true,false]`    | double check SoPlex results with CPLEX                             |
 | `NOBLKMEM`             | `on`, `off`                        | `NOBLKMEM=[true,false]`    |                                                                    |
 | `NOBUFMEM`             | `on`, `off`                        | `NOBUFMEM=[true,false]`    |                                                                    |

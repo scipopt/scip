@@ -50,6 +50,7 @@
 #ifdef WITH_SCIPDEF
 #include "scip/def.h"
 #include "scip/pub_message.h"
+#include "scip/pub_misc.h"
 #else
 #include <stdint.h>
 #endif
@@ -85,17 +86,18 @@
 #ifdef SCIPdebugMessage
 #define debugMessage SCIPdebugMessage
 #define errorMessage SCIPerrorMessage
+#define printInfo SCIPioPrintStdout
 #else
 #define debugMessage while( FALSE ) printf
 #define errorMessage printf
 #define printErrorHeader(f,l) printf("[%s:%d] ERROR: ", f, l)
 #define printError printf
+#define printInfo printf
 #endif
 
 #ifdef ENABLE_MEMLIST_CHECKS
 #define warningMessage printf
 #endif
-#define printInfo printf
 
 /* define some macros (if not already defined) */
 #ifndef FALSE
@@ -3187,8 +3189,8 @@ void BMSprintBufferMemory(
    totalmem = 0UL;
    for (i = 0; i < buffer->ndata; ++i)
    {
-      printf("[%c] %8llu bytes at %p\n", buffer->used[i] ? '*' : ' ', (unsigned long long)(buffer->size[i]), buffer->data[i]);
+      printInfo("[%c] %8llu bytes at %p\n", buffer->used[i] ? '*' : ' ', (unsigned long long)(buffer->size[i]), buffer->data[i]);
       totalmem += buffer->size[i];
    }
-   printf("    %8llu bytes total in %llu buffers\n", (unsigned long long)totalmem, (unsigned long long)(buffer->ndata));
+   printInfo("    %8llu bytes total in %llu buffers\n", (unsigned long long)totalmem, (unsigned long long)(buffer->ndata));
 }

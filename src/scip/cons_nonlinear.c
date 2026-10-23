@@ -13478,8 +13478,7 @@ SCIP_RETCODE SCIPprocessRowprepNonlinear(
          else if( !SCIPisEQ(scip, auxvalue, estimateval) )
          {
             char gap[40];
-            /* coverity[secure_coding] */
-            (void) sprintf(gap, "_estimategap=%g", REALABS(auxvalue - estimateval));
+            (void) SCIPsnprintf(gap, (int) sizeof(gap), "_estimategap=%g", REALABS(auxvalue - estimateval));
             (void) strncat(SCIProwprepGetName(rowprep), gap,
                SCIP_MAXSTRLEN - strlen(SCIProwprepGetName(rowprep)) - 1);
          }
