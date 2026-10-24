@@ -297,6 +297,8 @@ Features
 Performance improvements
 ------------------------
 
+- restart LP column and row indexing for each run to reduce memory demand based on unique element indices
+
 Fixed bugs
 ----------
 
