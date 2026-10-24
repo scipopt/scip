@@ -2002,7 +2002,6 @@ void consdataUpdateAddCoef(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSDATA*        consdata,           /**< linear constraint data */
    SCIP_VAR*             var,                /**< variable of constraint entry */
-   SCIP_RATIONAL*        valExact,           /**< coefficient of constraint entry */
    SCIP_INTERVAL         val                 /**< coefficient of constraint entry */
    )
 {
@@ -2052,7 +2051,7 @@ void consdataUpdateDelCoef(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSDATA*        consdata,           /**< linear constraint data */
    SCIP_VAR*             var,                /**< variable of constraint entry */
-   SCIP_RATIONAL*        valExact,           /**< exact coefficient of constraint entry */
+   SCIP_RATIONAL*        valexact,           /**< exact coefficient of constraint entry */
    SCIP_INTERVAL         val                 /**< coefficient of constraint entry */
    )
 {
@@ -2091,7 +2090,7 @@ void consdataUpdateDelCoef(
    /* invalidate maximum absolute value, if this coefficient was the maximum */
    if( consdata->validmaxabsval )
    {
-      if( SCIPrationalIsAbsEQ(valExact, consdata->maxabsvalexact) )
+      if( SCIPrationalIsAbsEQ(valexact, consdata->maxabsvalexact) )
       {
          consdata->validmaxabsval = FALSE;
          SCIPrationalSetInfinity(consdata->maxabsvalexact);
@@ -2101,7 +2100,7 @@ void consdataUpdateDelCoef(
    /* invalidate minimum absolute value, if this coefficient was the minimum */
    if( consdata->validminabsval )
    {
-      if( SCIPrationalIsAbsEQ(valExact, consdata->minabsvalexact) )
+      if( SCIPrationalIsAbsEQ(valexact, consdata->minabsvalexact) )
       {
          consdata->validminabsval = FALSE;
          SCIPrationalSetInfinity(consdata->minabsvalexact);
@@ -2148,9 +2147,9 @@ void consdataUpdateChgCoef(
    SCIP_CONSDATA*        consdata,           /**< linear constraint data */
    SCIP_VAR*             var,                /**< variable of constraint entry */
    SCIP_INTERVAL         oldval,             /**< old coefficient of constraint entry */
-   SCIP_RATIONAL*        oldvalExact,        /**< old exact coefficient of constraint entry */
+   SCIP_RATIONAL*        oldvalexact,        /**< old exact coefficient of constraint entry */
    SCIP_INTERVAL         newval,             /**< new coefficient of constraint entry */
-   SCIP_RATIONAL*        newvalExact         /**< new coefficient of constraint entry */
+   SCIP_RATIONAL*        newvalexact         /**< new coefficient of constraint entry */
    )
 {
    assert(scip != NULL);
@@ -2207,14 +2206,14 @@ void consdataUpdateChgCoef(
    /* update maximum absolute value */
    if( consdata->validmaxabsval )
    {
-      if( SCIPrationalIsAbsGT(newvalExact, consdata->maxabsvalexact) )
+      if( SCIPrationalIsAbsGT(newvalexact, consdata->maxabsvalexact) )
       {
-         SCIPrationalAbs(consdata->maxabsvalexact, newvalExact);
+         SCIPrationalAbs(consdata->maxabsvalexact, newvalexact);
       }
       else
       {
          /* invalidate maximum absolute value */
-         if( SCIPrationalIsAbsEQ(oldvalExact, consdata->maxabsvalexact) )
+         if( SCIPrationalIsAbsEQ(oldvalexact, consdata->maxabsvalexact) )
          {
             consdata->validmaxabsval = FALSE;
             SCIPrationalSetInfinity(consdata->maxabsvalexact);
@@ -2224,14 +2223,14 @@ void consdataUpdateChgCoef(
       /* update minimum absolute value */
    if( consdata->validminabsval )
    {
-      if( SCIPrationalIsAbsGT(consdata->minabsvalexact, newvalExact) )
+      if( SCIPrationalIsAbsGT(consdata->minabsvalexact, newvalexact) )
       {
-         SCIPrationalAbs(consdata->minabsvalexact, newvalExact);
+         SCIPrationalAbs(consdata->minabsvalexact, newvalexact);
       }
       else
       {
          /* invalidate minimum absolute value */
-         if( SCIPrationalIsAbsEQ(oldvalExact, consdata->minabsvalexact) )
+         if( SCIPrationalIsAbsEQ(oldvalexact, consdata->minabsvalexact) )
          {
             consdata->validminabsval = FALSE;
             SCIPrationalSetInfinity(consdata->minabsvalexact);
@@ -2265,8 +2264,8 @@ void consdataUpdateChgCoef(
    }
 
    /* @todo as in cons_linear, do something more clever here, e.g. if oldval * newval >= 0, do the update directly */
-   consdataUpdateDelCoef(scip, consdata, var, oldvalExact, oldval);
-   consdataUpdateAddCoef(scip, consdata, var, newvalExact, newval);
+   consdataUpdateDelCoef(scip, consdata, var, oldvalexact, oldval);
+   consdataUpdateAddCoef(scip, consdata, var, newval);
 }
 
 /** ensures that every nonzero is a least minval so that we don't get problem with SCIPs 0 in floating point representation */
@@ -2366,7 +2365,7 @@ void consdataCalcActivities(
    consdata->glbmaxactivityposhuge = 0;
 
    for( i = 0; i < consdata->nvars; ++i )
-      consdataUpdateAddCoef(scip, consdata, consdata->vars[i], consdata->vals[i], consdata->valsreal[i]);
+      consdataUpdateAddCoef(scip, consdata, consdata->vars[i], consdata->valsreal[i]);
    consdata->lastminactivity = consdata->minactivity;
    consdata->lastmaxactivity = consdata->maxactivity;
    consdata->lastglbminactivity = consdata->glbminactivity;
@@ -3565,7 +3564,7 @@ SCIP_RETCODE addCoef(
       }
 
       /* update minimum and maximum activities */
-      consdataUpdateAddCoef(scip, consdata, var, consdata->vals[consdata->nvars - 1], consdata->valsreal[consdata->nvars - 1]);
+      consdataUpdateAddCoef(scip, consdata, var, consdata->valsreal[consdata->nvars - 1]);
    }
 
    /* install rounding locks for new variable */
