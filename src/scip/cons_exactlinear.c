@@ -110,6 +110,7 @@
 
 
 /** constraint data for linear constraints */
+/**@todo remove unused tracking of absolute values */
 struct SCIP_ConsData
 {
    SCIP_RATIONAL*        lhs;                /**< left hand side of row (for ranged rows) */
@@ -2028,26 +2029,6 @@ void consdataUpdateAddCoef(
 
       absval = MAX(REALABS(val.inf), REALABS(val.sup)); /*lint !e777  !e666*/
       consdata->minabsval = MIN(consdata->minabsval, absval);
-   }
-
-      /* invalidate maximum absolute value, if this coefficient was the maximum */
-   if( consdata->validmaxabsval )
-   {
-      if( SCIPrationalIsAbsEQ(valExact, consdata->maxabsvalexact) )
-      {
-         consdata->validmaxabsval = FALSE;
-         SCIPrationalSetInfinity(consdata->maxabsvalexact);
-      }
-   }
-
-   /* invalidate minimum absolute value, if this coefficient was the minimum */
-   if( consdata->validminabsval )
-   {
-      if( SCIPrationalIsAbsEQ(valExact, consdata->minabsvalexact) )
-      {
-         consdata->validminabsval = FALSE;
-         SCIPrationalSetInfinity(consdata->minabsvalexact);
-      }
    }
 
    /* update minimal and maximal activity */
