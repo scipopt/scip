@@ -219,8 +219,10 @@ void SCIPstatReset(
 {
    assert(stat != NULL);
    assert(stat->marked_nvaridx >= 0);
-   assert(stat->marked_ncolidx >= 0);
-   assert(stat->marked_nrowidx >= 0);
+
+   SCIPstatResetImplications(stat);
+   SCIPstatResetPresolving(stat, set, transprob, origprob);
+   SCIPstatResetPrimalDualIntegrals(stat, set, FALSE);
 
    SCIPclockReset(stat->solvingtime);
    SCIPclockReset(stat->presolvingtime);
@@ -298,8 +300,6 @@ void SCIPstatReset(
    stat->nrootintfixings = 0;
    stat->prevrunnvars = 0;
    stat->nvaridx = stat->marked_nvaridx;
-   stat->ncolidx = stat->marked_ncolidx;
-   stat->nrowidx = stat->marked_nrowidx;
    stat->nnz = 0;
    stat->avgnnz = 0;
    stat->lpcount = 0;
@@ -398,10 +398,6 @@ void SCIPstatReset(
    stat->collectvarhistory = TRUE;
    stat->performpresol = FALSE;
    stat->disableenforelaxmsg = FALSE;
-
-   SCIPstatResetImplications(stat);
-   SCIPstatResetPresolving(stat, set, transprob, origprob);
-   SCIPstatResetPrimalDualIntegrals(stat, set, FALSE);
 }
 
 /** reset implication counter */
@@ -676,6 +672,12 @@ void SCIPstatResetCurrentRun(
    )
 {
    assert(stat != NULL);
+
+   /* restore column and row counters */
+   assert(stat->marked_ncolidx >= 0);
+   assert(stat->marked_nrowidx >= 0);
+   stat->ncolidx = stat->marked_ncolidx;
+   stat->nrowidx = stat->marked_nrowidx;
 
    stat->nnodes = 0;
    stat->ninternalnodes = 0;
