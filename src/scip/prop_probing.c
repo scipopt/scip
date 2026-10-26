@@ -390,8 +390,8 @@ SCIP_RETCODE sparseCreate(
 
    for( d = 0; d < 2; ++d )
    {
-      SCIP_CALL( SCIPallocClearBufferArray(scip, &sparse->implmark[d], nvars) );
-      SCIP_CALL( SCIPallocClearBufferArray(scip, &sparse->propmark[d], nvars) );
+      SCIP_CALL( SCIPallocClearBufferArray(scip, &sparse->implmark[d], nvars) ); /*lint !e866*/
+      SCIP_CALL( SCIPallocClearBufferArray(scip, &sparse->propmark[d], nvars) ); /*lint !e866*/
       SCIP_CALL( SCIPallocBufferArray(scip, &sparse->proppos[d], nvars) );
       sparse->implstamp[d] = 0;
       sparse->propstamp[d] = 0;
@@ -493,7 +493,7 @@ SCIP_RETCODE sparseAddDeps(
       default:
          /* a fixed variable: the bounds that derive from it do not change */
          break;
-      }
+      } /*lint !e788*/
    }
 
    return SCIP_OKAY;
@@ -1806,7 +1806,7 @@ SCIP_RETCODE applyProbingVar(
          }
       }
 
-      if( dense )
+      if( dense ) /*lint !e774*/
       {
          for( i = 0; i < nvars; ++i )
          {
@@ -1842,7 +1842,7 @@ SCIP_RETCODE applyProbingVar(
          }
       }
 
-      if( dense )
+      if( dense ) /*lint !e774*/
       {
          for( i = 0; i < nvars; ++i )
          {
