@@ -5300,6 +5300,16 @@ SCIP_RETCODE SCIPsolveCIP(
             /* stop node activation timer */
             SCIPclockStop(stat->nodeactivationtime, set);
 
+            /* issue NODEINFEASIBLE event if the new focus node was cut off while switching the path */
+            if( cutoff && focusnode != NULL )
+            {
+               assert(!tree->focuslpconstructed);
+
+               SCIP_CALL( SCIPeventChgType(&event, SCIP_EVENTTYPE_NODEINFEASIBLE) );
+               SCIP_CALL( SCIPeventChgNode(&event, focusnode) );
+               SCIP_CALL( SCIPeventProcess(&event, set, NULL, NULL, NULL, eventfilter) );
+            }
+
             assert(BMSgetNUsedBufferMemory(mem->buffer) == 0);
          }
          while( cutoff ); /* select new node, if the current one was located in a cut off subtree */
