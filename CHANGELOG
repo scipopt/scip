@@ -29,6 +29,7 @@ Fixed bugs
   from artificial constraints themselves, which could cascade into many redundant constraints causing memory exhaustion
 - reset coefficient state after setting objective offset in LP reader
 - use SCIPcalcMemGrowSize() in distribution branching and diving heuristic to avoid integer overflow
+- issue NODEINFEASIBLE event for focus nodes that are cut off while switching the path
 
 Examples and applications
 -------------------------
