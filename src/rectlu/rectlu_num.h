@@ -37,7 +37,7 @@
 #ifndef __RECTLU_NUM_H
 #define __RECTLU_NUM_H
 
-#ifdef SCIP_WITH_GMP
+#if SCIP_HAS_GMP
 #include <gmp.h>
 
 #define QSnum_type mpq_t

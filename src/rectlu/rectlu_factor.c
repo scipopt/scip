@@ -48,7 +48,7 @@
 
 #pragma GCC diagnostic ignored "-Wpedantic"
 
-#ifdef SCIP_WITH_GMP
+#if SCIP_HAS_GMP
 static QSnum_type qsnum_zeroLpNum;
 static QSnum_type qsnum_oneLpNum;
 static QSnum_type __t__;

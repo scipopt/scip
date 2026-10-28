@@ -2074,7 +2074,7 @@ SCIP_RETCODE createAndAddAndCons(
 
       /* @todo: keep and-resultants defined to check debug solution */
 #ifdef SCIP_DISABLED_CODE
-#ifdef WITH_DEBUG_SOLUTION
+#if SCIP_HAS_DEBUG_SOLUTION
       if( SCIPdebugIsMainscip(scip) )
       {
          SCIP_Real val = 1.0;
@@ -2103,7 +2103,7 @@ SCIP_RETCODE createAndAddAndCons(
             SCIP_CALL( SCIPdebugAddSolVal(scip, resultant, val) );
          }
       }
-#endif
+#endif /* SCIP_HAS_DEBUG_SOLUTION */
 #endif
 
       SCIP_CALL( SCIPgetBoolParam(scip, "constraints/" CONSHDLR_NAME "/nlcseparate", &separate) );

@@ -270,15 +270,14 @@
  *
  * project(minex)
  * find_package(SCIP REQUIRED)
- * include_directories(${SCIP_INCLUDE_DIRS})
  *
  * add_executable(minex
- *   src/cmain.c)
+ *    src/cmain.c)
  *
- * target_link_libraries(minex ${SCIP_LIBRARIES})
+ * target_link_libraries(minex SCIP::SCIP)
  *
- * if( TARGET examples )
- *     add_dependencies( examples minex )
+ * if(TARGET examples)
+ *    add_dependencies(examples minex)
  * endif()
  * ```
  *

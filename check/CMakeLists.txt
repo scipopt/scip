@@ -326,7 +326,7 @@ set(instances_fastMIP
 #
 # add additional ZIMPL instances if the configuration uses ZIMPL
 #
-if(SCIP_WITH_ZIMPL)
+if(SCIP_HAS_ZIMPL)
     list(APPEND
         instances_Indicator
         "instances/Indicator/indicatortest.zpl\;-2"
@@ -354,7 +354,7 @@ if(SCIP_WITH_EXACTSOLVE)
         "instances/MIP/stein27_inf.lp\;+infinity"
         "instances/PseudoBoolean/normalized-t2001.13queen13.1111218308.opb\;+infinity"
     )
-    if(SCIP_WITH_ZIMPL)
+    if(SCIP_HAS_ZIMPL)
         list(APPEND
             instances_MIPEX
             # instance misc03p1 appended later
@@ -640,7 +640,7 @@ set(writer_only_extensions
 # add a test to build the SCIP binary that all further tests depend on
 #
 add_test(NAME scip-build
-        COMMAND ${CMAKE_COMMAND} --build ${CMAKE_BINARY_DIR} --target scip
+        COMMAND ${CMAKE_COMMAND} --build ${CMAKE_BINARY_DIR} --target scip-executable
         )
 
 #
@@ -699,7 +699,7 @@ macro(add_instancetests instances settings prefix)
             if(NOT ((${setting} STREQUAL "lns_epsgreedy_vanilla") AND (${basename} STREQUAL "blend2.mps") AND (${LPS} STREQUAL "grb")))
             if(NOT ((${setting} STREQUAL "cgmipdirect") AND (${basename} STREQUAL "bell5.mps")))
             add_test(NAME ${prefix}-${setting}-${basename}
-                    COMMAND $<TARGET_FILE:scip> -f ${PROJECT_SOURCE_DIR}/check/${path} -s ${PROJECT_SOURCE_DIR}/check/coverage/settings/${setting}.set -o ${optval} ${optval}
+                    COMMAND $<TARGET_FILE:scip-executable> -f ${PROJECT_SOURCE_DIR}/check/${path} -s ${PROJECT_SOURCE_DIR}/check/coverage/settings/${setting}.set -o ${optval} ${optval}
                     )
             set_tests_properties(${prefix}-${setting}-${basename}
                                 PROPERTIES
@@ -737,7 +737,7 @@ if((${TEST_BENDERSQP} AND (NOT ${LPS} STREQUAL "msk" )) OR (NOT ${prefix} STREQU
             #
             if(NOT ((${basename} STREQUAL "classical_30_0.mps") AND ((${LPS} STREQUAL "grb") OR (${LPS} STREQUAL "cpx"))))
             add_test(NAME ${prefix}-${setting}-${basename}
-               COMMAND $<TARGET_FILE:scip> -c "set load ${PROJECT_SOURCE_DIR}/check/coverage/settings/${setting}.set read ${PROJECT_SOURCE_DIR}/check/${instpath} read ${PROJECT_SOURCE_DIR}/check/${decpath} opt validatesol ${optval} ${optval} q"
+               COMMAND $<TARGET_FILE:scip-executable> -c "set load ${PROJECT_SOURCE_DIR}/check/coverage/settings/${setting}.set read ${PROJECT_SOURCE_DIR}/check/${instpath} read ${PROJECT_SOURCE_DIR}/check/${decpath} opt validatesol ${optval} ${optval} q"
                     )
             set_tests_properties(${prefix}-${setting}-${basename}
                                 PROPERTIES
@@ -763,7 +763,7 @@ macro(add_pairtests pairs prefix)
         # add the test
         #
         add_test(NAME ${prefix}-${setting}-${basename}
-                COMMAND $<TARGET_FILE:scip> -f ${PROJECT_SOURCE_DIR}/check/${path} -s ${PROJECT_SOURCE_DIR}/check/coverage/settings/${setting}.set -o ${optval} ${optval}
+                COMMAND $<TARGET_FILE:scip-executable> -f ${PROJECT_SOURCE_DIR}/check/${path} -s ${PROJECT_SOURCE_DIR}/check/coverage/settings/${setting}.set -o ${optval} ${optval}
                 )
         set_tests_properties(${prefix}-${setting}-${basename}
                             PROPERTIES
@@ -815,7 +815,7 @@ foreach(instance ${instances_MINLP})
     #
     configure_file(interactiveshell/solutiontest.bat.in interactiveshell/solutiontest-${basename}.bat)
         add_test(NAME MINLP-solutiontest-${basename}
-                COMMAND $<TARGET_FILE:scip> -b ${PROJECT_BINARY_DIR}/check/interactiveshell/solutiontest-${basename}.bat
+                COMMAND $<TARGET_FILE:scip-executable> -b ${PROJECT_BINARY_DIR}/check/interactiveshell/solutiontest-${basename}.bat
                 )
         set_tests_properties(MINLP-solutiontest-${basename}
                             PROPERTIES
@@ -835,7 +835,7 @@ foreach(instance ${instances_Indicator})
     #
     configure_file(interactiveshell/solvecip.bat.in interactiveshell/solvecip-${basename}.bat)
     add_test(NAME Indicator-solvecip-${basename}
-            COMMAND $<TARGET_FILE:scip> -b ${PROJECT_BINARY_DIR}/check/interactiveshell/solvecip-${basename}.bat
+            COMMAND $<TARGET_FILE:scip-executable> -b ${PROJECT_BINARY_DIR}/check/interactiveshell/solvecip-${basename}.bat
             )
     set_tests_properties(Indicator-solvecip-${basename}
         PROPERTIES
@@ -855,7 +855,7 @@ foreach(instance ${instances_Objlim})
     #
     configure_file(interactiveshell/objectivelimit.bat.in interactiveshell/objectivelimit-${basename}.bat)
     add_test(NAME Objlim-${setting}-${basename}
-            COMMAND $<TARGET_FILE:scip> -b ${PROJECT_BINARY_DIR}/check/interactiveshell/objectivelimit-${basename}.bat
+            COMMAND $<TARGET_FILE:scip-executable> -b ${PROJECT_BINARY_DIR}/check/interactiveshell/objectivelimit-${basename}.bat
             )
     set_tests_properties(Objlim-${setting}-${basename}
         PROPERTIES
@@ -928,7 +928,7 @@ foreach(instance ${instances_MIP_write})
     configure_file(interactiveshell/writeronlytest.bat.in interactiveshell/writeronlytest-${extension}-${basename}.bat)
     set(regex "written original problem to file")
     add_test(NAME MIP-writeronlytest-${extension}-${basename}
-      COMMAND $<TARGET_FILE:scip> -b ${PROJECT_BINARY_DIR}/check/interactiveshell/writeronlytest-${extension}-${basename}.bat
+      COMMAND $<TARGET_FILE:scip-executable> -b ${PROJECT_BINARY_DIR}/check/interactiveshell/writeronlytest-${extension}-${basename}.bat
       )
     set_tests_properties(MIP-writeronlytest-${extension}-${basename}
       PROPERTIES
@@ -961,7 +961,7 @@ foreach(instance ${instances_MIP})
             set(regex "${message_format_${extension}}")
         endif()
         add_test(NAME MIP-readertest-${extension}-${basename}
-                COMMAND $<TARGET_FILE:scip> -b ${PROJECT_BINARY_DIR}/check/interactiveshell/readertest-${extension}-${basename}.bat
+                COMMAND $<TARGET_FILE:scip-executable> -b ${PROJECT_BINARY_DIR}/check/interactiveshell/readertest-${extension}-${basename}.bat
                 )
         set_tests_properties(MIP-readertest-${extension}-${basename}
                             PROPERTIES
@@ -994,7 +994,7 @@ foreach(instance ${instances_MINLP})
             set(regex "${message_format_${extension}}")
         endif()
         add_test(NAME MINLP-readertest-${extension}-${basename}
-                COMMAND $<TARGET_FILE:scip> -b ${PROJECT_BINARY_DIR}/check/interactiveshell/readertest-${extension}-${basename}.bat
+                COMMAND $<TARGET_FILE:scip-executable> -b ${PROJECT_BINARY_DIR}/check/interactiveshell/readertest-${extension}-${basename}.bat
                 )
         set_tests_properties(MINLP-readertest-${extension}-${basename}
                             PROPERTIES
@@ -1016,7 +1016,7 @@ foreach(instance ${instances_PB})
         #
         configure_file(interactiveshell/readertest.bat.in interactiveshell/readertest-${extension}-${basename}.bat)
         add_test(NAME PseudoBoolean-readertest-${extension}-${basename}
-                COMMAND $<TARGET_FILE:scip> -b ${PROJECT_BINARY_DIR}/check/interactiveshell/readertest-${extension}-${basename}.bat
+                COMMAND $<TARGET_FILE:scip-executable> -b ${PROJECT_BINARY_DIR}/check/interactiveshell/readertest-${extension}-${basename}.bat
                 )
         set_tests_properties(PseudoBoolean-readertest-${extension}-${basename}
                             PROPERTIES
@@ -1038,7 +1038,7 @@ if(NOT ${TPI} STREQUAL "none")
         #
         configure_file(interactiveshell/concurrentsolve.bat.in interactiveshell/concurrentsolve-${basename}.bat)
         add_test(NAME MIP-concurrentsolve-${basename}
-                COMMAND $<TARGET_FILE:scip> -b ${PROJECT_BINARY_DIR}/check/interactiveshell/concurrentsolve-${basename}.bat
+                COMMAND $<TARGET_FILE:scip-executable> -b ${PROJECT_BINARY_DIR}/check/interactiveshell/concurrentsolve-${basename}.bat
                 )
         set_tests_properties(MIP-concurrentsolve-${basename}
                             PROPERTIES
@@ -1056,7 +1056,7 @@ if(NOT ${TPI} STREQUAL "none")
     foreach(runid RANGE 9)
        configure_file(interactiveshell/concurrentsolve.bat.in interactiveshell/concurrentsolve-egout-repeat${runid}.bat)
        add_test(NAME MIP-concurrentsolve-egout-repeat${runid}
-                COMMAND $<TARGET_FILE:scip> -b ${PROJECT_BINARY_DIR}/check/interactiveshell/concurrentsolve-egout-repeat${runid}.bat
+                COMMAND $<TARGET_FILE:scip-executable> -b ${PROJECT_BINARY_DIR}/check/interactiveshell/concurrentsolve-egout-repeat${runid}.bat
                )
        set_tests_properties(MIP-concurrentsolve-egout-repeat${runid}
                             PROPERTIES
@@ -1086,7 +1086,7 @@ if(NOT ${TPI} STREQUAL "none")
           list(GET config 1 settings)
           configure_file(interactiveshell/concurrentsolve-settings.bat.in interactiveshell/concurrentsolve-${name}-${basename}.bat)
           add_test(NAME MIP-concurrentsolve-${name}-${basename}
-                   COMMAND $<TARGET_FILE:scip> -b ${PROJECT_BINARY_DIR}/check/interactiveshell/concurrentsolve-${name}-${basename}.bat
+                   COMMAND $<TARGET_FILE:scip-executable> -b ${PROJECT_BINARY_DIR}/check/interactiveshell/concurrentsolve-${name}-${basename}.bat
                   )
           set_tests_properties(MIP-concurrentsolve-${name}-${basename}
                                PROPERTIES
@@ -1115,7 +1115,7 @@ foreach(instance ${instances_MIP})
         # add test that executes the configured batch file and greps the validation expression
         #
         add_test(NAME MIP-mipstart-${basename}
-                COMMAND $<TARGET_FILE:scip> -b interactiveshell/MIP-mipstart-${basename}.bat
+                COMMAND $<TARGET_FILE:scip-executable> -b interactiveshell/MIP-mipstart-${basename}.bat
                 )
         set_tests_properties(MIP-mipstart-${basename}
                             PROPERTIES
@@ -1135,7 +1135,7 @@ set(shell_tmp_dir ${PROJECT_BINARY_DIR}/check/temp)
 file(MAKE_DIRECTORY ${shell_tmp_dir})
 configure_file(interactiveshell/interactiveshell.bat.in interactiveshell/interactiveshell.bat)
 add_test(NAME interactiveshell
-        COMMAND $<TARGET_FILE:scip> -b ${PROJECT_BINARY_DIR}/check/interactiveshell/interactiveshell.bat
+        COMMAND $<TARGET_FILE:scip-executable> -b ${PROJECT_BINARY_DIR}/check/interactiveshell/interactiveshell.bat
         )
 set_tests_properties(interactiveshell
                     PROPERTIES
@@ -1144,7 +1144,7 @@ set_tests_properties(interactiveshell
                         DEPENDS scip-build
                     )
 add_test(NAME write_and_read_settings
-        COMMAND $<TARGET_FILE:scip> -b ${CMAKE_CURRENT_SOURCE_DIR}/interactiveshell/write_and_read_settings.bat
+        COMMAND $<TARGET_FILE:scip-executable> -b ${CMAKE_CURRENT_SOURCE_DIR}/interactiveshell/write_and_read_settings.bat
         )
 set_tests_properties(write_and_read_settings
                     PROPERTIES
@@ -1163,7 +1163,7 @@ foreach(testname reopt-chg-obj-stein27 reopt-chg-obj-flugpl reopt-chg-obj-1-Full
     foreach(setting ${settings_reopt})
         configure_file(interactiveshell/${testname}.bat.in interactiveshell/${testname}-${setting}.bat)
         add_test(NAME ${testname}-${setting}
-                COMMAND $<TARGET_FILE:scip> -b ${PROJECT_BINARY_DIR}/check/interactiveshell/${testname}-${setting}.bat
+                COMMAND $<TARGET_FILE:scip-executable> -b ${PROJECT_BINARY_DIR}/check/interactiveshell/${testname}-${setting}.bat
                 )
         set_tests_properties(${testname}-${setting} PROPERTIES
                                             PASS_REGULAR_EXPRESSION "Validation         : Success"
@@ -1281,7 +1281,7 @@ foreach(instance ${instances_MIP})
     if(NOT linclassfound EQUAL -1 )
         configure_file(interactiveshell/linclass.bat.in interactiveshell/linclass-${basename}.bat)
         add_test(NAME MIP-linclass-${basename}
-                COMMAND $<TARGET_FILE:scip> -b interactiveshell/linclass-${basename}.bat
+                COMMAND $<TARGET_FILE:scip-executable> -b interactiveshell/linclass-${basename}.bat
                 )
         set_tests_properties(MIP-linclass-${basename}
                             PROPERTIES
@@ -1318,7 +1318,7 @@ foreach(instance ${instances_consecSolve})
     # this test acts as a setup for the next test
     #
     add_test(NAME consecutivesolve-${basename}-setup
-            COMMAND $<TARGET_FILE:scip> -b
+            COMMAND $<TARGET_FILE:scip-executable> -b
             ${PROJECT_BINARY_DIR}/check/interactiveshell/consecutivesolve-${basename}.bat
             )
     set_tests_properties(consecutivesolve-${basename}-setup
@@ -1354,7 +1354,7 @@ if (UNIX)
     endif (APPLE)
     configure_file(interactiveshell/signal-handling-sigterm.bat.in interactiveshell/signal-handling-sigterm.bat)
     add_test(NAME signal-handling-sigterm
-            COMMAND ${timeoutcommand} -sSIGTERM 1 $<TARGET_FILE:scip> -b interactiveshell/signal-handling-sigterm.bat
+            COMMAND ${timeoutcommand} -sSIGTERM 1 $<TARGET_FILE:scip-executable> -b interactiveshell/signal-handling-sigterm.bat
             )
     set_tests_properties(signal-handling-sigterm
                         PROPERTIES
@@ -1391,7 +1391,7 @@ if(SCIP_WITH_EXACTSOLVE)
             if(NOT ((${extension} STREQUAL "cip") AND (${basename} STREQUAL "rgn.zpl") AND (${LPS} STREQUAL "xprs")))
             if(NOT ((${basename} STREQUAL "stein27.zpl") AND (${LPS} STREQUAL "xprs")))
             add_test(NAME MIPEX-readertest-${extension}-${basename}
-                    COMMAND $<TARGET_FILE:scip>
+                    COMMAND $<TARGET_FILE:scip-executable>
                     -c "set load ${PROJECT_SOURCE_DIR}/check/coverage/settings/exact-default.set"
                     -b "${PROJECT_BINARY_DIR}/check/interactiveshell/readertest-${extension}-${basename}.bat"
                     )
@@ -1408,7 +1408,7 @@ if(SCIP_WITH_EXACTSOLVE)
     #
     # append ZIMPL instances with objective constant (not compatible with the readertest)
     #
-    if(SCIP_WITH_ZIMPL)
+    if(SCIP_HAS_ZIMPL)
         list(APPEND
             instances_MIPEX
             "instances/MIPEX/misc03p1.zpl\;3360.1"
@@ -1428,7 +1428,7 @@ if(SCIP_WITH_EXACTSOLVE)
             # treat the instance as a tuple (list) of two values
             #
             add_test(NAME MIPEX-${setting}-${basename}
-                    COMMAND $<TARGET_FILE:scip> -c "set load ${PROJECT_SOURCE_DIR}/check/coverage/settings/${setting}.set
+                    COMMAND $<TARGET_FILE:scip-executable> -c "set load ${PROJECT_SOURCE_DIR}/check/coverage/settings/${setting}.set
                         read ${PROJECT_SOURCE_DIR}/check/${path}
                         o validatesolve ${optval} ${optval} q"
                     )
@@ -1458,7 +1458,7 @@ if(SCIP_WITH_EXACTSOLVE)
             # treat the instance as a tuple (list) of two values
             #
             add_test(NAME MIPEX-${setting}-${basename}-certified
-                    COMMAND $<TARGET_FILE:scip> -c "set certificate filename ${basename}.${setting}.vipr
+                    COMMAND $<TARGET_FILE:scip-executable> -c "set certificate filename ${basename}.${setting}.vipr
                         set load ${PROJECT_SOURCE_DIR}/check/coverage/settings/${setting}.set
                         read ${PROJECT_SOURCE_DIR}/check/${path}
                         o validatesolve ${optval} ${optval} q"

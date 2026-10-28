@@ -30,7 +30,7 @@
  *
  * This is an implementation of SCIP's LP interface for SoPlex.
  *
- * For debugging purposes, the SoPlex results can be double checked with CPLEX if SCIP_WITH_LPSCHECK is defined. This may
+ * For debugging purposes, the SoPlex results can be double checked with CPLEX if SCIP_HAS_LPSCHECK is defined. This may
  * yield false positives, since the LP is dumped to a file for transferring it to CPLEX, hence, precision may be lost.
  */
 
@@ -47,7 +47,7 @@
 #include "scip/config.h"
 
 /* in this case the SoPlex results are double checked using CPLEX */
-#ifdef SCIP_WITH_LPSCHECK
+#if SCIP_HAS_LPSCHECK
 #include <cplex.h>
 
 #define CHECK_SPXSOLVE                  true /**< shall the SoPlex results in spxSolve() be double checked using CPLEX? */
@@ -73,7 +73,7 @@
                                            }                                                                                \
                                         }                                                                                   \
                                         while( false )
-#endif
+#endif /* SCIP_HAS_LPSCHECK */
 
 /* check the return value of setParam methods */
 #define CHECK_SOPLEX_PARAM(x)                                                           \
@@ -221,12 +221,12 @@ class SPxSCIP : public SoPlex
    char*                 _probname;
    DataArray<SPxSolver::VarStatus> _colStat;  /**< column basis status used for strong branching */
    DataArray<SPxSolver::VarStatus> _rowStat;  /**< row basis status used for strong branching */
-#ifdef SCIP_WITH_LPSCHECK
+#if SCIP_HAS_LPSCHECK
    int                   _checknum;
    bool                  _doublecheck;
    CPXENVptr             _cpxenv;           /**< CPLEX memory environment */
    CPXLPptr              _cpxlp;            /**< CPLEX lp structure */
-#endif
+#endif /* SCIP_HAS_LPSCHECK */
    SCIP_MESSAGEHDLR*     _messagehdlr;      /**< messagehdlr handler for printing messages, or NULL */
 
 public:
@@ -248,7 +248,7 @@ public:
       (void)setBoolParam(SoPlex::ENSURERAY, true);
 #endif
 
-#ifdef SCIP_WITH_LPSCHECK
+#if SCIP_HAS_LPSCHECK
       int cpxstat;
       _checknum = 0;
       _doublecheck = false;
@@ -256,7 +256,7 @@ public:
       assert(_cpxenv != NULL);
       _cpxlp = CPXcreateprob(_cpxenv, &cpxstat, probname != NULL ? probname : "spxcheck");
       (void) CPXsetintparam(_cpxenv, CPX_PARAM_SCRIND, 0);
-#endif
+#endif /* SCIP_HAS_LPSCHECK */
    }
 
    virtual ~SPxSCIP()
@@ -266,10 +266,10 @@ public:
 
       freePreStrongbranchingBasis(); /*lint !e1551*/
 
-#ifdef SCIP_WITH_LPSCHECK
+#if SCIP_HAS_LPSCHECK
       (void) CPXfreeprob(_cpxenv, &_cpxlp);
       (void) CPXcloseCPLEX(&_cpxenv);
-#endif
+#endif /* SCIP_HAS_LPSCHECK */
    }/*lint -e1579*/
 
    // we might need these methods to return the original values SCIP provided, even if they could not be set
@@ -369,7 +369,7 @@ public:
       }
    }
 
-#ifdef SCIP_WITH_LPSCHECK
+#if SCIP_HAS_LPSCHECK
    bool getDoubleCheck()
    {
       _checknum++;
@@ -438,7 +438,7 @@ public:
          return "UNKNOWN";
       }  /*lint !e788*/
    }
-#endif
+#endif /* SCIP_HAS_LPSCHECK */
 
 #ifndef NDEBUG
    bool checkConsistentBounds() const
@@ -535,11 +535,11 @@ public:
       assert(checkConsistentBounds());
       assert(checkConsistentSides());
 
-#ifdef SCIP_WITH_LPSCHECK
+#if SCIP_HAS_LPSCHECK
       /* dump LP with current basis and settings saved in SoPlex */
       if( getDoubleCheck() )
          writeStateReal("spxcheck", NULL, NULL);
-#endif
+#endif /* SCIP_HAS_LPSCHECK */
 
       trySolve(printwarning);
       spxStatus = status();
@@ -547,7 +547,7 @@ public:
       /* for safety reset iteration limit */
 //       setTerminationIter(_itlim);
 
-#ifdef SCIP_WITH_LPSCHECK
+#if SCIP_HAS_LPSCHECK
       bool minimize = intParam(OBJSENSE) == OBJSENSE_MINIMIZE;
       Real objLimitUpper = realParam(OBJLIMIT_UPPER);
       Real objLimitLower = realParam(OBJLIMIT_LOWER);
@@ -657,7 +657,7 @@ public:
       }
 
    ENDCHECK:
-#endif
+#endif /* SCIP_HAS_LPSCHECK */
 
       /* restore verbosity */
       spxout.setVerbosity(verbosity);
@@ -982,10 +982,10 @@ const static char spxdesc[200] =  {'L', 'i', 'n', 'e', 'a', 'r', ' ', 'p', 'r', 
                                    ' ', 's', 'o', 'l', 'v', 'e', 'r', ' ' , 'd', 'e', 'v', 'e', 'l', 'o', 'p', 'e', 'd',
                                    ' ', 'a', 't', ' ', 'Z', 'u', 's', 'e', ' ', 'I', 'n', 's', 't', 'i', 't', 'u', 't', 'e',
                                    ' ', 'B', 'e', 'r', 'l', 'i', 'n', ' ', '(', 's', 'o', 'p', 'l', 'e', 'x', '.', 'z', 'i', 'b', '.', 'd', 'e', ')',
-#ifdef SCIP_WITH_LPSCHECK
+#if SCIP_HAS_LPSCHECK
                                    ' ', '-', ' ', 'i', 'n', 'c', 'l', 'u', 'd', 'i', 'n', 'g', ' ', 'C','P','L', 'E', 'X',
                                    ' ', 'd', 'o', 'u', 'b', 'l', 'e', ' ', 'c', 'h', 'e', 'c', 'k',
-#endif
+#endif /* SCIP_HAS_LPSCHECK */
                                    ' ', '[', 'G', 'i', 't', 'H', 'a', 's', 'h', ':', ' ',
                                    getGitHash()[0], getGitHash()[1], getGitHash()[2], getGitHash()[3],
                                    getGitHash()[4], getGitHash()[5], getGitHash()[6], getGitHash()[7],
@@ -2403,9 +2403,9 @@ SCIP_RETCODE spxSolve(
 
    assert( lpi->spx->preStrongbranchingBasisFreed() );
 
-#ifdef SCIP_WITH_LPSCHECK
+#if SCIP_HAS_LPSCHECK
    lpi->spx->setDoubleCheck(CHECK_SPXSOLVE);
-#endif
+#endif /* SCIP_HAS_LPSCHECK */
 
    /* delete starting basis if solving from scratch */
    if( lpi->spx->getFromScratch() )
@@ -2606,9 +2606,9 @@ SCIP_RETCODE lpiStrongbranch(
 #ifndef STRONGBRANCH_RESTOREBASIS
          SCIP_Bool repeatstrongbranching;
 #endif
-#ifdef SCIP_WITH_LPSCHECK
+#if SCIP_HAS_LPSCHECK
          spx->setDoubleCheck(CHECK_SPXSTRONGBRANCH);
-#endif
+#endif /* SCIP_HAS_LPSCHECK */
 #if SOPLEX_VERSION > 221 || (SOPLEX_VERSION == 221 && SOPLEX_SUBVERSION >= 4)
 #if SOPLEX_APIVERSION > 11
          status =  spx->optimize(spx->getInterrupt());
@@ -2705,9 +2705,9 @@ SCIP_RETCODE lpiStrongbranch(
 #ifndef STRONGBRANCH_RESTOREBASIS
             SCIP_Bool repeatstrongbranching;
 #endif
-#ifdef SCIP_WITH_LPSCHECK
+#if SCIP_HAS_LPSCHECK
             spx->setDoubleCheck(CHECK_SPXSTRONGBRANCH);
-#endif
+#endif /* SCIP_HAS_LPSCHECK */
 #if SOPLEX_VERSION > 221 || (SOPLEX_VERSION == 221 && SOPLEX_SUBVERSION >= 4)
 #if SOPLEX_APIVERSION > 11
          status =  spx->optimize(spx->getInterrupt());

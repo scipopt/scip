@@ -220,7 +220,7 @@ SCIP_DECL_PRESOLEXEC(presolExecBoundshift)
                SCIPvarIsInitial(var), SCIPvarIsRemovable(var), NULL, NULL, NULL, NULL, NULL) );
          SCIP_CALL( SCIPaddVar(scip, newvar) );
 
-#ifdef WITH_DEBUG_SOLUTION
+#if SCIP_HAS_DEBUG_SOLUTION
          if( SCIPdebugIsMainscip(scip) )
          {
             /* calculate and store debug solution value of shift variable */
@@ -244,7 +244,7 @@ SCIP_DECL_PRESOLEXEC(presolExecBoundshift)
 
             SCIP_CALL( SCIPdebugAddSolVal(scip, newvar, val) );
          }
-#endif
+#endif /* SCIP_HAS_DEBUG_SOLUTION */
 
          /* aggregate old variable with new variable */
          if( presoldata->flipping )

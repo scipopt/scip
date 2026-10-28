@@ -1682,74 +1682,278 @@ $(SCIPCONFIGHFILE) :
 		@echo "#define SCIP_VERSION_PATCH $(SCIP_VERSION_PATCH)" >> $@
 		@echo "#define SCIP_VERSION_API $(SCIP_VERSION_API)" >> $@
 ifeq ($(NOBLKBUFMEM),true)
+		@echo "#define BMS_HAS_NOBLOCKMEM 1" >> $@
+		@echo "#define SCIP_HAS_NOBUFFERMEM 1" >> $@
+		@echo "/* Deprecated: */" >> $@
 		@echo "#define BMS_NOBLOCKMEM" >> $@
 		@echo "#define SCIP_NOBUFFERMEM" >> $@
 else
 ifeq ($(NOBLKMEM),true)
+		@echo "#define BMS_HAS_NOBLOCKMEM 1" >> $@
+		@echo "/* Deprecated: */" >> $@
 		@echo "#define BMS_NOBLOCKMEM" >> $@
+else
+		@echo "#define BMS_HAS_NOBLOCKMEM 0" >> $@
 endif
 ifeq ($(NOBUFMEM),true)
+		@echo "#define SCIP_HAS_NOBUFFERMEM 1" >> $@
+		@echo "/* Deprecated: */" >> $@
 		@echo "#define SCIP_NOBUFFERMEM" >> $@
+else
+		@echo "#define SCIP_HAS_NOBUFFERMEM 0" >> $@
 endif
 endif
 ifeq ($(DEBUGSOL),true)
+		@echo "#define SCIP_HAS_DEBUG_SOLUTION 1" >> $@
+		@echo "/* Deprecated: */" >> $@
 		@echo "#define WITH_DEBUG_SOLUTION" >> $@
-endif
-ifeq ($(TPI),none)
-		@echo "#define TPI_NONE" >> $@
-endif
-ifeq ($(TPI),tny)
-		@echo "#define TPI_TNY" >> $@
+else
+		@echo "#define SCIP_HAS_DEBUG_SOLUTION 0" >> $@
 endif
 ifeq ($(TPI),omp)
+		@echo "#define SCIP_HAS_TPI 1" >> $@
+		@echo "#define SCIP_TPI_OMP 1" >> $@
+		@echo "/* Deprecated: */" >> $@
 		@echo "#define TPI_OMP" >> $@
+else
+		@echo "#define SCIP_TPI_OMP 0" >> $@
 endif
-ifeq ($(THREADSAFE),true)
+ifeq ($(TPI),tny)
+		@echo "#define SCIP_HAS_TPI 1" >> $@
+		@echo "#define SCIP_TPI_TNY 1" >> $@
+		@echo "/* Deprecated: */" >> $@
+		@echo "#define TPI_TNY" >> $@
+else
+		@echo "#define SCIP_TPI_TNY 0" >> $@
+endif
+ifeq ($(TPI),none)
+		@echo "#define SCIP_HAS_TPI 0" >> $@
+		@echo "#define SCIP_TPI_NONE 1" >> $@
+		@echo "/* Deprecated: */" >> $@
+		@echo "#define TPI_NONE" >> $@
+else
+		@echo "#define SCIP_TPI_NONE 0" >> $@
+endif
+ifeq ($(THREADSAFE)-$(TPI),false-none)
+		@echo "#define SCIP_IS_THREADSAFE 0" >> $@
+else
+		@echo "#define SCIP_IS_THREADSAFE 1" >> $@
+		@echo "/* Deprecated: */" >> $@
 		@echo "#define SCIP_THREADSAFE" >> $@
 endif
 		@echo "#define WITH_SCIPDEF" >> $@
 ifeq ($(LAPACK),true)
+		@echo "#define SCIP_HAS_LAPACK 1" >> $@
+		@echo "/* Deprecated: */" >> $@
 		@echo "#define SCIP_WITH_LAPACK" >> $@
+else
+		@echo "#define SCIP_HAS_LAPACK 0" >> $@
+endif
+ifeq ($(CONOPT),true)
+		@echo "#define SCIP_HAS_CONOPT 1" >> $@
+else
+		@echo "#define SCIP_HAS_CONOPT 0" >> $@
+endif
+ifeq ($(IPOPT),true)
+		@echo "#define SCIP_HAS_IPOPT 1" >> $@
+else
+		@echo "#define SCIP_HAS_IPOPT 0" >> $@
+endif
+ifeq ($(WORHP),true)
+		@echo "#define SCIP_HAS_WORHP 1" >> $@
+else
+		@echo "#define SCIP_HAS_WORHP 0" >> $@
 endif
 ifeq ($(PAPILO),true)
+		@echo "#define SCIP_HAS_PAPILO 1" >> $@
+		@echo "/* Deprecated: */" >> $@
 		@echo "#define SCIP_WITH_PAPILO" >> $@
-ifeq ($(GMP),true)
-		@echo "#define PAPILO_HAVE_GMP" >> $@
-endif
+else
+		@echo "#define SCIP_HAS_PAPILO 0" >> $@
 endif
 ifeq ($(ZLIB),true)
+		@echo "#define SCIP_HAS_ZLIB 1" >> $@
+		@echo "/* Deprecated: */" >> $@
 		@echo "#define SCIP_WITH_ZLIB" >> $@
+else
+		@echo "#define SCIP_HAS_ZLIB 0" >> $@
 endif
 ifeq ($(READLINE),true)
+		@echo "#define SCIP_HAS_READLINE 1" >> $@
+		@echo "/* Deprecated: */" >> $@
 		@echo "#define SCIP_WITH_READLINE" >> $@
+else
+		@echo "#define SCIP_HAS_READLINE 0" >> $@
 endif
 ifeq ($(GMP),true)
+		@echo "#define SCIP_HAS_GMP 1" >> $@
+		@echo "/* Deprecated: */" >> $@
 		@echo "#define SCIP_WITH_GMP" >> $@
+else
+		@echo "#define SCIP_HAS_GMP 0" >> $@
 endif
 ifeq ($(MPFR),true)
+		@echo "#define SCIP_HAS_MPFR 1" >> $@
+		@echo "/* Deprecated: */" >> $@
 		@echo "#define SCIP_WITH_MPFR" >> $@
+else
+		@echo "#define SCIP_HAS_MPFR 0" >> $@
 endif
 ifeq ($(BOOST),true)
+		@echo "#define SCIP_HAS_BOOST 1" >> $@
+		@echo "/* Deprecated: */" >> $@
 		@echo "#define SCIP_WITH_BOOST" >> $@
+else
+		@echo "#define SCIP_HAS_BOOST 0" >> $@
 endif
 ifeq ($(EXACTSOLVE),true)
+		@echo "#define SCIP_HAS_EXACTSOLVE 1" >> $@
+		@echo "/* Deprecated: */" >> $@
 		@echo "#define SCIP_WITH_EXACTSOLVE" >> $@
+else
+		@echo "#define SCIP_HAS_EXACTSOLVE 0" >> $@
 endif
 ifeq ($(LPSCHECK),true)
+		@echo "#define SCIP_HAS_LPSCHECK 1" >> $@
+		@echo "/* Deprecated: */" >> $@
 		@echo "#define SCIP_WITH_LPSCHECK" >> $@
+else
+		@echo "#define SCIP_HAS_LPSCHECK 0" >> $@
 endif
 ifeq ($(ZIMPL),true)
+		@echo "#define SCIP_HAS_ZIMPL 1" >> $@
+		@echo "/* Deprecated: */" >> $@
 		@echo "#define SCIP_WITH_ZIMPL" >> $@
+else
+		@echo "#define SCIP_HAS_ZIMPL 0" >> $@
 endif
 ifeq ($(AMPL),true)
+		@echo "#define SCIP_HAS_AMPL 1" >> $@
+		@echo "/* Deprecated: */" >> $@
 		@echo "#define SCIP_WITH_AMPL" >> $@
+else
+		@echo "#define SCIP_HAS_AMPL 0" >> $@
 endif
 ifeq ($(CHECKSTAGE),true)
-		@echo "#define SCIP_CHECK_STAGE" >> $@
+		@echo "#define SCIP_CHECK_STAGE 1" >> $@
+else
+		@echo "#define SCIP_CHECK_STAGE 0" >> $@
 endif
 ifeq ($(CHECKNAME),true)
-		@echo "#define SCIP_CHECK_NAME" >> $@
+		@echo "#define SCIP_CHECK_NAME 1" >> $@
+else
+		@echo "#define SCIP_CHECK_NAME 0" >> $@
 endif
+ifeq ($(LPS),none)
+		@echo "#define SCIP_HAS_LPS 0" >> $@
+		@echo "#define SCIP_LPS_NONE 1" >> $@
+		@echo "#define SCIP_LPS_NAME" >> $@
+else
+		@echo "#define SCIP_HAS_LPS 1" >> $@
+		@echo "#define SCIP_LPS_NONE 0" >> $@
+endif
+ifeq ($(LPS),spx)
+		@echo "#define SCIP_LPS_SPX 1" >> $@
+		@echo "#define SCIP_LPS_NAME \"SoPlex\"" >> $@
+		@echo "#define SCIP_HAS_SOPLEX 1" >> $@
+else
+		@echo "#define SCIP_LPS_SPX 0" >> $@
+endif
+ifeq ($(LPS),clp)
+		@echo "#define SCIP_LPS_CLP 1" >> $@
+		@echo "#define SCIP_LPS_NAME \"CLP\"" >> $@
+		@echo "#define SCIP_HAS_CLP 1" >> $@
+else
+		@echo "#define SCIP_LPS_CLP 0" >> $@
+		@echo "#define SCIP_HAS_CLP 0" >> $@
+endif
+ifeq ($(LPS),qso)
+		@echo "#define SCIP_LPS_QSO 1" >> $@
+		@echo "#define SCIP_LPS_NAME \"QSopt_ex\"" >> $@
+else
+		@echo "#define SCIP_LPS_QSO 0" >> $@
+endif
+ifeq ($(LPS),glop)
+		@echo "#define SCIP_LPS_GLOP 1" >> $@
+		@echo "#define SCIP_LPS_NAME \"GLOP\"" >> $@
+		@echo "#define SCIP_HAS_ORTOOLS 1" >> $@
+else
+		@echo "#define SCIP_LPS_GLOP 0" >> $@
+		@echo "#define SCIP_HAS_ORTOOLS 0" >> $@
+endif
+ifeq ($(LPS),highs)
+		@echo "#define SCIP_LPS_HIGHS 1" >> $@
+		@echo "#define SCIP_LPS_NAME \"HiGHS\"" >> $@
+		@echo "#define SCIP_HAS_HIGHS 1" >> $@
+else
+		@echo "#define SCIP_LPS_HIGHS 0" >> $@
+		@echo "#define SCIP_HAS_HIGHS 0" >> $@
+endif
+ifeq ($(LPS),cpx)
+		@echo "#define SCIP_LPS_CPX 1" >> $@
+		@echo "#define SCIP_LPS_NAME \"CPLEX\"" >> $@
+		@echo "#define SCIP_HAS_CPLEX 1" >> $@
+else
+		@echo "#define SCIP_LPS_CPX 0" >> $@
+		@echo "#define SCIP_HAS_CPLEX 0" >> $@
+endif
+ifeq ($(LPS),xprs)
+		@echo "#define SCIP_LPS_XPRS 1" >> $@
+		@echo "#define SCIP_LPS_NAME \"Xpress\"" >> $@
+		@echo "#define SCIP_HAS_XPRESS 1" >> $@
+else
+		@echo "#define SCIP_LPS_XPRS 0" >> $@
+		@echo "#define SCIP_HAS_XPRESS 0" >> $@
+endif
+ifeq ($(LPS),msk)
+		@echo "#define SCIP_LPS_MSK 1" >> $@
+		@echo "#define SCIP_LPS_NAME \"Mosek\"" >> $@
+		@echo "#define SCIP_HAS_MOSEK 1" >> $@
+else
+		@echo "#define SCIP_LPS_MSK 0" >> $@
+		@echo "#define SCIP_HAS_MOSEK 0" >> $@
+endif
+ifeq ($(LPS),grb)
+		@echo "#define SCIP_LPS_GRB 1" >> $@
+		@echo "#define SCIP_LPS_NAME \"Gurobi\"" >> $@
+		@echo "#define SCIP_HAS_GUROBI 1" >> $@
+else
+		@echo "#define SCIP_LPS_GRB 0" >> $@
+		@echo "#define SCIP_HAS_GUROBI 0" >> $@
+endif
+ifeq ($(LPSEXACT),none)
+		@echo "#define SCIP_HAS_LPSEXACT 0" >> $@
+		@echo "#define SCIP_LPSEXACT_NONE 1" >> $@
+		@echo "#define SCIP_LPSEXACT_NAME" >> $@
+else
+		@echo "#define SCIP_HAS_LPSEXACT 1" >> $@
+		@echo "#define SCIP_LPSEXACT_NONE 0" >> $@
+endif
+ifeq ($(LPSEXACT),spx)
+		@echo "#define SCIP_LPSEXACT_SPX 1" >> $@
+		@echo "#define SCIP_LPSEXACT_NAME \"SoPlex\"" >> $@
+		@echo "#define SCIP_HAS_SOPLEX 1" >> $@
+else
+		@echo "#define SCIP_LPSEXACT_SPX 0" >> $@
+endif
+ifeq ($(LPSEXACT),qsoex)
+		@echo "#define SCIP_LPSEXACT_QSOEX 1" >> $@
+		@echo "#define SCIP_LPSEXACT_NAME \"QSopt_ex\"" >> $@
+else
+		@echo "#define SCIP_LPSEXACT_QSOEX 0" >> $@
+endif
+ifeq ($(LPS),qso)
+		@echo "#define SCIP_HAS_QSOPTEX 1" >> $@
+else
+ifeq ($(LPSEXACT),qsoex)
+		@echo "#define SCIP_HAS_QSOPTEX 1" >> $@
+else
+		@echo "#define SCIP_HAS_QSOPTEX 0" >> $@
+endif
+endif
+		@echo "#if !defined(SCIP_HAS_SOPLEX)" >> $@
+		@echo "#  define SCIP_HAS_SOPLEX 0" >> $@
+		@echo "#endif /* !defined(SCIP_HAS_SOPLEX) */" >> $@
 		@echo >> $@
 		@echo "#endif /* SCIP_CONFIG_H */" >> $@
 

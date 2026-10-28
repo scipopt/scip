@@ -51,7 +51,7 @@
 #include "ortools/util/time_limit.h"
 
 #include "ortools/base/logging.h"
-#include "ortools/base/vlog_is_on.h"
+//#include "ortools/base/vlog_is_on.h"
 
 #include "lpi/lpi.h"
 #include "scip/pub_message.h"
@@ -106,7 +106,6 @@ struct SCIP_LPi
    bool                  lp_time_limit_was_reached;
 
    /* store the values of some parameters in order to be able to return them */
-   bool                  lp_info;            /**< whether additional output is turned on */
    SCIP_PRICING          pricing;            /**< SCIP pricing setting  */
    bool                  from_scratch;       /**< store whether basis is ignored for next solving call */
    int                   numthreads;         /**< number of threads used to solve the LP (0 = automatic) */
@@ -261,7 +260,7 @@ SCIP_RETCODE SCIPlpiCreate(
    SCIP_CALL( SCIPlpiChgObjsen(*lpi, objsen) );
 
    (*lpi)->from_scratch = false;
-   (*lpi)->lp_info = false;
+   (*lpi)->parameters->set_log_search_progress(false);
    (*lpi)->pricing = SCIP_PRICING_LPIDEFAULT;
    (*lpi)->lp_modified_since_last_solve = true;
    (*lpi)->lp_time_limit_was_reached = false;
@@ -1108,6 +1107,8 @@ SCIP_RETCODE SCIPlpiGetRows(
       assert(ind != NULL);
       assert(val != NULL);
 
+      /* The next line may be removed once https://github.com/google/or-tools/issues/5276 is fixed. */
+      lpi->linear_program->CleanUp();
       const SparseMatrix& matrixtrans = lpi->linear_program->GetTransposeSparseMatrix();
 
       *nnonz = 0;
@@ -2909,7 +2910,7 @@ SCIP_RETCODE SCIPlpiGetIntpar(
       SCIPdebugMessage("SCIPlpiGetIntpar: SCIP_LPPAR_FROMSCRATCH = %d.\n", *ival);
       break;
    case SCIP_LPPAR_LPINFO:
-      *ival = (int) lpi->lp_info;
+      *ival = (int) lpi->parameters->log_search_progress();
       SCIPdebugMessage("SCIPlpiGetIntpar: SCIP_LPPAR_LPINFO = %d.\n", *ival);
       break;
    case SCIP_LPPAR_LPITLIM:
@@ -2967,16 +2968,7 @@ SCIP_RETCODE SCIPlpiSetIntpar(
       break;
    case SCIP_LPPAR_LPINFO:
       SCIPdebugMessage("SCIPlpiSetIntpar: SCIP_LPPAR_LPINFO -> %d.\n", ival);
-      if ( ival == 0 )
-      {
-         (void) google::SetVLOGLevel("*", google::GLOG_INFO);
-         lpi->lp_info = false;
-      }
-      else
-      {
-         (void) google::SetVLOGLevel("*", google::GLOG_ERROR);
-         lpi->lp_info = true;
-      }
+      lpi->parameters->set_log_search_progress(ival);
       break;
    case SCIP_LPPAR_LPITLIM:
       SCIPdebugMessage("SCIPlpiSetIntpar: SCIP_LPPAR_LPITLIM -> %d.\n", ival);
@@ -3217,7 +3209,8 @@ SCIP_RETCODE SCIPlpiReadLP(
 
    const std::string filespec(fname);
    MPModelProto proto;
-   if ( ! ReadFileToProto(filespec, &proto) )
+   const absl::Status status = ReadFileToProto(filespec, &proto);
+   if ( ! status.ok() )
    {
       SCIPerrorMessage("Could not read <%s>\n", fname);
       return SCIP_READERROR;
@@ -3241,7 +3234,8 @@ SCIP_RETCODE SCIPlpiWriteLP(
    MPModelProto proto;
    LinearProgramToMPModelProto(*lpi->linear_program, &proto);
    const std::string filespec(fname);
-   if ( ! WriteProtoToFile(filespec, proto, operations_research::ProtoWriteFormat::kProtoText, true) )
+   const absl::Status status = WriteProtoToFile(filespec, proto, operations_research::ProtoWriteFormat::kProtoText, false);
+   if ( ! status.ok() )
    {
       SCIPerrorMessage("Could not write <%s>\n", fname);
       return SCIP_READERROR;

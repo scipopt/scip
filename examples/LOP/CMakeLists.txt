@@ -8,26 +8,29 @@ endif()
 project(LOP)
 include(CTest)
 
-if(TARGET SCIP::SCIP)
-  # find package by SCIP PATH
-  find_package(SCIP CONFIG NO_DEFAULT_PATH PATHS ${SCIP_BINARY_DIR} REQUIRED)
-else()
-  find_package(SCIP REQUIRED)
+# Find SCIP unless we already have it because we build it.
+if(NOT TARGET SCIP::SCIP)
+  find_package(SCIP
+     REQUIRED
+     CONFIG
+     HINTS "${SCIP_DIR}"
+     )
 endif()
 
-include_directories(BEFORE PUBLIC ${SCIP_INCLUDE_DIRS})
 
 add_executable(lop
    src/cmain.c
    src/cons_lop.c
    src/reader_lop.c)
-set_property(TARGET lop PROPERTY INTERPROCEDURAL_OPTIMIZATION ${LTO_AVAILABLE})
+target_link_libraries(lop SCIP::SCIP)
 
-target_link_libraries(lop ${SCIP_LIBRARIES})
-target_compile_options(lop PRIVATE ${SCIP_COMPILE_FLAGS})
+if(SCIP_HAS_LTO)
+   set_target_properties(lop PROPERTIES
+      INTERPROCEDURAL_OPTIMIZATION 1)
+endif()
 
-if( TARGET examples )
-    add_dependencies( examples lop )
+if(TARGET examples)
+    add_dependencies(examples lop)
 endif()
 
 add_subdirectory(check)

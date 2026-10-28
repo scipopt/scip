@@ -67,19 +67,20 @@ using std::vector;
 #define NO_CPPAD_USER_ATOMIC
 
 /* fallback to non-thread-safe version if C++ is too old to have std::atomic */
-#if __cplusplus < 201103L && defined(SCIP_THREADSAFE)
-#undef SCIP_THREADSAFE
-#endif
+#if __cplusplus < 201103L && SCIP_IS_THREADSAFE
+#undef SCIP_IS_THREADSAFE
+#define SCIP_IS_THREADSAFE 0
+#endif /* C++ < 201103 && SCIP_IS_THREADSAFE */
 
 /* CppAD needs to know a fixed upper bound on the number of threads at compile time.
  * It is wise to set it to a power of 2, so that if the tape id overflows, it is likely to start at 0 again, which avoids difficult to debug errors.
  */
 #ifndef CPPAD_MAX_NUM_THREADS
-#ifdef SCIP_THREADSAFE
+#if SCIP_IS_THREADSAFE
 #define CPPAD_MAX_NUM_THREADS 64
-#else
+#else /* !SCIP_IS_THREADSAFE */
 #define CPPAD_MAX_NUM_THREADS 1
-#endif
+#endif /* SCIP_IS_THREADSAFE */
 #endif
 
 /* disable -Wshadow warnings for upcoming includes of CppAD if using some old GCC
@@ -108,7 +109,7 @@ using std::vector;
  * This allocator requires to know the number of threads and a thread number for each thread.
  * To implement this, we follow the team_pthread example of CppAD, which uses pthread's thread-specific data management.
  */
-#ifdef SCIP_THREADSAFE
+#if SCIP_IS_THREADSAFE
 
 #include <atomic>
 
@@ -169,7 +170,7 @@ char SCIPexprintCppADInitParallel(void)
 static char init_parallel_return = SCIPexprintCppADInitParallel();
 #endif
 
-#endif // SCIP_THREADSAFE
+#endif /* SCIP_IS_THREADSAFE */
 
 using CppAD::AD;
 
