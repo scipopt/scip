@@ -3942,7 +3942,7 @@ SCIP_RETCODE reformulateFactorizedBinaryQuadratic(
          TRUE, FALSE, NULL, NULL, NULL, NULL, NULL) );
    SCIP_CALL( SCIPaddVar(scip, auxvar) );
 
-#ifdef WITH_DEBUG_SOLUTION
+#if SCIP_HAS_DEBUG_SOLUTION
    if( SCIPdebugIsMainscip(scip) )
    {
       SCIP_Real debugsolval;  /* value of auxvar in debug solution */
@@ -3964,7 +3964,7 @@ SCIP_RETCODE reformulateFactorizedBinaryQuadratic(
       /* store debug solution value of auxiliary variable */
       SCIP_CALL( SCIPdebugAddSolVal(scip, auxvar, debugsolval) );
    }
-#endif
+#endif /* SCIP_HAS_DEBUG_SOLUTION */
 
    /* create and add z - maxact x <= 0 */
    if( !SCIPisZero(scip, maxact) )
@@ -4274,7 +4274,7 @@ SCIP_RETCODE getBinaryProductExprDo(
    SCIP_CALL( SCIPaddVar(scip, w) );
    SCIPdebugMsg(scip, "  created auxiliary variable %s\n", name);
 
-#ifdef WITH_DEBUG_SOLUTION
+#if SCIP_HAS_DEBUG_SOLUTION
    if( SCIPdebugIsMainscip(scip) )
    {
       SCIP_Real debugsolval;  /* value of auxvar in debug solution */
@@ -4291,7 +4291,7 @@ SCIP_RETCODE getBinaryProductExprDo(
       /* store debug solution value of auxiliary variable */
       SCIP_CALL( SCIPdebugAddSolVal(scip, w, debugsolval) );
    }
-#endif
+#endif /* SCIP_HAS_DEBUG_SOLUTION */
 
    /* use variable bound constraints if it is a bilinear product and there is no empathy for an AND constraint */
    if( nchildren == 2 && !empathy4and )
@@ -6120,7 +6120,7 @@ SCIP_RETCODE createAuxVar(
     */
    SCIP_CALL( SCIPaddVarLocks(scip, ownerdata->auxvar, 1, 1) );
 
-#ifdef WITH_DEBUG_SOLUTION
+#if SCIP_HAS_DEBUG_SOLUTION
    if( SCIPdebugIsMainscip(scip) )
    {
       /* store debug solution value of auxiliary variable
@@ -6128,7 +6128,7 @@ SCIP_RETCODE createAuxVar(
        */
       SCIP_CALL( SCIPdebugAddSolVal(scip, ownerdata->auxvar, SCIPexprGetEvalValue(expr)) );
    }
-#endif
+#endif /* SCIP_HAS_DEBUG_SOLUTION */
 
    if( SCIPgetDepth(scip) > 0 )
    {
@@ -6192,14 +6192,14 @@ SCIP_RETCODE initSepa(
       assert(consdata != NULL);
       assert(consdata->expr != NULL);
 
-#ifdef WITH_DEBUG_SOLUTION
+#if SCIP_HAS_DEBUG_SOLUTION
       if( SCIPdebugIsMainscip(scip) )
       {
          SCIP_SOL* debugsol;
 
          SCIP_CALL( SCIPdebugGetSol(scip, &debugsol) );
 
-         if( debugsol != NULL ) /* it can be compiled WITH_DEBUG_SOLUTION, but still no solution given */
+         if( debugsol != NULL ) /* it can be compiled with SCIP_HAS_DEBUG_SOLUTION, but still no solution given */
          {
             /* evaluate expression in debug solution, so we can set the solution value of created auxiliary variables
              * in createAuxVar()
@@ -6207,7 +6207,7 @@ SCIP_RETCODE initSepa(
             SCIP_CALL( SCIPevalExpr(scip, consdata->expr, debugsol, 0) );
          }
       }
-#endif
+#endif /* SCIP_HAS_DEBUG_SOLUTION */
 
       /* ensure we have a valid activity for auxvars and propExprDomains() call below */
       SCIP_CALL( SCIPevalExprActivity(scip, consdata->expr) );

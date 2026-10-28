@@ -7,29 +7,33 @@ endif()
 
 project(LennardJones)
 
-if(TARGET SCIP::SCIP)
-  # find package by SCIP PATH
-  find_package(SCIP CONFIG NO_DEFAULT_PATH PATHS ${SCIP_BINARY_DIR} REQUIRED)
-else()
-  find_package(SCIP REQUIRED)
+# Find SCIP unless we already have it because we build it.
+if(NOT TARGET SCIP::SCIP)
+  find_package(SCIP
+     REQUIRED
+     CONFIG
+     HINTS "${SCIP_DIR}"
+     )
 endif()
 
-include_directories(BEFORE PUBLIC ${SCIP_INCLUDE_DIRS})
-
-add_executable(lj src/main.c src/nlhdlr_lj.c)
-set_property(TARGET lj PROPERTY INTERPROCEDURAL_OPTIMIZATION ${LTO_AVAILABLE})
-
-target_link_libraries(lj ${SCIP_LIBRARIES})
-target_compile_options(lj PRIVATE ${SCIP_COMPILE_FLAGS})
-
-# link to math library if it is available
+# Find math library.
 find_library(LIBM m)
-if(LIBM)
-  target_link_libraries(lj ${LIBM})
+if(NOT LIBM)
+  set(LIBM "")
 endif()
+
+add_executable(lj
+   src/main.c
+   src/nlhdlr_lj.c
+   )
+if(SCIP_HAS_LTO)
+   set_target_properties(lj PROPERTIES
+      INTERPROCEDURAL_OPTIMIZATION 1)
+endif()
+target_link_libraries(lj SCIP::SCIP ${LIBM})
 
 if(TARGET examples)
-  add_dependencies(examples lj)
+   add_dependencies(examples lj)
 endif()
 
 add_subdirectory(check)

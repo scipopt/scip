@@ -41,9 +41,9 @@
 #include "scip/def.h"
 #include "scip/type_rational.h"
 
-#if defined(SCIP_WITH_BOOST) && defined(SCIP_WITH_GMP)
+#if SCIP_HAS_BOOST && SCIP_HAS_GMP
 #include <gmp.h>
-#endif
+#endif /* SCIP_HAS_BOOST && SCIP_HAS_GMP */
 
 #ifdef __cplusplus
 extern "C" {
@@ -54,7 +54,7 @@ extern "C" {
  * @{
  */
 
-#if defined(SCIP_WITH_BOOST) && defined(SCIP_WITH_GMP)
+#if SCIP_HAS_BOOST && SCIP_HAS_GMP
 /** gets the underlying gmp rational pointer */
 SCIP_EXPORT
 mpq_t* SCIPrationalGetGMP(
@@ -98,7 +98,7 @@ void SCIPrationalClearArrayGMP(
    mpq_t*                mpqarray,           /**< gmp rational array */
    int                   len                 /**< array length */
    );
-#endif
+#endif /* SCIP_HAS_BOOST && SCIP_HAS_GMP */
 
 /** @} */
 

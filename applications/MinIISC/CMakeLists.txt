@@ -7,33 +7,36 @@ endif()
 
 project(MinIISC)
 
-if(TARGET SCIP::SCIP)
-  # find package by SCIP PATH
-  find_package(SCIP CONFIG NO_DEFAULT_PATH PATHS ${SCIP_BINARY_DIR} REQUIRED)
-else()
-  find_package(SCIP REQUIRED)
+# Find SCIP unless we already have it because we build it.
+if(NOT TARGET SCIP::SCIP)
+  find_package(SCIP
+     REQUIRED
+     CONFIG
+     HINTS "${SCIP_DIR}"
+     )
 endif()
 
-include_directories(BEFORE PUBLIC ${SCIP_INCLUDE_DIRS})
-
-add_executable(miniisc
-    src/benders.c
-    src/miniisc.c
-    src/readargs.c
-)
-set_property(TARGET miniisc PROPERTY INTERPROCEDURAL_OPTIMIZATION ${LTO_AVAILABLE})
-
-# link to math library if it is available
+# Find math library.
 find_library(LIBM m)
 if(NOT LIBM)
   set(LIBM "")
 endif()
 
-target_link_libraries(miniisc ${SCIP_LIBRARIES} ${LIBM})
-target_compile_options(miniisc PRIVATE ${SCIP_COMPILE_FLAGS})
 
-if( TARGET applications )
-    add_dependencies( applications miniisc )
+add_executable(miniisc
+   src/benders.c
+   src/miniisc.c
+   src/readargs.c
+   )
+target_link_libraries(miniisc SCIP::SCIP ${LIBM})
+
+if(SCIP_HAS_LTO)
+   set_target_properties(miniisc PROPERTIES
+      INTERPROCEDURAL_OPTIMIZATION 1)
+endif()
+
+if(TARGET applications)
+   add_dependencies(applications miniisc)
 endif()
 
 add_subdirectory(check)

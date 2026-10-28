@@ -3474,7 +3474,7 @@ SCIP_RETCODE readSolFile(
          }
          else if( !SCIPstrToRealValue(valuestring, &value, &endptr) || *endptr != '\0' )
          {
-#ifdef SCIP_WITH_EXACTSOLVE
+#if SCIP_HAS_EXACTSOLVE
             /* convert exact value */
             if( SCIPrationalIsString(valuestring) )
             {
@@ -3487,7 +3487,7 @@ SCIP_RETCODE readSolFile(
                SCIPrationalFreeBlock(SCIPblkmem(scip), &valueexact);
             }
             else
-#endif
+#endif /* SCIP_HAS_EXACTSOLVE */
             {
                SCIPerrorMessage("Invalid solution value <%s> for variable <%s> in line %d of solution file <%s>.\n",
                      valuestring, varname, lineno, filename);
@@ -3710,7 +3710,7 @@ SCIP_RETCODE readXmlSolFile(
          }
          else if( !SCIPstrToRealValue(valuestring, &value, &endptr) || *endptr != '\0' )
          {
-#ifdef SCIP_WITH_EXACTSOLVE
+#if SCIP_HAS_EXACTSOLVE
             /* convert exact value */
             if( SCIPrationalIsString(valuestring) )
             {
@@ -3723,7 +3723,7 @@ SCIP_RETCODE readXmlSolFile(
                SCIPrationalFreeBlock(SCIPblkmem(scip), &valueexact);
             }
             else
-#endif
+#endif /* SCIP_HAS_EXACTSOLVE */
             {
                SCIPerrorMessage("Invalid solution value <%s> for variable <%s> in XML solution file <%s>.\n",
                      valuestring, varname, filename);

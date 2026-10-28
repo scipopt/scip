@@ -32,9 +32,9 @@
 #include "scip/type_clock.h"
 #include "scip/scip_randnumgen.h"
 #include <time.h>
-#ifdef SCIP_WITH_GMP
+#if SCIP_HAS_GMP
 #include <gmp.h>
-#endif
+#endif /* SCIP_HAS_GMP */
 #include "include/scip_test.h"
 
 
@@ -94,7 +94,7 @@ void tearDown(void)
    teardown();
 }
 
-#ifdef SCIP_WITH_BOOST
+#if SCIP_HAS_BOOST
 
 /* TESTS  */
 void test_rationals_create_and_free(void)
@@ -115,7 +115,7 @@ void test_rationals_setting(void)
    SCIP_Longint testint = 100345;
    SCIP_Real testreal = 1235.235690;
    SCIP_RATIONAL* testr;
-#if defined(SCIP_WITH_GMP) && defined(SCIP_WITH_BOOST)
+#if SCIP_HAS_GMP && SCIP_HAS_BOOST
    mpq_t gmpr;
 
    mpq_init(gmpr);
@@ -124,7 +124,7 @@ void test_rationals_setting(void)
    /* create some rationals with different methods*/
 
    (void) SCIPrationalCreateBlockGMP(blkmem, &testr, gmpr);
-#endif
+#endif /* SCIP_HAS_GMP && SCIP_HAS_BOOST */
 
    /* test setter methods */
    SCIPrationalSetFraction(r1, testint, 1LL);
@@ -154,11 +154,11 @@ void test_rationals_setting(void)
    TEST_ASSERT_LESS_THAN(SCIPrationalRoundReal(r1, SCIP_R_ROUND_DOWNWARDS), SCIPrationalRoundReal(r1, SCIP_R_ROUND_UPWARDS), "rounding down should be lt rounding up");
 
    /* test gmp conversion */
-#if defined(SCIP_WITH_GMP) && defined(SCIP_WITH_BOOST)
+#if SCIP_HAS_GMP && SCIP_HAS_BOOST
    SCIPrationalSetGMP(r1, gmpr);
    TEST_ASSERT_EQUAL(SCIPrationalGetReal(r1), mpq_get_d(gmpr), "gmp and Rational should be the same ");
    TEST_ASSERT(0 == mpq_cmp(gmpr, *SCIPrationalGetGMP(r1)));
-#endif
+#endif /* SCIP_HAS_GMP && SCIP_HAS_BOOST */
 
    /* delete the rationals */
    SCIPrationalFreeBlock(blkmem, &testr);
@@ -427,7 +427,7 @@ void test_rationals_arrays(void)
 
    SCIPrationalarrayFree(&ratar2, blkmem);
 }
-#endif
+#endif /* SCIP_HAS_BOOST */
 
 int main(void)
 {

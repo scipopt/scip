@@ -37,10 +37,10 @@
 #include <vector>
 #include <string>
 
-#ifdef SCIP_WITH_BOOST
+#if SCIP_HAS_BOOST
 #include <boost/multiprecision/number.hpp>
 
-#ifdef SCIP_WITH_GMP
+#if SCIP_HAS_GMP
 #include <boost/multiprecision/gmp.hpp>
 using namespace boost::multiprecision;
 namespace scip
@@ -48,7 +48,7 @@ namespace scip
    using Rational = boost::multiprecision::number<gmp_rational, et_off>;
    using Integer = number<gmp_int, et_off>;
 }
-#else
+#else /* !SCIP_HAS_GMP */
 #include <boost/multiprecision/cpp_int.hpp>
 using namespace boost::multiprecision;
 namespace scip
@@ -56,13 +56,13 @@ namespace scip
    using Rational = cpp_rational;
    using Integer = cpp_int;
 }
-#endif
+#endif /* SCIP_HAS_GMP */
 
 namespace scip
 {
    using sparsevec = std::vector<SCIP_RATIONAL>;
 }
-#else
+#else /* !SCIP_HAS_BOOST */
 namespace scip
 {
    /**@todo replace this dummy class with a direct interface to GMP for systems where Boost is not available */
@@ -119,6 +119,6 @@ namespace scip
    INLINE SCIP_Longint denominator(Rational& r){return 0L;}
    INLINE SCIP_Longint numerator(Rational& r){return 0L;}
 }
-#endif
+#endif /* SCIP_HAS_BOOST */
 
 #endif

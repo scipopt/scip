@@ -155,13 +155,13 @@ SCIP_RETCODE SCIPenableExactSolving(
 {
    assert(scip != NULL);
 
-#ifndef SCIP_WITH_EXACTSOLVE
+#if !SCIP_HAS_EXACTSOLVE
    if( enable )
    {
       SCIPerrorMessage("SCIP was compiled without exact solve support: cannot enable exact solving mode.\n");
       return SCIP_ERROR;
    }
-#else
+#else /* SCIP_HAS_EXACTSOLVE */
    /* skip if nothing has changed */
    if( enable == scip->set->exact_enable )
       return SCIP_OKAY;
@@ -181,7 +181,7 @@ SCIP_RETCODE SCIPenableExactSolving(
    }
 
    scip->set->exact_enable = enable;
-#endif
+#endif /* !SCIP_HAS_EXACTSOLVE */
 
    return SCIP_OKAY;
 }

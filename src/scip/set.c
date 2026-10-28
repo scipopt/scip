@@ -335,9 +335,9 @@
 #define SCIP_DEFAULT_MISC_SCALEOBJ         TRUE /**< should the objective function be scaled? */
 #define SCIP_DEFAULT_MISC_SHOWDIVINGSTATS FALSE /**< should detailed statistics for diving heuristics be shown? */
 
-#ifdef WITH_DEBUG_SOLUTION
+#if SCIP_HAS_DEBUG_SOLUTION
 #define SCIP_DEFAULT_MISC_DEBUGSOLUTION     "-" /**< path to a debug solution */
-#endif
+#endif /* SCIP_HAS_DEBUG_SOLUTION */
 
 /* Randomization */
 #define SCIP_DEFAULT_RANDOM_RANDSEEDSHIFT     0 /**< global shift of all random seeds in the plugins, this will have no impact on the permutation seed */
@@ -866,7 +866,7 @@ SCIP_DECL_PARAMCHGD(paramChgdEnableReopt)
    return retcode;
 }
 
-#ifdef SCIP_WITH_EXACTSOLVE
+#if SCIP_HAS_EXACTSOLVE
 /** information method for a parameter change of exact solving mode */
 static
 SCIP_DECL_PARAMCHGD(paramChgdExactSolve)
@@ -884,7 +884,7 @@ SCIP_DECL_PARAMCHGD(paramChgdExactSolve)
 
    return retcode;
 }
-#endif
+#endif /* SCIP_HAS_EXACTSOLVE */
 
 /** set parameters for reoptimization */
 SCIP_RETCODE SCIPsetSetReoptimizationParams(
@@ -2307,13 +2307,13 @@ SCIP_RETCODE SCIPsetCreate(
          &(*set)->misc_referencevalue, FALSE, SCIP_DEFAULT_MISC_REFERENCEVALUE, SCIP_REAL_MIN, SCIP_REAL_MAX,
          NULL, NULL) );
 
-#ifdef WITH_DEBUG_SOLUTION
+#if SCIP_HAS_DEBUG_SOLUTION
    SCIP_CALL( SCIPsetAddStringParam(*set, messagehdlr, blkmem,
          "misc/debugsol",
          "path to a debug solution",
          &(*set)->misc_debugsol, FALSE, SCIP_DEFAULT_MISC_DEBUGSOLUTION,
          NULL, NULL) );
-#endif
+#endif /* SCIP_HAS_DEBUG_SOLUTION */
 
    /* randomization parameters */
    SCIP_CALL( SCIPsetAddIntParam(*set, messagehdlr, blkmem,
@@ -2978,7 +2978,7 @@ SCIP_RETCODE SCIPsetCreate(
          &(*set)->visual_objextern, FALSE, SCIP_DEFAULT_VISUAL_OBJEXTERN,
          NULL, NULL) );
 
-#ifdef SCIP_WITH_EXACTSOLVE
+#if SCIP_HAS_EXACTSOLVE
    /* exact SCIP parameters */
    SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
          "exact/enable",
@@ -3033,7 +3033,7 @@ SCIP_RETCODE SCIPsetCreate(
          "maximum size of the certificate file in MB (stop printing when reached)",
          &(*set)->certificate_maxfilesize, FALSE, (SCIP_Real)SCIP_DEFAULT_CERTIFICATE_MAXFILESIZE, 0.0, (SCIP_Real)SCIP_MEM_NOLIMIT,
          NULL, NULL) );
-#else
+#else /* !SCIP_HAS_EXACTSOLVE */
    /* if SCIP is built without support for exact solving, we initialize the values of the exact parameters, but do not
     * display the parameters to the SCIP user
     */
@@ -3049,7 +3049,7 @@ SCIP_RETCODE SCIPsetCreate(
    (*set)->exact_cutapproxmaxboundval = SCIP_DEFAULT_CUTAPPROXMAXBOUNDVAL;
    (*set)->certificate_filename = (char*)SCIP_DEFAULT_CERTIFICATE_FILENAME;
    (*set)->certificate_maxfilesize = (SCIP_Real)SCIP_DEFAULT_CERTIFICATE_MAXFILESIZE;
-#endif
+#endif /* SCIP_HAS_EXACTSOLVE */
 
    /* Reading parameters */
    SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,

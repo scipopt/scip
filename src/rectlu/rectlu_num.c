@@ -41,7 +41,7 @@
 
 #pragma GCC diagnostic ignored "-Wpedantic"
 
-#ifdef SCIP_WITH_GMP
+#if SCIP_HAS_GMP
 
 /* allocates array with size elements of QSnum_type */
 QSnum_type* QSnum_AllocArray(int size)

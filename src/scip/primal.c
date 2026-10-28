@@ -952,7 +952,7 @@ SCIP_RETCODE primalAddSol(
             SCIPprobExternObjval(transprob, origprob, set, SCIPgetLowerbound(set->scip)), SCIPprobExternObjval(transprob, origprob, set, obj));
       }
 
-#ifdef WITH_DEBUG_SOLUTION
+#if SCIP_HAS_DEBUG_SOLUTION
       /* check for missed debugsol cutoff */
       if( SCIPdebugSolIsEnabled(set->scip) )
       {
@@ -965,7 +965,7 @@ SCIP_RETCODE primalAddSol(
          else
             assert(SCIPsetIsFeasGE(set, SCIPgetDualbound(set->scip), SCIPsolGetOrigObj(debugsol)));
       }
-#endif
+#endif /* SCIP_HAS_DEBUG_SOLUTION */
    }
 
    SCIPdebug( SCIP_CALL( SCIPsolPrint(sol, set, messagehdlr, stat, transprob, NULL, NULL, FALSE, FALSE) ) );

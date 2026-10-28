@@ -27,7 +27,7 @@ else()
     # 1a. create the raw shell tutorial using commands for SCIP
     #
     add_custom_command(OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/inc/shelltutorial/shelltutorialraw.tmp
-        COMMAND $<TARGET_FILE:scip> < doc/inc/shelltutorial/commands | tee doc/inc/shelltutorial/shelltutorialraw.tmp
+        COMMAND $<TARGET_FILE:scip-executable> < doc/inc/shelltutorial/commands | tee doc/inc/shelltutorial/shelltutorialraw.tmp
         COMMAND ${BASH} -c "rm stein27.lp stein27.sol settingsfile.set"
         WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/../
     )
@@ -54,7 +54,7 @@ else()
     # 3. parameter file generation
     #
     add_custom_command(OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/inc/parameters.set
-        COMMAND $<TARGET_FILE:scip> -c "set default set save inc/parameters.set quit"
+        COMMAND $<TARGET_FILE:scip-executable> -c "set default set save inc/parameters.set quit"
         WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
     )
 
@@ -63,7 +63,7 @@ else()
     #
     # bin/scip -c "read doc/inc/simpleinstance/simple.lp optimize quit" > doc/inc/simpleinstance/output.log
     add_custom_command(OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/inc/simpleinstance/output.log
-        COMMAND $<TARGET_FILE:scip> -c "read inc/simpleinstance/simple.lp optimize quit" -l inc/simpleinstance/output.log
+        COMMAND $<TARGET_FILE:scip-executable> -c "read inc/simpleinstance/simple.lp optimize quit" -l inc/simpleinstance/output.log
         WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
     )
 

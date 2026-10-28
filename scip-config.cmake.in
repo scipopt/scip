@@ -1,48 +1,416 @@
-if(NOT TARGET libscip)
-  include("${CMAKE_CURRENT_LIST_DIR}/scip-targets.cmake")
-endif()
-
-# For `find_dependency` function.
-include(CMakeFindDependencyMacro)
-
-list(APPEND CMAKE_MODULE_PATH @EXTRA_CMAKE_MODULE_PATH@)
-
-set(SCIP_LIBRARIES libscip @CONF_SANITIZE_FLAGS@)
-set(SCIP_INCLUDE_DIRS "@CONF_INCLUDE_DIRS@")
-# additional compilation flags to use
-set(SCIP_COMPILE_FLAGS @CONF_SANITIZE_FLAGS@)
-set(SCIP_FOUND TRUE)
-
-# If SCIP was built with GMP then we also need it.
-set(SCIP_WITH_GMP @SCIP_WITH_GMP@)
-if(SCIP_WITH_GMP AND SCIP_FOUND)
-   if(NOT GMP_DIR)
-      set(GMP_DIR "@GMP_DIR@")
+# Check if already found.
+if(TARGET SCIP::SCIP)
+   if(NOT SCIP_FIND_QUIETLY)
+      message(STATUS "Already found suitable SCIP version ${SCIP_VERSION}.")
    endif()
-   find_dependency(GMP)
-
-   # TODO: Once we use targets, this will not be needed.
-   set(SCIP_INCLUDE_DIRS ${SCIP_INCLUDE_DIRS} ${GMP_INCLUDE_DIRS})
+else()
+  if(NOT SCIP_FIND_QUIETLY)
+     message(STATUS "Checking SCIP: ${CMAKE_CURRENT_LIST_FILE}")
+  endif()
 endif()
 
-# If SCIP was built with MPFR then we also need it.
-set(SCIP_WITH_MPFR @SCIP_WITH_MPFR@)
-if(SCIP_WITH_MPFR AND SCIP_FOUND)
-   if(NOT MPFR_DIR)
-      set(MPFR_DIR "@MPFR_DIR@")
+# Whether SCIP was built with position-independent code.
+set(SCIP_HAS_PIC @SCIP_HAS_PIC@)
+
+# Task Processing Interface.
+set(SCIP_HAS_TPI @SCIP_HAS_TPI@)
+set(SCIP_TPI_OMP @SCIP_TPI_OMP@)
+set(SCIP_TPI_TNY @SCIP_TPI_TNY@)
+set(SCIP_TPI_NONE @SCIP_TPI_NONE@)
+
+# Whether a floating-point LP solver is linked.
+set(SCIP_HAS_LPS @SCIP_HAS_LPS@)
+set(SCIP_LPS_NAME "@SCIP_LPS_NAME@")
+set(SCIP_LPS_SPX @SCIP_LPS_SPX@)
+set(SCIP_LPS_CLP @SCIP_LPS_CLP@)
+set(SCIP_LPS_QSO @SCIP_LPS_QSO@)
+set(SCIP_LPS_GLOP @SCIP_LPS_GLOP@)
+set(SCIP_LPS_HIGHS @SCIP_LPS_HIGHS@)
+set(SCIP_LPS_CPX @SCIP_LPS_CPX@)
+set(SCIP_LPS_XPRS @SCIP_LPS_XPRS@)
+set(SCIP_LPS_MSK @SCIP_LPS_MSK@)
+set(SCIP_LPS_GRB @SCIP_LPS_GRB@)
+set(SCIP_LPS_NONE @SCIP_LPS_NONE@)
+
+# Whether SCIP was built with EXACTSOLVE.
+set(SCIP_HAS_EXACTSOLVE @SCIP_HAS_EXACTSOLVE@)
+set(SCIP_HAS_LPSEXACT @SCIP_HAS_LPSEXACT@)
+set(SCIP_LPSEXACT_NAME "@SCIP_LPSEXACT_NAME@")
+set(SCIP_LPSEXACT_SPX @SCIP_LPSEXACT_SPX@)
+set(SCIP_LPSEXACT_QSOEX @SCIP_LPSEXACT_QSOEX@)
+set(SCIP_LPSEXACT_NONE @SCIP_LPSEXACT_NONE@)
+
+# Tools used for SCIP's symmetry computations.
+set(SCIP_HAS_SYM @SCIP_HAS_SYM@)
+set(SCIP_HAS_BLISS @SCIP_HAS_BLISS@)
+set(SCIP_HAS_NAUTY @SCIP_HAS_NAUTY@)
+set(SCIP_HAS_SASSY @SCIP_HAS_SASSY@)
+set(SCIP_HAS_DEJAVU @SCIP_HAS_DEJAVU@)
+set(SCIP_SYM_NAME "@SCIP_SYM_NAME@")
+set(SCIP_SYM_VERSION "@SCIP_SYM_VERSION@")
+
+# Whether SCIP was built with AMPL interface.
+set(SCIP_HAS_AMPL @SCIP_HAS_AMPL@)
+
+# Whether SCIP was built with Boost.
+set(SCIP_HAS_BOOST @SCIP_HAS_BOOST@)
+
+# Whether SCIP was built with Curses.
+set(SCIP_HAS_CURSES @SCIP_HAS_CURSES@)
+
+# Whether SCIP was built with CLP.
+set(SCIP_HAS_CLP @SCIP_HAS_CLP@)
+
+# Whether SCIP was built with CONOPT.
+set(SCIP_HAS_CONOPT @SCIP_HAS_CONOPT@)
+
+# Whether SCIP was built with CPLEX.
+set(SCIP_HAS_CPLEX @SCIP_HAS_CPLEX@)
+
+# Whether SCIP was built with GMP.
+set(SCIP_HAS_GMP @SCIP_HAS_GMP@)
+
+# Whether SCIP was built with Gurobi.
+set(SCIP_HAS_GUROBI @SCIP_HAS_GUROBI@)
+
+# Whether SCIP was built with HiGHS.
+set(SCIP_HAS_HIGHS @SCIP_HAS_HIGHS@)
+
+# Whether SCIP was built with Ipopt.
+set(SCIP_HAS_IPOPT @SCIP_HAS_IPOPT@)
+
+# Whether SCIP was built with LAPACK.
+set(SCIP_HAS_LAPACK @SCIP_HAS_LAPACK@)
+
+# Whether SCIP was built with MPFR.
+set(SCIP_HAS_MPFR @SCIP_HAS_MPFR@)
+
+# Whether SCIP was built with MOSEK.
+set(SCIP_HAS_MOSEK @SCIP_HAS_MOSEK@)
+
+# Whether SCIP was built with external NAUTY.
+set(SCIP_HAS_EXTERNAL_NAUTY @SCIP_HAS_EXTERNAL_NAUTY@)
+
+# Whether SCIP was built with OR-Tools (for GLOP).
+set(SCIP_HAS_ORTOOOLS @SCIP_HAS_ORTOOLS@)
+
+# Whether SCIP was built with PaPILO.
+set(SCIP_HAS_PAPILO @SCIP_HAS_PAPILO@)
+
+# Whether SCIP was built with QSopt_ex.
+set(SCIP_HAS_QSOPTEX @SCIP_HAS_QSOPTEX@)
+
+# Whether SCIP was built with Readline.
+set(SCIP_HAS_READLINE @SCIP_HAS_READLINE@)
+
+# Whether SCIP was built with SoPlex.
+set(SCIP_HAS_SOPLEX @SCIP_HAS_SOPLEX@)
+
+# Whether SCIP was built with WORHP.
+set(SCIP_HAS_WORHP @SCIP_HAS_WORHP@)
+
+# Whether SCIP was built with Xpress.
+set(SCIP_HAS_XPRESS @SCIP_HAS_XPRESS@)
+
+# Whether SCIP was built with ZIMPL.
+set(SCIP_HAS_ZIMPL @SCIP_HAS_ZIMPL@)
+
+# Whether SCIP was built with ZLIB.
+set(SCIP_HAS_ZLIB @SCIP_HAS_ZLIB@)
+
+# Dependency search and inclusion of targets.
+if(NOT TARGET SCIP::SCIP)
+   # Indent messages for dependency search.
+   list(APPEND CMAKE_MESSAGE_INDENT "  ")
+   
+   # Additional path for CMake files.
+   list(APPEND CMAKE_MODULE_PATH @EXTRA_CMAKE_MODULE_PATH@)
+   
+   # For `find_dependency` and `find_package_message` functions.
+   include(CMakeFindDependencyMacro)
+   
+   # If SCIP was built statically with GMP then we also need it.
+   # Note that GMP must be found if one wants to use rational
+   # arithmetic parts of the library. We disable it to allow
+   # users without GMP headers to just use SCIP.
+   @SCIP_CONFIG_GMP_DIR@
+   if(SCIP_HAS_GMP AND NOT SCIP_HAS_PIC)
+      find_dependency(GMP)
+   
+      # Support legacy FindGMP.cmake versions.
+      if(GMP_FOUND AND NOT TARGET GMP::GMP)
+         if(TARGET GMP::gmp)
+            message(WARNING "Found GMP version \"${GMP_VERSION}\" has no GMP::GMP target; interfacing GMP::gmp target instead.")
+            add_library(GMP::GMP INTERFACE IMPORTED)
+            target_link_libraries(GMP::GMP INTERFACE GMP::gmp)
+         elseif(TARGET GMP)
+            message(WARNING "Found GMP version \"${GMP_VERSION}\" has no GMP::GMP target; interfacing GMP target instead.")
+            add_library(GMP::GMP INTERFACE IMPORTED)
+            target_link_libraries(GMP::GMP INTERFACE GMP)
+         elseif(TARGET gmp)
+            message(WARNING "Found GMP version \"${GMP_VERSION}\" has no GMP::GMP target; interfacing gmp target instead.")
+            add_library(GMP::GMP INTERFACE IMPORTED)
+            target_link_libraries(GMP::GMP INTERFACE gmp)
+         elseif(GMP_INCLUDE_DIRS AND GMP_LIBRARIES)
+            message(WARNING "Found GMP version \"${GMP_VERSION}\" has no GMP::GMP target; using legacy variables GMP_INCLUDE_DIRS=\"${GMP_INCLUDE_DIRS}\" and GMP_LIBRARIES=\"${GMP_LIBRARIES}\" instead.")
+            # GMP_LIBRARIES may be a list, so we need to create each library seperately and glue them via an INTERFACE library.
+            list(LENGTH GMP_LIBRARIES num_gmp_lib)
+            math(EXPR last_gmp_lib ${num_gmp_lib}-1)
+            add_library(GMP_libgmp INTERFACE IMPORTED)
+            foreach(id_gmp_lib RANGE ${last_gmp_lib})
+               add_library(GMP::libgmp_${id_gmp_lib} UNKNOWN IMPORTED)
+               list(GET GMP_LIBRARIES ${id_gmp_lib} the_gmp_lib)
+               set_target_properties(GMP::libgmp_${id_gmp_lib} PROPERTIES
+                  IMPORTED_LOCATION "${the_gmp_lib}"
+                  INTERFACE_INCLUDE_DIRECTORIES "${GMP_INCLUDE_DIRS}")
+               target_link_libraries(GMP_libgmp INTERFACE GMP::libgmp_${id_gmp_lib})
+            endforeach()
+            add_library(GMP::GMP INTERFACE IMPORTED)
+            target_link_libraries(GMP::GMP INTERFACE GMP_libgmp)
+         else()
+            message(FATAL_ERROR "Found GMP version \"${GMP_VERSION}\" has no GMP::GMP target; unable to recover!")
+         endif()
+      endif()
    endif()
-   find_dependency(MPFR)
-
-   # TODO: Once we use targets, this will not be needed.
-   set(SCIP_INCLUDE_DIRS ${SCIP_INCLUDE_DIRS} ${MPFR_INCLUDE_DIRS})
+   
+   # Support for legacy FindGMP.cmake modules.
+   if(GMP_FOUND AND NOT TARGET GMP::GMP)
+      add_library(GMP::GMP IMPORTED INTERFACE)
+      if(TARGET GMP::gmp)
+         message(WARNING "Found GMP has no GMP::GMP target; interfacing GMP::gmp instead; consider using SCIP's FindGMP module.")
+         target_link_libraries(GMP::GMP GMP::gmp)
+      elseif(TARGET GMP)
+         message(WARNING "Found GMP has no GMP::GMP target; interfacing GMP instead; consider using SCIP's FindGMP module.")
+         target_link_libraries(GMP::GMP GMP)
+      elseif(TARGET gmp)
+         message(WARNING "Found GMP has no GMP::GMP target; interfacing gmp instead; consider using SCIP's FindGMP module.")
+         target_link_libraries(GMP::GMP gmp)
+      elseif(GMP_INCLUDE_DIRS AND GMP_LIBRARIES)
+         message(WARNING "Found GMP has no GMP::GMP target; using legacy variables GMP_INCLUDE_DIRS=\"${GMP_INCLUDE_DIRS}\" and GMP_LIBRARIES=\"${GMP_LIBRARIES}\" instead; consider using SCIP's FindGMP module.")
+         # GMP_LIBRARIES may be a list, so we need to create each library seperately and glue them via an INTERFACE library.
+         list(LENGTH GMP_LIBRARIES num_gmp_lib)
+         math(EXPR last_gmp_lib ${num_gmp_lib}-1)
+         foreach(id_gmp_lib RANGE ${last_gmp_lib})
+            add_library(GMP::libgmp_${id_gmp_lib} UNKNOWN IMPORTED)
+            list(GET GMP_LIBRARIES ${id_gmp_lib} the_gmp_lib)
+            set_target_properties(GMP::libgmp_${id_gmp_lib} PROPERTIES
+               IMPORTED_LOCATION "${the_gmp_lib}"
+               INTERFACE_INCLUDE_DIRECTORIES "${GMP_INCLUDE_DIRS}"
+               )
+            target_link_libraries(GMP::GMP
+               INTERFACE GMP::libgmp_${id_gmp_lib})
+         endforeach()
+      else()
+         message(FATAL_ERROR "Found GMP has no GMP::GMP target; unable to recover; consider using SCIP's FindGMP module.")
+      endif()
+   endif()
+   
+   # If SCIP was built statically with Boost then we also need it.
+   @SCIP_CONFIG_BOOST_DIR@
+   if(SCIP_HAS_BOOST AND NOT SCIP_HAS_PIC)
+      # Extract Boost version in old CMake versions.
+      if(Boost_FOUND)
+         if(NOT DEFINED Boost_VERSION_STRING)
+            math(EXPR _boost_major "${Boost_VERSION} / 100000")
+            math(EXPR _boost_minor "${Boost_VERSION} / 100 % 1000")
+            math(EXPR _boost_patch "${Boost_VERSION} % 100")
+            set(Boost_VERSION_STRING "${_boost_major}.${_boost_minor}.${_boost_patch}")
+         endif()
+      endif()
+      if(NOT Boost_FOUND OR Boost_VERSION_STRING VERSION_LESS @BOOST_MIN_VERSION@)
+         find_dependency(Boost @BOOST_MIN_VERSION@)
+      endif()
+   endif()
+   
+   # If SCIP was built statically with Curses then we also need it.
+   if(SCIP_HAS_CURSES AND NOT SCIP_HAS_PIC)
+      find_dependency(Curses)
+      if(Curses_FOUND AND NOT TARGET Curses::Curses)
+         add_library(Curses::Curses INTERFACE IMPORTED)
+         set_target_properties(Curses::Curses
+            PROPERTIES
+               INTERFACE_LINK_LIBRARIES "${CURSES_LIBRARIES}"
+               INTERFACE_INCLUDE_DIRECTORIES "${CURSES_INCLUDE_DIRS}"
+            )
+      endif()
+   endif()
+   
+   # If SCIP was built statically with CLP then we also need it.
+   @SCIP_CONFIG_CLP_DIR@
+   @SCIP_CONFIG_COINUTILS_DIR@
+   if(SCIP_HAS_CLP AND NOT SCIP_HAS_PIC)
+      find_dependency(CLP)
+      find_dependency(CoinUtils)
+   endif()
+   
+   # If SCIP was built statically with CONOPT then we also need it.
+   @SCIP_CONFIG_CONOPT_DIR@
+   if(SCIP_HAS_CONOPT AND NOT SCIP_HAS_PIC)
+      find_dependency(CONOPT)
+   endif()
+   
+   # If SCIP was built statically with CPLEX then we also need it.
+   @SCIP_CONFIG_CPLEX_DIR@
+   if(SCIP_HAS_CPLEX AND NOT SCIP_HAS_PIC)
+      find_dependency(CPLEX)
+   endif()
+   
+   # If SCIP was built statically with Gurobi then we also need it.
+   @SCIP_CONFIG_GUROBI_DIR@
+   if(SCIP_HAS_GUROBI AND NOT SCIP_HAS_PIC)
+      find_dependency(Gurobi)
+   endif()
+   
+   # If SCIP was built statically with HiGHS then we also need it.
+   @SCIP_CONFIG_HIGHS_DIR@
+   if(SCIP_HAS_HIGHS AND NOT SCIP_HAS_PIC)
+      find_dependency(HIGHS)
+   endif()
+   
+   # If SCIP was built statically with Ipopt then we also need it.
+   @SCIP_CONFIG_IPOPT_DIR@
+   if(SCIP_HAS_IPOPT AND NOT SCIP_HAS_PIC)
+      find_dependency(Ipopt)
+   endif()
+   
+   # If SCIP was built statically with LAPACK then we also need it.
+   if(SCIP_HAS_LAPACK AND NOT SCIP_HAS_PIC)
+      find_dependency(LAPACK)
+   endif()
+   
+   # If SCIP was built statically with MPFR then we also need it.
+   @SCIP_CONFIG_MPFR_DIR@
+   if(SCIP_HAS_MPFR AND NOT SCIP_HAS_PIC)
+      find_dependency(MPFR)
+   
+      # Support legacy FindMPFR.cmake versions.
+      if(SCIP_HAS_MPFR AND NOT TARGET MPFR::MPFR)
+         if(TARGET MPFR::mpfr)
+            message(WARNING "Found MPFR version \"${MPFR_VERSION}\" has no MPFR::MPFR target; interfacing MPFR::mpfr instead.")
+            add_library(MPFR::MPFR INTERFACE IMPORTED)
+            target_link_libraries(MPFR::MPFR INTERFACE MPFR::mpfr)
+         elseif(TARGET MPFR)
+            message(WARNING "Found MPFR version \"${MPFR_VERSION}\" has no MPFR::MPFR target; interfacing MPFR instead.")
+            add_library(MPFR::MPFR INTERFACE IMPORTED)
+            target_link_libraries(MPFR::MPFR INTERFACE MPFR)
+         elseif(TARGET mpfr)
+            message(WARNING "Found MPFR version \"${MPFR_VERSION}\" has no MPFR::MPFR target; interfacing mpfr instead.")
+            add_library(MPFR::MPFR INTERFACE IMPORTED)
+            target_link_libraries(MPFR::MPFR INTERFACE mpfr)
+         elseif(MPFR_INCLUDE_DIRS AND MPFR_LIBRARIES)
+            message(WARNING "Found MPFR version \"${MPFR_VERSION}\" has no MPFR::MPFR target; using legacy variables MPFR_INCLUDE_DIRS=\"${MPFR_INCLUDE_DIRS}\" and MPFR_LIBRARIES=\"${MPFR_LIBRARIES}\" instead.")
+            # MPFR_LIBRARIES may be a list, so we need to create each library seperately and glue them via an INTERFACE library.
+            list(LENGTH MPFR_LIBRARIES num_mpfr_lib)
+            math(EXPR last_mpfr_lib ${num_mpfr_lib}-1)
+            add_library(MPFR_libmpfr INTERFACE IMPORTED)
+            foreach(id_mpfr_lib RANGE ${last_mpfr_lib})
+               add_library(MPFR::libmpfr_${id_mpfr_lib} UNKNOWN IMPORTED)
+               list(GET MPFR_LIBRARIES ${id_mpfr_lib} the_mpfr_lib)
+               set_target_properties(MPFR::libmpfr_${id_mpfr_lib} PROPERTIES
+                  IMPORTED_LOCATION "${the_mpfr_lib}"
+                  INTERFACE_INCLUDE_DIRECTORIES "${MPFR_INCLUDE_DIRS}")
+               target_link_libraries(MPFR_libmpfr INTERFACE MPFR::libmpfr_${id_mpfr_lib})
+            endforeach()
+            add_library(MPFR::MPFR INTERFACE IMPORTED)
+            target_link_libraries(MPFR::MPFR INTERFACE MPFR_libmpfr)
+         else()
+            message(FATAL_ERROR "Found MPFR version \"${MPFR_VERSION}\" has no MPFR::MPFR target; unable to recover!")
+         endif()
+      endif()
+   endif()
+   
+   # If SCIP was built statically with MOSEK then we also need it.
+   @SCIP_CONFIG_MOSEK_DIR@
+   if(SCIP_HAS_MOSEK AND NOT SCIP_HAS_PIC)
+      find_dependency(MOSEK)
+   endif()
+   
+   # If SCIP was built statically with OR-Tools (for GLOP) then we also need it.
+   @SCIP_CONFIG_ORTOOLS_DIR@
+   if(SCIP_HAS_ORTOOLS AND NOT SCIP_HAS_PIC)
+      find_dependency(ortools)
+   endif()
+   
+   # If SCIP was built statically with PaPILO then we also need it.
+   @SCIP_CONFIG_PAPILO_DIR@
+   if(SCIP_HAS_PAPILO AND NOT SCIP_HAS_PIC)
+      find_dependency(PAPILO)
+   endif()
+   
+   # If SCIP was built statically with QSopt_ex then we also need it.
+   @SCIP_CONFIG_QSOPTEX_DIR@
+   if(SCIP_HAS_QSOPTEX AND NOT SCIP_HAS_PIC)
+      find_dependency(QSoptex)
+   endif()
+   
+   # If SCIP was built statically with Readline then we also need it.
+   if(SCIP_HAS_READLINE AND NOT SCIP_HAS_PIC)
+      find_dependency(Readline)
+   endif()
+   
+   # If SCIP was built statically with SoPlex then we also need it.
+   @SCIP_CONFIG_SOPLEX_DIR@
+   if(SCIP_HAS_SOPLEX AND NOT SCIP_HAS_PIC)
+      find_dependency(SOPLEX)
+   endif()
+   
+   # If SCIP was built statically with WORHP then we also need it.
+   @SCIP_CONFIG_WORHP_DIR@
+   if(SCIP_HAS_WORHP AND NOT SCIP_HAS_PIC)
+      find_dependency(WORHP)
+   endif()
+   
+   # If SCIP was built statically with Xpress then we also need it.
+   @SCIP_CONFIG_XPRESS_DIR@
+   if(SCIP_HAS_XPRESS AND NOT SCIP_HAS_PIC)
+      find_dependency(Xpress)
+   endif()
+   
+   # If SCIP was built statically with ZIMPL then we also need it.
+   @SCIP_CONFIG_ZIMPL_DIR@
+   if(SCIP_HAS_ZIMPL AND NOT SCIP_HAS_PIC)
+      find_dependency(ZIMPL)
+   endif()
+   
+   # If SCIP was built statically with ZLIB then we also need it.
+   if(SCIP_HAS_ZLIB AND NOT SCIP_HAS_PIC)
+      find_dependency(ZLIB)
+   endif()
+      
+   # If SCIP was built statically with external NAUTY then we also need it.
+   if(SCIP_HAS_EXTERNAL_NAUTY AND NOT SCIP_HAS_PIC)
+      find_dependency(nauty)
+   endif()
+   
+   # Unindent messages again; equivalent to list(POP_BACK, CMAKE_MESSAGE_INDENT) which requires CMake 3.15.
+   list(REVERSE CMAKE_MESSAGE_INDENT)
+   list(REMOVE_AT CMAKE_MESSAGE_INDENT 0)
+   list(REVERSE CMAKE_MESSAGE_INDENT)
+   
+   # Include the targets.
+   include("${CMAKE_CURRENT_LIST_DIR}/scip-targets.cmake")
+   
+   # Add main alias.
+   add_library(SCIP::SCIP ALIAS SCIP::libscip)
+   
+   # Set version.
+   set(SCIP_VERSION "@SCIP_VERSION_MAJOR@.@SCIP_VERSION_MINOR@.@SCIP_VERSION_PATCH@")
+   
+   # Report success.
+   if(NOT SCIP_FIND_QUIETLY)
+      message(STATUS "Found SCIP version ${SCIP_VERSION}.")
+   endif()
 endif()
 
-if(@ZIMPL_NEEDED@ AND SCIP_FOUND)
-   set(ZIMPL_DIR "@CONF_ZIMPL_DIR@")
-   find_dependency(ZIMPL CONFIG)
+# Deprecated variables.
+add_library(SCIP_LIBRARIES INTERFACE IMPORTED)
+if(CMAKE_VERSION VERSION_GREATER_EQUAL 3.17)
+   set_target_properties(SCIP_LIBRARIES PROPERTIES
+      DEPRECATION "Do not use SCIP_INCLUDE_DIRS and SCIP_LIBRARIES anymore, but the SCIP::SCIP target instead.")
+else()
+   message(DEBUG "CMake version ${CMAKE_VERSION} is too low to mark SCIP_LIBRARIES target as deprecated!")
 endif()
+target_link_libraries(SCIP_LIBRARIES INTERFACE SCIP::libscip)
+set(SCIP_LIBRARIES "SCIP_LIBRARIES")
+get_target_property(SCIP_INCLUDE_DIRS SCIP::public_dependencies INTERFACE_INCLUDE_DIRECTORIES)
 
-if(@SOPLEX_NEEDED@ AND SCIP_FOUND)
-   set(SOPLEX_DIR "@CONF_SOPLEX_DIR@")
-   find_dependency(SOPLEX CONFIG)
-endif()

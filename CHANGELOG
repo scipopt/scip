@@ -286,6 +286,98 @@ Unit tests
 - migrated the unit test framework from Criterion to Unity; the `TEST_ASSERT*` and `SOFT_ASSERT*` macros
   provided by `tests/include/scip_test.h` replace the former Criterion `cr_*` assertions
 
+Build system
+------------
+
+- several preprocessor macros in scip/config.h are renamed to `SCIP_HAS_*`. They are always set to a binary value; old macros are still kept but deprecated. Affected indicators:
+  - SCIP_HAS_GMP (replaces SCIP_WITH_GMP)
+  - SCIP_HAS_ZLIB (replaces SCIP_WITH_ZLIB)
+  - SCIP_HAS_MPFR (replaces SCIP_WITH_MPFR)
+  - SCIP_HAS_PAPILO (replaces SCIP_WITH_PAPILO)
+  - SCIP_HAS_BOOST (replaces SCIP_WITH_BOOST)
+  - SCIP_HAS_LAPACK (replaces SCIP_WITH_LAPACK)
+  - SCIP_HAS_EXACTSOLVE (replaces SCIP_WITH_EXACTSOLVE)
+  - SCIP_HAS_LPS (indicates whether a floating-point LP solver is linked)
+  - SCIP_LPS_NAME (human-readable string for the floating-point LP solver)
+  - SCIP_HAS_SOPLEX (replaces SCIP_WITH_SOPLEX)
+  - SCIP_HAS_CLP (indicates whether Clp is linked)
+  - SCIP_HAS_QSOPTEX (indicates whether QSopt_ex is linked)
+  - SCIP_HAS_GLOP (indicates whether GLOP is linked)
+  - SCIP_HAS_HIGHS (indicates whether HiGHS is linked)
+  - SCIP_HAS_CPLEX (indicates whether CPLEX is linked)
+  - SCIP_HAS_XPRESS (indicates whether Xpress is linked)
+  - SCIP_HAS_MOSEK (indicates whether Mosek is linked)
+  - SCIP_HAS_GUROBI (indicates whether Gurobi is linked)
+  - SCIP_LPS_SPX (indicates whether floating-point LP solver is SoPlex)
+  - SCIP_LPS_CLP (indicates whether floating-point LP solver is Clp)
+  - SCIP_LPS_QSO (indicates whether floating-point LP solver is QSopt_ex)
+  - SCIP_LPS_GLOP (indicates whether floating-point LP solver is GLOP)
+  - SCIP_LPS_HIGHS (indicates whether floating-point LP solver is HiGHS)
+  - SCIP_LPS_CPX (indicates whether floating-point LP solver is CPLEX)
+  - SCIP_LPS_XPRS (indicates whether floating-point LP solver is Xpress)
+  - SCIP_LPS_MSK (indicates whether floating-point LP solver is Mosek)
+  - SCIP_LPS_GRB (indicates whether floating-point LP solver is Gurobi)
+  - SCIP_LPS_NONE (indicates whether no floating-point LP solver is used)
+  - SCIP_HAS_LPSEXACT (indicates whether an exact LP solver is linked)
+  - SCIP_LPSEXACT_NAME (human-readable string for the exact LP solver)
+  - SCIP_HAS_QSOEX (indicates whether QSopt_ex is linked)
+  - SCIP_LPSEXACT_SPX (indicates whether exact LP solver is SoPlex)
+  - SCIP_LPSEXACT_QSOEX (indicates whether exact LP solver is QSopt_ex)
+  - SCIP_LPSEXACT_NONE (indicates whether no exact LP solver is used)
+  - SCIP_HAS_ZIMPL (indicates whether ZIMPL is linked)
+  - SCIP_HAS_AMPL (replaces SCIP_WITH_AMPL)
+  - SCIP_IS_THREADSAFE (replaces SCIP_THREADSAFE)
+  - SCIP_HAS_TPI (indicates whether some TPI is used)
+  - SCIP_TPI_OMP (replaces TPI_OMP)
+  - SCIP_TPI_TNY (replaces TPI_TNY)
+  - SCIP_TPI_NONE (replaces TPI_NONE)
+  - SCIP_HAS_LPSCHECK (replaces SCIP_LPSCHECK)
+  - SCIP_HAS_CONOPT (indicates whether CONOPT is linked)
+  - SCIP_HAS_IPOPT (indicates whether Ipopt is linked)
+  - SCIP_HAS_WORHP (indicates whether WORHP is linked)
+  - SCIP_HAS_READLINE (replaces SCIP_WITH_READLINE)
+  - SCIP_HAS_DEBUG_SOLUTION (replaces WITH_DEBUG_SOLUTION)
+  - SCIP_HAS_NOBUFFERMEM (replaces SCIP_NOBUFFERMEM)
+  - BMS_HAS_NOBLOCKMEM (replaces BMS_NOBLOCKMEM)
+
+### CMake
+
+- removed CXXONLY and MT options.
+- libscip is by default built as a shared library, and the scip executable just links to it.
+- several feature indicator variables of the form `SCIP_HAS_*` and `SCIP_IS_*` are exposed in scip-config.cmake, in particular those for which preprocessor macros are defined in scip/config.h. Additional ones are:
+  - SCIP_HAS_PIC indicates whether libscip was built with position-independent code.
+- replaced CMake module for GMP to declare GMP::GMP target.
+- added GMP=auto build option to make finding GMP optional; GMP=on makes it required.
+- removed STATIC_GMP flag since this is not relevant and does not work on Windows anyhow.
+- added ZLIB=auto build option to make finding ZLIB optional; ZLIB=on makes it required.
+- added MPFR=auto build option to make finding MPFR optional; MPFR=on makes it required.
+- added PAPILO=auto build option to make finding PaPILO optional; PAPILO=on makes it required.
+- added LPS=auto build option to allow searching for any LP solver.
+- added ZIMPL=auto build option to make finding ZIMPL optional; ZIMPL=on makes it required.
+- added TPI=auto build option to make finding TPI optional; searches first for OpenMP and then for POSIX threads.
+- added CONOPT=auto build option to make finding CONOPT optional; CONOPT=on makes it required.
+- added LAPACK=auto build option to make finding LAPACK optional; LAPACK=on makes it required.
+- added IPOPT=auto build option to make finding Ipopt optional; IPOPT=on makes it required.
+- added WORHP=auto build option to make finding WORHP optional; WORHP=on makes it required.
+- added READLINE=auto build option to make finding Readline optional; READLINE=on makes it required.
+- replaced CMake module for Gurobi to declare Gurobi::Gurobi target.
+- replaced CMake module for CPLEX to declare CPLEX::CPLEX target.
+- replaced CMake module for MOSEK to declare MOSEK::MOSEK target.
+- replaced CMake module for CLP to declare CLP::CLP target.
+- replaced CMake module for Xpress to declare Xpress:Xpress target.
+- replaced CMake module for QSopt_ex to declare QSoptex::QSoptex target.
+- replaced CMake module for CONOPT to declare CONOPT::CONOPT target.
+- replaced CMake module for Ipopt to declare Ipopt::Ipopt target.
+- replaced CMake module for WORHP to declare WORHP::WORHP target.
+- replaced CMake module for Readline to declare Readline::Readline target.
+- added CMake module for nauty to declare nauty::nauty target, replacing direct inclusion.
+- removed AUTOBUILD option since most options have an `auto` value.
+- added option GITHASH_BRANCH to append the current git branch to the githash.
+
+### Makefiles
+
+- the same preprocessor macros as above are also set in the Makefile.
+
 @page RN10 Release notes for SCIP 10
 
 @section RN1020 SCIP 10.2.0

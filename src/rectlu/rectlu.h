@@ -33,7 +33,7 @@
  */
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#ifdef SCIP_WITH_GMP
+#if SCIP_HAS_GMP
 #include <gmp.h>
 #endif
 #include "rectlu_num.h"
@@ -42,7 +42,7 @@
 #ifndef __RECTLU_H
 #define __RECTLU_H
 
-#ifdef SCIP_WITH_GMP
+#if SCIP_HAS_GMP
 
 typedef struct qsnum_svector {
    int nzcnt;

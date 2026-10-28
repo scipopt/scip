@@ -47,7 +47,7 @@
 #include "scip/struct_scip.h"
 
 
-#ifdef WITH_DEBUG_SOLUTION
+#if SCIP_HAS_DEBUG_SOLUTION
 
 #define SCIP_HASHSIZE_DEBUG        500    /**< minimum size of hash map for storing whether a solution is valid for the node */
 
@@ -245,7 +245,7 @@ SCIP_RETCODE readSolfile(
             value = -SCIPsetInfinity(set);
          else if( !SCIPstrToRealValue(valuestring, &value, &endptr) || *endptr != '\0' )
          {
-#ifdef SCIP_WITH_EXACTSOLVE
+#if SCIP_HAS_EXACTSOLVE
             /* convert exact value */
             if( SCIPrationalIsString(valuestring) )
             {
@@ -258,7 +258,7 @@ SCIP_RETCODE readSolfile(
                SCIPrationalFreeBlock(SCIPblkmem(set->scip), &valueexact);
             }
             else
-#endif
+#endif /* SCIP_HAS_EXACTSOLVE */
             {
                SCIPerrorMessage("Invalid solution value <%s> for variable <%s> in line %d of solution file <%s>.\n",
                      valuestring, varname, lineno, filename);
@@ -2024,14 +2024,11 @@ SCIP_Bool SCIPdebugSolIsEnabled(
    return (!debugsoldata->debugsoldisabled);
 }
 
-/** check if SCIP is compiled with WITH_DEBUG_SOLUTION */
+/** check if SCIP is compiled with SCIP_HAS_DEBUG_SOLUTION */
 SCIP_Bool SCIPwithDebugSol(void)
 {
-#ifdef WITH_DEBUG_SOLUTION
+   /* if SCIP_HAS_DEBUG_SOLUTION is disabled then it is a macro. */
    return TRUE;
-#else
-   return FALSE;
-#endif
 }
 
 
@@ -2214,7 +2211,7 @@ SCIP_RETCODE SCIPdebugAddSolVal(
    return SCIP_OKAY;
 }
 
-#else
+#else /* !SCIP_HAS_DEBUG_SOLUTION */
 
 /** this is a dummy method to make the SunOS gcc linker happy */
 extern void SCIPdummyDebugMethodForSun(void);
@@ -2223,7 +2220,7 @@ void SCIPdummyDebugMethodForSun(void)
    return;
 }
 
-#endif
+#endif /* SCIP_HAS_DEBUG_SOLUTION */
 
 
 /*
@@ -2314,7 +2311,7 @@ SCIP_RETCODE SCIPdebugCheckBInvRow(
 #endif
 
 /** checks if SCIP is in one of the feasible stages */
-#ifdef SCIP_CHECK_STAGE
+#if SCIP_CHECK_STAGE
 SCIP_RETCODE SCIPcheckStage(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           method,             /**< method that was called */
@@ -2645,4 +2642,4 @@ SCIP_RETCODE SCIPcheckStage(
       return SCIP_ERROR;
    }
 }
-#endif
+#endif /* SCIP_CHECK_STAGE */

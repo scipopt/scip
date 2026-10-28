@@ -390,7 +390,7 @@ SCIP_Real getGenVBoundsBound(
    return boundval;
 }
 
-#ifdef WITH_DEBUG_SOLUTION
+#if SCIP_HAS_DEBUG_SOLUTION
 /** checks whether a generalized variable bound violates the debug solution */
 static
 SCIP_RETCODE checkDebugSolutionGenVBound(
@@ -446,7 +446,7 @@ SCIP_RETCODE checkDebugSolutionGenVBound(
 
    return SCIP_OKAY;
 }
-#endif
+#endif /* SCIP_HAS_DEBUG_SOLUTION */
 
 /** allocate local and global startindices, startcomponents and startmap */
 static
@@ -2323,9 +2323,9 @@ SCIP_RETCODE SCIPgenVBoundAdd(
    /* debug message */
    SCIPdebugMsg(scip, "added genvbound ");
    SCIPdebug( printGenVBound(scip, genvbound) );
-#ifdef WITH_DEBUG_SOLUTION
+#if SCIP_HAS_DEBUG_SOLUTION
    SCIP_CALL( checkDebugSolutionGenVBound(scip, genvbound) );
-#endif
+#endif /* SCIP_HAS_DEBUG_SOLUTION */
 
    return SCIP_OKAY;
 }

@@ -31,7 +31,7 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#ifdef TPI_NONE
+#if SCIP_TPI_NONE
 
 #ifndef __TYPE_TPI_NONE_H__
 #define __TYPE_TPI_NONE_H__
@@ -43,4 +43,4 @@ typedef int SCIP_CONDITION;
 
 #endif
 
-#endif
+#endif /* SCIP_TPI_NONE */

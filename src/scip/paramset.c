@@ -4083,10 +4083,10 @@ SCIP_RETCODE SCIPparamsetSetEmphasis(
       SCIP_CALL( paramSetReal(paramset, set, messagehdlr, "separating/maxcoefratio", 100.0, quiet) );
       SCIP_CALL( paramSetReal(paramset, set, messagehdlr, "separating/maxcoefratiofacrowprep", 1.0, quiet) );
 
-#ifdef SCIP_WITH_PAPILO
+#if SCIP_HAS_PAPILO
       SCIP_CALL( paramSetReal(paramset, set, messagehdlr, "presolving/milp/hugebound", 1e6, quiet) );
       SCIP_CALL( paramSetReal(paramset, set, messagehdlr, "presolving/milp/markowitztolerance", 0.1, quiet) );
-#endif
+#endif /* SCIP_HAS_PAPILO */
 
       /* weaken domain propagation of nonlinear constraints by increasing relaxation of variable bounds and constraint sides */
       SCIP_CALL( paramSetReal(paramset, set, messagehdlr, "constraints/nonlinear/conssiderelaxamount", 1e-7, quiet) );

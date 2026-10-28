@@ -1675,7 +1675,7 @@ SCIP_RETCODE createRelaxation(
                SCIPconsIsInitial(cons), SCIPconsIsRemovable(cons), NULL, NULL, NULL, NULL, NULL) );
          SCIP_CALL( SCIPaddVar(scip, consdata->intvar) );
 
-#ifdef WITH_DEBUG_SOLUTION
+#if SCIP_HAS_DEBUG_SOLUTION
          if( SCIPdebugIsMainscip(scip) )
          {
             SCIP_Real solval;
@@ -1693,7 +1693,7 @@ SCIP_RETCODE createRelaxation(
             /* store debug sol value of artificial integer variable */
             SCIP_CALL( SCIPdebugAddSolVal(scip, consdata->intvar, solval) );
          }
-#endif
+#endif /* SCIP_HAS_DEBUG_SOLUTION */
 
          /* install the rounding locks for the internal variable */
          SCIP_CALL( lockRounding(scip, cons, consdata->intvar) );

@@ -83,17 +83,17 @@
 #include <strings.h> /*lint --e{766}*/
 #endif
 
-#ifdef SCIP_WITH_MPFR
+#if SCIP_HAS_MPFR
 #include <mpfr.h>
-#endif
+#endif /* SCIP_HAS_MPFR */
 
-#ifdef SCIP_WITH_ZLIB
+#if SCIP_HAS_ZLIB
 #include <zlib.h>
-#endif
+#endif /* SCIP_HAS_ZLIB */
 
-#ifdef SCIP_WITH_BOOST
+#if SCIP_HAS_BOOST
 #include <boost/version.hpp>
-#endif
+#endif /* SCIP_HAS_BOOST */
 
 /* In debug mode, the following methods are implemented as function calls to ensure
  * type validity.
@@ -179,11 +179,11 @@ void SCIPprintVersion(
 
    SCIPmessageFPrintInfo(scip->messagehdlr, file, " [precision: %d byte]", (int)sizeof(SCIP_Real));
 
-#ifndef BMS_NOBLOCKMEM
+#if !BMS_HAS_NOBLOCKMEM
    SCIPmessageFPrintInfo(scip->messagehdlr, file, " [memory: block]");
-#else
+#else /* BMS_HAS_NOBLOCKMEM */
    SCIPmessageFPrintInfo(scip->messagehdlr, file, " [memory: standard]");
-#endif
+#endif /* !BMS_HAS_NOBLOCKMEM */
 #ifndef NDEBUG
    SCIPmessageFPrintInfo(scip->messagehdlr, file, " [mode: debug]");
 #else
@@ -286,11 +286,11 @@ SCIP_RETCODE doScipCreate(
       SCIP_CALL( SCIPsetIncludeExternalCode((*scip)->set, SCIPlpiExactGetSolverName(), SCIPlpiExactGetSolverDesc()) );
    }
 
-#ifdef SCIP_WITH_ZLIB
+#if SCIP_HAS_ZLIB
    SCIP_CALL( SCIPsetIncludeExternalCode((*scip)->set, "ZLIB " ZLIB_VERSION, "General purpose compression library by J. Gailly and M. Adler (zlib.net)") );
-#endif
+#endif /* SCIP_HAS_ZLIB */
 
-#ifdef SCIP_WITH_LAPACK
+#if SCIP_HAS_LAPACK
    {
       char name[SCIP_MAXSTRLEN];
       int major;
@@ -302,19 +302,19 @@ SCIP_RETCODE doScipCreate(
 
       SCIP_CALL( SCIPsetIncludeExternalCode((*scip)->set, name, "General Linear Algebra PACKage (http://www.netlib.org/lapack/)") );
    }
-#endif
+#endif /* SCIP_HAS_LAPACK */
 
    /* check whether all dependencies for exact solving mode are present */
-#ifdef SCIP_WITH_EXACTSOLVE
-#ifndef SCIP_WITH_GMP
+#if SCIP_HAS_EXACTSOLVE
+#if !SCIP_HAS_GMP
    SCIPerrorMessage("SCIP was compiled with exact solve support, but without GMP. Please recompile SCIP with GMP.\n");
    return SCIP_ERROR;
    /* external code information for GMP added in SCIPincludeConshdlrCountsols() */
-#endif
-#ifndef SCIP_WITH_MPFR
+#endif /* !SCIP_HAS_GMP */
+#if !SCIP_HAS_MPFR
    SCIPerrorMessage("SCIP was compiled with exact solve support, but without MPFR. Please recompile SCIP with MPFR.\n");
    return SCIP_ERROR;
-#else
+#else /* SCIP_HAS_MPFR */
    {
       char name[SCIP_MAXSTRLEN];
 
@@ -322,10 +322,10 @@ SCIP_RETCODE doScipCreate(
       SCIP_CALL( SCIPsetIncludeExternalCode((*scip)->set, name, "GNU Multiple Precision Floating-Point Reliable Library (mpfr.org)") );
    }
 #endif /*lint --e{529}*/
-#ifndef SCIP_WITH_BOOST
+#if !SCIP_HAS_BOOST
    SCIPerrorMessage("SCIP was compiled with exact solve support, but without Boost. Please recompile SCIP with Boost.\n");
    return SCIP_ERROR;
-#else
+#else /* SCIP_HAS_BOOST */
    {
       char name[SCIP_MAXSTRLEN];
       int boost_version_major = BOOST_VERSION / 100000;
@@ -335,13 +335,13 @@ SCIP_RETCODE doScipCreate(
       (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "Boost %d.%d.%d", boost_version_major, boost_version_minor, boost_version_patch);
       SCIP_CALL( SCIPsetIncludeExternalCode((*scip)->set, name, "Boost C++ Libraries (boost.org)") );
    }
-#endif
+#endif /* !SCIP_HAS_BOOST */
    if( strcmp(SCIPlpiExactGetSolverName(), "NONE") == 0 )
    {
       SCIPerrorMessage("SCIP was compiled with exact solve support, but without an exact LP solver. Please recompile SCIP with an exact LP solver.\n");
       return SCIP_ERROR;
    }
-#endif
+#endif /* SCIP_HAS_EXACTSOLVE */
 
    if( SCIPtpiIsAvailable() )
    {

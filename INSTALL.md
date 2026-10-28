@@ -33,7 +33,8 @@ make install                                                                  # 
 Note: For a full ctest run `ctest` instead of `make check` after compilation.
 
 CMake checks for available dependencies like PaPILO, SoPlex, or ZLIB and sets up the configuration accordingly.
-Currently, it is necessary to either explicitly disable dependencies that should not be used, or use `-DAUTOBUILD=ON` as parameter to the cmake call to automatically disable dependencies that cannot be found.
+Many options support an `auto` value that disables a dependency if it cannot be found.
+Setting such an option to `on` enforces it, which results in a configuration error if the dependency cannot be found.
 Note that the symmetry codes [Nauty](https://pallini.di.uniroma1.it/), [Sassy](https://github.com/markusa4/sassy), and
 [Dejavu](https://github.com/markusa4/dejavu) are shipped with SCIP.
 A version of Bliss that is compatible with SCIP is available at https://github.com/scipopt/bliss.
@@ -67,12 +68,6 @@ Additionally the following dependencies need to be downloaded, compiled and inst
 
 Troubleshooting
 ---------------
-
-If you have a problem with your cmake configuration and just want to build scip with all the available dependencies, the **simplest solution is to activate the `AUTOBUILD` option**:
-```
-cmake .. -DAUTOBUILD=on
-```
-This option activates the automatic search for dependent packages like GMP, IPOPT, PaPILO, Readline, WORHP, ZIMPL, ZLIB, and deactivates the missing ones.
 
 If you need a specific package that is not automatically found, you should try setting a hint to the installation with the specified variable.
 Specific packages can also be disabled individually.
@@ -111,17 +106,23 @@ Solution: add `-DZIMPL_DIR=/path/to/zimpl/installation` or disable ZIMPL by sett
 
 Problem:
 ```
--- Finding IPOPT
--- Could NOT find IPOPT (missing: IPOPT_LIBRARIES) (Required is at least version "3.12.0")
-CMake Error at CMakeLists.txt:564 (message):
-  IPOPT not found, try specifying IPOPT_DIR.
+-- Finding Ipopt.
+CMake Error at cmake/Modules/FindIpopt.cmake:293 (message):
+  Could NOT find Ipopt version 3.12.  Try specifying suitable IPOPT_DIR!
+Call Stack (most recent call first):
+  cmake/Modules/FindIpopt.cmake:304 (ipopt_find)
+  CMakeLists.txt:951 (find_package)
 
-  If you have troubles configuring, you can consider setting AUTOBUILD=ON to
-  try and find optional packages as available.
+-- Finding IPOPT
+CMake Error at cmake/Modules/FindIpopt.cmake:293 (message):
+  Could NOT find Ipopt version 3.12.  Try specifying suitable IPOPT_DIR!
+Call Stack (most recent call first):
+  cmake/Modules/FindIpopt.cmake:304 (ipopt_find)
+  CMakeLists.txt:1005 (find_package)
 
 -- Configuring incomplete, errors occurred!
 ```
-Solution: add `-DIPOPT_DIR=/path/to/ipopt/installation` or disable IPOPT by setting `-DIPOPT=off`.
+Solution: add `-DIPOPT_DIR=/path/to/ipopt/installation` or do not require Ipopt by setting `-DIPOPT=auto` or `-DIPOPT=off`.
 
 Problem:
 ```
@@ -180,18 +181,20 @@ e.g., `cmake </path/to/SCIP> -DSOPLEX_DIR=<path/to/SoPlex/build/or/install>`.
 |------------------------|------------------------------------|----------------------------|--------------------------------------------------------------------|
 | `AUTOBUILD`            | `on`, `off`                        | --                         | automatically find dependencies on availability, ignores individual flags of these packages |
 | `CMAKE_BUILD_TYPE`     | `Release`, `Debug`, ...            | `OPT=[opt, dbg]`           |                                                                    |
-| `GMP`                  | `on`, `off`                        | `GMP=[true, false]`        | specify `GMP_DIR` if not found automatically                       |
-| `MPFR`                 | `on`, `off`                        | `MPFR=[true, false]`       | specify `MPFR_DIR` if not found automatically                      |
-| `CONOPT`               | `on`, `off`                        | `CONOPT=[true,false]`      | specify `CONOPT_DIR` if not found automatically                    |
-| `IPOPT`                | `on`, `off`                        | `IPOPT=[true,false]`       | requires IPOPT version >= 3.12.0; specify `IPOPT_DIR` if not found automatically |
-| `LAPACK`               | `on`, `off`                        | `LAPACK=[true,false]`      | requires Lapack to be installed on the system                      |
-| `LPS`                  | `spx`, `cpx`, `grb`, `xprs`, ...   | `LPS=...`                  | specify `SOPLEX_DIR`, `CPLEX_DIR`, `MOSEK_DIR`, ... if LP solver is not found automatically |
-| `LPSEXACT`             | `spx`, `qsoex`, `none`, `auto`     | `LPSEXACT=...`             | specify `SOPLEX_DIR`, `QSOEX_DIR` if exact LP solver is not found automatically |
+| `GMP`                  | `on`, `off`, `auto`                | `GMP=[true, false]`        | specify `GMP_DIR` if not found automatically                       |
+| `ZLIB`                 | `on`, `off`, `auto`                | `ZLIB=[true, false]`       | specify `ZLIB_DIR` if not found automatically                      |
+| `MPFR`                 | `on`, `off`, `auto`                | `MPFR=[true, false]`       | specify `MPFR_DIR` if not found automatically                      |
+| `PAPILO`               | `on`, `off`, `auto`                | `PAPILO=[true, false]`     | specify `PAPILO_DIR` if not found automatically                    |
+| `CONOPT`               | `on`, `off`, `auto`                | `CONOPT=[true,false]`      | specify `CONOPT_DIR` if not found automatically                    |
+| `IPOPT`                | `on`, `off`, `auto`                | `IPOPT=[true,false]`       | requires IPOPT version >= 3.12.0; specify `IPOPT_DIR` if not found automatically |
+| `LAPACK`               | `auto`, `on`, `off`                | `LAPACK=[true,false]`      | requires LAPACK to be installed on the system                      |
+| `LPS`                  | `auto`, `spx`, `cpx`, `grb`, ...   | `LPS=...`                  | specify `SOPLEX_DIR`, `CPLEX_DIR`, `MOSEK_DIR`, ... if LP solver is not found automatically |
+| `LPSEXACT`             | `auto`, `spx`, `qsoex`, `none`     | `LPSEXACT=...`             | specify `SOPLEX_DIR`, `QSOEX_DIR` if exact LP solver is not found automatically |
 | `SYM`                  | `nauty`, `snauty`, `none`, ...     | `SYM=[nauty, snauty, none]`| choose symmetry handling                                           |
-| `WORHP`                | `on`, `off`                        | `WORHP=[true,false]`       | should worhp be linked; specify `WORHP_DIR` if not found automatically |
-| `ZIMPL`                | `on`, `off`                        | `ZIMPL=[true, false]`      | specify `ZIMPL_DIR` if not found automatically                     |
+| `WORHP`                | `auto`, `on`, `off`                | `WORHP=[true,false]`       | should worhp be linked; specify `WORHP_DIR` if not found automatically |
+| `ZIMPL`                | `on`, `off`, `auto`                | `ZIMPL=[true, false]`      | specify `ZIMPL_DIR` if not found automatically                     |
 | `AMPL`                 | `on`, `off`                        | `AMPL=[true, false]`       |                                                                    |
-| `READLINE`             | `on`, `off`                        | `READLINE=[true, false]`   |                                                                    |
+| `READLINE`             | `auto`, `on`, `off`                | `READLINE=[true, false]`   |                                                                    |
 | `..._DIR`              | `<custom/path/to/.../package>`     | --                         | e.g. `IPOPT_DIR`, `CPLEX_DIR`, `WORHP_DIR`, `Readline_DIR` ...     |
 | `BOOST_ROOT`           | `<custom/path/to/.../boost>`       | --                         | hint for location of boost                                         |
 | `EXACTSOLVE`           | `auto`, `on`, `off`                | `EXACTSOLVE=[auto,true,false]` | build with exact solving functionality                         |
@@ -209,7 +212,7 @@ e.g., `cmake </path/to/SCIP> -DSOPLEX_DIR=<path/to/SoPlex/build/or/install>`.
 | `THREADSAFE`           | `on`, `off`                        | `THREADSAFE=[true,false]`  | thread safe compilation                                            |
 | `SANITIZE`             | `on`, `off`, `thread`, `address`, `memory` | `SANITIZE=...`     | sanitizers to enable; if not `off` (default), then enables undefined-behavior sanitizer, `thread` enables also thread sanitizer, `address` enables also address sanitizer, `memory` enables also memory sanitizer |
 | `LTO`                  | `on`, `off`                        | `LTO=[true,false]`         | enable link-time-optimization on Linux/MacOS and gcc/clang         |
-| `TPI`                  | `tny`, `omp`, `none`               | `TPI=[tny,omp,none]`       | enable task processing interface required for concurrent solver    |
+| `TPI`                  | `auto`, `tny`, `omp`, `none`       | `TPI=[tny,omp,none]`       | enable task processing interface required for concurrent solver    |
 
 Parameters can be set all at once or in subsequent calls to `cmake` - extending or modifying the existing configuration.
 

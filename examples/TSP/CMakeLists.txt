@@ -7,14 +7,18 @@ endif()
 
 project(TSP)
 
-if(TARGET SCIP::SCIP)
-  # find package by SCIP PATH
-  find_package(SCIP CONFIG NO_DEFAULT_PATH PATHS ${SCIP_BINARY_DIR} REQUIRED)
-else()
-  find_package(SCIP REQUIRED)
+# Find SCIP unless we already have it because we build it.
+if(NOT TARGET SCIP::SCIP)
+  find_package(SCIP
+     REQUIRED
+     CONFIG
+     HINTS "${SCIP_DIR}"
+     )
 endif()
 
-include_directories(BEFORE PUBLIC ${SCIP_INCLUDE_DIRS})
+if(ZLIB)
+   find_package(ZLIB)
+endif()
 
 add_executable(sciptsp
    src/ConshdlrSubtour.cpp
@@ -26,20 +30,18 @@ add_executable(sciptsp
    src/HeurFrats.cpp
    src/ProbDataTSP.cpp
    src/ReaderTSP.cpp)
-set_property(TARGET sciptsp PROPERTY INTERPROCEDURAL_OPTIMIZATION ${LTO_AVAILABLE})
+target_link_libraries(sciptsp
+   SCIP::SCIP
+   $<$<BOOL:${ZLIB_FOUND}>:ZLIB::ZLIB>
+   )
 
-target_link_libraries(sciptsp ${SCIP_LIBRARIES})
-target_compile_options(sciptsp PRIVATE ${SCIP_COMPILE_FLAGS})
-
-if(ZLIB)
-    find_package(ZLIB)
-    if(ZLIB_FOUND)
-        target_link_libraries(sciptsp ${ZLIB_LIBRARIES})
-    endif()
+if(SCIP_HAS_LTO)
+   set_target_properties(sciptsp PROPERTIES
+      INTERPROCEDURAL_OPTIMIZATION 1)
 endif()
 
-if( TARGET examples )
-    add_dependencies( examples sciptsp )
+if(TARGET examples)
+    add_dependencies(examples sciptsp)
 endif()
 
 add_subdirectory(check)

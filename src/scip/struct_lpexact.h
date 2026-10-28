@@ -86,9 +86,9 @@
 #include "lpi/type_lpi.h"
 #include "lpiexact/type_lpiexact.h"
 #include "scip/rational.h"
-#ifdef SCIP_WITH_EXACTSOLVE
+#if SCIP_HAS_EXACTSOLVE
 #include "rectlu/rectlu.h"
-#endif
+#endif /* SCIP_HAS_EXACTSOLVE */
 
 #ifdef __cplusplus
 extern "C" {
@@ -241,9 +241,9 @@ struct SCIP_ProjShiftData
    SCIP_RATIONAL**       correction;         /**< needed on every iteration, so only construct once and possibly resize */
    int*                  includedrows;       /**< 1 if constraints (or vars) dual variable is included in original S-interior point/ray */
    int*                  projshiftbasis;     /**< mapping for basis used in factorization (maps [1,...,|includedrows|] -> 2*nrows+2*ncols) */
-#if defined SCIP_WITH_GMP && defined SCIP_WITH_EXACTSOLVE
+#if SCIP_HAS_GMP && SCIP_HAS_EXACTSOLVE
    qsnum_factor_work*    rectfactor;         /**< stores factorized matrix for project-and-shift */
-#endif
+#endif /* SCIP_HAS_GMP && SCIP_HAS_EXACTSOLVE */
    SCIP_RATIONAL*        commonslack;        /**< slack by which S-interior point/ray satisfies inequalities */
    int                   projshiftbasisdim;  /**< length of projshiftbasis */
    int                   nextendedrows;      /**< dimension of S-interior point/ray = 2*(ncols+nrows) */

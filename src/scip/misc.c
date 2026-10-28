@@ -11104,7 +11104,7 @@ void SCIPsplitFilename(
       lastdot = NULL;
 
    /* detect known compression extensions */
-#ifdef SCIP_WITH_ZLIB
+#if SCIP_HAS_ZLIB
    if( lastdot != NULL )
    {
       char* compext;
@@ -11124,7 +11124,7 @@ void SCIPsplitFilename(
       if( lastslash != NULL && lastdot != NULL && lastdot < lastslash ) /* is the last dot belonging to the path? */
          lastdot = NULL;
    }
-#endif
+#endif /* SCIP_HAS_ZLIB */
 
    if( lastslash == NULL )
    {

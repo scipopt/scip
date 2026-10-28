@@ -210,7 +210,7 @@ SCIP_RETCODE SCIPstatUpdateVarRootLPBestEstimate(
    SCIP_Real             oldrootpscostscore  /**< old minimum pseudo cost score of variable */
    );
 
-#ifdef TPI_NONE
+#if SCIP_TPI_NONE
 /* no TPI included so just update the stats */
 
 #define SCIPstatUpdate(stat, set, field, val) do { \
@@ -225,7 +225,7 @@ SCIP_RETCODE SCIPstatUpdateVarRootLPBestEstimate(
    (stat)->field += (val); \
    } while(0)
 
-#else
+#else /* !SCIP_TPI_NONE */
 /* TPI not none, so increment deterministic time for relevant stats */
 
 #define SCIPupdateDeterministicTimeCount(stat, set, val) do { \
@@ -296,7 +296,7 @@ SCIP_RETCODE SCIPstatUpdateVarRootLPBestEstimate(
    } \
    (stat)->field += (val); \
    } while(0)
-#endif
+#endif /* SCIP_TPI_NONE */
 
 
 /* if we have a C99 compiler */

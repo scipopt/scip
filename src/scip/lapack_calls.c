@@ -50,7 +50,7 @@
 /*lint --e{788,818}*/
 
 
-#ifdef SCIP_WITH_LAPACK
+#if SCIP_HAS_LAPACK
 /* we use 64 bit integers as the base type */
 typedef int64_t LAPACKINTTYPE;
 
@@ -108,7 +108,7 @@ void F77_FUNC(dgetrs, DGETRS)(char* TRANS, LAPACKINTTYPE* N, LAPACKINTTYPE* NRHS
 void F77_FUNC(ilaver, ILAVER)(LAPACKINTTYPE* MAJOR, LAPACKINTTYPE* MINOR, LAPACKINTTYPE* PATCH);
 
 /**@} */
-#endif
+#endif /* SCIP_HAS_LAPACK */
 
 /*
  * Functions
@@ -123,14 +123,14 @@ SCIP_Bool SCIPlapackIsAvailable(void)
    if ( SCIPisIpoptAvailableIpopt() )
       return TRUE;
 
-#ifdef SCIP_WITH_LAPACK
+#if SCIP_HAS_LAPACK
    return TRUE;
-#else
+#else /* !SCIP_HAS_LAPACK */
    return FALSE;
-#endif
+#endif /* SCIP_HAS_LAPACK */
 }
 
-#ifdef SCIP_WITH_LAPACK
+#if SCIP_HAS_LAPACK
 /** converts a number stored in a int64_t to an int, depending on big- or little endian machines
  *
  *  We assume that the number actually fits into an int. Thus, if more bits are used, we assume that the number is
@@ -175,7 +175,7 @@ int convertToInt(
    }
    return work.small[1];
 }
-#endif
+#endif /* SCIP_HAS_LAPACK */
 
 /** returns whether Lapack s available, i.e., whether it has been linked in */
 void SCIPlapackVersion(
@@ -184,30 +184,30 @@ void SCIPlapackVersion(
    int*                  patchver            /**< patch version number */
    )
 {
-#ifdef SCIP_WITH_LAPACK
+#if SCIP_HAS_LAPACK
    LAPACKINTTYPE MAJOR = 0LL;
    LAPACKINTTYPE MINOR = 0LL;
    LAPACKINTTYPE PATCH = 0LL;
-#endif
+#endif /* SCIP_HAS_LAPACK */
 
    assert( majorver != NULL );
    assert( minorver != NULL );
    assert( patchver != NULL );
 
-#ifdef SCIP_WITH_LAPACK
+#if SCIP_HAS_LAPACK
    F77_FUNC(ilaver, ILAVER)(&MAJOR, &MINOR, &PATCH);
 
    *majorver = convertToInt(MAJOR);
    *minorver = convertToInt(MINOR);
    *patchver = convertToInt(PATCH);
-#else
+#else /* !SCIP_HAS_LAPACK */
    *majorver = -1;
    *minorver = -1;
    *patchver = -1;
-#endif
+#endif /* SCIP_HAS_LAPACK */
 }
 
-#ifdef SCIP_WITH_LAPACK
+#if SCIP_HAS_LAPACK
 /** computes eigenvalues of a symmetric matrix using LAPACK */
 static
 SCIP_RETCODE lapackComputeEigenvalues(
@@ -343,7 +343,7 @@ SCIP_RETCODE lapackComputeEigenvalues(
 
    return SCIP_OKAY;
 }
-#endif
+#endif /* SCIP_HAS_LAPACK */
 
 /** computes eigenvalues and eigenvectors of a dense symmetric matrix
  *
@@ -365,12 +365,12 @@ SCIP_RETCODE SCIPlapackComputeEigenvalues(
    else
    {
       assert( bufmem != NULL );
-#ifdef SCIP_WITH_LAPACK
+#if SCIP_HAS_LAPACK
       SCIP_CALL( lapackComputeEigenvalues(bufmem, geteigenvectors, N, a, w) );
-#else
+#else /* !SCIP_HAS_LAPACK */
       SCIPerrorMessage("Lapack not available.\n");
       return SCIP_PLUGINNOTFOUND;
-#endif
+#endif /* SCIP_HAS_LAPACK */
    }
 
    return SCIP_OKAY;
@@ -405,7 +405,7 @@ SCIP_RETCODE SCIPlapackSolveLinearEquations(
    }
    else
    {
-#ifdef SCIP_WITH_LAPACK
+#if SCIP_HAS_LAPACK
       LAPACKINTTYPE INFO;
       LAPACKINTTYPE N;
       LAPACKINTTYPE* pivots;
@@ -450,12 +450,12 @@ SCIP_RETCODE SCIPlapackSolveLinearEquations(
       BMSfreeBufferMemoryArray(bufmem, &pivots);
       BMSfreeBufferMemoryArray(bufmem, &btmp);
       BMSfreeBufferMemoryArray(bufmem, &Atmp);
-#else
+#else /* !SCIP_HAS_LAPACK */
       SCIP_UNUSED(bufmem);
 
       /* call fallback solution in nlpi_ipopt_dummy */
       SCIP_CALL( SCIPsolveLinearEquationsIpopt(n, A, b, x, success) );
-#endif
+#endif /* SCIP_HAS_LAPACK */
    }
 
    return SCIP_OKAY;

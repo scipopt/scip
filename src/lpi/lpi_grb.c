@@ -53,19 +53,19 @@
 #error "The Gurobi interface only works for Gurobi versions at least 7.0.2"
 #endif
 
-#ifdef SCIP_THREADSAFE
+#if SCIP_IS_THREADSAFE
    #if defined(_Thread_local)
       /* Use thread local environment in order to not create a new environment for each new LP. */
       static _Thread_local GRBenv*    reusegrbenv = NULL; /**< thread local Gurobi environment */
       static _Thread_local int        numlp = 0;          /**< number of open LP objects */
       #define SCIP_REUSEENV
    #endif
-#else
+#else /* !SCIP_IS_THREADSAFE */
    /* Global Gurobi environment in order to not create a new environment for each new LP. This is not thread safe. */
    static GRBenv*           reusegrbenv = NULL; /**< global Gurobi environment */
    static int               numlp = 0;          /**< number of open LP objects */
    #define SCIP_REUSEENV
-#endif
+#endif /* SCIP_IS_THREADSAFE */
 
 /* macro for checking return codes of Gurobi */
 #define CHECK_ZERO(messagehdlr, x) do { int _restat_;                   \

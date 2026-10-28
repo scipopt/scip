@@ -31,7 +31,7 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#ifdef TPI_OMP
+#if SCIP_TPI_OMP
 
 #ifndef __TYPE_TPI_OPENMP_H__
 #define __TYPE_TPI_OPENMP_H__
@@ -48,4 +48,4 @@ typedef struct {
 
 #endif
 
-#endif
+#endif /* SCIP_TPI_OMP */

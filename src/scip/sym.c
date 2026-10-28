@@ -1487,7 +1487,6 @@ int SCIPsymhdlrGetPresolPriority(
 }
 
 /** gets description of symmetry handler */
-SCIP_EXPORT
 const char* SCIPsymhdlrGetDesc(
    SCIP_SYMHDLR*         symhdlr             /**< symmetry handler */
    )

@@ -423,7 +423,7 @@
 
 
 /** checks if name matches reference */
-#ifdef SCIP_CHECK_NAME
+#if SCIP_CHECK_NAME
 
 #define SCIP_STRINGEQ(name, reference, retcode)                                                                       \
    do                                                                                                                 \
@@ -439,10 +439,10 @@
    }                                                                                                                  \
    while( FALSE )
 
-#else
+#else /* !SCIP_CHECK_NAME */
 
 #define SCIP_STRINGEQ(name, reference, retcode)
 
-#endif
+#endif /* SCIP_CHECK_NAME */
 
 #endif

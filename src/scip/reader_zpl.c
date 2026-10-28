@@ -33,7 +33,7 @@
 
 #include "scip/reader_zpl.h"
 
-#ifdef SCIP_WITH_ZIMPL
+#if SCIP_HAS_ZIMPL
 
 #include <unistd.h>
 #include <stdbool.h>
@@ -80,9 +80,9 @@ extern "C" {
 
 /* @Note: Due to dependencies we need the following order. */
 /* include the ZIMPL headers necessary to define the LP and MINLP construction interface */
-#ifdef SCIP_WITH_GMP
+#if SCIP_HAS_GMP
 #include <gmp.h>
-#endif
+#endif /* SCIP_HAS_GMP */
 #include "zimpl/attribute.h"
 #include "zimpl/ratlptypes.h"
 #include "zimpl/lint.h"
@@ -137,7 +137,7 @@ SCIP_ReaderData
    SCIP_RETCODE          retcode;            /**< store a none SCIP_OKAY return code if an error occurred */
 };
 
-#if defined(SCIP_WITH_GMP) &&  defined(SCIP_WITH_BOOST)
+#if SCIP_HAS_GMP && SCIP_HAS_BOOST
 /** convert between scips_rational and zimpl's numb type */
 static
 SCIP_RETCODE RcreateNumb(
@@ -158,7 +158,7 @@ SCIP_RETCODE RcreateNumb(
 
    return SCIP_OKAY;
 }
-#else
+#else /* !SCIP_HAS_GMP || !SCIP_HAS_BOOST */
 /** convert between scips_rational and zimpl's numb type */
 static
 SCIP_RETCODE RcreateNumb(
@@ -171,7 +171,7 @@ SCIP_RETCODE RcreateNumb(
    SCIPrationalSetReal(*rational, numb_todbl(numb));
    return SCIP_OKAY;
 }
-#endif
+#endif /* SCIP_HAS_GMP && SCIP_HAS_BOOST */
 
 /** abort the reading with an errormessage; this type of constraint is not supported
  *  in exact solving
@@ -1918,7 +1918,7 @@ SCIP_RETCODE SCIPincludeReaderZpl(
    SCIP*                 scip                /**< SCIP data structure */
    )
 { /*lint --e{715}*/
-#ifdef SCIP_WITH_ZIMPL
+#if SCIP_HAS_ZIMPL
 #if (ZIMPL_VERSION >= 341)
    SCIP_READERDATA* readerdata;
    SCIP_READER* reader;
@@ -1953,13 +1953,13 @@ SCIP_RETCODE SCIPincludeReaderZpl(
 
    (void) SCIPsnprintf(extcodename, SCIP_MAXSTRLEN, "ZIMPL %d.%d.%d", ZIMPL_VERSION/100, (ZIMPL_VERSION%100)/10, ZIMPL_VERSION%10); /*lint !e778*/
    SCIP_CALL( SCIPincludeExternalCodeInformation(scip, extcodename, "Zuse Institute Mathematical Programming Language developed by T. Koch (zimpl.zib.de)") );
-#else
+#else /* ZIMPL_VERSION < 341 */
    assert(scip != NULL);
 
    SCIPwarningMessage(scip, "SCIP does only support ZIMPL 3.4.1 and higher. Please update your ZIMPL version %d.%d.%d\n",
       ZIMPL_VERSION/100, (ZIMPL_VERSION%100)/10, ZIMPL_VERSION%10);
-#endif
-#endif
+#endif /* ZIMPL_VERSION >= 341 */
+#endif /* SCIP_HAS_ZIMPL */
 
    return SCIP_OKAY;
 }

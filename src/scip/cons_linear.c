@@ -10012,14 +10012,14 @@ SCIP_RETCODE convertLongEquality(
             /* add new variable to problem */
             SCIP_CALL( SCIPaddVar(scip, newvar) );
 
-#ifdef WITH_DEBUG_SOLUTION
+#if SCIP_HAS_DEBUG_SOLUTION
             if( SCIPdebugIsMainscip(scip) )
             {
                SCIP_Real varval;
                SCIP_CALL( SCIPdebugGetSolVal(scip, var, &varval) );
                SCIP_CALL( SCIPdebugAddSolVal(scip, newvar, absval * varval) );
             }
-#endif
+#endif /* SCIP_HAS_DEBUG_SOLUTION */
 
             /* convert the continuous variable with coefficient 1.0 into an implied integral variable */
             SCIPdebugMsg(scip, "linear constraint <%s>: aggregating continuous variable <%s> to newly created implied integral variable <%s>, aggregation factor = %g\n",
