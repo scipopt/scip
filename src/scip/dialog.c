@@ -175,7 +175,7 @@ SCIP_RETCODE readLine(
       char* result;
 
       /* display prompt */
-      printf("%s", prompt);
+      SCIPioPrintStdout("%s", prompt);
 
       /* read line from stdin */
       result = fgets(&dialoghdlr->buffer[dialoghdlr->bufferpos], dialoghdlr->buffersize - dialoghdlr->bufferpos, stdin);

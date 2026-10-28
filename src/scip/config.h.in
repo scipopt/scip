@@ -9,6 +9,7 @@
 #cmakedefine BMS_NOBLOCKMEM
 #cmakedefine SCIP_NOBUFFERMEM
 #cmakedefine WITH_DEBUG_SOLUTION
+#cmakedefine SCIP_CUSTOM_IO
 #cmakedefine SCIP_NO_SIGACTION
 #cmakedefine SCIP_NO_STRTOK_R
 #cmakedefine TPI_NONE

@@ -4108,7 +4108,7 @@ SCIP_RETCODE writeOpbConstraints(
 
       SCIPerrorMessage("Cannot print constraint %s with non-integral coefficient or sides in opb-format\n",
             SCIPconsGetName(cons));
-      SCIP_CALL( SCIPprintCons(scip, cons, stderr) );
+      SCIP_CALL( SCIPprintCons(scip, cons, SCIPioGetStderr()) );
       SCIPinfoMessage(scip, file, ";\n");
    }
 

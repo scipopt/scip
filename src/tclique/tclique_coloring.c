@@ -41,6 +41,9 @@
 #include "tclique/tclique_def.h"
 #include "tclique/tclique_coloring.h"
 #include "blockmemshell/memory.h"
+#ifdef WITH_SCIPDEF
+#include "scip/pub_misc.h"
+#endif
 
 
 
