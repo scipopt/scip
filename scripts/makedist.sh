@@ -25,7 +25,7 @@ git ls-files | xargs dirname | sort -u | xargs chmod 750
 git ls-files | xargs chmod 640
 git ls-files "*.sh" "scripts/split_scip/*.py" | xargs chmod 750
 
-chmod 750 scripts/* check/cmpres.awk cmake/Modules/asan-wrapper
+chmod 750 scripts/* check/cmpres.awk cmake/asan-wrapper
 
 # pack files tracked by git and append $NAME to the front
 echo "pack files"
