@@ -173,38 +173,6 @@ if(NOT TARGET SCIP::SCIP)
       endif()
    endif()
    
-   # Support for legacy FindGMP.cmake modules.
-   if(GMP_FOUND AND NOT TARGET GMP::GMP)
-      add_library(GMP::GMP IMPORTED INTERFACE)
-      if(TARGET GMP::gmp)
-         message(WARNING "Found GMP has no GMP::GMP target; interfacing GMP::gmp instead; consider using SCIP's FindGMP module.")
-         target_link_libraries(GMP::GMP GMP::gmp)
-      elseif(TARGET GMP)
-         message(WARNING "Found GMP has no GMP::GMP target; interfacing GMP instead; consider using SCIP's FindGMP module.")
-         target_link_libraries(GMP::GMP GMP)
-      elseif(TARGET gmp)
-         message(WARNING "Found GMP has no GMP::GMP target; interfacing gmp instead; consider using SCIP's FindGMP module.")
-         target_link_libraries(GMP::GMP gmp)
-      elseif(GMP_INCLUDE_DIRS AND GMP_LIBRARIES)
-         message(WARNING "Found GMP has no GMP::GMP target; using legacy variables GMP_INCLUDE_DIRS=\"${GMP_INCLUDE_DIRS}\" and GMP_LIBRARIES=\"${GMP_LIBRARIES}\" instead; consider using SCIP's FindGMP module.")
-         # GMP_LIBRARIES may be a list, so we need to create each library seperately and glue them via an INTERFACE library.
-         list(LENGTH GMP_LIBRARIES num_gmp_lib)
-         math(EXPR last_gmp_lib ${num_gmp_lib}-1)
-         foreach(id_gmp_lib RANGE ${last_gmp_lib})
-            add_library(GMP::libgmp_${id_gmp_lib} UNKNOWN IMPORTED)
-            list(GET GMP_LIBRARIES ${id_gmp_lib} the_gmp_lib)
-            set_target_properties(GMP::libgmp_${id_gmp_lib} PROPERTIES
-               IMPORTED_LOCATION "${the_gmp_lib}"
-               INTERFACE_INCLUDE_DIRECTORIES "${GMP_INCLUDE_DIRS}"
-               )
-            target_link_libraries(GMP::GMP
-               INTERFACE GMP::libgmp_${id_gmp_lib})
-         endforeach()
-      else()
-         message(FATAL_ERROR "Found GMP has no GMP::GMP target; unable to recover; consider using SCIP's FindGMP module.")
-      endif()
-   endif()
-   
    # If SCIP was built statically with Boost then we also need it.
    @SCIP_CONFIG_BOOST_DIR@
    if(SCIP_HAS_BOOST AND NOT SCIP_HAS_PIC)
