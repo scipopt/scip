@@ -161,9 +161,9 @@ enum ProbingBounds
    IMPL_LB = 0,                              /**< lower bounds after implications and cliques */
    IMPL_UB = 1,                              /**< upper bounds after implications and cliques */
    PROP_LB = 2,                              /**< lower bounds after propagation */
-   PROP_UB = 3,                              /**< upper bounds after propagation */
-   NBOUNDARRAYS = 4                          /**< number of bound arrays */
+   PROP_UB = 3                               /**< upper bounds after propagation */
 };
+#define NBOUNDARRAYS 4                       /**< number of bound arrays of a probing direction */
 
 
 /*
