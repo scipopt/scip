@@ -155,16 +155,6 @@ struct ProbingSparse
 };
 typedef struct ProbingSparse PROBINGSPARSE;
 
-/** bound arrays of a probing direction in the sparse analysis */
-enum ProbingBounds
-{
-   IMPL_LB = 0,                              /**< lower bounds after implications and cliques */
-   IMPL_UB = 1,                              /**< upper bounds after implications and cliques */
-   PROP_LB = 2,                              /**< lower bounds after propagation */
-   PROP_UB = 3                               /**< upper bounds after propagation */
-};
-#define NBOUNDARRAYS 4                       /**< number of bound arrays of a probing direction */
-
 
 /*
  * Local methods
@@ -641,9 +631,17 @@ SCIP_RETCODE analyzeDeductionsSparse(
    SCIP_Bool*            cutoff              /**< buffer to store whether a cutoff is detected */
    )
 {
+   /* the 4 bound arrays of a probing direction */
+   enum ProbingBounds
+   {
+      IMPL_LB = 0,                           /**< lower bounds after implications and cliques */
+      IMPL_UB = 1,                           /**< upper bounds after implications and cliques */
+      PROP_LB = 2,                           /**< lower bounds after propagation */
+      PROP_UB = 3                            /**< upper bounds after propagation */
+   };
    SCIP_VAR** setvars;
-   SCIP_Real* src[2][NBOUNDARRAYS];
-   SCIP_Real* dst[2][NBOUNDARRAYS];
+   SCIP_Real* src[2][4];
+   SCIP_Real* dst[2][4];
    int* setpos;
    int nset;
    int stamp;
@@ -702,7 +700,7 @@ SCIP_RETCODE analyzeDeductionsSparse(
    SCIP_CALL( SCIPallocBufferArray(scip, &setvars, MAX(nset, 1)) );
    for( d = 0; d < 2; ++d )
    {
-      for( a = 0; a < NBOUNDARRAYS; ++a )
+      for( a = 0; a < 4; ++a )
       {
          SCIP_CALL( SCIPallocBufferArray(scip, &dst[d][a], MAX(nset, 1)) ); /*lint !e866*/
       }
@@ -747,7 +745,7 @@ SCIP_RETCODE analyzeDeductionsSparse(
          {
             for( d = 0; d < 2; ++d )
             {
-               for( a = 0; a < NBOUNDARRAYS; ++a )
+               for( a = 0; a < 4; ++a )
                   assert(dst[d][a][k] == src[d][a][p]); /*lint !e777*/
             }
             ++k;
@@ -777,7 +775,7 @@ SCIP_RETCODE analyzeDeductionsSparse(
 
    for( d = 1; d >= 0; --d )
    {
-      for( a = NBOUNDARRAYS - 1; a >= 0; --a )
+      for( a = 3; a >= 0; --a )
       {
          SCIPfreeBufferArray(scip, &dst[d][a]);
       }
