@@ -370,15 +370,22 @@ if(NOT TARGET SCIP::SCIP)
    endif()
 endif()
 
-# Deprecated variables.
-add_library(SCIP_LIBRARIES INTERFACE IMPORTED)
-if(CMAKE_VERSION VERSION_GREATER_EQUAL 3.17)
-   set_target_properties(SCIP_LIBRARIES PROPERTIES
-      DEPRECATION "Do not use SCIP_INCLUDE_DIRS and SCIP_LIBRARIES anymore, but the SCIP::SCIP target instead.")
-else()
-   message(DEBUG "CMake version ${CMAKE_VERSION} is too low to mark SCIP_LIBRARIES target as deprecated!")
+# Deprecated `SCIP_LIBRARIES` target aliases SCIP::libscip.
+if(NOT TARGET SCIP_LIBRARIES)
+   add_library(SCIP_LIBRARIES INTERFACE IMPORTED)
+   if(CMAKE_VERSION VERSION_GREATER_EQUAL 3.17)
+      set_target_properties(SCIP_LIBRARIES PROPERTIES
+         DEPRECATION "Do not use SCIP_INCLUDE_DIRS and SCIP_LIBRARIES anymore, but the SCIP::SCIP target instead.")
+   else()
+      message(DEBUG "CMake version ${CMAKE_VERSION} is too low to mark SCIP_LIBRARIES target as deprecated!")
+   endif()
+   target_link_libraries(SCIP_LIBRARIES INTERFACE SCIP::libscip)
 endif()
-target_link_libraries(SCIP_LIBRARIES INTERFACE SCIP::libscip)
-set(SCIP_LIBRARIES "SCIP_LIBRARIES")
+
+# Deprecated variables.
 get_target_property(SCIP_INCLUDE_DIRS SCIP::public_dependencies INTERFACE_INCLUDE_DIRECTORIES)
+set(SCIP_LIBRARIES "SCIP_LIBRARIES")
+if(SCIP_HAS_PIC)
+   set(SCIP_PIC_LIBRARIES "SCIP_LIBRARIES")
+endif()
 
