@@ -155,6 +155,16 @@ struct ProbingSparse
 };
 typedef struct ProbingSparse PROBINGSPARSE;
 
+/** bound arrays of a probing direction in the sparse analysis */
+enum ProbingBounds
+{
+   IMPL_LB = 0,                              /**< lower bounds after implications and cliques */
+   IMPL_UB = 1,                              /**< upper bounds after implications and cliques */
+   PROP_LB = 2,                              /**< lower bounds after propagation */
+   PROP_UB = 3,                              /**< upper bounds after propagation */
+   NBOUNDARRAYS = 4                          /**< number of bound arrays */
+};
+
 
 /*
  * Local methods
@@ -490,10 +500,16 @@ SCIP_RETCODE sparseAddDeps(
             SCIP_CALL( sparseAddDeps(scip, sparse, probvar, pos) );
          }
          break;
-      default:
-         /* a fixed variable: the bounds that derive from it do not change */
+      case SCIP_VARSTATUS_FIXED:
+         /* the bounds that derive from a fixed variable do not change */
          break;
-      } /*lint !e788*/
+      case SCIP_VARSTATUS_ORIGINAL:
+      case SCIP_VARSTATUS_AGGREGATED:
+      case SCIP_VARSTATUS_NEGATED:
+      default:
+         SCIPerrorMessage("invalid status of an active representative\n");
+         return SCIP_INVALIDDATA;
+      }
    }
 
    return SCIP_OKAY;
@@ -626,8 +642,8 @@ SCIP_RETCODE analyzeDeductionsSparse(
    )
 {
    SCIP_VAR** setvars;
-   SCIP_Real* src[2][4];
-   SCIP_Real* dst[2][4];
+   SCIP_Real* src[2][NBOUNDARRAYS];
+   SCIP_Real* dst[2][NBOUNDARRAYS];
    int* setpos;
    int nset;
    int stamp;
@@ -674,21 +690,19 @@ SCIP_RETCODE analyzeDeductionsSparse(
    else
       SCIPsortInt(setpos, nset);
 
-   /* per direction (0: probing to 0, 1: to 1): lower and upper bounds after implications and cliques, then lower and
-    * upper bounds after propagation
-    */
-   src[0][0] = zeroimpllbs;
-   src[0][1] = zeroimplubs;
-   src[0][2] = zeroproplbs;
-   src[0][3] = zeropropubs;
-   src[1][0] = oneimpllbs;
-   src[1][1] = oneimplubs;
-   src[1][2] = oneproplbs;
-   src[1][3] = onepropubs;
+   /* per direction (0: probing to 0, 1: to 1) */
+   src[0][IMPL_LB] = zeroimpllbs;
+   src[0][IMPL_UB] = zeroimplubs;
+   src[0][PROP_LB] = zeroproplbs;
+   src[0][PROP_UB] = zeropropubs;
+   src[1][IMPL_LB] = oneimpllbs;
+   src[1][IMPL_UB] = oneimplubs;
+   src[1][PROP_LB] = oneproplbs;
+   src[1][PROP_UB] = onepropubs;
    SCIP_CALL( SCIPallocBufferArray(scip, &setvars, MAX(nset, 1)) );
    for( d = 0; d < 2; ++d )
    {
-      for( a = 0; a < 4; ++a )
+      for( a = 0; a < NBOUNDARRAYS; ++a )
       {
          SCIP_CALL( SCIPallocBufferArray(scip, &dst[d][a], MAX(nset, 1)) ); /*lint !e866*/
       }
@@ -715,10 +729,10 @@ SCIP_RETCODE analyzeDeductionsSparse(
 
          implchanged = (sparse->implmark[d][p] == sparse->implstamp[d]);
          propchanged = (sparse->propmark[d][p] == sparse->propstamp[d]);
-         dst[d][0][k] = (implchanged ? src[d][0][p] : lb);
-         dst[d][1][k] = (implchanged ? src[d][1][p] : ub);
-         dst[d][2][k] = (propchanged ? src[d][2][p] : lb);
-         dst[d][3][k] = (propchanged ? src[d][3][p] : ub);
+         dst[d][IMPL_LB][k] = (implchanged ? src[d][IMPL_LB][p] : lb);
+         dst[d][IMPL_UB][k] = (implchanged ? src[d][IMPL_UB][p] : ub);
+         dst[d][PROP_LB][k] = (propchanged ? src[d][PROP_LB][p] : lb);
+         dst[d][PROP_UB][k] = (propchanged ? src[d][PROP_UB][p] : ub);
       }
    }
 
@@ -733,7 +747,7 @@ SCIP_RETCODE analyzeDeductionsSparse(
          {
             for( d = 0; d < 2; ++d )
             {
-               for( a = 0; a < 4; ++a )
+               for( a = 0; a < NBOUNDARRAYS; ++a )
                   assert(dst[d][a][k] == src[d][a][p]); /*lint !e777*/
             }
             ++k;
@@ -747,8 +761,8 @@ SCIP_RETCODE analyzeDeductionsSparse(
             ub = SCIPvarGetUbLocal(vars[p]);
             for( d = 0; d < 2; ++d )
             {
-               assert(src[d][0][p] == lb && src[d][1][p] == ub); /*lint !e777*/
-               assert(src[d][2][p] == lb && src[d][3][p] == ub); /*lint !e777*/
+               assert(src[d][IMPL_LB][p] == lb && src[d][IMPL_UB][p] == ub); /*lint !e777*/
+               assert(src[d][PROP_LB][p] == lb && src[d][PROP_UB][p] == ub); /*lint !e777*/
             }
             assert(SCIPvarGetStatus(vars[p]) == SCIP_VARSTATUS_FIXED || !SCIPisEQ(scip, lb, ub));
          }
@@ -756,13 +770,14 @@ SCIP_RETCODE analyzeDeductionsSparse(
    }
 #endif
 
-   SCIP_CALL( SCIPanalyzeDeductionsProbing(scip, vars[probingpos], 0.0, 1.0, nset, setvars, dst[0][0], dst[0][1],
-         dst[0][2], dst[0][3], dst[1][0], dst[1][1], dst[1][2], dst[1][3], nfixedvars, naggrvars, nimplications, nchgbds,
-         cutoff) );
+   SCIP_CALL( SCIPanalyzeDeductionsProbing(scip, vars[probingpos], 0.0, 1.0, nset, setvars,
+         dst[0][IMPL_LB], dst[0][IMPL_UB], dst[0][PROP_LB], dst[0][PROP_UB],
+         dst[1][IMPL_LB], dst[1][IMPL_UB], dst[1][PROP_LB], dst[1][PROP_UB],
+         nfixedvars, naggrvars, nimplications, nchgbds, cutoff) );
 
    for( d = 1; d >= 0; --d )
    {
-      for( a = 3; a >= 0; --a )
+      for( a = NBOUNDARRAYS - 1; a >= 0; --a )
       {
          SCIPfreeBufferArray(scip, &dst[d][a]);
       }
@@ -787,7 +802,6 @@ SCIP_RETCODE applyProbingVar(
    SCIP_Real*            proplbs,            /**< array to store lower bounds after full propagation */
    SCIP_Real*            propubs,            /**< array to store upper bounds after full propagation */
    PROBINGSPARSE*        sparse,             /**< sparse bookkeeping, or NULL to store the bounds of all variables */
-   int                   direction,          /**< direction in the sparse bookkeeping (0: probing to 0, 1: to 1) */
    SCIP_Bool*            cutoff              /**< pointer to store whether the probing direction is infeasible */
    );
 
@@ -959,7 +973,7 @@ SCIP_RETCODE applyProbing(
          {
             /* apply probing for fixing the variable to one */
             SCIP_CALL( applyProbingVar(scip, vars, nvars, i, SCIP_BOUNDTYPE_LOWER, 1.0, propdata->proprounds,
-                  oneimpllbs, oneimplubs, oneproplbs, onepropubs, sparse, 1, &localcutoff) );
+                  oneimpllbs, oneimplubs, oneproplbs, onepropubs, sparse, &localcutoff) );
 
             if( localcutoff )
             {
@@ -1018,7 +1032,7 @@ SCIP_RETCODE applyProbing(
          {
             /* apply probing for fixing the variable to zero */
             SCIP_CALL( applyProbingVar(scip, vars, nvars, i, SCIP_BOUNDTYPE_UPPER, 0.0, propdata->proprounds,
-                  zeroimpllbs, zeroimplubs, zeroproplbs, zeropropubs, sparse, 0, &localcutoff) );
+                  zeroimpllbs, zeroimplubs, zeroproplbs, zeropropubs, sparse, &localcutoff) );
 
             if( localcutoff )
             {
@@ -1721,11 +1735,11 @@ SCIP_RETCODE applyProbingVar(
    SCIP_Real*            proplbs,            /**< array to store lower bounds after full propagation */
    SCIP_Real*            propubs,            /**< array to store upper bounds after full propagation */
    PROBINGSPARSE*        sparse,             /**< sparse bookkeeping, or NULL to store the bounds of all variables */
-   int                   direction,          /**< direction in the sparse bookkeeping (0: probing to 0, 1: to 1) */
    SCIP_Bool*            cutoff              /**< pointer to store whether the probing direction is infeasible */
    )
 {
    SCIP_Bool dense;
+   int direction;
    int i;
 
    assert(impllbs != NULL);
@@ -1736,7 +1750,7 @@ SCIP_RETCODE applyProbingVar(
    assert(0 <= probingpos && probingpos < nvars);
    assert(SCIPisGE(scip, bound, SCIPvarGetLbLocal(vars[probingpos])));
    assert(SCIPisLE(scip, bound, SCIPvarGetUbLocal(vars[probingpos])));
-   assert(sparse == NULL || direction == 0 || direction == 1);
+   assert(sparse == NULL || SCIPvarIsBinary(vars[probingpos]));
 
    SCIPdebugMsg(scip, "applying probing on variable <%s> %s %g (nlocks=%d/%d, impls=%d/%d, clqs=%d/%d)\n",
       SCIPvarGetName(vars[probingpos]), boundtype == SCIP_BOUNDTYPE_UPPER ? "<=" : ">=", bound,
@@ -1752,6 +1766,8 @@ SCIP_RETCODE applyProbingVar(
    dense = TRUE;
 #endif
 
+   /* the sparse bookkeeping probes a binary variable: to 1 by its lower bound, to 0 by its upper bound */
+   direction = (boundtype == SCIP_BOUNDTYPE_LOWER ? 1 : 0);
    if( sparse != NULL )
       sparse->nproppos[direction] = 0;
 
@@ -1875,7 +1891,7 @@ SCIP_RETCODE SCIPapplyProbingVar(
    )
 {
    SCIP_CALL( applyProbingVar(scip, vars, nvars, probingpos, boundtype, bound, maxproprounds, impllbs, implubs, proplbs,
-         propubs, NULL, 0, cutoff) );
+         propubs, NULL, cutoff) );
 
    return SCIP_OKAY;
 }
