@@ -107,17 +107,17 @@ Solution: add `-DZIMPL_DIR=/path/to/zimpl/installation` or disable ZIMPL by sett
 Problem:
 ```
 -- Finding Ipopt.
-CMake Error at cmake/Modules/FindIpopt.cmake:293 (message):
+CMake Error at cmake/FindIpopt.cmake:293 (message):
   Could NOT find Ipopt version 3.12.  Try specifying suitable IPOPT_DIR!
 Call Stack (most recent call first):
-  cmake/Modules/FindIpopt.cmake:304 (ipopt_find)
+  cmake/FindIpopt.cmake:304 (ipopt_find)
   CMakeLists.txt:951 (find_package)
 
 -- Finding IPOPT
-CMake Error at cmake/Modules/FindIpopt.cmake:293 (message):
+CMake Error at cmake/FindIpopt.cmake:293 (message):
   Could NOT find Ipopt version 3.12.  Try specifying suitable IPOPT_DIR!
 Call Stack (most recent call first):
-  cmake/Modules/FindIpopt.cmake:304 (ipopt_find)
+  cmake/FindIpopt.cmake:304 (ipopt_find)
   CMakeLists.txt:1005 (find_package)
 
 -- Configuring incomplete, errors occurred!

@@ -88,7 +88,7 @@ set(CPPAD_SHIPPED_VERSION 20180000.0) # Version of CppAD that is shipped with SC
 include(GNUInstallDirs)
 
 # Path to CMake modules such as FindGMP.cmake.
-list(APPEND CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake/Modules")
+list(APPEND CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake")
 
 # Packaging
 set(CPACK_RESOURCE_FILE_LICENSE "${PROJECT_SOURCE_DIR}/LICENSE")
@@ -1458,48 +1458,53 @@ endif()
 
 # Configure scip-config.cmake for the build-tree:
 # We add the CMake module path from the sources.
-set(EXTRA_CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake/Modules")
+set(EXTRA_CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake")
 configure_file("${PROJECT_SOURCE_DIR}/scip-config.cmake.in"
    "${CMAKE_BINARY_DIR}/scip-config.cmake"
-   @ONLY)
+   @ONLY
+   )
 
 # Configure scip-config.cmake for the installation.
 # We add the current directory of the installed scip-config.cmake.
 set(EXTRA_CMAKE_MODULE_PATH "\${CMAKE_CURRENT_LIST_DIR}")
 configure_file("${PROJECT_SOURCE_DIR}/scip-config.cmake.in"
    "${PROJECT_BINARY_DIR}/${CMAKE_FILES_DIRECTORY}/scip-config.cmake"
-   @ONLY)
+   @ONLY
+   )
 
 # Install CMake config and modules.
 install(FILES
    "${PROJECT_BINARY_DIR}/${CMAKE_FILES_DIRECTORY}/scip-config.cmake"
    "${CMAKE_BINARY_DIR}/scip-config-version.cmake"
-   $<$<BOOL:${SCIP_HAS_CONOPT}>:${PROJECT_SOURCE_DIR}/cmake/Modules/FindCONOPT.cmake>
-   $<$<BOOL:${SCIP_HAS_WORHP}>:${PROJECT_SOURCE_DIR}/cmake/Modules/FindWORHP.cmake>
-   $<$<BOOL:${SCIP_HAS_GMP}>:${PROJECT_SOURCE_DIR}/cmake/Modules/FindGMP.cmake>
-   $<$<BOOL:${SCIP_HAS_MPFR}>:${PROJECT_SOURCE_DIR}/cmake/Modules/FindMPFR.cmake>
-   $<$<BOOL:${SCIP_HAS_EXTERNAL_NAUTY}>:${PROJECT_SOURCE_DIR}/cmake/Modules/Findnauty.cmake>
-   $<$<BOOL:${SCIP_HAS_IPOPT}>:${PROJECT_SOURCE_DIR}/cmake/Modules/FindIpopt.cmake>
-   $<$<BOOL:${SCIP_HAS_CLP}>:${PROJECT_SOURCE_DIR}/cmake/Modules/FindCLP.cmake>
-   $<$<BOOL:${SCIP_HAS_CLP}>:${PROJECT_SOURCE_DIR}/cmake/Modules/FindCoinUtils.cmake>
-   $<$<BOOL:${SCIP_HAS_QSOPTEX}>:${PROJECT_SOURCE_DIR}/cmake/Modules/FindQSoptex.cmake>
-   $<$<BOOL:${SCIP_HAS_READLINE}>:${PROJECT_SOURCE_DIR}/cmake/Modules/FindReadline.cmake>
-   $<$<BOOL:${SCIP_HAS_CPLEX}>:${PROJECT_SOURCE_DIR}/cmake/Modules/FindCPLEX.cmake>
-   $<$<BOOL:${SCIP_HAS_XPRESS}>:${PROJECT_SOURCE_DIR}/cmake/Modules/FindXpress.cmake>
-   $<$<BOOL:${SCIP_HAS_MOSEK}>:${PROJECT_SOURCE_DIR}/cmake/Modules/FindMOSEK.cmake>
-   $<$<BOOL:${SCIP_HAS_GUROBI}>:${PROJECT_SOURCE_DIR}/cmake/Modules/FindGurobi.cmake>
-   "${PROJECT_SOURCE_DIR}/cmake/Modules/FindPackageMessage.cmake"
-   DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/scip")
+   "$<$<BOOL:${SCIP_HAS_CONOPT}>:${PROJECT_SOURCE_DIR}/cmake/FindCONOPT.cmake>"
+   "$<$<BOOL:${SCIP_HAS_WORHP}>:${PROJECT_SOURCE_DIR}/cmake/FindWORHP.cmake>"
+   "$<$<BOOL:${SCIP_HAS_GMP}>:${PROJECT_SOURCE_DIR}/cmake/FindGMP.cmake>"
+   "$<$<BOOL:${SCIP_HAS_MPFR}>:${PROJECT_SOURCE_DIR}/cmake/FindMPFR.cmake>"
+   "$<$<BOOL:${SCIP_HAS_EXTERNAL_NAUTY}>:${PROJECT_SOURCE_DIR}/cmake/Findnauty.cmake>"
+   "$<$<BOOL:${SCIP_HAS_IPOPT}>:${PROJECT_SOURCE_DIR}/cmake/FindIpopt.cmake>"
+   "$<$<BOOL:${SCIP_HAS_CLP}>:${PROJECT_SOURCE_DIR}/cmake/FindCLP.cmake>"
+   "$<$<BOOL:${SCIP_HAS_CLP}>:${PROJECT_SOURCE_DIR}/cmake/FindCoinUtils.cmake>"
+   "$<$<BOOL:${SCIP_HAS_QSOPTEX}>:${PROJECT_SOURCE_DIR}/cmake/FindQSoptex.cmake>"
+   "$<$<BOOL:${SCIP_HAS_READLINE}>:${PROJECT_SOURCE_DIR}/cmake/FindReadline.cmake>"
+   "$<$<BOOL:${SCIP_HAS_CPLEX}>:${PROJECT_SOURCE_DIR}/cmake/FindCPLEX.cmake>"
+   "$<$<BOOL:${SCIP_HAS_XPRESS}>:${PROJECT_SOURCE_DIR}/cmake/FindXpress.cmake>"
+   "$<$<BOOL:${SCIP_HAS_MOSEK}>:${PROJECT_SOURCE_DIR}/cmake/FindMOSEK.cmake>"
+   "$<$<BOOL:${SCIP_HAS_GUROBI}>:${PROJECT_SOURCE_DIR}/cmake/FindGurobi.cmake>"
+   "${PROJECT_SOURCE_DIR}/cmake/FindPackageMessage.cmake"
+   DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/scip"
+   )
 
 # Install the scip-targets export set.
 install(EXPORT scip-targets
    NAMESPACE SCIP::
-   DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/scip")
+   DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/scip"
+   )
 
 # Export targets for the build-tree.
 export(EXPORT scip-targets
    NAMESPACE SCIP::
-   FILE "${CMAKE_BINARY_DIR}/scip-targets.cmake")
+   FILE "${CMAKE_BINARY_DIR}/scip-targets.cmake"
+   )
 
 ##### LOGGING #####
 
