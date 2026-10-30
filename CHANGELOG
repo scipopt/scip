@@ -44,6 +44,11 @@ Performance improvements
 - restarts based on tree size estimation are no longer capped at one; each additional restart becomes harder to trigger than the last
 - spend a smaller part of the LP iterations on strong branching as long as only few restarts have been performed
 
+Fixed bugs
+----------
+
+- fixed loss of explicit upper bounds when a later MPS bound record changes a binary variable to integer
+
 Interface changes
 -----------------
 
