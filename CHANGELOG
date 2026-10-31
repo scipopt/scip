@@ -31,6 +31,7 @@ Fixed bugs
 - use SCIPcalcMemGrowSize() in distribution branching and diving heuristic to avoid integer overflow
 - issue NODEINFEASIBLE event for focus nodes that are cut off while switching the path
 - fixed use of non-default path to readline headers in cmake builds
+- made sure that nauty is terminated if the maxmum number of generators is reached
 
 Examples and applications
 -------------------------
