@@ -128,13 +128,13 @@ if(NOT TARGET SCIP::SCIP)
    
    # For `find_dependency` and `find_package_message` functions.
    include(CMakeFindDependencyMacro)
-   
+
    # If SCIP was built statically with GMP then we also need it.
    # Note that GMP must be found if one wants to use rational
    # arithmetic parts of the library. We disable it to allow
    # users without GMP headers to just use SCIP.
-   @SCIP_CONFIG_GMP_DIR@
    if(SCIP_HAS_GMP AND NOT SCIP_HAS_PIC)
+      @SCIP_CONFIG_GMP_DIR@
       find_dependency(GMP)
    
       # Support legacy FindGMP.cmake versions.
@@ -174,8 +174,8 @@ if(NOT TARGET SCIP::SCIP)
    endif()
    
    # If SCIP was built statically with Boost then we also need it.
-   @SCIP_CONFIG_BOOST_DIR@
    if(SCIP_HAS_BOOST AND NOT SCIP_HAS_PIC)
+      @SCIP_CONFIG_BOOST_DIR@
       # Extract Boost version in old CMake versions.
       if(Boost_FOUND)
          if(NOT DEFINED Boost_VERSION_STRING)
@@ -204,40 +204,40 @@ if(NOT TARGET SCIP::SCIP)
    endif()
    
    # If SCIP was built statically with CLP then we also need it.
-   @SCIP_CONFIG_CLP_DIR@
-   @SCIP_CONFIG_COINUTILS_DIR@
    if(SCIP_HAS_CLP AND NOT SCIP_HAS_PIC)
+      @SCIP_CONFIG_CLP_DIR@
+      @SCIP_CONFIG_COINUTILS_DIR@
       find_dependency(CLP)
       find_dependency(CoinUtils)
    endif()
    
    # If SCIP was built statically with CONOPT then we also need it.
-   @SCIP_CONFIG_CONOPT_DIR@
    if(SCIP_HAS_CONOPT AND NOT SCIP_HAS_PIC)
+      @SCIP_CONFIG_CONOPT_DIR@
       find_dependency(CONOPT)
    endif()
    
    # If SCIP was built statically with CPLEX then we also need it.
-   @SCIP_CONFIG_CPLEX_DIR@
    if(SCIP_HAS_CPLEX AND NOT SCIP_HAS_PIC)
+      @SCIP_CONFIG_CPLEX_DIR@
       find_dependency(CPLEX)
    endif()
    
    # If SCIP was built statically with Gurobi then we also need it.
-   @SCIP_CONFIG_GUROBI_DIR@
    if(SCIP_HAS_GUROBI AND NOT SCIP_HAS_PIC)
+      @SCIP_CONFIG_GUROBI_DIR@
       find_dependency(Gurobi)
    endif()
    
    # If SCIP was built statically with HiGHS then we also need it.
-   @SCIP_CONFIG_HIGHS_DIR@
    if(SCIP_HAS_HIGHS AND NOT SCIP_HAS_PIC)
+      @SCIP_CONFIG_HIGHS_DIR@
       find_dependency(HIGHS)
    endif()
    
    # If SCIP was built statically with Ipopt then we also need it.
-   @SCIP_CONFIG_IPOPT_DIR@
    if(SCIP_HAS_IPOPT AND NOT SCIP_HAS_PIC)
+      @SCIP_CONFIG_IPOPT_DIR@
       find_dependency(Ipopt)
    endif()
    
@@ -247,8 +247,8 @@ if(NOT TARGET SCIP::SCIP)
    endif()
    
    # If SCIP was built statically with MPFR then we also need it.
-   @SCIP_CONFIG_MPFR_DIR@
    if(SCIP_HAS_MPFR AND NOT SCIP_HAS_PIC)
+      @SCIP_CONFIG_MPFR_DIR@
       find_dependency(MPFR)
    
       # Support legacy FindMPFR.cmake versions.
@@ -288,26 +288,26 @@ if(NOT TARGET SCIP::SCIP)
    endif()
    
    # If SCIP was built statically with MOSEK then we also need it.
-   @SCIP_CONFIG_MOSEK_DIR@
    if(SCIP_HAS_MOSEK AND NOT SCIP_HAS_PIC)
+      @SCIP_CONFIG_MOSEK_DIR@
       find_dependency(MOSEK)
    endif()
    
    # If SCIP was built statically with OR-Tools (for GLOP) then we also need it.
-   @SCIP_CONFIG_ORTOOLS_DIR@
    if(SCIP_HAS_ORTOOLS AND NOT SCIP_HAS_PIC)
-      find_dependency(ortools)
+      @SCIP_CONFIG_ORTOOLS_DIR@
+      find_dependency(ortools HINTS "${ortools_DIR}")
    endif()
    
    # If SCIP was built statically with PaPILO then we also need it.
-   @SCIP_CONFIG_PAPILO_DIR@
    if(SCIP_HAS_PAPILO AND NOT SCIP_HAS_PIC)
-      find_dependency(PAPILO)
+      @SCIP_CONFIG_PAPILO_DIR@
+      find_dependency(PAPILO HINTS "${PAPILO_DIR}")
    endif()
    
    # If SCIP was built statically with QSopt_ex then we also need it.
-   @SCIP_CONFIG_QSOPTEX_DIR@
    if(SCIP_HAS_QSOPTEX AND NOT SCIP_HAS_PIC)
+      @SCIP_CONFIG_QSOPTEX_DIR@
       find_dependency(QSoptex)
    endif()
    
@@ -317,27 +317,27 @@ if(NOT TARGET SCIP::SCIP)
    endif()
    
    # If SCIP was built statically with SoPlex then we also need it.
-   @SCIP_CONFIG_SOPLEX_DIR@
    if(SCIP_HAS_SOPLEX AND NOT SCIP_HAS_PIC)
-      find_dependency(SOPLEX)
+      @SCIP_CONFIG_SOPLEX_DIR@
+      find_dependency(SOPLEX HINTS "${SOPLEX_DIR}")
    endif()
    
    # If SCIP was built statically with WORHP then we also need it.
-   @SCIP_CONFIG_WORHP_DIR@
    if(SCIP_HAS_WORHP AND NOT SCIP_HAS_PIC)
+      @SCIP_CONFIG_WORHP_DIR@
       find_dependency(WORHP)
    endif()
    
    # If SCIP was built statically with Xpress then we also need it.
-   @SCIP_CONFIG_XPRESS_DIR@
    if(SCIP_HAS_XPRESS AND NOT SCIP_HAS_PIC)
+      @SCIP_CONFIG_XPRESS_DIR@
       find_dependency(Xpress)
    endif()
    
    # If SCIP was built statically with ZIMPL then we also need it.
-   @SCIP_CONFIG_ZIMPL_DIR@
    if(SCIP_HAS_ZIMPL AND NOT SCIP_HAS_PIC)
-      find_dependency(ZIMPL)
+      @SCIP_CONFIG_ZIMPL_DIR@
+      find_dependency(ZIMPL HINTS "${ZIMPL_DIR}")
    endif()
    
    # If SCIP was built statically with ZLIB then we also need it.
