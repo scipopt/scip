@@ -97,6 +97,13 @@ set(SCIP_HAS_ORTOOOLS @SCIP_HAS_ORTOOLS@)
 # Whether SCIP was built with PaPILO.
 set(SCIP_HAS_PAPILO @SCIP_HAS_PAPILO@)
 
+# Whether SCIP has Fortran.
+set(SCIP_HAS_FORTRAN @SCIP_HAS_FORTRAN@)
+if(SCIP_HAS_FORTRAN)
+   # This has to be done independently of presence of SCIP::SCIP.
+   enable_language(Fortran)
+endif()
+
 # Whether SCIP was built with QSopt_ex.
 set(SCIP_HAS_QSOPTEX @SCIP_HAS_QSOPTEX@)
 
