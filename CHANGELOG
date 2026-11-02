@@ -49,6 +49,7 @@ Fixed bugs
 - use pkg-config to detect Ipopt libs with cmake on Windows when not using Microsoft-compatible compiler (e.g., MINGW)
 - fixed nondeterministic selection of the winning solver in concurrent solving when several solvers reach an
   optimal status; ties are now broken by the smallest solver id
+- fixed inverted avoidmemout check when deciding number of threads for concurrent solve
 - move definition of ObjTable::scip_output() into objtable.h to avoid missing symbols (vtable, typeinfo) when linking SCIP library
 - fix problems when using the clone() methods by making clonable objscip classes visible in shared/dynamic libraries
   (so the typeinfo of the classes becomes available)
@@ -64,6 +65,7 @@ Fixed bugs
 - reset coefficient state after setting objective offset in LP reader
 - use SCIPcalcMemGrowSize() in distribution branching and diving heuristic to avoid integer overflow
 - issue NODEINFEASIBLE event for focus nodes that are cut off while switching the path
+- fixed use of non-default path to readline headers in cmake builds
 
 Examples and applications
 -------------------------
