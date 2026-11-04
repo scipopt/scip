@@ -1,3 +1,4 @@
+set heur localsearch freq -1
 set limits memory 512
 set misc avoidmemout TRUE
 set parallel minnthreads 1
