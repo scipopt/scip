@@ -734,40 +734,6 @@ SCIP_RETCODE analyzeDeductionsSparse(
       }
    }
 
-#ifndef NDEBUG
-   /* debug mode: the set has the bounds of the dense arrays, and on all other variables the analysis does nothing */
-   {
-      int p;
-
-      for( k = 0, p = 0; p < nvars; ++p )
-      {
-         if( k < nset && setpos[k] == p )
-         {
-            for( d = 0; d < 2; ++d )
-            {
-               for( a = 0; a < 4; ++a )
-                  assert(dst[d][a][k] == src[d][a][p]); /*lint !e777*/
-            }
-            ++k;
-         }
-         else
-         {
-            SCIP_Real lb;
-            SCIP_Real ub;
-
-            lb = SCIPvarGetLbLocal(vars[p]);
-            ub = SCIPvarGetUbLocal(vars[p]);
-            for( d = 0; d < 2; ++d )
-            {
-               assert(src[d][IMPL_LB][p] == lb && src[d][IMPL_UB][p] == ub); /*lint !e777*/
-               assert(src[d][PROP_LB][p] == lb && src[d][PROP_UB][p] == ub); /*lint !e777*/
-            }
-            assert(SCIPvarGetStatus(vars[p]) == SCIP_VARSTATUS_FIXED || !SCIPisEQ(scip, lb, ub));
-         }
-      }
-   }
-#endif
-
    SCIP_CALL( SCIPanalyzeDeductionsProbing(scip, vars[probingpos], 0.0, 1.0, nset, setvars,
          dst[0][IMPL_LB], dst[0][IMPL_UB], dst[0][PROP_LB], dst[0][PROP_UB],
          dst[1][IMPL_LB], dst[1][IMPL_UB], dst[1][PROP_LB], dst[1][PROP_UB],
@@ -1736,7 +1702,6 @@ SCIP_RETCODE applyProbingVar(
    SCIP_Bool*            cutoff              /**< pointer to store whether the probing direction is infeasible */
    )
 {
-   SCIP_Bool dense;
    int direction;
    int i;
 
@@ -1756,13 +1721,6 @@ SCIP_RETCODE applyProbingVar(
       SCIPvarGetNLocksUpType(vars[probingpos], SCIP_LOCKTYPE_MODEL),
       SCIPvarGetNImpls(vars[probingpos], FALSE), SCIPvarGetNImpls(vars[probingpos], TRUE),
       SCIPvarGetNCliques(vars[probingpos], FALSE), SCIPvarGetNCliques(vars[probingpos], TRUE));
-
-   /* debug mode also stores all bounds: analyzeDeductionsSparse() checks the sparse ones against them */
-#ifdef NDEBUG
-   dense = (sparse == NULL);
-#else
-   dense = TRUE;
-#endif
 
    /* the sparse bookkeeping probes a binary variable: to 1 by its lower bound, to 0 by its upper bound */
    direction = (boundtype == SCIP_BOUNDTYPE_LOWER ? 1 : 0);
@@ -1820,7 +1778,7 @@ SCIP_RETCODE applyProbingVar(
          }
       }
 
-      if( dense ) /*lint !e774*/
+      if( sparse == NULL )
       {
          for( i = 0; i < nvars; ++i )
          {
@@ -1856,7 +1814,7 @@ SCIP_RETCODE applyProbingVar(
          }
       }
 
-      if( dense ) /*lint !e774*/
+      if( sparse == NULL )
       {
          for( i = 0; i < nvars; ++i )
          {
