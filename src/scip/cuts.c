@@ -12213,6 +12213,7 @@ SCIP_Real evaluateLiftingFunctionKnapsack(
    SCIP_Real QUAD(hfrac);
    SCIP_Real cutcoef;
    SCIP_Real hreal;
+   SCIP_Real tol;
    int h;
 
    /* the lifted value is at least the coeficient (a_k) divided by \bar{a} because the largest value
@@ -12266,7 +12267,9 @@ SCIP_Real evaluateLiftingFunctionKnapsack(
    while( h < coversize )
    {
       SCIPquadprecSumQD(tmp, x, -covervals[h]); /* recall: covervals[h] = S^-(h+1) */
-      if( QUAD_TO_DBL(tmp) <= SCIPepsilon(scip) * MAX(1.0, REALABS(covervals[h])) )
+      tol = REALABS(covervals[h]);
+      tol = SCIPepsilon(scip) * MAX(1.0, tol);
+      if( QUAD_TO_DBL(tmp) <= tol )
          break;
 
       ++h;
