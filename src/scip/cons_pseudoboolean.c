@@ -7760,10 +7760,17 @@ SCIP_DECL_CONSINIT(consInitPseudoboolean)
       SCIP_VAR** vars;
       int nvars;
       int v;
+#endif
 
       assert(conshdlrdata->allconsanddatas[c] != NULL);
+
+      /* skip mapping data of untransformed and-constraints */
+      if( !conshdlrdata->allconsanddatas[c]->istransformed )
+         continue;
+
       assert(conshdlrdata->allconsanddatas[c]->newvars == NULL);
 
+#ifndef NDEBUG
       vars = conshdlrdata->allconsanddatas[c]->vars;
       nvars = conshdlrdata->allconsanddatas[c]->nvars;
       assert(vars != NULL || nvars == 0);
