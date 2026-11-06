@@ -33,6 +33,7 @@ Fixed bugs
 - issue NODEINFEASIBLE event for focus nodes that are cut off while switching the path
 - fixed use of non-default path to readline headers in cmake builds
 - made sure that nauty is terminated if the maximum number of generators is reached
+- skip mapping data of untransformed and-constraints in pseudoboolean constraint initialization to avoid segmentation fault for example in IIS generation
 
 Examples and applications
 -------------------------
