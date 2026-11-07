@@ -292,7 +292,8 @@
 #define SCIP_DEFAULT_LP_RESOLVEITERMIN     1000 /**< minimum number of iterations that are allowed for LP resolve */
 #define SCIP_DEFAULT_LP_SOLUTIONPOLISHING     3 /**< LP solution polishing method (0: disabled, 1: only root, 2: always, 3: auto) */
 #define SCIP_DEFAULT_LP_REFACTORINTERVAL      0 /**< LP refactorization interval (0: automatic) */
-#define SCIP_DEFAULT_LP_ALWAYSGETDUALS    FALSE /**< should the dual solution always be collected */
+#define SCIP_DEFAULT_LP_ALWAYSGETDUALS    FALSE /**< should the dual solution always be collected? */
+#define SCIP_DEFAULT_LP_OUTPUTADDEDROWS   FALSE /**< should the rows added to the LP be output for debugging? */
 
 /* NLP */
 
@@ -2158,6 +2159,11 @@ SCIP_RETCODE SCIPsetCreate(
          "lp/alwaysgetduals",
          "should the Farkas duals always be collected when an LP is found to be infeasible?",
          &(*set)->lp_alwaysgetduals, FALSE, SCIP_DEFAULT_LP_ALWAYSGETDUALS,
+         NULL, NULL) );
+   SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
+         "lp/outputaddedrows",
+         "should the rows added to the LP be output for debugging?",
+         &(*set)->lp_outputaddedrows, FALSE, SCIP_DEFAULT_LP_OUTPUTADDEDROWS,
          NULL, NULL) );
 
    /* NLP parameters */
