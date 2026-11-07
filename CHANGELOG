@@ -215,6 +215,7 @@ Interface changes
   generated no-good cut. Default TRUE.
 - `benders/<benders>/benderscut/integer/zerosolvars`: should variables that have a zero solution value be included in the
   generated no-good cut. Default TRUE.
+- 'lp/outputaddedrows' to output the rows that are added to the LP
 
 ### Changed parameters
 

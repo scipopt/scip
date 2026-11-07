@@ -412,6 +412,7 @@ struct SCIP_Set
    int                   lp_solutionpolishing;/**< LP solution polishing method (0: disabled, 1: only root, 2: always, 3: auto) */
    int                   lp_refactorinterval;/**< LP refactorization interval (0: automatic) */
    SCIP_Bool             lp_alwaysgetduals;  /**< should the dual solution always be collected for LP solutions. */
+   SCIP_Bool             lp_outputaddedrows; /**< should the rows added to the LP be output for debugging? */
 
    /* NLP settings */
    SCIP_Bool             nlp_disable;        /**< should the NLP be disabled even if a constraint handler enabled it? */
