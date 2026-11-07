@@ -68,6 +68,7 @@ Fixed bugs
 - fixed use of non-default path to readline headers in cmake builds
 - made sure that nauty is terminated if the maximum number of generators is reached
 - skip mapping data of untransformed and-constraints in pseudoboolean constraint initialization to avoid segmentation fault for example in IIS generation
+- reset valid depth for local constraint in SCIPconsSetLocal() to avoid invalid globality e.g. within disjunction constraint
 
 Examples and applications
 -------------------------

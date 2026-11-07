@@ -6949,17 +6949,17 @@ SCIP_RETCODE SCIPconsSetPropagated(
    return SCIP_OKAY;
 }
 
-/** sets the local flag of the given constraint */
+/** sets the local flag of the given constraint and resets valid depth */
 void SCIPconsSetLocal(
    SCIP_CONS*            cons,               /**< constraint */
    SCIP_Bool             local               /**< new value */
    )
 {
    assert(cons != NULL);
+   assert(cons->local || cons->validdepth <= 0);
 
    cons->local = local;
-   if( !local )
-      cons->validdepth = 0;
+   cons->validdepth = local ? -1 : 0;
 }
 
 /** sets the modifiable flag of the given constraint */
