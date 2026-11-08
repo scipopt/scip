@@ -102,6 +102,8 @@ include(CPack)
 
 ##### OPTIONS #####
 
+option(BUILD_PACKAGE "are we building a package" OFF)
+
 # Whether to build shared libraries.
 option(BUILD_SHARED_LIBS "Whether to build shared libraries" ON)
 # For compatibility with the Makefile build system, the SHARED option exists.
