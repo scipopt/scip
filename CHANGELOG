@@ -43,6 +43,8 @@ Performance improvements
   hold up the other solvers
 - restarts based on tree size estimation are no longer capped at one; each additional restart becomes harder to trigger than the last
 - spend a smaller part of the LP iterations on strong branching as long as only few restarts have been performed
+- probing in presolving records per probing only the variables whose bounds changed instead of copying and comparing
+  the bounds of all variables; same deductions, less work per probing
 
 Interface changes
 -----------------
