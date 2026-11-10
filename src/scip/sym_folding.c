@@ -41,7 +41,7 @@
 /* fundamental symmetry handler properties */
 #define SYM_NAME                 "folding"
 #define SYM_DESC                 "symmetry handler for folding based reductions"
-#define SYM_PRIORITY             50000       /**< priority of try-add function*/
+#define SYM_PRIORITY            -1 /**< priority of try-add function*/
 
 /* optional symmetry handler properties */
 #define SYM_PRESOLPRIORITY       0 /**< priority of the symmetry handler for presolving */
