@@ -141,10 +141,12 @@ void addLogLinearization(
    }
    else
    {
-      /* log(x) -> secant between f=floor(refpoint) and f+1 = log((f+1.0)/f) * x + log(f) - log((f+1.0)/f) * f */
+      /* log(x) -> secant between f=floor(refpoint) and f+1 = log((f+1.0)/f) * x + log(f) - log((f+1.0)/f) * f
+       * for refpoint < 1, use f = 1, since the integral points in the domain of log are at least 1
+       */
       SCIP_Real f;
 
-      f = SCIPfloor(scip, refpoint);
+      f = MAX(1.0, SCIPfloor(scip, refpoint));
       assert(f > 0.0);
 
       coef     = log((f+1.0) / f);
