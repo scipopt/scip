@@ -4151,6 +4151,7 @@
  * component.
  * The first symmetry handler that can handle the symmetries of a component will get this component assigned.
  * That is, the higher the priority the more likely it is that this symmetry handler handles a symmetry component.
+ * Symmetry handlers with a negative priority are disabled, i.e., they will not try to handle symmetries.
  *
  * @subsection SYM_ADDITIONALPROPERTIES Optional Symmetry Handler properties
  *
