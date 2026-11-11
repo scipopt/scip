@@ -7365,11 +7365,11 @@ SCIP_RETCODE treeCreateProbingNode(
    SCIP_CALL( nodeCreate(&node, blkmem, set) );
    assert(node != NULL);
 
-   /* mark node to be a probing node */
-   node->nodetype = SCIP_NODETYPE_PROBINGNODE; /*lint !e641*/
-
    /* create the probingnode data */
    SCIP_CALL( probingnodeCreate(&node->data.probingnode, blkmem, lp) );
+
+   /* mark node to be a probing node */
+   node->nodetype = SCIP_NODETYPE_PROBINGNODE; /*lint !e641*/
 
    /* make the current node the parent of the new probing node */
    retcode = nodeAssignParent(node, blkmem, set, tree, currentnode, 0.0);

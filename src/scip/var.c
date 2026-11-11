@@ -2584,12 +2584,12 @@ SCIP_RETCODE SCIPvarCreateOriginal(
    SCIP_CALL( varCreate(var, blkmem, set, stat, name, lb, ub, obj, vartype, impltype, initial, removable,
          varcopy, vardelorig, vartrans, vardeltrans, vardata) );
 
-   /* set variable status and data */
-   (*var)->varstatus = SCIP_VARSTATUS_ORIGINAL; /*lint !e641*/
+   /* set variable data and status */
    (*var)->data.original.origdom.holelist = NULL;
    (*var)->data.original.origdom.lb = lb;
    (*var)->data.original.origdom.ub = ub;
    (*var)->data.original.transvar = NULL;
+   (*var)->varstatus = SCIP_VARSTATUS_ORIGINAL; /*lint !e641*/
 
    /* capture variable */
    SCIPvarCapture(*var);
@@ -2630,10 +2630,10 @@ SCIP_RETCODE SCIPvarCreateTransformed(
    /* create event filter for transformed variable */
    SCIP_CALL( SCIPeventfilterCreate(&(*var)->eventfilter, blkmem) );
 
-   /* set variable status and data */
-   (*var)->varstatus = SCIP_VARSTATUS_LOOSE; /*lint !e641*/
+   /* set variable data and status */
    (*var)->data.loose.minaggrcoef = 1.0;
    (*var)->data.loose.maxaggrcoef = 1.0;
+   (*var)->varstatus = SCIP_VARSTATUS_LOOSE; /*lint !e641*/
 
    /* capture variable */
    SCIPvarCapture(*var);
@@ -4690,11 +4690,11 @@ SCIP_RETCODE SCIPvarColumn(
 
    SCIPsetDebugMsg(set, "creating column for variable <%s>\n", var->name);
 
-   /* switch variable status */
-   var->varstatus = SCIP_VARSTATUS_COLUMN; /*lint !e641*/
-
    /* create column of variable */
    SCIP_CALL( SCIPcolCreate(&var->data.col, blkmem, set, stat, var, 0, NULL, NULL, var->removable) );
+
+   /* switch variable status */
+   var->varstatus = SCIP_VARSTATUS_COLUMN; /*lint !e641*/
 
    if( var->probindex != -1 )
    {
@@ -4727,11 +4727,11 @@ SCIP_RETCODE SCIPvarColumnExact(
 
    SCIPsetDebugMsg(set, "creating exact column for variable <%s>\n", var->name);
 
-   /* switch variable status */
-   var->exactdata->varstatusexact = SCIP_VARSTATUS_COLUMN; /*lint !e641*/
-
    /* create column of variable */
    SCIP_CALL( SCIPcolExactCreate(&(var->exactdata->colexact), SCIPvarGetCol(var), blkmem, set, stat, var, 0, NULL, NULL, var->removable) );
+
+   /* switch variable status */
+   var->exactdata->varstatusexact = SCIP_VARSTATUS_COLUMN; /*lint !e641*/
 
    if( var->probindex != -1 )
    {
@@ -4764,6 +4764,10 @@ SCIP_RETCODE SCIPvarLoose(
    /* free column of variable */
    SCIP_CALL( SCIPcolFree(&var->data.col, blkmem, set, eventqueue, lp) );
 
+   /* initialize variable data */
+   var->data.loose.minaggrcoef = 1.0;
+   var->data.loose.maxaggrcoef = 1.0;
+
    /* switch variable status */
    var->varstatus = SCIP_VARSTATUS_LOOSE; /*lint !e641*/
 
@@ -4775,10 +4779,6 @@ SCIP_RETCODE SCIPvarLoose(
       /* inform LP, that problem variable is now a loose variable and no longer a column */
       SCIP_CALL( SCIPlpUpdateVarLoose(lp, set, var) );
    }
-
-   /* initialize variable data */
-   var->data.loose.minaggrcoef = 1.0;
-   var->data.loose.maxaggrcoef = 1.0;
 
    return SCIP_OKAY;
 }
@@ -6797,8 +6797,8 @@ SCIP_RETCODE SCIPvarAggregate(
       && SCIPsetIsEQ(set, scalar, -1.0) && SCIPsetIsEQ(set, constant, 1.0) )
    {
       /* link both variables as negation pair */
-      var->varstatus = SCIP_VARSTATUS_NEGATED; /*lint !e641*/
       var->data.negate.constant = 1.0;
+      var->varstatus = SCIP_VARSTATUS_NEGATED; /*lint !e641*/
       var->negatedvar = aggvar;
       aggvar->negatedvar = var;
 
@@ -6813,10 +6813,10 @@ SCIP_RETCODE SCIPvarAggregate(
    else
    {
       /* convert variable into aggregated variable */
-      var->varstatus = SCIP_VARSTATUS_AGGREGATED; /*lint !e641*/
       var->data.aggregate.var = aggvar;
       var->data.aggregate.scalar = scalar;
       var->data.aggregate.constant = constant;
+      var->varstatus = SCIP_VARSTATUS_AGGREGATED; /*lint !e641*/
 
       /* copy donot(mult)aggr status */
       aggvar->donotaggr |= var->donotaggr;
@@ -7114,9 +7114,9 @@ SCIP_RETCODE SCIPvarAggregateExact(
       && SCIPrationalIsEQReal(scalar, -1.0) && SCIPrationalIsEQReal(constant, 1.0) )
    {
       /* link both variables as negation pair */
+      var->data.negate.constant = 1.0;
       var->varstatus = SCIP_VARSTATUS_NEGATED; /*lint !e641*/
       var->exactdata->varstatusexact = SCIP_VARSTATUS_NEGATED; /*lint !e641*/
-      var->data.negate.constant = 1.0;
       var->negatedvar = aggvar;
       aggvar->negatedvar = var;
 
@@ -7130,16 +7130,15 @@ SCIP_RETCODE SCIPvarAggregateExact(
    else
    {
       /* convert variable into aggregated variable */
-      var->varstatus = SCIP_VARSTATUS_AGGREGATED; /*lint !e641*/
-      var->exactdata->varstatusexact = SCIP_VARSTATUS_AGGREGATED; /*lint !e641*/
-      SCIP_CALL( SCIPrationalCreateBlock(blkmem, &var->exactdata->aggregate.scalar) );
-      SCIP_CALL( SCIPrationalCreateBlock(blkmem, &var->exactdata->aggregate.constant) );
-
       var->data.aggregate.var = aggvar;
-      SCIPrationalSetRational(var->exactdata->aggregate.scalar, scalar);
-      SCIPrationalSetRational(var->exactdata->aggregate.constant, constant);
       var->data.aggregate.scalar = SCIPrationalGetReal(scalar);
       var->data.aggregate.constant = SCIPrationalGetReal(constant);
+      var->varstatus = SCIP_VARSTATUS_AGGREGATED; /*lint !e641*/
+      SCIP_CALL( SCIPrationalCreateBlock(blkmem, &var->exactdata->aggregate.scalar) );
+      SCIP_CALL( SCIPrationalCreateBlock(blkmem, &var->exactdata->aggregate.constant) );
+      SCIPrationalSetRational(var->exactdata->aggregate.scalar, scalar);
+      SCIPrationalSetRational(var->exactdata->aggregate.constant, constant);
+      var->exactdata->varstatusexact = SCIP_VARSTATUS_AGGREGATED; /*lint !e641*/
 
       /* copy doNotMultiaggr status */
       aggvar->donotmultaggr |= var->donotmultaggr;
@@ -8355,12 +8354,12 @@ SCIP_RETCODE SCIPvarMultiaggregate(
          varUpdateMinMaxAggrCoef(tmpvars[v], var, tmpscalars[v]);
 
       /* convert variable into multi-aggregated variable */
-      var->varstatus = SCIP_VARSTATUS_MULTAGGR; /*lint !e641*/
       SCIP_ALLOC( BMSduplicateBlockMemoryArray(blkmem, &var->data.multaggr.vars, tmpvars, ntmpvars) );
       SCIP_ALLOC( BMSduplicateBlockMemoryArray(blkmem, &var->data.multaggr.scalars, tmpscalars, ntmpvars) );
       var->data.multaggr.constant = tmpconstant;
       var->data.multaggr.nvars = ntmpvars;
       var->data.multaggr.varssize = ntmpvars;
+      var->varstatus = SCIP_VARSTATUS_MULTAGGR; /*lint !e641*/
 
       /* mark variable to be non-deletable */
       SCIPvarMarkNotDeletable(var);
@@ -8723,17 +8722,17 @@ SCIP_RETCODE SCIPvarMultiaggregateExact(
       }
 
       /* convert variable into multi-aggregated variable */
-      var->varstatus = SCIP_VARSTATUS_MULTAGGR; /*lint !e641*/
-      var->exactdata->varstatusexact = SCIP_VARSTATUS_MULTAGGR; /*lint !e641*/
       SCIP_ALLOC( BMSduplicateBlockMemoryArray(blkmem, &var->data.multaggr.vars, tmpvars, ntmpvars) );
-      SCIP_CALL( SCIPrationalCopyBlockArray(blkmem, &(var->exactdata->multaggr.scalars), tmpscalars, ntmpvars) );
       SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &var->data.multaggr.scalars, ntmpvars) );
       for( i = 0; i < ntmpvars; ++i )
          var->data.multaggr.scalars[i] = SCIPrationalGetReal(tmpscalars[i]);
-      SCIP_CALL( SCIPrationalCopyBlock(blkmem, &(var->exactdata->multaggr.constant), tmpconstant) );
       var->data.multaggr.constant = SCIPrationalGetReal(tmpconstant);
       var->data.multaggr.nvars = ntmpvars;
       var->data.multaggr.varssize = ntmpvars;
+      var->varstatus = SCIP_VARSTATUS_MULTAGGR; /*lint !e641*/
+      SCIP_CALL( SCIPrationalCopyBlockArray(blkmem, &(var->exactdata->multaggr.scalars), tmpscalars, ntmpvars) );
+      SCIP_CALL( SCIPrationalCopyBlock(blkmem, &(var->exactdata->multaggr.constant), tmpconstant) );
+      var->exactdata->varstatusexact = SCIP_VARSTATUS_MULTAGGR; /*lint !e641*/
 
       /* mark variable to be non-deletable */
       SCIPvarMarkNotDeletable(var);
@@ -9078,11 +9077,11 @@ SCIP_RETCODE SCIPvarNegate(
       /* create negated variable */
       SCIP_CALL( varCreate(negvar, blkmem, set, stat, negvarname, var->glbdom.lb, var->glbdom.ub, 0.0,
             SCIPvarGetType(var), SCIPvarGetImplType(var), var->initial, var->removable, NULL, NULL, NULL, NULL, NULL) );
-      (*negvar)->varstatus = SCIP_VARSTATUS_NEGATED; /*lint !e641*/
       if( SCIPvarIsBinary(var) )
          (*negvar)->data.negate.constant = 1.0;
       else
          (*negvar)->data.negate.constant = var->glbdom.lb + var->glbdom.ub;
+      (*negvar)->varstatus = SCIP_VARSTATUS_NEGATED; /*lint !e641*/
 
       /* create event filter for transformed variable */
       if( SCIPvarIsTransformed(var) )

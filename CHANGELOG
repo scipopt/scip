@@ -454,7 +454,7 @@ Fixed bugs
 - reset valid depth for local constraint in SCIPconsSetLocal() to avoid invalid globality e.g. within disjunction constraint
 - fixed uninitialized data in exact LU factorization (rectlu) leading to wrong results
 - consider all binary objective variables in the pseudoobj propagator to avoid invalid conflicts
-
+- set variable status in SCIPvarColumn(), SCIPvarColumnExact(), SCIPvarMultiaggregate(), SCIPvarMultiaggregateExact(), and node status in treeCreateProbingNode() after data allocation succeeds to enable freeing after data allocation fails
 
 Examples and applications
 -------------------------
