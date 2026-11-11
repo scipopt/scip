@@ -1642,11 +1642,10 @@ SCIP_RETCODE propdataInit(
          uselesscliques = NULL;
       }
 
-      /* collect the variables with non-zero objective contribution and catch global bound tighten events that decrease the
-       * maximal pseudo objective activity
-       */
-      for( v = 0; v < nvars && (nobjintvars == 0 || nobjintvars < propdata->objintvarssize); ++v )
+      /* reiterate all possible binary variables since only non-binary objective variables are counted */
+      for( v = 0; v < nintvars || nobjintvars < propdata->objintvarssize; ++v )
       {
+         assert(v < nvars);
          var = vars[v];
          assert(var != NULL);
 
