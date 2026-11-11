@@ -12267,6 +12267,8 @@ SCIP_Real evaluateLiftingFunctionKnapsack(
    while( h < coversize )
    {
       SCIPquadprecSumQD(tmp, x, -covervals[h]); /* recall: covervals[h] = S^-(h+1) */
+      /* use a relative tolerance, since the row may be scaled arbitrarily and the
+       * rounding errors of x and S^-() grow with its magnitude /*
       tol = REALABS(covervals[h]);
       tol = SCIPepsilon(scip) * MAX(1.0, tol);
       if( QUAD_TO_DBL(tmp) <= tol )
