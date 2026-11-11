@@ -689,6 +689,8 @@ struct SCIP_Set
 
    /* symmetry settings */
    SCIP_Bool             sym_enabled;        /**< is symmetry handling enabled? */
+   SCIP_Real             sym_accuracy;       /**< Accuracy used to compare coefficients and bounds in symmetry
+                                              *   detection. (negative: SCIP's internal epsilon is used) */
    int                   sym_tryaddtiming;   /**< timing for trying to add symmetry handling methods (0: before presolinv; 1: after presolving) */
    int                   sym_maxngenerators; /**< maximum number of symmetry group generators to be computed (-1: unbounded) */
    int                   sym_symtype;        /**< type of symmetries to be considered */

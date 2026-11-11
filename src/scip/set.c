@@ -580,6 +580,9 @@ static const char SCIP_DEFAULT_CERTIFICATE_FILENAME[2] = {'-', '\0'}; /**< name 
                                                  *   different */
 /* symmetry settings */
 #define SCIP_DEFAULT_SYM_ENABLED           TRUE /**< is symmetry handling enabled? */
+#define SCIP_DEFAULT_SYM_ACCURACY            -1 /**< Accuracy used to compare coefficients and bounds in symmetry
+                                                 *   detection. (negative: SCIP's internal epsilon is used) */
+
 #define SCIP_DEFAULT_SYM_TRYADDTIMING SYM_TIMING_AFTERPRESOL /**< timing for trying to add symmetry handling methods (0: before presolinv; 1: after presolving) */
 #define SCIP_DEFAULT_SYM_MAXNGENERATORS    1500 /**< maximum number of symmetry group generators to be computed (-1: unbounded) */
 #define SCIP_DEFAULT_SYM_SYMTYPE SYM_SYMTYPE_PERM /**< type of symmetries to be considered (0: permutation symmetries, 1: signed permutation symmetries) */
@@ -3085,6 +3088,12 @@ SCIP_RETCODE SCIPsetCreate(
          "Is symmetry handling enabled?",
          &(*set)->sym_enabled, FALSE, SCIP_DEFAULT_SYM_ENABLED,
          NULL, NULL) );
+
+   SCIP_CALL( SCIPsetAddRealParam(*set, messagehdlr, blkmem,
+         "symmetries/accuracy",
+         "Accuracy used to compare coefficients and bounds in symmetry detection. (negative: SCIP's internal epsilon is used)",
+         &(*set)->sym_accuracy, FALSE, SCIP_DEFAULT_SYM_ACCURACY,
+         -1, SCIP_REAL_MAX, NULL, NULL) );
 
    SCIP_CALL( SCIPsetAddIntParam(*set, messagehdlr, blkmem,
          "symmetries/tryaddtiming",
