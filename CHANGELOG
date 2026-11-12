@@ -39,6 +39,7 @@ Fixed bugs
 - consider all binary objective variables in the pseudoobj propagator to avoid invalid conflicts
 - set variable status in SCIPvarColumn(), SCIPvarColumnExact(), SCIPvarMultiaggregate(), SCIPvarMultiaggregateExact(), and node status in treeCreateProbingNode() after data allocation succeeds to enable freeing after data allocation fails
 - keep best passed solution in trysol heuristic also for maximization
+- check bound array memory reallocations in conflictClearResolution()
 
 Examples and applications
 -------------------------
