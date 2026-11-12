@@ -46,6 +46,11 @@ Performance improvements
 - probing in presolving records per probing only the variables whose bounds changed instead of copying and comparing
   the bounds of all variables; same deductions, less work per probing
 
+Fixed bugs
+----------
+
+- order stored solutions by rational objective values in exact mode, including insertion, re-sorting, and transformed-space tie breaking
+
 Interface changes
 -----------------
 
