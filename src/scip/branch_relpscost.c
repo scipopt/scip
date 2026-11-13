@@ -2463,6 +2463,8 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpRelpscost)
    branchruledata->sumlogmeangains = 0.0;
    branchruledata->logstdevgain = 0.0;
    branchruledata->nzerogains = 0;
+   branchruledata->currndualgains = 0;
+   branchruledata->currmeandualgain = 0.0;
 
    /* determine whether we should run filtering */
    runfiltering = ! branchruledata->nosymmetry && branchruledata->filtercandssym && SCIPgetSubscipDepth(scip) == 0 && ! SCIPinDive(scip) && ! SCIPinProbing(scip);
