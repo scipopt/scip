@@ -1881,10 +1881,10 @@ SCIP_RETCODE extractSDG(
    SCIP_CALL( estimateSymgraphSize(scip, &nopnodes, &nvalnodes, &nconsnodes, &nedges) );
 
    /* create graph */
-   SCIP_CALL( SCIPgetRealParam(scip, "symmetries/accuracy", &eps) );
+   eps = scip->set->sym_accuracy;
    if( eps < 0 )
    {
-      SCIP_CALL( SCIPgetRealParam(scip, "numerics/epsilon", &eps) );
+      eps = scip->set->num_epsilon;
    }
    SCIP_CALL( SCIPcreateSymgraph(scip, symtype, graph, SCIPgetVars(scip), SCIPgetNVars(scip),
          nopnodes, nvalnodes, nconsnodes, nedges, eps) );

@@ -581,7 +581,7 @@ static const char SCIP_DEFAULT_CERTIFICATE_FILENAME[2] = {'-', '\0'}; /**< name 
 /* symmetry settings */
 #define SCIP_DEFAULT_SYM_ENABLED           TRUE /**< is symmetry handling enabled? */
 #define SCIP_DEFAULT_SYM_ACCURACY            -1 /**< Accuracy used to compare coefficients and bounds in symmetry
-                                                 *   detection. (negative: SCIP's internal epsilon is used) */
+                                                 *   detection (negative: SCIP's internal epsilon is used). */
 
 #define SCIP_DEFAULT_SYM_TRYADDTIMING SYM_TIMING_AFTERPRESOL /**< timing for trying to add symmetry handling methods (0: before presolinv; 1: after presolving) */
 #define SCIP_DEFAULT_SYM_MAXNGENERATORS    1500 /**< maximum number of symmetry group generators to be computed (-1: unbounded) */
@@ -3091,7 +3091,7 @@ SCIP_RETCODE SCIPsetCreate(
 
    SCIP_CALL( SCIPsetAddRealParam(*set, messagehdlr, blkmem,
          "symmetries/accuracy",
-         "Accuracy used to compare coefficients and bounds in symmetry detection. (negative: SCIP's internal epsilon is used)",
+         "Accuracy used to compare coefficients and bounds in symmetry detection (negative: SCIP's internal epsilon is used).",
          &(*set)->sym_accuracy, FALSE, SCIP_DEFAULT_SYM_ACCURACY,
          -1, SCIP_REAL_MAX, NULL, NULL) );
 
