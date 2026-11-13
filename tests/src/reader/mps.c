@@ -32,6 +32,7 @@
 #include <assert.h>
 
 #include "scip/scip.h"
+#include "scip/rational.h"
 #include "scip/reader_mps.h"
 #include "scip/scipdefplugins.h"
 
@@ -114,6 +115,45 @@ void test_readermps_shortlines(void)
     SOFT_ASSERT( SCIPgetNConss(scip) == 3 );
 }
 
+/** @brief preserve an explicit upper bound when a later lower bound changes the variable type */
+void test_readermps_boundorder(void)
+{
+   char filename[SCIP_MAXSTRLEN];
+   int nruns = 1;
+   int exact;
+
+   TESTsetTestfilename(filename, __FILE__, "boundorder.mps");
+#ifdef SCIP_WITH_EXACTSOLVE
+   nruns = 2;
+#endif
+
+   for( exact = 0; exact < nruns; ++exact )
+   {
+      SCIP_VAR* var;
+
+#ifdef SCIP_WITH_EXACTSOLVE
+      SCIP_CALL( SCIPsetBoolParam(scip, "exact/enable", exact) );
+#endif
+      SCIP_CALL( SCIPreadProb(scip, filename, NULL) );
+      var = SCIPfindVar(scip, "x");
+      TEST_ASSERT_NOT_NULL(var);
+      SOFT_ASSERT( SCIPvarIsIntegral(var) );
+      SOFT_ASSERT_EQUAL( SCIPvarGetLbGlobal(var), 0.0 );
+      SOFT_ASSERT_EQUAL( SCIPvarGetUbGlobal(var), 1.0 );
+#ifdef SCIP_WITH_EXACTSOLVE
+      if( exact )
+      {
+         SOFT_ASSERT( SCIPrationalIsEQReal(SCIPvarGetLbGlobalExact(var), 0.0) );
+         SOFT_ASSERT( SCIPrationalIsEQReal(SCIPvarGetUbGlobalExact(var), 1.0) );
+      }
+#endif
+      SCIP_CALL( SCIPsolve(scip) );
+      SOFT_ASSERT_EQUAL( SCIPgetStatus(scip), SCIP_STATUS_OPTIMAL );
+      SOFT_ASSERT_EQUAL( SCIPgetSolOrigObj(scip, SCIPgetBestSol(scip)), 1.0 );
+      SCIP_CALL( SCIPfreeProb(scip) );
+   }
+}
+
 void setUp(void) { setup(); }
 
 void tearDown(void) { teardown(); }
@@ -126,5 +166,6 @@ int main(void)
    RUN_TEST(test_readermps_read2);
    RUN_TEST(test_readermps_spaceinrowname);
    RUN_TEST(test_readermps_shortlines);
+   RUN_TEST(test_readermps_boundorder);
    return UNITY_END();
 }

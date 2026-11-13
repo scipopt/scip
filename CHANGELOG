@@ -46,6 +46,11 @@ Performance improvements
 - probing in presolving records per probing only the variables whose bounds changed instead of copying and comparing
   the bounds of all variables; same deductions, less work per probing
 
+Fixed bugs
+----------
+
+- fixed loss of explicit upper bounds when a later MPS bound record changes a binary variable to integer
+
 Interface changes
 -----------------
 
