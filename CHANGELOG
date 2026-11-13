@@ -459,6 +459,8 @@ Fixed bugs
 - check bound array memory reallocations in conflictClearResolution()
 - fixed that the dynamic lookahead in branch_relpscost did not reset the dual gain sample count and mean at the start of
   each branching call
+- fixed that SCIPeventqueueAdd() recorded a variable's event queue position before appending the event, which left a
+  stale position if the append failed
 
 Examples and applications
 -------------------------
