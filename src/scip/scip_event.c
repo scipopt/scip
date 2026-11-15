@@ -496,7 +496,7 @@ SCIP_RETCODE SCIPdropRowEvent(
    SCIP_EVENTTYPE        eventtype,          /**< event type mask of dropped event */
    SCIP_EVENTHDLR*       eventhdlr,          /**< event handler to process events with */
    SCIP_EVENTDATA*       eventdata,          /**< event data to pass to the event handler when processing this event */
-   int                   filterpos           /**< position of event filter entry returned by SCIPcatchVarEvent(), or -1 */
+   int                   filterpos           /**< position of event filter entry returned by SCIPcatchRowEvent(), or -1 */
    )
 {
    SCIP_CALL( SCIPcheckStage(scip, "SCIPdropRowEvent", FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE) );

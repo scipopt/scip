@@ -2599,7 +2599,7 @@ SCIP_RETCODE readBoundsRational(
                   break;
                case LP_SENSE_NOTHING:
                default:
-                  SCIPerrorMessage("invalid bound sense <%d>\n", leftsense);
+                  SCIPerrorMessage("invalid bound sense <%d>\n", rightsense);
                   return SCIP_INVALIDDATA;
                }
             }
@@ -2782,7 +2782,7 @@ SCIP_RETCODE readBounds(
                   break;
                case LP_SENSE_NOTHING:
                default:
-                  SCIPerrorMessage("invalid bound sense <%d>\n", leftsense);
+                  SCIPerrorMessage("invalid bound sense <%d>\n", rightsense);
                   return SCIP_INVALIDDATA;
                }
             }

@@ -264,7 +264,7 @@ int SCIPgetNCutsels(
 SCIP_RETCODE SCIPsetCutselPriority(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CUTSEL*          cutsel,             /**< cut selector */
-   int                   priority            /**< new priority of the separator */
+   int                   priority            /**< new priority of the cut selector */
    )
 {
    assert(scip != NULL);
