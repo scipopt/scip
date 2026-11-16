@@ -12002,7 +12002,8 @@ SCIP_Bool computeInitialKnapsackCover(
    int*                  varsign,            /**< sign of coefficients for each nonzero in the row be transformation */
    int*                  coverstatus,        /**< array to return the coverstatus for each variable in the  knapsack row */
    int*                  coverpos,           /**< position of nonzero in the knapsack row for each variable in the cover */
-   SCIP_Real*            covervals,          /**< coefficient value of each variable in the cover */
+   SCIP_Real*            covervals,          /**< coefficient value of each variable in the cover (plain values in the
+                                              *   first entries of the array, which is sized for a quad array) */
    int*                  coversize,          /**< pointer to return number of variables in the cover;
                                               *   matches the length of the associated arrays */
    QUAD(SCIP_Real*       coverweight)        /**< pointer to return the weight of the cover;
@@ -12091,8 +12092,9 @@ void prepareLiftingData(
    int*                  coverpos,           /**< position of nonzero in the knapsack row for each variable in the cover */
    int                   coversize,          /**< number of variables in the cover */
    QUAD(SCIP_Real        coverweight),       /**< weight of cover */
-   SCIP_Real*            covervals,          /**< coefficient value of each variable in the cover;
-                                              *   on output stores the running sum of S^-(*) values */
+   SCIP_Real*            covervals,          /**< coefficient value of each variable in the cover (plain values in the
+                                              *   first entries of the array); on output a quad array that stores the
+                                              *   running sum of S^-(*) values */
    int*                  coverstatus,        /**< coverstatus for each variable in the cover. After calling this function
                                               *   variables in C^- will have the value -1, variables in C^+ the value 1,
                                               *   and all variables outside the cover keep the value 0. */
@@ -12107,7 +12109,7 @@ void prepareLiftingData(
    /* Now compute \bar{a}, the unique rational number such that for the cover C it holds that
     * b = \sum_{a_i \in C} \min(\bar{a}, a_i).
     * For that we need to sort by decreasing coefficients of the variables in the cover.
-    * After the sorting the covervals array is free to be reused.
+    * After the sorting the covervals array is free to be reused; it is overwritten by the quad array of S^- values below.
     */
    SCIPsortDownRealInt(covervals, coverpos, coversize);
 
@@ -12189,8 +12191,8 @@ void prepareLiftingData(
          coverstatus[coverpos[k]] = -1;
          SCIPquadprecSumQQ(tmp, tmp, coef);
       }
-      covervals[k] = QUAD_TO_DBL(tmp);
-      SCIPdebugMsg(scip, "S^-(%d) = %g\n", k + 1, covervals[k]);
+      QUAD_ARRAY_STORE(covervals, k, tmp);
+      SCIPdebugMsg(scip, "S^-(%d) = %g\n", k + 1, QUAD_TO_DBL(tmp));
    }
 
    /* set abar to its reciprocal for faster computation of the lifting coefficients */
@@ -12203,14 +12205,14 @@ SCIP_Real evaluateLiftingFunctionKnapsack(
    SCIP*                 scip,               /**< SCIP datastructure */
    QUAD(SCIP_Real        x),                 /**< value to evaluate the lifting function at */
    QUAD(SCIP_Real        abar),              /**< the reciprocal value of \bar{a} */
-   SCIP_Real*            covervals,          /**< the running sum of S^-(*) values */
+   SCIP_Real*            covervals,          /**< the running sum of S^-(*) values, stored as quad array */
    int                   coversize,          /**< the size of the cover */
    int                   cplussize,          /**< the size of C^+ */
    SCIP_Real*            scale               /**< pointer to update the scale to integrality when a fractional value is returned */
    )
 {
-   SCIP_Real QUAD(tmp);
    SCIP_Real QUAD(hfrac);
+   SCIP_Real QUAD(sminus);
    SCIP_Real cutcoef;
    SCIP_Real hreal;
    int h;
@@ -12265,9 +12267,13 @@ SCIP_Real evaluateLiftingFunctionKnapsack(
     */
    while( h < coversize )
    {
-      SCIPquadprecSumQD(tmp, x, -covervals[h]); /* recall: covervals[h] = S^-(h+1) */
-      /* compare with standard epsilon tolerance since computation involves abar, which is computed like an activity */
-      if( !SCIPisPositive(scip, QUAD_TO_DBL(tmp)) )
+      /* recall: covervals[h] = S^-(h+1) */
+      QUAD_ARRAY_LOAD(sminus, covervals, h);
+
+      /* use a relative tolerance, since the row may be scaled arbitrarily and the
+       * rounding errors of x and S^-() grow with its magnitude
+       */
+      if( SCIPisRelLE(scip, QUAD_TO_DBL(x), QUAD_TO_DBL(sminus)) )
          break;
 
       ++h;
@@ -12275,10 +12281,8 @@ SCIP_Real evaluateLiftingFunctionKnapsack(
 
    cutcoef += h;
 
-   SCIPdebugMsg(scip, "x is %g, coversize is %d, h is %d\n", QUAD_TO_DBL(x), coversize, h );
    /* the lifted coefficient is h increased possibly by 0.5 for the case checked above */
-   SCIPdebugMsg(scip, "lifted coef %g < %g <= %g to %g\n", h == 0 ? 0 : covervals[h-1], QUAD_TO_DBL(x),
-         covervals[h], cutcoef);
+   SCIPdebugMsg(scip, "x is %g, coversize is %d, h is %d, lifted coef is %g\n", QUAD_TO_DBL(x), coversize, h, cutcoef);
 
    return cutcoef;
 }
@@ -12361,7 +12365,7 @@ SCIP_RETCODE SCIPcalcKnapsackCover(
    SCIP_CALL( SCIPallocBufferArray(scip, &varsign, nvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &boundtype, nvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &coverstatus, nvars) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &covervals, nvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &covervals, QUAD_ARRAY_SIZE(nvars)) );
    SCIP_CALL( SCIPallocBufferArray(scip, &coverpos, nvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &tmpinds, nvars) );
    SCIP_CALL( SCIPallocCleanBufferArray(scip, &tmpcoefs, QUAD_ARRAY_SIZE(nvars)) );
