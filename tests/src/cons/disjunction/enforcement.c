@@ -33,7 +33,7 @@
 #include <stdio.h>
 
 /* TESTS  */
-Test(disjunction, enforcement)
+void test_disjunction_enforcement(void)
 {
    SCIP* scip;
    SCIP_VAR* lambdas[9];
@@ -109,7 +109,7 @@ Test(disjunction, enforcement)
    SCIP_CALL( SCIPprintOrigProblem(scip, NULL, "cip", FALSE) );
    SCIP_CALL( SCIPsolve(scip) );
 
-   cr_expect(SCIPisFeasEQ(scip, SCIPgetPrimalbound(scip), -1.0));
+   TEST_ASSERT(SCIPisFeasEQ(scip, SCIPgetPrimalbound(scip), -1.0));
 
    /* release variables */
    for( i = 0; i < 9; ++i )
@@ -119,4 +119,15 @@ Test(disjunction, enforcement)
 
    /* release SCIP */
    SCIP_CALL( SCIPfree(&scip ) );
+}
+
+void setUp(void) { }
+
+void tearDown(void) { }
+
+int main(void)
+{
+   UNITY_BEGIN();
+   RUN_TEST(test_disjunction_enforcement);
+   return UNITY_END();
 }

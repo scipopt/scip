@@ -64,13 +64,11 @@ void teardown(void)
    SCIP_CALL( SCIPreleaseVar(scip, &x) );
    SCIP_CALL( SCIPfree(&scip) );
 
-   cr_assert_eq(BMSgetMemoryUsed(), 0, "Memory leak!!");
+   TEST_ASSERT_EQUAL(BMSgetMemoryUsed(), 0, "Memory leak!!");
 }
 
-TestSuite(nonlinupgd, .init = setup, .fini = teardown);
-
 /* upgrades a linear nonlinear constraint to a linear constraint */
-Test(nonlinupgd, linear)
+void test_nonlinupgd_linear(void)
 {
    SCIP_EXPR* expr;
    SCIP_EXPR* simplified;
@@ -90,24 +88,26 @@ Test(nonlinupgd, linear)
 
    SCIP_CALL( upgradeConsNonlinear(scip, cons, 3, &nupgdconss, &lincons, 1) );
 
-   cr_assert_eq(nupgdconss, 1);
-   cr_assert_not_null(lincons);
-   cr_expect(SCIPgetNVarsLinear(scip, lincons) == 3);
-   cr_expect(SCIPgetLhsLinear(scip, lincons) == -2.5);
-   cr_expect(SCIPgetRhsLinear(scip, lincons) == 1.5);
+   TEST_ASSERT_EQUAL(nupgdconss, 1);
+   TEST_ASSERT_NOT_NULL(lincons);
+   SOFT_ASSERT(SCIPgetNVarsLinear(scip, lincons) == 3);
+   SOFT_ASSERT(SCIPgetLhsLinear(scip, lincons) == -2.5);
+   SOFT_ASSERT(SCIPgetRhsLinear(scip, lincons) == 1.5);
 
-   /* check coefficients */
+   /* check coefficients; soft asserts so that a wrong coefficient is reported
+    * for every variable at once instead of only for the first one
+    */
    for( i = 0; i < SCIPgetNVarsLinear(scip, lincons); ++i )
    {
       SCIP_VAR* var = SCIPgetVarsLinear(scip, lincons)[i];
       SCIP_Real coef = SCIPgetValsLinear(scip, lincons)[i];
 
       if( var == x )
-         cr_expect(coef == 1.0);
+         SOFT_ASSERT(coef == 1.0);
       else if( var == y )
-         cr_expect(coef == 2.0);
+         SOFT_ASSERT(coef == 2.0);
       else if( var == z )
-         cr_expect(coef == -3.0);
+         SOFT_ASSERT(coef == -3.0);
    }
 
    /* release constraints and expressions */
@@ -118,7 +118,7 @@ Test(nonlinupgd, linear)
 }
 
 /* tries to upgrade a quadratic nonlinear constraint to a linear constraint, which should fail */
-Test(nonlinupgd, quadratic)
+void test_nonlinupgd_quadratic(void)
 {
    SCIP_EXPR* expr;
    SCIP_EXPR* simplified;
@@ -137,11 +137,23 @@ Test(nonlinupgd, quadratic)
 
    SCIP_CALL( upgradeConsNonlinear(scip, cons, 2, &nupgdconss, &lincons, 1) );
 
-   cr_assert_eq(nupgdconss, 0);
-   cr_assert_null(lincons);
+   TEST_ASSERT_EQUAL(nupgdconss, 0);
+   TEST_ASSERT_NULL(lincons);
 
    /* release constraints and expressions */
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
    SCIP_CALL( SCIPreleaseExpr(scip, &simplified) );
    SCIP_CALL( SCIPreleaseExpr(scip, &expr) );
+}
+
+void setUp(void) { setup(); }
+
+void tearDown(void) { teardown(); }
+
+int main(void)
+{
+   UNITY_BEGIN();
+   RUN_TEST(test_nonlinupgd_linear);
+   RUN_TEST(test_nonlinupgd_quadratic);
+   return UNITY_END();
 }

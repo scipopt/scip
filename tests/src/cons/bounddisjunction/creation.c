@@ -35,7 +35,7 @@
 /* TESTS  */
 
 /* Test1: Redundancy */
-Test(bounddisjunction, redundant)
+void test_bounddisjunction_redundant(void)
 {
    char name[SCIP_MAXSTRLEN];
    SCIP* scip;
@@ -89,13 +89,13 @@ Test(bounddisjunction, redundant)
    consvars = SCIPgetVarsBounddisjunction(scip, cons);
    consboundtypes = SCIPgetBoundtypesBounddisjunction(scip, cons);
 
-   cr_assert( nconsvars == 3 );
-   cr_assert( consvars[0] == vars[0] );
-   cr_assert( consvars[1] == vars[1] );
-   cr_assert( consvars[2] == vars[1] );
-   cr_assert( consboundtypes[0] == SCIP_BOUNDTYPE_LOWER );
-   cr_assert( consboundtypes[1] == SCIP_BOUNDTYPE_LOWER );
-   cr_assert( consboundtypes[2] == SCIP_BOUNDTYPE_UPPER );
+   TEST_ASSERT( nconsvars == 3 );
+   TEST_ASSERT( consvars[0] == vars[0] );
+   TEST_ASSERT( consvars[1] == vars[1] );
+   TEST_ASSERT( consvars[2] == vars[1] );
+   TEST_ASSERT( consboundtypes[0] == SCIP_BOUNDTYPE_LOWER );
+   TEST_ASSERT( consboundtypes[1] == SCIP_BOUNDTYPE_LOWER );
+   TEST_ASSERT( consboundtypes[2] == SCIP_BOUNDTYPE_UPPER );
 
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
 
@@ -111,7 +111,7 @@ Test(bounddisjunction, redundant)
 
 
 /* Test2: Compression 1 - all variables are fixed */
-Test(bounddisjunction, compression1)
+void test_bounddisjunction_compression1(void)
 {
    SCIP* scip;
    SCIP_VAR* vars[2];
@@ -166,9 +166,9 @@ Test(bounddisjunction, compression1)
    consvars = SCIPgetVarsBounddisjunction(scip, cons);
    consboundtypes = SCIPgetBoundtypesBounddisjunction(scip, cons);
 
-   cr_assert( nconsvars == 1 );
-   cr_assert( consvars[0] == vars[0] );
-   cr_assert( consboundtypes[0] == SCIP_BOUNDTYPE_LOWER );
+   TEST_ASSERT( nconsvars == 1 );
+   TEST_ASSERT( consvars[0] == vars[0] );
+   TEST_ASSERT( consboundtypes[0] == SCIP_BOUNDTYPE_LOWER );
 
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
 
@@ -184,7 +184,7 @@ Test(bounddisjunction, compression1)
 
 
 /* Test3: Compression 2 - only one variable is fixed */
-Test(bounddisjunction, compression2)
+void test_bounddisjunction_compression2(void)
 {
    SCIP* scip;
    SCIP_VAR* vars[2];
@@ -243,11 +243,11 @@ Test(bounddisjunction, compression2)
    consvars = SCIPgetVarsBounddisjunction(scip, cons);
    consboundtypes = SCIPgetBoundtypesBounddisjunction(scip, cons);
 
-   cr_assert( nconsvars == 2 );
-   cr_assert( consvars[0] == vars[1] );
-   cr_assert( consvars[1] == vars[1] );
-   cr_assert( consboundtypes[0] == SCIP_BOUNDTYPE_LOWER );
-   cr_assert( consboundtypes[1] == SCIP_BOUNDTYPE_UPPER );
+   TEST_ASSERT( nconsvars == 2 );
+   TEST_ASSERT( consvars[0] == vars[1] );
+   TEST_ASSERT( consvars[1] == vars[1] );
+   TEST_ASSERT( consboundtypes[0] == SCIP_BOUNDTYPE_LOWER );
+   TEST_ASSERT( consboundtypes[1] == SCIP_BOUNDTYPE_UPPER );
 
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
 
@@ -259,4 +259,17 @@ Test(bounddisjunction, compression2)
 
    /* release SCIP */
    SCIP_CALL( SCIPfree(&scip ) );
+}
+
+void setUp(void) { }
+
+void tearDown(void) { }
+
+int main(void)
+{
+   UNITY_BEGIN();
+   RUN_TEST(test_bounddisjunction_redundant);
+   RUN_TEST(test_bounddisjunction_compression1);
+   RUN_TEST(test_bounddisjunction_compression2);
+   return UNITY_END();
 }

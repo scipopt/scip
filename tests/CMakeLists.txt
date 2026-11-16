@@ -40,117 +40,112 @@ include(CTest)
 # Finally, a test is added for every executable.
 #
 
-#
-# define the C99 standard for older compilers (gcc < 5.0)
-#
+# Define the C99 standard for older compilers (gcc < 5.0)
 set(CMAKE_C_STANDARD 99)
 set(CMAKE_C_STANDARD_REQUIRED on)
 
-#
-# unit tests depend on the presence of the Criterion framework
-#
-if( CRITERION_FOUND )
+# Unity test framework source file
+set(UNITY_SRC ${CMAKE_CURRENT_SOURCE_DIR}/unity/unity.c)
 
-    #
-    # glob recurse into the src/ subdirectory and collect all C-files
-    #
-    file(GLOB_RECURSE TEST_SRCS RELATIVE ${CMAKE_CURRENT_SOURCE_DIR}/src
-        ${CMAKE_CURRENT_SOURCE_DIR}/src/*.c)
+# Glob recurse into the src/ subdirectory and collect all C-files
+file(GLOB_RECURSE TEST_SRCS
+   RELATIVE "${CMAKE_CURRENT_SOURCE_DIR}/src"
+   "${CMAKE_CURRENT_SOURCE_DIR}/src/*.c"
+   )
 
-    #
-    # besides Criterion, we also include the current source directory for test specific implementations,
-    # and the source directory of the parent SCIP directory to be able to include C-sources of SCIP
-    # into our unittests
-    #
-    include_directories(BEFORE PUBLIC ${CRITERION_INCLUDE_DIRS} ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/../src)
+# Include the current source directory for test specific implementations, and the source directory
+# of the parent SCIP directory to be able to include C-sources of SCIP into our unittests.
 
-    if(SANITIZE)
-        find_package(Sanitizers)
-    endif(SANITIZE)
+include_directories(BEFORE
+   PUBLIC
+      "${CMAKE_CURRENT_SOURCE_DIR}"
+      "${CMAKE_CURRENT_SOURCE_DIR}/include"
+      "${CMAKE_CURRENT_SOURCE_DIR}/../src"
+   )
 
-    #
-    # Prepare unit test executable for every source file
-    #
-    foreach(testSrc ${TEST_SRCS})
-        #
-        # extract the filename without an extension and directory (NAME_WE)
-        # and extract the directory name (DIRECTORY) in dedicated variables.
-        #
-        get_filename_component(testName ${testSrc} NAME_WE)
-        get_filename_component(dir ${testSrc} DIRECTORY)
+if(SANITIZE)
+   find_package(Sanitizers)
+endif(SANITIZE)
 
-        # intel compiler segfaults on cons_nonlinear, so skip these tests when compiler is intel
-        if((CMAKE_CXX_COMPILER_ID MATCHES "Intel") AND (${dir} STREQUAL "cons/nonlinear"))
-            continue()
-        endif()
+# Prepare unit test executable for every source file.
+foreach(testSrc ${TEST_SRCS})
+   # Extract the filename without an extension and directory (NAME_WE)
+   # and extract the directory name (DIRECTORY) in dedicated variables.
 
+   get_filename_component(testName ${testSrc} NAME_WE)
+   get_filename_component(dir ${testSrc} DIRECTORY)
 
-        #
-        # replace forward slashes by hyphens
-        #
-        string(REPLACE "/" "-" dirhyphen ${dir})
-        set(testName "unittest-${dirhyphen}-${testName}")
+   # Intel compiler segfaults on cons_nonlinear, so skip these tests when compiler is intel.
+   if((CMAKE_CXX_COMPILER_ID MATCHES "Intel") AND (${dir} STREQUAL "cons/nonlinear"))
+      continue()
+   endif()
 
-        #
-        # add compile target
-        #
-        add_executable(${testName} src/${testSrc})
+   # Replace forward slashes by hyphens.
+   string(REPLACE "/" "-" dirhyphen ${dir})
+   set(testName "unittest-${dirhyphen}-${testName}")
 
-        #
-        # link the executable against both criterion and the SCIP library target
-        #
-        target_link_libraries(${testName} ${CRITERION_LIBRARIES} libscip m)
+   # Add compile target (include Unity source).
+   add_executable(${testName}
+      src/${testSrc}
+      ${UNITY_SRC}
+      )
 
-        if(SANITIZE)
-            add_sanitizers(${testName})
-        endif(SANITIZE)
+   # Link the executable against the SCIP library target.
+   target_link_libraries(${testName}
+      libscip
+      $<$<NOT:$<BOOL:${WIN32}>>:m>
+      $<$<BOOL:${SCIP_HAS_GMP}>:GMP::GMP> # libscip does not export GMP::GMP publicly.
+      )
 
-        #
-        # use the directory name (relative to src/) to build the executable
-        #
-        set_target_properties(${testName} PROPERTIES
-            RESOURCE_LOCK libscip
-            RUNTIME_OUTPUT_DIRECTORY ${dir})
-        #
-        # add the newly created executable to the dependencies of the unittest target
-        #
-        add_dependencies(unittests ${testName})
+   if(SANITIZE)
+      add_sanitizers(${testName})
+   endif()
 
-        #
-        # add a test to build this unit test
-        #
-        add_test(NAME ${testName}-build
-                COMMAND ${CMAKE_COMMAND} --build ${CMAKE_BINARY_DIR} --target ${testName}
-                )
+   # Use the directory name (relative to src/) to build the executable.
+   set_target_properties(${testName} PROPERTIES
+      RESOURCE_LOCK libscip
+      RUNTIME_OUTPUT_DIRECTORY ${dir}
+      )
 
-        #
-        # avoid that several build jobs try to concurrently build the SCIP library
-        # note that this ressource lock name is not the actual libscip target
-        #
-        set_tests_properties(${testName}-build
-                            PROPERTIES
-                                RESOURCE_LOCK libscip
-                            )
+   # Add the newly created executable to the dependencies of the unittest target.
+   add_dependencies(unittests ${testName})
 
-        #
-        # Finally, add the executable as a test to the test framework
-        #
-        if( COVERAGE )
-            set( ADDITIONAL_FLAGS "--no-early-exit" )
-        else()
-            set( ADDITIONAL_FLAGS "" )
-        endif()
+   # Add a test to build this unit test.
+   add_test(NAME ${testName}-build
+      COMMAND ${CMAKE_COMMAND} --build ${CMAKE_BINARY_DIR} --target ${testName}
+      )
 
-        if(NOT ((${testName} STREQUAL "unittest-cons-nonlinear-vertexpolyhedral") AND (${LPS} STREQUAL "xprs")))
-        add_test(NAME ${testName}
-            COMMAND $<TARGET_FILE:${testName}> ${ADDITIONAL_FLAGS}
-            WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-            )
-        set_tests_properties(${testName}
-                            PROPERTIES
-                                DEPENDS ${testName}-build
-                                RESOURCE_LOCK libscip
-                            )
-        endif()  # LP Error: Xpress returned 120, #3724 (LPS=xprs, unittest-cons-nonlinear-vertexpolyhedral)
-    endforeach(testSrc)
-endif()
+   # Avoid that several build jobs try to concurrently build the SCIP library.
+   # Note that this ressource lock name is not the actual libscip target.
+   set_tests_properties(${testName}-build PROPERTIES
+      RESOURCE_LOCK libscip)
+
+   # Finally, add the executable as a test to the test framework.
+   if(COVERAGE)
+      set(ADDITIONAL_FLAGS "--no-early-exit")
+   else()
+      set(ADDITIONAL_FLAGS "")
+   endif()
+
+   # LP Error: Xpress returned 120, #3724 (LPS=xprs, unittest-cons-nonlinear-vertexpolyhedral)
+   if((${testName} STREQUAL "unittest-cons-nonlinear-vertexpolyhedral") AND (${LPS} STREQUAL "xprs"))
+      continue()
+   endif()
+
+   add_test(NAME ${testName}
+      COMMAND $<TARGET_FILE:${testName}> ${ADDITIONAL_FLAGS}
+      WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
+      )
+   set_tests_properties(${testName} PROPERTIES
+      DEPENDS ${testName}-build
+      RESOURCE_LOCK libscip
+      )
+
+   # On Windows we need to execute the unittest executables from the directory containing the libscip.dll.
+   # On other systems this directory does not exist.
+   if(WIN32)
+      set_tests_properties(${testName} PROPERTIES
+         WORKING_DIRECTORY "${CMAKE_BINARY_DIR}/bin/$<CONFIG>"
+         )
+   endif()
+endforeach(testSrc)

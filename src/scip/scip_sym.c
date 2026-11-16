@@ -231,6 +231,9 @@ SCIP_RETCODE SCIPsetSymhdlrProp(
    (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "symmetries/%s/propfreq", name);
    SCIP_CALL( SCIPsetSetDefaultIntParam(scip->set, paramname, propfreq) );
 
+   (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "symmetries/%s/proppriority", name);
+   SCIP_CALL( SCIPsetSetDefaultIntParam(scip->set, paramname, proppriority) );
+
    (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "symmetries/%s/proptiming", name);
    SCIP_CALL( SCIPsetSetDefaultIntParam(scip->set, paramname, (int) proptiming) );
 

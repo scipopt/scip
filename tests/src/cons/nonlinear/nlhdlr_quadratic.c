@@ -68,8 +68,6 @@ static SCIP_NLHDLR* nlhdlr = NULL;
 
 static RAYS* myrays = NULL;
 
-#define EXPECTFEQ(a,b) cr_expect_float_eq(a, b, 1e-6, "%s = %g != %g (dif %g)", #a, a, b, ABS(a-b))
-
 /* creates scip, problem, includes nonlinear constraint handler, creates and adds variables */
 static
 void setup(void)
@@ -92,7 +90,7 @@ void setup(void)
    SCIP_CALL( SCIPincludeExprhdlrCos(scip) );
 
    conshdlr = SCIPfindConshdlr(scip, "nonlinear");
-   cr_assert_not_null(conshdlr);
+   TEST_ASSERT_NOT_NULL(conshdlr);
 
    /* include quadratic and default nlhdlr */
    SCIP_CALL( SCIPincludeNlhdlrQuadratic(scip) );
@@ -100,7 +98,7 @@ void setup(void)
 
    /* get quadratic nlhdl */
    nlhdlr = SCIPfindNlhdlrNonlinear(conshdlr, "quadratic");
-   cr_assert_not_null(nlhdlr);
+   TEST_ASSERT_NOT_NULL(nlhdlr);
 
    /* create problem */
    SCIP_CALL( SCIPcreateProbBasic(scip, "test_problem") );
@@ -140,7 +138,7 @@ void teardown(void)
    SCIP_CALL( SCIPfree(&scip) );
 
    BMSdisplayMemory();
-   cr_assert_eq(BMSgetMemoryUsed(), 0, "Memory is leaking!!");
+   TEST_ASSERT_EQUAL(BMSgetMemoryUsed(), 0, "Memory is leaking!!");
 }
 
 static
@@ -157,9 +155,9 @@ void checkNQuad(
 
    SCIPexprGetQuadraticData(expr, NULL, &nlinexprs, NULL, NULL, &nquadexprs, &nbilinexprs, NULL, NULL);
 
-   cr_expect_eq(nlinexprs, enlin, "Expecting %d linear expr, got %d\n", enlin, nlinexprs);
-   cr_expect_eq(nquadexprs, enquad, "Expecting %d quadratic terms, got %d\n", enquad, nquadexprs);
-   cr_expect_eq(nbilinexprs, enbilin, "Expecting %d bilinear terms, got %d\n", enbilin, nbilinexprs);
+   SOFT_ASSERT_EQUAL(nlinexprs, enlin, "Expecting %d linear expr, got %d\n", enlin, nlinexprs);
+   SOFT_ASSERT_EQUAL(nquadexprs, enquad, "Expecting %d quadratic terms, got %d\n", enquad, nquadexprs);
+   SOFT_ASSERT_EQUAL(nbilinexprs, enbilin, "Expecting %d bilinear terms, got %d\n", enbilin, nbilinexprs);
 }
 
 static
@@ -178,26 +176,26 @@ void checkQuadTerm(
 
    SCIPexprGetQuadraticQuadTerm(expr, nterm, &qexpr, &lincoef, &sqrcoef, NULL, NULL, NULL);
 
-   cr_expect_eq(elincoef, lincoef, "Expecting lincoef %g in quad term, got %g\n", elincoef, lincoef);
-   cr_expect_eq(esqrcoef, sqrcoef, "Expecting sqrcoef %g in quad term, got %g\n", esqrcoef, sqrcoef);
+   SOFT_ASSERT_EQUAL(elincoef, lincoef, "Expecting lincoef %g in quad term, got %g\n", elincoef, lincoef);
+   SOFT_ASSERT_EQUAL(esqrcoef, sqrcoef, "Expecting sqrcoef %g in quad term, got %g\n", esqrcoef, sqrcoef);
 
    if( evar != NULL )
    {
       SCIP_VAR* var;
-      cr_expect(SCIPisExprVar(scip, qexpr));
+      SOFT_ASSERT(SCIPisExprVar(scip, qexpr));
 
       var = SCIPgetVarExprVar(qexpr);
-      cr_expect_eq(evar, var, "Expecting var %s in quad term, got %s\n", SCIPvarGetName(evar), SCIPvarGetName(var));
+      SOFT_ASSERT_EQUAL(evar, var, "Expecting var %s in quad term, got %s\n", SCIPvarGetName(evar), SCIPvarGetName(var));
    }
 
    if( eexpr != NULL )
    {
-      cr_expect_eq(qexpr, eexpr);
+      SOFT_ASSERT_EQUAL(qexpr, eexpr);
    }
 }
 
 /* detects x^2 + x as quadratic expression */
-Test(nlhdlrquadratic, detectandfree1, .init = setup, .fini = teardown)
+void test_nlhdlrquadratic_detectandfree1(void)
 {
    SCIP_NLHDLREXPRDATA* nlhdlrexprdata = NULL;
    SCIP_CONS* cons;
@@ -216,11 +214,11 @@ Test(nlhdlrquadratic, detectandfree1, .init = setup, .fini = teardown)
    /* create expression and simplify it: note it fails if not simplified, the order matters! */
    SCIP_CALL( SCIPparseCons(scip, &cons, (char*)"[nonlinear] <test>: <x>^2 + <x> <= 1", TRUE, TRUE,
             TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, &success) );
-   cr_assert(success);
+   TEST_ASSERT(success);
 
    success = FALSE;
    SCIP_CALL( canonicalizeConstraints(scip, conshdlr, &cons, 1, SCIP_PRESOLTIMING_ALWAYS, &infeasible, NULL, NULL, NULL) );
-   cr_assert(!infeasible);
+   TEST_ASSERT(!infeasible);
 
    /* get expr and work with it */
    expr = SCIPgetExprNonlinear(cons);
@@ -229,17 +227,17 @@ Test(nlhdlrquadratic, detectandfree1, .init = setup, .fini = teardown)
    enforcing = SCIP_NLHDLR_METHOD_NONE;
    participating = SCIP_NLHDLR_METHOD_NONE;
    SCIP_CALL( nlhdlrDetectQuadratic(scip, conshdlr, nlhdlr, expr, NULL, &enforcing, &participating, &nlhdlrexprdata) );
-   cr_assert_not_null(nlhdlrexprdata);
-   cr_assert_eq(nlhdlrexprdata->qexpr, expr);
+   TEST_ASSERT_NOT_NULL(nlhdlrexprdata);
+   TEST_ASSERT_EQUAL(nlhdlrexprdata->qexpr, expr);
 
    /* x^2 + x <= something is convex and so convex nlhdlr should take care of it; x^2 + x >= something is nonconvex
     * and so intersection cuts participates
     */
    participatingexpected = /*SCIP_NLHDLR_METHOD_SEPAABOVE |*/ SCIP_NLHDLR_METHOD_ACTIVITY;
-   cr_expect_eq(participating, participatingexpected, "participating expecting %d got %d\n", participatingexpected, participating);
+   SOFT_ASSERT_EQUAL(participating, participatingexpected, "participating expecting %d got %d\n", participatingexpected, participating);
 
    enforcingexpected = SCIP_NLHDLR_METHOD_ACTIVITY;
-   cr_expect_eq(enforcing, enforcingexpected, "enforcing expecting %d got %d\n", enforcingexpected, enforcing);
+   SOFT_ASSERT_EQUAL(enforcing, enforcingexpected, "enforcing expecting %d got %d\n", enforcingexpected, enforcing);
 
    nlhdlrFreeexprdataQuadratic(scip, nlhdlr, expr, &nlhdlrexprdata);
 
@@ -253,7 +251,7 @@ Test(nlhdlrquadratic, detectandfree1, .init = setup, .fini = teardown)
 /* detects x^2 + 2*x cos(y x^2) + cos(y x^2)^2 <= 1 as convex quadratic expression:
  * simplify yields x^2 + 2 * x cos(x^2 y) + cos(x^2 y)^2 <= 1 --> should detect x^2 + 2 x * w + w^2
  */
-Test(nlhdlrquadratic, detectandfree2, .init = setup, .fini = teardown)
+void test_nlhdlrquadratic_detectandfree2(void)
 {
    SCIP_NLHDLR_METHOD enforcing;
    SCIP_NLHDLR_METHOD participating;
@@ -274,31 +272,31 @@ Test(nlhdlrquadratic, detectandfree2, .init = setup, .fini = teardown)
    success = FALSE;
    SCIP_CALL( SCIPparseCons(scip, &cons, (char*)"[nonlinear] <test>: <x>^2 + 2 * <x> * cos(<y> * <x>^2) + cos(<y> * <x>^2)^2 <= 1", TRUE, TRUE,
             TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, &success) );
-   cr_assert(success);
+   TEST_ASSERT(success);
 
    success = FALSE;
    SCIP_CALL( canonicalizeConstraints(scip, conshdlr, &cons, 1, SCIP_PRESOLTIMING_ALWAYS, &infeasible, NULL, NULL, NULL) );
-   cr_assert(!infeasible);
+   TEST_ASSERT(!infeasible);
 
    /* get expr and work with it */
    expr = SCIPgetExprNonlinear(cons);
 
    /* get cosine expression */
-   cr_assert_eq(SCIPexprGetNChildren(expr), 3);
+   TEST_ASSERT_EQUAL(SCIPexprGetNChildren(expr), 3);
    cosexpr = SCIPexprGetChildren(expr)[1]; /*  x * cos(x^2 y) */
    cosexpr = SCIPexprGetChildren(cosexpr)[1]; /* cos(x^2 y) */
-   cr_assert_str_eq(SCIPexprhdlrGetName(SCIPexprGetHdlr(cosexpr)), "cos", "expecting cos got %s\n",
+   TEST_ASSERT_EQUAL_STRING(SCIPexprhdlrGetName(SCIPexprGetHdlr(cosexpr)), "cos", "expecting cos got %s\n",
          SCIPexprhdlrGetName(SCIPexprGetHdlr(cosexpr)));
 
    /* detect */
    enforcing = SCIP_NLHDLR_METHOD_NONE;
    participating = SCIP_NLHDLR_METHOD_NONE;
    SCIP_CALL( nlhdlrDetectQuadratic(scip, conshdlr, nlhdlr, expr, NULL, &enforcing, &participating, &nlhdlrexprdata) );
-   cr_assert_not_null(nlhdlrexprdata);
+   TEST_ASSERT_NOT_NULL(nlhdlrexprdata);
    participatingexpected = /*SCIP_NLHDLR_METHOD_SEPAABOVE | */SCIP_NLHDLR_METHOD_ACTIVITY;
    enforcingexpected = SCIP_NLHDLR_METHOD_ACTIVITY;
-   cr_expect_eq(participating, participatingexpected, "part expecting %d got %d\n", participatingexpected, participating);
-   cr_expect_eq(enforcing, enforcingexpected, "enfo expecting %d got %d\n", enforcingexpected, enforcing);
+   SOFT_ASSERT_EQUAL(participating, participatingexpected, "part expecting %d got %d\n", participatingexpected, participating);
+   SOFT_ASSERT_EQUAL(enforcing, enforcingexpected, "enfo expecting %d got %d\n", enforcingexpected, enforcing);
 
    nlhdlrFreeexprdataQuadratic(scip, nlhdlr, expr, &nlhdlrexprdata);
 
@@ -308,7 +306,7 @@ Test(nlhdlrquadratic, detectandfree2, .init = setup, .fini = teardown)
    checkQuadTerm(expr, 1, cosexpr, NULL, 0.0, 1.0);
 
 #if DEFAULT_USEINTERCUTS
-//   cr_expect(SCIPgetExprNAuxvarUsesNonlinear(quad.expr) > 0, "cos expr should have auxiliary variable!\n");
+//   SOFT_ASSERT(SCIPgetExprNAuxvarUsesNonlinear(quad.expr) > 0, "cos expr should have auxiliary variable!\n");
 #endif
 
 
@@ -318,22 +316,22 @@ Test(nlhdlrquadratic, detectandfree2, .init = setup, .fini = teardown)
    SCIP_VAR* var;
    SCIPexprGetQuadraticBilinTerm(expr, 0, &expr1, &expr2, &coef, NULL, NULL);
 
-   cr_assert_not_null(expr1);
-   cr_assert_not_null(expr2);
+   TEST_ASSERT_NOT_NULL(expr1);
+   TEST_ASSERT_NOT_NULL(expr2);
 
-   cr_expect(SCIPisExprVar(scip, expr1));
+   SOFT_ASSERT(SCIPisExprVar(scip, expr1));
    var = SCIPgetVarExprVar(expr1);
 
-   cr_expect_eq(var, x, "Expecting %s as first factor, got %s\n", SCIPvarGetName(x), SCIPvarGetName(var));
-   cr_expect_eq(expr2, cosexpr);
-   cr_expect_eq(2.0, coef, "Expecting bilinear coef of %g, got %g\n", 2.0, coef);
+   SOFT_ASSERT_EQUAL(var, x, "Expecting %s as first factor, got %s\n", SCIPvarGetName(x), SCIPvarGetName(var));
+   SOFT_ASSERT_EQUAL(expr2, cosexpr);
+   SOFT_ASSERT_EQUAL(2.0, coef, "Expecting bilinear coef of %g, got %g\n", 2.0, coef);
 
    SCIP_CALL( SCIPaddCons(scip, cons) );
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
 }
 
 /* properly detect quadratic expression in exp(abs(log(x^2 + 2 * x*y + y^2))) <= 1 */
-Test(nlhdlrquadratic, detectandfree3, .init = setup, .fini = teardown)
+void test_nlhdlrquadratic_detectandfree3(void)
 {
    SCIP_EXPR* expr;
    SCIP_CONS* cons;
@@ -344,13 +342,13 @@ Test(nlhdlrquadratic, detectandfree3, .init = setup, .fini = teardown)
    success = FALSE;
    SCIP_CALL( SCIPparseCons(scip, &cons, (char*)"[nonlinear] <test>: exp(abs(log(<x>^2 + 2 * <x> * <y> + <y> + 2 * <y>^2))) <= 1", TRUE, TRUE,
             TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, &success) );
-   cr_assert(success);
+   TEST_ASSERT(success);
 
    /* adds locks which are needed for detectNlhdlrs */
    SCIP_CALL( SCIPaddConsLocks(scip, cons, 1, 0) );
 
    SCIP_CALL( canonicalizeConstraints(scip, conshdlr, &cons, 1, SCIP_PRESOLTIMING_ALWAYS, &infeasible, NULL, NULL, NULL) );
-   cr_assert_not(infeasible);
+   TEST_ASSERT_NOT(infeasible);
 
    /* call detection method -> this registers the nlhdlr */
    SCIP_CALL( detectNlhdlrs(scip, conshdlr, &cons, 1) );
@@ -359,26 +357,26 @@ Test(nlhdlrquadratic, detectandfree3, .init = setup, .fini = teardown)
    expr = SCIPgetExprNonlinear(cons);
 
    /* expr is exponential expr */
-   cr_assert_eq(SCIPexprGetNChildren(expr), 1);
-   cr_assert_str_eq(SCIPexprhdlrGetName(SCIPexprGetHdlr(expr)), "exp", "expecting exp got %s\n",
+   TEST_ASSERT_EQUAL(SCIPexprGetNChildren(expr), 1);
+   TEST_ASSERT_EQUAL_STRING(SCIPexprhdlrGetName(SCIPexprGetHdlr(expr)), "exp", "expecting exp got %s\n",
          SCIPexprhdlrGetName(SCIPexprGetHdlr(expr)));
 
    /* expr is abs expr */
    expr = SCIPexprGetChildren(expr)[0];
-   cr_assert_eq(SCIPexprGetNChildren(expr), 1);
-   cr_assert_str_eq(SCIPexprhdlrGetName(SCIPexprGetHdlr(expr)), "abs", "expecting abs got %s\n",
+   TEST_ASSERT_EQUAL(SCIPexprGetNChildren(expr), 1);
+   TEST_ASSERT_EQUAL_STRING(SCIPexprhdlrGetName(SCIPexprGetHdlr(expr)), "abs", "expecting abs got %s\n",
          SCIPexprhdlrGetName(SCIPexprGetHdlr(expr)));
 
    /* expr is log expr */
    expr = SCIPexprGetChildren(expr)[0];
-   cr_assert_eq(SCIPexprGetNChildren(expr), 1);
-   cr_assert_str_eq(SCIPexprhdlrGetName(SCIPexprGetHdlr(expr)), "log", "expecting log got %s\n",
+   TEST_ASSERT_EQUAL(SCIPexprGetNChildren(expr), 1);
+   TEST_ASSERT_EQUAL_STRING(SCIPexprhdlrGetName(SCIPexprGetHdlr(expr)), "log", "expecting log got %s\n",
          SCIPexprhdlrGetName(SCIPexprGetHdlr(expr)));
 
    /* expr is sum expr */
    expr = SCIPexprGetChildren(expr)[0];
-   cr_assert_eq(SCIPexprGetNChildren(expr), 4);
-   cr_assert_str_eq(SCIPexprhdlrGetName(SCIPexprGetHdlr(expr)), "sum", "expecting sum got %s\n",
+   TEST_ASSERT_EQUAL(SCIPexprGetNChildren(expr), 4);
+   TEST_ASSERT_EQUAL_STRING(SCIPexprhdlrGetName(SCIPexprGetHdlr(expr)), "sum", "expecting sum got %s\n",
          SCIPexprhdlrGetName(SCIPexprGetHdlr(expr)));
 
 #ifdef SCIP_DISABLED_CODE
@@ -386,7 +384,7 @@ Test(nlhdlrquadratic, detectandfree3, .init = setup, .fini = teardown)
    for( int i = 0; i < SCIPexprGetNChildren(expr); ++i )
    {
       SCIP_EXPR* child = SCIPexprGetChildren(expr)[i];
-      cr_expect_null(child->auxvar);
+      SOFT_ASSERT_NULL(child->auxvar);
    }
 #endif
 
@@ -399,13 +397,13 @@ Test(nlhdlrquadratic, detectandfree3, .init = setup, .fini = teardown)
 
    ///* bilinear term */
    //SCIP_QUADEXPR_BILINTERM bilin;
-   //cr_expect_eq(1, expr->enfos[0]->nlhdlrexprdata->quaddata->nbilinexprterms);
+   //SOFT_ASSERT_EQUAL(1, expr->enfos[0]->nlhdlrexprdata->quaddata->nbilinexprterms);
    //bilin = expr->enfos[0]->nlhdlrexprdata->quaddata->bilinexprterms[0];
-   //cr_assert_not_null(bilin.expr1);
-   //cr_assert_not_null(bilin.expr2);
-   //cr_expect_eq(2.0, bilin.coef, "Expecting bilincoef %g in quad term, got %g\n", 2.0, bilin.coef);
-   //cr_expect_eq(SCIPgetExprAuxVarNonlinear(bilin.expr1), y);
-   //cr_expect_eq(SCIPgetExprAuxVarNonlinear(bilin.expr2), x);
+   //TEST_ASSERT_NOT_NULL(bilin.expr1);
+   //TEST_ASSERT_NOT_NULL(bilin.expr2);
+   //SOFT_ASSERT_EQUAL(2.0, bilin.coef, "Expecting bilincoef %g in quad term, got %g\n", 2.0, bilin.coef);
+   //SOFT_ASSERT_EQUAL(SCIPgetExprAuxVarNonlinear(bilin.expr1), y);
+   //SOFT_ASSERT_EQUAL(SCIPgetExprAuxVarNonlinear(bilin.expr2), x);
 
    /* remove locks */
    SCIP_CALL( SCIPaddConsLocks(scip, cons, -1, 0) );
@@ -417,7 +415,7 @@ Test(nlhdlrquadratic, detectandfree3, .init = setup, .fini = teardown)
 }
 
 /* x^2 + y^2 + w*z should not be propagated by this nlhandler */
-Test(nlhdlrquadratic, notpropagablequadratic1, .init = setup, .fini = teardown)
+void test_nlhdlrquadratic_notpropagablequadratic1(void)
 {
    SCIP_NLHDLREXPRDATA* nlhdlrexprdata = NULL;
    SCIP_EXPR* expr;
@@ -430,8 +428,8 @@ Test(nlhdlrquadratic, notpropagablequadratic1, .init = setup, .fini = teardown)
    /* create expression and simplify it: note it fails if not simplified, the order matters! */
    SCIP_CALL( SCIPparseExpr(scip, &expr, (char*)"<x>^2 + <y>^2 + <w>*<z>", NULL, NULL, NULL) );
    SCIP_CALL( SCIPsimplifyExpr(scip, expr, &simplified, &changed, &infeasible, NULL, NULL) );
-   cr_expect_not(changed);
-   cr_expect_not(infeasible);
+   SOFT_ASSERT_NOT(changed);
+   SOFT_ASSERT_NOT(infeasible);
    SCIP_CALL( SCIPreleaseExpr(scip, &expr) );
    expr = simplified;
 
@@ -441,20 +439,20 @@ Test(nlhdlrquadratic, notpropagablequadratic1, .init = setup, .fini = teardown)
    SCIP_CALL( nlhdlrDetectQuadratic(scip, conshdlr, nlhdlr, expr, FALSE, &enforcing, &participating, &nlhdlrexprdata) );
 #if DEFAULT_USEINTERCUTS
    /* should have detected separation only */
-   cr_expect_not_null(nlhdlrexprdata);
-   cr_expect_eq(participating, SCIP_NLHDLR_METHOD_SEPABOTH, "got %d\n", participating);
-   cr_expect_eq(enforcing, SCIP_NLHDLR_METHOD_NONE);
+   SOFT_ASSERT_NOT_NULL(nlhdlrexprdata);
+   SOFT_ASSERT_EQUAL(participating, SCIP_NLHDLR_METHOD_SEPABOTH, "got %d\n", participating);
+   SOFT_ASSERT_EQUAL(enforcing, SCIP_NLHDLR_METHOD_NONE);
 #else
    /* shouldn't have detected anything -> provides nothing */
-   cr_expect_null(nlhdlrexprdata);
-   cr_expect_eq(participating, SCIP_NLHDLR_METHOD_NONE, "got %d\n", participating);
-   cr_expect_eq(enforcing, SCIP_NLHDLR_METHOD_NONE);
+   SOFT_ASSERT_NULL(nlhdlrexprdata);
+   SOFT_ASSERT_EQUAL(participating, SCIP_NLHDLR_METHOD_NONE, "got %d\n", participating);
+   SOFT_ASSERT_EQUAL(enforcing, SCIP_NLHDLR_METHOD_NONE);
 #endif
    SCIP_CALL( SCIPreleaseExpr(scip, &expr) );
 }
 
 /* log^2 x + sin^2 y + cos^2 z should not be handled by this nlhandler when intersection cuts are not available */
-Test(nlhdlrquadratic, notpropagable2, .init = setup, .fini = teardown)
+void test_nlhdlrquadratic_notpropagable2(void)
 {
    SCIP_NLHDLREXPRDATA* nlhdlrexprdata = NULL;
    SCIP_EXPR* expr;
@@ -467,8 +465,8 @@ Test(nlhdlrquadratic, notpropagable2, .init = setup, .fini = teardown)
    /* create expression and simplify it: note it fails if not simplified, the order matters! */
    SCIP_CALL( SCIPparseExpr(scip, &expr, (char*)"log(<x>)^2 + sin(<y>)^2 + cos(<z>)^2", NULL, NULL, NULL) );
    SCIP_CALL( SCIPsimplifyExpr(scip, expr, &simplified, &changed, &infeasible, NULL, NULL) );
-   cr_expect(changed);
-   cr_expect_not(infeasible);
+   SOFT_ASSERT(changed);
+   SOFT_ASSERT_NOT(infeasible);
    SCIP_CALL( SCIPreleaseExpr(scip, &expr) );
    expr = simplified;
 
@@ -479,9 +477,9 @@ Test(nlhdlrquadratic, notpropagable2, .init = setup, .fini = teardown)
    SCIP_CALL( nlhdlrDetectQuadratic(scip, conshdlr, nlhdlr, expr, FALSE, &enforcing, &participating, &nlhdlrexprdata) );
 
    /* shouldn't have detected anything -> provides nothing */
-   cr_expect_eq(participating, SCIP_NLHDLR_METHOD_NONE);
-   cr_assert_eq(enforcing, SCIP_NLHDLR_METHOD_NONE);
-   cr_expect_null(nlhdlrexprdata);
+   SOFT_ASSERT_EQUAL(participating, SCIP_NLHDLR_METHOD_NONE);
+   TEST_ASSERT_EQUAL(enforcing, SCIP_NLHDLR_METHOD_NONE);
+   SOFT_ASSERT_NULL(nlhdlrexprdata);
 
    SCIP_CALL( SCIPreleaseExpr(scip, &expr) );
 }
@@ -494,7 +492,7 @@ Test(nlhdlrquadratic, notpropagable2, .init = setup, .fini = teardown)
  * and call the detection method of the quadratic to this expression. This is the cleanest way
  * and probably the way it should be done (TODO)
  */
-Test(nlhdlrquadratic, onlyPropagation, .init = setup, .fini = teardown)
+void test_nlhdlrquadratic_onlyPropagation(void)
 {
    SCIP_NLHDLREXPRDATA* nlhdlrexprdata = NULL;
    SCIP_EXPR* expr;
@@ -510,8 +508,8 @@ Test(nlhdlrquadratic, onlyPropagation, .init = setup, .fini = teardown)
    SCIP_CALL( SCIPprintExpr(scip, expr, NULL) );
    SCIPinfoMessage(scip, NULL, "\n");
    SCIP_CALL( SCIPsimplifyExpr(scip, expr, &simplified, &changed, &infeasible, NULL, NULL) );
-   cr_expect(changed);
-   cr_expect_not(infeasible);
+   SOFT_ASSERT(changed);
+   SOFT_ASSERT_NOT(infeasible);
    SCIP_CALL( SCIPreleaseExpr(scip, &expr) );
    expr = simplified;
    SCIP_CALL( SCIPprintExpr(scip, expr, NULL) );
@@ -526,9 +524,9 @@ Test(nlhdlrquadratic, onlyPropagation, .init = setup, .fini = teardown)
    participating = SCIP_NLHDLR_METHOD_NONE;
    SCIP_CALL( nlhdlrDetectQuadratic(scip, conshdlr, nlhdlr, expr, FALSE, &enforcing, &participating, &nlhdlrexprdata) );
 
-   cr_expect_eq(participating, SCIP_NLHDLR_METHOD_ACTIVITY, "got %d\n", participating);
-   cr_expect_eq(enforcing, SCIP_NLHDLR_METHOD_ACTIVITY, "got %d\n", enforcing);
-   cr_expect_not_null(nlhdlrexprdata);
+   SOFT_ASSERT_EQUAL(participating, SCIP_NLHDLR_METHOD_ACTIVITY, "got %d\n", participating);
+   SOFT_ASSERT_EQUAL(enforcing, SCIP_NLHDLR_METHOD_ACTIVITY, "got %d\n", enforcing);
+   SOFT_ASSERT_NOT_NULL(nlhdlrexprdata);
 
    checkNQuad(expr, 0, 3, 1);
 
@@ -539,7 +537,7 @@ Test(nlhdlrquadratic, onlyPropagation, .init = setup, .fini = teardown)
 #if SCIP_DISABLED_CODE
 /* TODO: it might be that test needs to be updated to new propagation algorithms */
 /* test propagation of yz - xz = z(y - x) */
-Test(nlhdlrquadratic, factorize, .init = setup, .fini = teardown)
+void test_nlhdlrquadratic_factorize(void)
 {
    SCIP_NLHDLREXPRDATA* nlhdlrexprdata = NULL;
    SCIP_EXPR* expr;
@@ -554,8 +552,8 @@ Test(nlhdlrquadratic, factorize, .init = setup, .fini = teardown)
    SCIP_CALL( SCIPprintExpr(scip, expr, NULL) );
    SCIPinfoMessage(scip, NULL, "\n");
    SCIP_CALL( SCIPsimplifyExpr(scip, expr, &simplified, &changed, &infeasible, NULL, NULL) );
-   cr_expect(changed);
-   cr_expect_not(infeasible);
+   SOFT_ASSERT(changed);
+   SOFT_ASSERT_NOT(infeasible);
    SCIP_CALL( SCIPreleaseExpr(scip, &expr) );
    expr = simplified;
    SCIP_CALL( SCIPprintExpr(scip, expr, NULL) );
@@ -566,30 +564,30 @@ Test(nlhdlrquadratic, factorize, .init = setup, .fini = teardown)
    enforcing = SCIP_NLHDLR_METHOD_NONE;
    SCIP_CALL( nlhdlrDetectQuadratic(scip, conshdlr, nlhdlr, expr, FALSE, &enforcing, &participating, &nlhdlrexprdata) );
 
-   cr_expect_eq(participating, SCIP_NLHDLR_METHOD_ACTIVITY /*ALL*/, "got %d\n", participating);
-   cr_expect_eq(enforcing, SCIP_NLHDLR_METHOD_ACTIVITY, "got %d\n", enforcing);
-   cr_expect_not_null(nlhdlrexprdata);
+   SOFT_ASSERT_EQUAL(participating, SCIP_NLHDLR_METHOD_ACTIVITY /*ALL*/, "got %d\n", participating);
+   SOFT_ASSERT_EQUAL(enforcing, SCIP_NLHDLR_METHOD_ACTIVITY, "got %d\n", enforcing);
+   SOFT_ASSERT_NOT_NULL(nlhdlrexprdata);
 
-   cr_expect(nlhdlrexprdata->quaddata->nquadexprs == 3);
+   SOFT_ASSERT(nlhdlrexprdata->quaddata->nquadexprs == 3);
 
    /* no auxiliary variables should have been created */
-   cr_expect(SCIPgetExprNAuxvarUsesNonlinear(nlhdlrexprdata->quaddata->quadexprterms[0].expr) == 0);
-   cr_expect(SCIPgetExprNAuxvarUsesNonlinear(nlhdlrexprdata->quaddata->quadexprterms[1].expr) == 0);
-   cr_expect(SCIPgetExprNAuxvarUsesNonlinear(nlhdlrexprdata->quaddata->quadexprterms[2].expr) == 0);
+   SOFT_ASSERT(SCIPgetExprNAuxvarUsesNonlinear(nlhdlrexprdata->quaddata->quadexprterms[0].expr) == 0);
+   SOFT_ASSERT(SCIPgetExprNAuxvarUsesNonlinear(nlhdlrexprdata->quaddata->quadexprterms[1].expr) == 0);
+   SOFT_ASSERT(SCIPgetExprNAuxvarUsesNonlinear(nlhdlrexprdata->quaddata->quadexprterms[2].expr) == 0);
 
    /* check internal structure */
-   cr_expect_eq(expr->children[0]->children[0], nlhdlrexprdata->quaddata->quadexprterms[0].expr); /* x should be first */
-   cr_expect_eq(expr->children[0]->children[1], nlhdlrexprdata->quaddata->quadexprterms[1].expr); /* then z */
-   cr_expect_eq(expr->children[1]->children[0], nlhdlrexprdata->quaddata->quadexprterms[2].expr); /* finally y */
-   cr_expect_eq(nlhdlrexprdata->quaddata->bilinexprterms[0].expr1, nlhdlrexprdata->quaddata->bilinexprterms[1].expr1); /* z should be the first on both */
+   SOFT_ASSERT_EQUAL(expr->children[0]->children[0], nlhdlrexprdata->quaddata->quadexprterms[0].expr); /* x should be first */
+   SOFT_ASSERT_EQUAL(expr->children[0]->children[1], nlhdlrexprdata->quaddata->quadexprterms[1].expr); /* then z */
+   SOFT_ASSERT_EQUAL(expr->children[1]->children[0], nlhdlrexprdata->quaddata->quadexprterms[2].expr); /* finally y */
+   SOFT_ASSERT_EQUAL(nlhdlrexprdata->quaddata->bilinexprterms[0].expr1, nlhdlrexprdata->quaddata->bilinexprterms[1].expr1); /* z should be the first on both */
 
    /* interval evaluate */
    SCIPintervalSetEntire(SCIP_INTERVAL_INFINITY, &interval);
    SCIP_CALL( SCIPevalConsExprExprInterval(scip, conshdlr, expr, 0, NULL, NULL) );
    SCIP_CALL( nlhdlrIntevalQuadratic(scip, nlhdlr, expr, nlhdlrexprdata, &interval, NULL, NULL) );
 
-   cr_expect_float_eq(interval.inf, matinf, 1e-7); cr_expect_leq(interval.inf, matinf);
-   cr_expect_float_eq(interval.sup, matsup, 1e-7); cr_expect_geq(interval.sup, matsup);
+   SOFT_ASSERT_DOUBLE_WITHIN(interval.inf, matinf, 1e-7); SOFT_ASSERT_LESS_OR_EQUAL(interval.inf, matinf);
+   SOFT_ASSERT_DOUBLE_WITHIN(interval.sup, matsup, 1e-7); SOFT_ASSERT_GREATER_OR_EQUAL(interval.sup, matsup);
 
    /* test reverse propagation */
    {
@@ -600,10 +598,10 @@ Test(nlhdlrquadratic, factorize, .init = setup, .fini = teardown)
       SCIP_CALL( SCIPdismantleExpr(scip, NULL, expr) );
       SCIP_CALL( nlhdlrReversepropQuadratic(scip, conshdlr, nlhdlr, expr, nlhdlrexprdata, exprinterval, &infeasible, &nreductions) );
       SCIP_CALL( SCIPdismantleExpr(scip, NULL, expr) );
-      cr_expect_eq(nreductions, 2);
-      cr_expect_not(infeasible);
-      cr_expect_float_eq(SCIPvarGetLbLocal(z), -0.0741996, 1e-7);
-      cr_expect_float_eq(SCIPvarGetUbLocal(x), -0.928007, 1e-6);
+      SOFT_ASSERT_EQUAL(nreductions, 2);
+      SOFT_ASSERT_NOT(infeasible);
+      SOFT_ASSERT_DOUBLE_WITHIN(SCIPvarGetLbLocal(z), -0.0741996, 1e-7);
+      SOFT_ASSERT_DOUBLE_WITHIN(SCIPvarGetUbLocal(x), -0.928007, 1e-6);
    }
 
    SCIP_CALL( SCIPreleaseExpr(scip, &expr) );
@@ -681,7 +679,7 @@ rhsw=Iq-(QX+QZ+QY); rw=Reduce[Element[{qw[w]},rhsw],Reals];
 newIw=Interval[{MinValue[w,(rw)&&Element[{w},newIw],w],MaxValue[w,(rw)&&Element[{w},newIw],w]}];
 Print["new Iw : ",newIw]
  */
-Test(nlhdlrquadratic, propagation_inteval, .init = setup, .fini = teardown)
+void test_nlhdlrquadratic_propagation_inteval(void)
 {
    SCIP_NLHDLREXPRDATA* nlhdlrexprdata = NULL;
    SCIP_EXPR* expr;
@@ -704,8 +702,8 @@ Test(nlhdlrquadratic, propagation_inteval, .init = setup, .fini = teardown)
    SCIP_CALL( SCIPprintExpr(scip, expr, NULL) );
    SCIPinfoMessage(scip, NULL, "\n");
    SCIP_CALL( SCIPsimplifyExpr(scip, expr, &simplified, &changed, &infeasible, NULL, NULL) );
-   cr_expect(changed);
-   cr_expect_not(infeasible);
+   SOFT_ASSERT(changed);
+   SOFT_ASSERT_NOT(infeasible);
    SCIP_CALL( SCIPreleaseExpr(scip, &expr) );
    expr = simplified;
    SCIP_CALL( SCIPprintExpr(scip, expr, NULL) );
@@ -727,25 +725,25 @@ Test(nlhdlrquadratic, propagation_inteval, .init = setup, .fini = teardown)
    participating = SCIP_NLHDLR_METHOD_NONE;
    SCIP_CALL( nlhdlrDetectQuadratic(scip, conshdlr, nlhdlr, expr, FALSE, &enforcing, &participating, &nlhdlrexprdata) );
 
-   cr_expect_eq(participating, SCIP_NLHDLR_METHOD_ACTIVITY, "got %d\n", participating);
-   cr_expect_eq(enforcing, SCIP_NLHDLR_METHOD_ACTIVITY, "got %d\n", enforcing);
-   cr_expect_not_null(nlhdlrexprdata);
+   SOFT_ASSERT_EQUAL(participating, SCIP_NLHDLR_METHOD_ACTIVITY, "got %d\n", participating);
+   SOFT_ASSERT_EQUAL(enforcing, SCIP_NLHDLR_METHOD_ACTIVITY, "got %d\n", enforcing);
+   SOFT_ASSERT_NOT_NULL(nlhdlrexprdata);
 
    ///* check internal sorting of factors */
    //for( int i = 0; i < nlhdlrexprdata->quaddata->nbilinexprterms; ++ i)
    //{
    //   /* x always first */
-   //   cr_expect(SCIPgetExprAuxVarNonlinear(nlhdlrexprdata->quaddata->bilinexprterms[i].expr2) != x);
+   //   SOFT_ASSERT(SCIPgetExprAuxVarNonlinear(nlhdlrexprdata->quaddata->bilinexprterms[i].expr2) != x);
    //   /* w never first */
-   //   cr_expect(SCIPgetExprAuxVarNonlinear(nlhdlrexprdata->quaddata->bilinexprterms[i].expr1) != w);
+   //   SOFT_ASSERT(SCIPgetExprAuxVarNonlinear(nlhdlrexprdata->quaddata->bilinexprterms[i].expr1) != w);
 
    //   /* z can only be second to x */
    //   if( SCIPgetExprAuxVarNonlinear(nlhdlrexprdata->quaddata->bilinexprterms[i].expr2) == z )
-   //      cr_expect(SCIPgetExprAuxVarNonlinear(nlhdlrexprdata->quaddata->bilinexprterms[i].expr1) == x);
+   //      SOFT_ASSERT(SCIPgetExprAuxVarNonlinear(nlhdlrexprdata->quaddata->bilinexprterms[i].expr1) == x);
 
    //   /* y can only be first to w */
    //   if( SCIPgetExprAuxVarNonlinear(nlhdlrexprdata->quaddata->bilinexprterms[i].expr1) == y )
-   //      cr_expect(SCIPgetExprAuxVarNonlinear(nlhdlrexprdata->quaddata->bilinexprterms[i].expr1) == w);
+   //      SOFT_ASSERT(SCIPgetExprAuxVarNonlinear(nlhdlrexprdata->quaddata->bilinexprterms[i].expr1) == w);
    //}
 
    /* interval evaluate */
@@ -765,8 +763,8 @@ Test(nlhdlrquadratic, propagation_inteval, .init = setup, .fini = teardown)
       //SCIP_CALL( SCIPdismantleExpr(scip, NULL, expr) );
       SCIP_CALL( nlhdlrReversepropQuadratic(scip, conshdlr, nlhdlr, expr, nlhdlrexprdata, bounds, &infeasible, &nreductions) );
       //SCIP_CALL( SCIPdismantleExpr(scip, NULL, expr) );
-      cr_expect_eq(nreductions, 3, "expecting 3 got %d\n", nreductions); /* three because the z improved twice */
-      cr_expect_not(infeasible);
+      SOFT_ASSERT_EQUAL(nreductions, 3, "expecting 3 got %d\n", nreductions); /* three because the z improved twice */
+      SOFT_ASSERT_NOT(infeasible);
 
       EXPECTFEQ(SCIPvarGetLbLocal(z), -0.0485777477946283);
       EXPECTFEQ(SCIPvarGetUbLocal(z), 0.0198745061962769);
@@ -783,7 +781,7 @@ Test(nlhdlrquadratic, propagation_inteval, .init = setup, .fini = teardown)
  * MaxValue[y/x + 1/2*x, Element[{x}, Ix] && Element[{y}, Ir], {x, y}]
  * for some intervals Ix and Ir (one can also change the coef 1/2 above)
  */
-Test(nlhdlrquadratic, bilin_rhs_range, .init = setup, .fini = teardown)
+void test_nlhdlrquadratic_bilin_rhs_range(void)
 {
    SCIP_INTERVAL rhs;
    SCIP_INTERVAL exprdom;
@@ -828,7 +826,7 @@ Test(nlhdlrquadratic, bilin_rhs_range, .init = setup, .fini = teardown)
    exprdom.sup = 10.0;
 
    computeRangeForBilinearProp(exprdom, 0.25, rhs, &range);
-   cr_expect(SCIPintervalIsEntire(SCIP_INTERVAL_INFINITY, range));
+   SOFT_ASSERT(SCIPintervalIsEntire(SCIP_INTERVAL_INFINITY, range));
 }
 
 /* test propagation of x*y + z + z^2; this is interesting to see how reverse propagation handles the term x*y.
@@ -849,7 +847,7 @@ zmin = MinValue[{z, Element[{x}, Ix] && y >= 1 && Element[{z}, Iz] && cons}, {x,
  */
 /* FIXME: nlhdlr_quadratic now treats x*y as an argument, so detect and propagation calls for the x*y expression need to be added here */
 #if SCIP_DISABLED_CODE
-Test(nlhdlrquadratic, propagation_freq1vars, .init = setup, .fini = teardown)
+void test_nlhdlrquadratic_propagation_freq1vars(void)
 {
    SCIP_NLHDLREXPRDATA* nlhdlrexprdata = NULL;
    SCIP_EXPR* expr;
@@ -870,8 +868,8 @@ Test(nlhdlrquadratic, propagation_freq1vars, .init = setup, .fini = teardown)
    SCIP_CALL( SCIPprintExpr(scip, conshdlr, expr, NULL) );
    SCIPinfoMessage(scip, NULL, "\n");
    SCIP_CALL( SCIPsimplifyExpr(scip, conshdlr, expr, &simplified, &changed, &infeasible) );
-   cr_expect(changed);
-   cr_expect_not(infeasible);
+   SOFT_ASSERT(changed);
+   SOFT_ASSERT_NOT(infeasible);
    SCIP_CALL( SCIPreleaseExpr(scip, &expr) );
    expr = simplified;
    SCIP_CALL( SCIPprintExpr(scip, conshdlr, expr, NULL) );
@@ -883,17 +881,17 @@ Test(nlhdlrquadratic, propagation_freq1vars, .init = setup, .fini = teardown)
    participating = SCIP_NLHDLR_METHOD_NONE;
    SCIP_CALL( nlhdlrDetectQuadratic(scip, conshdlr, nlhdlr, expr, FALSE, &enforcing, &participating, &nlhdlrexprdata) );
 
-   cr_expect_eq(participating, SCIP_NLHDLR_METHOD_ACTIVITY, "got %d\n", participating);
-   cr_expect_eq(enforcing, SCIP_NLHDLR_METHOD_ACTIVITY, "got %d\n", enforcing);
-   cr_expect_not_null(nlhdlrexprdata);
+   SOFT_ASSERT_EQUAL(participating, SCIP_NLHDLR_METHOD_ACTIVITY, "got %d\n", participating);
+   SOFT_ASSERT_EQUAL(enforcing, SCIP_NLHDLR_METHOD_ACTIVITY, "got %d\n", enforcing);
+   SOFT_ASSERT_NOT_NULL(nlhdlrexprdata);
 
    /* interval evaluate */
    SCIP_CALL( SCIPevalExprActivity(scip, conshdlr, expr, &interval, FALSE, FALSE) );
    //SCIPintervalSetEntire(SCIP_INTERVAL_INFINITY, &interval);
    //SCIP_CALL( nlhdlrIntevalQuadratic(scip, nlhdlr, expr, nlhdlrexprdata, &interval, NULL, FALSE, NULL) );
 
-   //cr_expect_float_eq(interval.inf, matinf, 1e-7, "got %f, expected %f\n", interval.inf, matinf); cr_expect_leq(interval.inf, matinf);
-   //cr_expect_float_eq(interval.sup, matsup, 1e-7, "got %f, expected %f\n", interval.sup, matsup); cr_expect_geq(interval.sup, matsup);
+   //SOFT_ASSERT_DOUBLE_WITHIN(interval.inf, matinf, 1e-7, "got %f, expected %f\n", interval.inf, matinf); SOFT_ASSERT_LESS_OR_EQUAL(interval.inf, matinf);
+   //SOFT_ASSERT_DOUBLE_WITHIN(interval.sup, matsup, 1e-7, "got %f, expected %f\n", interval.sup, matsup); SOFT_ASSERT_GREATER_OR_EQUAL(interval.sup, matsup);
 
    /* test reverse propagation */
    {
@@ -903,8 +901,8 @@ Test(nlhdlrquadratic, propagation_freq1vars, .init = setup, .fini = teardown)
       SCIP_CALL( SCIPdismantleExpr(scip, NULL, expr) );
       SCIP_CALL( nlhdlrReversepropQuadratic(scip, conshdlr, nlhdlr, expr, nlhdlrexprdata, interval, &infeasible, &nreductions) );
       SCIP_CALL( SCIPdismantleExpr(scip, NULL, expr) );
-      cr_expect_eq(nreductions, 2);
-      cr_expect_not(infeasible);
+      SOFT_ASSERT_EQUAL(nreductions, 2);
+      SOFT_ASSERT_NOT(infeasible);
    }
 
    /* check result */
@@ -916,9 +914,9 @@ Test(nlhdlrquadratic, propagation_freq1vars, .init = setup, .fini = teardown)
 
       for( i = 0; i < (int)(sizeof(vars)/sizeof(SCIP_VAR*)); ++i )
       {
-         cr_expect_float_eq(SCIPvarGetLbLocal(vars[i]), expectedlowerbounds[i], 1e-7, "var %s expecting %g, got %g\n",
+         SOFT_ASSERT_DOUBLE_WITHIN(SCIPvarGetLbLocal(vars[i]), expectedlowerbounds[i], 1e-7, "var %s expecting %g, got %g\n",
                SCIPvarGetName(vars[i]), expectedlowerbounds[i], SCIPvarGetLbLocal(vars[i]));
-         cr_expect_float_eq(SCIPvarGetUbLocal(vars[i]), expectedupperbounds[i], 1e-7, "var %s expecting %g, got %g\n",
+         SOFT_ASSERT_DOUBLE_WITHIN(SCIPvarGetUbLocal(vars[i]), expectedupperbounds[i], 1e-7, "var %s expecting %g, got %g\n",
                SCIPvarGetName(vars[i]), expectedupperbounds[i], SCIPvarGetUbLocal(vars[i]));
       }
    }
@@ -953,8 +951,6 @@ Test(nlhdlrquadratic, propagation_freq1vars, .init = setup, .fini = teardown)
  *
  */
 
-TestSuite(interCuts, .init = setup, .fini = teardown);
-
 static
 void simplifyAndDetect(
    SCIP_CONS**           cons,
@@ -972,11 +968,11 @@ void simplifyAndDetect(
    success = FALSE;
    SCIP_CALL( SCIPparseCons(scip, cons, str, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, &success)
          );
-   cr_assert(success);
+   TEST_ASSERT(success);
 
    infeasible = TRUE;
    SCIP_CALL( canonicalizeConstraints(scip, conshdlr, cons, 1, SCIP_PRESOLTIMING_ALWAYS, &infeasible, NULL, NULL, NULL) );
-   cr_assert(!infeasible);
+   TEST_ASSERT(!infeasible);
    expr = SCIPgetExprNonlinear(*cons);
 
    /* SCIP_CALL( SCIPprintExpr(scip, conshdlr, expr, NULL) ); */
@@ -989,7 +985,7 @@ void simplifyAndDetect(
    nlhdlrdata->useintersectioncuts = TRUE;
    SCIP_CALL( nlhdlrDetectQuadratic(scip, conshdlr, nlhdlr, expr, *cons, &enforcing, &participating, nlhdlrexprdata) );
 
-   cr_expect_not_null(nlhdlrexprdata);
+   SOFT_ASSERT_NOT_NULL(nlhdlrexprdata);
 }
 
 static
@@ -1047,13 +1043,13 @@ void testRays(
    ncols = SCIPgetNLPCols(scip);
    cols = SCIPgetLPCols(scip);
 
-   cr_expect(ncols == expectedncols);
+   SOFT_ASSERT(ncols == expectedncols);
    SCIPexprGetQuadraticData(quaddata, NULL, &nlinexprs, &linexprs, NULL, &nquadexprs, NULL, NULL, NULL);
 
    /* first check that vars in lp and constraint are sorted as vars and consvars, respectively */
    for( int i = 0; i < ncols; ++i )
    {
-      cr_assert_eq(SCIPcolGetVar(cols[i]), vars[i], "expected %s got %s\n", SCIPvarGetName(vars[i]), SCIPvarGetName(SCIPcolGetVar(cols[i])));
+      TEST_ASSERT_EQUAL(SCIPcolGetVar(cols[i]), vars[i], "expected %s got %s\n", SCIPvarGetName(vars[i]), SCIPvarGetName(SCIPcolGetVar(cols[i])));
    }
    for( int i = 0; i < nquadexprs; ++i )
    {
@@ -1061,30 +1057,30 @@ void testRays(
       SCIPexprGetQuadraticQuadTerm(quaddata, i, &expr, NULL, NULL, NULL, NULL, NULL);
 
       printf("%d got %s exp %s\n", i, SCIPvarGetName(SCIPgetExprAuxVarNonlinear(expr)), SCIPvarGetName(consvars[i]));
-      cr_assert_eq(SCIPgetExprAuxVarNonlinear(expr), consvars[i]);
+      TEST_ASSERT_EQUAL(SCIPgetExprAuxVarNonlinear(expr), consvars[i]);
    }
    for( int i = 0; i < nlinexprs; ++i )
    {
       printf("%d got %s exp %s\n", i, SCIPvarGetName(SCIPgetExprAuxVarNonlinear(linexprs[i])), SCIPvarGetName(consvars[i + nquadexprs]));
-      cr_assert_eq(SCIPgetExprAuxVarNonlinear(linexprs[i]), consvars[i + nquadexprs]);
+      TEST_ASSERT_EQUAL(SCIPgetExprAuxVarNonlinear(linexprs[i]), consvars[i + nquadexprs]);
    }
 
    /*
     * create rays and test them
     */
    SCIP_CALL( createAndStoreSparseRays(scip, nlhdlrexprdata, auxvar, &myrays, &success) );
-   cr_expect(success);
-   cr_expect_eq(myrays->nrays, expectednrays, "e %d g %d\n", expectednrays, myrays->nrays);
-   cr_expect_eq(myrays->raysbegin[myrays->nrays], expectednnonz, "e %d g %d\n", expectednnonz, myrays->raysbegin[myrays->nrays]);
+   TEST_ASSERT(success);
+   SOFT_ASSERT_EQUAL(myrays->nrays, expectednrays, "e %d g %d\n", expectednrays, myrays->nrays);
+   SOFT_ASSERT_EQUAL(myrays->raysbegin[myrays->nrays], expectednnonz, "e %d g %d\n", expectednnonz, myrays->raysbegin[myrays->nrays]);
 
    for( int i = 0; i < expectednnonz; ++i )
    {
-      cr_expect_float_eq(myrays->rays[i], expectedrayscoefs[i], 1e-9, "%d-th entry: expected %g, got %g\n", i,
+      SOFT_ASSERT_DOUBLE_WITHIN(myrays->rays[i], expectedrayscoefs[i], 1e-9, "%d-th entry: expected %g, got %g\n", i,
             expectedrayscoefs[i], myrays->rays[i]);
    }
-   cr_expect_arr_eq(myrays->raysidx, expectedraysidx, expectednnonz * sizeof(int));
-   cr_expect_arr_eq(myrays->lpposray, expectedlppos, expectednrays * sizeof(int));
-   cr_expect_arr_eq(myrays->raysbegin, expectedbegin, (expectednrays + 1) * sizeof(int));
+   SOFT_ASSERT_EQUAL_MEMORY(expectedraysidx, myrays->raysidx, expectednnonz * sizeof(int));
+   SOFT_ASSERT_EQUAL_MEMORY(expectedlppos, myrays->lpposray, expectednrays * sizeof(int));
+   SOFT_ASSERT_EQUAL_MEMORY(expectedbegin, myrays->raysbegin, (expectednrays + 1) * sizeof(int));
 }
 
 /* builds lp so that every var is nonbasic at lower */
@@ -1105,14 +1101,14 @@ void buildAndSolveSimpleProbingLP(void)
    SCIP_CALL( SCIPchgVarLbProbing(scip, w, 0.0) );
 
    SCIP_CALL( SCIPsolveProbingLP(scip, -1, &lperror, &cutoff) );
-   //cr_expect_not(cutoff); /* cutoff == TRUE since the LP is solved to optimality with a obtimal value greater than cutoffbound */
-   cr_expect_not(lperror);
+   //SOFT_ASSERT_NOT(cutoff); /* cutoff == TRUE since the LP is solved to optimality with a obtimal value greater than cutoffbound */
+   SOFT_ASSERT_NOT(lperror);
 
    /* all variables should be nonbasic */
-   cr_expect_eq(SCIPcolGetBasisStatus(SCIPvarGetCol(x)), SCIP_BASESTAT_LOWER);
-   cr_expect_eq(SCIPcolGetBasisStatus(SCIPvarGetCol(y)), SCIP_BASESTAT_LOWER);
-   cr_expect_eq(SCIPcolGetBasisStatus(SCIPvarGetCol(z)), SCIP_BASESTAT_LOWER);
-   cr_expect_eq(SCIPcolGetBasisStatus(SCIPvarGetCol(w)), SCIP_BASESTAT_LOWER);
+   SOFT_ASSERT_EQUAL(SCIPcolGetBasisStatus(SCIPvarGetCol(x)), SCIP_BASESTAT_LOWER);
+   SOFT_ASSERT_EQUAL(SCIPcolGetBasisStatus(SCIPvarGetCol(y)), SCIP_BASESTAT_LOWER);
+   SOFT_ASSERT_EQUAL(SCIPcolGetBasisStatus(SCIPvarGetCol(z)), SCIP_BASESTAT_LOWER);
+   SOFT_ASSERT_EQUAL(SCIPcolGetBasisStatus(SCIPvarGetCol(w)), SCIP_BASESTAT_LOWER);
 }
 
 /* builds lp so that x, y, and z are basic and the rays are
@@ -1160,15 +1156,15 @@ void buildAndSolveSimpleProbingLP2(void)
 
 
    SCIP_CALL( SCIPsolveProbingLP(scip, -1, &lperror, &cutoff) );
-   cr_assert_not(lperror);
+   TEST_ASSERT_NOT(lperror);
    /* interestingly this fails because the cutoffbound of scip is .0001 or something TODO: figure out why */
-   //cr_assert_not(cutoff);
+   //TEST_ASSERT_NOT(cutoff);
    SCIP_CALL( SCIPprintSol(scip, NULL, NULL, TRUE) );
 
    /* all variables should be nonbasic */
-   cr_expect_eq(SCIPcolGetBasisStatus(SCIPvarGetCol(x)), SCIP_BASESTAT_BASIC, "got %d\n", SCIPcolGetBasisStatus(SCIPvarGetCol(x)));
-   cr_expect_eq(SCIPcolGetBasisStatus(SCIPvarGetCol(y)), SCIP_BASESTAT_BASIC);
-   cr_expect_eq(SCIPcolGetBasisStatus(SCIPvarGetCol(z)), SCIP_BASESTAT_BASIC);
+   SOFT_ASSERT_EQUAL(SCIPcolGetBasisStatus(SCIPvarGetCol(x)), SCIP_BASESTAT_BASIC, "got %d\n", SCIPcolGetBasisStatus(SCIPvarGetCol(x)));
+   SOFT_ASSERT_EQUAL(SCIPcolGetBasisStatus(SCIPvarGetCol(y)), SCIP_BASESTAT_BASIC);
+   SOFT_ASSERT_EQUAL(SCIPcolGetBasisStatus(SCIPvarGetCol(z)), SCIP_BASESTAT_BASIC);
 
 }
 
@@ -1205,14 +1201,14 @@ void buildAndSolveSimpleProbingLP3(void)
    SCIP_CALL( SCIPchgVarObjProbing(scip, y, 1.0) );
 
    SCIP_CALL( SCIPsolveProbingLP(scip, -1, &lperror, &cutoff) );
-   cr_assert_not(lperror);
+   TEST_ASSERT_NOT(lperror);
    /* interestingly this fails because the cutoffbound of scip is .0001 or something TODO: figure out why */
-   //cr_assert_not(cutoff);
+   //TEST_ASSERT_NOT(cutoff);
    SCIP_CALL( SCIPprintSol(scip, NULL, NULL, TRUE) );
 
    /* all variables should be basic */
-   cr_expect_eq(SCIPcolGetBasisStatus(SCIPvarGetCol(x)), SCIP_BASESTAT_BASIC, "got %d\n", SCIPcolGetBasisStatus(SCIPvarGetCol(x)));
-   cr_expect_eq(SCIPcolGetBasisStatus(SCIPvarGetCol(y)), SCIP_BASESTAT_BASIC);
+   SOFT_ASSERT_EQUAL(SCIPcolGetBasisStatus(SCIPvarGetCol(x)), SCIP_BASESTAT_BASIC, "got %d\n", SCIPcolGetBasisStatus(SCIPvarGetCol(x)));
+   SOFT_ASSERT_EQUAL(SCIPcolGetBasisStatus(SCIPvarGetCol(y)), SCIP_BASESTAT_BASIC);
 }
 
 /* function to test cuts: coefficients should be normalize so to have norm 1 */
@@ -1243,7 +1239,7 @@ void testCut(
    for( int i = 0; i < expectedncoefs; i++ )
       enorm += SQR( expectedcoefs[i] );
    enorm = sqrt(enorm);
-   cr_assert(enorm > 0);
+   TEST_ASSERT(enorm > 0);
 
    expr = SCIPgetExprNonlinear(cons);
 
@@ -1251,7 +1247,7 @@ void testCut(
 
    SCIP_CALL( generateIntercut(scip, expr, SCIPnlhdlrGetData(nlhdlr), nlhdlrexprdata, cons, NULL, rowprep, overestimate, &success ) );
 
-   cr_expect(success);
+   TEST_ASSERT(success);
 
    /* create cut from rowprep and get some info */
    SCIP_CALL( SCIPgetRowprepRowCons(scip, &cut, rowprep, cons) );
@@ -1266,15 +1262,15 @@ void testCut(
    /* ~~check same number of coefficients~~
     * currently not, as with HiGHS a coef of 2e-9 is obtained, which messes up nonzero count but still passes the coef checks below
     */
-   /* cr_expect_eq(nnonz, expectedncoefs, "expected %d coefs, but got %d\n", expectedncoefs, nnonz); */
+   /* SOFT_ASSERT_EQUAL(nnonz, expectedncoefs, "expected %d coefs, but got %d\n", expectedncoefs, nnonz); */
 
    /* check norm not zero */
-   cr_assert(cutnorm > 0);
+   TEST_ASSERT(cutnorm > 0);
 
    /* check side */
    side = SCIProwGetLhs(cut);
-   cr_expect(!SCIPisInfinity(scip, -side));
-   cr_expect_float_eq(side / cutnorm, expectedlhs / enorm, 1e-6, "expecting lhs %g, got %g\n", expectedlhs / enorm, side
+   SOFT_ASSERT(!SCIPisInfinity(scip, -side));
+   SOFT_ASSERT_DOUBLE_WITHIN(side / cutnorm, expectedlhs / enorm, 1e-6, "expecting lhs %g, got %g\n", expectedlhs / enorm, side
          / cutnorm);
 
     /* check coefficients */
@@ -1284,7 +1280,7 @@ void testCut(
        for( int i = 0; i < expectedncoefs; i++ )
           if( SCIPcolGetVar(cols[j]) == expectedvars[i] )
             expcoeffound = expectedcoefs[i];
-      cr_expect_float_eq(coefs[j] / cutnorm, expcoeffound / enorm, 1e-6, "expecting cut coef %g, got %g\n",
+      SOFT_ASSERT_DOUBLE_WITHIN(coefs[j] / cutnorm, expcoeffound / enorm, 1e-6, "expecting cut coef %g, got %g\n",
          expcoeffound / enorm, coefs[j] / cutnorm);
    }
    /* and another round to check that there isn't an expected coef missing */
@@ -1294,7 +1290,7 @@ void testCut(
       for( int j = 0; j < nnonz; j++ )
          if( SCIPcolGetVar(cols[j]) == expectedvars[i] )
             coeffound = coefs[j];
-      cr_expect_float_eq(coeffound / cutnorm, expectedcoefs[i] / enorm, 1e-6, "expecting cut coef %g, got %g\n",
+      SOFT_ASSERT_DOUBLE_WITHIN(coeffound / cutnorm, expectedcoefs[i] / enorm, 1e-6, "expecting cut coef %g, got %g\n",
          expectedcoefs[i] / enorm, coeffound / cutnorm);
    }
 
@@ -1308,7 +1304,7 @@ void testCut(
  * y  = 0 x + 1 y + 0 w + 0 z
  * z    0     0     0     1
  */
-Test(interCuts, testRays1)
+void test_interCuts_testRays1(void)
 {
    SCIP_Bool cutoff;
    SCIP_NLHDLREXPRDATA* nlhdlrexprdata = NULL;
@@ -1321,7 +1317,7 @@ Test(interCuts, testRays1)
     * build LP so that every var is non-basic
     */
    SCIP_CALL( SCIPconstructLP(scip, &cutoff) ); /* the nonlinear constraint was not added, so it shouldn't add weird constraints to LP */
-   cr_assert_not(cutoff);
+   TEST_ASSERT_NOT(cutoff);
 
    SCIP_CALL( SCIPstartProbing(scip) );
    buildAndSolveSimpleProbingLP();
@@ -1358,7 +1354,7 @@ Test(interCuts, testRays1)
  * x    1     0     0     0
  * y  = 0 x + 1 y + 0 w + 0 z
  */
-Test(interCuts, testRays2)
+void test_interCuts_testRays2(void)
 {
    SCIP_Bool cutoff;
    SCIP_NLHDLREXPRDATA* nlhdlrexprdata = NULL;
@@ -1371,7 +1367,7 @@ Test(interCuts, testRays2)
     * build LP so that every var is non-basic
     */
    SCIP_CALL( SCIPconstructLP(scip, &cutoff) ); /* the nonlinear constraint was not added, so it shouldn't add weird constraints to LP */
-   cr_assert_not(cutoff);
+   TEST_ASSERT_NOT(cutoff);
 
    SCIP_CALL( SCIPstartProbing(scip) );
    buildAndSolveSimpleProbingLP();
@@ -1407,7 +1403,7 @@ Test(interCuts, testRays2)
  * y    0     1     0     0
  * z  = 0 x + 0 y + 0 w + 1 z
  */
-Test(interCuts, testRays3)
+void test_interCuts_testRays3(void)
 {
    SCIP_Bool cutoff;
    SCIP_NLHDLREXPRDATA* nlhdlrexprdata = NULL;
@@ -1420,7 +1416,7 @@ Test(interCuts, testRays3)
     * build LP so that every var is non-basic
     */
    SCIP_CALL( SCIPconstructLP(scip, &cutoff) ); /* the nonlinear constraint was not added, so it shouldn't add weird constraints to LP */
-   cr_assert_not(cutoff);
+   TEST_ASSERT_NOT(cutoff);
 
    SCIP_CALL( SCIPstartProbing(scip) );
    buildAndSolveSimpleProbingLP();
@@ -1455,7 +1451,7 @@ Test(interCuts, testRays3)
 /* test that stored rays are
  * z  = 0 x + 0 y + 0 w + 1 z
  */
-Test(interCuts, testRays4)
+void test_interCuts_testRays4(void)
 {
    SCIP_Bool cutoff;
    SCIP_NLHDLREXPRDATA* nlhdlrexprdata = NULL;
@@ -1468,7 +1464,7 @@ Test(interCuts, testRays4)
     * build LP so that every var is non-basic
     */
    SCIP_CALL( SCIPconstructLP(scip, &cutoff) ); /* the nonlinear constraint was not added, so it shouldn't add weird constraints to LP */
-   cr_assert_not(cutoff);
+   TEST_ASSERT_NOT(cutoff);
 
    SCIP_CALL( SCIPstartProbing(scip) );
    buildAndSolveSimpleProbingLP();
@@ -1525,7 +1521,7 @@ Test(interCuts, testRays4)
  * the slack variable is active at its upper bound! This is different for XPRESS for example.
  *
  */
-Test(interCuts, testRays5)
+void test_interCuts_testRays5(void)
 {
    SCIP_Bool cutoff;
    SCIP_NLHDLREXPRDATA* nlhdlrexprdata = NULL;
@@ -1536,7 +1532,7 @@ Test(interCuts, testRays5)
 
    /* build LP */
    SCIP_CALL( SCIPconstructLP(scip, &cutoff) ); /* the nonlinear constraint was not added, so it shouldn't add weird constraints to LP */
-   cr_assert_not(cutoff);
+   TEST_ASSERT_NOT(cutoff);
 
    SCIP_CALL( SCIPstartProbing(scip) );
 
@@ -1585,17 +1581,17 @@ Test(interCuts, testRays5)
       //SCIP_CALL( SCIPchgVarObjProbing(scip, y,  1.0e-5) );
 
       SCIP_CALL( SCIPsolveProbingLP(scip, -1, &lperror, &cutoff) );
-      //cr_assert_not(cutoff); /* cutoff == TRUE since the LP is solved to optimality with a obtimal value greater than cutoffbound */
-      cr_assert_not(lperror);
+      //TEST_ASSERT_NOT(cutoff); /* cutoff == TRUE since the LP is solved to optimality with a obtimal value greater than cutoffbound */
+      TEST_ASSERT_NOT(lperror);
       SCIP_CALL( SCIPprintSol(scip, NULL, NULL, FALSE) );
 
       /* all variables should be nonbasic */
-      cr_expect_eq(SCIPcolGetBasisStatus(SCIPvarGetCol(x)), SCIP_BASESTAT_BASIC, "got %d\n", SCIPcolGetBasisStatus(SCIPvarGetCol(x)));
-      cr_expect_eq(SCIPcolGetBasisStatus(SCIPvarGetCol(y)), SCIP_BASESTAT_BASIC);
-      cr_expect_eq(SCIPcolGetBasisStatus(SCIPvarGetCol(w)), SCIP_BASESTAT_LOWER);
-      cr_expect_eq(SCIPcolGetBasisStatus(SCIPvarGetCol(s)), SCIP_BASESTAT_LOWER);
-      cr_expect_eq(SCIPcolGetBasisStatus(SCIPvarGetCol(z)), SCIP_BASESTAT_UPPER);
-      cr_expect_eq(SCIPcolGetBasisStatus(SCIPvarGetCol(t)), SCIP_BASESTAT_UPPER);
+      SOFT_ASSERT_EQUAL(SCIPcolGetBasisStatus(SCIPvarGetCol(x)), SCIP_BASESTAT_BASIC, "got %d\n", SCIPcolGetBasisStatus(SCIPvarGetCol(x)));
+      SOFT_ASSERT_EQUAL(SCIPcolGetBasisStatus(SCIPvarGetCol(y)), SCIP_BASESTAT_BASIC);
+      SOFT_ASSERT_EQUAL(SCIPcolGetBasisStatus(SCIPvarGetCol(w)), SCIP_BASESTAT_LOWER);
+      SOFT_ASSERT_EQUAL(SCIPcolGetBasisStatus(SCIPvarGetCol(s)), SCIP_BASESTAT_LOWER);
+      SOFT_ASSERT_EQUAL(SCIPcolGetBasisStatus(SCIPvarGetCol(z)), SCIP_BASESTAT_UPPER);
+      SOFT_ASSERT_EQUAL(SCIPcolGetBasisStatus(SCIPvarGetCol(t)), SCIP_BASESTAT_UPPER);
    }
 
    /* what rays should be
@@ -1670,7 +1666,7 @@ Test(interCuts, testRays5)
  * 1st ray should intersect in case 4b,
  * the other 2 intersect in case 4a
  */
-Test(interCuts, testRays6)
+void test_interCuts_testRays6(void)
 {
    SCIP_Bool cutoff;
    SCIP_NLHDLREXPRDATA* nlhdlrexprdata = NULL;
@@ -1699,7 +1695,7 @@ Test(interCuts, testRays6)
 
    /* build LP */
    SCIP_CALL( SCIPconstructLP(scip, &cutoff) ); /* the nonlinear constraint was not added, so it shouldn't add weird constraints to LP */
-   cr_assert_not(cutoff);
+   TEST_ASSERT_NOT(cutoff);
 
    SCIP_CALL( SCIPstartProbing(scip) );
 
@@ -1748,23 +1744,23 @@ Test(interCuts, testRays6)
       //SCIP_CALL( SCIPchgVarObjProbing(scip, y,  1.0e-5) );
 
       SCIP_CALL( SCIPsolveProbingLP(scip, -1, &lperror, &cutoff) );
-      cr_assert_not(lperror);
+      TEST_ASSERT_NOT(lperror);
 
       /* interestingly this fails because the cutoffbound of scip is .5 something TODO: figure out why */
-      /* cr_expect_not(cutoff); */
+      /* SOFT_ASSERT_NOT(cutoff); */
       SCIP_CALL( SCIPprintSol(scip, NULL, NULL, TRUE) );
 
       /* check nonbasic statuc */
-      cr_expect_eq(SCIPcolGetBasisStatus(SCIPvarGetCol(x)), SCIP_BASESTAT_BASIC, "got %d\n", SCIPcolGetBasisStatus(SCIPvarGetCol(x)));
-      cr_expect_eq(SCIPcolGetBasisStatus(SCIPvarGetCol(y)), SCIP_BASESTAT_BASIC);
-      cr_expect_eq(SCIPcolGetBasisStatus(SCIPvarGetCol(z)), SCIP_BASESTAT_BASIC);
-      cr_expect_eq(SCIPcolGetBasisStatus(SCIPvarGetCol(w)), SCIP_BASESTAT_ZERO);
-      cr_expect_eq(SCIPcolGetBasisStatus(SCIPvarGetCol(s)), SCIP_BASESTAT_ZERO);
-      cr_expect_eq(SCIPcolGetBasisStatus(SCIPvarGetCol(t)), SCIP_BASESTAT_ZERO);
+      SOFT_ASSERT_EQUAL(SCIPcolGetBasisStatus(SCIPvarGetCol(x)), SCIP_BASESTAT_BASIC, "got %d\n", SCIPcolGetBasisStatus(SCIPvarGetCol(x)));
+      SOFT_ASSERT_EQUAL(SCIPcolGetBasisStatus(SCIPvarGetCol(y)), SCIP_BASESTAT_BASIC);
+      SOFT_ASSERT_EQUAL(SCIPcolGetBasisStatus(SCIPvarGetCol(z)), SCIP_BASESTAT_BASIC);
+      SOFT_ASSERT_EQUAL(SCIPcolGetBasisStatus(SCIPvarGetCol(w)), SCIP_BASESTAT_ZERO);
+      SOFT_ASSERT_EQUAL(SCIPcolGetBasisStatus(SCIPvarGetCol(s)), SCIP_BASESTAT_ZERO);
+      SOFT_ASSERT_EQUAL(SCIPcolGetBasisStatus(SCIPvarGetCol(t)), SCIP_BASESTAT_ZERO);
 
-      cr_expect_float_eq(SCIPvarGetLPSol(x), 1.0, 1e-12);
-      cr_expect_float_eq(SCIPvarGetLPSol(y), -1.0, 1e-12);
-      cr_expect_float_eq(SCIPvarGetLPSol(z), 1.0, 1e-12);
+      SOFT_ASSERT_DOUBLE_WITHIN(SCIPvarGetLPSol(x), 1.0, 1e-12);
+      SOFT_ASSERT_DOUBLE_WITHIN(SCIPvarGetLPSol(y), -1.0, 1e-12);
+      SOFT_ASSERT_DOUBLE_WITHIN(SCIPvarGetLPSol(z), 1.0, 1e-12);
    }
 
    /* what rays should be
@@ -1802,10 +1798,10 @@ Test(interCuts, testRays6)
    SCIP_CALL( intercutsComputeCommonQuantities(scip, nlhdlrexprdata, NULL, 1.0, NULL, vb, vzlp, wcoefs, &wzlp, &kappa) );
 
    /* w should be w(x,y,z) = x */
-   cr_expect_float_eq(wcoefs[0], 0.0, 1e-9);
-   cr_expect_float_eq(wcoefs[1], 0.0, 1e-9);
-   cr_expect_float_eq(wzlp, 1.0, 1e-12);
-   cr_expect_float_eq(kappa, 0.0, 1e-9);
+   SOFT_ASSERT_DOUBLE_WITHIN(wcoefs[0], 0.0, 1e-9);
+   SOFT_ASSERT_DOUBLE_WITHIN(wcoefs[1], 0.0, 1e-9);
+   SOFT_ASSERT_DOUBLE_WITHIN(wzlp, 1.0, 1e-12);
+   SOFT_ASSERT_DOUBLE_WITHIN(kappa, 0.0, 1e-9);
 
    /* rays case 4a */
    {
@@ -1825,15 +1821,15 @@ Test(interCuts, testRays6)
          SCIP_CALL( computeRestrictionToRay(scip, nlhdlrexprdata, 1.0, TRUE, &myrays->rays[myrays->raysbegin[nray]],
                   &myrays->raysidx[myrays->raysbegin[nray]], myrays->raysbegin[nray + 1] - myrays->raysbegin[nray], vb, vzlp,
                   wcoefs, wzlp, kappa, coefs4a, coefs4b, coefscond, &success) );
-         cr_expect(success);
+         TEST_ASSERT(success);
 
          /* check coefficients */
          for( int i = 0; i < 5; ++i )
          {
-            cr_expect_float_eq(coefs4a[i], expectedcoefs4a[5*nray + i], 1e-12, "case 4a: coefs4a %i for ray %d: got %g, exp %g dif %g\n", i,
+            SOFT_ASSERT_DOUBLE_WITHIN(coefs4a[i], expectedcoefs4a[5*nray + i], 1e-12, "case 4a: coefs4a %i for ray %d: got %g, exp %g dif %g\n", i,
                   nray, coefs4a[i], expectedcoefs4a[5*nray + i], ABS(coefs4a[i]- expectedcoefs4a[5*nray + i]));
 
-            cr_expect_float_eq(coefs4b[i], expectedcoefs4b[5*nray + i], 1e-12, "case 4b: coefs4b %i for ray %d: got %g, exp %g dif %g\n", i,
+            SOFT_ASSERT_DOUBLE_WITHIN(coefs4b[i], expectedcoefs4b[5*nray + i], 1e-12, "case 4b: coefs4b %i for ray %d: got %g, exp %g dif %g\n", i,
                   nray, coefs4b[i], expectedcoefs4b[5*nray + i], ABS(coefs4b[i]- expectedcoefs4b[5*nray + i]));
          }
 
@@ -1842,10 +1838,10 @@ Test(interCuts, testRays6)
          root = computeRoot(scip, coefs4a);
 
          /* high tolerance because we do a bin search to ensure that phi(root) <= 0 and small, we don't solve exactly */
-         cr_expect_float_eq(root, expectedroots4a[nray], 1e-5, "case 4a: root for ray %d: got %g, exp %g\n", nray, root,
+         SOFT_ASSERT_DOUBLE_WITHIN(root, expectedroots4a[nray], 1e-5, "case 4a: root for ray %d: got %g, exp %g\n", nray, root,
                expectedroots4a[nray]);
          root = computeRoot(scip, coefs4b);
-         cr_expect_float_eq(root, expectedroots4b[nray], 1e-5, "case 4b: root for ray %d: got %g, exp %g dif %g\n", nray, root,
+         SOFT_ASSERT_DOUBLE_WITHIN(root, expectedroots4b[nray], 1e-5, "case 4b: root for ray %d: got %g, exp %g dif %g\n", nray, root,
                expectedroots4b[nray], root - expectedroots4b[nray]);
       }
    }
@@ -1866,14 +1862,14 @@ Test(interCuts, testRays6)
 
       SCIP_CALL( computeRestrictionToRay(scip, nlhdlrexprdata, 1.0, TRUE, testraycoef, testrayidx, testraynnonz,
                vb, vzlp, wcoefs, wzlp, kappa, coefs4a, coefs4b, coefscond, &success) );
-      cr_expect(success);
+      TEST_ASSERT(success);
       root = computeRoot(scip, coefs4a);
 
-      cr_expect_float_eq(root, expectedroot4a, 1e-12, "case 4a: root for custom ray: got %g, exp %g\n", root,
+      SOFT_ASSERT_DOUBLE_WITHIN(root, expectedroot4a, 1e-12, "case 4a: root for custom ray: got %g, exp %g\n", root,
             expectedroot4a);
 
       root = computeRoot(scip, coefs4b);
-      cr_expect_float_eq(root, expectedroot4b, 1e-12, "case 4b: root for custom ray: got %g, exp %g\n", root,
+      SOFT_ASSERT_DOUBLE_WITHIN(root, expectedroot4b, 1e-12, "case 4b: root for custom ray: got %g, exp %g\n", root,
             expectedroot4b);
    }
    {
@@ -1890,19 +1886,19 @@ Test(interCuts, testRays6)
       /* 4a */
       SCIP_CALL( computeRestrictionToRay(scip, nlhdlrexprdata, 1.0, TRUE, testraycoef, testrayidx, testraynnonz,
                vb, vzlp, wcoefs, wzlp, kappa, coefs4a, coefs4b, coefscond, &success) );
-      cr_expect(success);
+      TEST_ASSERT(success);
       root = computeRoot(scip, coefs4a);
 
       printf("computing root with A, B, C, D, E = %.15f, %.15f, %.15f, %.15f, %.15f\n",coefs4a[0], coefs4a[1], coefs4a[2], coefs4a[3], coefs4a[4]);
       /* TODO: the error that we have is around 300, implementing a binary search should help improve; however, 300 is
        * not going to make much of a difference for the cut coefficient */
-      cr_expect_float_eq(root, expectedroot4a, 1000, "case 4a: root for custom ray: got %.15f, exp %.15f dif %g\n", root,
+      SOFT_ASSERT_DOUBLE_WITHIN(root, expectedroot4a, 1000, "case 4a: root for custom ray: got %.15f, exp %.15f dif %g\n", root,
             expectedroot4a, ABS(root - expectedroot4a));
 
       /* 4b */
       root = computeRoot(scip, coefs4b);
 
-      cr_expect_float_eq(root, expectedroot4b, 1e-12, "case 4b: root for custom ray: got %g, exp %g\n", root,
+      SOFT_ASSERT_DOUBLE_WITHIN(root, expectedroot4b, 1e-12, "case 4b: root for custom ray: got %g, exp %g\n", root,
             expectedroot4b);
    }
 
@@ -1925,7 +1921,7 @@ Test(interCuts, testRays6)
 }
 
 /* test when aux var is present and all nonbasic */
-Test(interCuts, testRaysAuxvar1)
+void test_interCuts_testRaysAuxvar1(void)
 {
    SCIP_Bool cutoff;
    SCIP_Bool infeasible;
@@ -1939,7 +1935,7 @@ Test(interCuts, testRaysAuxvar1)
 
    /* create aux variable */
    expr = SCIPgetExprNonlinear(cons);
-   cr_assert_not_null(expr);
+   TEST_ASSERT_NOT_NULL(expr);
    SCIP_CALL( SCIPregisterExprUsageNonlinear(scip, expr, TRUE, FALSE, FALSE, FALSE) );
    SCIP_CALL( initSepa(scip, conshdlr, &cons, 1, &infeasible) );
 
@@ -1947,13 +1943,13 @@ Test(interCuts, testRaysAuxvar1)
     * build LP so that every var is non-basic
     */
    SCIP_CALL( SCIPconstructLP(scip, &cutoff) ); /* the nonlinear constraint was not added, so it shouldn't add weird constraints to LP */
-   cr_assert_not(cutoff);
+   TEST_ASSERT_NOT(cutoff);
 
    SCIP_CALL( SCIPstartProbing(scip) );
 
    /* set bounds of auxvar */
    auxvar = SCIPgetExprAuxVarNonlinear(expr);
-   cr_assert_not_null(auxvar);
+   TEST_ASSERT_NOT_NULL(auxvar);
 
    SCIP_CALL( SCIPchgVarObjProbing(scip, auxvar, 1.0) );
    SCIP_CALL( SCIPchgVarLbProbing(scip, auxvar, 0.0) );
@@ -1992,7 +1988,7 @@ Test(interCuts, testRaysAuxvar1)
 /* Gurobi finds a different basis here since the optimal solution of this problem is degenerate.
  * We disable it for now since it fails for Gurobi. TODO: fix that or run only for specific lp solvers */
 /* test when aux var is present and auxvar basic */
-Test(interCuts, testRaysAuxvar2)
+void test_interCuts_testRaysAuxvar2(void)
 {
    SCIP_Bool cutoff;
    SCIP_Bool infeasible;
@@ -2023,13 +2019,13 @@ Test(interCuts, testRaysAuxvar2)
 
    /* create aux variable */
    expr = SCIPgetExprNonlinear(cons);
-   cr_assert_not_null(expr);
+   TEST_ASSERT_NOT_NULL(expr);
    SCIP_CALL( SCIPregisterExprUsageNonlinear(scip, expr, TRUE, FALSE, FALSE, FALSE) );
    SCIP_CALL( initSepa(scip, conshdlr, &cons, 1, &infeasible) );
 
    //SCIP_CALL( SCIPcreateConsExprExprAuxVar(scip, conshdlr, expr, NULL) );
    auxvar = SCIPgetExprAuxVarNonlinear(expr);
-   cr_assert_not_null(auxvar);
+   TEST_ASSERT_NOT_NULL(auxvar);
 
    /* build LP:
     * I want
@@ -2038,7 +2034,7 @@ Test(interCuts, testRaysAuxvar2)
     * so LP must be the one below
     */
    SCIP_CALL( SCIPconstructLP(scip, &cutoff) ); /* the nonlinear constraint was not added, so it shouldn't add weird constraints to LP */
-   cr_assert_not(cutoff);
+   TEST_ASSERT_NOT(cutoff);
 
    SCIP_CALL( SCIPstartProbing(scip) );
 
@@ -2075,9 +2071,9 @@ Test(interCuts, testRaysAuxvar2)
 
    SCIP_CALL( SCIPsolveProbingLP(scip, -1, &lperror, &cutoff) );
 
-   cr_expect_eq(SCIPcolGetBasisStatus(SCIPvarGetCol(z)), SCIP_BASESTAT_LOWER);
-   cr_expect_eq(SCIPcolGetBasisStatus(SCIPvarGetCol(x)), SCIP_BASESTAT_BASIC, "got %d\n", SCIPcolGetBasisStatus(SCIPvarGetCol(x)));
-   cr_expect_eq(SCIPcolGetBasisStatus(SCIPvarGetCol(auxvar)), SCIP_BASESTAT_BASIC);
+   SOFT_ASSERT_EQUAL(SCIPcolGetBasisStatus(SCIPvarGetCol(z)), SCIP_BASESTAT_LOWER);
+   SOFT_ASSERT_EQUAL(SCIPcolGetBasisStatus(SCIPvarGetCol(x)), SCIP_BASESTAT_BASIC, "got %d\n", SCIPcolGetBasisStatus(SCIPvarGetCol(x)));
+   SOFT_ASSERT_EQUAL(SCIPcolGetBasisStatus(SCIPvarGetCol(auxvar)), SCIP_BASESTAT_BASIC);
 
    /* rays should be
     *      x = 2 z - 1.1 slack1 - 1.2 slack_2
@@ -2121,7 +2117,8 @@ Test(interCuts, testRaysAuxvar2)
 }
 #endif
 
-Test(interCuts, cut1, .description = "test cut for Case 2")
+/** @brief test cut for Case 2 */
+void test_interCuts_cut1(void)
 {
    SCIP_Bool cutoff;
    SCIP_NLHDLREXPRDATA* nlhdlrexprdata = NULL;
@@ -2142,7 +2139,7 @@ Test(interCuts, cut1, .description = "test cut for Case 2")
     * build LP so that every var is non-basic
     */
    SCIP_CALL( SCIPconstructLP(scip, &cutoff) );
-   cr_assert_not(cutoff);
+   TEST_ASSERT_NOT(cutoff);
 
    SCIP_CALL( SCIPstartProbing(scip) );
 
@@ -2165,7 +2162,8 @@ Test(interCuts, cut1, .description = "test cut for Case 2")
    registerAndFree(cons, nlhdlrexprdata);
 }
 
-Test(interCuts, cut2, .description = "test cut for Case 1")
+/** @brief test cut for Case 1 */
+void test_interCuts_cut2(void)
 {
    SCIP_Bool cutoff;
    SCIP_NLHDLREXPRDATA* nlhdlrexprdata = NULL;
@@ -2186,7 +2184,7 @@ Test(interCuts, cut2, .description = "test cut for Case 1")
     * build LP so that every var is non-basic
     */
    SCIP_CALL( SCIPconstructLP(scip, &cutoff) );
-   cr_assert_not(cutoff);
+   TEST_ASSERT_NOT(cutoff);
 
    SCIP_CALL( SCIPstartProbing(scip) );
 
@@ -2210,7 +2208,8 @@ Test(interCuts, cut2, .description = "test cut for Case 1")
    /* register enforcer info in expr and free */
    registerAndFree(cons, nlhdlrexprdata);
 }
-Test(interCuts, cut3, .description = "test cut for Case 3")
+/** @brief test cut for Case 3 */
+void test_interCuts_cut3(void)
 {
    SCIP_Bool cutoff;
    SCIP_NLHDLREXPRDATA* nlhdlrexprdata = NULL;
@@ -2231,7 +2230,7 @@ Test(interCuts, cut3, .description = "test cut for Case 3")
     * build LP so that every var is non-basic
     */
    SCIP_CALL( SCIPconstructLP(scip, &cutoff) );
-   cr_assert_not(cutoff);
+   TEST_ASSERT_NOT(cutoff);
 
    SCIP_CALL( SCIPstartProbing(scip) );
 
@@ -2259,7 +2258,8 @@ Test(interCuts, cut3, .description = "test cut for Case 3")
 /*
  * Tests for Strengthening
  */
-Test(interCuts, strength1, .description = "test strengthening case 1")
+/** @brief test strengthening case 1 */
+void test_interCuts_strength1(void)
 {
    SCIP_Bool cutoff;
    SCIP_NLHDLREXPRDATA* nlhdlrexprdata = NULL;
@@ -2278,7 +2278,7 @@ Test(interCuts, strength1, .description = "test strengthening case 1")
 
    /* build LP */
    SCIP_CALL( SCIPconstructLP(scip, &cutoff) ); /* the nonlinear constraint was not added, so it shouldn't add weird constraints to LP */
-   cr_assert_not(cutoff);
+   TEST_ASSERT_NOT(cutoff);
 
    SCIP_CALL( SCIPstartProbing(scip) );
 
@@ -2332,7 +2332,8 @@ Test(interCuts, strength1, .description = "test strengthening case 1")
    registerAndFree(cons, nlhdlrexprdata);
 }
 
-Test(interCuts, strength2, .description = "test strengthening case 2")
+/** @brief test strengthening case 2 */
+void test_interCuts_strength2(void)
 {
    SCIP_Bool cutoff;
    SCIP_NLHDLREXPRDATA* nlhdlrexprdata = NULL;
@@ -2351,7 +2352,7 @@ Test(interCuts, strength2, .description = "test strengthening case 2")
 
    /* build LP */
    SCIP_CALL( SCIPconstructLP(scip, &cutoff) ); /* the nonlinear constraint was not added, so it shouldn't add weird constraints to LP */
-   cr_assert_not(cutoff);
+   TEST_ASSERT_NOT(cutoff);
 
    SCIP_CALL( SCIPstartProbing(scip) );
 
@@ -2409,7 +2410,8 @@ Test(interCuts, strength2, .description = "test strengthening case 2")
    registerAndFree(cons, nlhdlrexprdata);
 }
 
-Test(interCuts, strength3, .description = "test strengthening case 3")
+/** @brief test strengthening case 3 */
+void test_interCuts_strength3(void)
 {
    SCIP_Bool cutoff;
    SCIP_NLHDLREXPRDATA* nlhdlrexprdata = NULL;
@@ -2428,7 +2430,7 @@ Test(interCuts, strength3, .description = "test strengthening case 3")
 
    /* build LP */
    SCIP_CALL( SCIPconstructLP(scip, &cutoff) ); /* the nonlinear constraint was not added, so it shouldn't add weird constraints to LP */
-   cr_assert_not(cutoff);
+   TEST_ASSERT_NOT(cutoff);
 
    SCIP_CALL( SCIPstartProbing(scip) );
 
@@ -2482,7 +2484,8 @@ Test(interCuts, strength3, .description = "test strengthening case 3")
    registerAndFree(cons, nlhdlrexprdata);
 }
 
-Test(interCuts, strength4, .description = "test strengthening case 4")
+/** @brief test strengthening case 4 */
+void test_interCuts_strength4(void)
 {
    SCIP_Bool cutoff;
    SCIP_NLHDLREXPRDATA* nlhdlrexprdata = NULL;
@@ -2501,7 +2504,7 @@ Test(interCuts, strength4, .description = "test strengthening case 4")
 
    /* build LP */
    SCIP_CALL( SCIPconstructLP(scip, &cutoff) ); /* the nonlinear constraint was not added, so it shouldn't add weird constraints to LP */
-   cr_assert_not(cutoff);
+   TEST_ASSERT_NOT(cutoff);
 
    SCIP_CALL( SCIPstartProbing(scip) );
 
@@ -2559,7 +2562,8 @@ Test(interCuts, strength4, .description = "test strengthening case 4")
  * The second ray intersects in 4a
  * After strengthening the third ray, the new ray is in the recession cone of C due to 4b
  */
-Test(interCuts, strength4ab, .description = "more complicated test strengthening case 4")
+/** @brief more complicated test strengthening case 4 */
+void test_interCuts_strength4ab(void)
 {
    SCIP_Bool cutoff;
    SCIP_NLHDLREXPRDATA* nlhdlrexprdata = NULL;
@@ -2577,7 +2581,7 @@ Test(interCuts, strength4ab, .description = "more complicated test strengthening
    }
 
    SCIP_CALL( SCIPconstructLP(scip, &cutoff) ); /* the nonlinear constraint was not added, so it shouldn't add weird constraints to LP */
-   cr_assert_not(cutoff);
+   TEST_ASSERT_NOT(cutoff);
    SCIP_CALL( SCIPstartProbing(scip) );
 
    /* build LP
@@ -2625,15 +2629,15 @@ Test(interCuts, strength4ab, .description = "more complicated test strengthening
       /* SCIP_CALL( SCIPwriteLP(scip, "probing.lp") ); */
 
       SCIP_CALL( SCIPsolveProbingLP(scip, -1, &lperror, &cutoff) );
-      cr_assert_not(lperror);
+      TEST_ASSERT_NOT(lperror);
       /* interestingly this fails because the cutoffbound of scip is .0001 or something TODO: figure out why */
-      //cr_assert_not(cutoff);
+      //TEST_ASSERT_NOT(cutoff);
       SCIP_CALL( SCIPprintSol(scip, NULL, NULL, TRUE) );
 
       /* all variables should be nonbasic */
-      cr_expect_eq(SCIPcolGetBasisStatus(SCIPvarGetCol(x)), SCIP_BASESTAT_BASIC, "got %d\n", SCIPcolGetBasisStatus(SCIPvarGetCol(x)));
-      cr_expect_eq(SCIPcolGetBasisStatus(SCIPvarGetCol(y)), SCIP_BASESTAT_BASIC);
-      cr_expect_eq(SCIPcolGetBasisStatus(SCIPvarGetCol(z)), SCIP_BASESTAT_BASIC);
+      SOFT_ASSERT_EQUAL(SCIPcolGetBasisStatus(SCIPvarGetCol(x)), SCIP_BASESTAT_BASIC, "got %d\n", SCIPcolGetBasisStatus(SCIPvarGetCol(x)));
+      SOFT_ASSERT_EQUAL(SCIPcolGetBasisStatus(SCIPvarGetCol(y)), SCIP_BASESTAT_BASIC);
+      SOFT_ASSERT_EQUAL(SCIPcolGetBasisStatus(SCIPvarGetCol(z)), SCIP_BASESTAT_BASIC);
 
    }
 
@@ -2690,7 +2694,7 @@ Test(interCuts, strength4ab, .description = "more complicated test strengthening
  * y  = 0 x + 1 y + 0 w + 0 z
  * z    0     0     0     1
  */
-Test(interCuts, testBoundRays1)
+void test_interCuts_testBoundRays1(void)
 {
    SCIP_Bool cutoff;
    SCIP_Bool lperror;
@@ -2715,7 +2719,7 @@ Test(interCuts, testBoundRays1)
     * build LP
     */
    SCIP_CALL( SCIPconstructLP(scip, &cutoff) ); /* the nonlinear constraint was not added, so it shouldn't add weird constraints to LP */
-   cr_assert_not(cutoff);
+   TEST_ASSERT_NOT(cutoff);
 
    SCIP_CALL( SCIPstartProbing(scip) );
 
@@ -2725,8 +2729,8 @@ Test(interCuts, testBoundRays1)
    SCIPchgVarLbProbing(scip, z, 1.0);
 
    SCIP_CALL( SCIPsolveProbingLP(scip, -1, &lperror, &cutoff) );
-   //cr_expect_not(cutoff); /* cutoff == TRUE since the LP is solved to optimality with a obtimal value greater than cutoffbound */
-   cr_expect_not(lperror);
+   //SOFT_ASSERT_NOT(cutoff); /* cutoff == TRUE since the LP is solved to optimality with a obtimal value greater than cutoffbound */
+   SOFT_ASSERT_NOT(lperror);
 
    /* choose solution to separate */
    SCIP_CALL( SCIPcreateSol(scip, &sol, NULL) );
@@ -2756,21 +2760,21 @@ Test(interCuts, testBoundRays1)
 
       for( int i = 0; i < 6; ++i )
       {
-         cr_expect_float_eq(SCIPgetSolVal(scip, vertex, vars[i]), expectedvertexcoefs[i], 1e-9, "%d-th entry: expected %g, got %g\n", i,
+         SOFT_ASSERT_DOUBLE_WITHIN(SCIPgetSolVal(scip, vertex, vars[i]), expectedvertexcoefs[i], 1e-9, "%d-th entry: expected %g, got %g\n", i,
             expectedvertexcoefs[i], SCIPgetSolVal(scip, vertex, vars[i]));
       }
 
-      cr_expect_eq(myrays->nrays, expectednrays, "e %d g %d\n", expectednrays, myrays->nrays);
-      cr_expect_eq(myrays->raysbegin[myrays->nrays], expectednnonz, "e %d g %d\n", expectednnonz, myrays->raysbegin[myrays->nrays]);
+      SOFT_ASSERT_EQUAL(myrays->nrays, expectednrays, "e %d g %d\n", expectednrays, myrays->nrays);
+      SOFT_ASSERT_EQUAL(myrays->raysbegin[myrays->nrays], expectednnonz, "e %d g %d\n", expectednnonz, myrays->raysbegin[myrays->nrays]);
 
       for( int i = 0; i < expectednnonz; ++i )
       {
-         cr_expect_float_eq(myrays->rays[i], expectedrayscoefs[i], 1e-9, "%d-th entry: expected %g, got %g\n", i,
+         SOFT_ASSERT_DOUBLE_WITHIN(myrays->rays[i], expectedrayscoefs[i], 1e-9, "%d-th entry: expected %g, got %g\n", i,
             expectedrayscoefs[i], myrays->rays[i]);
       }
-      /* cr_expect_arr_eq(myrays->raysidx, expectedraysidx, expectednnonz * sizeof(int));
-      cr_expect_arr_eq(myrays->lpposray, expectedlppos, expectednrays * sizeof(int));
-      cr_expect_arr_eq(myrays->raysbegin, expectedbegin, (expectednrays + 1) * sizeof(int)); */
+      /* SOFT_ASSERT_EQUAL_MEMORY(expectedraysidx, myrays->raysidx, expectednnonz * sizeof(int));
+      SOFT_ASSERT_EQUAL_MEMORY(expectedlppos, myrays->lpposray, expectednrays * sizeof(int));
+      SOFT_ASSERT_EQUAL_MEMORY(expectedbegin, myrays->raysbegin, (expectednrays + 1) * sizeof(int)); */
 
       SCIP_CALL( SCIPfreeSol(scip, &vertex) );
    }
@@ -2784,7 +2788,8 @@ Test(interCuts, testBoundRays1)
    registerAndFree(cons, nlhdlrexprdata);
 }
 
-Test(interCuts, minrepresentation, .description = "test negative coef for minimal representation in case 2")
+/** @brief test negative coef for minimal representation in case 2 */
+void test_interCuts_minrepresentation(void)
 {
    SCIP_Bool cutoff;
    SCIP_NLHDLREXPRDATA* nlhdlrexprdata = NULL;
@@ -2812,7 +2817,7 @@ Test(interCuts, minrepresentation, .description = "test negative coef for minima
     * build LP so that every var is non-basic
     */
    SCIP_CALL( SCIPconstructLP(scip, &cutoff) );
-   cr_assert_not(cutoff);
+   TEST_ASSERT_NOT(cutoff);
 
    SCIP_CALL( SCIPstartProbing(scip) );
 
@@ -2880,16 +2885,16 @@ Test(interCuts, minrepresentation, .description = "test negative coef for minima
       /* compute apex */
       computeApex(nlhdlrexprdata, vb, vzlp, kappa, 1.0, apex, &success);
 
-      cr_assert(success);
+      TEST_ASSERT(success);
 
       /* compute eigenvectors * ray and eigenvectors * apex */
       computeVApexAndVRay(nlhdlrexprdata, apex, raycoefs, rayidx, raynnonz, vapex, vray);
 
       /* compute quadratic function of monoidal problem and check if thery are correct */
       computeMonoidalQuadCoefs(scip, nlhdlrexprdata, vb, vzlp, vapex, vray, kappa, 1.0, &a, &b, &c);
-      cr_expect_float_eq(a, expectedquadcoefs[0], 1e-8, "e %g g %g\n", expectedquadcoefs[0], a);
-      cr_expect_float_eq(b, expectedquadcoefs[1], 1e-8, "e %g g %g\n", expectedquadcoefs[1], b);
-      cr_expect_float_eq(c, expectedquadcoefs[2], 1e-8, "e %g g %g\n", expectedquadcoefs[2], c);
+      SOFT_ASSERT_DOUBLE_WITHIN(a, expectedquadcoefs[0], 1e-8, "e %g g %g\n", expectedquadcoefs[0], a);
+      SOFT_ASSERT_DOUBLE_WITHIN(b, expectedquadcoefs[1], 1e-8, "e %g g %g\n", expectedquadcoefs[1], b);
+      SOFT_ASSERT_DOUBLE_WITHIN(c, expectedquadcoefs[2], 1e-8, "e %g g %g\n", expectedquadcoefs[2], c);
 
       /* get coefficients of the minimal representation quadratic */
       SCIP_CALL( computeRestrictionToLine(scip, nlhdlrexprdata, 1.0, raycoefs, rayidx, raynnonz, vb, vzlp, kappa, apex, coefs, &success) );
@@ -2899,15 +2904,15 @@ Test(interCuts, minrepresentation, .description = "test negative coef for minima
 
       /* compute intersection point and check */
       cutcoef = - computeRoot(scip, coefs);
-      cr_expect_float_eq(cutcoef, expectedcutcoef, 1e-8, "e %g g %g\n", expectedcutcoef, cutcoef);
+      SOFT_ASSERT_DOUBLE_WITHIN(cutcoef, expectedcutcoef, 1e-8, "e %g g %g\n", expectedcutcoef, cutcoef);
 
 
       /* check if coefs are correct */
-      //cr_expect_float_eq(coefs[0], expectedminrepcoefs[0], 1e-8, "e %g g %g\n", expectedminrepcoefs[0], coefs[0]);
-      //cr_expect_float_eq(coefs[1], expectedminrepcoefs[1], 1e-8, "e %g g %g\n", expectedminrepcoefs[1], coefs[1]);
-      //cr_expect_float_eq(coefs[2], expectedminrepcoefs[2], 1e-8, "e %g g %g\n", expectedminrepcoefs[2], coefs[2]);
-      //cr_expect_float_eq(coefs[3], expectedminrepcoefs[3], 1e-8, "e %g g %g\n", expectedminrepcoefs[3], coefs[3]);
-      //cr_expect_float_eq(coefs[4], expectedminrepcoefs[4], 1e-8, "e %g g %g\n", expectedminrepcoefs[4], coefs[4]);
+      //SOFT_ASSERT_DOUBLE_WITHIN(coefs[0], expectedminrepcoefs[0], 1e-8, "e %g g %g\n", expectedminrepcoefs[0], coefs[0]);
+      //SOFT_ASSERT_DOUBLE_WITHIN(coefs[1], expectedminrepcoefs[1], 1e-8, "e %g g %g\n", expectedminrepcoefs[1], coefs[1]);
+      //SOFT_ASSERT_DOUBLE_WITHIN(coefs[2], expectedminrepcoefs[2], 1e-8, "e %g g %g\n", expectedminrepcoefs[2], coefs[2]);
+      //SOFT_ASSERT_DOUBLE_WITHIN(coefs[3], expectedminrepcoefs[3], 1e-8, "e %g g %g\n", expectedminrepcoefs[3], coefs[3]);
+      //SOFT_ASSERT_DOUBLE_WITHIN(coefs[4], expectedminrepcoefs[4], 1e-8, "e %g g %g\n", expectedminrepcoefs[4], coefs[4]);
    }
 
    SCIP_CALL( SCIPendProbing(scip) );
@@ -2915,7 +2920,8 @@ Test(interCuts, minrepresentation, .description = "test negative coef for minima
    /* register enforcer info in expr and free */
    registerAndFree(cons, nlhdlrexprdata);
 }
-Test(interCuts, monoidal, .description = "test cut for monoidal strengthening")
+/** @brief test cut for monoidal strengthening */
+void test_interCuts_monoidal(void)
 {
    SCIP_Bool cutoff;
    SCIP_NLHDLREXPRDATA* nlhdlrexprdata = NULL;
@@ -2943,7 +2949,7 @@ Test(interCuts, monoidal, .description = "test cut for monoidal strengthening")
     * build LP so that every var is non-basic
     */
    SCIP_CALL( SCIPconstructLP(scip, &cutoff) );
-   cr_assert_not(cutoff);
+   TEST_ASSERT_NOT(cutoff);
 
    SCIP_CALL( SCIPstartProbing(scip) );
 
@@ -3003,7 +3009,7 @@ Test(interCuts, monoidal, .description = "test cut for monoidal strengthening")
       /* compute apex */
       computeApex(nlhdlrexprdata, vb, vzlp, kappa, 1.0, apex, &success);
 
-      cr_assert(success);
+      TEST_ASSERT(success);
 
       /* compute eigenvectors * ray and eigenvectors * apex */
       computeVApexAndVRay(nlhdlrexprdata, apex, raycoefs, rayidx, raynnonz, vapex, vray);
@@ -3013,10 +3019,10 @@ Test(interCuts, monoidal, .description = "test cut for monoidal strengthening")
       cutcoef = findMonoidalQuadRoot(scip, a, b, c);
 
       /* check if coefs are correct */
-      cr_expect_float_eq(a, expectedquadcoefs[0], 1e-8, "e %g g %g\n", expectedquadcoefs[0], a);
-      cr_expect_float_eq(b, expectedquadcoefs[1], 1e-8, "e %g g %g\n", expectedquadcoefs[1], b);
-      cr_expect_float_eq(c, expectedquadcoefs[2], 1e-8, "e %g g %g\n", expectedquadcoefs[2], c);
-      cr_expect_float_eq(cutcoef, expectedcutcoef, 1e-8, "e %.10f g %.15f\n", expectedcutcoef, cutcoef);
+      SOFT_ASSERT_DOUBLE_WITHIN(a, expectedquadcoefs[0], 1e-8, "e %g g %g\n", expectedquadcoefs[0], a);
+      SOFT_ASSERT_DOUBLE_WITHIN(b, expectedquadcoefs[1], 1e-8, "e %g g %g\n", expectedquadcoefs[1], b);
+      SOFT_ASSERT_DOUBLE_WITHIN(c, expectedquadcoefs[2], 1e-8, "e %g g %g\n", expectedquadcoefs[2], c);
+      SOFT_ASSERT_DOUBLE_WITHIN(cutcoef, expectedcutcoef, 1e-8, "e %.10f g %.15f\n", expectedcutcoef, cutcoef);
    }
 
    SCIP_CALL( SCIPendProbing(scip) );
@@ -3025,7 +3031,8 @@ Test(interCuts, monoidal, .description = "test cut for monoidal strengthening")
    registerAndFree(cons, nlhdlrexprdata);
 }
 
-Test(interCuts, monoidal2, .description = "test cut for monoidal strengthening")
+/** @brief test cut for monoidal strengthening */
+void test_interCuts_monoidal2(void)
 {
    SCIP_Bool cutoff;
    SCIP_NLHDLREXPRDATA* nlhdlrexprdata = NULL;
@@ -3046,7 +3053,7 @@ Test(interCuts, monoidal2, .description = "test cut for monoidal strengthening")
     * build LP so that every var is non-basic
     */
    SCIP_CALL( SCIPconstructLP(scip, &cutoff) );
-   cr_assert_not(cutoff);
+   TEST_ASSERT_NOT(cutoff);
 
    SCIP_CALL( SCIPstartProbing(scip) );
 
@@ -3107,11 +3114,11 @@ Test(interCuts, monoidal2, .description = "test cut for monoidal strengthening")
       /* compute apex */
       computeApex(nlhdlrexprdata, vb, vzlp, kappa, 1.0, apex, &success);
 
-      cr_assert(success);
+      TEST_ASSERT(success);
 
       /* check if apex is correct */
-      cr_expect_float_eq(apex[0], expectedapex[0], 1e-12, "e %g g %g\n", expectedapex[0], apex[0]);
-      cr_expect_float_eq(apex[1], expectedapex[1], 1e-12, "e %g g %g\n", expectedapex[1], apex[1]);
+      SOFT_ASSERT_DOUBLE_WITHIN(apex[0], expectedapex[0], 1e-12, "e %g g %g\n", expectedapex[0], apex[0]);
+      SOFT_ASSERT_DOUBLE_WITHIN(apex[1], expectedapex[1], 1e-12, "e %g g %g\n", expectedapex[1], apex[1]);
 
       /* compute eigenvectors * ray and eigenvectors * apex */
       computeVApexAndVRay(nlhdlrexprdata, apex, raycoefs, rayidx, raynnonz, vapex, vray);
@@ -3121,14 +3128,60 @@ Test(interCuts, monoidal2, .description = "test cut for monoidal strengthening")
       cutcoef = findMonoidalQuadRoot(scip, a, b, c);
 
       /* check if coefs are correct */
-      cr_expect_float_eq(a, expectedquadcoefs[0], 1e-8, "e %g g %g\n", expectedquadcoefs[0], a);
-      cr_expect_float_eq(b, expectedquadcoefs[1], 1e-8, "e %g g %g\n", expectedquadcoefs[1], b);
-      cr_expect_float_eq(c, expectedquadcoefs[2], 1e-8, "e %g g %g\n", expectedquadcoefs[2], c);
-      cr_expect_float_eq(cutcoef, expectedcutcoef, 1e-8, "e %.10f g %.15f\n", expectedcutcoef, cutcoef);
+      SOFT_ASSERT_DOUBLE_WITHIN(a, expectedquadcoefs[0], 1e-8, "e %g g %g\n", expectedquadcoefs[0], a);
+      SOFT_ASSERT_DOUBLE_WITHIN(b, expectedquadcoefs[1], 1e-8, "e %g g %g\n", expectedquadcoefs[1], b);
+      SOFT_ASSERT_DOUBLE_WITHIN(c, expectedquadcoefs[2], 1e-8, "e %g g %g\n", expectedquadcoefs[2], c);
+      SOFT_ASSERT_DOUBLE_WITHIN(cutcoef, expectedcutcoef, 1e-8, "e %.10f g %.15f\n", expectedcutcoef, cutcoef);
    }
 
    SCIP_CALL( SCIPendProbing(scip) );
 
    /* register enforcer info in expr and free */
    registerAndFree(cons, nlhdlrexprdata);
+}
+
+void setUp(void) { setup(); }
+
+void tearDown(void) { teardown(); }
+
+int main(void)
+{
+   UNITY_BEGIN();
+   RUN_TEST(test_nlhdlrquadratic_detectandfree1);
+   RUN_TEST(test_nlhdlrquadratic_detectandfree2);
+   RUN_TEST(test_nlhdlrquadratic_detectandfree3);
+   RUN_TEST(test_nlhdlrquadratic_notpropagablequadratic1);
+   RUN_TEST(test_nlhdlrquadratic_notpropagable2);
+   RUN_TEST(test_nlhdlrquadratic_onlyPropagation);
+#if SCIP_DISABLED_CODE
+   RUN_TEST(test_nlhdlrquadratic_factorize);
+#endif
+   RUN_TEST(test_nlhdlrquadratic_propagation_inteval);
+   RUN_TEST(test_nlhdlrquadratic_bilin_rhs_range);
+#if SCIP_DISABLED_CODE
+   RUN_TEST(test_nlhdlrquadratic_propagation_freq1vars);
+#endif
+   RUN_TEST(test_interCuts_testRays1);
+   RUN_TEST(test_interCuts_testRays2);
+   RUN_TEST(test_interCuts_testRays3);
+   RUN_TEST(test_interCuts_testRays4);
+   RUN_TEST(test_interCuts_testRays5);
+   RUN_TEST(test_interCuts_testRays6);
+   RUN_TEST(test_interCuts_testRaysAuxvar1);
+#if SCIP_DISABLED_CODE
+   RUN_TEST(test_interCuts_testRaysAuxvar2);
+#endif
+   RUN_TEST(test_interCuts_cut1);
+   RUN_TEST(test_interCuts_cut2);
+   RUN_TEST(test_interCuts_cut3);
+   RUN_TEST(test_interCuts_strength1);
+   RUN_TEST(test_interCuts_strength2);
+   RUN_TEST(test_interCuts_strength3);
+   RUN_TEST(test_interCuts_strength4);
+   RUN_TEST(test_interCuts_strength4ab);
+   RUN_TEST(test_interCuts_testBoundRays1);
+   RUN_TEST(test_interCuts_minrepresentation);
+   RUN_TEST(test_interCuts_monoidal);
+   RUN_TEST(test_interCuts_monoidal2);
+   return UNITY_END();
 }

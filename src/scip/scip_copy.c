@@ -759,6 +759,7 @@ SCIP_RETCODE SCIPgetVarCopy(
    {
       *success = FALSE;
       *targetvar = NULL;
+      return SCIP_OKAY;
    }
 
    /* if the target SCIP is already in solving stage we currently are not copying the variable!

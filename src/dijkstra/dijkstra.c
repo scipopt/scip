@@ -82,7 +82,7 @@ DIJKSTRA_Bool dijkstraGraphIsValid(
 static
 DIJKSTRA_Bool dijkstraHeapIsValid(
    const unsigned int*   entry,              /**< entries of heap */
-   const unsigned long long* value,          /**< values in heap */
+   const uint64_t*       value,              /**< values in heap */
    const unsigned int*   order,              /**< order of entries */
    const unsigned int    used,               /**< number of used entries */
    const unsigned int    size                /**< size of entry array */
@@ -96,9 +96,10 @@ DIJKSTRA_Bool dijkstraHeapIsValid(
    /* check heap property */
    for (i = 0; i < used / 2; ++i)
    {
-      if ( value[entry[i]] > value[entry[i + i]] )
+      unsigned int child = i + i + 1;
+      if ( value[entry[i]] > value[entry[child]] )
          return FALSE;
-      if ( i + i + 1 < used && value[entry[i]] > value[entry[i + i + 1]] )
+      if ( child + 1 < used && value[entry[i]] > value[entry[child + 1]] )
          return FALSE;
    }
 
@@ -111,18 +112,18 @@ DIJKSTRA_Bool dijkstraHeapIsValid(
 static
 void dijkstraSiftDown(
    unsigned int*         entry,              /**< entries of heap */
-   const unsigned long long* value,          /**< values in heap */
+   const uint64_t*       value,              /**< values in heap */
    unsigned int*         order,              /**< order of entries */
    unsigned int          used,               /**< number of used entries */
    unsigned int          current             /**< current entry to be sifted */
    )
 {
-   unsigned long long val;
+   uint64_t val;
    unsigned int child;
    unsigned int ent;
    unsigned int e;
 
-   child = current + current;
+   child = current + current + 1;
    ent = entry[current];
    val = value[ent];
 
@@ -145,7 +146,7 @@ void dijkstraSiftDown(
       order[e] = current;
 
       current = child;
-      child += child;
+      child += child + 1;
    }
    entry[current] = ent;
    order[ent] = current;
@@ -156,12 +157,12 @@ void dijkstraSiftDown(
 static
 void dijkstraSiftUp(
    unsigned int*         entry,              /**< entries of heap */
-   const unsigned long long* value,          /**< values in heap */
+   const uint64_t*       value,              /**< values in heap */
    unsigned int*         order,              /**< order of entries */
    unsigned int          current             /**< current entry to be sifted */
    )
 {
-   unsigned long long val;
+   uint64_t val;
    unsigned int parent;
    unsigned int ent;
    unsigned int e;
@@ -171,7 +172,7 @@ void dijkstraSiftUp(
 
    while ( current > 0 )
    {
-      parent = current / 2;
+      parent = (current - 1) / 2;
       e = entry[parent];
 
       if ( value[e] <= val )
@@ -190,13 +191,13 @@ void dijkstraSiftUp(
 unsigned int dijkstra(
    const DIJKSTRA_GRAPH* G,                  /**< directed graph */
    unsigned int          source,             /**< source node */
-   unsigned long long*   dist,               /**< node distances (allocated by user) */
+   uint64_t*             dist,               /**< node distances (allocated by user) */
    unsigned int*         pred,               /**< node predecessors in final shortest path tree (allocated by user) */
    unsigned int*         entry,              /**< temporary storage (for each node - must be allocated by user) */
    unsigned int*         order               /**< temporary storage (for each node - must be allocated by user) */
    )
 {
-   unsigned long long weight;
+   uint64_t weight;
    unsigned int iters = 0;
    unsigned int used = 0;
    unsigned int head;
@@ -291,13 +292,13 @@ unsigned int dijkstraPair(
    const DIJKSTRA_GRAPH* G,                  /**< directed graph */
    unsigned int          source,             /**< source node */
    unsigned int          target,             /**< target node */
-   unsigned long long*   dist,               /**< node distances (allocated by user) */
+   uint64_t*             dist,               /**< node distances (allocated by user) */
    unsigned int*         pred,               /**< node predecessors in final shortest path tree (allocated by user) */
    unsigned int*         entry,              /**< temporary storage (for each node - must be allocated by user) */
    unsigned int*         order               /**< temporary storage (for each node - must be allocated by user) */
    )
 {
-   unsigned long long weight;
+   uint64_t weight;
    unsigned int iters = 0;
    unsigned int used = 0;
    unsigned int head;
@@ -397,14 +398,14 @@ unsigned int dijkstraPairCutoff(
    const DIJKSTRA_GRAPH* G,                  /**< directed graph */
    unsigned int          source,             /**< source node */
    unsigned int          target,             /**< target node */
-   unsigned long long    cutoff,             /**< if the distance of a node reached this value, we truncate the search */
-   unsigned long long*   dist,               /**< node distances (allocated by user) */
+   uint64_t              cutoff,             /**< if the distance of a node reached this value, we truncate the search */
+   uint64_t*             dist,               /**< node distances (allocated by user) */
    unsigned int*         pred,               /**< node predecessors in final shortest path tree (allocated by user) */
    unsigned int*         entry,              /**< temporary storage (for each node - must be allocated by user) */
    unsigned int*         order               /**< temporary storage (for each node - must be allocated by user) */
    )
 {
-   unsigned long long weight;
+   uint64_t weight;
    unsigned int iters = 0;
    unsigned int used = 0;
    unsigned int head;
@@ -509,14 +510,14 @@ unsigned int dijkstraPairCutoffIgnore(
    unsigned int          source,             /**< source node */
    unsigned int          target,             /**< target node */
    unsigned int*         ignore,             /**< marking nodes to be ignored (if value is nonzero) */
-   unsigned long long    cutoff,             /**< if the distance of a node reached this value, we truncate the search */
-   unsigned long long*   dist,               /**< node distances (allocated by user) */
+   uint64_t              cutoff,             /**< if the distance of a node reached this value, we truncate the search */
+   uint64_t*             dist,               /**< node distances (allocated by user) */
    unsigned int*         pred,               /**< node predecessors in final shortest path tree (allocated by user) */
    unsigned int*         entry,              /**< temporary storage (for each node - must be allocated by user) */
    unsigned int*         order               /**< temporary storage (for each node - must be allocated by user) */
    )
 {
-   unsigned long long weight;
+   uint64_t weight;
    unsigned int iters = 0;
    unsigned int used = 0;
    unsigned int head;

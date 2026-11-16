@@ -63,15 +63,14 @@ void teardown(void)
    /* clear all memory chunks */
    BMSclearChunkMemory(mem);
 
-   cr_assert_eq(BMSgetChunkMemoryUsed(mem), 0, "There is a memory leak!");
+   TEST_ASSERT_EQUAL(BMSgetChunkMemoryUsed(mem), 0, "There is a memory leak!");
 
    /* delete memory allocator */
    BMSdestroyChunkMemory(&mem);
 
-   cr_assert_null(mem);
+   TEST_ASSERT_NULL(mem);
 }
 
-TestSuite(bmschunkmem, .init = setup, .fini = teardown);
 
 /* TESTS */
 
@@ -82,7 +81,7 @@ TestSuite(bmschunkmem, .init = setup, .fini = teardown);
  *    Calling "BMSfreeChunkMemory_call" frees pointer "mem->firsteager" which has already been freed.
  *  The message is a false positive, since chkmem->firsteager is corrected in unlinkEagerChunk().
  */
-Test(bmschunkmem, bmsgarbagecollect)
+void test_bmschunkmem_bmsgarbagecollect(void)
 {
    TESTSTRUCT* data[CHUNK_NUM];
    int i;
@@ -112,4 +111,15 @@ Test(bmschunkmem, bmsgarbagecollect)
    /* free remaining chunks */
    for (i = 0; i < CHUNK_NUM; ++i)
       BMSfreeChunkMemoryNull(mem, &data[i]);
+}
+
+void setUp(void) { setup(); }
+
+void tearDown(void) { teardown(); }
+
+int main(void)
+{
+   UNITY_BEGIN();
+   RUN_TEST(test_bmschunkmem_bmsgarbagecollect);
+   return UNITY_END();
 }

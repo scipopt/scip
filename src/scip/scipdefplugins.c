@@ -87,9 +87,9 @@ SCIP_RETCODE SCIPincludeDefaultPlugins(
    SCIP_CALL( SCIPincludeReaderSol(scip) );
    SCIP_CALL( SCIPincludeReaderOsil(scip) );
    SCIP_CALL( SCIPincludeReaderZpl(scip) );
-#ifdef SCIP_WITH_AMPL
+#if SCIP_HAS_AMPL
    SCIP_CALL( SCIPincludeReaderNl(scip) );
-#endif
+#endif /* SCIP_HAS_AMPL */
    SCIP_CALL( SCIPincludeReaderGms(scip) );
    SCIP_CALL( SCIPincludeReaderOpb(scip) );
    SCIP_CALL( SCIPincludeReaderWbo(scip) );
@@ -111,9 +111,9 @@ SCIP_RETCODE SCIPincludeDefaultPlugins(
    SCIP_CALL( SCIPincludeReaderPpm(scip) );
    SCIP_CALL( SCIPincludeReaderPbm(scip) );
    SCIP_CALL( SCIPincludeReaderCcg(scip) );
-#ifdef SCIP_WITH_PAPILO
+#if SCIP_HAS_PAPILO
    SCIP_CALL( SCIPincludePresolMILP(scip) );
-#endif
+#endif /* SCIP_HAS_PAPILO */
    SCIP_CALL( SCIPincludePresolTrivial(scip) );
    SCIP_CALL( SCIPincludePresolBoundshift(scip) );
    SCIP_CALL( SCIPincludePresolInttobinary(scip) );
@@ -190,6 +190,7 @@ SCIP_RETCODE SCIPincludeDefaultPlugins(
    SCIP_CALL( SCIPincludeHeurFarkasdiving(scip) );
    SCIP_CALL( SCIPincludeHeurFeasjump(scip) );
    SCIP_CALL( SCIPincludeHeurFeaspump(scip) );
+   SCIP_CALL( SCIPincludeHeurLocalsearch(scip) );
    SCIP_CALL( SCIPincludeHeurConflictdiving(scip) );
    SCIP_CALL( SCIPincludeHeurCoefdiving(scip) );
    SCIP_CALL( SCIPincludeHeurPscostdiving(scip) );
@@ -222,6 +223,7 @@ SCIP_RETCODE SCIPincludeDefaultPlugins(
    SCIP_CALL( SCIPincludeHeurMultistart(scip) );
    SCIP_CALL( SCIPincludeHeurTrySol(scip) );
    SCIP_CALL( SCIPincludePropRootredcost(scip) );
+   SCIP_CALL( SCIPincludePropDistance(scip) );
    SCIP_CALL( SCIPincludePropDualfix(scip) );
    SCIP_CALL( SCIPincludePropGenvbounds(scip) );
    SCIP_CALL( SCIPincludePropVbounds(scip) );

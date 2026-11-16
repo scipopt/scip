@@ -2,14 +2,13 @@
 #include <stdarg.h>
 #include <assert.h>
 #include <string.h>
-#if defined(_WIN32) || defined(_WIN64)
-#else
+#ifndef _WIN32
 #include <strings.h> /*lint --e{766}*/
 #endif
 
-#ifdef SCIP_WITH_ZLIB
+#if SCIP_HAS_ZLIB
 #include <zlib.h>
-#endif
+#endif /* SCIP_HAS_ZLIB */
 
 #include "lpi/lpi.h"
 #include "scip/exprinterpret.h"

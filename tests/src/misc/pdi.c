@@ -69,16 +69,24 @@ void teardown(void)
 {
    SCIP_CALL( SCIPfree(&scip) );
 
-   cr_assert_null(scip, "SCIP data structure is not null after being freed");
-   cr_assert_eq(BMSgetMemoryUsed(), 0, "There is a memory leak!!");
+   TEST_ASSERT_NULL(scip, "SCIP data structure is not null after being freed");
+   TEST_ASSERT_EQUAL(BMSgetMemoryUsed(), 0, "There is a memory leak!!");
 }
 
 
-TestSuite(primalDualIntegral, .init = setup, .fini = teardown);
+void setUp(void)
+{
+   setup();
+}
 
-Test(primalDualIntegral, pdiPositive, .init = setup, .fini = teardown,
-   .description = "MIP with two indicator constraints has a positive PDI"
-   )
+void tearDown(void)
+{
+   teardown();
+}
+
+/* TESTS  */
+/** @brief MIP with two indicator constraints has a positive PDI */
+void test_primalDualIntegral_pdiPositive(void)
 {
    /* include default SCIP plugins */
    SCIP_CALL( SCIPincludeDefaultPlugins(scip) );
@@ -149,7 +157,7 @@ Test(primalDualIntegral, pdiPositive, .init = setup, .fini = teardown,
    SCIPsolve(scip);
 
    pdi = SCIPgetPrimalDualIntegral(scip);
-   cr_assert( pdi > 0, "PDI should be greater than 0" );
+   TEST_ASSERT( pdi > 0, "PDI should be greater than 0" );
 
    SCIP_CALL( SCIPreleaseCons(scip, &ic1) );
    SCIP_CALL( SCIPreleaseCons(scip, &ic2) );
@@ -159,4 +167,11 @@ Test(primalDualIntegral, pdiPositive, .init = setup, .fini = teardown,
    SCIP_CALL( SCIPreleaseVar(scip, &x2) );
    SCIP_CALL( SCIPreleaseVar(scip, &z1) );
    SCIP_CALL( SCIPreleaseVar(scip, &z2) );
+}
+
+int main(void)
+{
+   UNITY_BEGIN();
+   RUN_TEST(test_primalDualIntegral_pdiPositive);
+   return UNITY_END();
 }

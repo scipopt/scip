@@ -32,6 +32,7 @@ Examples
 | `CallableLibrary` | `string`          | `string`          |
 | `Eventhdlr`       | `eventhdlr`       | `scip`            |
 | `GMI`             | `gmi`             | `gmi`             |
+| `LennardJones`    | `lj`              | `lj`              |
 | `LOP`             | `lop`             | `lop`             |
 | `MIPSolver`       | `scipmip`         | `scipmip`         |
 | `Queens`          | `queens`          | `queens`          |

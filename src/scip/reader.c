@@ -51,6 +51,7 @@
 #include "scip/pub_message.h"
 #include "scip/struct_reader.h"
 #include "scip/scip_mem.h"
+#include "scip/scip_prob.h"
 
 
 /** copies the given reader to a new scip */
@@ -520,9 +521,21 @@ SCIP_RETCODE SCIPreaderWrite(
          SCIPrationalSetRational(objoffsetexact, SCIPprobGetObjoffsetExact(prob));
          SCIPrationalSetRational(objscaleexact, SCIPprobGetObjscaleExact(prob));
 
-         /* adapt exact objective scale for transformed problem (for the original no change is necessary) */
-         if( SCIPprobIsTransformed(prob) && SCIPprobGetObjsense(prob) == SCIP_OBJSENSE_MAXIMIZE )
-            SCIPrationalMultReal(objscaleexact, objscaleexact, -1.0);
+         /* adapt exact objective for transformed problem (for the original no change is necessary) */
+         if( SCIPprobIsTransformed(prob) )
+         {
+            SCIP_RATIONAL* origobjoffsetexact;
+
+            /* negate for maximization */
+            if( SCIPprobGetObjsense(prob) == SCIP_OBJSENSE_MAXIMIZE )
+               SCIPrationalMultReal(objscaleexact, objscaleexact, -1.0);
+
+            /* add original offset */
+            SCIP_CALL( SCIPrationalCreateBuffer(SCIPbuffer(set->scip), &origobjoffsetexact) );
+            SCIPrationalDiv(origobjoffsetexact, SCIPgetOrigObjoffsetExact(set->scip), objscaleexact);
+            SCIPrationalAdd(objoffsetexact, objoffsetexact, origobjoffsetexact);
+            SCIPrationalFreeBuffer(SCIPbuffer(set->scip), &origobjoffsetexact);
+         }
       }
       /* only real objective offset and scale */
       else
@@ -534,9 +547,16 @@ SCIP_RETCODE SCIPreaderWrite(
       objoffset = SCIPprobGetObjoffset(prob);
       objscale = SCIPprobGetObjscale(prob);
 
-      /* adapt real objective scale for transformed problem (for the original no change is necessary) */
-      if( SCIPprobIsTransformed(prob) && SCIPprobGetObjsense(prob) == SCIP_OBJSENSE_MAXIMIZE )
-         objscale *= -1.0;
+      /* adapt real objective for transformed problem (for the original no change is necessary) */
+      if( SCIPprobIsTransformed(prob) )
+      {
+         /* negate for maximization */
+         if( SCIPprobGetObjsense(prob) == SCIP_OBJSENSE_MAXIMIZE )
+            objscale *= -1.0;
+
+         /* add original offset */
+         objoffset += SCIPgetOrigObjoffset(set->scip) / objscale;
+      }
 
       /* call reader to write problem */
       retcode = reader->readerwrite(set->scip, reader, file, filename, SCIPprobGetName(prob), SCIPprobGetData(prob),

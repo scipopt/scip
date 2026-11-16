@@ -7,30 +7,34 @@ endif()
 
 project(GMI)
 
-if(TARGET SCIP::SCIP)
-  # find package by SCIP PATH
-  find_package(SCIP CONFIG NO_DEFAULT_PATH PATHS ${SCIP_BINARY_DIR} REQUIRED)
-else()
-  find_package(SCIP REQUIRED)
+# Find SCIP unless we already have it because we build it.
+if(NOT TARGET SCIP::SCIP)
+  find_package(SCIP
+     REQUIRED
+     CONFIG
+     HINTS "${SCIP_DIR}"
+     )
 endif()
 
-include_directories(BEFORE PUBLIC ${SCIP_INCLUDE_DIRS})
-
-add_executable(gmi
-   src/cmain.c
-   src/sepa_gmi.c)
-set_property(TARGET gmi PROPERTY INTERPROCEDURAL_OPTIMIZATION ${LTO_AVAILABLE})
-
-# link to math library if it is available
+# Find math library.
 find_library(LIBM m)
 if(NOT LIBM)
   set(LIBM "")
 endif()
 
-target_link_libraries(gmi ${SCIP_LIBRARIES} ${LIBM})
 
-if( TARGET examples )
-    add_dependencies( examples gmi )
+add_executable(gmi
+   src/cmain.c
+   src/sepa_gmi.c)
+target_link_libraries(gmi SCIP::SCIP ${LIBM})
+
+if(SCIP_HAS_LTO)
+   set_target_properties(gmi PROPERTIES
+      INTERPROCEDURAL_OPTIMIZATION 1)
+endif()
+
+if(TARGET examples)
+    add_dependencies(examples gmi)
 endif()
 
 include(CTest)
@@ -43,62 +47,59 @@ include(CTest)
 #
 
 set(instances
-    "instances/MIP/dcmulti.mps\;188182"
-    "instances/MIP/misc03.mps\;3360"
-    "instances/MIP/stein27.fzn\;18"
-    "instances/MINLP/parincQuadratic.osil\;49920.5564"
-    "instances/MINLP/tltr.mps\;48.0666666667"
-    "instances/PseudoBoolean/normalized-bsg_10_4_5.opb\;-4"
-    "instances/PseudoBoolean/normalized-mds_10_4_3.opb\;2"
-    )
+   "instances/MIP/dcmulti.mps\;188182"
+   "instances/MIP/misc03.mps\;3360"
+   "instances/MIP/stein27.fzn\;18"
+   "instances/MINLP/parincQuadratic.osil\;49920.5564"
+   "instances/MINLP/tltr.mps\;48.0666666667"
+   "instances/PseudoBoolean/normalized-bsg_10_4_5.opb\;-4"
+   "instances/PseudoBoolean/normalized-mds_10_4_3.opb\;2"
+   )
 set(settings
-    "gmionly"
-    "gmirep"
-    "gmi"
-    "scipdefault")
+   "gmionly"
+   "gmirep"
+   "gmi"
+   "scipdefault"
+   )
 
 #
 # add the build of the binary as a test
 #
 add_test(NAME examples-gmi-build
-        COMMAND "${CMAKE_COMMAND}" --build "${CMAKE_BINARY_DIR}" --config $<CONFIG> --target gmi
-        )
+   COMMAND "${CMAKE_COMMAND}" --build "${CMAKE_BINARY_DIR}" --config $<CONFIG> --target gmi
+   )
 #
 # avoid that several build jobs try to concurrently build the SCIP library
 # note that this ressource lock name is not the actual libscip target
 #
-set_tests_properties(examples-gmi-build
-                    PROPERTIES
-                        RESOURCE_LOCK libscip
-                    )
-#
+set_tests_properties(examples-gmi-build PROPERTIES
+   RESOURCE_LOCK libscip)
 #
 # loop over the instances
 #
 foreach(instance ${instances})
-    list(GET instance 0 path)
-    list(GET instance 1 optval)
-    get_filename_component(basename ${path} NAME)
-    foreach(setting ${settings})
-        #
-        # treat the instance as a tuple (list) of two values
-        #
-        add_test(NAME examples-gmi-${setting}-${basename}
-                COMMAND $<TARGET_FILE:gmi> ${CMAKE_CURRENT_SOURCE_DIR}/../../check/${path} ${CMAKE_CURRENT_SOURCE_DIR}/settings/${setting}.set -o ${optval} ${optval}
-                )
-        set_tests_properties(examples-gmi-${setting}-${basename}
-                            PROPERTIES
-                            FAIL_REGULAR_EXPRESSION "ERROR"
-                                DEPENDS examples-gmi-build
-                                RESOURCE_LOCK libscip
-                            )
-        if(WIN32)
-           # on windows we need to execute the application and examples executables from the directory containing the libscip.dll,
-           # on other systems this directory does not exist.
-            set_tests_properties(examples-gmi-${setting}-${basename}
-                PROPERTIES
-                        WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/bin/$<CONFIG>
-                )
-        endif()
-    endforeach(setting)
+   list(GET instance 0 path)
+   list(GET instance 1 optval)
+   get_filename_component(basename ${path} NAME)
+   foreach(setting ${settings})
+      #
+      # treat the instance as a tuple (list) of two values
+      #
+      add_test(NAME examples-gmi-${setting}-${basename}
+         COMMAND $<TARGET_FILE:gmi> ${CMAKE_CURRENT_SOURCE_DIR}/../../check/${path} ${CMAKE_CURRENT_SOURCE_DIR}/settings/${setting}.set -o ${optval} ${optval}
+         )
+      set_tests_properties(examples-gmi-${setting}-${basename} PROPERTIES
+         FAIL_REGULAR_EXPRESSION "ERROR"
+         DEPENDS examples-gmi-build
+         RESOURCE_LOCK libscip
+         )
+      if(WIN32)
+         # on windows we need to execute the application and examples executables from the directory containing the libscip.dll,
+         # on other systems this directory does not exist.
+         set_tests_properties(examples-gmi-${setting}-${basename} PROPERTIES
+            WORKING_DIRECTORY "${CMAKE_BINARY_DIR}/bin/$<CONFIG>"
+            )
+      endif()
+   endforeach(setting)
 endforeach(instance)
+

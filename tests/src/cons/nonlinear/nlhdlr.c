@@ -538,13 +538,13 @@ void setup(void)
 
    success = FALSE;
    SCIP_CALL( SCIPparseCons(scip, &cons, input1, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, &success) );
-   cr_assert(success);
+   TEST_ASSERT(success);
    SCIP_CALL( SCIPaddCons(scip, cons) );
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
 
    success = FALSE;
    SCIP_CALL( SCIPparseCons(scip, &cons, input2, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, &success) );
-   cr_assert(success);
+   TEST_ASSERT(success);
    SCIP_CALL( SCIPaddCons(scip, cons) );
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
 }
@@ -557,12 +557,11 @@ void teardown(void)
    SCIP_CALL( SCIPreleaseVar(scip, &y) );
    SCIP_CALL( SCIPfree(&scip) );
 
-   cr_assert_eq(BMSgetMemoryUsed(), 0, "Memory is leaking!!");
+   TEST_ASSERT_EQUAL(BMSgetMemoryUsed(), 0, "Memory is leaking!!");
 }
 
-Test(conshdlr, nlhdlr, .init = setup, .fini = teardown,
-   .description = "test basic functionality of nonlinear handler of the nonlinear constraint handler."
-   )
+/** @brief test basic functionality of nonlinear handler of the nonlinear constraint handler. */
+void test_conshdlr_nlhdlr(void)
 {
    SCIP_NLHDLR* nlhdlr;
    SCIP_NLHDLRDATA* nlhdlrdata;
@@ -595,7 +594,18 @@ Test(conshdlr, nlhdlr, .init = setup, .fini = teardown,
    SCIP_CALL( SCIPprintStatistics(scip, NULL) );
 #endif
 
-   cr_assert(SCIPgetStatus(scip) == SCIP_STATUS_OPTIMAL, "not solved to optimality");
-   cr_assert(SCIPisFeasEQ(scip, SCIPgetPrimalbound(scip), -1.93649230212515), "optimal value not correct, expected -1.93649230212515, but got %.20g", SCIPgetPrimalbound(scip));
-   cr_assert(SCIPgetNNodes(scip) <= 1, "convex NLP should be solved without branching, but took %" SCIP_LONGINT_FORMAT " nodes", SCIPgetNNodes(scip));
+   TEST_ASSERT(SCIPgetStatus(scip) == SCIP_STATUS_OPTIMAL, "not solved to optimality");
+   TEST_ASSERT(SCIPisFeasEQ(scip, SCIPgetPrimalbound(scip), -1.93649230212515), "optimal value not correct, expected -1.93649230212515, but got %.20g", SCIPgetPrimalbound(scip));
+   TEST_ASSERT(SCIPgetNNodes(scip) <= 1, "convex NLP should be solved without branching, but took %" SCIP_LONGINT_FORMAT " nodes", SCIPgetNNodes(scip));
+}
+
+void setUp(void) { setup(); }
+
+void tearDown(void) { teardown(); }
+
+int main(void)
+{
+   UNITY_BEGIN();
+   RUN_TEST(test_conshdlr_nlhdlr);
+   return UNITY_END();
 }

@@ -51,13 +51,22 @@ static void teardown(void)
 {
    SCIP_CALL( SCIPfree(&scip) );
 
-   cr_assert_null(scip);
-   cr_assert_eq(BMSgetMemoryUsed(), 0, "There is a memory leak!!");
+   TEST_ASSERT_NULL(scip);
+   TEST_ASSERT_EQUAL(BMSgetMemoryUsed(), 0, "There is a memory leak!!");
 }
 
-TestSuite(stats, .init = setup, .fini = teardown);
+void setUp(void)
+{
+   setup();
+}
 
-Test(stats, print_json)
+void tearDown(void)
+{
+   teardown();
+}
+
+/* TESTS */
+void test_stats_print_json(void)
 {
    /* read problem */
    char filename[SCIP_MAXSTRLEN];
@@ -68,4 +77,11 @@ Test(stats, print_json)
 
    /* just to test that it doesn't raise any errors or has a memory leak */
    SCIP_CALL( SCIPprintStatisticsJson(scip, NULL) );
+}
+
+int main(void)
+{
+   UNITY_BEGIN();
+   RUN_TEST(test_stats_print_json);
+   return UNITY_END();
 }

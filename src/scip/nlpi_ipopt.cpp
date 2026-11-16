@@ -84,16 +84,16 @@
 #endif
 
 /* MUMPS that can be used by Ipopt is not threadsafe
- * If we want SCIP to be threadsafe (SCIP_THREADSAFE), have std::mutex (C++11 or higher), and use Ipopt before 3.14,
+ * If we want SCIP to be threadsafe (SCIP_IS_THREADSAFE), have std::mutex (C++11 or higher), and use Ipopt before 3.14,
  * then we protect the call to Ipopt by a mutex if MUMPS is used as linear solver.
  * Thus, we allow only one Ipopt run at a time.
  * Ipopt 3.14 has this build-in to its MUMPS interface, so we won't have to take care of this.
  */
-#if defined(SCIP_THREADSAFE) && __cplusplus >= 201103L && IPOPT_VERSION_MAJOR == 3 && IPOPT_VERSION_MINOR < 14
+#if SCIP_IS_THREADSAFE && __cplusplus >= 201103L && IPOPT_VERSION_MAJOR == 3 && IPOPT_VERSION_MINOR < 14
 #define PROTECT_SOLVE_BY_MUTEX
 #include <mutex>
 static std::mutex solve_mutex;  /*lint !e1756*/
-#endif
+#endif /* SCIP_IS_THREADSAFE && C++ version >= 201103 && IPOPT_VERSION_MAJOR == 3 && IPOPT_VERSION_MINOR < 14 */
 
 using namespace Ipopt;
 
@@ -945,9 +945,9 @@ SCIP_DECL_NLPICREATEPROBLEM(nlpiCreateProblemIpopt)
       (*problem)->ipopt = new IpoptApplication(false);
 
       /* plugin our journal to get output through SCIP message handler */
-      SmartPtr<Journal> jrnl = new ScipJournal("console", J_ITERSUMMARY, scip);
+      SmartPtr<ScipJournal> jrnl = new ScipJournal("console", J_ITERSUMMARY, scip);
       jrnl->SetPrintLevel(J_DBG, J_NONE);
-      if( !(*problem)->ipopt->Jnlst()->AddJournal(jrnl) )
+      if( !(*problem)->ipopt->Jnlst()->AddJournal(GetRawPtr(jrnl)) )
       {
          SCIPerrorMessage("Failed to register ScipJournal for IPOPT output.");
       }

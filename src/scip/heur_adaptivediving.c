@@ -525,7 +525,7 @@ SCIP_DECL_HEUREXEC(heurExecAdaptivediving) /*lint --e{715}*/
    assert(divesets != NULL);
    assert(heurdata->ndivesets > 0);
 
-   SCIPdebugMsg(scip, "heurExecAdaptivediving: depth %d sols %d inf %u node %lld (last dive at %lld)\n",
+   SCIPdebugMsg(scip, "heurExecAdaptivediving: depth %d sols %d inf %u node %" SCIP_LONGINT_FORMAT " (last dive at %" SCIP_LONGINT_FORMAT ")\n",
          SCIPgetDepth(scip),
          SCIPgetNSols(scip),
          nodeinfeasible,

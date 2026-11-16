@@ -6,33 +6,122 @@
 #define SCIP_VERSION_MINOR @SCIP_VERSION_MINOR@
 #define SCIP_VERSION_PATCH @SCIP_VERSION_PATCH@
 #define SCIP_VERSION_API @SCIP_VERSION_API@
-#cmakedefine BMS_NOBLOCKMEM
-#cmakedefine SCIP_NOBUFFERMEM
-#cmakedefine WITH_DEBUG_SOLUTION
+
+#cmakedefine01 BMS_HAS_NOBLOCKMEM
+#cmakedefine01 SCIP_HAS_NOBUFFERMEM
+#cmakedefine01 SCIP_HAS_DEBUG_SOLUTION
 #cmakedefine SCIP_NO_SIGACTION
 #cmakedefine SCIP_NO_STRTOK_R
-#cmakedefine TPI_NONE
-#cmakedefine TPI_TNY
-#cmakedefine TPI_OMP
-#cmakedefine SCIP_THREADSAFE
 #cmakedefine WITH_SCIPDEF
-#cmakedefine SCIP_WITH_LAPACK
-#cmakedefine SCIP_WITH_PAPILO
-#cmakedefine SCIP_WITH_ZLIB
-#cmakedefine SCIP_WITH_READLINE
-#cmakedefine SCIP_WITH_GMP
-#cmakedefine SCIP_WITH_MPFR
-#cmakedefine SCIP_WITH_QSOPTEX
-#cmakedefine SCIP_WITH_LPSCHECK
-#cmakedefine SCIP_WITH_ZIMPL
-#cmakedefine SCIP_WITH_AMPL
+#cmakedefine01 SCIP_HAS_LAPACK
+#cmakedefine01 SCIP_HAS_PAPILO
+#cmakedefine01 SCIP_HAS_ZLIB
+#cmakedefine01 SCIP_HAS_READLINE
+#cmakedefine01 SCIP_HAS_GMP
+#cmakedefine01 SCIP_HAS_MPFR
+#cmakedefine01 SCIP_HAS_LPSCHECK
+#cmakedefine01 SCIP_HAS_ZIMPL
+#cmakedefine01 SCIP_HAS_AMPL
 #cmakedefine SCIP_ROUNDING_FE
 #cmakedefine SCIP_ROUNDING_FP
 #cmakedefine SCIP_ROUNDING_MS
-#cmakedefine SCIP_WITH_EXACTSOLVE
+#cmakedefine01 SCIP_HAS_EXACTSOLVE
 #cmakedefine SCIP_WITH_EGLIB
-#cmakedefine SCIP_WITH_BOOST
-#cmakedefine SCIP_CHECK_STAGE
-#cmakedefine SCIP_CHECK_NAME
+#cmakedefine01 SCIP_HAS_BOOST
+#cmakedefine01 SCIP_CHECK_STAGE
+#cmakedefine01 SCIP_CHECK_NAME
+#cmakedefine01 SCIP_HAS_CONOPT
+#cmakedefine01 SCIP_HAS_WORHP
+#cmakedefine01 SCIP_HAS_IPOPT
+
+#cmakedefine01 SCIP_IS_THREADSAFE
+#cmakedefine01 SCIP_HAS_TPI
+#cmakedefine01 SCIP_TPI_OMP
+#cmakedefine01 SCIP_TPI_TNY
+#cmakedefine01 SCIP_TPI_NONE
+
+#cmakedefine01 SCIP_HAS_LPS
+#define SCIP_LPS_NAME "@SCIP_LPS_NAME@"
+#cmakedefine01 SCIP_HAS_SOPLEX
+#cmakedefine01 SCIP_HAS_CLP
+#cmakedefine01 SCIP_HAS_QSOPTEX
+#cmakedefine01 SCIP_HAS_GLOP
+#cmakedefine01 SCIP_HAS_HIGHS
+#cmakedefine01 SCIP_HAS_CPLEX
+#cmakedefine01 SCIP_HAS_XPRESS
+#cmakedefine01 SCIP_HAS_MOSEK
+#cmakedefine01 SCIP_HAS_GUROBI
+#cmakedefine01 SCIP_LPS_SPX
+#cmakedefine01 SCIP_LPS_CLP
+#cmakedefine01 SCIP_LPS_QSO
+#cmakedefine01 SCIP_LPS_GLOP
+#cmakedefine01 SCIP_LPS_HIGHS
+#cmakedefine01 SCIP_LPS_CPX
+#cmakedefine01 SCIP_LPS_XPRS
+#cmakedefine01 SCIP_LPS_MSK
+#cmakedefine01 SCIP_LPS_GRB
+#cmakedefine01 SCIP_LPS_NONE
+
+#cmakedefine01 SCIP_HAS_LPSEXACT
+#define SCIP_LPSEXACT_NAME "@SCIP_LPSEXACT_NAME@"
+#cmakedefine01 SCIP_LPSEXACT_SPX
+#cmakedefine01 SCIP_LPSEXACT_QSOEX
+#cmakedefine01 SCIP_LPSEXACT_NONE
+
+/* Deprecated macros. Use SCIP_HAS_* instead, noting that they are always defined with a binary value. */
+#if SCIP_HAS_GMP && !defined(SCIP_WITH_GMP)
+  #define SCIP_WITH_GMP
+#endif /* SCIP_HAS_GMP && !defined(SCIP_WITH_GMP) */
+#if SCIP_HAS_ZLIB && !defined(SCIP_WITH_ZLIB)
+  #define SCIP_WITH_ZLIB
+#endif /* SCIP_HAS_ZLIB && !defined(SCIP_WITH_ZLIB) */
+#if SCIP_HAS_MPFR && !defined(SCIP_WITH_MPFR)
+  #define SCIP_WITH_MPFR
+#endif /* SCIP_HAS_MPFR && !defined(SCIP_WITH_MPFR) */
+#if SCIP_HAS_PAPILO && !defined(SCIP_WITH_PAPILO)
+  #define SCIP_WITH_PAPILO
+#endif /* SCIP_HAS_PAPILO && !defined(SCIP_WITH_PAPILO) */
+#if SCIP_HAS_BOOST && !defined(SCIP_WITH_BOOST)
+  #define SCIP_WITH_BOOST
+#endif /* SCIP_HAS_BOOST && !defined(SCIP_WITH_BOOST) */
+#if SCIP_HAS_ZIMPL && !defined(SCIP_WITH_ZIMPL)
+  #define SCIP_WITH_ZIMPL
+#endif /* SCIP_HAS_ZIMPL && !defined(SCIP_WITH_ZIMPL) */
+#if SCIP_HAS_EXACTSOLVE && !defined(SCIP_WITH_EXACTSOLVE)
+  #define SCIP_WITH_EXACTSOLVE
+#endif /* SCIP_HAS_EXACTSOLVE && !defined(SCIP_WITH_EXACTSOLVE) */
+#if SCIP_HAS_AMPL && !defined(SCIP_WITH_AMPL)
+  #define SCIP_WITH_AMPL
+#endif /* SCIP_HAS_AMPL && !defined(SCIP_WITH_AMPL) */
+#if SCIP_IS_THREADSAFE && !defined(SCIP_THREADSAFE)
+  #define SCIP_THREADSAFE
+#endif /* SCIP_IS_THREADSAFE && !defined(SCIP_THREADSAFE) */
+#if SCIP_TPI_OMP && !defined(TPI_OMP)
+  #define TPI_OMP
+#endif /* SCIP_TPI_OMP && !defined(TPI_OMP) */
+#if SCIP_TPI_TNY && !defined(TPI_TNY)
+  #define TPI_TNY
+#endif /* SCIP_TPI_TNY && !defined(TPI_TNY) */
+#if SCIP_TPI_NONE && !defined(TPI_NONE)
+  #define TPI_NONE
+#endif /* SCIP_TPI_NONE && !defined(TPI_NONE) */
+#if SCIP_HAS_LPSCHECK && !defined(SCIP_LPSCHECK)
+  #define SCIP_LPSCHECK
+#endif /* SCIP_HAS_LPSCHECK && !defined(SCIP_LPSCHECK) */
+#if SCIP_HAS_LAPACK && !defined(SCIP_WITH_LAPACK)
+  #define SCIP_WITH_LAPACK
+#endif /* SCIP_HAS_LAPACK && !defined(SCIP_WITH_LAPACK) */
+#if SCIP_HAS_CURSES && !defined(SCIP_WITH_READLINE)
+  #define SCIP_WITH_READLINE
+#endif /* SCIP_HAS_READLINE && !defined(SCIP_WITH_READLINE) */
+#if BMS_HAS_NOBLOCKMEM && !defined(BMS_NOBLOCKMEM)
+  #define BMS_NOBLOCKMEM
+#endif /* BMS_HAS_NOBLOCKMEM && !defined(BMS_NOBLOCKMEM) */
+#if SCIP_HAS_NOBUFFERMEM && !defined(SCIP_NOBUFFERMEM)
+  #define SCIP_NOBUFFERMEM
+#endif /* SCIP_HAS_NOBUFFERMEM && !defined(SCIP_NOBUFFERMEM) */
+#if SCIP_HAS_DEBUG_SOLUTION && !defined(WITH_DEBUG_SOLUTION)
+  #define WITH_DEBUG_SOLUTION
+#endif /* SCIP_HAS_DEBUG_SOLUTION && !defined(WITH_DEBUG_SOLUTION */
 
 #endif

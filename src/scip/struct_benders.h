@@ -53,6 +53,19 @@ struct SCIP_BenderscutCut
 };
 typedef struct SCIP_BenderscutCut SCIP_BENDERSCUTCUT;
 
+/** parameters and statistics for the DFBS cut strengthening */
+struct SCIP_BendersDFBSData
+{
+   SCIP_CLOCK*           clock;              /**< temporary for testing */
+   SCIP_Longint          maxnodes;           /**< parameter for the maximum number of nodes processed in a DFBS iteration */
+   int                   numcalls;           /**< counts the number of times the DFBS algorithm is called */
+   int                   offset;             /**< the number of DFBS algorithm calls before being executed */
+   int                   initfreq;           /**< the initial number of DFBS algorithm calls between successive executions */
+   int                   freq;               /**< the number of DFBS algorithm calls between successive executions */
+   SCIP_Longint          totalnodes;         /**< the total number of nodes processed in the DFBS algorithm */
+};
+typedef struct SCIP_BendersDFBSData SCIP_BENDERSDFBSDATA;
+
 /** Benders' decomposition data */
 struct SCIP_Benders
 {
@@ -105,11 +118,15 @@ struct SCIP_Benders
    int                   numthreads;         /**< the number of threads to use when solving the subproblem */
 #endif
    SCIP_Bool             execfeasphase;      /**< should a feasibility phase be executed during the root node, i.e.
-                                                  adding slack variables to constraints to ensure feasibility */
+                                              *   adding slack variables to constraints to ensure feasibility */
    SCIP_Real             slackvarcoef;       /**< the initial objective coefficient of the slack variables in the subproblem */
    SCIP_Real             maxslackvarcoef;    /**< the maximal objective coefficient of the slack variables in the subproblem */
    SCIP_Bool             checkconsconvexity; /**< should the constraints of the subproblems be checked for convexity? */
    SCIP_NLPPARAM         nlpparam;           /**< parameters for NLP solves */
+   SCIP_Bool             iiscutstrengthen;   /**< should an IIS-type method be applied to find solutions that strengthen no-good-based cuts? */
+   SCIP_Longint          earlytermminnodes;  /**< the minimum number of nodes processed before early termination of the subproblem */
+   SCIP_Real             earlytermminimp;    /**< the minimum improvement in the dual bound required to terminate the subproblem early */
+
 
    /* information for heuristics */
    SCIP*                 sourcescip;         /**< the source scip from when the Benders' was copied */
@@ -142,11 +159,11 @@ struct SCIP_Benders
    int                   nconvexsubprobs;    /**< the number of subproblems that are convex */
    int                   nnonlinearsubprobs; /**< the number of subproblems that are non-linear */
    SCIP_Bool             subprobscreated;    /**< have the subproblems been created for this Benders' decomposition.
-                                                  This flag is used when retransforming the problem.*/
+                                              *   This flag is used when retransforming the problem.*/
    SCIP_Bool             subprobsinfeasible; /**< flag to indicate that infeasibility of at least one subproblem has
-                                                  been detected in the initialisation stages. */
+                                              *   been detected in the initialisation stages. */
    SCIP_Bool*            mastervarscont;     /**< flag to indicate that the master problem variable have been converted
-                                               to continuous variables. */
+                                              *   to continuous variables. */
    SCIP_Bool*            subprobsetup;       /**< flag to indicate whether the subproblem has been set up. */
    SCIP_Bool*            indepsubprob;       /**< flag to indicate if a subproblem is independent of the master prob */
    SCIP_Bool*            subprobenabled;     /**< flag to indicate whether the subproblem is enabled */
@@ -161,12 +178,13 @@ struct SCIP_Benders
    SCIP_Real             convexmult;         /**< the multiplier for the convex comb of the LP and sepa point */
    SCIP_Real             perturbeps;         /**< epsilon value to perturb the LP solution */
    int                   noimprovecount;     /**< count of the iterations without improvement */
-   int                   noimprovelimit;     /**< limit used to change behaviour of stabilitation */
+   int                   noimprovelimit;     /**< limit used to change behaviour of stabilisation */
    SCIP_NODE*            prevnode;           /**< the previous node where the cut strengthening was performed */
    SCIP_Longint          prevnlpiter;        /**< number of LP iters at the previous call of the cut strengthening */
    SCIP_Real             prevlowerbound;     /**< the lowerbound from the previous LP enforcement iteration */
    SCIP_Bool             strengthenenabled;  /**< is the core point cut strengthening enabled */
-   char                  strengthenintpoint; /**< where should the strengthening interior point be sourced from ('l'p relaxation, 'f'irst solution, 'i'ncumbent solution, 'r'elative interior point, vector of 'o'nes, vector of 'z'eros)  */
+   char                  strengthenintpoint; /**< where should the strengthening interior point be sourced from
+                                              *   ('l'p relaxation, 'f'irst solution, 'i'ncumbent solution, 'r'elative interior point, vector of 'o'nes, vector of 'z'eros)  */
    SCIP_Bool             strengthenround;    /**< flag to indicate whether a cut strengthening round is being performed */
    int                   nstrengthencuts;    /**< the number of strengthened cuts found */
    int                   nstrengthencalls;   /**< the number of calls to the strengthening round */
@@ -187,6 +205,8 @@ struct SCIP_Benders
    SCIP_BENDERSCUTCUT**  storedcuts;         /**< array to store the data required to form a cut/constraint */
    int                   storedcutssize;     /**< the size of the added cuts array */
    int                   nstoredcuts;        /**< the number of the added cuts */
+
+   SCIP_BENDERSDFBSDATA* dfbsdata;           /**< data for the DFBS cut strengthening */
 };
 
 /** statistics for solving the subproblems. Used for prioritising the solving of the subproblem */
@@ -195,6 +215,8 @@ struct SCIP_SubproblemSolveStat
    int                   idx;                /**< the index of the subproblem */
    int                   ncalls;             /**< the number of times this subproblems has been solved */
    SCIP_Real             avgiter;            /**< the average number of LP/NLP iterations performed */
+   SCIP_Longint          iterations;         /**< the number of LP/NLP iterations performed */
+   SCIP_Longint          nodes;              /**< the number of nodes processed */
 };
 
 /** parameters that are set to solve the subproblem. This will be changed from what the user inputs, so they are stored

@@ -48,7 +48,7 @@
 
 #pragma GCC diagnostic ignored "-Wpedantic"
 
-#ifdef SCIP_WITH_GMP
+#if SCIP_HAS_GMP
 static QSnum_type qsnum_zeroLpNum;
 static QSnum_type qsnum_oneLpNum;
 static QSnum_type __t__;
@@ -240,11 +240,15 @@ int QSnum_factor_create_factor_work(
       f->ur_inf[i].nzcnt = 0;
       f->lc_inf[i].nzcnt = 0;
       f->lr_inf[i].nzcnt = 0;
+      f->ur_inf[i].delay = 0;
+      f->lc_inf[i].delay = 0;
+      f->lr_inf[i].delay = 0;
       f->rperm[i] = i;
       f->rrank[i] = i;
    }
    for (i = 0; i < dimc; i++) {
       f->uc_inf[i].nzcnt = 0;
+      f->uc_inf[i].delay = 0;
       f->cperm[i] = i;
       f->crank[i] = i;
    }
@@ -1893,7 +1897,6 @@ static int qsnum_dense_build_matrix(
    f->dense_base = f->stage;
    f->dmat = dmat;
    f->dsize = dsize;
-   dmat = 0;
 
    /* CLEANUP:  */
    return rval;
@@ -3285,8 +3288,8 @@ void QSnum_factor_btran (
    int nzcnt;
    int sparse;
    int *aindx;
-   QSnum_type *acoef = a->coef;
-   QSnum_type *work_coef = f->work_coef;
+   QSnum_type *acoef;
+   QSnum_type *work_coef;
    int dimr;
 
    if( a->nzcnt >= SPARSE_FACTOR * f->dimr )
@@ -3312,7 +3315,7 @@ void QSnum_factor_btran (
    }
    else
    {
-      qsnum_factor_btranu (f, work_coef, &f->xtmp);
+      qsnum_factor_btranu (f, work_coef, &f->xtmp);  /*lint !e644*/
    }
 
    if( f->xtmp.nzcnt >= SPARSE_FACTOR * f->dimr )
@@ -3451,7 +3454,7 @@ int QSnum_svector_alloc(
    int                   nzcnt               /**< nonzero count */
    )
 {
-   int rval = 0;
+   int rval;
 
    s->nzcnt = nzcnt;
    if( nzcnt == 0 )
@@ -3577,8 +3580,10 @@ void RECTLUfreeFactorization(
    qsnum_factor_work*    f                   /**< factor work */
    )
 {
+   assert(f != NULL);
+
    QSnum_factor_free_factor_work (f);
    QSnum_factor_clear ();
-   if (f) free (f);
+   free (f);
 }
 #endif

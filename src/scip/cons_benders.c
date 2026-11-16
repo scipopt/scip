@@ -431,7 +431,7 @@ SCIP_DECL_CONSFREE(consFreeBenders)
    assert(conshdlrdata != NULL);
 
    /* freeing the constraint handler data */
-   SCIPfreeMemory(scip, &conshdlrdata);
+   SCIPfreeBlockMemory(scip, &conshdlrdata);
 
    return SCIP_OKAY;
 }
@@ -822,15 +822,11 @@ SCIP_RETCODE SCIPincludeConshdlrBenders(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
-   SCIP_CONSHDLRDATA* conshdlrdata;
-   SCIP_CONSHDLR* conshdlr;
+   SCIP_CONSHDLRDATA* conshdlrdata = NULL;
+   SCIP_CONSHDLR* conshdlr = NULL;
 
    /* create benders constraint handler data */
-   conshdlrdata = NULL;
-
-   SCIP_CALL( SCIPallocMemory(scip, &conshdlrdata) );
-
-   conshdlr = NULL;
+   SCIP_CALL( SCIPallocBlockMemory(scip, &conshdlrdata) );
 
    /* include constraint handler */
    SCIP_CALL( SCIPincludeConshdlrBasic(scip, &conshdlr, CONSHDLR_NAME, CONSHDLR_DESC,

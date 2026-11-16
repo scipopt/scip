@@ -52,6 +52,14 @@ SCIP_RETCODE SCIPincludeEventHdlrGlobalbnd(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
+/** enables immediate publishing of this concurrent solver's tightened global variable bounds to the
+ *  syncstore bound pool; the global bound change events are caught in any case once the handler is included
+ */
+SCIP_EXPORT
+SCIP_RETCODE SCIPeventGlobalbndEnableBoundPool(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
 /** gets the global bound changes stored in the eventhandler */
 SCIP_EXPORT
 SCIP_BOUNDSTORE* SCIPeventGlobalbndGetBoundChanges(

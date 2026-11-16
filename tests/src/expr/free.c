@@ -67,15 +67,12 @@ void teardown(void)
    SCIP_CALL( SCIPreleaseVar(scip, &y) );
    SCIP_CALL( SCIPfree(&scip) );
 
-   cr_assert_eq(BMSgetMemoryUsed(), 0, "There is are memory leak!!");
+   TEST_ASSERT_EQUAL(BMSgetMemoryUsed(), 0, "There is are memory leak!!");
 }
 
-/***** TEST SUITE: all tests of the form Test(free, xyz) belong to the same suite and share the setup and teardown *****/
-TestSuite(free, .init = setup, .fini = teardown);
+/***** TEST SUITE: free tests *****/
 
-/***** ACTUAL TESTS *****/
-
-Test(free, simple_5xy)
+void test_free_basic(void)
 {
    SCIP_EXPR* expr_x;
    SCIP_EXPR* expr_y;
@@ -104,7 +101,7 @@ Test(free, simple_5xy)
    /* in the teardown we check, after scip is freed, that there are no leaks */
 }
 
-Test(free, long_expr)
+void test_free_long_expr(void)
 {
    int i;
    SCIP_EXPR* exprs[BIG];
@@ -124,19 +121,19 @@ Test(free, long_expr)
    /* create expression for sum */
    SCIP_CALL( SCIPcreateExprSum(scip, &sumexpr, BIG, exprs, coefs, -1.0, NULL, NULL) );
 
-   cr_expect_eq(SCIPexprGetNUses(expr_x), BIG + 1);
+   SOFT_ASSERT_EQUAL(SCIPexprGetNUses(expr_x), BIG + 1);
 
    /* release leaf expressions (this should not free them yet, as they are captured by sumexpr) */
    SCIP_CALL( SCIPreleaseExpr(scip, &expr_x) );
 
-   cr_expect_eq(SCIPexprGetNUses(exprs[0]), BIG);
+   SOFT_ASSERT_EQUAL(SCIPexprGetNUses(exprs[0]), BIG);
 
    /* release sum expression (this should free the sum and its children) */
    SCIP_CALL( SCIPreleaseExpr(scip, &sumexpr) );
    /* in the teardown we check, after scip is freed, that there are no leaks */
 }
 
-Test(free, deep_expr)
+void test_free_deep_expr(void)
 {
    int i;
    SCIP_EXPR* sumexprs[BIG];
@@ -151,8 +148,8 @@ Test(free, deep_expr)
    {
       /* create expressions for sum */
       SCIP_CALL( SCIPcreateExprSum(scip, &sumexprs[i], 1, &sumexprs[i-1], NULL, 1.0 * i, NULL, NULL) );
-      cr_expect_eq(SCIPexprGetNUses(sumexprs[i]), 1);
-      cr_expect_eq(SCIPexprGetNUses(sumexprs[i-1]), 2);
+      SOFT_ASSERT_EQUAL(SCIPexprGetNUses(sumexprs[i]), 1);
+      SOFT_ASSERT_EQUAL(SCIPexprGetNUses(sumexprs[i-1]), 2);
    }
    printf("finish big loop\n");
 
@@ -160,16 +157,16 @@ Test(free, deep_expr)
    SCIP_CALL( SCIPcreateExprSum(scip, &sumexpr, 1, &sumexprs[BIG-1], NULL, 1.0 * BIG, NULL, NULL) );
 
    /* check nuses */
-   cr_expect_eq(SCIPexprGetNUses(sumexpr), 1);
-   cr_expect_eq(SCIPexprGetNUses(expr_x), 2);
+   SOFT_ASSERT_EQUAL(SCIPexprGetNUses(sumexpr), 1);
+   SOFT_ASSERT_EQUAL(SCIPexprGetNUses(expr_x), 2);
 
    /* release leaf expressions (this should not free them yet, as they are captured by sumexpr) */
    for( i = 0; i < BIG; i++ )
    {
-      cr_expect_eq(SCIPexprGetNUses(sumexprs[i]), 2);
+      SOFT_ASSERT_EQUAL(SCIPexprGetNUses(sumexprs[i]), 2);
       SCIP_CALL( SCIPreleaseExpr(scip, &sumexprs[i]) );
    }
-   cr_expect_eq(SCIPexprGetNUses(expr_x), 2);
+   SOFT_ASSERT_EQUAL(SCIPexprGetNUses(expr_x), 2);
    SCIP_CALL( SCIPreleaseExpr(scip, &expr_x) );
 
    /* release sum expression (this should free all expressions) */
@@ -177,7 +174,7 @@ Test(free, deep_expr)
    /* in the teardown we check, after scip is freed, that there are no leaks */
 }
 
-Test(free, long_and_deep_expr)
+void test_free_long_and_deep_expr(void)
 {
    SCIP_EXPR* expr_x;
    SCIP_EXPR* expr_y;
@@ -233,4 +230,18 @@ Test(free, long_and_deep_expr)
 
    /* release crazy expression (this should free the product and its children) */
    SCIP_CALL( SCIPreleaseExpr(scip, &crazyexpr) );
+}
+
+void setUp(void) { setup(); }
+
+void tearDown(void) { teardown(); }
+
+int main(void)
+{
+   UNITY_BEGIN();
+   RUN_TEST(test_free_basic);
+   RUN_TEST(test_free_long_expr);
+   RUN_TEST(test_free_deep_expr);
+   RUN_TEST(test_free_long_and_deep_expr);
+   return UNITY_END();
 }

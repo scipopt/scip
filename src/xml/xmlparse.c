@@ -45,7 +45,7 @@
 
 
 #include <sys/types.h>
-#ifdef SCIP_WITH_ZLIB
+#if SCIP_HAS_ZLIB
 #ifdef _WIN32
 #define R_OK 0
 #define access _access
@@ -53,7 +53,7 @@
 #else
 #include <unistd.h>
 #endif
-#endif
+#endif /* SCIP_HAS_ZLIB */
 #include <stdio.h>
 #include <stdlib.h>
 #include <assert.h>
@@ -1104,7 +1104,7 @@ XML_NODE* SCIPxmlProcess(
       return NULL;
    BMScopyMemoryArray(myfilename, filename, filenamelen + 1);
 
-#ifdef SCIP_WITH_ZLIB
+#if SCIP_HAS_ZLIB
    if ( access(filename, R_OK) != 0 )
    {
       strcat(myfilename, ".gz");
@@ -1115,7 +1115,7 @@ XML_NODE* SCIPxmlProcess(
       if ( access(myfilename, R_OK) != 0 )
          (void)SCIPstrncpy(myfilename, filename, (int)filenamelen + 5);
    }
-#endif
+#endif /* SCIP_HAS_ZLIB */
    ppos.fp = FOPEN(myfilename, "r");
    if ( ppos.fp == NULL )
       perror(myfilename);

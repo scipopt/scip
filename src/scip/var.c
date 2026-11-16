@@ -514,9 +514,9 @@ SCIP_RETCODE varAddLbchginfo(
 
    SCIPsetDebugMsg(set, "adding lower bound change info to var <%s>[%g,%g]: depth=%d, pos=%d, infer%s=<%s>, inferinfo=%d, %g -> %g\n",
       SCIPvarGetName(var), var->locdom.lb, var->locdom.ub, depth, pos,
-      infercons != NULL ? "cons" : (inferprop != NULL ? "prop" : "symcomp"),
+      infercons != NULL ? "cons" : (inferprop != NULL ? "prop" : (infersymcomp != NULL ? "symcomp" : "-")),
       infercons != NULL ? SCIPconsGetName(infercons) :
-      (inferprop != NULL ? SCIPpropGetName(inferprop) : SCIPsymcompGetName(infersymcomp)),
+      (inferprop != NULL ? SCIPpropGetName(inferprop) : (infersymcomp != NULL ? SCIPsymcompGetName(infersymcomp) : "-")),
       inferinfo, oldbound, newbound);
 
    SCIP_CALL( varEnsureLbchginfosSize(var, blkmem, set, var->nlbchginfos+1) );
@@ -596,9 +596,9 @@ SCIP_RETCODE varAddUbchginfo(
 
    SCIPsetDebugMsg(set, "adding upper bound change info to var <%s>[%g,%g]: depth=%d, pos=%d, infer%s=<%s>, inferinfo=%d, %g -> %g\n",
       SCIPvarGetName(var), var->locdom.lb, var->locdom.ub, depth, pos,
-      infercons != NULL ? "cons" : (inferprop != NULL ? "prop" : "symcomp"),
+      infercons != NULL ? "cons" : (inferprop != NULL ? "prop" : (infersymcomp != NULL ? "symcomp" : "-")),
       infercons != NULL ? SCIPconsGetName(infercons) :
-      (inferprop != NULL ? SCIPpropGetName(inferprop) : SCIPsymcompGetName(infersymcomp)),
+      (inferprop != NULL ? SCIPpropGetName(inferprop) : (infersymcomp != NULL ? SCIPsymcompGetName(infersymcomp) : "-")),
       inferinfo, oldbound, newbound);
 
    SCIP_CALL( varEnsureUbchginfosSize(var, blkmem, set, var->nubchginfos+1) );
@@ -733,7 +733,7 @@ SCIP_RETCODE boundchgApplyExact(
                SCIP_CALL( varAddLbchginfo(var, blkmem, set, var->locdom.lb, boundchg->newbound, depth, pos,
                      boundchg->data.inferencedata.var, NULL, NULL, boundchg->data.inferencedata.reason.symcomp,
                      boundchg->data.inferencedata.info,
-                     (SCIP_BOUNDTYPE)(boundchg->inferboundtype), SCIP_BOUNDCHGTYPE_PROPINFER) );
+                     (SCIP_BOUNDTYPE)(boundchg->inferboundtype), SCIP_BOUNDCHGTYPE_SYMINFER) );
                break;
 
             default:
@@ -816,7 +816,7 @@ SCIP_RETCODE boundchgApplyExact(
                SCIP_CALL( varAddUbchginfo(var, blkmem, set, var->locdom.ub, boundchg->newbound, depth, pos,
                      boundchg->data.inferencedata.var, NULL, NULL, boundchg->data.inferencedata.reason.symcomp,
                      boundchg->data.inferencedata.info,
-                     (SCIP_BOUNDTYPE)(boundchg->inferboundtype), SCIP_BOUNDCHGTYPE_PROPINFER) );
+                     (SCIP_BOUNDTYPE)(boundchg->inferboundtype), SCIP_BOUNDCHGTYPE_SYMINFER) );
                break;
 
             default:
@@ -967,7 +967,7 @@ SCIP_RETCODE SCIPboundchgApply(
                SCIP_CALL( varAddLbchginfo(var, blkmem, set, var->locdom.lb, boundchg->newbound, depth, pos,
                      boundchg->data.inferencedata.var, NULL, NULL, boundchg->data.inferencedata.reason.symcomp,
                      boundchg->data.inferencedata.info,
-                     (SCIP_BOUNDTYPE)(boundchg->inferboundtype), SCIP_BOUNDCHGTYPE_PROPINFER) );
+                     (SCIP_BOUNDTYPE)(boundchg->inferboundtype), SCIP_BOUNDCHGTYPE_SYMINFER) );
                break;
 
             default:
@@ -1052,7 +1052,7 @@ SCIP_RETCODE SCIPboundchgApply(
                SCIP_CALL( varAddUbchginfo(var, blkmem, set, var->locdom.ub, boundchg->newbound, depth, pos,
                      boundchg->data.inferencedata.var, NULL, NULL, boundchg->data.inferencedata.reason.symcomp,
                      boundchg->data.inferencedata.info,
-                     (SCIP_BOUNDTYPE)(boundchg->inferboundtype), SCIP_BOUNDCHGTYPE_PROPINFER) );
+                     (SCIP_BOUNDTYPE)(boundchg->inferboundtype), SCIP_BOUNDCHGTYPE_SYMINFER) );
                break;
 
             default:
@@ -1460,7 +1460,8 @@ SCIP_RETCODE SCIPdomchgFree(
 static
 SCIP_RETCODE domchgMakeDynamic(
    SCIP_DOMCHG**         domchg,             /**< pointer to domain change data */
-   BMS_BLKMEM*           blkmem              /**< block memory */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set                 /**< global SCIP settings */
    )
 {
    assert(domchg != NULL);
@@ -1501,8 +1502,10 @@ SCIP_RETCODE domchgMakeDynamic(
    {
       int i;
       for( i = 0; i < (int)(*domchg)->domchgbound.nboundchgs; ++i )
+      {
          assert(!SCIPvarIsIntegral((*domchg)->domchgbound.boundchgs[i].var)
-            || EPSISINT((*domchg)->domchgbound.boundchgs[i].newbound, 1e-06));
+            || SCIPsetIsIntegral(set, (*domchg)->domchgbound.boundchgs[i].newbound));
+      }
    }
 #endif
 
@@ -1785,9 +1788,9 @@ void SCIPdomchgAddCurrentCertificateIndex(
 
    change = &(domchg->domchgdyn.boundchgs[domchg->domchgdyn.nboundchgs - 1]);
 
-   #ifndef NDEBUG
-      assert(SCIPcertificateEnsureLastBoundInfoConsistent(certificate, change->var, (SCIP_BOUNDTYPE) change->boundtype, change->newbound, FALSE));
-   #endif
+#ifndef NDEBUG
+   assert(SCIPcertificateEnsureLastBoundInfoConsistent(certificate, change->var, (SCIP_BOUNDTYPE) change->boundtype, change->newbound, FALSE));
+#endif
 
    change->certificateindex = SCIPcertificateGetCurrentIndex(certificate) - 1;
 }
@@ -1836,7 +1839,7 @@ SCIP_RETCODE SCIPdomchgAddBoundchg(
    }
    else if( (*domchg)->domchgdyn.domchgtype != SCIP_DOMCHGTYPE_DYNAMIC ) /*lint !e641*/
    {
-      SCIP_CALL( domchgMakeDynamic(domchg, blkmem) );
+      SCIP_CALL( domchgMakeDynamic(domchg, blkmem, set) );
    }
    assert(*domchg != NULL && (*domchg)->domchgdyn.domchgtype == SCIP_DOMCHGTYPE_DYNAMIC); /*lint !e641*/
 
@@ -1928,7 +1931,7 @@ SCIP_RETCODE SCIPdomchgAddHolechg(
    }
    else if( (*domchg)->domchgdyn.domchgtype != SCIP_DOMCHGTYPE_DYNAMIC ) /*lint !e641*/
    {
-      SCIP_CALL( domchgMakeDynamic(domchg, blkmem) );
+      SCIP_CALL( domchgMakeDynamic(domchg, blkmem, set) );
    }
    assert(*domchg != NULL && (*domchg)->domchgdyn.domchgtype == SCIP_DOMCHGTYPE_DYNAMIC); /*lint !e641*/
 
@@ -2581,12 +2584,12 @@ SCIP_RETCODE SCIPvarCreateOriginal(
    SCIP_CALL( varCreate(var, blkmem, set, stat, name, lb, ub, obj, vartype, impltype, initial, removable,
          varcopy, vardelorig, vartrans, vardeltrans, vardata) );
 
-   /* set variable status and data */
-   (*var)->varstatus = SCIP_VARSTATUS_ORIGINAL; /*lint !e641*/
+   /* set variable data and status */
    (*var)->data.original.origdom.holelist = NULL;
    (*var)->data.original.origdom.lb = lb;
    (*var)->data.original.origdom.ub = ub;
    (*var)->data.original.transvar = NULL;
+   (*var)->varstatus = SCIP_VARSTATUS_ORIGINAL; /*lint !e641*/
 
    /* capture variable */
    SCIPvarCapture(*var);
@@ -2627,10 +2630,10 @@ SCIP_RETCODE SCIPvarCreateTransformed(
    /* create event filter for transformed variable */
    SCIP_CALL( SCIPeventfilterCreate(&(*var)->eventfilter, blkmem) );
 
-   /* set variable status and data */
-   (*var)->varstatus = SCIP_VARSTATUS_LOOSE; /*lint !e641*/
+   /* set variable data and status */
    (*var)->data.loose.minaggrcoef = 1.0;
    (*var)->data.loose.maxaggrcoef = 1.0;
+   (*var)->varstatus = SCIP_VARSTATUS_LOOSE; /*lint !e641*/
 
    /* capture variable */
    SCIPvarCapture(*var);
@@ -2740,7 +2743,8 @@ SCIP_RETCODE SCIPvarAddExactData(
    {
       if( (SCIP_VARTYPE)var->vartype == SCIP_VARTYPE_BINARY )
       {
-         SCIPerrorMessage("invalid bounds [%.2g,%.2g] for binary variable <%s>\n", var->data.original.origdom.lb, var->data.original.origdom.ub, var->name);
+         SCIPerrorMessage("invalid bounds [%.2g,%.2g] for binary variable <%s>\n", var->data.original.origdom.lb,
+            var->data.original.origdom.ub, var->name);
          return SCIP_INVALIDDATA;
       }
    }
@@ -2792,7 +2796,8 @@ SCIP_RETCODE SCIPvarCopyExactData(
    if( sourcevar->exactdata->multaggr.scalars != NULL )
    {
       SCIP_CALL( SCIPrationalCopyBlock(blkmem, &targetvar->exactdata->aggregate.constant, sourcevar->exactdata->multaggr.constant) );
-      SCIP_CALL( SCIPrationalCopyBlockArray(blkmem, &targetvar->exactdata->multaggr.scalars, sourcevar->exactdata->multaggr.scalars, sourcevar->data.multaggr.nvars) );
+      SCIP_CALL( SCIPrationalCopyBlockArray(blkmem, &targetvar->exactdata->multaggr.scalars,
+            sourcevar->exactdata->multaggr.scalars, sourcevar->data.multaggr.nvars) );
    }
    else
    {
@@ -3000,7 +3005,7 @@ SCIP_RETCODE parseBounds(
    SCIP_Real*            ub,                 /**< pointer to store the upper bound */
    SCIP_RATIONAL*        lbexact,            /**< pointer to store the exact lower bound */
    SCIP_RATIONAL*        ubexact,            /**< pointer to store the exact upper bound */
-   char**                endptr              /**< pointer to store the final string position if successfully parsed (or NULL if an error occured) */
+   char**                endptr              /**< pointer to store the final string position if successfully parsed (or NULL if an error occurred) */
    )
 {
    char token[SCIP_MAXSTRLEN];
@@ -3846,7 +3851,7 @@ void SCIPvarCapture(
 #endif
    )
    {
-      printf("Captured variable " DEBUGUSES_VARNAME " in SCIP %p, now %d uses; captured at\n", (void*)var->scip, var->nuses);  /* cppcheck-suppress syntaxError */
+      printf("Captured variable " DEBUGUSES_VARNAME " in SCIP %p, now %d uses; captured at\n", (void*)var->scip, var->nuses);
       print_backtrace();
    }
 #endif
@@ -4336,12 +4341,7 @@ SCIP_RETCODE SCIPvarAddLocks(
          assert(!lockvar->donotaggr);
 
          if( lockvar->data.aggregate.scalar < 0.0 )
-         {
-            int tmp = addnlocksup;
-
-            addnlocksup = addnlocksdown;
-            addnlocksdown = tmp;
-         }
+            SCIPswapInts(&addnlocksup, &addnlocksdown);
 
          lockvar = lockvar->data.aggregate.var;
          break;
@@ -4374,14 +4374,11 @@ SCIP_RETCODE SCIPvarAddLocks(
       }
       case SCIP_VARSTATUS_NEGATED:
       {
-         int tmp = addnlocksup;
-
          assert(lockvar->negatedvar != NULL);
          assert(SCIPvarGetStatus(lockvar->negatedvar) != SCIP_VARSTATUS_NEGATED);
          assert(lockvar->negatedvar->negatedvar == lockvar);
 
-         addnlocksup = addnlocksdown;
-         addnlocksdown = tmp;
+         SCIPswapInts(&addnlocksup, &addnlocksdown);
 
          lockvar = lockvar->negatedvar;
          break;
@@ -4693,11 +4690,11 @@ SCIP_RETCODE SCIPvarColumn(
 
    SCIPsetDebugMsg(set, "creating column for variable <%s>\n", var->name);
 
-   /* switch variable status */
-   var->varstatus = SCIP_VARSTATUS_COLUMN; /*lint !e641*/
-
    /* create column of variable */
    SCIP_CALL( SCIPcolCreate(&var->data.col, blkmem, set, stat, var, 0, NULL, NULL, var->removable) );
+
+   /* switch variable status */
+   var->varstatus = SCIP_VARSTATUS_COLUMN; /*lint !e641*/
 
    if( var->probindex != -1 )
    {
@@ -4730,11 +4727,11 @@ SCIP_RETCODE SCIPvarColumnExact(
 
    SCIPsetDebugMsg(set, "creating exact column for variable <%s>\n", var->name);
 
-   /* switch variable status */
-   var->exactdata->varstatusexact = SCIP_VARSTATUS_COLUMN; /*lint !e641*/
-
    /* create column of variable */
    SCIP_CALL( SCIPcolExactCreate(&(var->exactdata->colexact), SCIPvarGetCol(var), blkmem, set, stat, var, 0, NULL, NULL, var->removable) );
+
+   /* switch variable status */
+   var->exactdata->varstatusexact = SCIP_VARSTATUS_COLUMN; /*lint !e641*/
 
    if( var->probindex != -1 )
    {
@@ -4767,6 +4764,10 @@ SCIP_RETCODE SCIPvarLoose(
    /* free column of variable */
    SCIP_CALL( SCIPcolFree(&var->data.col, blkmem, set, eventqueue, lp) );
 
+   /* initialize variable data */
+   var->data.loose.minaggrcoef = 1.0;
+   var->data.loose.maxaggrcoef = 1.0;
+
    /* switch variable status */
    var->varstatus = SCIP_VARSTATUS_LOOSE; /*lint !e641*/
 
@@ -4778,10 +4779,6 @@ SCIP_RETCODE SCIPvarLoose(
       /* inform LP, that problem variable is now a loose variable and no longer a column */
       SCIP_CALL( SCIPlpUpdateVarLoose(lp, set, var) );
    }
-
-   /* initialize variable data */
-   var->data.loose.minaggrcoef = 1.0;
-   var->data.loose.maxaggrcoef = 1.0;
 
    return SCIP_OKAY;
 }
@@ -6108,14 +6105,16 @@ SCIP_RETCODE SCIPvarFlattenAggregationGraph(
 
    if( !set->exact_enable )
    {
-      SCIP_CALL( SCIPvarGetActiveRepresentatives(set, var->data.multaggr.vars, var->data.multaggr.scalars, &nmultvars, multvarssize, &multconstant, &multrequiredsize) );
+      SCIP_CALL( SCIPvarGetActiveRepresentatives(set, var->data.multaggr.vars, var->data.multaggr.scalars, &nmultvars,
+            multvarssize, &multconstant, &multrequiredsize) );
 
       if( multrequiredsize > multvarssize )
       {
          SCIP_ALLOC( BMSreallocBlockMemoryArray(blkmem, &(var->data.multaggr.vars), multvarssize, multrequiredsize) );
          SCIP_ALLOC( BMSreallocBlockMemoryArray(blkmem, &(var->data.multaggr.scalars), multvarssize, multrequiredsize) );
          multvarssize = multrequiredsize;
-         SCIP_CALL( SCIPvarGetActiveRepresentatives(set, var->data.multaggr.vars, var->data.multaggr.scalars, &nmultvars, multvarssize, &multconstant, &multrequiredsize) );
+         SCIP_CALL( SCIPvarGetActiveRepresentatives(set, var->data.multaggr.vars, var->data.multaggr.scalars, &nmultvars,
+               multvarssize, &multconstant, &multrequiredsize) );
 
          assert( multrequiredsize <= multvarssize );
       }
@@ -6798,8 +6797,8 @@ SCIP_RETCODE SCIPvarAggregate(
       && SCIPsetIsEQ(set, scalar, -1.0) && SCIPsetIsEQ(set, constant, 1.0) )
    {
       /* link both variables as negation pair */
-      var->varstatus = SCIP_VARSTATUS_NEGATED; /*lint !e641*/
       var->data.negate.constant = 1.0;
+      var->varstatus = SCIP_VARSTATUS_NEGATED; /*lint !e641*/
       var->negatedvar = aggvar;
       aggvar->negatedvar = var;
 
@@ -6814,10 +6813,10 @@ SCIP_RETCODE SCIPvarAggregate(
    else
    {
       /* convert variable into aggregated variable */
-      var->varstatus = SCIP_VARSTATUS_AGGREGATED; /*lint !e641*/
       var->data.aggregate.var = aggvar;
       var->data.aggregate.scalar = scalar;
       var->data.aggregate.constant = constant;
+      var->varstatus = SCIP_VARSTATUS_AGGREGATED; /*lint !e641*/
 
       /* copy donot(mult)aggr status */
       aggvar->donotaggr |= var->donotaggr;
@@ -7115,9 +7114,9 @@ SCIP_RETCODE SCIPvarAggregateExact(
       && SCIPrationalIsEQReal(scalar, -1.0) && SCIPrationalIsEQReal(constant, 1.0) )
    {
       /* link both variables as negation pair */
+      var->data.negate.constant = 1.0;
       var->varstatus = SCIP_VARSTATUS_NEGATED; /*lint !e641*/
       var->exactdata->varstatusexact = SCIP_VARSTATUS_NEGATED; /*lint !e641*/
-      var->data.negate.constant = 1.0;
       var->negatedvar = aggvar;
       aggvar->negatedvar = var;
 
@@ -7131,16 +7130,15 @@ SCIP_RETCODE SCIPvarAggregateExact(
    else
    {
       /* convert variable into aggregated variable */
-      var->varstatus = SCIP_VARSTATUS_AGGREGATED; /*lint !e641*/
-      var->exactdata->varstatusexact = SCIP_VARSTATUS_AGGREGATED; /*lint !e641*/
-      SCIP_CALL( SCIPrationalCreateBlock(blkmem, &var->exactdata->aggregate.scalar) );
-      SCIP_CALL( SCIPrationalCreateBlock(blkmem, &var->exactdata->aggregate.constant) );
-
       var->data.aggregate.var = aggvar;
-      SCIPrationalSetRational(var->exactdata->aggregate.scalar, scalar);
-      SCIPrationalSetRational(var->exactdata->aggregate.constant, constant);
       var->data.aggregate.scalar = SCIPrationalGetReal(scalar);
       var->data.aggregate.constant = SCIPrationalGetReal(constant);
+      var->varstatus = SCIP_VARSTATUS_AGGREGATED; /*lint !e641*/
+      SCIP_CALL( SCIPrationalCreateBlock(blkmem, &var->exactdata->aggregate.scalar) );
+      SCIP_CALL( SCIPrationalCreateBlock(blkmem, &var->exactdata->aggregate.constant) );
+      SCIPrationalSetRational(var->exactdata->aggregate.scalar, scalar);
+      SCIPrationalSetRational(var->exactdata->aggregate.constant, constant);
+      var->exactdata->varstatusexact = SCIP_VARSTATUS_AGGREGATED; /*lint !e641*/
 
       /* copy doNotMultiaggr status */
       aggvar->donotmultaggr |= var->donotmultaggr;
@@ -7837,42 +7835,51 @@ SCIP_RETCODE SCIPvarTryAggregateVars(
 
    assert(typex >= typey);
 
-   /* figure out, which variable should be aggregated */
    easyaggr = FALSE;
-
-   /* check if it is an easy aggregation */
-   if( typex == SCIP_VARTYPE_CONTINUOUS && typey != SCIP_VARTYPE_CONTINUOUS )
-   {
-      easyaggr = TRUE;
-   }
-   else if( SCIPsetIsFeasIntegral(set, scalary/scalarx) )
-   {
-      easyaggr = TRUE;
-   }
-   else if( typex == typey && SCIPsetIsFeasIntegral(set, scalarx / scalary) )
-   {
-      /* we have an easy aggregation if we flip the variables x and y */
-      SCIP_VAR* var;
-
-      /* switch the variables, such that varx is the aggregated variable */
-      var = vary;
-      vary = varx;
-      varx = var;
-      scalar = scalary;
-      scalary = scalarx;
-      scalarx = scalar;
-      easyaggr = TRUE;
-   }
-   else if( typex == SCIP_VARTYPE_CONTINUOUS )
-   {
-      /* the aggregation is still easy if both variables are continuous */
-      assert(typey == SCIP_VARTYPE_CONTINUOUS); /* otherwise we are in the first case */
-      easyaggr = TRUE;
-   }
 
    /* calculate aggregation scalar and constant: a*x + b*y == c  =>  x == -b/a * y + c/a */
    scalar = -scalary / scalarx;
    constant = rhs / scalarx;
+
+   /* check if it is an easy aggregation */
+   if( typex == SCIP_VARTYPE_CONTINUOUS )
+   {
+      easyaggr = TRUE;
+   }
+   else if( SCIPsetIsIntegral(set, scalar) )
+   {
+      if( SCIPsetIsFeasIntegral(set, constant) )
+         constant = SCIPsetRound(set, constant);
+      else
+      {
+         *infeasible = TRUE;
+         return SCIP_OKAY;
+      }
+
+      scalar = SCIPsetRound(set, scalar);
+      easyaggr = TRUE;
+   }
+   else if( typex == typey && SCIPsetIsIntegral(set, scalarx / scalary) )
+   {
+      /* swap the variables, such that varx is the aggregated variable */
+      SCIP_VAR* var;
+
+      constant = rhs / scalary;
+
+      if( SCIPsetIsFeasIntegral(set, constant) )
+         constant = SCIPsetRound(set, constant);
+      else
+      {
+         *infeasible = TRUE;
+         return SCIP_OKAY;
+      }
+
+      scalar = SCIPsetRound(set, -scalarx / scalary);
+      var = varx;
+      varx = vary;
+      vary = var;
+      easyaggr = TRUE;
+   }
 
    /* terminate if a bound on resolved aggregation scalar becomes too small or large so that numerical cancellation may be caused */
    if( !SCIPvarIsAggrCoefAcceptable(set, varx, scalar) )
@@ -7886,18 +7893,10 @@ SCIP_RETCODE SCIPvarTryAggregateVars(
       if( REALABS(constant) > SCIPsetGetHugeValue(set) * SCIPsetFeastol(set) ) /*lint !e653*/
          return SCIP_OKAY;
 
-      /* check aggregation for integer feasibility */
-      if( typex != SCIP_VARTYPE_CONTINUOUS && typey != SCIP_VARTYPE_CONTINUOUS
-         && SCIPsetIsFeasIntegral(set, scalar) && !SCIPsetIsFeasIntegral(set, constant) )
-      {
-         *infeasible = TRUE;
-         return SCIP_OKAY;
-      }
-
-      /* if the aggregation scalar is fractional, we cannot (for technical reasons) and do not want to aggregate implicit integer variables,
+      /* if the aggregation scalar is fractional, we cannot aggregate integral variables,
        * since then we would loose the corresponding divisibility property
        */
-      assert(typex != SCIP_DEPRECATED_VARTYPE_IMPLINT || SCIPsetIsFeasIntegral(set, scalar));
+      assert(typex == SCIP_VARTYPE_CONTINUOUS || SCIPsetIsIntegral(set, scalar));
 
       /* aggregate the variable */
       SCIP_CALL( SCIPvarAggregate(varx, blkmem, set, stat, transprob, origprob, primal, tree, reopt, lp, cliquetable,
@@ -8355,12 +8354,12 @@ SCIP_RETCODE SCIPvarMultiaggregate(
          varUpdateMinMaxAggrCoef(tmpvars[v], var, tmpscalars[v]);
 
       /* convert variable into multi-aggregated variable */
-      var->varstatus = SCIP_VARSTATUS_MULTAGGR; /*lint !e641*/
       SCIP_ALLOC( BMSduplicateBlockMemoryArray(blkmem, &var->data.multaggr.vars, tmpvars, ntmpvars) );
       SCIP_ALLOC( BMSduplicateBlockMemoryArray(blkmem, &var->data.multaggr.scalars, tmpscalars, ntmpvars) );
       var->data.multaggr.constant = tmpconstant;
       var->data.multaggr.nvars = ntmpvars;
       var->data.multaggr.varssize = ntmpvars;
+      var->varstatus = SCIP_VARSTATUS_MULTAGGR; /*lint !e641*/
 
       /* mark variable to be non-deletable */
       SCIPvarMarkNotDeletable(var);
@@ -8723,17 +8722,17 @@ SCIP_RETCODE SCIPvarMultiaggregateExact(
       }
 
       /* convert variable into multi-aggregated variable */
-      var->varstatus = SCIP_VARSTATUS_MULTAGGR; /*lint !e641*/
-      var->exactdata->varstatusexact = SCIP_VARSTATUS_MULTAGGR; /*lint !e641*/
       SCIP_ALLOC( BMSduplicateBlockMemoryArray(blkmem, &var->data.multaggr.vars, tmpvars, ntmpvars) );
-      SCIP_CALL( SCIPrationalCopyBlockArray(blkmem, &(var->exactdata->multaggr.scalars), tmpscalars, ntmpvars) );
       SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &var->data.multaggr.scalars, ntmpvars) );
       for( i = 0; i < ntmpvars; ++i )
          var->data.multaggr.scalars[i] = SCIPrationalGetReal(tmpscalars[i]);
-      SCIP_CALL( SCIPrationalCopyBlock(blkmem, &(var->exactdata->multaggr.constant), tmpconstant) );
       var->data.multaggr.constant = SCIPrationalGetReal(tmpconstant);
       var->data.multaggr.nvars = ntmpvars;
       var->data.multaggr.varssize = ntmpvars;
+      var->varstatus = SCIP_VARSTATUS_MULTAGGR; /*lint !e641*/
+      SCIP_CALL( SCIPrationalCopyBlockArray(blkmem, &(var->exactdata->multaggr.scalars), tmpscalars, ntmpvars) );
+      SCIP_CALL( SCIPrationalCopyBlock(blkmem, &(var->exactdata->multaggr.constant), tmpconstant) );
+      var->exactdata->varstatusexact = SCIP_VARSTATUS_MULTAGGR; /*lint !e641*/
 
       /* mark variable to be non-deletable */
       SCIPvarMarkNotDeletable(var);
@@ -9078,11 +9077,11 @@ SCIP_RETCODE SCIPvarNegate(
       /* create negated variable */
       SCIP_CALL( varCreate(negvar, blkmem, set, stat, negvarname, var->glbdom.lb, var->glbdom.ub, 0.0,
             SCIPvarGetType(var), SCIPvarGetImplType(var), var->initial, var->removable, NULL, NULL, NULL, NULL, NULL) );
-      (*negvar)->varstatus = SCIP_VARSTATUS_NEGATED; /*lint !e641*/
       if( SCIPvarIsBinary(var) )
          (*negvar)->data.negate.constant = 1.0;
       else
          (*negvar)->data.negate.constant = var->glbdom.lb + var->glbdom.ub;
+      (*negvar)->varstatus = SCIP_VARSTATUS_NEGATED; /*lint !e641*/
 
       /* create event filter for transformed variable */
       if( SCIPvarIsTransformed(var) )
@@ -9601,8 +9600,7 @@ SCIP_RETCODE SCIPvarChgObjExact(
 
             SCIPrationalMultReal(tmp, newobj, (SCIP_Real) prob->objsense/prob->objscale);
 
-            SCIP_CALL( SCIPvarChgObjExact(var->data.original.transvar, blkmem, set, prob, primal, lp, eventqueue,
-                  tmp) );
+            SCIP_CALL( SCIPvarChgObjExact(var->data.original.transvar, blkmem, set, prob, primal, lp, eventqueue, tmp) );
          }
          else
             assert(set->stage == SCIP_STAGE_PROBLEM);
@@ -10427,7 +10425,8 @@ SCIP_RETCODE varEventGlbChangedExact(
 
       SCIPrationalDebugMessage("issue exact GLBCHANGED event for variable <%s>: %q -> %q\n", var->name, oldbound, newbound);
 
-      SCIP_CALL( SCIPeventCreateGlbChanged(&event, blkmem, var, SCIPrationalRoundReal(oldbound, SCIP_R_ROUND_DOWNWARDS), SCIPrationalRoundReal(newbound, SCIP_R_ROUND_DOWNWARDS)) );
+      SCIP_CALL( SCIPeventCreateGlbChanged(&event, blkmem, var, SCIPrationalRoundReal(oldbound, SCIP_R_ROUND_DOWNWARDS),
+            SCIPrationalRoundReal(newbound, SCIP_R_ROUND_DOWNWARDS)) );
       SCIP_CALL( SCIPeventAddExactBdChg(event, blkmem, oldbound, newbound) );
       SCIP_CALL( SCIPeventqueueAdd(eventqueue, blkmem, set, NULL, lp, branchcand, NULL, &event) );
    }
@@ -10504,7 +10503,8 @@ SCIP_RETCODE varEventGubChangedExact(
 
       SCIPsetDebugMsg(set, "issue GUBCHANGED event for variable <%s>: %g -> %g\n", var->name, SCIPrationalGetReal(oldbound), SCIPrationalGetReal(newbound));
 
-      SCIP_CALL( SCIPeventCreateGubChanged(&event, blkmem, var, SCIPrationalRoundReal(oldbound, SCIP_R_ROUND_UPWARDS), SCIPrationalRoundReal(newbound, SCIP_R_ROUND_UPWARDS)) );
+      SCIP_CALL( SCIPeventCreateGubChanged(&event, blkmem, var, SCIPrationalRoundReal(oldbound, SCIP_R_ROUND_UPWARDS),
+            SCIPrationalRoundReal(newbound, SCIP_R_ROUND_UPWARDS)) );
       SCIP_CALL( SCIPeventAddExactBdChg(event, blkmem, oldbound, newbound) );
       SCIP_CALL( SCIPeventqueueAdd(eventqueue, blkmem, set, NULL, lp, branchcand, NULL, &event) );
    }
@@ -10715,17 +10715,23 @@ SCIP_RETCODE varProcessChgLbGlobal(
          /* this change does not affect the behavior in floating-point SCIP although it looks like it at first glance */
          {
             SCIP_Real parentnewbound;
+            SCIP_Real scalar;
+            SCIP_Real constant;
+
             assert(parentvar->data.aggregate.var == var);
 
-            if( parentvar->data.aggregate.scalar > 0 )
+            scalar = parentvar->data.aggregate.scalar;
+            constant = parentvar->data.aggregate.constant;
+
+            if( scalar > 0.0 )
             {
                /* a > 0 -> change lower bound of y */
                assert(SCIPsetIsInfinity(set, -parentvar->glbdom.lb) || SCIPsetIsInfinity(set, -oldbound)
-                  || SCIPsetIsFeasEQ(set, parentvar->glbdom.lb, oldbound * parentvar->data.aggregate.scalar + parentvar->data.aggregate.constant)
-                  || (SCIPsetIsZero(set, parentvar->glbdom.lb / parentvar->data.aggregate.scalar) && SCIPsetIsZero(set, oldbound)));
+                  || SCIPsetIsFeasEQ(set, parentvar->glbdom.lb, oldbound * scalar + constant)
+                  || (SCIPsetIsZero(set, parentvar->glbdom.lb / scalar) && SCIPsetIsZero(set, oldbound)));
 
                if( !SCIPsetIsInfinity(set, -newbound) && !SCIPsetIsInfinity(set, newbound) )
-                  parentnewbound = parentvar->data.aggregate.scalar * newbound + parentvar->data.aggregate.constant;
+                  parentnewbound = scalar * newbound + constant;
                else
                   parentnewbound = newbound;
                SCIP_CALL( varProcessChgLbGlobal(parentvar, blkmem, set, stat, lp, branchcand, eventqueue, cliquetable, parentnewbound) );
@@ -10735,11 +10741,11 @@ SCIP_RETCODE varProcessChgLbGlobal(
                /* a < 0 -> change upper bound of y */
                assert(SCIPsetIsNegative(set, parentvar->data.aggregate.scalar));
                assert(SCIPsetIsInfinity(set, parentvar->glbdom.ub) || SCIPsetIsInfinity(set, -oldbound)
-                  || SCIPsetIsFeasEQ(set, parentvar->glbdom.ub, oldbound * parentvar->data.aggregate.scalar + parentvar->data.aggregate.constant)
-                  || (SCIPsetIsZero(set, parentvar->glbdom.ub / parentvar->data.aggregate.scalar) && SCIPsetIsZero(set, oldbound)));
+                  || SCIPsetIsFeasEQ(set, parentvar->glbdom.ub, oldbound * scalar + constant)
+                  || (SCIPsetIsZero(set, parentvar->glbdom.ub / scalar) && SCIPsetIsZero(set, oldbound)));
 
                if( !SCIPsetIsInfinity(set, -newbound) && !SCIPsetIsInfinity(set, newbound) )
-                  parentnewbound = parentvar->data.aggregate.scalar * newbound + parentvar->data.aggregate.constant;
+                  parentnewbound = scalar * newbound + constant;
                else
                   parentnewbound = -newbound;
                SCIP_CALL( varProcessChgUbGlobal(parentvar, blkmem, set, stat, lp, branchcand, eventqueue, cliquetable, parentnewbound) );
@@ -10894,16 +10900,21 @@ SCIP_RETCODE varProcessChgUbGlobal(
          /* this change does not affect the behavior in floating-point SCIP although it looks like it at first glance */
          {
             SCIP_Real parentnewbound;
+            SCIP_Real scalar;
+            SCIP_Real constant;
+
             assert(parentvar->data.aggregate.var == var);
 
-            if( parentvar->data.aggregate.scalar > 0 )
+            scalar = parentvar->data.aggregate.scalar;
+            constant = parentvar->data.aggregate.constant;
+
+            if( scalar > 0.0 )
             {
                /* a > 0 -> change upper bound of y */
                assert(SCIPsetIsInfinity(set, parentvar->glbdom.ub) || SCIPsetIsInfinity(set, oldbound)
-                  || SCIPsetIsFeasEQ(set, parentvar->glbdom.ub,
-                     oldbound * parentvar->data.aggregate.scalar + parentvar->data.aggregate.constant));
+                  || SCIPsetIsFeasEQ(set, parentvar->glbdom.ub, oldbound * scalar + constant));
                if( !SCIPsetIsInfinity(set, -newbound) && !SCIPsetIsInfinity(set, newbound) )
-                  parentnewbound = parentvar->data.aggregate.scalar * newbound + parentvar->data.aggregate.constant;
+                  parentnewbound = scalar * newbound + constant;
                else
                   parentnewbound = newbound;
                SCIP_CALL( varProcessChgUbGlobal(parentvar, blkmem, set, stat, lp, branchcand, eventqueue, cliquetable, parentnewbound) );
@@ -10911,12 +10922,11 @@ SCIP_RETCODE varProcessChgUbGlobal(
             else
             {
                /* a < 0 -> change lower bound of y */
-               assert(SCIPsetIsNegative(set, parentvar->data.aggregate.scalar));
+               assert(SCIPsetIsNegative(set, scalar));
                assert(SCIPsetIsInfinity(set, -parentvar->glbdom.lb) || SCIPsetIsInfinity(set, oldbound)
-                  || SCIPsetIsFeasEQ(set, parentvar->glbdom.lb,
-                     oldbound * parentvar->data.aggregate.scalar + parentvar->data.aggregate.constant));
+                  || SCIPsetIsFeasEQ(set, parentvar->glbdom.lb, oldbound * scalar + constant));
                if( !SCIPsetIsInfinity(set, -newbound) && !SCIPsetIsInfinity(set, newbound) )
-                  parentnewbound = parentvar->data.aggregate.scalar * newbound + parentvar->data.aggregate.constant;
+                  parentnewbound = scalar * newbound + constant;
                else
                   parentnewbound = -newbound;
                SCIP_CALL( varProcessChgLbGlobal(parentvar, blkmem, set, stat, lp, branchcand, eventqueue, cliquetable, parentnewbound) );
@@ -11332,33 +11342,38 @@ SCIP_RETCODE SCIPvarChgLbGlobal(
 
    case SCIP_VARSTATUS_AGGREGATED: /* x = a*y + c  ->  y = (x-c)/a */
       {
+         SCIP_VAR* aggrvar;
          SCIP_Real childnewbound;
-         assert(var->data.aggregate.var != NULL);
+         SCIP_Real scalar;
+         SCIP_Real constant;
 
-         if( var->data.aggregate.scalar > 0 )
+         scalar = var->data.aggregate.scalar;
+         constant = var->data.aggregate.constant;
+         aggrvar = var->data.aggregate.var;
+         assert(aggrvar != NULL);
+
+         if( scalar > 0.0 )
          {
             /* a > 0 -> change lower bound of y */
-            assert((SCIPsetIsInfinity(set, -var->glbdom.lb) && SCIPsetIsInfinity(set, -var->data.aggregate.var->glbdom.lb))
-               || SCIPsetIsFeasEQ(set, var->glbdom.lb,
-                  var->data.aggregate.var->glbdom.lb * var->data.aggregate.scalar + var->data.aggregate.constant));
+            assert((SCIPsetIsInfinity(set, -var->glbdom.lb) && SCIPsetIsInfinity(set, -aggrvar->glbdom.lb))
+               || SCIPsetIsFeasEQ(set, var->glbdom.lb, aggrvar->glbdom.lb * scalar + constant));
             if( !SCIPsetIsInfinity(set, -newbound) && !SCIPsetIsInfinity(set, newbound) )
-               childnewbound = (newbound - var->data.aggregate.constant)/var->data.aggregate.scalar;
+               childnewbound = (newbound - constant) / scalar;
             else
                childnewbound = newbound;
-            SCIP_CALL( SCIPvarChgLbGlobal(var->data.aggregate.var, blkmem, set, stat, lp, branchcand, eventqueue, cliquetable,
+            SCIP_CALL( SCIPvarChgLbGlobal(aggrvar, blkmem, set, stat, lp, branchcand, eventqueue, cliquetable,
                   childnewbound) );
          }
          else
          {
             /* a < 0 -> change upper bound of y */
             assert((SCIPsetIsInfinity(set, -var->glbdom.lb) && SCIPsetIsInfinity(set, var->data.aggregate.var->glbdom.ub))
-               || SCIPsetIsFeasEQ(set, var->glbdom.lb,
-                  var->data.aggregate.var->glbdom.ub * var->data.aggregate.scalar + var->data.aggregate.constant));
+               || SCIPsetIsFeasEQ(set, var->glbdom.lb, aggrvar->glbdom.ub * scalar + constant));
             if( !SCIPsetIsInfinity(set, -newbound) && !SCIPsetIsInfinity(set, newbound) )
-               childnewbound = (newbound - var->data.aggregate.constant)/var->data.aggregate.scalar;
+               childnewbound = (newbound - constant) / scalar;
             else
                childnewbound = -newbound;
-            SCIP_CALL( SCIPvarChgUbGlobal(var->data.aggregate.var, blkmem, set, stat, lp, branchcand, eventqueue, cliquetable,
+            SCIP_CALL( SCIPvarChgUbGlobal(aggrvar, blkmem, set, stat, lp, branchcand, eventqueue, cliquetable,
                   childnewbound) );
          }
          break;
@@ -11629,33 +11644,38 @@ SCIP_RETCODE SCIPvarChgUbGlobal(
 
    case SCIP_VARSTATUS_AGGREGATED: /* x = a*y + c  ->  y = (x-c)/a */
    {
+      SCIP_VAR* aggrvar;
       SCIP_Real childnewbound;
-      assert(var->data.aggregate.var != NULL);
+      SCIP_Real scalar;
+      SCIP_Real constant;
 
-      if( var->data.aggregate.scalar > 0 )
+      scalar = var->data.aggregate.scalar;
+      constant = var->data.aggregate.constant;
+      aggrvar = var->data.aggregate.var;
+      assert(aggrvar != NULL);
+
+      if( scalar > 0.0 )
       {
          /* a > 0 -> change lower bound of y */
-         assert((SCIPsetIsInfinity(set, var->glbdom.ub) && SCIPsetIsInfinity(set, var->data.aggregate.var->glbdom.ub))
-            || SCIPsetIsFeasEQ(set, var->glbdom.ub,
-               var->data.aggregate.var->glbdom.ub * var->data.aggregate.scalar + var->data.aggregate.constant));
+         assert((SCIPsetIsInfinity(set, var->glbdom.ub) && SCIPsetIsInfinity(set, aggrvar->glbdom.ub))
+            || SCIPsetIsFeasEQ(set, var->glbdom.ub, aggrvar->glbdom.ub * scalar + constant));
          if( !SCIPsetIsInfinity(set, -newbound) && !SCIPsetIsInfinity(set, newbound) )
-            childnewbound = (newbound - var->data.aggregate.constant)/var->data.aggregate.scalar;
+            childnewbound = (newbound - constant) / scalar;
          else
             childnewbound = newbound;
-         SCIP_CALL( SCIPvarChgUbGlobal(var->data.aggregate.var, blkmem, set, stat, lp, branchcand, eventqueue, cliquetable,
+         SCIP_CALL( SCIPvarChgUbGlobal(aggrvar, blkmem, set, stat, lp, branchcand, eventqueue, cliquetable,
                childnewbound) );
       }
       else
       {
          /* a < 0 -> change upper bound of y */
-         assert((SCIPsetIsInfinity(set, var->glbdom.ub) && SCIPsetIsInfinity(set, -var->data.aggregate.var->glbdom.lb))
-            || SCIPsetIsFeasEQ(set, var->glbdom.ub,
-               var->data.aggregate.var->glbdom.lb * var->data.aggregate.scalar + var->data.aggregate.constant));
+         assert((SCIPsetIsInfinity(set, var->glbdom.ub) && SCIPsetIsInfinity(set, -aggrvar->glbdom.lb))
+            || SCIPsetIsFeasEQ(set, var->glbdom.ub, aggrvar->glbdom.lb * scalar + constant));
          if( !SCIPsetIsInfinity(set, -newbound) && !SCIPsetIsInfinity(set, newbound) )
-            childnewbound = (newbound - var->data.aggregate.constant)/var->data.aggregate.scalar;
+            childnewbound = (newbound - constant) / scalar;
          else
             childnewbound = -newbound;
-         SCIP_CALL( SCIPvarChgLbGlobal(var->data.aggregate.var, blkmem, set, stat, lp, branchcand, eventqueue, cliquetable,
+         SCIP_CALL( SCIPvarChgLbGlobal(aggrvar, blkmem, set, stat, lp, branchcand, eventqueue, cliquetable,
                childnewbound) );
       }
       break;
@@ -12008,7 +12028,8 @@ SCIP_RETCODE varEventLbChangedExact(
 
       SCIPrationalDebugMessage("issue exact LBCHANGED event for variable <%s>: %q -> %q\n", var->name, oldbound, newbound);
 
-      SCIP_CALL( SCIPeventCreateLbChanged(&event, blkmem, var, SCIPrationalRoundReal(oldbound, SCIP_R_ROUND_DOWNWARDS), SCIPrationalRoundReal(newbound, SCIP_R_ROUND_DOWNWARDS)) );
+      SCIP_CALL( SCIPeventCreateLbChanged(&event, blkmem, var, SCIPrationalRoundReal(oldbound, SCIP_R_ROUND_DOWNWARDS),
+            SCIPrationalRoundReal(newbound, SCIP_R_ROUND_DOWNWARDS)) );
       SCIP_CALL( SCIPeventAddExactBdChg(event, blkmem, oldbound, newbound) );
       SCIP_CALL( SCIPeventqueueAdd(eventqueue, blkmem, set, NULL, lp->fplp, branchcand, NULL, &event) );
    }
@@ -12084,7 +12105,8 @@ SCIP_RETCODE varEventUbChangedExact(
 
       SCIPsetDebugMsg(set, "issue UBCHANGED event for variable <%s>: %g -> %g\n", var->name, SCIPrationalGetReal(oldbound), SCIPrationalGetReal(newbound));
 
-      SCIP_CALL( SCIPeventCreateUbChanged(&event, blkmem, var, SCIPrationalRoundReal(oldbound, SCIP_R_ROUND_UPWARDS), SCIPrationalRoundReal(newbound, SCIP_R_ROUND_UPWARDS)) );
+      SCIP_CALL( SCIPeventCreateUbChanged(&event, blkmem, var, SCIPrationalRoundReal(oldbound, SCIP_R_ROUND_UPWARDS),
+            SCIPrationalRoundReal(newbound, SCIP_R_ROUND_UPWARDS)) );
       SCIP_CALL( SCIPeventAddExactBdChg(event, blkmem, oldbound, newbound) );
       SCIP_CALL( SCIPeventqueueAdd(eventqueue, blkmem, set, NULL, lp->fplp, branchcand, NULL, &event) );
    }
@@ -12211,27 +12233,33 @@ SCIP_RETCODE varProcessChgLbLocal(
          /* this change does not affect the behavior in floating-point SCIP although it looks like it at first glance */
          {
             SCIP_Real parentnewbound;
+            SCIP_Real scalar;
+            SCIP_Real constant;
+
             assert(parentvar->data.aggregate.var == var);
+
+            scalar = parentvar->data.aggregate.scalar;
+            constant = parentvar->data.aggregate.constant;
 
             if (!set->exact_enable)
             {
-               parentnewbound = parentvar->data.aggregate.scalar * newbound + parentvar->data.aggregate.constant;
+               parentnewbound = scalar * newbound + constant;
             }
             else
             {
                SCIP_INTERVAL parentboundinterval;
                SCIPintervalSet(&parentboundinterval, newbound);
-               SCIPintervalMulScalar(SCIP_INTERVAL_INFINITY, &parentboundinterval, parentboundinterval, parentvar->data.aggregate.scalar);
-               SCIPintervalAddScalar(SCIP_INTERVAL_INFINITY, &parentboundinterval, parentboundinterval, parentvar->data.aggregate.constant);
-               parentnewbound = parentvar->data.aggregate.scalar > 0 ? parentboundinterval.inf : parentboundinterval.sup;
+               SCIPintervalMulScalar(SCIP_INTERVAL_INFINITY, &parentboundinterval, parentboundinterval, scalar);
+               SCIPintervalAddScalar(SCIP_INTERVAL_INFINITY, &parentboundinterval, parentboundinterval, constant);
+               parentnewbound = scalar > 0.0 ? parentboundinterval.inf : parentboundinterval.sup;
             }
 
-            if( parentvar->data.aggregate.scalar > 0 )
+            if( scalar > 0.0 )
             {
                /* a > 0 -> change lower bound of y */
                assert(SCIPsetIsInfinity(set, -parentvar->locdom.lb) || SCIPsetIsInfinity(set, -oldbound)
-                  || SCIPsetIsFeasEQ(set, parentvar->locdom.lb, oldbound * parentvar->data.aggregate.scalar + parentvar->data.aggregate.constant)
-                  || (SCIPsetIsZero(set, parentvar->locdom.lb / parentvar->data.aggregate.scalar) && SCIPsetIsZero(set, oldbound)));
+                  || SCIPsetIsFeasEQ(set, parentvar->locdom.lb, oldbound * scalar + constant)
+                  || (SCIPsetIsZero(set, parentvar->locdom.lb / scalar) && SCIPsetIsZero(set, oldbound)));
 
                if( !SCIPsetIsInfinity(set, -newbound) && !SCIPsetIsInfinity(set, newbound) )
                {
@@ -12253,10 +12281,10 @@ SCIP_RETCODE varProcessChgLbLocal(
             else
             {
                /* a < 0 -> change upper bound of y */
-               assert(SCIPsetIsNegative(set, parentvar->data.aggregate.scalar));
+               assert(SCIPsetIsNegative(set, scalar));
                assert(SCIPsetIsInfinity(set, parentvar->locdom.ub) || SCIPsetIsInfinity(set, -oldbound)
-                  || SCIPsetIsFeasEQ(set, parentvar->locdom.ub, oldbound * parentvar->data.aggregate.scalar + parentvar->data.aggregate.constant)
-                  || (SCIPsetIsZero(set, parentvar->locdom.ub / parentvar->data.aggregate.scalar) && SCIPsetIsZero(set, oldbound)));
+                  || SCIPsetIsFeasEQ(set, parentvar->locdom.ub, oldbound * scalar + constant)
+                  || (SCIPsetIsZero(set, parentvar->locdom.ub / scalar) && SCIPsetIsZero(set, oldbound)));
 
                if( !SCIPsetIsInfinity(set, -newbound) && !SCIPsetIsInfinity(set, newbound) )
                {
@@ -12398,26 +12426,32 @@ SCIP_RETCODE varProcessChgUbLocal(
          /* this change does not affect the behavior in floating-point SCIP although it looks like it at first glance */
          {
             SCIP_Real parentnewbound;
+            SCIP_Real scalar;
+            SCIP_Real constant;
+
             assert(parentvar->data.aggregate.var == var);
+
+            scalar = parentvar->data.aggregate.scalar;
+            constant = parentvar->data.aggregate.constant;
 
             if( !set->exact_enable )
             {
-               parentnewbound = parentvar->data.aggregate.scalar * newbound + parentvar->data.aggregate.constant;
+               parentnewbound = scalar * newbound + constant;
             }
             else
             {
                SCIP_INTERVAL parentboundinterval;
                SCIPintervalSet(&parentboundinterval, newbound);
-               SCIPintervalMulScalar(SCIP_INTERVAL_INFINITY, &parentboundinterval, parentboundinterval, parentvar->data.aggregate.scalar);
-               SCIPintervalAddScalar(SCIP_INTERVAL_INFINITY, &parentboundinterval, parentboundinterval, parentvar->data.aggregate.constant);
-               parentnewbound = parentvar->data.aggregate.scalar > 0 ? parentboundinterval.sup : parentboundinterval.inf;
+               SCIPintervalMulScalar(SCIP_INTERVAL_INFINITY, &parentboundinterval, parentboundinterval, scalar);
+               SCIPintervalAddScalar(SCIP_INTERVAL_INFINITY, &parentboundinterval, parentboundinterval, constant);
+               parentnewbound = scalar > 0.0 ? parentboundinterval.sup : parentboundinterval.inf;
             }
-            if( parentvar->data.aggregate.scalar > 0 )
+
+            if( scalar > 0.0 )
             {
                /* a > 0 -> change upper bound of x */
                assert(SCIPsetIsInfinity(set, parentvar->locdom.ub) || SCIPsetIsInfinity(set, oldbound)
-                  || SCIPsetIsFeasEQ(set, parentvar->locdom.ub,
-                     oldbound * parentvar->data.aggregate.scalar + parentvar->data.aggregate.constant));
+                  || SCIPsetIsFeasEQ(set, parentvar->locdom.ub, oldbound * scalar + constant));
                if( !SCIPsetIsInfinity(set, -newbound) && !SCIPsetIsInfinity(set, newbound) )
                {
                   /* if parent's new upper bound is below its lower bound, then this could be due to numerical difficulties, e.g., if numbers are large
@@ -12438,10 +12472,9 @@ SCIP_RETCODE varProcessChgUbLocal(
             else
             {
                /* a < 0 -> change lower bound of x */
-               assert(SCIPsetIsNegative(set, parentvar->data.aggregate.scalar));
+               assert(SCIPsetIsNegative(set, scalar));
                assert(SCIPsetIsInfinity(set, -parentvar->locdom.lb) || SCIPsetIsInfinity(set, oldbound)
-                  || SCIPsetIsFeasEQ(set, parentvar->locdom.lb,
-                     oldbound * parentvar->data.aggregate.scalar + parentvar->data.aggregate.constant));
+                  || SCIPsetIsFeasEQ(set, parentvar->locdom.lb, oldbound * scalar + constant));
                if( !SCIPsetIsInfinity(set, -newbound) && !SCIPsetIsInfinity(set, newbound) )
                {
                   /* if parent's new lower bound exceeds its upper bound, then this could be due to numerical difficulties, e.g., if numbers are large
@@ -12851,33 +12884,38 @@ SCIP_RETCODE SCIPvarChgLbLocal(
 
    case SCIP_VARSTATUS_AGGREGATED: /* x = a*y + c  ->  y = (x-c)/a */
    {
+      SCIP_VAR* aggrvar;
       SCIP_Real childnewbound;
-      assert(var->data.aggregate.var != NULL);
+      SCIP_Real scalar;
+      SCIP_Real constant;
 
-      if( SCIPsetIsPositive(set, var->data.aggregate.scalar) )
+      scalar = var->data.aggregate.scalar;
+      constant = var->data.aggregate.constant;
+      aggrvar = var->data.aggregate.var;
+      assert(aggrvar != NULL);
+
+      if( SCIPsetIsPositive(set, scalar) )
       {
          /* a > 0 -> change lower bound of y */
-         assert((SCIPsetIsInfinity(set, -var->locdom.lb) && SCIPsetIsInfinity(set, -var->data.aggregate.var->locdom.lb))
-            || SCIPsetIsFeasEQ(set, var->locdom.lb,
-               var->data.aggregate.var->locdom.lb * var->data.aggregate.scalar + var->data.aggregate.constant));
+         assert((SCIPsetIsInfinity(set, -var->locdom.lb) && SCIPsetIsInfinity(set, -aggrvar->locdom.lb))
+            || SCIPsetIsFeasEQ(set, var->locdom.lb, aggrvar->locdom.lb * scalar + constant));
          if( !SCIPsetIsInfinity(set, -newbound) && !SCIPsetIsInfinity(set, newbound) )
-            childnewbound = (newbound - var->data.aggregate.constant)/var->data.aggregate.scalar;
+            childnewbound = (newbound - constant) / scalar;
          else
             childnewbound = newbound;
-         SCIP_CALL( SCIPvarChgLbLocal(var->data.aggregate.var, blkmem, set, stat, lp, branchcand, eventqueue,
+         SCIP_CALL( SCIPvarChgLbLocal(aggrvar, blkmem, set, stat, lp, branchcand, eventqueue,
                childnewbound) );
       }
-      else if( SCIPsetIsNegative(set, var->data.aggregate.scalar) )
+      else if( SCIPsetIsNegative(set, scalar) )
       {
          /* a < 0 -> change upper bound of y */
-         assert((SCIPsetIsInfinity(set, -var->locdom.lb) && SCIPsetIsInfinity(set, var->data.aggregate.var->locdom.ub))
-            || SCIPsetIsFeasEQ(set, var->locdom.lb,
-               var->data.aggregate.var->locdom.ub * var->data.aggregate.scalar + var->data.aggregate.constant));
+         assert((SCIPsetIsInfinity(set, -var->locdom.lb) && SCIPsetIsInfinity(set, aggrvar->locdom.ub))
+            || SCIPsetIsFeasEQ(set, var->locdom.lb, aggrvar->locdom.ub * scalar + constant));
          if( !SCIPsetIsInfinity(set, -newbound) && !SCIPsetIsInfinity(set, newbound) )
-            childnewbound = (newbound - var->data.aggregate.constant)/var->data.aggregate.scalar;
+            childnewbound = (newbound - constant) / scalar;
          else
             childnewbound = -newbound;
-         SCIP_CALL( SCIPvarChgUbLocal(var->data.aggregate.var, blkmem, set, stat, lp, branchcand, eventqueue,
+         SCIP_CALL( SCIPvarChgUbLocal(aggrvar, blkmem, set, stat, lp, branchcand, eventqueue,
                childnewbound) );
       }
       else
@@ -13118,33 +13156,38 @@ SCIP_RETCODE SCIPvarChgUbLocal(
 
    case SCIP_VARSTATUS_AGGREGATED: /* x = a*y + c  ->  y = (x-c)/a */
    {
+      SCIP_VAR* aggrvar;
       SCIP_Real childnewbound;
-      assert(var->data.aggregate.var != NULL);
+      SCIP_Real scalar;
+      SCIP_Real constant;
 
-      if( SCIPsetIsPositive(set, var->data.aggregate.scalar) )
+      scalar = var->data.aggregate.scalar;
+      constant = var->data.aggregate.constant;
+      aggrvar = var->data.aggregate.var;
+      assert(aggrvar != NULL);
+
+      if( SCIPsetIsPositive(set, scalar) )
       {
          /* a > 0 -> change upper bound of y */
-         assert((SCIPsetIsInfinity(set, var->locdom.ub) && SCIPsetIsInfinity(set, var->data.aggregate.var->locdom.ub))
-            || SCIPsetIsFeasEQ(set, var->locdom.ub,
-               var->data.aggregate.var->locdom.ub * var->data.aggregate.scalar + var->data.aggregate.constant));
+         assert((SCIPsetIsInfinity(set, var->locdom.ub) && SCIPsetIsInfinity(set, aggrvar->locdom.ub))
+            || SCIPsetIsFeasEQ(set, var->locdom.ub, aggrvar->locdom.ub * scalar + constant));
          if( !SCIPsetIsInfinity(set, -newbound) && !SCIPsetIsInfinity(set, newbound) )
-            childnewbound = (newbound - var->data.aggregate.constant)/var->data.aggregate.scalar;
+            childnewbound = (newbound - constant) / scalar;
          else
             childnewbound = newbound;
-         SCIP_CALL( SCIPvarChgUbLocal(var->data.aggregate.var, blkmem, set, stat, lp, branchcand, eventqueue,
+         SCIP_CALL( SCIPvarChgUbLocal(aggrvar, blkmem, set, stat, lp, branchcand, eventqueue,
                childnewbound) );
       }
-      else if( SCIPsetIsNegative(set, var->data.aggregate.scalar) )
+      else if( SCIPsetIsNegative(set, scalar) )
       {
          /* a < 0 -> change lower bound of y */
-         assert((SCIPsetIsInfinity(set, var->locdom.ub) && SCIPsetIsInfinity(set, -var->data.aggregate.var->locdom.lb))
-            || SCIPsetIsFeasEQ(set, var->locdom.ub,
-               var->data.aggregate.var->locdom.lb * var->data.aggregate.scalar + var->data.aggregate.constant));
+         assert((SCIPsetIsInfinity(set, var->locdom.ub) && SCIPsetIsInfinity(set, -aggrvar->locdom.lb))
+            || SCIPsetIsFeasEQ(set, var->locdom.ub, aggrvar->locdom.lb * scalar + constant));
          if( !SCIPsetIsInfinity(set, -newbound) && !SCIPsetIsInfinity(set, newbound) )
-            childnewbound = (newbound - var->data.aggregate.constant)/var->data.aggregate.scalar;
+            childnewbound = (newbound - constant) / scalar;
          else
             childnewbound = -newbound;
-         SCIP_CALL( SCIPvarChgLbLocal(var->data.aggregate.var, blkmem, set, stat, lp, branchcand, eventqueue,
+         SCIP_CALL( SCIPvarChgLbLocal(aggrvar, blkmem, set, stat, lp, branchcand, eventqueue,
                childnewbound) );
       }
       else
@@ -13388,7 +13431,7 @@ SCIP_RETCODE SCIPvarChgLbDive(
 
          /* a > 0 -> change lower bound of y */
          if( !SCIPsetIsInfinity(set, -newbound) && !SCIPsetIsInfinity(set, newbound) )
-            childnewbound = (newbound - var->data.aggregate.constant)/var->data.aggregate.scalar;
+            childnewbound = (newbound - var->data.aggregate.constant) / var->data.aggregate.scalar;
          else
             childnewbound = newbound;
          SCIP_CALL( SCIPvarChgLbDive(var->data.aggregate.var, set, lp, childnewbound) );
@@ -13399,7 +13442,7 @@ SCIP_RETCODE SCIPvarChgLbDive(
 
          /* a < 0 -> change upper bound of y */
          if( !SCIPsetIsInfinity(set, -newbound) && !SCIPsetIsInfinity(set, newbound) )
-            childnewbound = (newbound - var->data.aggregate.constant)/var->data.aggregate.scalar;
+            childnewbound = (newbound - var->data.aggregate.constant) / var->data.aggregate.scalar;
          else
             childnewbound = -newbound;
          SCIP_CALL( SCIPvarChgUbDive(var->data.aggregate.var, set, lp, childnewbound) );
@@ -13535,7 +13578,7 @@ SCIP_RETCODE SCIPvarChgUbDive(
 
          /* a > 0 -> change upper bound of y */
          if( !SCIPsetIsInfinity(set, -newbound) && !SCIPsetIsInfinity(set, newbound) )
-            childnewbound = (newbound - var->data.aggregate.constant)/var->data.aggregate.scalar;
+            childnewbound = (newbound - var->data.aggregate.constant) / var->data.aggregate.scalar;
          else
             childnewbound = newbound;
          SCIP_CALL( SCIPvarChgUbDive(var->data.aggregate.var, set, lp, childnewbound) );
@@ -13546,7 +13589,7 @@ SCIP_RETCODE SCIPvarChgUbDive(
 
          /* a < 0 -> change lower bound of y */
          if( !SCIPsetIsInfinity(set, -newbound) && !SCIPsetIsInfinity(set, newbound) )
-            childnewbound = (newbound - var->data.aggregate.constant)/var->data.aggregate.scalar;
+            childnewbound = (newbound - var->data.aggregate.constant) / var->data.aggregate.scalar;
          else
             childnewbound = -newbound;
          SCIP_CALL( SCIPvarChgLbDive(var->data.aggregate.var, set, lp, childnewbound) );
@@ -13700,8 +13743,10 @@ SCIP_Real SCIPvarGetMultaggrLbLocal(
    return (MAX(lb, SCIPvarGetLbLocal(var))); /*lint !e666*/
 }
 
-/** for a multi-aggregated variable, gives the exact local lower bound computed by adding the local bounds from all aggregation variables
- *  this lower bound may be tighter than the one given by SCIPvarGetLbLocal, since the latter is not updated if bounds of aggregation variables are changing
+/** for a multi-aggregated variable, gives the exact local lower bound computed by adding the local bounds from all
+ *  aggregation variables; this lower bound may be tighter than the one given by SCIPvarGetLbLocal, since the latter is
+ *  not updated if bounds of aggregation variables are changing
+ *
  *  calling this function for a non-multi-aggregated variable is not allowed
  */
 SCIP_RETCODE SCIPvarGetMultaggrLbLocalExact(
@@ -14320,13 +14365,13 @@ SCIP_RETCODE SCIPvarAddHoleGlobal(
       if( SCIPsetIsPositive(set, var->data.aggregate.scalar) )
       {
          /* a > 0 -> change lower bound of y */
-         childnewleft = (left - var->data.aggregate.constant)/var->data.aggregate.scalar;
-         childnewright = (right - var->data.aggregate.constant)/var->data.aggregate.scalar;
+         childnewleft = (left - var->data.aggregate.constant) / var->data.aggregate.scalar;
+         childnewright = (right - var->data.aggregate.constant) / var->data.aggregate.scalar;
       }
       else if( SCIPsetIsNegative(set, var->data.aggregate.scalar) )
       {
-         childnewright = (left - var->data.aggregate.constant)/var->data.aggregate.scalar;
-         childnewleft = (right - var->data.aggregate.constant)/var->data.aggregate.scalar;
+         childnewright = (left - var->data.aggregate.constant) / var->data.aggregate.scalar;
+         childnewleft = (right - var->data.aggregate.constant) / var->data.aggregate.scalar;
       }
       else
       {
@@ -14559,13 +14604,13 @@ SCIP_RETCODE SCIPvarAddHoleLocal(
       if( SCIPsetIsPositive(set, var->data.aggregate.scalar) )
       {
          /* a > 0 -> change lower bound of y */
-         childnewleft = (left - var->data.aggregate.constant)/var->data.aggregate.scalar;
-         childnewright = (right - var->data.aggregate.constant)/var->data.aggregate.scalar;
+         childnewleft = (left - var->data.aggregate.constant) / var->data.aggregate.scalar;
+         childnewright = (right - var->data.aggregate.constant) / var->data.aggregate.scalar;
       }
       else if( SCIPsetIsNegative(set, var->data.aggregate.scalar) )
       {
-         childnewright = (left - var->data.aggregate.constant)/var->data.aggregate.scalar;
-         childnewleft = (right - var->data.aggregate.constant)/var->data.aggregate.scalar;
+         childnewright = (left - var->data.aggregate.constant) / var->data.aggregate.scalar;
+         childnewleft = (right - var->data.aggregate.constant) / var->data.aggregate.scalar;
       }
       else
       {
@@ -15278,7 +15323,8 @@ SCIP_RETCODE varAddTransitiveImplic(
              *       have to explicitly check that the active variable has not a variable status
              *       SCIP_VARSTATUS_AGGREGATED or SCIP_VARSTATUS_NEGATED;
              */
-            if( SCIPvarIsActive(vlbvars[i]) && SCIPvarGetStatus(vlbvars[i]) != SCIP_VARSTATUS_AGGREGATED && SCIPvarGetStatus(vlbvars[i]) != SCIP_VARSTATUS_NEGATED )
+            if( SCIPvarIsActive(vlbvars[i]) && SCIPvarGetStatus(vlbvars[i]) != SCIP_VARSTATUS_AGGREGATED
+               && SCIPvarGetStatus(vlbvars[i]) != SCIP_VARSTATUS_NEGATED )
             {
                SCIP_Real vbimplbound;
 
@@ -15348,7 +15394,8 @@ SCIP_RETCODE varAddTransitiveImplic(
              *       have to explicitly check that the active variable has not a variable status
              *       SCIP_VARSTATUS_AGGREGATED or SCIP_VARSTATUS_NEGATED;
              */
-            if( SCIPvarIsActive(vubvars[i]) && SCIPvarGetStatus(vubvars[i]) != SCIP_VARSTATUS_AGGREGATED && SCIPvarGetStatus(vubvars[i]) != SCIP_VARSTATUS_NEGATED )
+            if( SCIPvarIsActive(vubvars[i]) && SCIPvarGetStatus(vubvars[i]) != SCIP_VARSTATUS_AGGREGATED
+               && SCIPvarGetStatus(vubvars[i]) != SCIP_VARSTATUS_NEGATED )
             {
                SCIP_Real vbimplbound;
 
@@ -15806,15 +15853,15 @@ SCIP_RETCODE SCIPvarAddVlb(
       {
          /* a > 0 -> add variable lower bound */
          SCIP_CALL( SCIPvarAddVlb(var->data.aggregate.var, blkmem, set, stat, transprob, origprob, tree, reopt, lp,
-               cliquetable, branchcand, eventqueue, eventfilter, vlbvar, vlbcoef/var->data.aggregate.scalar,
-               (vlbconstant - var->data.aggregate.constant)/var->data.aggregate.scalar, transitive, infeasible, nbdchgs) );
+               cliquetable, branchcand, eventqueue, eventfilter, vlbvar, vlbcoef / var->data.aggregate.scalar,
+               (vlbconstant - var->data.aggregate.constant) / var->data.aggregate.scalar, transitive, infeasible, nbdchgs) );
       }
       else if( SCIPsetIsNegative(set, var->data.aggregate.scalar) )
       {
          /* a < 0 -> add variable upper bound */
          SCIP_CALL( SCIPvarAddVub(var->data.aggregate.var, blkmem, set, stat, transprob, origprob, tree, reopt, lp,
-               cliquetable, branchcand, eventqueue, eventfilter, vlbvar, vlbcoef/var->data.aggregate.scalar,
-               (vlbconstant - var->data.aggregate.constant)/var->data.aggregate.scalar, transitive, infeasible, nbdchgs) );
+               cliquetable, branchcand, eventqueue, eventfilter, vlbvar, vlbcoef / var->data.aggregate.scalar,
+               (vlbconstant - var->data.aggregate.constant) / var->data.aggregate.scalar, transitive, infeasible, nbdchgs) );
       }
       else
       {
@@ -16262,15 +16309,15 @@ SCIP_RETCODE SCIPvarAddVub(
       {
          /* a > 0 -> add variable upper bound */
          SCIP_CALL( SCIPvarAddVub(var->data.aggregate.var, blkmem, set, stat, transprob, origprob, tree, reopt, lp,
-               cliquetable, branchcand, eventqueue, eventfilter, vubvar, vubcoef/var->data.aggregate.scalar,
-               (vubconstant - var->data.aggregate.constant)/var->data.aggregate.scalar, transitive, infeasible, nbdchgs) );
+               cliquetable, branchcand, eventqueue, eventfilter, vubvar, vubcoef / var->data.aggregate.scalar,
+               (vubconstant - var->data.aggregate.constant) / var->data.aggregate.scalar, transitive, infeasible, nbdchgs) );
       }
       else if( SCIPsetIsNegative(set, var->data.aggregate.scalar) )
       {
          /* a < 0 -> add variable lower bound */
          SCIP_CALL( SCIPvarAddVlb(var->data.aggregate.var, blkmem, set, stat, transprob, origprob, tree, reopt, lp,
-               cliquetable, branchcand, eventqueue, eventfilter, vubvar, vubcoef/var->data.aggregate.scalar,
-               (vubconstant - var->data.aggregate.constant)/var->data.aggregate.scalar, transitive, infeasible, nbdchgs) );
+               cliquetable, branchcand, eventqueue, eventfilter, vubvar, vubcoef / var->data.aggregate.scalar,
+               (vubconstant - var->data.aggregate.constant) / var->data.aggregate.scalar, transitive, infeasible, nbdchgs) );
       }
       else
       {
@@ -16917,7 +16964,7 @@ SCIP_RETCODE SCIPvarAddClique(
    *infeasible = FALSE;
 
    /* get corresponding active problem variable */
-   SCIP_CALL( SCIPvarGetProbvarBinary(&var, &value) );
+   SCIP_CALL( SCIPvarGetProbvarBinary(set, &var, &value) );
    assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN
       || SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE
       || SCIPvarGetStatus(var) == SCIP_VARSTATUS_FIXED
@@ -17054,6 +17101,7 @@ SCIP_RETCODE SCIPvarDelCliqueFromList(
 SCIP_RETCODE SCIPvarDelClique(
    SCIP_VAR*             var,                /**< problem variable  */
    BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_CLIQUETABLE*     cliquetable,        /**< clique table data structure */
    SCIP_Bool             value,              /**< value of the variable in the clique */
    SCIP_CLIQUE*          clique              /**< clique the variable should be removed from */
@@ -17063,7 +17111,7 @@ SCIP_RETCODE SCIPvarDelClique(
    assert(SCIPvarIsBinary(var));
 
    /* get corresponding active problem variable */
-   SCIP_CALL( SCIPvarGetProbvarBinary(&var, &value) );
+   SCIP_CALL( SCIPvarGetProbvarBinary(set, &var, &value) );
    assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN
       || SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE
       || SCIPvarGetStatus(var) == SCIP_VARSTATUS_FIXED
@@ -17898,6 +17946,7 @@ SCIP_VAR* SCIPvarGetProbvar(
  *  negation status of each variable
  */
 SCIP_RETCODE SCIPvarsGetProbvarBinary(
+   SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_VAR***           vars,               /**< pointer to binary problem variables */
    SCIP_Bool**           negatedarr,         /**< pointer to corresponding array to update the negation status */
    int                   nvars               /**< number of variables and values in vars and negated array */
@@ -17918,7 +17967,7 @@ SCIP_RETCODE SCIPvarsGetProbvarBinary(
       negated = &((*negatedarr)[v]);
 
       /* get problem variable */
-      SCIP_CALL( SCIPvarGetProbvarBinary(var, negated) );
+      SCIP_CALL( SCIPvarGetProbvarBinary(set, var, negated) );
    }
 
    return SCIP_OKAY;
@@ -17930,6 +17979,7 @@ SCIP_RETCODE SCIPvarsGetProbvarBinary(
  *  FALSE is used)
  */
 SCIP_RETCODE SCIPvarGetProbvarBinary(
+   SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_VAR**            var,                /**< pointer to binary problem variable */
    SCIP_Bool*            negated             /**< pointer to update the negation status */
    )
@@ -17942,6 +17992,7 @@ SCIP_RETCODE SCIPvarGetProbvarBinary(
 
    assert(var != NULL);
    assert(*var != NULL);
+   assert(set != NULL);
    assert(negated != NULL);
    assert(SCIPvarIsBinary(*var));
 
@@ -17972,7 +18023,7 @@ SCIP_RETCODE SCIPvarGetProbvarBinary(
             assert( (*var)->data.multaggr.vars != NULL );
             assert( (*var)->data.multaggr.scalars != NULL );
             assert( SCIPvarIsBinary((*var)->data.multaggr.vars[0]) );
-            assert(!EPSZ((*var)->data.multaggr.scalars[0], 1e-06));
+            assert( !SCIPsetIsSumZero(set, (*var)->data.multaggr.scalars[0]) );
 
             /* if not all variables were fully propagated, it might happen that a variable is multi-aggregated to
              * another variable which needs to be fixed
@@ -17982,9 +18033,10 @@ SCIP_RETCODE SCIPvarGetProbvarBinary(
              *
              * is this special case we need to return the muti-aggregation
              */
-            if( EPSEQ((*var)->data.multaggr.constant, -1.0, 1e-06) || (EPSEQ((*var)->data.multaggr.constant, 1.0, 1e-06) && EPSEQ((*var)->data.multaggr.scalars[0], 1.0, 1e-06)) )
+            if( SCIPsetIsSumEQ(set, (*var)->data.multaggr.constant, -1.0)
+               || (SCIPsetIsSumEQ(set, (*var)->data.multaggr.constant, 1.0) && SCIPsetIsSumEQ(set, (*var)->data.multaggr.scalars[0], 1.0)))
             {
-               assert(EPSEQ((*var)->data.multaggr.scalars[0], 1.0, 1e-06));
+               assert(SCIPsetIsSumEQ(set, (*var)->data.multaggr.scalars[0], 1.0));
             }
             else
             {
@@ -17993,7 +18045,7 @@ SCIP_RETCODE SCIPvarGetProbvarBinary(
                 *       fixed to zero, but this should be done by another enforcement; so not depending on the scalar,
                 *       we will return the aggregated variable;
                 */
-               if( !EPSEQ(REALABS((*var)->data.multaggr.scalars[0]), 1.0, 1e-06) )
+               if( !SCIPsetIsSumEQ(set, REALABS((*var)->data.multaggr.scalars[0]), 1.0) )
                {
                   active = TRUE;
                   break;
@@ -18003,31 +18055,31 @@ SCIP_RETCODE SCIPvarGetProbvarBinary(
                 *       aggregation variable needs to be fixed to one, but this should be done by another enforcement;
                 *       so if this is the case, we will return the aggregated variable
                 */
-               assert(EPSZ((*var)->data.multaggr.constant, 1e-06) || EPSEQ((*var)->data.multaggr.constant, 1.0, 1e-06)
-                  || EPSZ((*var)->data.multaggr.constant + (*var)->data.multaggr.scalars[0], 1e-06)
-                  || EPSEQ((*var)->data.multaggr.constant + (*var)->data.multaggr.scalars[0], 1.0, 1e-06));
+               assert(SCIPsetIsSumZero(set, (*var)->data.multaggr.constant) || SCIPsetIsSumEQ(set, (*var)->data.multaggr.constant, 1.0)
+                  || SCIPsetIsSumZero(set, (*var)->data.multaggr.constant + (*var)->data.multaggr.scalars[0])
+                  || SCIPsetIsSumEQ(set, (*var)->data.multaggr.constant + (*var)->data.multaggr.scalars[0], 1.0));
 
-               if( !EPSZ((*var)->data.multaggr.constant, 1e-06) && !EPSEQ((*var)->data.multaggr.constant, 1.0, 1e-06) )
+               if( !SCIPsetIsSumZero(set, (*var)->data.multaggr.constant) && !SCIPsetIsSumEQ(set, (*var)->data.multaggr.constant, 1.0) )
                {
                   active = TRUE;
                   break;
                }
 
-               assert(EPSEQ((*var)->data.multaggr.scalars[0], 1.0, 1e-06) || EPSEQ((*var)->data.multaggr.scalars[0], -1.0, 1e-06));
+               assert(SCIPsetIsSumEQ(set, (*var)->data.multaggr.scalars[0], 1.0) || SCIPsetIsSumEQ(set, (*var)->data.multaggr.scalars[0], -1.0));
 
-               if( EPSZ((*var)->data.multaggr.constant, 1e-06) )
+               if( SCIPsetIsSumZero(set, (*var)->data.multaggr.constant) )
                {
                   /* if the scalar is negative, either the aggregation variable is already fixed to zero or has at
                    * least one uplock (that hopefully will enforce this fixation to zero); can it happen that this
                    * variable itself is multi-aggregated again?
                    */
-                  assert(EPSEQ((*var)->data.multaggr.scalars[0], -1.0, 1e-06) ?
+                  assert(SCIPsetIsSumEQ(set, (*var)->data.multaggr.scalars[0], -1.0) ?
                      ((SCIPvarGetUbGlobal((*var)->data.multaggr.vars[0]) < 0.5) ||
                         SCIPvarGetNLocksUpType((*var)->data.multaggr.vars[0], SCIP_LOCKTYPE_MODEL) > 0) : TRUE);
                }
                else
                {
-                  assert(EPSEQ((*var)->data.multaggr.scalars[0], -1.0, 1e-06));
+                  assert(SCIPsetIsSumEQ(set, (*var)->data.multaggr.scalars[0], -1.0));
 #ifndef NDEBUG
                   constant += (*negated) != orignegated ? -1.0 : 1.0;
 #endif
@@ -18043,8 +18095,8 @@ SCIP_RETCODE SCIPvarGetProbvarBinary(
 
       case SCIP_VARSTATUS_AGGREGATED:  /* x = a'*x' + c'  =>  a*x + c == (a*a')*x' + (a*c' + c) */
          assert((*var)->data.aggregate.var != NULL);
-         assert(EPSEQ((*var)->data.aggregate.scalar, 1.0, 1e-06) || EPSEQ((*var)->data.aggregate.scalar, -1.0, 1e-06));
-         assert(EPSLE((*var)->data.aggregate.var->glbdom.ub - (*var)->data.aggregate.var->glbdom.lb, 1.0, 1e-06));
+         assert(SCIPsetIsSumEQ(set, (*var)->data.aggregate.scalar, 1.0) || SCIPsetIsSumEQ(set, (*var)->data.aggregate.scalar, -1.0));
+         assert(SCIPsetIsSumLE(set, (*var)->data.aggregate.var->glbdom.ub - (*var)->data.aggregate.var->glbdom.lb, 1.0));
 #ifndef NDEBUG
          constant += (*negated) != orignegated ? -(*var)->data.aggregate.constant : (*var)->data.aggregate.constant;
 #endif
@@ -18073,8 +18125,8 @@ SCIP_RETCODE SCIPvarGetProbvarBinary(
    if( active )
    {
       assert(SCIPvarIsBinary(*var));
-      assert(EPSZ(constant, 1e-06) || EPSEQ(constant, 1.0, 1e-06));
-      assert(EPSZ(constant, 1e-06) == ((*negated) == orignegated));
+      assert(SCIPsetIsSumZero(set, constant) || SCIPsetIsSumEQ(set, constant, 1.0));
+      assert(SCIPsetIsSumZero(set, constant) == ((*negated) == orignegated));
 
       return SCIP_OKAY;
    }
@@ -18622,9 +18674,7 @@ SCIP_RETCODE SCIPvarGetOrigvarSum(
 
    while( !SCIPvarIsOriginal(*var) )
    {
-      /* if the variable has no parent variables, it was generated during solving and has no corresponding original
-       * var
-       */
+      /* if the variable has no parents, it was generated during solving and has no corresponding original var */
       if( (*var)->nparentvars == 0 )
       {
          /* negated variables do not need to have a parent variables, and negated variables can exist in original
@@ -18639,9 +18689,6 @@ SCIP_RETCODE SCIPvarGetOrigvarSum(
 
             continue;
          }
-         /* if the variables does not have any parent the variables was created during solving and has no original
-          * counterpart
-          */
          else
          {
             *var = NULL;
@@ -18711,9 +18758,7 @@ SCIP_RETCODE SCIPvarGetOrigvarSumExact(
 
    while( !SCIPvarIsOriginal(*var) )
    {
-      /* if the variable has no parent variables, it was generated during solving and has no corresponding original
-       * var
-       */
+      /* if the variable has no parents, it was generated during solving and has no corresponding original var */
       if( (*var)->nparentvars == 0 )
       {
          /* negated variables do not need to have a parent variables, and negated variables can exist in original
@@ -18728,9 +18773,6 @@ SCIP_RETCODE SCIPvarGetOrigvarSumExact(
 
             continue;
          }
-         /* if the variables does not have any parent the variables was created during solving and has no original
-          * counterpart
-          */
          else
          {
             *var = NULL;
@@ -19022,22 +19064,12 @@ SCIP_Real SCIPvarGetLPSol_rec(
 
       assert(!var->donotaggr);
       assert(var->data.aggregate.var != NULL);
+
       lpsolval = SCIPvarGetLPSol(var->data.aggregate.var);
 
-      /* a correct implementation would need to check the value of var->data.aggregate.var for infinity and return the
-       * corresponding infinity value instead of performing an arithmetical transformation (compare method
-       * SCIPvarGetLbLP()); however, we do not want to introduce a SCIP or SCIP_SET pointer to this method, since it is
-       * (or is called by) a public interface method; instead, we only assert that values are finite
-       * w.r.t. SCIP_DEFAULT_INFINITY, which seems to be true in our regression tests; note that this may yield false
-       * positives and negatives if the parameter <numerics/infinity> is modified by the user
-       */
-//       assert(lpsolval > -SCIP_DEFAULT_INFINITY);
-//       assert(lpsolval < +SCIP_DEFAULT_INFINITY);
-
-      if( lpsolval >= SCIP_DEFAULT_INFINITY )
-         return (var->data.aggregate.scalar > 0) ? SCIP_DEFAULT_INFINITY : -SCIP_DEFAULT_INFINITY;
-      else if( lpsolval <= -SCIP_DEFAULT_INFINITY )
-         return (var->data.aggregate.scalar > 0) ? -SCIP_DEFAULT_INFINITY : SCIP_DEFAULT_INFINITY;
+      /**@todo Get access to SCIP's infinity value and either add an assert that the absolute value of the computed
+       * LP-value is not infinite or truncate it. This would require access to a set or scip pointer and involve several
+       * interface changes because of public functions. */
 
       return var->data.aggregate.scalar * lpsolval + var->data.aggregate.constant;
    }
@@ -19221,18 +19253,16 @@ SCIP_Real SCIPvarGetPseudoSol_rec(
    case SCIP_VARSTATUS_AGGREGATED:
    {
       SCIP_Real pseudosolval;
+
       assert(!var->donotaggr);
       assert(var->data.aggregate.var != NULL);
-      /* a correct implementation would need to check the value of var->data.aggregate.var for infinity and return the
-       * corresponding infinity value instead of performing an arithmetical transformation (compare method
-       * SCIPvarGetLbLP()); however, we do not want to introduce a SCIP or SCIP_SET pointer to this method, since it is
-       * (or is called by) a public interface method; instead, we only assert that values are finite
-       * w.r.t. SCIP_DEFAULT_INFINITY, which seems to be true in our regression tests; note that this may yield false
-       * positives and negatives if the parameter <numerics/infinity> is modified by the user
-       */
+
       pseudosolval = SCIPvarGetPseudoSol(var->data.aggregate.var);
-      assert(pseudosolval > -SCIP_DEFAULT_INFINITY);
-      assert(pseudosolval < +SCIP_DEFAULT_INFINITY);
+
+      /**@todo Get access to SCIP's infinity value and either add an assert that the absolute value of the computed
+       * LP-value is not infinite or truncate it. This would require access to a set or scip pointer and involve several
+       * interface changes because of public functions. */
+
       return var->data.aggregate.scalar * pseudosolval + var->data.aggregate.constant;
    }
    case SCIP_VARSTATUS_MULTAGGR:
@@ -19429,15 +19459,11 @@ SCIP_Real SCIPvarGetRootSol(
    case SCIP_VARSTATUS_AGGREGATED:
       assert(!var->donotaggr);
       assert(var->data.aggregate.var != NULL);
-      /* a correct implementation would need to check the value of var->data.aggregate.var for infinity and return the
-       * corresponding infinity value instead of performing an arithmetical transformation (compare method
-       * SCIPvarGetLbLP()); however, we do not want to introduce a SCIP or SCIP_SET pointer to this method, since it is
-       * (or is called by) a public interface method; instead, we only assert that values are finite
-       * w.r.t. SCIP_DEFAULT_INFINITY, which seems to be true in our regression tests; note that this may yield false
-       * positives and negatives if the parameter <numerics/infinity> is modified by the user
-       */
-      assert(SCIPvarGetRootSol(var->data.aggregate.var) > -SCIP_DEFAULT_INFINITY);
-      assert(SCIPvarGetRootSol(var->data.aggregate.var) < +SCIP_DEFAULT_INFINITY);
+
+      /**@todo Get access to SCIP's infinity value and either add an assert that the absolute value of the computed
+       * LP-value is not infinite or truncate it. This would require access to a set or scip pointer and involve several
+       * interface changes because of public functions. */
+
       return var->data.aggregate.scalar * SCIPvarGetRootSol(var->data.aggregate.var) + var->data.aggregate.constant;
 
    case SCIP_VARSTATUS_MULTAGGR:
@@ -19794,15 +19820,11 @@ SCIP_Real SCIPvarGetBestRootSol(
    case SCIP_VARSTATUS_AGGREGATED:
       assert(!var->donotaggr);
       assert(var->data.aggregate.var != NULL);
-      /* a correct implementation would need to check the value of var->data.aggregate.var for infinity and return the
-       * corresponding infinity value instead of performing an arithmetical transformation (compare method
-       * SCIPvarGetLbLP()); however, we do not want to introduce a SCIP or SCIP_SET pointer to this method, since it is
-       * (or is called by) a public interface method; instead, we only assert that values are finite
-       * w.r.t. SCIP_DEFAULT_INFINITY, which seems to be true in our regression tests; note that this may yield false
-       * positives and negatives if the parameter <numerics/infinity> is modified by the user
-       */
-      assert(SCIPvarGetBestRootSol(var->data.aggregate.var) > -SCIP_DEFAULT_INFINITY);
-      assert(SCIPvarGetBestRootSol(var->data.aggregate.var) < +SCIP_DEFAULT_INFINITY);
+
+      /**@todo Get access to SCIP's infinity value and either add an assert that the absolute value of the computed
+       * LP-value is not infinite or truncate it. This would require access to a set or scip pointer and involve several
+       * interface changes because of public functions. */
+
       return var->data.aggregate.scalar * SCIPvarGetBestRootSol(var->data.aggregate.var) + var->data.aggregate.constant;
 
    case SCIP_VARSTATUS_MULTAGGR:
@@ -19953,7 +19975,7 @@ SCIP_RETCODE SCIPvarSetRelaxSol(
    case SCIP_VARSTATUS_AGGREGATED: /* x = a*y + c  =>  y = (x-c)/a */
       assert(!SCIPsetIsZero(set, var->data.aggregate.scalar));
       SCIP_CALL( SCIPvarSetRelaxSol(var->data.aggregate.var, set, relaxation,
-            (solval - var->data.aggregate.constant)/var->data.aggregate.scalar, updateobj) );
+            (solval - var->data.aggregate.constant) / var->data.aggregate.scalar, updateobj) );
       break;
    case SCIP_VARSTATUS_MULTAGGR:
       SCIPerrorMessage("cannot set solution value for multiple aggregated variable\n");
@@ -20092,7 +20114,7 @@ SCIP_RETCODE SCIPvarSetNLPSol(
 
    case SCIP_VARSTATUS_AGGREGATED: /* x = a*y + c  =>  y = (x-c)/a */
       assert(!SCIPsetIsZero(set, var->data.aggregate.scalar));
-      SCIP_CALL( SCIPvarSetNLPSol(var->data.aggregate.var, set, (solval - var->data.aggregate.constant)/var->data.aggregate.scalar) );
+      SCIP_CALL( SCIPvarSetNLPSol(var->data.aggregate.var, set, (solval - var->data.aggregate.constant) / var->data.aggregate.scalar) );
       break;
 
    case SCIP_VARSTATUS_MULTAGGR:
@@ -20619,7 +20641,7 @@ SCIP_RETCODE SCIPvarUpdatePseudocost(
       f = fopen(filename, "a");
       if( NULL != f )
       {
-         fprintf(f, "%lld %s \t %lld \t %lld \t %lld \t %d \t %15.9f \t %.3f\n",
+         fprintf(f, "%" SCIP_LONGINT_FORMAT " %s \t %" SCIP_LONGINT_FORMAT " \t %" SCIP_LONGINT_FORMAT " \t %" SCIP_LONGINT_FORMAT " \t %d \t %15.9f \t %.3f\n",
             ++counter,
             SCIPvarGetName(var),
             SCIPnodeGetNumber(currentnode),
@@ -20641,7 +20663,7 @@ SCIP_RETCODE SCIPvarUpdatePseudocost(
    case SCIP_VARSTATUS_AGGREGATED:
       assert(!SCIPsetIsZero(set, var->data.aggregate.scalar));
       SCIP_CALL( SCIPvarUpdatePseudocost(var->data.aggregate.var, set, stat,
-            solvaldelta/var->data.aggregate.scalar, objdelta, weight) );
+            solvaldelta / var->data.aggregate.scalar, objdelta, weight) );
       return SCIP_OKAY;
 
    case SCIP_VARSTATUS_MULTAGGR:
@@ -20706,7 +20728,7 @@ SCIP_RETCODE SCIPvarUpdateAncPseudocost(
    case SCIP_VARSTATUS_AGGREGATED:
       assert(!SCIPsetIsZero(set, var->data.aggregate.scalar));
       SCIP_CALL( SCIPvarUpdateAncPseudocost(var->data.aggregate.var, set, stat,
-            solvaldelta/var->data.aggregate.scalar, objdelta, weight) );
+            solvaldelta / var->data.aggregate.scalar, objdelta, weight) );
       return SCIP_OKAY;
 
    case SCIP_VARSTATUS_MULTAGGR:
@@ -21446,7 +21468,7 @@ SCIP_RETCODE SCIPvarIncVSIDS(
       return SCIP_INVALIDDATA;
 
    case SCIP_VARSTATUS_AGGREGATED:
-      value = (value - var->data.aggregate.constant)/var->data.aggregate.scalar;
+      value = (value - var->data.aggregate.constant) / var->data.aggregate.scalar;
 
       if( var->data.aggregate.scalar > 0.0 )
       {
@@ -21577,7 +21599,7 @@ SCIP_RETCODE SCIPvarIncNActiveConflicts(
       return SCIP_INVALIDDATA;
 
    case SCIP_VARSTATUS_AGGREGATED:
-      value = (value - var->data.aggregate.constant)/var->data.aggregate.scalar;
+      value = (value - var->data.aggregate.constant) / var->data.aggregate.scalar;
 
       if( var->data.aggregate.scalar > 0.0 )
       {
@@ -21840,7 +21862,7 @@ SCIP_RETCODE SCIPvarIncNBranchings(
       return SCIP_INVALIDDATA;
 
    case SCIP_VARSTATUS_AGGREGATED:
-      value = (value - var->data.aggregate.constant)/var->data.aggregate.scalar;
+      value = (value - var->data.aggregate.constant) / var->data.aggregate.scalar;
 
       if( var->data.aggregate.scalar > 0.0 )
       {
@@ -21924,7 +21946,7 @@ SCIP_RETCODE SCIPvarIncInferenceSum(
       return SCIP_INVALIDDATA;
 
    case SCIP_VARSTATUS_AGGREGATED:
-      value = (value - var->data.aggregate.constant)/var->data.aggregate.scalar;
+      value = (value - var->data.aggregate.constant) / var->data.aggregate.scalar;
 
       if( var->data.aggregate.scalar > 0.0 )
       {
@@ -22008,7 +22030,7 @@ SCIP_RETCODE SCIPvarIncCutoffSum(
       return SCIP_INVALIDDATA;
 
    case SCIP_VARSTATUS_AGGREGATED:
-      value = (value - var->data.aggregate.constant)/var->data.aggregate.scalar;
+      value = (value - var->data.aggregate.constant) / var->data.aggregate.scalar;
 
       if( var->data.aggregate.scalar > 0.0 )
       {
@@ -22731,7 +22753,7 @@ SCIP_Real SCIPvarGetAvgGMIScore(
          return SCIPvarGetAvgGMIScore(var->negatedvar, stat);
 
       default:
-      SCIPerrorMessage("unknown variable status\n");
+         SCIPerrorMessage("unknown variable status\n");
          SCIPABORT();
          return 0.0; /*lint !e527*/
    }
@@ -22775,7 +22797,7 @@ SCIP_RETCODE SCIPvarIncGMIeffSum(
          return SCIP_INVALIDDATA;
 
       default:
-      SCIPerrorMessage("unknown variable status\n");
+         SCIPerrorMessage("unknown variable status\n");
          SCIPABORT();
          return SCIP_INVALIDDATA; /*lint !e527*/
    }
@@ -22814,7 +22836,7 @@ SCIP_Real SCIPvarGetLastGMIScore(
          return SCIPvarGetLastGMIScore(var->negatedvar, stat);
 
       default:
-      SCIPerrorMessage("unknown variable status\n");
+         SCIPerrorMessage("unknown variable status\n");
          SCIPABORT();
          return 0.0; /*lint !e527*/
    }
@@ -22859,7 +22881,7 @@ SCIP_RETCODE SCIPvarSetLastGMIScore(
          return SCIP_INVALIDDATA;
 
       default:
-      SCIPerrorMessage("unknown variable status\n");
+         SCIPerrorMessage("unknown variable status\n");
          SCIPABORT();
          return SCIP_INVALIDDATA; /*lint !e527*/
    }
@@ -23240,7 +23262,6 @@ void SCIPvarsCountTypes(
    int*                  ncontvars           /**< pointer to store number of continuous variables or NULL if not needed */
    )
 {
-   assert(vars != NULL || nvars == 0);
    int binvars = 0;
    int binimplvars = 0;
    int intvars = 0;
@@ -23249,9 +23270,12 @@ void SCIPvarsCountTypes(
    int contimplvars = 0;
    int v;
 
+   assert(vars != NULL || nvars == 0);
+
    for( v = 0; v < nvars; ++v )
    {
       SCIP_Bool implied = SCIPvarIsImpliedIntegral(vars[v]);
+
       switch( SCIPvarGetType(vars[v]) )
       {
          case SCIP_VARTYPE_BINARY:
@@ -23277,6 +23301,7 @@ void SCIPvarsCountTypes(
             SCIPABORT();
       } /*lint !e788*/
    }
+
    if( nbinvars != NULL )
       *nbinvars = binvars;
    if( nintvars != NULL )
@@ -25487,8 +25512,8 @@ SCIP_Longint SCIPvarGetLbCertificateIndexLocal(
    )
 {
    assert(var->exactdata != NULL);
-   assert(var->exactdata->locdom.lbcertificateidx != -1);
-   assert(var->exactdata->locdom.lbcertificateidx <= SCIPcertificateGetCurrentIndex(SCIPgetCertificate(var->scip)) && var->exactdata->locdom.lbcertificateidx >= 0);
+   assert(var->exactdata->locdom.lbcertificateidx >= 0);
+   assert(var->exactdata->locdom.lbcertificateidx <= SCIPcertificateGetCurrentIndex(SCIPgetCertificate(var->scip)));
 
    return var->exactdata->locdom.lbcertificateidx;
 }
@@ -25499,8 +25524,8 @@ SCIP_Longint SCIPvarGetUbCertificateIndexLocal(
    )
 {
    assert(var->exactdata != NULL);
-   assert(var->exactdata->locdom.ubcertificateidx != -1);
-   assert(var->exactdata->locdom.ubcertificateidx <= SCIPcertificateGetCurrentIndex(SCIPgetCertificate(var->scip)) && var->exactdata->locdom.ubcertificateidx >= 0);
+   assert(var->exactdata->locdom.ubcertificateidx >= 0);
+   assert(var->exactdata->locdom.ubcertificateidx <= SCIPcertificateGetCurrentIndex(SCIPgetCertificate(var->scip)));
 
    return var->exactdata->locdom.ubcertificateidx;
 }
@@ -25511,8 +25536,8 @@ SCIP_Longint SCIPvarGetLbCertificateIndexGlobal(
    )
 {
    assert(var->exactdata != NULL);
-   assert(var->exactdata->glbdom.lbcertificateidx != -1);
-   assert(var->exactdata->glbdom.lbcertificateidx <= SCIPcertificateGetCurrentIndex(SCIPgetCertificate(var->scip)) && var->exactdata->glbdom.lbcertificateidx >= 0);
+   assert(var->exactdata->glbdom.lbcertificateidx >= 0);
+   assert(var->exactdata->glbdom.lbcertificateidx <= SCIPcertificateGetCurrentIndex(SCIPgetCertificate(var->scip)));
 
    return var->exactdata->glbdom.lbcertificateidx;
 }
@@ -25523,8 +25548,8 @@ SCIP_Longint SCIPvarGetUbCertificateIndexGlobal(
    )
 {
    assert(var->exactdata != NULL);
-   assert(var->exactdata->glbdom.ubcertificateidx != -1);
-   assert(var->exactdata->glbdom.ubcertificateidx <= SCIPcertificateGetCurrentIndex(SCIPgetCertificate(var->scip)) && var->exactdata->glbdom.ubcertificateidx >= 0);
+   assert(var->exactdata->glbdom.ubcertificateidx >= 0);
+   assert(var->exactdata->glbdom.ubcertificateidx <= SCIPcertificateGetCurrentIndex(SCIPgetCertificate(var->scip)));
 
    return var->exactdata->glbdom.ubcertificateidx;
 }

@@ -67,6 +67,7 @@
 #include "scip/cons_varbound.h"
 #include "scip/cons_and.h"
 #include "scip/cons_bounddisjunction.h"
+#include "scip/cons_setppc.h"
 #include "scip/heur_subnlp.h"
 #include "scip/heur_trysol.h"
 #include "scip/lapack_calls.h"
@@ -3941,7 +3942,7 @@ SCIP_RETCODE reformulateFactorizedBinaryQuadratic(
          TRUE, FALSE, NULL, NULL, NULL, NULL, NULL) );
    SCIP_CALL( SCIPaddVar(scip, auxvar) );
 
-#ifdef WITH_DEBUG_SOLUTION
+#if SCIP_HAS_DEBUG_SOLUTION
    if( SCIPdebugIsMainscip(scip) )
    {
       SCIP_Real debugsolval;  /* value of auxvar in debug solution */
@@ -3963,7 +3964,7 @@ SCIP_RETCODE reformulateFactorizedBinaryQuadratic(
       /* store debug solution value of auxiliary variable */
       SCIP_CALL( SCIPdebugAddSolVal(scip, auxvar, debugsolval) );
    }
-#endif
+#endif /* SCIP_HAS_DEBUG_SOLUTION */
 
    /* create and add z - maxact x <= 0 */
    if( !SCIPisZero(scip, maxact) )
@@ -4273,7 +4274,7 @@ SCIP_RETCODE getBinaryProductExprDo(
    SCIP_CALL( SCIPaddVar(scip, w) );
    SCIPdebugMsg(scip, "  created auxiliary variable %s\n", name);
 
-#ifdef WITH_DEBUG_SOLUTION
+#if SCIP_HAS_DEBUG_SOLUTION
    if( SCIPdebugIsMainscip(scip) )
    {
       SCIP_Real debugsolval;  /* value of auxvar in debug solution */
@@ -4290,7 +4291,7 @@ SCIP_RETCODE getBinaryProductExprDo(
       /* store debug solution value of auxiliary variable */
       SCIP_CALL( SCIPdebugAddSolVal(scip, w, debugsolval) );
    }
-#endif
+#endif /* SCIP_HAS_DEBUG_SOLUTION */
 
    /* use variable bound constraints if it is a bilinear product and there is no empathy for an AND constraint */
    if( nchildren == 2 && !empathy4and )
@@ -4398,9 +4399,12 @@ SCIP_RETCODE getBinaryProductExpr(
       if( nchildren == 2 )
       {
          SCIP_CLIQUE** xcliques;
+         SCIP_CONS* clqcons;
+         SCIP_VAR* clqvars[2];
          SCIP_VAR* x;
          SCIP_VAR* y;
          SCIP_Bool found_clique = FALSE;
+         char clqname[SCIP_MAXSTRLEN];
          int c;
 
          /* get variables from the product expression */
@@ -4418,9 +4422,20 @@ SCIP_RETCODE getBinaryProductExpr(
          {
             if( SCIPcliqueHasVar(xcliques[c], y, TRUE) ) /* x + y <= 1 => x*y = 0 */
             {
+               /* add clique as explicit set packing constraint to preserve model completeness */
+               clqvars[0] = x;
+               clqvars[1] = y;
+               (void) SCIPsnprintf(clqname, SCIP_MAXSTRLEN, "binreform_%s_%s",
+                     SCIPvarGetName(clqvars[0]), SCIPvarGetName(clqvars[1]));
+               SCIP_CALL( SCIPcreateConsBasicSetpack(scip, &clqcons, clqname, 2, clqvars) );
+               SCIP_CALL( SCIPaddCons(scip, clqcons) );
+               SCIP_CALL( SCIPreleaseCons(scip, &clqcons) );
+
                /* create zero value expression */
                SCIP_CALL( SCIPcreateExprValue(scip, newexpr, 0.0, exprownerCreate, (void*)conshdlr) );
 
+               if( naddconss != NULL )
+                  *naddconss += 1;
                if( nchgcoefs != NULL )
                   *nchgcoefs += 1;
 
@@ -4430,9 +4445,20 @@ SCIP_RETCODE getBinaryProductExpr(
 
             if( SCIPcliqueHasVar(xcliques[c], y, FALSE) ) /* x + (1-y) <= 1 => x*y = x */
             {
+               /* add clique as explicit set packing constraint: x + (1-y) <= 1 */
+               clqvars[0] = x;
+               SCIP_CALL( SCIPgetNegatedVar(scip, y, &clqvars[1]) );
+               (void) SCIPsnprintf(clqname, SCIP_MAXSTRLEN, "binreform_%s_%s",
+                     SCIPvarGetName(clqvars[0]), SCIPvarGetName(clqvars[1]));
+               SCIP_CALL( SCIPcreateConsBasicSetpack(scip, &clqcons, clqname, 2, clqvars) );
+               SCIP_CALL( SCIPaddCons(scip, clqcons) );
+               SCIP_CALL( SCIPreleaseCons(scip, &clqcons) );
+
                /* create variable expression for x */
                SCIP_CALL( createExprVar(scip, conshdlr, newexpr, x) );
 
+               if( naddconss != NULL )
+                  *naddconss += 1;
                if( nchgcoefs != NULL )
                   *nchgcoefs += 2;
 
@@ -4450,9 +4476,20 @@ SCIP_RETCODE getBinaryProductExpr(
             {
                if( SCIPcliqueHasVar(xcliques[c], y, TRUE) ) /* (1-x) + y <= 1 => x*y = y */
                {
+                  /* add clique as explicit set packing constraint: (1-x) + y <= 1 */
+                  SCIP_CALL( SCIPgetNegatedVar(scip, x, &clqvars[0]) );
+                  clqvars[1] = y;
+                  (void) SCIPsnprintf(clqname, SCIP_MAXSTRLEN, "binreform_%s_%s",
+                        SCIPvarGetName(clqvars[0]), SCIPvarGetName(clqvars[1]));
+                  SCIP_CALL( SCIPcreateConsBasicSetpack(scip, &clqcons, clqname, 2, clqvars) );
+                  SCIP_CALL( SCIPaddCons(scip, clqcons) );
+                  SCIP_CALL( SCIPreleaseCons(scip, &clqcons) );
+
                   /* create variable expression for y */
                   SCIP_CALL( createExprVar(scip, conshdlr, newexpr, y) );
 
+                  if( naddconss != NULL )
+                     *naddconss += 1;
                   if( nchgcoefs != NULL )
                      *nchgcoefs += 1;
 
@@ -4462,6 +4499,15 @@ SCIP_RETCODE getBinaryProductExpr(
 
                if( SCIPcliqueHasVar(xcliques[c], y, FALSE) ) /* (1-x) + (1-y) <= 1 => x*y = x + y - 1 */
                {
+                  /* add clique as explicit set covering constraint: x + y >= 1 */
+                  clqvars[0] = x;
+                  clqvars[1] = y;
+                  (void) SCIPsnprintf(clqname, SCIP_MAXSTRLEN, "binreform_%s_%s",
+                        SCIPvarGetName(clqvars[0]), SCIPvarGetName(clqvars[1]));
+                  SCIP_CALL( SCIPcreateConsBasicSetcover(scip, &clqcons, clqname, 2, clqvars) );
+                  SCIP_CALL( SCIPaddCons(scip, clqcons) );
+                  SCIP_CALL( SCIPreleaseCons(scip, &clqcons) );
+
                   /* create sum expression */
                   SCIP_EXPR* sum_children[2];
                   SCIP_Real sum_coefs[2];
@@ -4474,6 +4520,8 @@ SCIP_RETCODE getBinaryProductExpr(
                   SCIP_CALL( SCIPreleaseExpr(scip, &sum_children[0]) );
                   SCIP_CALL( SCIPreleaseExpr(scip, &sum_children[1]) );
 
+                  if( naddconss != NULL )
+                     *naddconss += 1;
                   if( nchgcoefs != NULL )
                      *nchgcoefs += 3;
 
@@ -4581,14 +4629,18 @@ SCIP_RETCODE replaceBinaryProducts(
  *    z_{ij} \leq x_i, \qquad z_{ij} \leq x_j, \qquad x_i + x_j - z_{ij} \leq 1.
  * \f]
  *
- * Before reformulating \f$x_i x_j\f$ in this way, it is checked whether there is a clique that contains \f$x_i\f$ and \f$x_j\f$.
- * These cliques allow for a better reformulation. There are four cases:
+ * Before reformulating \f$x_i x_j\f$ in this way, it is checked whether there is a clique that contains \f$x_i\f$ and
+ * \f$x_j\f$. These cliques allow for a better reformulation. There are four cases:
  *
  *    1. \f$x_i + x_j \leq 1\f$ implies that \f$x_i x_j = 0\f$
  *    2. \f$x_i + (1 - x_j) \leq 1\f$ implies \f$x_i x_j = x_i\f$
  *    3. \f$(1 - x_i) + x_j \leq 1\f$ implies \f$x_i x_j = x_j\f$
  *    4. \f$(1 - x_i) + (1 - x_j) \leq 1\f$ implies \f$x_i x_j = x_i + x_j - 1\f$
  *
+ * When a clique is used, the corresponding inequality is added as an explicit set packing or covering
+ * constraint to preserve model completeness, since the clique may have been derived from a constraint containing
+ * \f$x_i x_j\f$. For example, when \f$x_i x_j \leq 0\f$ provides the clique \f$(x_i, x_j)\f$, then the binary
+ * reformulation replaces \f$x_i x_j\f$ by 0 (case 1), but now \f$0 \leq 0\f$ no longer enforces \f$x_i = 0 \vee x_j = 0\f$.
  * The reformulation using \f$z_{ij}\f$ or the cliques is implemented in getBinaryProductExpr().
  *
  * Introducing too many extra variables and constraints can have a negative impact on the performance (e.g., due to
@@ -5789,7 +5841,7 @@ SCIP_RETCODE presolveSingleLockedVars(
             SCIPvarGetName(var), SCIPvarGetLbGlobal(var), SCIPvarGetUbGlobal(var));
 
          /* try to change the variable type to binary */
-         if( conshdlrdata->checkvarlocks == 't' && SCIPisEQ(scip, SCIPvarGetLbGlobal(var), 0.0) && SCIPisEQ(scip, SCIPvarGetUbGlobal(var), 1.0) )
+         if( SCIPisEQ(scip, SCIPvarGetLbGlobal(var), 0.0) && SCIPisEQ(scip, SCIPvarGetUbGlobal(var), 1.0) )
          {
             assert(SCIPvarGetType(var) != SCIP_VARTYPE_BINARY || SCIPvarIsImpliedIntegral(var));
             SCIP_CALL( SCIPchgVarType(scip, var, SCIP_VARTYPE_BINARY, infeasible) );
@@ -5802,7 +5854,7 @@ SCIP_RETCODE presolveSingleLockedVars(
             }
          }
          /* add bound disjunction constraint if bounds of the variable are finite */
-         else if( hasbounddisj && !SCIPisInfinity(scip, -SCIPvarGetLbGlobal(var)) && !SCIPisInfinity(scip, SCIPvarGetUbGlobal(var)) )
+         else if( hasbounddisj && conshdlrdata->checkvarlocks == 'b' && !SCIPisInfinity(scip, -SCIPvarGetLbGlobal(var)) && !SCIPisInfinity(scip, SCIPvarGetUbGlobal(var)) )
          {
             vars[0] = var;
             vars[1] = var;
@@ -6068,7 +6120,7 @@ SCIP_RETCODE createAuxVar(
     */
    SCIP_CALL( SCIPaddVarLocks(scip, ownerdata->auxvar, 1, 1) );
 
-#ifdef WITH_DEBUG_SOLUTION
+#if SCIP_HAS_DEBUG_SOLUTION
    if( SCIPdebugIsMainscip(scip) )
    {
       /* store debug solution value of auxiliary variable
@@ -6076,7 +6128,7 @@ SCIP_RETCODE createAuxVar(
        */
       SCIP_CALL( SCIPdebugAddSolVal(scip, ownerdata->auxvar, SCIPexprGetEvalValue(expr)) );
    }
-#endif
+#endif /* SCIP_HAS_DEBUG_SOLUTION */
 
    if( SCIPgetDepth(scip) > 0 )
    {
@@ -6140,14 +6192,14 @@ SCIP_RETCODE initSepa(
       assert(consdata != NULL);
       assert(consdata->expr != NULL);
 
-#ifdef WITH_DEBUG_SOLUTION
+#if SCIP_HAS_DEBUG_SOLUTION
       if( SCIPdebugIsMainscip(scip) )
       {
          SCIP_SOL* debugsol;
 
          SCIP_CALL( SCIPdebugGetSol(scip, &debugsol) );
 
-         if( debugsol != NULL ) /* it can be compiled WITH_DEBUG_SOLUTION, but still no solution given */
+         if( debugsol != NULL ) /* it can be compiled with SCIP_HAS_DEBUG_SOLUTION, but still no solution given */
          {
             /* evaluate expression in debug solution, so we can set the solution value of created auxiliary variables
              * in createAuxVar()
@@ -6155,7 +6207,7 @@ SCIP_RETCODE initSepa(
             SCIP_CALL( SCIPevalExpr(scip, consdata->expr, debugsol, 0) );
          }
       }
-#endif
+#endif /* SCIP_HAS_DEBUG_SOLUTION */
 
       /* ensure we have a valid activity for auxvars and propExprDomains() call below */
       SCIP_CALL( SCIPevalExprActivity(scip, consdata->expr) );
@@ -8474,7 +8526,7 @@ SCIP_RETCODE consEnfo(
 
    if( *result == SCIP_FEASIBLE )
    {
-      ENFOLOG( SCIPinfoMessage(scip, enfologfile, "node %lld: all expr-constraints feasible, skip enforcing\n",
+      ENFOLOG( SCIPinfoMessage(scip, enfologfile, "node %" SCIP_LONGINT_FORMAT ": all expr-constraints feasible, skip enforcing\n",
                SCIPnodeGetNumber(SCIPgetCurrentNode(scip))); )
       return SCIP_OKAY;
    }
@@ -8482,7 +8534,7 @@ SCIP_RETCODE consEnfo(
    SCIP_CALL( analyzeViolation(scip, conss, nconss, sol, soltag, &maxabsconsviol, &maxrelconsviol,
             &minauxviol, &maxauxviol, &maxvarboundviol) );
 
-   ENFOLOG( SCIPinfoMessage(scip, enfologfile, "node %lld: enforcing constraints with max conssviol=%e (rel=%e), "\
+   ENFOLOG( SCIPinfoMessage(scip, enfologfile, "node %" SCIP_LONGINT_FORMAT ": enforcing constraints with max conssviol=%e (rel=%e), "\
             "auxviolations in %g..%g, variable bounds violated by at most %g, LP feastol=%e\n",
             SCIPnodeGetNumber(SCIPgetCurrentNode(scip)), maxabsconsviol, maxrelconsviol, minauxviol, maxauxviol,
             maxvarboundviol, SCIPgetLPFeastol(scip)); )
@@ -8693,11 +8745,11 @@ SCIP_RETCODE consSepa(
    /* if none of our constraints are violated, don't attempt separation */
    if( !haveviol )
    {
-      ENFOLOG( SCIPinfoMessage(scip, enfologfile, "node %lld: skip separation of non-violated constraints\n", SCIPnodeGetNumber(SCIPgetCurrentNode(scip))); )
+      ENFOLOG( SCIPinfoMessage(scip, enfologfile, "node %" SCIP_LONGINT_FORMAT ": skip separation of non-violated constraints\n", SCIPnodeGetNumber(SCIPgetCurrentNode(scip))); )
       return SCIP_OKAY;
    }
 
-   ENFOLOG( SCIPinfoMessage(scip, enfologfile, "node %lld: separation\n", SCIPnodeGetNumber(SCIPgetCurrentNode(scip))); )
+   ENFOLOG( SCIPinfoMessage(scip, enfologfile, "node %" SCIP_LONGINT_FORMAT ": separation\n", SCIPnodeGetNumber(SCIPgetCurrentNode(scip))); )
 
    /* call separation */
    SCIP_CALL( enforceConstraints(scip, conshdlr, conss, nconss, sol, soltag, FALSE, FALSE, SCIP_INVALID, result) );
@@ -11256,7 +11308,14 @@ SCIP_DECL_CONSINITPRE(consInitpreNonlinear)
 static
 SCIP_DECL_CONSEXITPRE(consExitpreNonlinear)
 {  /*lint --e{715}*/
+   SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_Bool infeasible;
+
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+
+   /* reset flag to allow another call of presolSingleLockedVars() after a restart */
+   conshdlrdata->checkedvarlocks = FALSE;
 
    if( nconss == 0 )
       return SCIP_OKAY;
@@ -11341,9 +11400,6 @@ SCIP_DECL_CONSEXITSOL(consExitsolNonlinear)
 
    /* free hash table for bilinear terms */
    SCIP_CALL( bilinearTermsFree(scip, conshdlrdata) );
-
-   /* reset flag to allow another call of presolSingleLockedVars() after a restart */
-   conshdlrdata->checkedvarlocks = FALSE;
 
    /* drop catching new solution event, if catched before */
    if( conshdlrdata->newsoleventfilterpos >= 0 )
@@ -12353,12 +12409,12 @@ SCIP_DECL_TABLEOUTPUT(tableOutputNonlinear)
    /* print statistics for constraint handler */
    SCIPinfoMessage(scip, file, "Nonlinear Conshdlr : %10s %10s %10s %10s %10s %10s %10s\n", "WeakSepa", "TightenLP", "DespTghtLP", "DespBranch", "DespCutoff", "ForceLP", "CanonTime");
    SCIPinfoMessage(scip, file, "  enforce%-10s:", "");
-   SCIPinfoMessage(scip, file, " %10lld", conshdlrdata->nweaksepa);
-   SCIPinfoMessage(scip, file, " %10lld", conshdlrdata->ntightenlp);
-   SCIPinfoMessage(scip, file, " %10lld", conshdlrdata->ndesperatetightenlp);
-   SCIPinfoMessage(scip, file, " %10lld", conshdlrdata->ndesperatebranch);
-   SCIPinfoMessage(scip, file, " %10lld", conshdlrdata->ndesperatecutoff);
-   SCIPinfoMessage(scip, file, " %10lld", conshdlrdata->nforcelp);
+   SCIPinfoMessage(scip, file, " %10" SCIP_LONGINT_FORMAT, conshdlrdata->nweaksepa);
+   SCIPinfoMessage(scip, file, " %10" SCIP_LONGINT_FORMAT, conshdlrdata->ntightenlp);
+   SCIPinfoMessage(scip, file, " %10" SCIP_LONGINT_FORMAT, conshdlrdata->ndesperatetightenlp);
+   SCIPinfoMessage(scip, file, " %10" SCIP_LONGINT_FORMAT, conshdlrdata->ndesperatebranch);
+   SCIPinfoMessage(scip, file, " %10" SCIP_LONGINT_FORMAT, conshdlrdata->ndesperatecutoff);
+   SCIPinfoMessage(scip, file, " %10" SCIP_LONGINT_FORMAT, conshdlrdata->nforcelp);
    SCIPinfoMessage(scip, file, "\n");
    SCIPinfoMessage(scip, file, "  presolve%-9s: %-65s", "", "");
    SCIPinfoMessage(scip, file, " %10.2f", SCIPgetClockTime(scip, conshdlrdata->canonicalizetime));
@@ -13417,13 +13473,15 @@ SCIP_RETCODE SCIPprocessRowprepNonlinear(
           * skip if gap is zero
           */
          if( auxvalue == SCIP_INVALID )
-            strcat(SCIProwprepGetName(rowprep), "_estimategap=inf");
+            (void) strncat(SCIProwprepGetName(rowprep), "_estimategap=inf",
+               SCIP_MAXSTRLEN - strlen(SCIProwprepGetName(rowprep)) - 1);
          else if( !SCIPisEQ(scip, auxvalue, estimateval) )
          {
             char gap[40];
             /* coverity[secure_coding] */
             (void) sprintf(gap, "_estimategap=%g", REALABS(auxvalue - estimateval));
-            strcat(SCIProwprepGetName(rowprep), gap);
+            (void) strncat(SCIProwprepGetName(rowprep), gap,
+               SCIP_MAXSTRLEN - strlen(SCIProwprepGetName(rowprep)) - 1);
          }
       }
 

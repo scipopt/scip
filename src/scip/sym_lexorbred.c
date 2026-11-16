@@ -526,8 +526,13 @@ SCIP_RETCODE addOrbRed(
       nproperperms = nperms;
    }
 
-   SCIP_CALL( SCIPorbitalReductionAddComponent(scip, orbitalreddata, permvars, npermvars,
-         properperms, nproperperms, success) );
+   if( nproperperms > 0 )
+   {
+      SCIP_CALL( SCIPorbitalReductionAddComponent(scip, orbitalreddata, permvars, npermvars,
+            properperms, nproperperms, success) );
+   }
+   else
+      *success = FALSE;
 
    if( freeproperperms )
    {
@@ -1160,6 +1165,9 @@ SCIP_DECL_SYMHDLRPRESOL(symhdlrPresolLexOrbRed)
 
       for( c = 0; c < symdata->nconss; ++c )
       {
+         if( !SCIPconsIsActive(symdata->conss[c]) )
+            continue;
+
          SCIP_CALL( SCIPpresolCons(scip, symdata->conss[c], nrounds, presoltiming, nnewfixedvars, nnewaggrvars,
                nnewchgvartypes, nnewchgbds, nnewholes, nnewdelconss, nnewaddconss, nnewupgdconss, nnewchgcoefs,
                nnewchgsides, nfixedvars, naggrvars, nchgvartypes, nchgbds, naddholes, ndelconss, naddconss,

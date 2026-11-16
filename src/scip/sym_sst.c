@@ -1475,6 +1475,27 @@ SCIP_RETCODE tryAddSSTConss(
          ++ninactiveperms;
    }
 
+   if( ninactiveperms == ntotalperms )
+   {
+      int len;
+
+      SCIPfreeBufferArray(scip, &orbitbegins);
+      SCIPfreeBufferArray(scip, &orbits);
+      SCIPfreeBufferArray(scip, &inactiveperms);
+      SCIPfreeBufferArray(scip, &isaffected);
+      SCIPfreeBufferArray(scip, &isproperperm);
+
+      len = symtype == SYM_SYMTYPE_PERM ? npermvars : 2 * npermvars;
+
+      for( i = 0; i < len; ++i )
+      {
+         SCIPfreeBlockMemoryArray(scip, &permstrans[i], ntotalperms);
+      }
+      SCIPfreeBlockMemoryArray(scip, &permstrans, len);
+
+      return SCIP_OKAY;
+   }
+
    /* as long as the stabilizer is non-trivial, add Schreier-Sims constraints */
    norbitleadercomponent = 0;
    *success = TRUE;
@@ -1724,6 +1745,9 @@ SCIP_DECL_SYMHDLRPRESOL(symhdlrPresolSST)
 
       for( c = 0; c < symdata->nsstconss; ++c )
       {
+         if( !SCIPconsIsActive(symdata->sstconss[c]) )
+            continue;
+
          SCIP_CALL( SCIPpresolCons(scip, symdata->sstconss[c], nrounds, presoltiming, nnewfixedvars, nnewaggrvars,
                nnewchgvartypes, nnewchgbds, nnewholes, nnewdelconss, nnewaddconss, nnewupgdconss, nnewchgcoefs,
                nnewchgsides, nfixedvars, naggrvars, nchgvartypes, nchgbds, naddholes, ndelconss, naddconss,

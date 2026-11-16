@@ -108,14 +108,23 @@ void teardown(void)
    SCIP_CALL( SCIPfree(&scip) );
 }
 
+void setUp(void)
+{
+   setup();
+}
 
-TestSuite(multihash, .init = setup, .fini = teardown);
+void tearDown(void)
+{
+   teardown();
+}
 
-Test(multihash, setup_and_teardown, .description = "test that setup and teardown work correctly")
+/** @brief test that setup and teardown work correctly */
+void test_multihash_setup_and_teardown(void)
 {
 }
 
-Test(multihash, test_multihash_insertion, .description = "test that the multi hash map stores entries correctly.")
+/** @brief test that the multi hash map stores entries correctly. */
+void test_multihash_insertion(void)
 {
    int* ptr;
    int i;
@@ -123,46 +132,49 @@ Test(multihash, test_multihash_insertion, .description = "test that the multi ha
    for( i = 0; i < arraylen; i++ )
       SCIP_CALL( SCIPmultihashInsert(multihash, (void*) myptrs[i]) );
 
-   cr_assert_eq(arraylen, SCIPmultihashGetNElements(multihash));
+   TEST_ASSERT_EQUAL(arraylen, SCIPmultihashGetNElements(multihash));
    for( i = 0; i < arraylen; i++ )
    {
       ptr = SCIPmultihashRetrieve(multihash, (void*) myptrs[i]);
-      cr_assert_eq(myentries[i], *ptr);
+      TEST_ASSERT_EQUAL(myentries[i], *ptr);
    }
 }
 
-Test(multihash, test_multihash_remove, .description = "test that the multi hash map removes entries correctly.")
+/** @brief test that the multi hash map removes entries correctly. */
+void test_multihash_remove(void)
 {
    int i;
 
    for( i = 0; i < arraylen; i++ )
       SCIP_CALL( SCIPmultihashInsert(multihash, (void*) myptrs[i]) );
 
-   cr_assert_eq(arraylen, SCIPmultihashGetNElements(multihash));
+   TEST_ASSERT_EQUAL(arraylen, SCIPmultihashGetNElements(multihash));
    for( i = 0; i < arraylen; i++ )
    {
-      cr_assert(SCIPmultihashExists(multihash, (void*) myptrs[i]));
+      TEST_ASSERT(SCIPmultihashExists(multihash, (void*) myptrs[i]));
       SCIP_CALL( SCIPmultihashRemove(multihash, (void*) myptrs[i]) );
-      cr_assert(! SCIPmultihashExists(multihash, (void*) myptrs[i]));
+      TEST_ASSERT(! SCIPmultihashExists(multihash, (void*) myptrs[i]));
    }
 }
 
-Test(multihash, test_multihash_removeall, .description = "test that the multi hash map removes all entries at once correctly.")
+/** @brief test that the multi hash map removes all entries at once correctly. */
+void test_multihash_removeall(void)
 {
    int i;
 
    for( i = 0; i < arraylen; i++ )
       SCIP_CALL( SCIPmultihashInsert(multihash, (void*) myptrs[i]) );
 
-   cr_assert_eq(arraylen, SCIPmultihashGetNElements(multihash));
+   TEST_ASSERT_EQUAL(arraylen, SCIPmultihashGetNElements(multihash));
 
    SCIPmultihashRemoveAll(multihash);
 
    for( i = 0; i < arraylen; i++ )
-      cr_assert(! SCIPmultihashExists(multihash, (void*) myptrs[i]));
+      TEST_ASSERT(! SCIPmultihashExists(multihash, (void*) myptrs[i]));
 }
 
-Test(multihash, test_multihash_statistics, .description = "test that the multi hash map prints statistics correctly")
+/** @brief test that the multi hash map prints statistics correctly */
+void test_multihash_statistics(void)
 {
    SCIP_MESSAGEHDLR* msghdlr;
    int i;
@@ -173,4 +185,15 @@ Test(multihash, test_multihash_statistics, .description = "test that the multi h
       SCIP_CALL( SCIPmultihashInsert(multihash, (void*) myptrs[i]) );
 
    SCIPmultihashPrintStatistics(multihash, msghdlr);
+}
+
+int main(void)
+{
+   UNITY_BEGIN();
+   RUN_TEST(test_multihash_setup_and_teardown);
+   RUN_TEST(test_multihash_insertion);
+   RUN_TEST(test_multihash_remove);
+   RUN_TEST(test_multihash_removeall);
+   RUN_TEST(test_multihash_statistics);
+   return UNITY_END();
 }

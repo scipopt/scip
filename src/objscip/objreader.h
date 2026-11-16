@@ -49,7 +49,7 @@ namespace scip
  *  - \ref FILEREADERS "List of available file readers and writers"
  *  - \ref type_reader.h "Corresponding C interface"
  */
-class ObjReader : public ObjCloneable
+class SCIP_EXPORT ObjReader : public ObjCloneable
 {
 public:
    /*lint --e{1540}*/
@@ -159,7 +159,7 @@ public:
  *
  *  The method should be called in one of the following ways:
  *
- *   1. The user is resposible of deleting the object:
+ *   1. The user is responsible of deleting the object:
  *       SCIP_CALL( SCIPcreate(&scip) );
  *       ...
  *       MyReader* myreader = new MyReader(...);

@@ -55,7 +55,7 @@ void setup(void)
    SCIP_CALL( SCIPsetIntParam(scip, "presolving/maxrounds", 0) );
 
    nlpi = SCIPfindNlpi(scip, "ipopt");
-   cr_assert_not_null(nlpi);
+   TEST_ASSERT_NOT_NULL(nlpi);
 
    /* create a problem */
    SCIP_CALL( SCIPcreateProbBasic(scip, "problem") );
@@ -72,7 +72,7 @@ void setup(void)
 
    SCIP_CALL( TESTscipSetStage(scip, SCIP_STAGE_SOLVING, FALSE) );
 
-   cr_assert_eq(SCIPgetNVars(scip), 2);
+   TEST_ASSERT_EQUAL(SCIPgetNVars(scip), 2);
 
    SCIP_CALL( SCIPhashmapCreate(&var2idx, SCIPblkmem(scip), 2) );
 }
@@ -97,13 +97,12 @@ void teardown(void)
    SCIPhashmapFree(&var2idx);
    SCIP_CALL( SCIPfree(&scip) );
 
-   cr_assert_null(scip);
-   cr_assert_eq(BMSgetMemoryUsed(), 0, "There is are memory leak!!");
+   TEST_ASSERT_NULL(scip);
+   TEST_ASSERT_EQUAL(BMSgetMemoryUsed(), 0, "There is are memory leak!!");
 }
 
-Test(propagation, convexnlp, .init = setup, .fini = teardown,
-   .description = "checks the convex NLP relaxation"
-   )
+/** @brief checks the convex NLP relaxation */
+void test_propagation_convexnlp(void)
 {
    SCIP_NLROW* nlrows[5];
    SCIP_VAR* vars[2];
@@ -192,33 +191,33 @@ Test(propagation, convexnlp, .init = setup, .fini = teardown,
 
    /* create convex NLP relaxation */
    SCIP_CALL( SCIPcreateNlpiProblemFromNlRows(scip, nlpi, &nlpiprob, "convex_NLP", nlrows, 5, var2idx, NULL, nlscore, -1.5, FALSE, TRUE) );
-   cr_assert(nlpiprob != NULL);
+   TEST_ASSERT(nlpiprob != NULL);
 
    oracle = (SCIP_NLPIORACLE*) SCIPgetNlpiOracleIpopt(nlpiprob);
-   cr_assert(oracle != NULL);
+   TEST_ASSERT(oracle != NULL);
    SCIP_CALL( SCIPnlpiOraclePrintProblem(scip, oracle, NULL) );
 
-   cr_assert(SCIPnlpiOracleGetNConstraints(oracle) == 5);
-   cr_assert(SCIPnlpiOracleGetNVars(oracle) == 2);
+   TEST_ASSERT(SCIPnlpiOracleGetNConstraints(oracle) == 5);
+   TEST_ASSERT(SCIPnlpiOracleGetNVars(oracle) == 2);
 
-   cr_assert(nlscore[0] == 3);
-   cr_assert(nlscore[1] == 2);
+   TEST_ASSERT(nlscore[0] == 3);
+   TEST_ASSERT(nlscore[1] == 2);
 
-   cr_assert(SCIPisEQ(scip, SCIPnlpiOracleGetVarLbs(oracle)[0], SCIPvarGetLbLocal(x)));
-   cr_assert(SCIPisEQ(scip, SCIPnlpiOracleGetVarUbs(oracle)[0], SCIPvarGetUbLocal(x)));
-   cr_assert(SCIPisEQ(scip, SCIPnlpiOracleGetVarLbs(oracle)[1], SCIPvarGetLbLocal(y)));
-   cr_assert(SCIPisEQ(scip, SCIPnlpiOracleGetVarUbs(oracle)[1], SCIPvarGetUbLocal(y)));
+   TEST_ASSERT(SCIPisEQ(scip, SCIPnlpiOracleGetVarLbs(oracle)[0], SCIPvarGetLbLocal(x)));
+   TEST_ASSERT(SCIPisEQ(scip, SCIPnlpiOracleGetVarUbs(oracle)[0], SCIPvarGetUbLocal(x)));
+   TEST_ASSERT(SCIPisEQ(scip, SCIPnlpiOracleGetVarLbs(oracle)[1], SCIPvarGetLbLocal(y)));
+   TEST_ASSERT(SCIPisEQ(scip, SCIPnlpiOracleGetVarUbs(oracle)[1], SCIPvarGetUbLocal(y)));
 
-   cr_assert(SCIPisEQ(scip, SCIPnlpiOracleGetConstraintLhs(oracle, 0), -SCIPinfinity(scip)));
-   cr_assert(SCIPisEQ(scip, SCIPnlpiOracleGetConstraintRhs(oracle, 0), -1.5));
-   cr_assert(SCIPisEQ(scip, SCIPnlpiOracleGetConstraintLhs(oracle, 1), -SCIPinfinity(scip)));
-   cr_assert(SCIPisEQ(scip, SCIPnlpiOracleGetConstraintRhs(oracle, 1), 4.0));
-   cr_assert(SCIPisEQ(scip, SCIPnlpiOracleGetConstraintLhs(oracle, 2), -4.0));
-   cr_assert(SCIPisEQ(scip, SCIPnlpiOracleGetConstraintRhs(oracle, 2), SCIPinfinity(scip)));
-   cr_assert(SCIPisEQ(scip, SCIPnlpiOracleGetConstraintLhs(oracle, 3), 2.0));
-   cr_assert(SCIPisEQ(scip, SCIPnlpiOracleGetConstraintRhs(oracle, 3), 4.0));
-   cr_assert(SCIPisEQ(scip, SCIPnlpiOracleGetConstraintLhs(oracle, 4), -SCIPinfinity(scip)));
-   cr_assert(SCIPisEQ(scip, SCIPnlpiOracleGetConstraintRhs(oracle, 4), 10.0));
+   TEST_ASSERT(SCIPisEQ(scip, SCIPnlpiOracleGetConstraintLhs(oracle, 0), -SCIPinfinity(scip)));
+   TEST_ASSERT(SCIPisEQ(scip, SCIPnlpiOracleGetConstraintRhs(oracle, 0), -1.5));
+   TEST_ASSERT(SCIPisEQ(scip, SCIPnlpiOracleGetConstraintLhs(oracle, 1), -SCIPinfinity(scip)));
+   TEST_ASSERT(SCIPisEQ(scip, SCIPnlpiOracleGetConstraintRhs(oracle, 1), 4.0));
+   TEST_ASSERT(SCIPisEQ(scip, SCIPnlpiOracleGetConstraintLhs(oracle, 2), -4.0));
+   TEST_ASSERT(SCIPisEQ(scip, SCIPnlpiOracleGetConstraintRhs(oracle, 2), SCIPinfinity(scip)));
+   TEST_ASSERT(SCIPisEQ(scip, SCIPnlpiOracleGetConstraintLhs(oracle, 3), 2.0));
+   TEST_ASSERT(SCIPisEQ(scip, SCIPnlpiOracleGetConstraintRhs(oracle, 3), 4.0));
+   TEST_ASSERT(SCIPisEQ(scip, SCIPnlpiOracleGetConstraintLhs(oracle, 4), -SCIPinfinity(scip)));
+   TEST_ASSERT(SCIPisEQ(scip, SCIPnlpiOracleGetConstraintRhs(oracle, 4), 10.0));
 
    /* min x (OPT = -2.60064056606068e-01) */
    objcoefs[0] = 1.0;
@@ -229,7 +228,7 @@ Test(propagation, convexnlp, .init = setup, .fini = teardown,
    SCIP_CALL( SCIPnlpiOraclePrintProblem(scip, oracle, NULL) );
    SCIP_CALL( SCIPsolveNlpi(scip, nlpi, nlpiprob, .feastol = SCIPfeastol(scip) * 0.01, .opttol = SCIPfeastol(scip) * 0.01) );
    SCIP_CALL( SCIPgetNlpiSolution(scip, nlpi, nlpiprob, &primal, NULL, NULL, NULL, NULL) );
-   cr_assert(SCIPisFeasEQ(scip, primal[0], -2.60064056606068e-01));
+   TEST_ASSERT(SCIPisFeasEQ(scip, primal[0], -2.60064056606068e-01));
 
    /* max x (OPT = 5.90606671174385e-01) */
    objcoefs[0] = -1.0;
@@ -240,7 +239,7 @@ Test(propagation, convexnlp, .init = setup, .fini = teardown,
    SCIP_CALL( SCIPnlpiOraclePrintProblem(scip, oracle, NULL) );
    SCIP_CALL( SCIPsolveNlpi(scip, nlpi, nlpiprob, .feastol = SCIPfeastol(scip) * 0.01, .opttol = SCIPfeastol(scip) * 0.01) );
    SCIP_CALL( SCIPgetNlpiSolution(scip, nlpi, nlpiprob, &primal, NULL, NULL, NULL, NULL) );
-   cr_assert(SCIPisFeasEQ(scip, primal[0], 5.90606671174385e-01));
+   TEST_ASSERT(SCIPisFeasEQ(scip, primal[0], 5.90606671174385e-01));
 
    /* min y (OPT = -1.39009603494603e+00) */
    objcoefs[0] = 0.0;
@@ -251,7 +250,7 @@ Test(propagation, convexnlp, .init = setup, .fini = teardown,
    SCIP_CALL( SCIPnlpiOraclePrintProblem(scip, oracle, NULL) );
    SCIP_CALL( SCIPsolveNlpi(scip, nlpi, nlpiprob, .feastol = SCIPfeastol(scip) * 0.01, .opttol = SCIPfeastol(scip) * 0.01) );
    SCIP_CALL( SCIPgetNlpiSolution(scip, nlpi, nlpiprob, &primal, NULL, NULL, NULL, NULL) );
-   cr_assert(SCIPisFeasEQ(scip, primal[1], -1.39009603494603e+00));
+   TEST_ASSERT(SCIPisFeasEQ(scip, primal[1], -1.39009603494603e+00));
 
    /* max y (OPT = -5.90909090909091e-01) */
    objcoefs[0] = 0.0;
@@ -262,7 +261,7 @@ Test(propagation, convexnlp, .init = setup, .fini = teardown,
    SCIP_CALL( SCIPnlpiOraclePrintProblem(scip, oracle, NULL) );
    SCIP_CALL( SCIPsolveNlpi(scip, nlpi, nlpiprob, .feastol = SCIPfeastol(scip) * 0.01, .opttol = SCIPfeastol(scip) * 0.01) );
    SCIP_CALL( SCIPgetNlpiSolution(scip, nlpi, nlpiprob, &primal, NULL, NULL, NULL, NULL) );
-   cr_assert(SCIPisFeasEQ(scip, primal[1], -5.90909090909091e-01));
+   TEST_ASSERT(SCIPisFeasEQ(scip, primal[1], -5.90909090909091e-01));
 
    /* free memory */
    SCIP_CALL( SCIPfreeNlpiProblem(scip, nlpi, &nlpiprob) );
@@ -272,4 +271,15 @@ Test(propagation, convexnlp, .init = setup, .fini = teardown,
    }
    SCIP_CALL( SCIPreleaseExpr(scip, &varexprs[1]) );
    SCIP_CALL( SCIPreleaseExpr(scip, &varexprs[0]) );
+}
+
+void setUp(void) { setup(); }
+
+void tearDown(void) { teardown(); }
+
+int main(void)
+{
+   UNITY_BEGIN();
+   RUN_TEST(test_propagation_convexnlp);
+   return UNITY_END();
 }

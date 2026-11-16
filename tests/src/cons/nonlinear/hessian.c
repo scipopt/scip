@@ -36,9 +36,6 @@
 #include "scip/nlhdlr.c"
 #include "scip/cons_nonlinear.c"
 
-#define EXPECTFEQ(a,b) cr_expect_float_eq(a, b, 1e-6, "%s = %g != %g (dif %g)", #a, a, b, ABS(a-b))
-
-
 static SCIP* scip;
 static SCIP_SOL* sol;
 static SCIP_SOL* dir;
@@ -81,7 +78,7 @@ void teardown(void)
    assert(BMSgetMemoryUsed() == 0);
 }
 
-Test(hess, hessian1, .init = setup, .fini = teardown)
+void test_hess_hessian1(void)
 {
    SCIP_CONS* cons;
    SCIP_Bool success;
@@ -126,7 +123,7 @@ Test(hess, hessian1, .init = setup, .fini = teardown)
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
 }
 
-Test(hess, hessian2, .init = setup, .fini = teardown)
+void test_hess_hessian2(void)
 {
    SCIP_CONS* cons;
    SCIP_Bool success;
@@ -183,7 +180,7 @@ Test(hess, hessian2, .init = setup, .fini = teardown)
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
 }
 
-Test(hess, hessian3, .init = setup, .fini = teardown)
+void test_hess_hessian3(void)
 {
    SCIP_CONS* cons;
    SCIP_Bool success;
@@ -222,4 +219,17 @@ Test(hess, hessian3, .init = setup, .fini = teardown)
 
    SCIP_CALL( SCIPaddCons(scip, cons) );
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
+}
+
+void setUp(void) { setup(); }
+
+void tearDown(void) { teardown(); }
+
+int main(void)
+{
+   UNITY_BEGIN();
+   RUN_TEST(test_hess_hessian1);
+   RUN_TEST(test_hess_hessian2);
+   RUN_TEST(test_hess_hessian3);
+   return UNITY_END();
 }

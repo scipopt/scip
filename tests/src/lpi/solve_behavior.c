@@ -109,7 +109,7 @@ void initProb(int* ncols, int* nrows)
    vals[0] = 1.0;
    vals[1] = 2.0;
    SCIP_CALL( SCIPlpiAddRows(lpi, 1, &lhs, &rhs, NULL, 2, &beg, inds, vals) );
-   cr_assert( !SCIPlpiWasSolved(lpi) );
+   TEST_ASSERT( !SCIPlpiWasSolved(lpi) );
 }
 
 /* TEST SUITE */
@@ -118,26 +118,25 @@ void setup(void)
 {
    /* create LPI */
    SCIP_CALL( SCIPlpiCreate(&lpi, NULL, "prob", SCIP_OBJSEN_MAXIMIZE) );
-   cr_assert( !SCIPlpiWasSolved(lpi) );
+   TEST_ASSERT( !SCIPlpiWasSolved(lpi) );
 }
 
 static
 void teardown(void)
 {
    SCIP_CALL( SCIPlpiFree(&lpi) );
-   cr_assert_eq(BMSgetMemoryUsed(), 0, "There is a memory leak!");
+   TEST_ASSERT_EQUAL(BMSgetMemoryUsed(), 0, "There is a memory leak!");
 }
 
-TestSuite(solve_behavior, .init = setup, .fini = teardown);
 
 /** Tests */
 
 /** Test SCIPlpiSolveBarrier */
-Test(solve_behavior, testbarriersolve)
+void test_solve_behavior_testbarriersolve(void)
 {
    SCIP_Real objval;
    int i;
-   bool crossover = true;
+   SCIP_Bool crossover = TRUE;
    int nrows, ncols;
    SCIP_Real exp_primsol[3] = { 0.0, 6.0, 8.0};
    SCIP_Real exp_dualsol[3] = {-1.0, 0.0, 0.5};
@@ -156,9 +155,9 @@ Test(solve_behavior, testbarriersolve)
          SCIP_CALL( SCIPlpiSolveBarrier(lpi, crossover) );
 
          /* very short check (subset of complex test1 in bases.c) */
-         cr_assert( SCIPlpiWasSolved(lpi) );
+         TEST_ASSERT( SCIPlpiWasSolved(lpi) );
          SCIP_CALL( SCIPlpiGetObjval(lpi, &objval) );
-         cr_assert_float_eq(objval, 14.0, EPS);
+         TEST_ASSERT_DOUBLE_WITHIN(objval, 14.0, EPS);
 
          /* allocate storage for solution */
          BMSallocMemoryArray(&primsol, ncols);
@@ -169,12 +168,12 @@ Test(solve_behavior, testbarriersolve)
 
          for (i = 0; i < ncols; ++i)
          {
-            cr_assert_float_eq(primsol[i], exp_primsol[i], EPS, "Violation of primal solution %d: %g != %g\n", i, primsol[i], exp_primsol[i]);
+            TEST_ASSERT_DOUBLE_WITHIN(primsol[i], exp_primsol[i], EPS, "Violation of primal solution %d: %g != %g\n", i, primsol[i], exp_primsol[i]);
          }
 
          for (i = 0; i < nrows; ++i)
          {
-            cr_assert_float_eq(dualsol[i], exp_dualsol[i], EPS, "Violation of dual solution %d: %g != %g\n", i, dualsol[i], exp_dualsol[i]);
+            TEST_ASSERT_DOUBLE_WITHIN(dualsol[i], exp_dualsol[i], EPS, "Violation of dual solution %d: %g != %g\n", i, dualsol[i], exp_dualsol[i]);
          }
 
          /* free up memory */
@@ -188,10 +187,22 @@ Test(solve_behavior, testbarriersolve)
 }
 
 /** Test if the two method giving information about availability of solve methods do not crash. */
-Test(solve_behavior, testhassolve)
+void test_solve_behavior_testhassolve(void)
 {
    /* try calling all methods at least once */
    SCIPlpiHasPrimalSolve();
    SCIPlpiHasDualSolve();
    SCIPlpiHasBarrierSolve();
+}
+
+void setUp(void) { setup(); }
+
+void tearDown(void) { teardown(); }
+
+int main(void)
+{
+   UNITY_BEGIN();
+   RUN_TEST(test_solve_behavior_testbarriersolve);
+   RUN_TEST(test_solve_behavior_testhassolve);
+   return UNITY_END();
 }

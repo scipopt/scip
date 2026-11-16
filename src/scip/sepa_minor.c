@@ -611,7 +611,7 @@ SCIP_RETCODE addCut(
       SCIP_Bool infeasible;
 
       /* set name of rowprep */
-      (void) SCIPsnprintf(SCIProwprepGetName(rowprep), SCIP_MAXSTRLEN, "minor_%s_%s_%s_%lld", SCIPvarGetName(xx), SCIPvarGetName(yy),
+      (void) SCIPsnprintf(SCIProwprepGetName(rowprep), SCIP_MAXSTRLEN, "minor_%s_%s_%s_%" SCIP_LONGINT_FORMAT, SCIPvarGetName(xx), SCIPvarGetName(yy),
          SCIPvarGetName(xy), SCIPgetNLPs(scip));
 
       /* create, add, and release row */

@@ -1039,6 +1039,9 @@ SCIP_RETCODE readCoefficients(
             SCIPdebugMsg(scip, "(line %d) read objective offset %g\n", lpinput->linenumber, coefsign * coef);
             haveobjoffset = TRUE;
             *objoffset = coefsign * coef;
+            coefsign = +1;
+            coef = 1.0;
+            havevalue = FALSE;
          }
       }
 
@@ -1442,6 +1445,9 @@ SCIP_RETCODE readCoefficientsRational(
             SCIPdebugMsg(scip, "(line %d) read objective offset %g\n", lpinput->linenumber, coefsign * SCIPrationalGetReal(coef));
             haveobjoffset = TRUE;
             SCIPrationalMultReal(objoffset, coef, (double) coefsign);
+            coefsign = +1;
+            SCIPrationalSetReal(coef, 1.0);
+            havevalue = FALSE;
          }
       }
 
@@ -5015,7 +5021,8 @@ SCIP_RETCODE SCIPwriteLp(
             if( changed && !infeasible )
             {
                SCIP_CALL( SCIPcheckExprQuadratic(scip, expr, &isquadratic) );
-               isquadratic &= SCIPexprAreQuadraticExprsVariables(expr);
+               if( isquadratic )
+                  isquadratic = SCIPexprAreQuadraticExprsVariables(expr);
             }
          }
          else

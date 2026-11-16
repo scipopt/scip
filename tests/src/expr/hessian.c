@@ -31,8 +31,6 @@
 #include "scip/scipdefplugins.h"
 #include "include/scip_test.h"
 
-#define EXPECTFEQ(a,b) cr_expect_float_eq(a, b, 1e-6, "%s = %g != %g (dif %g)", #a, a, b, ABS(a-b))
-
 static SCIP* scip;
 static SCIP_SOL* sol;
 static SCIP_SOL* dir;
@@ -98,7 +96,7 @@ void teardown(void)
    assert(BMSgetMemoryUsed() == 0);
 }
 
-Test(hess, hessian1, .init = setup, .fini = teardown)
+void test_hess_hessian1(void)
 {
    SCIP_Real expected;
    SCIP_EXPR* expr;
@@ -127,7 +125,7 @@ Test(hess, hessian1, .init = setup, .fini = teardown)
    SCIP_CALL( SCIPreleaseExpr(scip, &expr) );
 }
 
-Test(hess, hessian2, .init = setup, .fini = teardown)
+void test_hess_hessian2(void)
 {
    SCIP_Real xv = 2.3;
    SCIP_Real yv = -4.0;
@@ -169,7 +167,7 @@ Test(hess, hessian2, .init = setup, .fini = teardown)
    SCIP_CALL( SCIPreleaseExpr(scip, &expr) );
 }
 
-Test(hess, hessian3, .init = setup, .fini = teardown)
+void test_hess_hessian3(void)
 {
    SCIP_Real expected;
    SCIP_Real xv = 2.3;
@@ -193,4 +191,18 @@ Test(hess, hessian3, .init = setup, .fini = teardown)
    EXPECTFEQ(fxx, expected);
 
    SCIP_CALL( SCIPreleaseExpr(scip, &expr) );
+}
+
+void setUp(void) { setup(); }
+
+void tearDown(void) { teardown(); }
+
+int main(void)
+{
+   UNITY_BEGIN();
+   RUN_TEST(test_hess_hessian1
+);
+   RUN_TEST(test_hess_hessian2);
+   RUN_TEST(test_hess_hessian3);
+   return UNITY_END();
 }

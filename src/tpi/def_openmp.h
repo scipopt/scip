@@ -40,19 +40,19 @@
 
 #define TPI_NULL  NULL
 
-#ifdef TPI_OMP
+#if SCIP_TPI_OMP
 
 #define TPI_PRAGMA_CLAUSE(directive, clause)    _Pragma( STRINGIFY( CONCATENATE( directive, clause ) ) )
 #define TPI_PRAGMA(directive)               _Pragma( STRINGIFY( directive ) )
 #define TPI_PRAGMA_PARENTH(directive, var)  _Pragma( STRINGIFY( CONCATPARENTH( directive, var ) ) )
 
-#else
+#else /* !SCIP_TPI_OMP */
 
 #define TPI_PRAGMA_CLAUSE(directive, clause)
 #define TPI_PRAGMA(directive)
 #define TPI_PRAGMA_PARENTH(directive, var)
 
-#endif
+#endif /* SCIP_TPI_OMP */
 
 
 #define TPI_FOR_CLAUSE(clause)      TPI_PRAGMA_CLAUSE( TPI_DIR_FOR, clause )

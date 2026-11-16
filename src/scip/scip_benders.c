@@ -1000,6 +1000,47 @@ SCIP_RETCODE SCIPcomputeBendersSubproblemLowerbound(
    return SCIP_OKAY;
 }
 
+/** extracts an irreducible infeasible/inducing subset (IIS) of the master problem solution for a non-convex
+ *  Benders' decomposition subproblem, by performing a depth first binary search over the active (value 1.0)
+ *  binary linking variables in sol, searching for a smaller subset that reproduces the same subproblem result
+ *  (infeasibility, or the same objective value)
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ */
+SCIP_RETCODE SCIPextractBendersIISMasterSolution(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_BENDERS*         benders,            /**< Benders' decomposition */
+   SCIP_SOL*             sol,                /**< the initial CIP solution */
+   SCIP_SOL**            newsol,             /**< the CIP solution corresponding to the reduced master solution */
+   int                   probnumber,         /**< the number of the subproblem for which the cut is generated */
+   SCIP_BENDERSENFOTYPE  type,               /**< the type of solution being enforced */
+   SCIP_BENDERSSUBSTATUS substatus           /**< the status of the subproblem solve */
+   )
+{
+   assert(scip != NULL);
+   assert(scip->set != NULL);
+   assert(benders != NULL);
+   assert(probnumber >= 0 && probnumber < SCIPgetBendersNSubproblems(scip, benders));
+
+   SCIP_CALL( SCIPcheckStage(scip, "SCIPextractBendersIISMasterSolution",
+         FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+
+   SCIP_CALL( SCIPbendersExtractIISMasterSolution(benders, scip->set, sol, newsol, probnumber, type, substatus) );
+
+   return SCIP_OKAY;
+}
+
 /** Merges a subproblem into the master problem. This process just adds a copy of the subproblem variables and
  *  constraints to the master problem, but keeps the subproblem stored in the Benders' decomposition data structure.
  *  The reason for keeping the subproblem available is for when it is queried for solutions after the problem is solved.

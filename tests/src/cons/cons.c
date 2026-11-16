@@ -608,12 +608,10 @@ void teardown(void)
 {
    SCIP_CALL( SCIPfree(&scip) );
 
-   cr_assert_null(scip);
-   cr_assert_eq(BMSgetMemoryUsed(), 0, "There is are memory leak!!");
+   TEST_ASSERT_NULL(scip);
+   TEST_ASSERT_EQUAL(BMSgetMemoryUsed(), 0, "There is are memory leak!!");
 }
 
-TestSuite(cons, .init = setup, .fini = teardown);
-TestSuite(cons_solve, .init = setup_solve, .fini = teardown);
 
 
 /* TESTS */
@@ -623,214 +621,291 @@ TestSuite(cons_solve, .init = setup_solve, .fini = teardown);
  * handler to check a single constraint. In this case the counter for the number of check calls does not increase (for SCIP).
  * So the total number of calls of the check method (getNcheckUnittests) should be at least SCIPconshdlrGetNCheckCalls().
  */
-Test(cons, NCheckCalls)
+void test_cons_NCheckCalls(void)
 {
-   cr_assert_geq(getNcheckUnittest(scip), SCIPconshdlrGetNCheckCalls(conshdlr));
+   TEST_ASSERT_GREATER_OR_EQUAL(getNcheckUnittest(scip), SCIPconshdlrGetNCheckCalls(conshdlr));
 }
 
-Test(cons, GetEnfoPriority)
+void test_cons_GetEnfoPriority(void)
 {
-   cr_assert_eq(SCIPconshdlrGetEnfoPriority(conshdlr), 0);
+   TEST_ASSERT_EQUAL(SCIPconshdlrGetEnfoPriority(conshdlr), 0);
 }
 
-Test(cons, GetName)
+void test_cons_GetName(void)
 {
    char name[SCIP_MAXSTRLEN];
 
    (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "unittest");
-   cr_assert_str_eq(name, SCIPconshdlrGetName(conshdlr));
+   TEST_ASSERT_EQUAL_STRING(name, SCIPconshdlrGetName(conshdlr));
 }
 
-Test(cons, GetDesc)
+void test_cons_GetDesc(void)
 {
    char desc[SCIP_MAXSTRLEN];
 
    (void) SCIPsnprintf(desc, SCIP_MAXSTRLEN, "constraint handler template");
-   cr_assert_str_eq(desc, SCIPconshdlrGetDesc(conshdlr));
+   TEST_ASSERT_EQUAL_STRING(desc, SCIPconshdlrGetDesc(conshdlr));
 }
 
-Test(cons, GetSepaPriority)
+void test_cons_GetSepaPriority(void)
 {
-   cr_assert_eq(SCIPconshdlrGetSepaPriority(conshdlr), 0);
+   TEST_ASSERT_EQUAL(SCIPconshdlrGetSepaPriority(conshdlr), 0);
 }
 
-Test(cons, GetCheckPriority)
+void test_cons_GetCheckPriority(void)
 {
-   cr_assert_eq(SCIPconshdlrGetCheckPriority(conshdlr), 0);
+   TEST_ASSERT_EQUAL(SCIPconshdlrGetCheckPriority(conshdlr), 0);
 }
 
-Test(cons, GetSepaFreq)
+void test_cons_GetSepaFreq(void)
 {
-   cr_assert_eq(SCIPconshdlrGetSepaFreq(conshdlr), -1);
+   TEST_ASSERT_EQUAL(SCIPconshdlrGetSepaFreq(conshdlr), -1);
 }
 
-Test(cons, GetEagerFreq)
+void test_cons_GetEagerFreq(void)
 {
-   cr_assert_eq(SCIPconshdlrGetEagerFreq(conshdlr), 100);
+   TEST_ASSERT_EQUAL(SCIPconshdlrGetEagerFreq(conshdlr), 100);
 }
 
-Test(cons, GetPropFreq)
+void test_cons_GetPropFreq(void)
 {
-   cr_assert_eq(SCIPconshdlrGetPropFreq(conshdlr), -1);
+   TEST_ASSERT_EQUAL(SCIPconshdlrGetPropFreq(conshdlr), -1);
 }
 
-Test(cons, NeedsCons)
+void test_cons_NeedsCons(void)
 {
-   cr_assert(SCIPconshdlrNeedsCons(conshdlr));
+   TEST_ASSERT(SCIPconshdlrNeedsCons(conshdlr));
 }
 
-Test(cons, DoesPresolve)
+void test_cons_DoesPresolve(void)
 {
-   cr_assert(SCIPconshdlrDoesPresolve(conshdlr));
+   TEST_ASSERT(SCIPconshdlrDoesPresolve(conshdlr));
 }
 
-Test(cons, IsSeparationDelayed)
+void test_cons_IsSeparationDelayed(void)
 {
-   cr_assert_not(SCIPconshdlrIsSeparationDelayed(conshdlr));
+   TEST_ASSERT_NOT(SCIPconshdlrIsSeparationDelayed(conshdlr));
 }
 
-Test(cons, IsPropagationDelayed)
+void test_cons_IsPropagationDelayed(void)
 {
-   cr_assert_not(SCIPconshdlrIsPropagationDelayed(conshdlr));
+   TEST_ASSERT_NOT(SCIPconshdlrIsPropagationDelayed(conshdlr));
 }
 
-Test(cons, IsInitialized)
+void test_cons_IsInitialized(void)
 {
-   cr_assert_not(SCIPconshdlrIsInitialized(conshdlr));
+   TEST_ASSERT_NOT(SCIPconshdlrIsInitialized(conshdlr));
 }
 
-Test(cons, GetPropTiming)
+void test_cons_GetPropTiming(void)
 {
-   cr_assert_eq(SCIPconshdlrGetPropTiming(conshdlr), SCIP_PROPTIMING_BEFORELP);
+   TEST_ASSERT_EQUAL(SCIPconshdlrGetPropTiming(conshdlr), SCIP_PROPTIMING_BEFORELP);
 }
 
-Test(cons, GetNConss)
+void test_cons_GetNConss(void)
 {
-   cr_assert_eq(SCIPconshdlrGetNConss(conshdlr), 0);
+   TEST_ASSERT_EQUAL(SCIPconshdlrGetNConss(conshdlr), 0);
 }
 
-Test(cons, GetNEnfoConss)
+void test_cons_GetNEnfoConss(void)
 {
-   cr_assert_eq(SCIPconshdlrGetNEnfoConss(conshdlr), 0);
+   TEST_ASSERT_EQUAL(SCIPconshdlrGetNEnfoConss(conshdlr), 0);
 }
 
-Test(cons, GetNCheckConss)
+void test_cons_GetNCheckConss(void)
 {
-   cr_assert_eq(SCIPconshdlrGetNCheckConss(conshdlr), 0);
+   TEST_ASSERT_EQUAL(SCIPconshdlrGetNCheckConss(conshdlr), 0);
 }
 
-Test(cons, GetNActiveConss)
+void test_cons_GetNActiveConss(void)
 {
-   cr_assert_eq(SCIPconshdlrGetNActiveConss(conshdlr), 0);
+   TEST_ASSERT_EQUAL(SCIPconshdlrGetNActiveConss(conshdlr), 0);
 }
 
-Test(cons, GetNEnabledConss)
+void test_cons_GetNEnabledConss(void)
 {
-   cr_assert_eq(SCIPconshdlrGetNEnabledConss(conshdlr), 0);
+   TEST_ASSERT_EQUAL(SCIPconshdlrGetNEnabledConss(conshdlr), 0);
 }
 
-Test(cons_solve, GetNEnabledConss)
+/* Forward declaration for solve tests */
+static void ensureSolved(void);
+
+void test_cons_solve_GetNEnabledConss(void)
 {
-   cr_assert_eq(SCIPconshdlrGetNEnabledConss(conshdlr), 1);
+   ensureSolved();
+   TEST_ASSERT_EQUAL(SCIPconshdlrGetNEnabledConss(conshdlr), 1);
 }
 
 /* how to test the time methods? */
-Test(cons_solve, GetSetupTime)
+void test_cons_solve_GetSetupTime(void)
 {
-   cr_assert_geq(SCIPconshdlrGetSetupTime(conshdlr), 0.0);
+   ensureSolved();
+   TEST_ASSERT_GREATER_OR_EQUAL(SCIPconshdlrGetSetupTime(conshdlr), 0.0);
 }
 
-Test(cons_solve, GetPresolTime)
+void test_cons_solve_GetPresolTime(void)
 {
-   cr_assert_geq(SCIPconshdlrGetPresolTime(conshdlr), 0.0);
+   ensureSolved();
+   TEST_ASSERT_GREATER_OR_EQUAL(SCIPconshdlrGetPresolTime(conshdlr), 0.0);
 }
 
-Test(cons_solve, GetSepaTime)
+void test_cons_solve_GetSepaTime(void)
 {
-   cr_assert_geq(SCIPconshdlrGetSepaTime(conshdlr), 0.0);
+   ensureSolved();
+   TEST_ASSERT_GREATER_OR_EQUAL(SCIPconshdlrGetSepaTime(conshdlr), 0.0);
 }
 
-Test(cons_solve, GetEnfoLPTime)
+void test_cons_solve_GetEnfoLPTime(void)
 {
-   cr_assert_geq(SCIPconshdlrGetEnfoLPTime(conshdlr), 0.0);
+   ensureSolved();
+   TEST_ASSERT_GREATER_OR_EQUAL(SCIPconshdlrGetEnfoLPTime(conshdlr), 0.0);
 }
 
-Test(cons_solve, GetEnfoPSTime)
+void test_cons_solve_GetEnfoPSTime(void)
 {
-   cr_assert_geq(SCIPconshdlrGetEnfoPSTime(conshdlr), 0.0);
+   ensureSolved();
+   TEST_ASSERT_GREATER_OR_EQUAL(SCIPconshdlrGetEnfoPSTime(conshdlr), 0.0);
 }
 
-Test(cons_solve, GetPropTime)
+void test_cons_solve_GetPropTime(void)
 {
-   cr_assert_geq(SCIPconshdlrGetPropTime(conshdlr), 0.0);
+   ensureSolved();
+   TEST_ASSERT_GREATER_OR_EQUAL(SCIPconshdlrGetPropTime(conshdlr), 0.0);
 }
 
-Test(cons, GetStrongBranchPropTime)
+void test_cons_GetStrongBranchPropTime(void)
 {
-   cr_assert_geq(SCIPconshdlrGetStrongBranchPropTime(conshdlr), 0.0);
+   TEST_ASSERT_GREATER_OR_EQUAL(SCIPconshdlrGetStrongBranchPropTime(conshdlr), 0.0);
 }
 
-Test(cons, GetCheckTime)
+void test_cons_GetCheckTime(void)
 {
-   cr_assert_geq(SCIPconshdlrGetCheckTime(conshdlr), 0.0);
+   TEST_ASSERT_GREATER_OR_EQUAL(SCIPconshdlrGetCheckTime(conshdlr), 0.0);
 }
 
-Test(cons, GetRespropTime)
+void test_cons_GetRespropTime(void)
 {
-   cr_assert_geq(SCIPconshdlrGetRespropTime(conshdlr), 0.0);
+   TEST_ASSERT_GREATER_OR_EQUAL(SCIPconshdlrGetRespropTime(conshdlr), 0.0);
 }
 
-Test(cons, GetNSepaCalls)
+void test_cons_GetNSepaCalls(void)
 {
-   cr_assert_eq(SCIPconshdlrGetNSepaCalls(conshdlr), getNsepalpUnittest(scip));
+   TEST_ASSERT_EQUAL(SCIPconshdlrGetNSepaCalls(conshdlr), getNsepalpUnittest(scip));
 }
 
-Test(cons, GetEnfoPSCalls)
+void test_cons_GetEnfoPSCalls(void)
 {
-   cr_assert_eq(SCIPconshdlrGetNEnfoPSCalls(conshdlr), getNenfopslpUnittest(scip));
+   TEST_ASSERT_EQUAL(SCIPconshdlrGetNEnfoPSCalls(conshdlr), getNenfopslpUnittest(scip));
 }
 
-Test(cons, GetNPropCalls)
+void test_cons_GetNPropCalls(void)
 {
-   cr_assert_eq(SCIPconshdlrGetNPropCalls(conshdlr), getNpropUnittest(scip));
+   TEST_ASSERT_EQUAL(SCIPconshdlrGetNPropCalls(conshdlr), getNpropUnittest(scip));
 }
 
-Test(cons, GetNRespropCalls)
+void test_cons_GetNRespropCalls(void)
 {
-   cr_assert_eq(SCIPconshdlrGetNRespropCalls(conshdlr), getNrespropUnittest(scip));
+   TEST_ASSERT_EQUAL(SCIPconshdlrGetNRespropCalls(conshdlr), getNrespropUnittest(scip));
 }
 
-Test(cons_solve, GetNPresolCalls)
+void test_cons_solve_GetNPresolCalls(void)
 {
-   cr_assert_eq(SCIPconshdlrGetNPresolCalls(conshdlr), getNpresolUnittest(scip));
+   ensureSolved();
+   TEST_ASSERT_EQUAL(SCIPconshdlrGetNPresolCalls(conshdlr), getNpresolUnittest(scip));
 }
 
-Test(cons_solve, NEnfoLPCalls)
+void test_cons_solve_NEnfoLPCalls(void)
 {
-   cr_assert_eq(SCIPconshdlrGetNEnfoLPCalls(conshdlr), getNenfolpUnittest(scip));
+   ensureSolved();
+   TEST_ASSERT_EQUAL(SCIPconshdlrGetNEnfoLPCalls(conshdlr), getNenfolpUnittest(scip));
 }
 
-Test(cons_solve, IsInitialized)
+/* Helper: ensure SCIP is solved for solve tests */
+static void ensureSolved(void)
 {
-   cr_assert(SCIPconshdlrIsInitialized(conshdlr));
+   if( SCIPgetStage(scip) < SCIP_STAGE_SOLVED )
+   {
+      SCIP_CALL( SCIPsolve(scip) );
+   }
 }
 
-Test(cons_solve, GetNConss)
+void test_cons_solve_IsInitialized(void)
 {
-   cr_assert_eq(SCIPconshdlrGetNConss(conshdlr), 1);
+   ensureSolved();
+   TEST_ASSERT(SCIPconshdlrIsInitialized(conshdlr));
 }
 
-Test(cons_solve, GetNEnfoConss)
+void test_cons_solve_GetNConss(void)
 {
-   cr_assert_eq(SCIPconshdlrGetNEnfoConss(conshdlr), 1);
+   ensureSolved();
+   TEST_ASSERT_EQUAL(SCIPconshdlrGetNConss(conshdlr), 1);
 }
 
-Test(cons_solve, GetNCheckConss)
+void test_cons_solve_GetNEnfoConss(void)
 {
-   cr_assert_eq(SCIPconshdlrGetNCheckConss(conshdlr), 1);
+   ensureSolved();
+   TEST_ASSERT_EQUAL(SCIPconshdlrGetNEnfoConss(conshdlr), 1);
 }
 
-Test(cons_solve, GetNActiveConss)
+void test_cons_solve_GetNCheckConss(void)
 {
-   cr_assert_eq(SCIPconshdlrGetNActiveConss(conshdlr), 1);
+   ensureSolved();
+   TEST_ASSERT_EQUAL(SCIPconshdlrGetNCheckConss(conshdlr), 1);
+}
+
+void test_cons_solve_GetNActiveConss(void)
+{
+   ensureSolved();
+   TEST_ASSERT_EQUAL(SCIPconshdlrGetNActiveConss(conshdlr), 1);
+}
+
+void setUp(void) { setup(); }
+
+void tearDown(void) { teardown(); }
+
+int main(void)
+{
+   UNITY_BEGIN();
+   RUN_TEST(test_cons_NCheckCalls);
+   RUN_TEST(test_cons_GetEnfoPriority);
+   RUN_TEST(test_cons_GetName);
+   RUN_TEST(test_cons_GetDesc);
+   RUN_TEST(test_cons_GetSepaPriority);
+   RUN_TEST(test_cons_GetCheckPriority);
+   RUN_TEST(test_cons_GetSepaFreq);
+   RUN_TEST(test_cons_GetEagerFreq);
+   RUN_TEST(test_cons_GetPropFreq);
+   RUN_TEST(test_cons_NeedsCons);
+   RUN_TEST(test_cons_DoesPresolve);
+   RUN_TEST(test_cons_IsSeparationDelayed);
+   RUN_TEST(test_cons_IsPropagationDelayed);
+   RUN_TEST(test_cons_IsInitialized);
+   RUN_TEST(test_cons_GetPropTiming);
+   RUN_TEST(test_cons_GetNConss);
+   RUN_TEST(test_cons_GetNEnfoConss);
+   RUN_TEST(test_cons_GetNCheckConss);
+   RUN_TEST(test_cons_GetNActiveConss);
+   RUN_TEST(test_cons_GetNEnabledConss);
+   RUN_TEST(test_cons_solve_GetNEnabledConss);
+   RUN_TEST(test_cons_solve_GetSetupTime);
+   RUN_TEST(test_cons_solve_GetPresolTime);
+   RUN_TEST(test_cons_solve_GetSepaTime);
+   RUN_TEST(test_cons_solve_GetEnfoLPTime);
+   RUN_TEST(test_cons_solve_GetEnfoPSTime);
+   RUN_TEST(test_cons_solve_GetPropTime);
+   RUN_TEST(test_cons_GetStrongBranchPropTime);
+   RUN_TEST(test_cons_GetCheckTime);
+   RUN_TEST(test_cons_GetRespropTime);
+   RUN_TEST(test_cons_GetNSepaCalls);
+   RUN_TEST(test_cons_GetEnfoPSCalls);
+   RUN_TEST(test_cons_GetNPropCalls);
+   RUN_TEST(test_cons_GetNRespropCalls);
+   RUN_TEST(test_cons_solve_GetNPresolCalls);
+   RUN_TEST(test_cons_solve_NEnfoLPCalls);
+   RUN_TEST(test_cons_solve_IsInitialized);
+   RUN_TEST(test_cons_solve_GetNConss);
+   RUN_TEST(test_cons_solve_GetNEnfoConss);
+   RUN_TEST(test_cons_solve_GetNCheckConss);
+   RUN_TEST(test_cons_solve_GetNActiveConss);
+   return UNITY_END();
 }

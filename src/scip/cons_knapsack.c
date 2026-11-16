@@ -1100,7 +1100,7 @@ SCIP_RETCODE SCIPsolveKnapsackExactly(
    int*                  nsolitems,          /**< pointer to store number of items in solution, or NULL */
    int*                  nnonsolitems,       /**< pointer to store number of items not in solution, or NULL */
    SCIP_Real*            solval,             /**< pointer to store optimal solution value, or NULL */
-   SCIP_Bool*            success             /**< pointer to store if an error occured during solving
+   SCIP_Bool*            success             /**< pointer to store if an error occurred during solving
                                               *   (normally a memory problem) */
    )
 {
@@ -1127,6 +1127,7 @@ SCIP_RETCODE SCIPsolveKnapsackExactly(
    SCIP_Real greedyupperbound;
    SCIP_Bool eqweights;
    SCIP_Bool intprofits;
+   int lastitem;  /* last item processed in DP (for early termination) */
 
    assert(weights != NULL);
    assert(profits != NULL);
@@ -1482,6 +1483,9 @@ SCIP_RETCODE SCIPsolveKnapsackExactly(
    for( d = currminweight; d < intcap; ++d )
       optvalues[d] = myprofits[0];
 
+   /* by default, all items are processed */
+   lastitem = nmyitems - 1;
+
    /* fills dynamic programming table with optimal values */
    for( j = 1; j < nmyitems; ++j )
    {
@@ -1519,6 +1523,13 @@ SCIP_RETCODE SCIPsolveKnapsackExactly(
          currminweight = intweight;
 
       allcurrminweight[j] = currminweight;
+
+      /* early termination: if current best value reaches the LP upper bound, we have found an optimal solution */
+      if( intprofits && optvalues[IDX(j, intcap - 1)] >= greedyupperbound )
+      {
+         lastitem = j;
+         break;
+      }
    }
 
    /* update optimal solution by following the table */
@@ -1529,8 +1540,12 @@ SCIP_RETCODE SCIPsolveKnapsackExactly(
 
       SCIPdebugMsg(scip, "Fill the solution vector after solving exactly.\n");
 
+      /* items after lastitem were not processed due to early termination; they are not in the solution */
+      for( j = nmyitems - 1; j > lastitem; --j )
+         nonsolitems[(*nnonsolitems)++] = myitems[j];
+
       /* insert all items in (non-) solution vector */
-      for( j = nmyitems - 1; j > 0; --j )
+      for( j = lastitem; j > 0; --j )
       {
          /* if the following condition holds this means all remaining items does not fit anymore */
          if( d < allcurrminweight[j] )
@@ -1574,7 +1589,7 @@ SCIP_RETCODE SCIPsolveKnapsackExactly(
 
    /* update solution value */
    if( solval != NULL )
-      *solval += optvalues[IDX(nmyitems-1,intcap-1)];
+      *solval += optvalues[IDX(lastitem, intcap - 1)];
    SCIPfreeBufferArray(scip, &allcurrminweight);
 
    /* free all temporary memory */
@@ -2098,14 +2113,14 @@ SCIP_RETCODE GUBsetCheck(
          /* get corresponding active problem variable */
          var1 = vars[gubset->gubconss[i]->gubvars[j]];
          var1negated = FALSE;
-         SCIP_CALL( SCIPvarGetProbvarBinary(&var1, &var1negated) );
+         SCIP_CALL( SCIPgetProbvarBinary(scip, &var1, &var1negated) );
 
          for( k = j+1; k < gubset->gubconss[i]->ngubvars; k++ )
          {
             /* get corresponding active problem variable */
             var2 = vars[gubset->gubconss[i]->gubvars[k]];
             var2negated = FALSE;
-            SCIP_CALL( SCIPvarGetProbvarBinary(&var2, &var2negated) );
+            SCIP_CALL( SCIPgetProbvarBinary(scip, &var2, &var2negated) );
 
             if( !SCIPvarsHaveCommonClique(var1, !var1negated, var2, !var2negated, TRUE) )
             {
@@ -2187,7 +2202,7 @@ SCIP_RETCODE GUBsetCalcCliquePartition(
    }
 
    /* get corresponding active problem variables */
-   SCIP_CALL( SCIPvarsGetProbvarBinary(&tmpvars, &tmpvalues, nvars) );
+   SCIP_CALL( SCIPgetProbvarsBinary(scip, &tmpvars, &tmpvalues, nvars) );
 
    /* ignore variables with LP value 1 (will be assigned to trivial GUBs at the end) and sort remaining variables
     * by nondecreasing number of cliques the variables are in
@@ -6809,7 +6824,7 @@ SCIP_RETCODE dualPresolving(
       negated = FALSE;
 
       /* get the active variable */
-      SCIP_CALL( SCIPvarGetProbvarBinary(&var, &negated) );
+      SCIP_CALL( SCIPgetProbvarBinary(scip, &var, &negated) );
       assert(SCIPvarIsActive(var));
 
       if( negated )
@@ -7656,7 +7671,7 @@ SCIP_RETCODE propagateCons(
                   SCIPdebugMsg(scip, " -> fixing variable <%s> to 0\n", SCIPvarGetName(maxvar));
                   SCIP_CALL( SCIPresetConsAge(scip, cons) );
                   SCIP_CALL( SCIPinferBinvarCons(scip, maxvar, FALSE, cons, cliquestartposs[c], &infeasible, &tightened) );
-                  assert(consdata->onesweightsum == oldonesweightsum);  /* cppcheck-suppress knownConditionTrueFalse */
+                  assert(consdata->onesweightsum == oldonesweightsum);
                   assert(!infeasible);
                   assert(tightened);
                   (*nfixedvars)++;
@@ -8179,7 +8194,6 @@ SCIP_RETCODE detectRedundantVars(
    SCIP_Longint* weights;
    SCIP_Longint capacity;
    SCIP_Longint sum;
-   int noldchgcoefs;
    int nvars;
    int v;
    int w;
@@ -8196,7 +8210,6 @@ SCIP_RETCODE detectRedundantVars(
    assert(consdata->nvars >= 2);
    assert(consdata->weightsum > consdata->capacity);
 
-   noldchgcoefs = *nchgcoefs;
    vars = consdata->vars;
    weights = consdata->weights;
    nvars = consdata->nvars;
@@ -8233,10 +8246,6 @@ SCIP_RETCODE detectRedundantVars(
 
       return SCIP_OKAY;
    }
-
-   /* if we already found some redundant variables, stop here */
-   if( *nchgcoefs > noldchgcoefs )
-      return SCIP_OKAY;
 
    assert(vars == consdata->vars);
    assert(weights == consdata->weights);
@@ -10020,7 +10029,7 @@ SCIP_RETCODE tightenWeightsLift(
       var = consdata->vars[i];
       weight = consdata->weights[i];
       value = TRUE;
-      SCIP_CALL( SCIPvarGetProbvarBinary(&var, &value) );
+      SCIP_CALL( SCIPgetProbvarBinary(scip, &var, &value) );
       varprobindex = SCIPvarGetProbindex(var);
       assert(0 <= varprobindex && varprobindex < nbinvars);
 

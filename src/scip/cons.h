@@ -981,7 +981,7 @@ SCIP_RETCODE SCIPconsSetPropagated(
    SCIP_Bool             propagate           /**< new value */
    );
 
-/** sets the local flag of the given constraint */
+/** sets the local flag of the given constraint and resets valid depth */
 void SCIPconsSetLocal(
    SCIP_CONS*            cons,               /**< constraint */
    SCIP_Bool             local               /**< new value */

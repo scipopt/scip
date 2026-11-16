@@ -166,7 +166,7 @@ SCIP_RETCODE verifyCircularPattern(
    {
       nlptimelimit = MIN3(conshdlrdata->timeleft, timelimit - SCIPgetSolvingTime(scip), conshdlrdata->nlptilim); /*lint !e666*/
 
-      SCIPdebugMsg(scip, "call verification NLP (%g,%lld)\n", nlptimelimit, conshdlrdata->nlpnodelim);
+      SCIPdebugMsg(scip, "call verification NLP (%g,%" SCIP_LONGINT_FORMAT ")\n", nlptimelimit, conshdlrdata->nlpnodelim);
       conshdlrdata->timeleft += SCIPgetSolvingTime(scip);
       SCIP_CALL( SCIPverifyCircularPatternNLP(scip, probdata, pattern, nlptimelimit, conshdlrdata->nlpnodelim) );
       conshdlrdata->timeleft -= SCIPgetSolvingTime(scip);

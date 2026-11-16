@@ -78,7 +78,7 @@ SCIP_DECL_CONSLOCK(consLockTest)
 /** TEST  **/
 #include "include/scip_test.h"
 
-Test(cons, initlp)
+void test_cons_initlp(void)
 {
    SCIP* scip;
    SCIP_CONSHDLR* conshdlr;
@@ -109,10 +109,21 @@ Test(cons, initlp)
 
    /* solve problem and expect it to be infeasible */
    SCIP_CALL( SCIPsolve(scip) );
-   cr_expect(SCIPgetStatus(scip) == SCIP_STATUS_INFEASIBLE);
+   SOFT_ASSERT(SCIPgetStatus(scip) == SCIP_STATUS_INFEASIBLE);
 
    /* free memory and assert no memory leak */
    SCIP_CALL( SCIPfree(&scip) );
-   cr_assert_null(scip);
-   cr_assert_eq(BMSgetMemoryUsed(), 0, "Memory is leaking!");
+   TEST_ASSERT_NULL(scip);
+   TEST_ASSERT_EQUAL(BMSgetMemoryUsed(), 0, "Memory is leaking!");
+}
+
+void setUp(void) { }
+
+void tearDown(void) { }
+
+int main(void)
+{
+   UNITY_BEGIN();
+   RUN_TEST(test_cons_initlp);
+   return UNITY_END();
 }

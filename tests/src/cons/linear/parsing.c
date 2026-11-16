@@ -136,17 +136,17 @@ void compareConstraint(
 {
    int i;
 
-   cr_assert_eq(lindata.nnonz, SCIPgetNVarsLinear(scip, cons), "Constraint number of variables != %d", lindata.nnonz);
+   TEST_ASSERT_EQUAL(lindata.nnonz, SCIPgetNVarsLinear(scip, cons), "Constraint number of variables != %d", lindata.nnonz);
 
    /* test variable names, coefficients, etc */
    for( i = 0; i < lindata.nnonz; ++i )
    {
       /* test for epsilon equality of every coefficient */
-      cr_assert_float_eq(lindata.coefs[i], SCIPgetValsLinear(scip, cons)[i], SCIPepsilon(scip), "Unequal coefficients %.15g != %.15g",
+      TEST_ASSERT_DOUBLE_WITHIN(lindata.coefs[i], SCIPgetValsLinear(scip, cons)[i], SCIPepsilon(scip), "Unequal coefficients %.15g != %.15g",
             lindata.coefs[i], SCIPgetValsLinear(scip, cons)[i]);
 
       /* test all variable names */
-      cr_assert_str_eq(lindata.names[i], SCIPvarGetName(SCIPgetVarsLinear(scip, cons)[i]), "Variable names are different: %s != %s",
+      TEST_ASSERT_EQUAL_STRING(lindata.names[i], SCIPvarGetName(SCIPgetVarsLinear(scip, cons)[i]), "Variable names are different: %s != %s",
             lindata.names[i], SCIPvarGetName(SCIPgetVarsLinear(scip, cons)[i]));
    }
 
@@ -183,7 +183,7 @@ void readIntoTargetProblem(void)
 {
    SCIP_CALL( SCIPreadProb(targetscip, filename, "cip") );
 
-   cr_assert_eq(SCIPgetNConss(targetscip), 1, "Number %d of target SCIP constraints should be 1", SCIPgetNConss(targetscip));
+   TEST_ASSERT_EQUAL(SCIPgetNConss(targetscip), 1, "Number %d of target SCIP constraints should be 1", SCIPgetNConss(targetscip));
    targetcons = SCIPgetConss(targetscip)[0];
 
    compareConstraint(targetscip, targetcons);
@@ -197,15 +197,15 @@ void performTestOnLinData(void)
    readIntoTargetProblem();
 }
 
-TestSuite(parsing_linear, .init = setup, .fini = teardown);
 
 /* TESTS  */
-Test(parsing_linear, create_and_free)
+void test_parsing_linear_create_and_free(void)
 {
    /* calls setup and teardown */
 }
 
-Test(parsing_linear, equation_0, .description = "test if an equation 0 == 0 is correctly handled")
+/** @brief test if an equation 0 == 0 is correctly handled */
+void test_parsing_linear_equation_0(void)
 {
    lindata.lhs = lindata.rhs = 0.0;
    sprintf(filename, FNAME, "equation_0");
@@ -213,7 +213,8 @@ Test(parsing_linear, equation_0, .description = "test if an equation 0 == 0 is c
    performTestOnLinData();
 }
 
-Test(parsing_linear, equation_const, .description = "test if a ranged row -const <= const is correctly handled")
+/** @brief test if a ranged row -const <= const is correctly handled */
+void test_parsing_linear_equation_const(void)
 {
    lindata.lhs = -5.0;
    lindata.rhs = 5.0;
@@ -222,7 +223,8 @@ Test(parsing_linear, equation_const, .description = "test if a ranged row -const
    performTestOnLinData();
 }
 
-Test(parsing_linear, inf_lhs, .description = "test if an infinite left hand side is correctly handled")
+/** @brief test if an infinite left hand side is correctly handled */
+void test_parsing_linear_inf_lhs(void)
 {
    lindata.rhs = 5.0;
    sprintf(filename, FNAME, "inf_lhs");
@@ -230,7 +232,8 @@ Test(parsing_linear, inf_lhs, .description = "test if an infinite left hand side
    performTestOnLinData();
 }
 
-Test(parsing_linear, inf_rhs, .description = "test if an infinite right hand side is correctly handled")
+/** @brief test if an infinite right hand side is correctly handled */
+void test_parsing_linear_inf_rhs(void)
 {
    lindata.lhs = 0.0;
    sprintf(filename, FNAME, "inf_rhs");
@@ -238,7 +241,8 @@ Test(parsing_linear, inf_rhs, .description = "test if an infinite right hand sid
    performTestOnLinData();
 }
 
-Test(parsing_linear, equation_onevariable, .description = "test if an equation const == const * variable is correctly handled")
+/** @brief test if an equation const == const * variable is correctly handled */
+void test_parsing_linear_equation_onevariable(void)
 {
    lindata.lhs = 5.0;
    lindata.rhs = 5.0;
@@ -251,7 +255,8 @@ Test(parsing_linear, equation_onevariable, .description = "test if an equation c
    performTestOnLinData();
 }
 
-Test(parsing_linear, free_constraint, .description = "test if a free row is correctly handled")
+/** @brief test if a free row is correctly handled */
+void test_parsing_linear_free_constraint(void)
 {
    /* left and right hand side are initialized to infinity */
    lindata.coefs[0] = 5.0;
@@ -263,7 +268,8 @@ Test(parsing_linear, free_constraint, .description = "test if a free row is corr
    performTestOnLinData();
 }
 
-Test(parsing_linear, infeasible_constraint, .description = "test infeasible constraint with left hand side larger than right hand side")
+/** @brief test infeasible constraint with left hand side larger than right hand side */
+void test_parsing_linear_infeasible_constraint(void)
 {
    lindata.lhs = 10.0;
    lindata.rhs = 0.0;
@@ -274,4 +280,22 @@ Test(parsing_linear, infeasible_constraint, .description = "test infeasible cons
    sprintf(filename, FNAME, "infeasible_constraint");
 
    performTestOnLinData();
+}
+
+void setUp(void) { setup(); }
+
+void tearDown(void) { teardown(); }
+
+int main(void)
+{
+   UNITY_BEGIN();
+   RUN_TEST(test_parsing_linear_create_and_free);
+   RUN_TEST(test_parsing_linear_equation_0);
+   RUN_TEST(test_parsing_linear_equation_const);
+   RUN_TEST(test_parsing_linear_inf_lhs);
+   RUN_TEST(test_parsing_linear_inf_rhs);
+   RUN_TEST(test_parsing_linear_equation_onevariable);
+   RUN_TEST(test_parsing_linear_free_constraint);
+   RUN_TEST(test_parsing_linear_infeasible_constraint);
+   return UNITY_END();
 }

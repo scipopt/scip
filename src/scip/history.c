@@ -427,7 +427,7 @@ void SCIPvaluehistoryScaleVSIDS(
  * simple functions implemented as defines
  */
 
-#ifndef NDEBUG
+#ifdef NDEBUG
 
 /* In debug mode, the following methods are implemented as function calls to ensure
  * type validity.
@@ -438,6 +438,8 @@ void SCIPvaluehistoryScaleVSIDS(
 #undef SCIPvaluehistoryGetNValues
 #undef SCIPvaluehistoryGetHistories
 #undef SCIPvaluehistoryGetValues
+
+#endif
 
 /** return the number of (domain) values for which a history exists */
 int SCIPvaluehistoryGetNValues(
@@ -469,15 +471,13 @@ SCIP_Real* SCIPvaluehistoryGetValues(
    return valuehistory->values;
 }
 
-#endif
-
 /**@} */
 
 /*
  * simple functions implemented as defines
  */
 
-#ifndef NDEBUG
+#ifdef NDEBUG
 
 /* In debug mode, the following methods are implemented as function calls to ensure
  * type validity.
@@ -515,6 +515,9 @@ SCIP_Real* SCIPvaluehistoryGetValues(
 #undef SCIPhistoryGetLastGMIeff
 #undef SCIPhistoryIncGMIeffSum
 #undef SCIPhistoryGetAvgGMIeff
+#undef SCIPhistoryGetPseudocostVariance
+
+#endif
 
 /** returns the opposite direction of the given branching direction */
 SCIP_BRANCHDIR SCIPbranchdirOpposite(
@@ -928,5 +931,3 @@ void SCIPhistorySetRatioHistory(
    history->ratio = ratio;
    history->balance = balance;
 }
-
-#endif

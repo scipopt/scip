@@ -182,7 +182,7 @@ SCIP_RETCODE fromAmpl(
    const char*           defaultsetname      /**< name of default settings file */
    )
 {
-#ifdef SCIP_WITH_AMPL
+#if SCIP_HAS_AMPL
    char fullnlfilename[SCIP_MAXSTRLEN];
    char* logfile;
    SCIP_Bool printstat;
@@ -298,10 +298,10 @@ SCIP_RETCODE fromAmpl(
 
    return SCIP_OKAY;
 
-#else /* SCIP_WITH_AMPL */
+#else /* !SCIP_HAS_AMPL */
    SCIPerrorMessage("SCIP has been compiled without AMPL support.\n");
    return SCIP_PLUGINNOTFOUND;
-#endif
+#endif /* SCIP_HAS_AMPL */
 }
 
 /** evaluates command line parameters and runs SCIP appropriately in the given SCIP instance */
@@ -647,11 +647,11 @@ SCIP_RETCODE SCIPprocessShellArguments(
          "  -t <threads>  : number of threads (triggers concurrent solving)\n"
          "  -c \"command\"  : execute single line of dialog commands (can be used multiple times)\n",
          argv[0]);
-#ifdef SCIP_WITH_AMPL
+#if SCIP_HAS_AMPL
       printf("\nas AMPL solver: %s <.nl-file without the .nl> -AMPL [-i]\n"
          "  -i : start interactive SCIP shell after .nl file has been read\n",
          argv[0]);
-#endif
+#endif /* SCIP_HAS_AMPL */
       printf("\n");
    }
 

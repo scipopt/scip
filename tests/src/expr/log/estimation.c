@@ -31,9 +31,8 @@
 #include "scip/expr_log.c"
 #include "../estimation.h"
 
-Test(separation, logarithmic, .init = setup, .fini = teardown,
-   .description = "test estimation for a logarithmic expression"
-   )
+/** @brief test estimation for a logarithmic expression */
+void test_separation_logarithmic(void)
 {
    SCIP_EXPR* expr;
    SCIP_Real coef;
@@ -57,11 +56,11 @@ Test(separation, logarithmic, .init = setup, .fini = teardown,
    SCIP_CALL( estimateLog(scip, expr, &localbounds, &globalbounds, &refpoint, TRUE, SCIPinfinity(scip), &coef,
          &constant, &islocal, &success, &branchcand) );
 
-   cr_assert(success);
-   cr_assert_float_eq(constant, -1.0 + log(2.0), SCIPepsilon(scip));
-   cr_assert_float_eq(coef, 0.5, SCIPepsilon(scip));
-   cr_assert(!islocal);
-   cr_assert(!branchcand);
+   TEST_ASSERT(success);
+   SOFT_ASSERT_DOUBLE_WITHIN(constant, -1.0 + log(2.0), SCIPepsilon(scip));
+   SOFT_ASSERT_DOUBLE_WITHIN(coef, 0.5, SCIPepsilon(scip));
+   SOFT_ASSERT(!islocal);
+   SOFT_ASSERT(!branchcand);
 
    /* compute an underestimation (secant) */
    refpoint = 2.0;
@@ -70,12 +69,23 @@ Test(separation, logarithmic, .init = setup, .fini = teardown,
    SCIP_CALL( estimateLog(scip, expr, &localbounds, &globalbounds, &refpoint, FALSE, -SCIPinfinity(scip), &coef,
          &constant, &islocal, &success, &branchcand) );
 
-   cr_assert(success);
-   cr_assert_float_eq(constant, -log(3.0)/2.0, SCIPepsilon(scip));
-   cr_assert_float_eq(coef, log(3.0)/2.0, SCIPepsilon(scip));
-   cr_assert(islocal);
-   cr_assert(branchcand);
+   TEST_ASSERT(success);
+   SOFT_ASSERT_DOUBLE_WITHIN(constant, -log(3.0)/2.0, SCIPepsilon(scip));
+   SOFT_ASSERT_DOUBLE_WITHIN(coef, log(3.0)/2.0, SCIPepsilon(scip));
+   SOFT_ASSERT(islocal);
+   SOFT_ASSERT(branchcand);
 
    /* release expression */
    SCIP_CALL( SCIPreleaseExpr(scip, &expr) );
+}
+
+void setUp(void) { setup(); }
+
+void tearDown(void) { teardown(); }
+
+int main(void)
+{
+   UNITY_BEGIN();
+   RUN_TEST(test_separation_logarithmic);
+   return UNITY_END();
 }

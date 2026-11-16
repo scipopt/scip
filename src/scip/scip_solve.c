@@ -3196,6 +3196,13 @@ SCIP_RETCODE SCIPsolveConcurrent(
       return SCIP_NOTIMPLEMENTED;
    }
 
+   /* concurrent solvers do not support reoptimization */
+   if( scip->set->reopt_enable )
+   {
+      SCIPerrorMessage("Concurrent solve not implemented for reoptimization mode.\n");
+      return SCIP_NOTIMPLEMENTED;
+   }
+
    SCIP_CALL( SCIPsetIntParam(scip, "timing/clocktype", (int)SCIP_CLOCKTYPE_WALL) );
 
    minnthreads = scip->set->parallel_minnthreads;
@@ -3207,12 +3214,15 @@ SCIP_RETCODE SCIPsolveConcurrent(
       return SCIP_INVALIDDATA;
    }
 
+   /* capture the CTRL-C interrupt */
+   if( scip->set->misc_catchctrlc )
+      SCIPinterruptCapture(scip->interrupt);
+
    if( scip->concurrent == NULL )
    {
       SCIP_CONCSOLVERTYPE** concsolvertypes;
       SCIP_Longint* weights;
       SCIP_Real* prios;
-      SCIP_Real memorylimit;
       SCIP_Real prefpriosum;
       int* solvertypes;
       int nconcsolvertypes;
@@ -3234,7 +3244,10 @@ SCIP_RETCODE SCIPsolveConcurrent(
          /* if yes, then presolve the problem */
          SCIP_CALL( SCIPpresolve(scip) );
          if( SCIPgetStatus(scip) != SCIP_STATUS_UNKNOWN )
-            return SCIP_OKAY;
+         {
+            retcode = SCIP_OKAY;
+            goto TERMINATE;
+         }
       }
       else
       {
@@ -3256,54 +3269,51 @@ SCIP_RETCODE SCIPsolveConcurrent(
       if( scip->set->stage < SCIP_STAGE_PRESOLVED )
       {
          SCIP_CALL( displayRelevantStats(scip) );
-         return SCIP_OKAY;
+         retcode = SCIP_OKAY;
+         goto TERMINATE;
       }
 
-      /* estimate memory */
-      memorylimit = scip->set->limit_memory;
-      if( memorylimit < SCIP_MEM_NOLIMIT )
+      /* estimate maximum number of threads based on memory limit, if any */
+      if( scip->set->misc_avoidmemout && scip->set->limit_memory < SCIP_MEM_NOLIMIT )
       {
+         SCIP_Real memorylimit = scip->set->limit_memory;
+
          /* substract the memory already used by the main SCIP and the estimated memory usage of external software */
          memorylimit -= SCIPgetMemUsed(scip)/1048576.0;
          memorylimit -= SCIPgetMemExternEstim(scip)/1048576.0;
 
-         /* estimate maximum number of copies that be created based on memory limit */
-         if( !scip->set->misc_avoidmemout )
-         {
-            nthreads = MAX(1, memorylimit / (4.0*SCIPgetMemExternEstim(scip)/1048576.0));  /*lint !e666 !e524*/
-            SCIPverbMessage(scip, SCIP_VERBLEVEL_FULL, NULL, "Estimated a maximum of %d threads based on memory limit.\n", nthreads);
-         }
-         else
-         {
-            nthreads = minnthreads;
-            SCIPverbMessage(scip, SCIP_VERBLEVEL_FULL, NULL, "Ignoring memory limit; all threads can be created.\n");
-         }
-      }
-      nconcsolvertypes = SCIPgetNConcsolverTypes(scip);
-      concsolvertypes = SCIPgetConcsolverTypes(scip);
+         nthreads = MAX(1, memorylimit / (4.0*SCIPgetMemExternEstim(scip)/1048576.0));  /*lint !e666 !e524*/
+         SCIPverbMessage(scip, SCIP_VERBLEVEL_FULL, NULL, "Estimated a maximum of %d threads based on memory limit.\n", nthreads);
 
-      if( minnthreads > nthreads )
-      {
-         SCIP_CALL( initSolve(scip, TRUE) );
-         scip->stat->status = SCIP_STATUS_MEMLIMIT;
-         SCIPsyncstoreSetSolveIsStopped(SCIPgetSyncstore(scip), TRUE);
-         SCIPwarningMessage(scip, "Requested minimum number of threads could not be satisfied with given memory limit.\n");
-         SCIP_CALL( displayRelevantStats(scip) );
-         return SCIP_OKAY;
+         if( minnthreads > nthreads )
+         {
+            SCIP_CALL( initSolve(scip, TRUE) );
+            scip->stat->status = SCIP_STATUS_MEMLIMIT;
+            SCIPsyncstoreSetSolveIsStopped(SCIPgetSyncstore(scip), TRUE);
+            SCIPwarningMessage(scip, "Requested minimum number of threads could not be satisfied with given memory limit.\n");
+            SCIP_CALL( displayRelevantStats(scip) );
+            retcode = SCIP_OKAY;
+            goto TERMINATE;
+         }
+
+         if( nthreads == 1 )
+         {
+            SCIPwarningMessage(scip, "Can only use 1 thread, performing sequential solve instead.\n");
+            SCIP_CALL( SCIPfreeConcurrent(scip) );
+            retcode = SCIPsolve(scip);
+            goto TERMINATE;
+         }
       }
 
-      if( nthreads == 1 )
-      {
-         SCIPwarningMessage(scip, "Can only use 1 thread, performing sequential solve instead.\n");
-         SCIP_CALL( SCIPfreeConcurrent(scip) );
-         return SCIPsolve(scip);
-      }
       nthreads = MIN(nthreads, maxnthreads);
-      SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "Using %d threads for concurrent solve.\n", nthreads);
+      SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "Using %d threads for concurrent solve in %s mode.\n", nthreads,
+         scip->set->parallel_mode == (int) SCIP_PARA_OPPORTUNISTIC ? "opportunistic" : "deterministic");
 
       /* now set up nthreads many concurrent solvers that will be used for the concurrent solve
        * using the preferred priorities of each concurrent solver
        */
+      nconcsolvertypes = SCIPgetNConcsolverTypes(scip);
+      concsolvertypes = SCIPgetConcsolverTypes(scip);
       prefpriosum = 0.0;
       for( i = 0; i < nconcsolvertypes; ++i )
          prefpriosum += SCIPconcsolverTypeGetPrefPrio(concsolvertypes[i]);
@@ -3365,6 +3375,11 @@ SCIP_RETCODE SCIPsolveConcurrent(
    retcode = SCIPconcurrentSolve(scip);
    SCIPclockStop(scip->stat->solvingtime, scip->set);
    SCIP_CALL( displayRelevantStats(scip) );
+
+TERMINATE:
+   /* release the CTRL-C interrupt */
+   if( scip->set->misc_catchctrlc )
+      SCIPinterruptRelease(scip->interrupt);
 
    return retcode;
 }

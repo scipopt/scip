@@ -58,29 +58,31 @@ void teardown(void)
 }
 
 /* TEST SUITE */
-TestSuite(readermps, .init = setup, .fini = teardown);
 
-Test(readermps, read1, .description = "check the function for reading a *.mps file")
+/** @brief check the function for reading a *.mps file */
+void test_readermps_read1(void)
 {
    /*The file tested below originally failed because 'OBJSENSE MAX' is on one line. */
    char filename[SCIP_MAXSTRLEN];
    TESTsetTestfilename(filename, __FILE__, "oc5.mps");
 
    SCIP_CALL( SCIPreadProb(scip, filename, NULL) );
-   cr_expect( SCIPgetNVars(scip) == 5 );
+   SOFT_ASSERT( SCIPgetNVars(scip) == 5 );
 }
 
-Test(readermps, read2, .description = "check the function for reading a *.mps file")
+/** @brief check the function for reading a *.mps file */
+void test_readermps_read2(void)
 {
     /*A 'normal' mps file with OBJSENSE MAX on two lines */
     char filename[SCIP_MAXSTRLEN];
     TESTsetTestfilename(filename, __FILE__, "oc5_1.mps");
 
     SCIP_CALL( SCIPreadProb(scip, filename, NULL) );
-    cr_expect( SCIPgetNVars(scip) == 5 );
+    SOFT_ASSERT( SCIPgetNVars(scip) == 5 );
 }
 
-Test(readermps, spaceinrowname, .description = "check for reading with a space in a row name")
+/** @brief check for reading with a space in a row name */
+void test_readermps_spaceinrowname(void)
 {
     /* a fixed-form mps file with spaces in row and column names
      * for this, there is a special treatment (len<14) in reader_mps
@@ -91,11 +93,12 @@ Test(readermps, spaceinrowname, .description = "check for reading with a space i
     TESTsetTestfilename(filename, __FILE__, "forplan_begin.mps");
 
     SCIP_CALL( SCIPreadProb(scip, filename, NULL) );
-    cr_expect( SCIPgetNVars(scip) == 6 );
-    cr_expect( SCIPgetNConss(scip) == 3 );
+    SOFT_ASSERT( SCIPgetNVars(scip) == 6 );
+    SOFT_ASSERT( SCIPgetNConss(scip) == 3 );
 }
 
-Test(readermps, shortlines, .description = "check for reading with short lines")
+/** @brief check for reading with short lines */
+void test_readermps_shortlines(void)
 {
     /* a free-form mps file with short row and column names
      * the special treatment for fixed-form mps in reader_mps (len<14, see above)
@@ -107,6 +110,21 @@ Test(readermps, shortlines, .description = "check for reading with short lines")
     TESTsetTestfilename(filename, __FILE__, "shortlines.mps");
 
     SCIP_CALL( SCIPreadProb(scip, filename, NULL) );
-    cr_expect( SCIPgetNVars(scip) == 7 );
-    cr_expect( SCIPgetNConss(scip) == 3 );
+    SOFT_ASSERT( SCIPgetNVars(scip) == 7 );
+    SOFT_ASSERT( SCIPgetNConss(scip) == 3 );
+}
+
+void setUp(void) { setup(); }
+
+void tearDown(void) { teardown(); }
+
+int main(void)
+{
+   UNITY_BEGIN();
+   RUN_TEST(test_readermps_read1
+);
+   RUN_TEST(test_readermps_read2);
+   RUN_TEST(test_readermps_spaceinrowname);
+   RUN_TEST(test_readermps_shortlines);
+   return UNITY_END();
 }

@@ -98,7 +98,7 @@ SCIP_DECL_EVENTEXEC(eventExecReopt)
    if( SCIPnodeGetType(eventnode) != SCIP_NODETYPE_FOCUSNODE || SCIPnodeGetDepth(eventnode) != SCIPgetEffectiveRootDepth(scip) )
       return SCIP_OKAY;
 
-   SCIPdebugMsg(scip, "catch event for node %lld: <%s>: %g -> %g\n", SCIPnodeGetNumber(eventnode),
+   SCIPdebugMsg(scip, "catch event for node %" SCIP_LONGINT_FORMAT ": <%s>: %g -> %g\n", SCIPnodeGetNumber(eventnode),
          SCIPvarGetName(SCIPeventGetVar(event)), SCIPeventGetOldbound(event), SCIPeventGetNewbound(event));
 
    assert(SCIPisFeasLT(scip, newbound, oldbound) || SCIPisFeasGT(scip, newbound, oldbound));
@@ -1912,7 +1912,7 @@ SCIP_RETCODE shrinkNode(
       {
          int c;
 
-         SCIPsetDebugMsg(set, " -> shrink node %lld at ID %u, replaced by %d child nodes.\n", SCIPnodeGetNumber(node),
+         SCIPsetDebugMsg(set, " -> shrink node %" SCIP_LONGINT_FORMAT " at ID %u, replaced by %d child nodes.\n", SCIPnodeGetNumber(node),
             id, reoptnodes[id]->nchilds);
 
          /* copy the references of child nodes to the parent*/
@@ -2561,7 +2561,7 @@ SCIP_RETCODE collectDualInformation(
          REOPT_CONSTYPE_DUALREDS : REOPT_CONSTYPE_INFSUBTREE);
       reopt->reopttree->reoptnodes[id]->dualredscur->linear = FALSE;
 
-      SCIPsetDebugMsg(set, " -> save dual information of type 1: node %lld, nvars %d, constype %d\n",
+      SCIPsetDebugMsg(set, " -> save dual information of type 1: node %" SCIP_LONGINT_FORMAT ", nvars %d, constype %d\n",
             SCIPnodeGetNumber(node), reopt->reopttree->reoptnodes[id]->dualredscur->nvars,
             reopt->reopttree->reoptnodes[id]->dualredscur->constype);
    }
@@ -2585,7 +2585,7 @@ SCIP_RETCODE collectDualInformation(
       reopt->reopttree->reoptnodes[id]->dualredsnex->constype = (reopttype == SCIP_REOPTTYPE_STRBRANCHED ?
          REOPT_CONSTYPE_DUALREDS : REOPT_CONSTYPE_INFSUBTREE);
 
-      SCIPsetDebugMsg(set, " -> save dual information of type 2: node %lld, nvars %d, constype %d\n",
+      SCIPsetDebugMsg(set, " -> save dual information of type 2: node %" SCIP_LONGINT_FORMAT ", nvars %d, constype %d\n",
          SCIPnodeGetNumber(node), reopt->reopttree->reoptnodes[id]->dualredsnex->nvars,
          reopt->reopttree->reoptnodes[id]->dualredsnex->constype);
    }
@@ -2688,7 +2688,7 @@ SCIP_RETCODE addNode(
          return SCIP_OKAY;
       }
 
-      SCIPsetDebugMsg(set, "update node %lld at ID %u:\n", SCIPnodeGetNumber(node), id);
+      SCIPsetDebugMsg(set, "update node %" SCIP_LONGINT_FORMAT " at ID %u:\n", SCIPnodeGetNumber(node), id);
 
       transintoorig = FALSE;
 
@@ -2955,7 +2955,7 @@ SCIP_RETCODE addNode(
       int nbndchgdiff;
       SCIP_Bool transintoorig;
 
-      SCIPsetDebugMsg(set, "try to add node #%lld to the reopttree\n", SCIPnodeGetNumber(node));
+      SCIPsetDebugMsg(set, "try to add node #%" SCIP_LONGINT_FORMAT " to the reopttree\n", SCIPnodeGetNumber(node));
       SCIPsetDebugMsg(set, " -> reopttype = %d\n", reopttype);
 
       /* check if we really want to save this node:
@@ -3053,7 +3053,7 @@ SCIP_RETCODE addNode(
       /* set the REOPTTYPE */
       SCIPnodeSetReopttype(node, reopttype);
 
-      SCIPsetDebugMsg(set, "save node #%lld successful\n", SCIPnodeGetNumber(node));
+      SCIPsetDebugMsg(set, "save node #%" SCIP_LONGINT_FORMAT " successful\n", SCIPnodeGetNumber(node));
       SCIPsetDebugMsg(set, " -> nvars: %d, ncons: %d, parentID: %u, reopttype: %d, lowerbound: %g\n",
          reopt->reopttree->reoptnodes[id]->nvars + reopt->reopttree->reoptnodes[id]->nafterdualvars,
          reopt->reopttree->reoptnodes[id]->nconss, reopt->reopttree->reoptnodes[id]->parentID,
@@ -3154,7 +3154,7 @@ void deleteLastDualBndchgs(
 
    if( reopt->dualreds != NULL && reopt->dualreds->nvars > 0 )
    {
-      SCIPdebugMessage("delete %d dual variable information about node %lld\n", reopt->dualreds->nvars,
+      SCIPdebugMessage("delete %d dual variable information about node %" SCIP_LONGINT_FORMAT "\n", reopt->dualreds->nvars,
             reopt->currentnode);
       reopt->dualreds->nvars = 0;
       reopt->currentnode = -1;
@@ -3746,7 +3746,7 @@ SCIP_RETCODE addSplitcons(
 
 #ifndef NDEBUG
    if( reopt->reopttree->reoptnodes[id]->dualredscur->constype == REOPT_CONSTYPE_DUALREDS )
-      SCIPsetDebugMsg(set, " create a split-node #%lld\n", SCIPnodeGetNumber(node));
+      SCIPsetDebugMsg(set, " create a split-node #%" SCIP_LONGINT_FORMAT "\n", SCIPnodeGetNumber(node));
    else
       SCIPsetDebugMsg(set, " separate an infeasible subtree\n");
 #endif
@@ -3942,7 +3942,7 @@ SCIP_RETCODE addSplitcons(
          SCIPfreeBufferArray(scip, &consvals);
       }
 
-      SCIPsetDebugMsg(set, " -> add constraint in node #%lld:\n", SCIPnodeGetNumber(node));
+      SCIPsetDebugMsg(set, " -> add constraint in node #%" SCIP_LONGINT_FORMAT ":\n", SCIPnodeGetNumber(node));
 #ifdef SCIP_DEBUG_CONSS
       SCIPdebugPrintCons(scip, cons, NULL);
 #endif
@@ -4217,7 +4217,7 @@ SCIP_RETCODE addLocalConss(
    if( reopt->reopttree->reoptnodes[id]->nconss == 0 )
       return SCIP_OKAY;
 
-   SCIPsetDebugMsg(set, " -> add %d constraint(s) to node #%lld:\n", reopt->reopttree->reoptnodes[id]->nconss,
+   SCIPsetDebugMsg(set, " -> add %d constraint(s) to node #%" SCIP_LONGINT_FORMAT ":\n", reopt->reopttree->reoptnodes[id]->nconss,
       SCIPnodeGetNumber(node));
 
    for( int c = 0; c < reopt->reopttree->reoptnodes[id]->nconss; ++c )
@@ -5986,7 +5986,7 @@ SCIP_RETCODE SCIPreoptCheckCutoff(
 
    reopt->lastseennode = SCIPnodeGetNumber(node);
 
-   SCIPsetDebugMsg(set, "catch event %" SCIP_EVENTTYPE_FORMAT " for node %lld (type:%d)\n", eventtype, SCIPnodeGetNumber(node), SCIPnodeGetType(node));
+   SCIPsetDebugMsg(set, "catch event %" SCIP_EVENTTYPE_FORMAT " for node %" SCIP_LONGINT_FORMAT " (type:%d)\n", eventtype, SCIPnodeGetNumber(node), SCIPnodeGetType(node));
 
    /* case 1: the current node is the root node
     * we can skip if the root is (in)feasible or branched w/o bound
@@ -6043,7 +6043,7 @@ SCIP_RETCODE SCIPreoptCheckCutoff(
    else
       strongbranched = SCIPnodeGetNDualBndchgs(node) > 0 ? TRUE : FALSE;
 
-   SCIPsetDebugMsg(set, "check the reason of cutoff for node %lld:\n", SCIPnodeGetNumber(node));
+   SCIPsetDebugMsg(set, "check the reason of cutoff for node %" SCIP_LONGINT_FORMAT ":\n", SCIPnodeGetNumber(node));
    SCIPsetDebugMsg(set, " -> focusnode       : %s\n", isfocusnode ? "yes" : "no");
    SCIPsetDebugMsg(set, " -> depth           : %d (eff. %d)\n", SCIPnodeGetDepth(node), effectiverootdepth);
    SCIPsetDebugMsg(set, " -> strong branched : %s\n", strongbranched ? "yes" : "no");
@@ -7468,7 +7468,7 @@ SCIP_RETCODE SCIPreoptApply(
             SCIP_CALL( SCIPnodeCreateChild(&childnodes[c], blkmem, set, stat, tree, 1.0, estimate) );
 
 #ifdef SCIP_MORE_DEBUG
-            SCIPsetDebugMsg(set, " change bounds at node %lld\n", SCIPnodeGetNumber(childnodes[c]));
+            SCIPsetDebugMsg(set, " change bounds at node %" SCIP_LONGINT_FORMAT "\n", SCIPnodeGetNumber(childnodes[c]));
 #endif
 
             /* change all bounds */
@@ -7775,7 +7775,7 @@ SCIP_RETCODE SCIPreoptApplyCuts(
                   SCIP_ROWORIGINTYPE_REOPT, NULL, FALSE, FALSE, TRUE) );
             SCIP_CALL( SCIPcutpoolAddRow(cutpool, blkmem, set, stat, lp, cut) );
 
-            SCIPsetDebugMsg(set, "add cut <%s> of size %d to cutpool, [lhs, rhs] = [%g,%g] to node %lld\n", cutname,
+            SCIPsetDebugMsg(set, "add cut <%s> of size %d to cutpool, [lhs, rhs] = [%g,%g] to node %" SCIP_LONGINT_FORMAT "\n", cutname,
                ncols, cons->lhs, cons->rhs, SCIPnodeGetNumber(node));
          }
          else
@@ -7785,7 +7785,7 @@ SCIP_RETCODE SCIPreoptApplyCuts(
             SCIP_CALL( SCIPsepastoreAddCut(sepastore, blkmem, set, stat, eventqueue, eventfilter, lp, cut, FALSE, root,
                   &infeasible) );
 
-            SCIPsetDebugMsg(set, "add cut <%s> of size %d to sepastore, [lhs, rhs] = [%g,%g] to node %lld\n", cutname,
+            SCIPsetDebugMsg(set, "add cut <%s> of size %d to sepastore, [lhs, rhs] = [%g,%g] to node %" SCIP_LONGINT_FORMAT "\n", cutname,
                ncols, cons->lhs, cons->rhs, SCIPnodeGetNumber(node));
          }
 

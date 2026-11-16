@@ -43,15 +43,18 @@
 #include <map>
 #include <cstdlib>
 #ifdef _WIN32
+#ifndef WIN32_LEAN_AND_MEAN
+#define WIN32_LEAN_AND_MEAN
+#endif
+#ifndef NOMINMAX
+#define NOMINMAX
+#endif
 #include <windows.h> // to be able to do the includes below
 #include <io.h>      // for _mktemp_s
 #include <direct.h>  // for _mkdir
 #include <fileapi.h> // for GetTempPath
-#ifdef max
-#undef max   // undo definition of max in windows.h
-#endif
 #ifdef IGNORE
-#undef IGNORE // undo definition of IGNORE in windows.h
+#undef IGNORE // undo definition of IGNORE in winbase.h
 #endif
 #else
 #include <unistd.h>  // for mkdtemp on macOS
@@ -97,13 +100,12 @@
 #define READER_EXTENSION        "nl"
 
 // a variant of SCIP_CALL that throws a std::logic_error if not SCIP_OKAY
-// (using cast to long long to work around issues with old MSVC)
 #define SCIP_CALL_THROW(x) \
    do                                                                                                   \
    {                                                                                                    \
       SCIP_RETCODE throw_retcode;                                                                       \
       if( ((throw_retcode) = (x)) != SCIP_OKAY )                                                        \
-         throw std::logic_error("Error <" + std::to_string((long long)throw_retcode) + "> in function call at reader_nl.cpp:" + std::to_string(__LINE__)); \
+         throw std::logic_error("Error <" + std::to_string((int)throw_retcode) + "> in function call at reader_nl.cpp:" + std::to_string(__LINE__)); \
    }                                                                                                    \
    while( false )
 
@@ -305,7 +307,7 @@ public:
          ++probname;
 
       // initialize empty SCIP problem
-      SCIP_CALL_THROW( SCIPcreateProb(scip, probname, probdataDelOrigNl, NULL, NULL, NULL, NULL, NULL, (SCIP_PROBDATA*)probdata) );
+      SCIP_CALL_THROW( SCIPcreateProb(scip, probname, probdataDelOrigNl, NULL, NULL, NULL, NULL, NULL, reinterpret_cast<SCIP_PROBDATA*>(probdata)) );
 
       // try to open files with variable and constraint names
       // temporarily add ".col" and ".row", respectively, to filenamestub
@@ -1357,7 +1359,7 @@ public:
             SCIP_VAR* resvar;
             SCIP_CONS* cons;
 
-            std::string name = std::string("_logic") + std::to_string((long long)logiccount++);
+            std::string name = std::string("_logic") + std::to_string(logiccount++);
             SCIP_CALL_THROW( SCIPcreateVarBasic(scip, &resvar, name.c_str(), 0.0, 1.0, 0.0, SCIP_VARTYPE_BINARY) );
             SCIP_CALL_THROW( SCIPaddVar(scip, resvar) );
             SCIP_CALL_THROW( SCIPcreateExprVar(scip, &expr, resvar, NULL, NULL) );
@@ -1413,7 +1415,7 @@ public:
             SCIP_VAR* resvar;
             SCIP_CONS* cons;
 
-            std::string name = std::string("_logic") + std::to_string((long long)logiccount++);
+            std::string name = std::string("_logic") + std::to_string(logiccount++);
             SCIP_CALL_THROW( SCIPcreateVarBasic(scip, &resvar, name.c_str(), 0.0, 1.0, 0.0, SCIP_VARTYPE_BINARY) );
             SCIP_CALL_THROW( SCIPaddVar(scip, resvar) );
             SCIP_CALL_THROW( SCIPcreateExprVar(scip, &expr, resvar, NULL, NULL) );
@@ -1472,7 +1474,7 @@ public:
             // to ensure auxvar = (lhsvar == rhsvar)
             SCIP_VAR* vars[3];
             SCIP_CONS* cons;
-            std::string name = std::string("_logic") + std::to_string((long long)logiccount++);
+            std::string name = std::string("_logic") + std::to_string(logiccount++);
             SCIP_CALL_THROW( SCIPcreateVarBasic(scip, &vars[0], name.c_str(), 0.0, 1.0, 0.0, SCIP_VARTYPE_BINARY) );
             SCIP_CALL_THROW( SCIPaddVar(scip, vars[0]) );
             SCIP_CALL_THROW( SCIPcreateExprVar(scip, &expr, vars[0], NULL, NULL) );
@@ -1562,7 +1564,7 @@ public:
 
             SCIP_VAR* vars[3];
             SCIP_CONS* cons;
-            std::string name = std::string("_logic") + std::to_string((long long)logiccount++);
+            std::string name = std::string("_logic") + std::to_string(logiccount++);
             SCIP_CALL_THROW( SCIPcreateVarBasic(scip, &vars[0], name.c_str(), 0.0, 1.0, 0.0, SCIP_VARTYPE_BINARY) );
             SCIP_CALL_THROW( SCIPaddVar(scip, vars[0]) );
             SCIP_CALL_THROW( SCIPcreateExprVar(scip, &expr, vars[0], NULL, NULL) );
@@ -2862,12 +2864,12 @@ public:
 static
 SCIP_DECL_PROBDELORIG(probdataDelOrigNl)
 {
-   SCIP_PROBNLDATA* probnldata = (SCIP_PROBNLDATA*)*probdata;
+   SCIP_PROBNLDATA* probnldata = reinterpret_cast<SCIP_PROBNLDATA*>(*probdata);
    int i;
 
    assert(probnldata != NULL);
    assert(probnldata->vars != NULL || probnldata->nvars == 0);
-   assert(probnldata->conss != NULL || probnldata->conss == 0);
+   assert(probnldata->conss != NULL || probnldata->nconss == 0);
 
    for( i = 0; i < probnldata->nconss; ++i )
    {
@@ -2883,7 +2885,7 @@ SCIP_DECL_PROBDELORIG(probdataDelOrigNl)
 
    SCIPfreeBlockMemoryArrayNull(scip, &probnldata->filenamestub, probnldata->filenamestublen+5);
 
-   SCIPfreeMemory(scip, (SCIP_PROBNLDATA**)probdata);
+   SCIPfreeMemory(scip, reinterpret_cast<SCIP_PROBNLDATA**>(probdata));
 
    return SCIP_OKAY;
 }
@@ -3260,7 +3262,7 @@ SCIP_RETCODE SCIPwriteSolutionNl(
 
    assert(scip != NULL);
 
-   probdata = (SCIP_PROBNLDATA*)SCIPgetProbData(scip);
+   probdata = reinterpret_cast<SCIP_PROBNLDATA*>(SCIPgetProbData(scip));
    if( probdata == NULL )
    {
       SCIPerrorMessage("No AMPL nl file read. Cannot write AMPL solution.\n");

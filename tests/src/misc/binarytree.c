@@ -61,19 +61,29 @@ void teardown(void)
    SCIP_CALL( SCIPfree(&scip) );
 }
 
+void setUp(void)
+{
+   setup();
+}
 
-TestSuite(binarytree, .init = setup, .fini = teardown);
+void tearDown(void)
+{
+   teardown();
+}
 
-Test(binarytree, setup_and_teardown, .description = "test that setup and teardown work correctly")
+/** @brief test that setup and teardown work correctly */
+void test_binarytree_setup_and_teardown(void)
 {
 }
 
-Test(binarytree, test_binarytree_empty, .description = "test that the binary tree checks emptiness correctly.")
+/** @brief test that the binary tree checks emptiness correctly. */
+void test_binarytree_empty(void)
 {
-   cr_assert(SCIPbtIsEmpty(binarytree));
+   TEST_ASSERT(SCIPbtIsEmpty(binarytree));
 }
 
-Test(binarytree, test_binarytree_full, .description = "test that the binary tree adds nodes correctly.")
+/** @brief test that the binary tree adds nodes correctly. */
+void test_binarytree_full(void)
 {
    SCIP_BTNODE* root;
    SCIP_BTNODE* lchild;
@@ -94,21 +104,22 @@ Test(binarytree, test_binarytree_full, .description = "test that the binary tree
    SCIPbtnodeSetParent(rchild, root);
 
    /* check tree structure */
-   cr_assert(SCIPbtnodeIsRoot(root));
-   cr_assert(SCIPbtnodeIsLeftchild(lchild));
-   cr_assert(SCIPbtnodeIsRightchild(rchild));
-   cr_assert(SCIPbtnodeIsLeaf(lchild));
-   cr_assert(SCIPbtnodeIsLeaf(rchild));
-   cr_assert_eq(root, SCIPbtGetRoot(binarytree));
-   cr_assert_eq(rchild, SCIPbtnodeGetSibling(lchild));
-   cr_assert_eq(lchild, SCIPbtnodeGetSibling(rchild));
-   cr_assert_eq(root, SCIPbtnodeGetParent(lchild));
-   cr_assert_eq(root, SCIPbtnodeGetParent(rchild));
-   cr_assert_eq(lchild, SCIPbtnodeGetLeftchild(root));
-   cr_assert_eq(rchild, SCIPbtnodeGetRightchild(root));
+   TEST_ASSERT(SCIPbtnodeIsRoot(root));
+   TEST_ASSERT(SCIPbtnodeIsLeftchild(lchild));
+   TEST_ASSERT(SCIPbtnodeIsRightchild(rchild));
+   TEST_ASSERT(SCIPbtnodeIsLeaf(lchild));
+   TEST_ASSERT(SCIPbtnodeIsLeaf(rchild));
+   TEST_ASSERT_EQUAL(root, SCIPbtGetRoot(binarytree));
+   TEST_ASSERT_EQUAL(rchild, SCIPbtnodeGetSibling(lchild));
+   TEST_ASSERT_EQUAL(lchild, SCIPbtnodeGetSibling(rchild));
+   TEST_ASSERT_EQUAL(root, SCIPbtnodeGetParent(lchild));
+   TEST_ASSERT_EQUAL(root, SCIPbtnodeGetParent(rchild));
+   TEST_ASSERT_EQUAL(lchild, SCIPbtnodeGetLeftchild(root));
+   TEST_ASSERT_EQUAL(rchild, SCIPbtnodeGetRightchild(root));
 }
 
-Test(binarytree, test_binarytree_data, .description = "test that the binary tree stores entry data correctly.")
+/** @brief test that the binary tree stores entry data correctly. */
+void test_binarytree_data(void)
 {
    SCIP_BTNODE* root;
    int* ptr;
@@ -119,7 +130,17 @@ Test(binarytree, test_binarytree_data, .description = "test that the binary tree
    SCIPbtnodeSetData(root, (void*) &mydata);
 
    ptr = (int*) SCIPbtnodeGetData(root);
-   cr_assert_eq(mydata, *ptr);
+   TEST_ASSERT_EQUAL(mydata, *ptr);
 
    SCIPbtnodeFree(binarytree, &root);
+}
+
+int main(void)
+{
+   UNITY_BEGIN();
+   RUN_TEST(test_binarytree_setup_and_teardown);
+   RUN_TEST(test_binarytree_empty);
+   RUN_TEST(test_binarytree_full);
+   RUN_TEST(test_binarytree_data);
+   return UNITY_END();
 }

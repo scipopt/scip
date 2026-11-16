@@ -71,13 +71,12 @@ static
 void teardown(void)
 {
    SCIP_CALL( SCIPlpiFree(&lpi) );
-   cr_assert_eq(BMSgetMemoryUsed(), 0, "There is are memory leak!!");
+   TEST_ASSERT_EQUAL(BMSgetMemoryUsed(), 0, "There is are memory leak!!");
 }
 
-TestSuite(boundchg, .init = setup, .fini = teardown);
 
 /** TESTS **/
-Test(boundchg, simple_bound_test)
+void test_boundchg_simple_bound_test(void)
 {
    SCIP_Real lb = 1.0;
    SCIP_Real ub = 2.0;
@@ -91,11 +90,11 @@ Test(boundchg, simple_bound_test)
    /* get bounds and compare */
    SCIP_CALL( SCIPlpiGetBounds(lpi, 0, 0, &lbnew, &ubnew) );
 
-   cr_assert_float_eq(lb, lbnew, EPS, "Violation of lower bounds: %g != %g\n", lb, lbnew);
-   cr_assert_float_eq(ub, ubnew, EPS, "Violation of upper bounds: %g != %g\n", ub, ubnew);
+   TEST_ASSERT_DOUBLE_WITHIN(lb, lbnew, EPS, "Violation of lower bounds: %g != %g\n", lb, lbnew);
+   TEST_ASSERT_DOUBLE_WITHIN(ub, ubnew, EPS, "Violation of upper bounds: %g != %g\n", ub, ubnew);
 }
 
-Test(boundchg, change_bound_by_small_value)
+void test_boundchg_change_bound_by_small_value(void)
 {
    SCIP_Real lb;
    SCIP_Real ub;
@@ -111,11 +110,11 @@ Test(boundchg, change_bound_by_small_value)
    /* get bounds and compare */
    SCIP_CALL( SCIPlpiGetBounds(lpi, 0, 0, &lbnew, &ubnew) );
 
-   cr_assert_float_eq(lb, lbnew, EPS, "Violation of lower bounds: %g != %g\n", lb, lbnew);
-   cr_assert_float_eq(ub, ubnew, EPS, "Violation of upper bounds: %g != %g\n", ub, ubnew);
+   TEST_ASSERT_DOUBLE_WITHIN(lb, lbnew, EPS, "Violation of lower bounds: %g != %g\n", lb, lbnew);
+   TEST_ASSERT_DOUBLE_WITHIN(ub, ubnew, EPS, "Violation of upper bounds: %g != %g\n", ub, ubnew);
 }
 
-Test(boundchg, fix_to_infinity)
+void test_boundchg_fix_to_infinity(void)
 {
    SCIP_RETCODE retcode;
    SCIP_Real lb;
@@ -129,5 +128,19 @@ Test(boundchg, fix_to_infinity)
    /* calling should return an LPERROR */
    retcode = SCIPlpiChgBounds(lpi, 1, &ind, &lb, &ub);
 
-   cr_assert(retcode == SCIP_LPERROR, "Fixing variables to infinity does not return an error.");
+   TEST_ASSERT(retcode == SCIP_LPERROR, "Fixing variables to infinity does not return an error.");
+}
+
+void setUp(void) { setup(); }
+
+void tearDown(void) { teardown(); }
+
+int main(void)
+{
+   UNITY_BEGIN();
+   RUN_TEST(test_boundchg_simple_bound_test
+);
+   RUN_TEST(test_boundchg_change_bound_by_small_value);
+   RUN_TEST(test_boundchg_fix_to_infinity);
+   return UNITY_END();
 }

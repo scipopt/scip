@@ -64,13 +64,13 @@ void teardown(void)
    SCIP_CALL( SCIPreleaseVar(scip, &x) );
    SCIP_CALL( SCIPfree(&scip) );
 
-   cr_assert_eq(BMSgetMemoryUsed(), 0, "Memory leak!!");
+   TEST_ASSERT_EQUAL(BMSgetMemoryUsed(), 0, "Memory leak!!");
 }
 
-/* macro for doing a cr_expect and return FALSE if condition is FALSE
+/* macro for doing a soft assert and return FALSE if condition is FALSE
  * note: x is evaluated twice
  */
-#define EXPECTANDRETURN(x) do { cr_expect(x); if (!(x)) return FALSE; } while(FALSE)
+#define EXPECTANDRETURN(x) do { SOFT_ASSERT(x); if (!(x)) return FALSE; } while(FALSE)
 
 /* auxiliary function to check locks of variables and their corresponding expressions */
 static
@@ -124,102 +124,114 @@ SCIP_RETCODE chgBounds(
 }
 
 /* define the test suite */
-TestSuite(locks, .init = setup, .fini = teardown);
-
 /*
  * tests
  */
 
-Test(locks, sum)
+void test_locks_sum(void)
 {
    const char* input = "[nonlinear] <test> : <x> - <y> <= 1.0";
 
    SCIP_CALL( SCIPparseCons(scip, &cons, input, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, &success) );
-   cr_expect(success);
-   cr_assert_not_null(cons);
+   TEST_ASSERT(success);
+   TEST_ASSERT_NOT_NULL(cons);
 
    /* add locks */
    SCIP_CALL( SCIPaddConsLocks(scip, cons, 1, 0) );
-   cr_expect( checkVarLocks(1, 0, 0, 1) );
+   SOFT_ASSERT( checkVarLocks(1, 0, 0, 1) );
 
    /* remove locks */
    SCIP_CALL( SCIPaddConsLocks(scip, cons, -1, 0) );
-   cr_expect( checkVarLocks(0, 0, 0, 0) );
+   SOFT_ASSERT( checkVarLocks(0, 0, 0, 0) );
 
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
 }
 
 /* test for changing bounds between locking of a single constraint */
-Test(locks, chg_bounds)
+void test_locks_chg_bounds(void)
 {
    const char* input = "[nonlinear] <test> : (<x>)^2 <= 1.0";
 
    SCIP_CALL( SCIPparseCons(scip, &cons, input, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, &success) );
-   cr_expect(success);
-   cr_assert_not_null(cons);
+   TEST_ASSERT(success);
+   TEST_ASSERT_NOT_NULL(cons);
 
    /*
     * x^2 is not monotone for [-1,1]
     */
    SCIP_CALL( chgBounds(-1.0, 1.0, 0.0, 0.0) );
    SCIP_CALL( SCIPaddConsLocks(scip, cons, 1, 0) );
-   cr_expect( checkVarLocks(1, 1, 0, 0) );
+   SOFT_ASSERT( checkVarLocks(1, 1, 0, 0) );
 
    /*
     * x^2 is monotone decreasing for [-1,0], but locking should still use old monotonicity
     */
    SCIP_CALL( chgBounds(-1.0, 0.0, 0.0, 0.0) );
    SCIP_CALL( SCIPaddConsLocks(scip, cons, -1, 0) );
-   cr_expect( checkVarLocks(0, 0, 0, 0) );
+   SOFT_ASSERT( checkVarLocks(0, 0, 0, 0) );
 
    /* locking x^2 again should result in only a single up-lock */
    SCIP_CALL( SCIPaddConsLocks(scip, cons, 1, 0) );
-   cr_expect( checkVarLocks(0, 1, 0, 0) );
+   SOFT_ASSERT( checkVarLocks(0, 1, 0, 0) );
 
    SCIP_CALL( SCIPaddConsLocks(scip, cons, -1, 0) );
-   cr_expect( checkVarLocks(0, 0, 0, 0) );
+   SOFT_ASSERT( checkVarLocks(0, 0, 0, 0) );
 
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
 }
 
 /* test locks for an non-monotone expression */
-Test(locks, non_monotone)
+void test_locks_non_monotone(void)
 {
    const char* input = "[nonlinear] <test> : sin(<x>^2) - cos(<y>^0.5) >= -.10";
 
    SCIP_CALL( SCIPparseCons(scip, &cons, input, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, &success) );
-   cr_expect(success);
-   cr_assert_not_null(cons);
+   TEST_ASSERT(success);
+   TEST_ASSERT_NOT_NULL(cons);
 
    /* add locks */
    SCIP_CALL( chgBounds(-10.0, 10.0, 1.0, 10.0) );
    SCIP_CALL( SCIPaddConsLocks(scip, cons, 1, 0) );
-   cr_expect( checkVarLocks(2, 2, 1, 1) );
+   SOFT_ASSERT( checkVarLocks(2, 2, 1, 1) );
 
    /* remove locks */
    SCIP_CALL( SCIPaddConsLocks(scip, cons, -1, 0) );
-   cr_expect( checkVarLocks(0, 0, 0, 0) );
+   SOFT_ASSERT( checkVarLocks(0, 0, 0, 0) );
 
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
 }
 
 /* tests locks for a complex expression */
-Test(locks, complex)
+void test_locks_complex(void)
 {
    const char* input = "[nonlinear] <test> : exp(<x>^2 + <x>*<y> - log(abs(<y>^3))) <= 0.0";
 
    SCIP_CALL( SCIPparseCons(scip, &cons, input, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, &success) );
-   cr_expect(success);
-   cr_assert_not_null(cons);
+   TEST_ASSERT(success);
+   TEST_ASSERT_NOT_NULL(cons);
 
    /* add locks */
    SCIP_CALL( chgBounds(-1.0, 1.0, -3.0, -2.0) );
    SCIP_CALL( SCIPaddConsLocks(scip, cons, 1, 0) );
-   cr_expect( checkVarLocks(1, 2, 2, 1) );
+   SOFT_ASSERT( checkVarLocks(1, 2, 2, 1) );
 
    /* remove locks */
    SCIP_CALL( SCIPaddConsLocks(scip, cons, -1, 0) );
-   cr_expect( checkVarLocks(0, 0, 0, 0) );
+   SOFT_ASSERT( checkVarLocks(0, 0, 0, 0) );
 
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
+}
+
+void setUp(void) { setup(); }
+
+void tearDown(void) { teardown(); }
+
+int main(void)
+{
+   UNITY_BEGIN();
+   RUN_TEST(test_locks_sum);
+   RUN_TEST(test_locks_chg_bounds);
+   RUN_TEST(test_locks_non_monotone);
+   RUN_TEST(test_locks_complex);
+   return UNITY_END();
 }

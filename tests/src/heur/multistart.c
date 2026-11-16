@@ -107,8 +107,8 @@ void setup(void)
 
    heurmultistart = SCIPfindHeur(scip, "multistart");
    heursubnlp = SCIPfindHeur(scip, "subnlp");
-   cr_assert( heurmultistart != NULL );
-   cr_assert( heursubnlp != NULL );
+   TEST_ASSERT( heurmultistart != NULL );
+   TEST_ASSERT( heursubnlp != NULL );
 
    /* create random number generator */
    SCIP_CALL( SCIPcreateRandom(scip, &randumgen, 777, TRUE) );
@@ -124,9 +124,8 @@ void teardown(void)
 }
 
 
-Test(heuristic, sampleRandomPoints, .init = setup, .fini = teardown,
-   .description = "check sampleRandomPoints() subroutine of the multi-start heuristic"
-   )
+/** @brief check sampleRandomPoints() subroutine of the multi-start heuristic */
+void test_heuristic_sampleRandomPoints(void)
 {
    SCIP_SOL** rndpoints;
    int nrndpoints;
@@ -136,22 +135,21 @@ Test(heuristic, sampleRandomPoints, .init = setup, .fini = teardown,
    /* compute a single random point */
    rndpoints[0] = NULL;
    SCIP_CALL( sampleRandomPoints(scip, rndpoints, 1, 1.0, randumgen, SCIPinfinity(scip), &nrndpoints) );
-   cr_assert( nrndpoints == 1 );
+   TEST_ASSERT( nrndpoints == 1 );
 
-   cr_assert( rndpoints[0] != NULL );
-   cr_assert( SCIPgetSolVal(scip, rndpoints[0], x) <= SCIPvarGetUbLocal(x) );
-   cr_assert( SCIPgetSolVal(scip, rndpoints[0], x) >= SCIPvarGetLbLocal(x) );
-   cr_assert( SCIPgetSolVal(scip, rndpoints[0], y) <= SCIPvarGetUbLocal(y) );
-   cr_assert( SCIPgetSolVal(scip, rndpoints[0], y) >= SCIPvarGetLbLocal(y) );
+   TEST_ASSERT( rndpoints[0] != NULL );
+   TEST_ASSERT( SCIPgetSolVal(scip, rndpoints[0], x) <= SCIPvarGetUbLocal(x) );
+   TEST_ASSERT( SCIPgetSolVal(scip, rndpoints[0], x) >= SCIPvarGetLbLocal(x) );
+   TEST_ASSERT( SCIPgetSolVal(scip, rndpoints[0], y) <= SCIPvarGetUbLocal(y) );
+   TEST_ASSERT( SCIPgetSolVal(scip, rndpoints[0], y) >= SCIPvarGetLbLocal(y) );
 
    SCIP_CALL( SCIPfreeSol(scip, &rndpoints[0]) );
 
    SCIPfreeBufferArray(scip, &rndpoints);
 }
 
-Test(heuristic, computeGradient, .init = setup, .fini = teardown,
-   .description = "check computeGradient subroutine of the multi-start heuristic"
-   )
+/** @brief check computeGradient subroutine of the multi-start heuristic */
+void test_heuristic_computeGradient(void)
 {
    SCIP_NLROW* nlrow;
    SCIP_VAR* linvars[2];
@@ -176,8 +174,8 @@ Test(heuristic, computeGradient, .init = setup, .fini = teardown,
    SCIP_CALL( computeGradient(scip, nlrow, sol, varindex, exprit, grad, &norm) );
    SCIP_CALL( SCIPreleaseNlRow(scip, &nlrow) );
 
-   cr_assert( SCIPisEQ(scip, grad[0], 2.3) );
-   cr_assert( SCIPisEQ(scip, grad[1], -3.1) );
+   TEST_ASSERT( SCIPisEQ(scip, grad[0], 2.3) );
+   TEST_ASSERT( SCIPisEQ(scip, grad[1], -3.1) );
 
    /* compute the gradient for 2.3*x - 3.1*y + 2*x^2 -4*y^2 + 5xy at point (x,y) = (1,-7) */
    SCIP_CALL( SCIPparseExpr(scip, &expr, (char*)"2*<t_x>^2 + 5.0*<t_x>*<t_y> -4*<t_y>^2", NULL, NULL, NULL) );
@@ -189,8 +187,8 @@ Test(heuristic, computeGradient, .init = setup, .fini = teardown,
    SCIP_CALL( computeGradient(scip, nlrow, sol, varindex, exprit, grad, &norm) );
    SCIP_CALL( SCIPreleaseNlRow(scip, &nlrow) );
 
-   cr_assert( SCIPisEQ(scip, grad[0], 2.3 + 4 * 1 + 5 * (-7)), "expecting %g, got %g\n", 2.3 + 4 * 1 + 5 * (-7), grad[0]);
-   cr_assert( SCIPisEQ(scip, grad[1], -3.1 - 8 * (-7) + 5 * 1) );
+   TEST_ASSERT( SCIPisEQ(scip, grad[0], 2.3 + 4 * 1 + 5 * (-7)), "expecting %g, got %g\n", 2.3 + 4 * 1 + 5 * (-7), grad[0]);
+   TEST_ASSERT( SCIPisEQ(scip, grad[1], -3.1 - 8 * (-7) + 5 * 1) );
 
    /* create expression tree for 2.3*x - 3.1*y + 2*x^2 -4*y^2 + 5xy + x*e^y at point (x,y) = (3,3) */
    SCIP_CALL( SCIPreleaseExpr(scip, &expr) );
@@ -204,17 +202,16 @@ Test(heuristic, computeGradient, .init = setup, .fini = teardown,
          SCIP_EXPRCURV_UNKNOWN) );
    SCIP_CALL( computeGradient(scip, nlrow, sol, varindex, exprit, grad, &norm) );
 
-   cr_assert( SCIPisEQ(scip, grad[0], 2.3 + 4 * 3 + 5 * 3 + exp(3)) );
-   cr_assert( SCIPisEQ(scip, grad[1], -3.1 - 8 * 3 + 5 * 3 + 3*exp(3)) );
+   TEST_ASSERT( SCIPisEQ(scip, grad[0], 2.3 + 4 * 3 + 5 * 3 + exp(3)) );
+   TEST_ASSERT( SCIPisEQ(scip, grad[1], -3.1 - 8 * 3 + 5 * 3 + 3*exp(3)) );
 
    SCIPfreeExpriter(&exprit);
    SCIP_CALL( SCIPreleaseNlRow(scip, &nlrow) );
    SCIP_CALL( SCIPreleaseExpr(scip, &expr) );
 }
 
-Test(heuristic, improvePoint, .init = setup, .fini = teardown,
-   .description = "check improvePoint subroutine of the multi-start heuristic"
-   )
+/** @brief check improvePoint subroutine of the multi-start heuristic */
+void test_heuristic_improvePoint(void)
 {
    SCIP_VAR* vars[2];
    SCIP_Real lincoefs[2];
@@ -241,8 +238,8 @@ Test(heuristic, improvePoint, .init = setup, .fini = teardown,
    SCIP_CALL( SCIPcreateNlRow(scip, &nlrows[0], "nlrow1", 0.0, 2, vars, lincoefs, NULL, 1.0, 1.0,
          SCIP_EXPRCURV_UNKNOWN) );
    SCIP_CALL( improvePoint(scip, nlrows, 1, varindex, sol, 1, 0.0, INT_MAX, &minfeas, nlrowgradcosts, &gradcosts) );
-   cr_expect(SCIPisFeasEQ(scip, minfeas, 0.0));
-   cr_expect(gradcosts > 0.0);
+   SOFT_ASSERT(SCIPisFeasEQ(scip, minfeas, 0.0));
+   SOFT_ASSERT(gradcosts > 0.0);
 
    /* consider one quadratic constraint of the form sqrt(x^2 + y^2) = 0.5 */
    SCIP_CALL( SCIPparseExpr(scip, &expr, (char*)"<t_x>^2 + <t_y>^2", NULL, NULL, NULL) );
@@ -253,22 +250,22 @@ Test(heuristic, improvePoint, .init = setup, .fini = teardown,
    SCIP_CALL( SCIPsetSolVal(scip, sol, x, 0.1) );
    SCIP_CALL( SCIPsetSolVal(scip, sol, y, 0.2) );
    SCIP_CALL( improvePoint(scip, &nlrows[1], 1, varindex, sol, 10, 0.0, INT_MAX, &minfeas, nlrowgradcosts, &gradcosts) );
-   cr_expect(SCIPisFeasGE(scip, minfeas, -EPS), "expecting minfeas %g > -eps (%g)\n", minfeas, -EPS);
-   cr_expect(gradcosts > 0.0);
+   SOFT_ASSERT(SCIPisFeasGE(scip, minfeas, -EPS), "expecting minfeas %g > -eps (%g)\n", minfeas, -EPS);
+   SOFT_ASSERT(gradcosts > 0.0);
 
    /* start outside the ball */
    SCIP_CALL( SCIPsetSolVal(scip, sol, x, 1.0) );
    SCIP_CALL( SCIPsetSolVal(scip, sol, y, 5.0) );
    SCIP_CALL( improvePoint(scip, &nlrows[1], 1, varindex, sol, 100, 0.0, INT_MAX, &minfeas, nlrowgradcosts, &gradcosts) );
-   cr_expect(SCIPisFeasGE(scip, minfeas, -EPS), "expecting minfeas %g > -eps (%g)\n", minfeas, -EPS);
-   cr_expect(gradcosts > 0.0);
+   SOFT_ASSERT(SCIPisFeasGE(scip, minfeas, -EPS), "expecting minfeas %g > -eps (%g)\n", minfeas, -EPS);
+   SOFT_ASSERT(gradcosts > 0.0);
 
    /* consider linear and quadratic constraint */
    SCIP_CALL( SCIPsetSolVal(scip, sol, x, -1.0) );
    SCIP_CALL( SCIPsetSolVal(scip, sol, y, -10.0) );
    SCIP_CALL( improvePoint(scip, nlrows, 2, varindex, sol, 100, 0.0, INT_MAX, &minfeas, nlrowgradcosts, &gradcosts) );
-   cr_expect(SCIPisFeasGE(scip, minfeas, -EPS), "expecting minfeas %g > -eps (%g)\n", minfeas, -EPS);
-   cr_expect(gradcosts > 0.0);
+   SOFT_ASSERT(SCIPisFeasGE(scip, minfeas, -EPS), "expecting minfeas %g > -eps (%g)\n", minfeas, -EPS);
+   SOFT_ASSERT(gradcosts > 0.0);
 
    /* free nlrows */
    SCIP_CALL( SCIPreleaseNlRow(scip, &nlrows[1]) );
@@ -276,9 +273,8 @@ Test(heuristic, improvePoint, .init = setup, .fini = teardown,
    SCIP_CALL( SCIPreleaseExpr(scip, &expr) );
 }
 
-Test(heuristic, filterPoints, .init = setup, .fini = teardown,
-   .description = "check filterPoints subroutine of the multi-start heuristic"
-   )
+/** @brief check filterPoints subroutine of the multi-start heuristic */
+void test_heuristic_filterPoints(void)
 {
    SCIP_SOL* points[10];
    SCIP_Real feasibilities[10];
@@ -292,17 +288,16 @@ Test(heuristic, filterPoints, .init = setup, .fini = teardown,
     * are excluded
     */
    SCIP_CALL( filterPoints(scip, points, feasibilities, 10, &nusefulpoints) );
-   cr_assert(nusefulpoints == 6);
+   TEST_ASSERT(nusefulpoints == 6);
 
    /* check is points are ordered decreasingly w.r.t their feasibilities */
    for( i = 0; i < 9; ++i )
-      cr_assert(feasibilities[i] >= feasibilities[i+1]);
+      TEST_ASSERT(feasibilities[i] >= feasibilities[i+1]);
 }
 
 #define NPOINTS 100
-Test(heuristic, clusterPointsGreedy, .init = setup, .fini = teardown,
-   .description = "check clusterPointsGreedy subroutine of the multi-start heuristic"
-   )
+/** @brief check clusterPointsGreedy subroutine of the multi-start heuristic */
+void test_heuristic_clusterPointsGreedy(void)
 {
    SCIP_SOL* points[NPOINTS];
    SCIP_Real maxreldist;
@@ -321,21 +316,21 @@ Test(heuristic, clusterPointsGreedy, .init = setup, .fini = teardown,
    }
 
    SCIP_CALL( clusterPointsGreedy(scip, points, NPOINTS, clusteridx, &nclusters, 1e+04, maxreldist, INT_MAX) );
-   cr_assert(nclusters > 0 && nclusters <= NPOINTS);
+   TEST_ASSERT(nclusters > 0 && nclusters <= NPOINTS);
 
    for( i = 0; i < NPOINTS; ++i )
    {
       int j;
 
-      cr_assert(clusteridx[i] >= 0);
-      cr_assert(clusteridx[i] < nclusters);
+      TEST_ASSERT(clusteridx[i] >= 0);
+      TEST_ASSERT(clusteridx[i] < nclusters);
 
       for( j = i + 1; j < NPOINTS; ++j )
       {
          SCIP_Real dist = getRelDistance(scip, points[i], points[j], 1e+04);
 
          /* distance between i and j in the same cluster should not be twice as large as maxreldist */
-         cr_assert(clusteridx[i] != clusteridx[j] || dist <= 2 * maxreldist);
+         TEST_ASSERT(clusteridx[i] != clusteridx[j] || dist <= 2 * maxreldist);
       }
    }
 
@@ -344,4 +339,20 @@ Test(heuristic, clusterPointsGreedy, .init = setup, .fini = teardown,
    {
       SCIP_CALL( SCIPfreeSol(scip, &points[i]) );
    }
+}
+
+void setUp(void) { setup(); }
+
+void tearDown(void) { teardown(); }
+
+int main(void)
+{
+   UNITY_BEGIN();
+   RUN_TEST(test_heuristic_sampleRandomPoints
+);
+   RUN_TEST(test_heuristic_computeGradient);
+   RUN_TEST(test_heuristic_improvePoint);
+   RUN_TEST(test_heuristic_filterPoints);
+   RUN_TEST(test_heuristic_clusterPointsGreedy);
+   return UNITY_END();
 }

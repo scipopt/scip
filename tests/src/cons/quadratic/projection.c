@@ -76,8 +76,8 @@ void getMatrix(SCIP_Real* matrix)
 
    for( i = 0; i < consdata->nbilinterms; ++i )
    {
-      cr_assert(SCIPhashmapExists(var2index, consdata->bilinterms[i].var1));
-      cr_assert(SCIPhashmapExists(var2index, consdata->bilinterms[i].var2));
+      TEST_ASSERT(SCIPhashmapExists(var2index, consdata->bilinterms[i].var1));
+      TEST_ASSERT(SCIPhashmapExists(var2index, consdata->bilinterms[i].var2));
 
       row = (int)(size_t)SCIPhashmapGetImage(var2index, consdata->bilinterms[i].var1);
       col = (int)(size_t)SCIPhashmapGetImage(var2index, consdata->bilinterms[i].var2);
@@ -87,7 +87,7 @@ void getMatrix(SCIP_Real* matrix)
       }
       else
       {
-         cr_assert_neq(row, col, "there is a bilinear term with var1 == var2, this shouldn't happen by construction");
+         TEST_ASSERT_NOT_EQUAL(row, col, "there is a bilinear term with var1 == var2, this shouldn't happen by construction");
          matrix[col * n + row] = consdata->bilinterms[i].coef/2;
       }
    }
@@ -112,7 +112,7 @@ void checkEigenDecomposition(void)
 
    printf("SVD computed\n");
 
-   cr_assert(consdata->isedavailable, "problem computing eigen decomposition, not available");
+   TEST_ASSERT(consdata->isedavailable, "problem computing eigen decomposition, not available");
 
    n = consdata->nquadvars;
 
@@ -131,10 +131,10 @@ void checkEigenDecomposition(void)
       }
 
       if( positive )
-         cr_assert(SCIPisGE(scip, consdata->eigenvalues[i], 0.0),
+         TEST_ASSERT(SCIPisGE(scip, consdata->eigenvalues[i], 0.0),
                "eigenvalue %d is %g, expected it to be >= 0", i, consdata->eigenvalues[i]);
       else
-         cr_assert(SCIPisLE(scip, consdata->eigenvalues[i], 0.0),
+         TEST_ASSERT(SCIPisLE(scip, consdata->eigenvalues[i], 0.0),
                "eigenvalue %d is %g, expected it to be <= 0", i, consdata->eigenvalues[i]);
    }
 
@@ -150,9 +150,9 @@ void checkEigenDecomposition(void)
             sum += consdata->eigenvectors[i*n + k] * consdata->eigenvectors[j*n +k];
 
          if( i == j )
-            cr_assert_float_eq(sum, 1.0, TOL, "eigenvector %d has norm %f, expecting 1.0", i, sum);
+            TEST_ASSERT_DOUBLE_WITHIN(sum, 1.0, TOL, "eigenvector %d has norm %f, expecting 1.0", i, sum);
          else
-            cr_assert_float_eq(sum, 0.0, TOL, "eigenvectors %d, %d are not orthogonal, dot product is %f", i, j, sum);
+            TEST_ASSERT_DOUBLE_WITHIN(sum, 0.0, TOL, "eigenvectors %d, %d are not orthogonal, dot product is %f", i, j, sum);
       }
    }
 
@@ -179,7 +179,7 @@ void checkEigenDecomposition(void)
          for( k = 0; k < n; k++ )
             sum += consdata->eigenvectors[k*n + i] * consdata->eigenvalues[k] * consdata->eigenvectors[k*n +j];
 
-         cr_assert_float_eq(A[i*n + j], sum, TOL,
+         TEST_ASSERT_DOUBLE_WITHIN(A[i*n + j], sum, TOL,
                "eigendecomposition is wrong, A(%d,%d) = %.10f != PDP^T(%d,%d) = %.10f\n", i, j, A[i*n+j], i, j, sum);
       }
    }
@@ -196,8 +196,9 @@ void checkEDandProjection(int n, SCIP_SOL* pointtoproject, SCIP_Real* expectedpr
    int i;
    SCIP_Real actualprojection[n];
 
-   /* TODO: when we can skip test (cr_skip), remove this and just skip the test the setup.
-    * this is basically a hack not to write the same code in every test */
+   /* TODO: remove this and skip the test in the setup instead, via
+    * TEST_IGNORE_MESSAGE(). this is basically a hack not to write the same code
+    * in every test */
    if( SCIPgetNNlpis(scip) == 0 )
    {
       printf("IPOPT not available, don't run test\n");
@@ -229,7 +230,7 @@ void checkEDandProjection(int n, SCIP_SOL* pointtoproject, SCIP_Real* expectedpr
 
    for( i = 0; i < n; i++ )
    {
-      cr_expect_float_eq(actualprojection[i], expectedprojection[i], TOL,
+      SOFT_ASSERT_DOUBLE_WITHIN(actualprojection[i], expectedprojection[i], TOL,
             "got %.10f, expected %.10f", actualprojection[i], expectedprojection[i]);
    }
 }
@@ -273,13 +274,13 @@ void setup(void)
 
    /* find quadratic conshdlr, we need it to call computeED and computeReferencePointProjection */
    conshdlr = SCIPfindConshdlr(scip, CONSHDLR_NAME); /* we are including cons_quadratic.c */
-   cr_assert_not_null(conshdlr);
+   TEST_ASSERT_NOT_NULL(conshdlr);
 }
 
 static
 void teardown(void)
 {
-   /* TODO: when we can skip test (cr_skip), remove this and just skip the test in setup. */
+   /* TODO: remove this and skip the test in the setup instead, via TEST_IGNORE_MESSAGE(). */
    if( SCIPgetNNlpis(scip) == 0 )
    {
       printf("IPOPT not available, don't run test\n");
@@ -302,19 +303,18 @@ void teardown(void)
    SCIP_CALL( SCIPfree(&scip) );
 
    /* check for memory leaks */
-   cr_assert_eq(BMSgetMemoryUsed(), 0, "There are memory leaks!");
+   TEST_ASSERT_EQUAL(BMSgetMemoryUsed(), 0, "There are memory leaks!");
 }
 
 /*
  * TESTSUITE
  */
-TestSuite(separation, .init = setup, .fini = teardown);
 
 /*
  * TESTS
  */
 /* test projection over: x^2 + y^2 <= 1 */
-Test(separation, projection_simple)
+void test_separation_projection_simple(void)
 {
    enum nquadterms {nquadterms = 2};
    enum n {n = 2};
@@ -345,7 +345,7 @@ Test(separation, projection_simple)
  * x^2 + 2829.0/2000*y^2  + 5266.0/5321*y*w + 4166.0/3319*y*z + 441.0/1033*w^2 + 2480.0/4413*w*z + 2093.0/1805*z^2 <= 1
  * @note: strictly convex quadratic function, no variable appears linearly.
  */
-Test(separation, projection_complex_strictly_convex)
+void test_separation_projection_complex_strictly_convex(void)
 {
    enum nquadterms {nquadterms = 7};
 
@@ -386,7 +386,7 @@ Test(separation, projection_complex_strictly_convex)
  * x + 2829.0/2000*y^2  + 5266.0/5321*y*w + 4166.0/3319*y*z + 441.0/1033*w^2 + 2480.0/4413*w*z + 2093.0/1805*z^2 <= 1
  * @note x doesn't appear quadratically
  */
-Test(separation, projection_complex_with_linear_part)
+void test_separation_projection_complex_with_linear_part(void)
 {
    enum nquadterms {nquadterms = 6};
    enum nlinvars {nlinvars = 1};
@@ -434,7 +434,7 @@ Test(separation, projection_complex_with_linear_part)
  * 9*x^2 + 10*x*y + 26*x*w + 20*x*z + 5*y^2 + 10*y*w + 20*y*z + 21*w^2 + 20*w*z + 20*z^2 - x + 2*y - w <= 30
  * @note: quadratic variables with linear terms (ie, x^2 + x) appear
  */
-Test(separation, projection_complex_with_linear_terms)
+void test_separation_projection_complex_with_linear_terms(void)
 {
    enum nquadterms {nquadterms = 10};
    enum nlinvars {nlinvars = 3};
@@ -486,7 +486,7 @@ Test(separation, projection_complex_with_linear_terms)
  * - x^2 - 2829.0/2000*y^2  - 5266.0/5321*y*w - 4166.0/3319*y*z - 441.0/1033*w^2 - 2480.0/4413*w*z - 2093.0/1805*z^2 >= -1
  * @note: convex quadratic constraint, but function is now concave
  */
-Test(separation, projection_complex_strictly_concave)
+void test_separation_projection_complex_strictly_concave(void)
 {
    enum nquadterms {nquadterms = 7};
 
@@ -529,7 +529,7 @@ Test(separation, projection_complex_strictly_concave)
  * -1.99799800199451*y*w + 1.00199799999999*w^2 -600*x + 200*w + 12*z <= -20
  * @note: quadratic with quadratic variables with linear terms (ie, x^2 + x) and also a linear part (12 *z)
  */
-Test(separation, projection_complex_with_linear_part_and_terms)
+void test_separation_projection_complex_with_linear_part_and_terms(void)
 {
    enum nquadterms {nquadterms = 6};
    enum nlinvars {nlinvars = 3};
@@ -577,3 +577,21 @@ Test(separation, projection_complex_with_linear_part_and_terms)
 }
 
 #endif  /* ifdef SCIP_DISABLED_CODE */
+
+void setUp(void) { }
+
+void tearDown(void) { }
+
+int main(void)
+{
+   UNITY_BEGIN();
+#ifdef SCIP_DISABLED_CODE
+   RUN_TEST(test_separation_projection_simple);
+   RUN_TEST(test_separation_projection_complex_strictly_convex);
+   RUN_TEST(test_separation_projection_complex_with_linear_part);
+   RUN_TEST(test_separation_projection_complex_with_linear_terms);
+   RUN_TEST(test_separation_projection_complex_strictly_concave);
+   RUN_TEST(test_separation_projection_complex_with_linear_part_and_terms);
+#endif
+   return UNITY_END();
+}

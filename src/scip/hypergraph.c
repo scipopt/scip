@@ -729,8 +729,8 @@ SCIP_RETCODE SCIPhypergraphComputeOverlaps(
                ebits |= ocardinalitybits | obits;
                fbits = ((uint64_t) f) << 40; /*lint !e571*/
                fbits |= ocardinalitybits | obits;
-               edgeOverlapPairs[numEdgeOverlapPairs] = (long long) ebits;
-               edgeOverlapPairs[numEdgeOverlapPairs + 1] = (long long) fbits;
+               edgeOverlapPairs[numEdgeOverlapPairs] = (SCIP_Longint) ebits;
+               edgeOverlapPairs[numEdgeOverlapPairs + 1] = (SCIP_Longint) fbits;
                numEdgeOverlapPairs += 2;
             }
          }
@@ -1230,8 +1230,8 @@ SCIP_Bool SCIPhypergraphIsValid(
    if( SCIPhypergraphHasVertexEdges(hypergraph) )
    {
       int nincidences;
-      long long* incidences1 = NULL;
-      long long* incidences2 = NULL;
+      SCIP_Longint* incidences1 = NULL;
+      SCIP_Longint* incidences2 = NULL;
       int i1 = 0;
       int i2 = 0;
 
@@ -1244,7 +1244,7 @@ SCIP_Bool SCIPhypergraphIsValid(
          for( int i = 0; i < esize; ++i )
          {
             SCIP_HYPERGRAPH_VERTEX v = SCIPhypergraphEdgeVertices(hypergraph, e)[i];
-            long long pair = v + (long long) SCIPhypergraphGetNVertices(hypergraph) * (long long) e;
+            SCIP_Longint pair = v + (SCIP_Longint) SCIPhypergraphGetNVertices(hypergraph) * (SCIP_Longint) e;
             incidences1[i1++] = pair;
          }
       }
@@ -1267,7 +1267,7 @@ SCIP_Bool SCIPhypergraphIsValid(
          for( int j = first; j < beyond; ++j )
          {
             SCIP_HYPERGRAPH_EDGE e = SCIPhypergraphVertexEdgesGetAtIndex(hypergraph, j);
-            long long pair = v + (long long) SCIPhypergraphGetNVertices(hypergraph) * (long long) e;
+            SCIP_Longint pair = v + (SCIP_Longint) SCIPhypergraphGetNVertices(hypergraph) * (SCIP_Longint) e;
             incidences2[i2++] = pair;
          }
       }
@@ -1296,7 +1296,7 @@ SCIP_Bool SCIPhypergraphIsValid(
                if( file )
                {
                   fprintf(file, "SCIPhypergraphIsValid detected inconsistency: "
-                     "incidence #%d is %lld (via edges) and %lld (via vertices)!\n", i, incidences1[i], incidences2[i]);
+                     "incidence #%d is %" SCIP_LONGINT_FORMAT " (via edges) and %" SCIP_LONGINT_FORMAT " (via vertices)!\n", i, incidences1[i], incidences2[i]);
                   fflush(file);
                }
             }
@@ -1310,8 +1310,8 @@ SCIP_Bool SCIPhypergraphIsValid(
    if( SCIPhypergraphHasVertexEdges(hypergraph) )
    {
       int nincidences;
-      long long* incidences1 = NULL;
-      long long* incidences2 = NULL;
+      SCIP_Longint* incidences1 = NULL;
+      SCIP_Longint* incidences2 = NULL;
       int i1 = 0;
       int i2 = 0;
 
@@ -1324,7 +1324,7 @@ SCIP_Bool SCIPhypergraphIsValid(
          for( int i = 0; i < esize; ++i )
          {
             SCIP_HYPERGRAPH_VERTEX v = SCIPhypergraphEdgeVertices(hypergraph, e)[i];
-            long long pair = v + (long long) SCIPhypergraphGetNVertices(hypergraph) * (long long) e;
+            SCIP_Longint pair = v + (SCIP_Longint) SCIPhypergraphGetNVertices(hypergraph) * (SCIP_Longint) e;
             incidences1[i1++] = pair;
          }
       }
@@ -1347,7 +1347,7 @@ SCIP_Bool SCIPhypergraphIsValid(
          for( int j = first; j < beyond; ++j )
          {
             SCIP_HYPERGRAPH_EDGE e = SCIPhypergraphVertexEdgesGetAtIndex(hypergraph, j);
-            long long pair = v + (long long) SCIPhypergraphGetNVertices(hypergraph) * (long long) e;
+            SCIP_Longint pair = v + (SCIP_Longint) SCIPhypergraphGetNVertices(hypergraph) * (SCIP_Longint) e;
             incidences2[i2++] = pair;
          }
       }
@@ -1376,7 +1376,7 @@ SCIP_Bool SCIPhypergraphIsValid(
                if( file )
                {
                   fprintf(file, "SCIPhypergraphIsValid detected inconsistency: "
-                     "incidence #%d is %lld (via edges) and %lld (via vertices)!\n", i, incidences1[i], incidences2[i]);
+                     "incidence #%d is %" SCIP_LONGINT_FORMAT " (via edges) and %" SCIP_LONGINT_FORMAT " (via vertices)!\n", i, incidences1[i], incidences2[i]);
                   fflush(file);
                }
             }

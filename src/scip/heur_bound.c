@@ -335,7 +335,7 @@ SCIP_DECL_HEUREXEC(heurExecBound)
    if( SCIPgetBestSol(scip) != NULL && heurdata->onlywithoutsol )
       return SCIP_OKAY;
 
-   SCIPdebugMsg(scip, "apply bound heuristic at node %lld\n",
+   SCIPdebugMsg(scip, "apply bound heuristic at node %" SCIP_LONGINT_FORMAT "\n",
       SCIPnodeGetNumber(SCIPgetCurrentNode(scip)));
 
    if( !SCIPisLPConstructed(scip) )

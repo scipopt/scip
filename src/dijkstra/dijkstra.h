@@ -31,6 +31,8 @@
 #ifndef DIJSKSTRA_H
 #define DIJSKSTRA_H
 
+#include <inttypes.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -75,7 +77,7 @@ DIJKSTRA_Bool dijkstraGraphIsValid(
 unsigned int dijkstra(
    const DIJKSTRA_GRAPH* G,                  /**< directed graph */
    unsigned int          source,             /**< source node */
-   unsigned long long*   dist,               /**< node distances (allocated by user) */
+   uint64_t*             dist,               /**< node distances (allocated by user) */
    unsigned int*         pred,               /**< node predecessors in final shortest path tree (allocated by user) */
    unsigned int*         entry,              /**< temporary storage (for each node - must be allocated by user) */
    unsigned int*         order               /**< temporary storage (for each node - must be allocated by user) */
@@ -86,7 +88,7 @@ unsigned int dijkstraPair(
    const DIJKSTRA_GRAPH* G,                  /**< directed graph */
    unsigned int          source,             /**< source node */
    unsigned int          target,             /**< target node */
-   unsigned long long*   dist,               /**< node distances (allocated by user) */
+   uint64_t*             dist,               /**< node distances (allocated by user) */
    unsigned int*         pred,               /**< node predecessors in final shortest path tree (allocated by user) */
    unsigned int*         entry,              /**< temporary storage (for each node - must be allocated by user) */
    unsigned int*         order               /**< temporary storage (for each node - must be allocated by user) */
@@ -97,8 +99,8 @@ unsigned int dijkstraPairCutoff(
    const DIJKSTRA_GRAPH* G,                  /**< directed graph */
    unsigned int          source,             /**< source node */
    unsigned int          target,             /**< target node */
-   unsigned long long    cutoff,             /**< if the distance of a node reached this value, we truncate the search */
-   unsigned long long*   dist,               /**< node distances (allocated by user) */
+   uint64_t              cutoff,             /**< if the distance of a node reached this value, we truncate the search */
+   uint64_t*             dist,               /**< node distances (allocated by user) */
    unsigned int*         pred,               /**< node predecessors in final shortest path tree (allocated by user) */
    unsigned int*         entry,              /**< temporary storage (for each node - must be allocated by user) */
    unsigned int*         order               /**< temporary storage (for each node - must be allocated by user) */
@@ -110,8 +112,8 @@ unsigned int dijkstraPairCutoffIgnore(
    unsigned int          source,             /**< source node */
    unsigned int          target,             /**< target node */
    unsigned int*         ignore,             /**< marking nodes to be ignored (if value is nonzero) */
-   unsigned long long    cutoff,             /**< if the distance of a node reached this value, we truncate the search */
-   unsigned long long*   dist,               /**< node distances (allocated by user) */
+   uint64_t              cutoff,             /**< if the distance of a node reached this value, we truncate the search */
+   uint64_t*             dist,               /**< node distances (allocated by user) */
    unsigned int*         pred,               /**< node predecessors in final shortest path tree (allocated by user) */
    unsigned int*         entry,              /**< temporary storage (for each node - must be allocated by user) */
    unsigned int*         order               /**< temporary storage (for each node - must be allocated by user) */

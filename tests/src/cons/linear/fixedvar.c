@@ -34,7 +34,7 @@
 #include <stdio.h>
 
 /* TESTS  */
-Test(fixedvar, addconswithfixedvar)
+void test_fixedvar_addconswithfixedvar(void)
 {
    SCIP* scip;
    SCIP_VAR* var;
@@ -55,9 +55,7 @@ Test(fixedvar, addconswithfixedvar)
    SCIP_CALL( SCIPsetIntParam(scip, "constraints/linear/propfreq", 3) );
 
    /* we take bell5.mps as our initial instance */
-   strcpy(testfile, __FILE__);
-   testfile[strlen(testfile) - 10] = '\0';  /* cutoff "fixedvar.c" */
-   strcat(testfile, "../../../../check/instances/MIP/bell5.mps");
+   TESTsetTestfilename(testfile, __FILE__, "../../../../check/instances/MIP/bell5.mps");
    SCIP_CALL( SCIPreadProb(scip, testfile, NULL) );
 
    /* the variable we want to SCIP to fix */
@@ -87,4 +85,15 @@ Test(fixedvar, addconswithfixedvar)
 
    /** free SCIP */
    SCIP_CALL( SCIPfree(&scip) );
+}
+
+void setUp(void) { }
+
+void tearDown(void) { }
+
+int main(void)
+{
+   UNITY_BEGIN();
+   RUN_TEST(test_fixedvar_addconswithfixedvar);
+   return UNITY_END();
 }

@@ -74,10 +74,10 @@ void teardown(void)
    SCIP_CALL( SCIPreleaseVar(scip, &z) );
    SCIP_CALL( SCIPfree(&scip) );
 
-   cr_assert_eq(BMSgetMemoryUsed(), 0, "Memory is leaking!!");
+   TEST_ASSERT_EQUAL(BMSgetMemoryUsed(), 0, "Memory is leaking!!");
 }
 
-Test(repair, linvars1, .init = setup, .fini = teardown)
+void test_repair_linvars1(void)
 {
    SCIP_CONS* cons;
    SCIP_Bool success;
@@ -89,25 +89,25 @@ Test(repair, linvars1, .init = setup, .fini = teardown)
    success = FALSE;
    SCIP_CALL( SCIPparseCons(scip, &cons, input,
          TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, &success) );
-   cr_assert(success);
+   TEST_ASSERT(success);
    SCIP_CALL( SCIPaddCons(scip, cons) );
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
 
    SCIP_CALL( TESTscipSetStage(scip, SCIP_STAGE_SOLVING, TRUE) );
 
-   cr_assert(SCIPgetNConss(scip) == 1);
+   TEST_ASSERT(SCIPgetNConss(scip) == 1);
    cons = SCIPgetConss(scip)[0];
-   cr_assert(cons != NULL);
+   TEST_ASSERT(cons != NULL);
 
    SCIPgetLinvarMayDecreaseNonlinear(scip, cons, &var, &coef);
-   cr_expect(var == SCIPvarGetTransVar(z));
-   cr_expect(coef == 0.5);
+   SOFT_ASSERT(var == SCIPvarGetTransVar(z));
+   SOFT_ASSERT(coef == 0.5);
    SCIPgetLinvarMayIncreaseNonlinear(scip, cons, &var, &coef);
-   cr_expect(var == SCIPvarGetTransVar(z));
-   cr_expect(coef == 0.5);
+   SOFT_ASSERT(var == SCIPvarGetTransVar(z));
+   SOFT_ASSERT(coef == 0.5);
 }
 
-Test(repair, linvars2, .init = setup, .fini = teardown)
+void test_repair_linvars2(void)
 {
    SCIP_CONS* cons;
    SCIP_Bool success;
@@ -126,30 +126,30 @@ Test(repair, linvars2, .init = setup, .fini = teardown)
       success = FALSE;
       SCIP_CALL( SCIPparseCons(scip, &cons, input[i],
             TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, &success) );
-      cr_assert(success);
+      TEST_ASSERT(success);
       SCIP_CALL( SCIPaddCons(scip, cons) );
       SCIP_CALL( SCIPreleaseCons(scip, &cons) );
    }
 
    SCIP_CALL( TESTscipSetStage(scip, SCIP_STAGE_SOLVING, TRUE) );
-   cr_assert(SCIPgetNConss(scip) == 2);
+   TEST_ASSERT(SCIPgetNConss(scip) == 2);
 
    for( i = 0; i < 2; ++i )
    {
       cons = SCIPgetConss(scip)[i];
-      cr_assert(cons != NULL);
+      TEST_ASSERT(cons != NULL);
 
       SCIPgetLinvarMayDecreaseNonlinear(scip, cons, &var, &coef);
-      cr_expect(var == NULL);
-      cr_expect(coef == 0.0);
+      SOFT_ASSERT(var == NULL);
+      SOFT_ASSERT(coef == 0.0);
 
       SCIPgetLinvarMayIncreaseNonlinear(scip, cons, &var, &coef);
-      cr_expect(var == SCIPvarGetTransVar(z));
-      cr_expect(i == 0 ? coef == -0.5 : coef == -1.5);
+      SOFT_ASSERT(var == SCIPvarGetTransVar(z));
+      SOFT_ASSERT(i == 0 ? coef == -0.5 : coef == -1.5);
    }
 }
 
-Test(repair, sol, .init = setup, .fini = teardown)
+void test_repair_sol(void)
 {
    SCIP_CONS* cons;
    SCIP_SOL* sol;
@@ -162,7 +162,7 @@ Test(repair, sol, .init = setup, .fini = teardown)
    success = FALSE;
    SCIP_CALL( SCIPparseCons(scip, &cons, input,
          TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, &success) );
-   cr_assert(success);
+   TEST_ASSERT(success);
    SCIP_CALL( SCIPaddCons(scip, cons) );
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
 
@@ -176,16 +176,29 @@ Test(repair, sol, .init = setup, .fini = teardown)
    SCIP_CALL( SCIPsetSolVal(scip, sol, SCIPvarGetTransVar(z), 0.0) );
 
    SCIP_CALL( SCIPtrySolFree(scip, &sol, FALSE, FALSE, FALSE, FALSE, FALSE, &success) );
-   cr_expect(!success);
+   SOFT_ASSERT(!success);
 
    /* call the execution method of trysol manually */
    SCIP_CALL( heurExecTrySol(scip, SCIPfindHeur(scip, "trysol"), SCIP_HEURTIMING_DURINGLPLOOP, FALSE, &result) );
-   cr_assert(result == SCIP_FOUNDSOL);
-   cr_assert(SCIPgetNSols(scip) == 1);
+   TEST_ASSERT(result == SCIP_FOUNDSOL);
+   TEST_ASSERT(SCIPgetNSols(scip) == 1);
 
    sol = SCIPgetBestSol(scip);
-   cr_assert(sol != NULL);
-   cr_expect(SCIPgetSolVal(scip, sol, SCIPvarGetTransVar(x)) == 0.0);
-   cr_expect(SCIPgetSolVal(scip, sol, SCIPvarGetTransVar(y)) == 0.0);
-   cr_expect(SCIPgetSolVal(scip, sol, SCIPvarGetTransVar(z)) == 2.0);
+   TEST_ASSERT(sol != NULL);
+   SOFT_ASSERT(SCIPgetSolVal(scip, sol, SCIPvarGetTransVar(x)) == 0.0);
+   SOFT_ASSERT(SCIPgetSolVal(scip, sol, SCIPvarGetTransVar(y)) == 0.0);
+   SOFT_ASSERT(SCIPgetSolVal(scip, sol, SCIPvarGetTransVar(z)) == 2.0);
+}
+
+void setUp(void) { setup(); }
+
+void tearDown(void) { teardown(); }
+
+int main(void)
+{
+   UNITY_BEGIN();
+   RUN_TEST(test_repair_linvars1);
+   RUN_TEST(test_repair_linvars2);
+   RUN_TEST(test_repair_sol);
+   return UNITY_END();
 }

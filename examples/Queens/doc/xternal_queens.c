@@ -97,7 +97,7 @@
  *
  * Since this is a lot of code for every function call, SCIP provides two
  * macros namely `SCIP_CALL` and `SCIP_CALL_ABORT`. The second one just
- * aborts the execution by calling `abort()` if an error occured. The first
+ * aborts the execution by calling `abort()` if an error occurred. The first
  * one calls the SCIP function and, in the error case, returns the retcode.
  * This results in the following code:
  *

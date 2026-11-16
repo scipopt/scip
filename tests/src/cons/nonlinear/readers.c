@@ -33,7 +33,7 @@
 #include "scip/scipdefplugins.h"
 #include "include/scip_test.h"
 
-Test(readers, pip)
+void test_readers_pip(void)
 {
    SCIP* scip;
    SCIP_VAR** vars;
@@ -53,112 +53,112 @@ Test(readers, pip)
    SCIP_CALL( SCIPreadProb(scip, filename, NULL));
 
    /* check that vars are what we expect */
-   cr_expect_eq(SCIPgetNVars(scip), 5);
+   SOFT_ASSERT_EQUAL(SCIPgetNVars(scip), 5);
    vars = SCIPgetVars(scip);
 
-   cr_expect_str_eq(SCIPvarGetName(vars[0]), "x");
-   cr_expect_str_eq(SCIPvarGetName(vars[1]), "y");
-   cr_expect_str_eq(SCIPvarGetName(vars[2]), "z");
-   cr_expect_str_eq(SCIPvarGetName(vars[3]), "objconst");
-   cr_expect_str_eq(SCIPvarGetName(vars[4]), "nonlinobjvar");
+   SOFT_ASSERT_EQUAL_STRING("x", SCIPvarGetName(vars[0]));
+   SOFT_ASSERT_EQUAL_STRING("y", SCIPvarGetName(vars[1]));
+   SOFT_ASSERT_EQUAL_STRING("z", SCIPvarGetName(vars[2]));
+   SOFT_ASSERT_EQUAL_STRING("objconst", SCIPvarGetName(vars[3]));
+   SOFT_ASSERT_EQUAL_STRING("nonlinobjvar", SCIPvarGetName(vars[4]));
 
    /* check that cons are what we expect */
-   cr_expect_eq(SCIPgetNConss(scip), 3);
+   SOFT_ASSERT_EQUAL(SCIPgetNConss(scip), 3);
    conss = SCIPgetConss(scip);
 
-   cr_expect_str_eq(SCIPconsGetName(conss[0]), "nonlinobj");
-   cr_expect_str_eq(SCIPconsGetName(conss[1]), "e1");
-   cr_expect_str_eq(SCIPconsGetName(conss[2]), "e2");
+   SOFT_ASSERT_EQUAL_STRING("nonlinobj", SCIPconsGetName(conss[0]));
+   SOFT_ASSERT_EQUAL_STRING("e1", SCIPconsGetName(conss[1]));
+   SOFT_ASSERT_EQUAL_STRING("e2", SCIPconsGetName(conss[2]));
 
    /* check objective coefficients */
-   cr_expect_eq(SCIPvarGetObj(vars[0]), 0.0);
-   cr_expect_eq(SCIPvarGetObj(vars[1]), 0.0);
-   cr_expect_eq(SCIPvarGetObj(vars[2]), 0.0);
-   cr_expect_eq(SCIPvarGetObj(vars[3]), 11.0);
-   cr_expect_eq(SCIPvarGetObj(vars[4]), 1.0);
+   SOFT_ASSERT_EQUAL(SCIPvarGetObj(vars[0]), 0.0);
+   SOFT_ASSERT_EQUAL(SCIPvarGetObj(vars[1]), 0.0);
+   SOFT_ASSERT_EQUAL(SCIPvarGetObj(vars[2]), 0.0);
+   SOFT_ASSERT_EQUAL(SCIPvarGetObj(vars[3]), 11.0);
+   SOFT_ASSERT_EQUAL(SCIPvarGetObj(vars[4]), 1.0);
 
    /*
     * check whether the first constraint is nonlinear and of the form + x - y^3 z^2 - nonlinobj <= 0
     */
 
-   cr_expect_eq(SCIPconsGetHdlr(conss[0]), SCIPfindConshdlr(scip, "nonlinear"));
+   SOFT_ASSERT_EQUAL(SCIPconsGetHdlr(conss[0]), SCIPfindConshdlr(scip, "nonlinear"));
    expr = SCIPgetExprNonlinear(conss[0]);
-   cr_expect_not_null(expr);
+   SOFT_ASSERT_NOT_NULL(expr);
    children = SCIPexprGetChildren(expr);
-   cr_expect_not_null(children);
-   cr_expect_eq(SCIPexprGetNChildren(expr), 3);
+   SOFT_ASSERT_NOT_NULL(children);
+   SOFT_ASSERT_EQUAL(SCIPexprGetNChildren(expr), 3);
 
    /* check sides */
-   cr_expect(SCIPisInfinity(scip, -SCIPgetLhsNonlinear(conss[0])));
-   cr_expect_eq(SCIPgetRhsNonlinear(conss[0]), 0.0);
+   SOFT_ASSERT(SCIPisInfinity(scip, -SCIPgetLhsNonlinear(conss[0])));
+   SOFT_ASSERT_EQUAL(SCIPgetRhsNonlinear(conss[0]), 0.0);
 
    /* check constant and coefficients of the sum expression */
-   cr_expect(SCIPisExprSum(scip, expr));
-   cr_expect_eq(SCIPgetConstantExprSum(expr), 0.0);
-   cr_expect_eq(SCIPgetCoefsExprSum(expr)[0], 1.0);
-   cr_expect_eq(SCIPgetCoefsExprSum(expr)[1], -1.0);
-   cr_expect_eq(SCIPgetCoefsExprSum(expr)[2], -1.0);
+   SOFT_ASSERT(SCIPisExprSum(scip, expr));
+   SOFT_ASSERT_EQUAL(SCIPgetConstantExprSum(expr), 0.0);
+   SOFT_ASSERT_EQUAL(SCIPgetCoefsExprSum(expr)[0], 1.0);
+   SOFT_ASSERT_EQUAL(SCIPgetCoefsExprSum(expr)[1], -1.0);
+   SOFT_ASSERT_EQUAL(SCIPgetCoefsExprSum(expr)[2], -1.0);
 
    /* check whether first and third child is a variable */
-   cr_expect(SCIPisExprVar(scip, children[0]));
-   cr_expect(SCIPisExprVar(scip, children[2]));
+   SOFT_ASSERT(SCIPisExprVar(scip, children[0]));
+   SOFT_ASSERT(SCIPisExprVar(scip, children[2]));
 
    /* check whether second child is a product; both grandchildren need to be power expressions */
-   cr_expect(SCIPisExprProduct(scip, children[1]));
+   SOFT_ASSERT(SCIPisExprProduct(scip, children[1]));
    grandchildren = SCIPexprGetChildren(children[1]);
-   cr_expect_eq(SCIPexprGetNChildren(children[1]), 2);
-   cr_expect(SCIPisExprPower(scip, grandchildren[0]));
-   cr_expect(SCIPisExprPower(scip, grandchildren[1]));
-   cr_expect_eq(SCIPgetExponentExprPow(grandchildren[0]), 3.0);
-   cr_expect_eq(SCIPgetExponentExprPow(grandchildren[1]), 2.0);
+   SOFT_ASSERT_EQUAL(SCIPexprGetNChildren(children[1]), 2);
+   SOFT_ASSERT(SCIPisExprPower(scip, grandchildren[0]));
+   SOFT_ASSERT(SCIPisExprPower(scip, grandchildren[1]));
+   SOFT_ASSERT_EQUAL(SCIPgetExponentExprPow(grandchildren[0]), 3.0);
+   SOFT_ASSERT_EQUAL(SCIPgetExponentExprPow(grandchildren[1]), 2.0);
 
    /*
     * check whether the second constraint is linear and of the form x + 2y + 3z <= 1
     */
 
-   cr_expect_eq(SCIPconsGetHdlr(conss[1]), SCIPfindConshdlr(scip, "linear"));
-   cr_expect(SCIPisInfinity(scip, -SCIPgetLhsLinear(scip, conss[1])));
-   cr_expect_eq(SCIPgetRhsLinear(scip, conss[1]), 1.0);
-   cr_expect_eq(SCIPgetNVarsLinear(scip, conss[1]), 3);
-   cr_expect_eq(SCIPgetValsLinear(scip, conss[1])[0], 1.0);
-   cr_expect_eq(SCIPgetValsLinear(scip, conss[1])[1], 2.0);
-   cr_expect_eq(SCIPgetValsLinear(scip, conss[1])[2], 3.0);
+   SOFT_ASSERT_EQUAL(SCIPconsGetHdlr(conss[1]), SCIPfindConshdlr(scip, "linear"));
+   SOFT_ASSERT(SCIPisInfinity(scip, -SCIPgetLhsLinear(scip, conss[1])));
+   SOFT_ASSERT_EQUAL(SCIPgetRhsLinear(scip, conss[1]), 1.0);
+   SOFT_ASSERT_EQUAL(SCIPgetNVarsLinear(scip, conss[1]), 3);
+   SOFT_ASSERT_EQUAL(SCIPgetValsLinear(scip, conss[1])[0], 1.0);
+   SOFT_ASSERT_EQUAL(SCIPgetValsLinear(scip, conss[1])[1], 2.0);
+   SOFT_ASSERT_EQUAL(SCIPgetValsLinear(scip, conss[1])[2], 3.0);
 
    /*
     * check whether the third constraint is nonlinear and of the form x^2 y^3 z^4 + x + y + 2 = 10
     */
 
-   cr_expect_eq(SCIPconsGetHdlr(conss[2]), SCIPfindConshdlr(scip, "nonlinear"));
+   SOFT_ASSERT_EQUAL(SCIPconsGetHdlr(conss[2]), SCIPfindConshdlr(scip, "nonlinear"));
    expr = SCIPgetExprNonlinear(conss[2]);
-   cr_expect_not_null(expr);
+   SOFT_ASSERT_NOT_NULL(expr);
    children = SCIPexprGetChildren(expr);
-   cr_expect_not_null(children);
-   cr_expect_eq(SCIPexprGetNChildren(expr), 3);
+   SOFT_ASSERT_NOT_NULL(children);
+   SOFT_ASSERT_EQUAL(SCIPexprGetNChildren(expr), 3);
 
    /* check sides */
-   cr_expect_eq(SCIPgetLhsNonlinear(conss[2]), 10.0);
-   cr_expect_eq(SCIPgetRhsNonlinear(conss[2]), 10.0);
+   SOFT_ASSERT_EQUAL(SCIPgetLhsNonlinear(conss[2]), 10.0);
+   SOFT_ASSERT_EQUAL(SCIPgetRhsNonlinear(conss[2]), 10.0);
 
    /* check constant and coefficients of the sum expression */
-   cr_expect(SCIPisExprSum(scip, expr));
-   cr_expect_eq(SCIPgetConstantExprSum(expr), 7.0);
-   cr_expect_eq(SCIPgetCoefsExprSum(expr)[0], 4.0);
-   cr_expect_eq(SCIPgetCoefsExprSum(expr)[1], 5.0);
-   cr_expect_eq(SCIPgetCoefsExprSum(expr)[2], 6.0);
+   SOFT_ASSERT(SCIPisExprSum(scip, expr));
+   SOFT_ASSERT_EQUAL(SCIPgetConstantExprSum(expr), 7.0);
+   SOFT_ASSERT_EQUAL(SCIPgetCoefsExprSum(expr)[0], 4.0);
+   SOFT_ASSERT_EQUAL(SCIPgetCoefsExprSum(expr)[1], 5.0);
+   SOFT_ASSERT_EQUAL(SCIPgetCoefsExprSum(expr)[2], 6.0);
 
    /* check whether first child is a product; all three grandchildren need to be power expressions */
-   cr_expect(SCIPisExprProduct(scip, children[0]));
+   SOFT_ASSERT(SCIPisExprProduct(scip, children[0]));
    grandchildren = SCIPexprGetChildren(children[0]);
-   cr_expect_eq(SCIPexprGetNChildren(children[0]), 3);
-   cr_expect(SCIPisExprPower(scip, grandchildren[0]));
-   cr_expect(SCIPisExprPower(scip, grandchildren[1]));
-   cr_expect(SCIPisExprPower(scip, grandchildren[2]));
-   cr_expect_eq(SCIPgetExponentExprPow(grandchildren[0]), 2.0);
-   cr_expect_eq(SCIPgetExponentExprPow(grandchildren[1]), 3.0);
-   cr_expect_eq(SCIPgetExponentExprPow(grandchildren[2]), 4.0);
+   SOFT_ASSERT_EQUAL(SCIPexprGetNChildren(children[0]), 3);
+   SOFT_ASSERT(SCIPisExprPower(scip, grandchildren[0]));
+   SOFT_ASSERT(SCIPisExprPower(scip, grandchildren[1]));
+   SOFT_ASSERT(SCIPisExprPower(scip, grandchildren[2]));
+   SOFT_ASSERT_EQUAL(SCIPgetExponentExprPow(grandchildren[0]), 2.0);
+   SOFT_ASSERT_EQUAL(SCIPgetExponentExprPow(grandchildren[1]), 3.0);
+   SOFT_ASSERT_EQUAL(SCIPgetExponentExprPow(grandchildren[2]), 4.0);
 }
 
-Test(readers, mps1)
+void test_readers_mps1(void)
 {
    SCIP* scip;
    SCIP_VAR** vars;
@@ -176,22 +176,22 @@ Test(readers, mps1)
    SCIP_CALL( SCIPreadProb(scip, filename, NULL));
 
    /* check that vars are what we expect */
-   cr_expect_eq(SCIPgetNVars(scip), 4);
+   SOFT_ASSERT_EQUAL(SCIPgetNVars(scip), 4);
    vars = SCIPgetVars(scip);
 
-   cr_expect_str_eq(SCIPvarGetName(vars[0]), "x1");
-   cr_expect_str_eq(SCIPvarGetName(vars[1]), "x2");
-   cr_expect_str_eq(SCIPvarGetName(vars[2]), "x3");
-   cr_expect_str_eq(SCIPvarGetName(vars[3]), "qmatrixvar");
+   SOFT_ASSERT_EQUAL_STRING("x1", SCIPvarGetName(vars[0]));
+   SOFT_ASSERT_EQUAL_STRING("x2", SCIPvarGetName(vars[1]));
+   SOFT_ASSERT_EQUAL_STRING("x3", SCIPvarGetName(vars[2]));
+   SOFT_ASSERT_EQUAL_STRING("qmatrixvar", SCIPvarGetName(vars[3]));
 
    /* check that cons are what we expect */
-   cr_expect_eq(SCIPgetNConss(scip), 4);
+   SOFT_ASSERT_EQUAL(SCIPgetNConss(scip), 4);
    conss = SCIPgetConss(scip);
 
-   cr_expect_str_eq(SCIPconsGetName(conss[0]), "c0");
-   cr_expect_str_eq(SCIPconsGetName(conss[1]), "c1");
-   cr_expect_str_eq(SCIPconsGetName(conss[2]), "c2");
-   cr_expect_str_eq(SCIPconsGetName(conss[3]), "qmatrix");
+   SOFT_ASSERT_EQUAL_STRING("c0", SCIPconsGetName(conss[0]));
+   SOFT_ASSERT_EQUAL_STRING("c1", SCIPconsGetName(conss[1]));
+   SOFT_ASSERT_EQUAL_STRING("c2", SCIPconsGetName(conss[2]));
+   SOFT_ASSERT_EQUAL_STRING("qmatrix", SCIPconsGetName(conss[3]));
 
    /* check some things from the constraints which should be
     * c0: x1 + 9 x1^2 + 0.5 x1 * x2 + 0.5 x2 * x1 = 0.1
@@ -209,31 +209,31 @@ Test(readers, mps1)
 
    for( int i = 0; i < 4; ++i )
    {
-      cr_expect_eq(SCIPfindConshdlr(scip, "nonlinear"), SCIPconsGetHdlr(conss[i]));
-      cr_expect_eq(SCIPgetLhsNonlinear(conss[i]), lhs[i], "lhs cons %d: expected %g, got %g\n", i, lhs[i], SCIPgetLhsNonlinear(conss[i]));
-      cr_expect_eq(SCIPgetRhsNonlinear(conss[i]), rhs[i], "rhs cons %d: expected %g, got %g\n", i, rhs[i], SCIPgetRhsNonlinear(conss[i]));
+      SOFT_ASSERT_EQUAL(SCIPfindConshdlr(scip, "nonlinear"), SCIPconsGetHdlr(conss[i]));
+      SOFT_ASSERT_EQUAL(SCIPgetLhsNonlinear(conss[i]), lhs[i], "lhs cons %d: expected %g, got %g\n", i, lhs[i], SCIPgetLhsNonlinear(conss[i]));
+      SOFT_ASSERT_EQUAL(SCIPgetRhsNonlinear(conss[i]), rhs[i], "rhs cons %d: expected %g, got %g\n", i, rhs[i], SCIPgetRhsNonlinear(conss[i]));
 
       expr = SCIPgetExprNonlinear(conss[i]);
-      cr_assert_not_null(expr);
-      cr_expect(SCIPisExprSum(scip, expr));
-      cr_expect_eq(SCIPexprGetNChildren(expr), expectednnonz[i]);
-      cr_expect_eq(SCIPgetConstantExprSum(expr), 0.0);
+      TEST_ASSERT_NOT_NULL(expr);
+      SOFT_ASSERT(SCIPisExprSum(scip, expr));
+      SOFT_ASSERT_EQUAL(SCIPexprGetNChildren(expr), expectednnonz[i]);
+      SOFT_ASSERT_EQUAL(SCIPgetConstantExprSum(expr), 0.0);
       for( int j = 0; j < expectednnonz[i]; ++j )
-         cr_expect_eq(SCIPgetCoefsExprSum(expr)[j], expectedcoeffs[i][j], "i,j = %d,%d: expected %g, got %g\n",
+         SOFT_ASSERT_EQUAL(SCIPgetCoefsExprSum(expr)[j], expectedcoeffs[i][j], "i,j = %d,%d: expected %g, got %g\n",
                i, j, expectedcoeffs[i][j], SCIPgetCoefsExprSum(expr)[j]);
    }
 
    /* check constraint c1 */
    expr = SCIPgetExprNonlinear(conss[1]);
-   cr_expect(SCIPisExprPower(scip, SCIPexprGetChildren(expr)[0]));;
-   cr_expect(SCIPisExprVar(scip, SCIPexprGetChildren(SCIPexprGetChildren(expr)[0])[0]));
-   cr_expect_eq(SCIPgetVarExprVar(SCIPexprGetChildren(SCIPexprGetChildren(expr)[0])[0]), vars[2]);
+   SOFT_ASSERT(SCIPisExprPower(scip, SCIPexprGetChildren(expr)[0]));;
+   SOFT_ASSERT(SCIPisExprVar(scip, SCIPexprGetChildren(SCIPexprGetChildren(expr)[0])[0]));
+   SOFT_ASSERT_EQUAL(SCIPgetVarExprVar(SCIPexprGetChildren(SCIPexprGetChildren(expr)[0])[0]), vars[2]);
 
-   cr_expect(SCIPisExprVar(scip, SCIPexprGetChildren(expr)[1]));
-   cr_expect_eq(SCIPgetVarExprVar(SCIPexprGetChildren(expr)[1]), vars[1]);
+   SOFT_ASSERT(SCIPisExprVar(scip, SCIPexprGetChildren(expr)[1]));
+   SOFT_ASSERT_EQUAL(SCIPgetVarExprVar(SCIPexprGetChildren(expr)[1]), vars[1]);
 }
 
-Test(readers, zimpl)
+void test_readers_zimpl(void)
 {
    SCIP* scip;
    SCIP_VAR** vars;
@@ -254,24 +254,24 @@ Test(readers, zimpl)
    SCIP_CALL( SCIPreadProb(scip, filename, NULL));
 
    /* check that vars are what we expect; zimpl will create 2 auxiliary variables, hence we expect 5 */
-   cr_expect_eq(SCIPgetNVars(scip), 5, "\nexpected 5 variables, got %d", SCIPgetNVars(scip));
+   SOFT_ASSERT_EQUAL(SCIPgetNVars(scip), 5, "\nexpected 5 variables, got %d", SCIPgetNVars(scip));
    vars = SCIPgetVars(scip);
 
-   cr_expect_str_eq(SCIPvarGetName(vars[0]), "X1");
-   cr_expect_str_eq(SCIPvarGetName(vars[1]), "X2");
-   cr_expect_str_eq(SCIPvarGetName(vars[2]), "X3");
-   cr_expect_str_eq(SCIPvarGetName(vars[3]), "@@polyfun_1_t_0");
-   cr_expect_str_eq(SCIPvarGetName(vars[4]), "@@polyfun_1_r_1");
+   SOFT_ASSERT_EQUAL_STRING("X1", SCIPvarGetName(vars[0]));
+   SOFT_ASSERT_EQUAL_STRING("X2", SCIPvarGetName(vars[1]));
+   SOFT_ASSERT_EQUAL_STRING("X3", SCIPvarGetName(vars[2]));
+   SOFT_ASSERT_EQUAL_STRING("@@polyfun_1_t_0", SCIPvarGetName(vars[3]));
+   SOFT_ASSERT_EQUAL_STRING("@@polyfun_1_r_1", SCIPvarGetName(vars[4]));
 
    /* check that cons are what we expect:  */
-   cr_expect_eq(SCIPgetNConss(scip), 5);
+   SOFT_ASSERT_EQUAL(SCIPgetNConss(scip), 5);
    conss = SCIPgetConss(scip);
 
-   cr_expect_str_eq(SCIPconsGetName(conss[0]), "quad_1");
-   cr_expect_str_eq(SCIPconsGetName(conss[1]), "poly_1");
-   cr_expect_str_eq(SCIPconsGetName(conss[2]), "polyfun_1_a_0");
-   cr_expect_str_eq(SCIPconsGetName(conss[3]), "polyfun_1_b_1");
-   cr_expect_str_eq(SCIPconsGetName(conss[4]), "polyfun_1");
+   SOFT_ASSERT_EQUAL_STRING("quad_1", SCIPconsGetName(conss[0]));
+   SOFT_ASSERT_EQUAL_STRING("poly_1", SCIPconsGetName(conss[1]));
+   SOFT_ASSERT_EQUAL_STRING("polyfun_1_a_0", SCIPconsGetName(conss[2]));
+   SOFT_ASSERT_EQUAL_STRING("polyfun_1_b_1", SCIPconsGetName(conss[3]));
+   SOFT_ASSERT_EQUAL_STRING("polyfun_1", SCIPconsGetName(conss[4]));
 
    /* check the constraints which should be
     * quad: X2^2 + 4*X1^2 == 0;
@@ -296,65 +296,78 @@ Test(readers, zimpl)
 
    for( int i = 0; i < 5; ++i )
    {
-      cr_assert_eq(SCIPfindConshdlr(scip, "nonlinear"), SCIPconsGetHdlr(conss[i]));
-      cr_assert(SCIPisEQ(scip, SCIPgetLhsNonlinear(conss[i]), lhs[i]));
-      cr_assert(SCIPisEQ(scip, SCIPgetRhsNonlinear(conss[i]), rhs[i]));
+      TEST_ASSERT_EQUAL(SCIPfindConshdlr(scip, "nonlinear"), SCIPconsGetHdlr(conss[i]));
+      TEST_ASSERT(SCIPisEQ(scip, SCIPgetLhsNonlinear(conss[i]), lhs[i]));
+      TEST_ASSERT(SCIPisEQ(scip, SCIPgetRhsNonlinear(conss[i]), rhs[i]));
 
       expr = SCIPgetExprNonlinear(conss[i]);
-      cr_assert_not_null(expr);
+      TEST_ASSERT_NOT_NULL(expr);
 
-      cr_expect(SCIPisExprSum(scip, expr));
-      cr_expect_eq(SCIPexprGetNChildren(expr), expectednnonz[i]);
-      cr_expect_eq(SCIPgetConstantExprSum(expr), 0.0);
+      SOFT_ASSERT(SCIPisExprSum(scip, expr));
+      SOFT_ASSERT_EQUAL(SCIPexprGetNChildren(expr), expectednnonz[i]);
+      SOFT_ASSERT_EQUAL(SCIPgetConstantExprSum(expr), 0.0);
       for( int j = 0; j < expectednnonz[i]; ++j )
       {
          SCIP_EXPR* childj;
          SCIP_EXPR* childexpr = NULL;
          SCIP_VAR* childvar;
 
-         cr_expect_eq(SCIPgetCoefsExprSum(expr)[j], expectedcoeffs[i][j], "i,j = %d,%d: expected %g, got %g\n",
+         SOFT_ASSERT_EQUAL(SCIPgetCoefsExprSum(expr)[j], expectedcoeffs[i][j], "i,j = %d,%d: expected %g, got %g\n",
                       i, j, expectedcoeffs[i][j], SCIPgetCoefsExprSum(expr)[j]);
          childj = SCIPexprGetChildren(expr)[j];
          switch( exprhdlrtypes[i][j] )
          {
             case POW:
-               cr_expect(SCIPisExprPower(scip, childj));
-               cr_expect_eq(SCIPgetExponentExprPow(childj), expectedexps[i][j]);
+               SOFT_ASSERT(SCIPisExprPower(scip, childj));
+               SOFT_ASSERT_EQUAL(SCIPgetExponentExprPow(childj), expectedexps[i][j]);
                childexpr = SCIPexprGetChildren(childj)[0];
                break;
             case PRODUCT:
-               cr_expect(SCIPisExprProduct(scip, childj));
-               cr_expect_eq(SCIPexprGetNChildren(childj), 2);
+               SOFT_ASSERT(SCIPisExprProduct(scip, childj));
+               SOFT_ASSERT_EQUAL(SCIPexprGetNChildren(childj), 2);
 
                /* there is only one product expression, check the power child here */
                /* for some reason the order of product children is non-deterministic, so check which child is power */
                childexpr = SCIPisExprPower(scip, SCIPexprGetChildren(childj)[0]) ?
                   SCIPexprGetChildren(childj)[0] : SCIPexprGetChildren(childj)[1];
 
-               cr_expect(SCIPisExprPower(scip, childexpr));
-               cr_expect_eq(SCIPgetExponentExprPow(childexpr), 3);
+               SOFT_ASSERT(SCIPisExprPower(scip, childexpr));
+               SOFT_ASSERT_EQUAL(SCIPgetExponentExprPow(childexpr), 3);
                childvar = SCIPgetVarExprVar(SCIPexprGetChildren(childexpr)[0]);
-               cr_expect_eq(childvar, vars[1]);
+               SOFT_ASSERT_EQUAL(childvar, vars[1]);
 
                /* save the other expr to childexpr */
                childexpr = SCIPisExprPower(scip, SCIPexprGetChildren(childj)[0]) ?
                   SCIPexprGetChildren(childj)[1] : SCIPexprGetChildren(childj)[0];
                break;
             case VAR:
-               cr_expect(SCIPisExprVar(scip, childj));
+               SOFT_ASSERT(SCIPisExprVar(scip, childj));
                childexpr = childj;
                break;
             case LOG:
-               cr_expect(SCIPisExprLog(scip, childj));
+               SOFT_ASSERT(SCIPisExprLog(scip, childj));
                childexpr = SCIPexprGetChildren(childj)[0];
                break;
             default:
-               cr_assert_fail("\nshouldn't have reached this, i, j = %d, %d", i, j);
+               TEST_FAIL_MESSAGE(scip_test_msg("\nshouldn't have reached this, i, j = %d, %d", i, j));
          }
 
-         cr_assert(childexpr != NULL);
-         cr_expect(SCIPisExprVar(scip, childexpr));
-         cr_expect_eq(SCIPgetVarExprVar(childexpr), expectedvars[i][j]);
+         TEST_ASSERT(childexpr != NULL);
+         SOFT_ASSERT(SCIPisExprVar(scip, childexpr));
+         SOFT_ASSERT_EQUAL(SCIPgetVarExprVar(childexpr), expectedvars[i][j]);
       }
    }
+}
+
+void setUp(void) { }
+
+void tearDown(void) { }
+
+int main(void)
+{
+   UNITY_BEGIN();
+   RUN_TEST(test_readers_pip);
+   RUN_TEST(test_readers_mps1);
+   RUN_TEST(test_readers_zimpl);
+   return UNITY_END();
 }

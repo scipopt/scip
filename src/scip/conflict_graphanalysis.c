@@ -2917,13 +2917,10 @@ SCIP_RETCODE conflictsetAddBounds(
                /* replace worse bound change info by tighter bound change info */
                confbdchginfos[k] = confbdchginfos[i];
                confrelaxedbds[k] = confrelaxedbds[i];
-               confsortvals[k] = confsortvals[i];
                ++i;
             }
             else
             {
-               assert(confsortvals[k] == confsortvals[i]);
-
                /* both bound change are equivalent; hence, keep the worse relaxed bound and remove one of them */
                confrelaxedbds[k] = (confsortvals[k] % 2 == 0) ? MAX(confrelaxedbds[k], confrelaxedbds[i]) : MIN(confrelaxedbds[k], confrelaxedbds[i]);
                ++i;
@@ -3418,7 +3415,7 @@ void conflictClear(
 
 /** clears the resolution conflict analysis queues and the bounds leading to conflict */
 static
-void conflictClearResolution(
+SCIP_RETCODE conflictClearResolution(
    SCIP_CONFLICT*        conflict,           /**< conflict analysis data */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_PROB*            prob                /**< problem data */
@@ -3432,7 +3429,7 @@ void conflictClearResolution(
    assert(prob != NULL);
 
    if( !set->conf_usegenres )
-      return;
+      return SCIP_OKAY;
 
    /* clear the resolution conflict analysis queues */
    SCIPpqueueClear(conflict->resbdchgqueue);
@@ -3443,9 +3440,9 @@ void conflictClearResolution(
    /* allocate memory for the lower and upper bounds of variables used in the resolution conflict analysis */
    if(conflict->conflictprobnvars < nvars)
    {
+      SCIP_ALLOC( BMSreallocMemoryArray(&conflict->conflictvarslbs, nvars) );
+      SCIP_ALLOC( BMSreallocMemoryArray(&conflict->conflictvarsubs, nvars) );
       conflict->conflictprobnvars = nvars;
-      BMSreallocMemoryArray(&conflict->conflictvarslbs, nvars);
-      BMSreallocMemoryArray(&conflict->conflictvarsubs, nvars);
    }
 
    for( i = 0; i < nvars; ++i )
@@ -3453,6 +3450,8 @@ void conflictClearResolution(
       conflict->conflictvarslbs[i] = SCIP_REAL_MIN;
       conflict->conflictvarsubs[i] = SCIP_REAL_MAX;
    }
+
+   return SCIP_OKAY;
 }
 
 /** initializes propagation and resolution conflict analysis by clearing the conflict candidate queues */
@@ -3476,7 +3475,7 @@ SCIP_RETCODE SCIPconflictInit(
    conflictClear(conflict);
 
    /* clear the resolution conflict analysis queues and the bounds leading to conflict */
-   conflictClearResolution(conflict, set, prob);
+   SCIP_CALL( conflictClearResolution(conflict, set, prob) );
 
    /* set conflict type */
    assert(conftype == SCIP_CONFTYPE_BNDEXCEEDING || conftype == SCIP_CONFTYPE_INFEASLP
@@ -4597,7 +4596,8 @@ SCIP_RETCODE addCand(
    SCIP_Real**           proofactdeltas,     /**< pointer to proof activity increase array for undoing bound changes */
    int*                  candssize,          /**< pointer to size of cands arrays */
    int*                  ncands,             /**< pointer to count number of candidates in bound change list */
-   int                   firstcand           /**< position of first unprocessed bound change candidate */
+   int                   firstcand,          /**< position of first unprocessed bound change candidate */
+   SCIP_Bool             keepsorted          /**< insert the candidate in sorted order; if FALSE the caller must sort afterwards */
    )
 {
    SCIP_Real oldbound;
@@ -4696,13 +4696,21 @@ SCIP_RETCODE addCand(
       SCIPvarGetName(var), proofcoef > 0.0 ? "<=" : ">=", newbound,
       proofcoef, depth, resolvable, QUAD_TO_DBL(proofactdelta), score);
 
-   /* insert variable in candidate list without touching the already processed candidates */
-   for( i = *ncands; i > firstcand && score > (*candscores)[i-1]; --i )
+   if( keepsorted )
    {
-      (*cands)[i] = (*cands)[i-1];
-      (*candscores)[i] = (*candscores)[i-1];
-      (*newbounds)[i] = (*newbounds)[i-1];
-      (*proofactdeltas)[i] = (*proofactdeltas)[i-1];
+      /* insert variable in candidate list without touching the already processed candidates */
+      for( i = *ncands; i > firstcand && score > (*candscores)[i-1]; --i )
+      {
+         (*cands)[i] = (*cands)[i-1];
+         (*candscores)[i] = (*candscores)[i-1];
+         (*newbounds)[i] = (*newbounds)[i-1];
+         (*proofactdeltas)[i] = (*proofactdeltas)[i-1];
+      }
+   }
+   else
+   {
+      /* append to back */
+      i = *ncands;
    }
    (*cands)[i] = var;
    (*candscores)[i] = score;
@@ -4738,9 +4746,12 @@ SCIP_RETCODE SCIPundoBdchgsProof(
    SCIP_Real* proofactdeltas;
    int nvars;
    int ncands;
+   int nmaincands;
    int candssize;
    int v;
    int i;
+   int j;
+   int k;
 
    assert(prob != NULL);
    assert(proofcoefs != NULL);
@@ -4823,19 +4834,32 @@ SCIP_RETCODE SCIPundoBdchgsProof(
       if( lbchginfoposs[v] >= 0 || ubchginfoposs[v] >= 0 )
       {
          SCIP_CALL( addCand(set, currentdepth, var, lbchginfoposs[v], ubchginfoposs[v], proofcoefs[v],
-               prooflhs, (*proofact), &cands, &candscores, &newbounds, &proofactdeltas, &candssize, &ncands, 0) );
+               prooflhs, (*proofact), &cands, &candscores, &newbounds, &proofactdeltas, &candssize, &ncands, 0, FALSE) );
       }
       /* we can set the proof coefficient to zero, because the variable is not needed */
       else
          proofcoefs[v] = 0.0;
    }
 
+   /* sort candidates collected by first loop once for descending score */
+   SCIPsortDownRealRealRealPtr(candscores, newbounds, proofactdeltas, (void**)cands, ncands);
+
    /* try to undo remaining local bound changes while still keeping the proof row violated:
     * bound changes can be undone, if prooflhs > proofact + proofactdelta;
-    * afterwards, the current proof activity has to be updated
+    * afterwards, the current proof activity has to be updated;
+    * candidates produced during this pass are appended to the tail of the same arrays starting at
+    * nmaincands and kept sorted among themselves; higher score head is picked in each iteration
     */
-   for( i = 0; i < ncands; ++i )
+   nmaincands = ncands;
+   j = 0;
+   k = nmaincands;
+   while( j < nmaincands || k < ncands )
    {
+      if( j < nmaincands && (k >= ncands || candscores[j] >= candscores[k]) )
+         i = j++;
+      else
+         i = k++;
+
       assert(proofactdeltas[i] > 0.0);
       assert((lbchginfoposs[SCIPvarGetProbindex(cands[i])] >= 0) != (ubchginfoposs[SCIPvarGetProbindex(cands[i])] >= 0));
 
@@ -4908,7 +4932,7 @@ SCIP_RETCODE SCIPundoBdchgsProof(
          if( lbchginfoposs[v] >= 0 || ubchginfoposs[v] >= 0 )
          {
             SCIP_CALL( addCand(set, currentdepth, cands[i], lbchginfoposs[v], ubchginfoposs[v], proofcoefs[v],
-                  prooflhs, (*proofact), &cands, &candscores, &newbounds, &proofactdeltas, &candssize, &ncands, i+1) );
+                  prooflhs, (*proofact), &cands, &candscores, &newbounds, &proofactdeltas, &candssize, &ncands, k, TRUE) );
          }
          else
             proofcoefs[v] = 0.0;

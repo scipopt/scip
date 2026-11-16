@@ -66,9 +66,9 @@ void teardown(void)
 }
 
 /* TEST SUITE */
-TestSuite(readerbnd, .init = setup, .fini = teardown);
 
-Test(readerbnd, read, .description = "check the function for reading a *.bnd file")
+/** @brief check the function for reading a *.bnd file */
+void test_readerbnd_read(void)
 {
    FILE* fp;
    const char* filename = "input.bnd";
@@ -79,22 +79,34 @@ Test(readerbnd, read, .description = "check the function for reading a *.bnd fil
    fclose(fp);
 
    SCIP_CALL( SCIPreadProb(scip, filename, NULL) );
-   cr_expect(SCIPisEQ(scip, SCIPvarGetLbGlobal(x), -3.0));
-   cr_expect(SCIPisEQ(scip, SCIPvarGetUbGlobal(x), 0.0));
+   SOFT_ASSERT(SCIPisEQ(scip, SCIPvarGetLbGlobal(x), -3.0));
+   SOFT_ASSERT(SCIPisEQ(scip, SCIPvarGetUbGlobal(x), 0.0));
 
    (void)remove(filename);
 }
 
-Test(readerbnd, write, .description = "check the function for writting a *.bnd file")
+/** @brief check the function for writting a *.bnd file */
+void test_readerbnd_write(void)
 {
    char formatstr[SCIP_MAXSTRLEN];
 
    /* check that the written bounds of x equal [-1,2] */
-   cr_redirect_stdout();
+   TEST_CAPTURE_STDOUT();
    SCIP_CALL( SCIPwriteOrigProblem(scip, NULL, "bnd", FALSE) );
-   fflush(stdout);
-
    sprintf(formatstr, "<%s> %16.15f %16.15f\n", varname, lb, ub);
 
-   cr_assert_stdout_eq_str(formatstr);
+   TEST_ASSERT_STDOUT_EQUAL_STRING(formatstr);
+}
+
+void setUp(void) { setup(); }
+
+void tearDown(void) { teardown(); }
+
+int main(void)
+{
+   UNITY_BEGIN();
+   RUN_TEST(test_readerbnd_read
+);
+   RUN_TEST(test_readerbnd_write);
+   return UNITY_END();
 }

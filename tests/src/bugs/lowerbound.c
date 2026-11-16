@@ -101,7 +101,7 @@ SCIP_DECL_RELAXEXEC(relaxExecConstant)
 /* TESTS */
 
 /* This test constructs an instance on which the assert for testing the lower bound should fail. */
-Test(lowerbound, constant, .signal = SIGABRT)
+static void lowerbound_constant_body(void)
 {
    char name[SCIP_MAXSTRLEN];
    SCIP* scip = NULL;
@@ -170,6 +170,22 @@ Test(lowerbound, constant, .signal = SIGABRT)
 
    SCIP_CALL( SCIPfree(&scip) );
 
-   cr_assert_null(scip);
-   cr_assert_eq(BMSgetMemoryUsed(), 0, "There is a memory leak!!");
+   TEST_ASSERT_NULL(scip);
+   TEST_ASSERT_EQUAL(BMSgetMemoryUsed(), 0, "There is a memory leak!!");
+}
+
+void test_lowerbound_constant(void)
+{
+   TEST_EXPECT_SIGNAL(SIGABRT, lowerbound_constant_body());
+}
+
+void setUp(void) { }
+
+void tearDown(void) { }
+
+int main(void)
+{
+   UNITY_BEGIN();
+   RUN_TEST(test_lowerbound_constant);
+   return UNITY_END();
 }

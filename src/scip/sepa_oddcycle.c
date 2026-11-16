@@ -3010,11 +3010,11 @@ SCIP_RETCODE separateGLS(
    unsigned int maxarcs;                     /* maximum number of arcs in the Dijkstra graph */
    unsigned int maxstarts;                   /* maximum number of start nodes */
    unsigned int startcounter;                /* counter of tried start nodes */
-   unsigned long long cutoff;                /* cutoff value for Dijkstra algorithm */
+   uint64_t cutoff;                          /* cutoff value for Dijkstra algorithm */
 
    unsigned int startnode;                   /* start node for Dijkstra algorithm */
    unsigned int endnode;                     /* target node for Dijkstra algorithm */
-   unsigned long long* dist;                 /* distance matrix for Dijkstra algorithm */
+   uint64_t* dist;                           /* distance matrix for Dijkstra algorithm */
    unsigned int* pred;                       /* predecessor list for found cycle */
    unsigned int* entry;                      /* storage for Dijkstra algorithm */
    unsigned int* order;                      /* storage for Dijkstra algorithm */
@@ -3338,8 +3338,8 @@ SCIP_RETCODE separateGLS(
 
       (void)  SCIPsnprintf(probname, SCIP_MAXSTRLEN, "%s", SCIPgetProbName(scip));
       SCIPsplitFilename(probname, NULL, &name, NULL, NULL);
-      (void)  SCIPsnprintf(filename, SCIP_MAXSTRLEN, "%s_%d.gml", name, SCIPgetNLPs(scip));
-      SCIP_CALL( SCIPwriteCliqueGraph(scip, filename, TRUE, TRUE) );
+      (void)  SCIPsnprintf(filename, SCIP_MAXSTRLEN, "%s_%" SCIP_LONGINT_FORMAT ".gml", name, SCIPgetNLPs(scip));
+      SCIP_CALL( SCIPwriteCliqueGraph(scip, filename, TRUE) );
       SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "Wrote clique/implication graph to <%s>.\n", filename);
    }
 #endif
@@ -3353,7 +3353,7 @@ SCIP_RETCODE separateGLS(
    SCIP_CALL( SCIPallocBufferArray(scip, &incycle, (int) (2 * nbinvars)) );
 
    /* separate odd cycle inequalities by GLS method */
-   cutoff = (unsigned long long) (0.5 * sepadata->scale);
+   cutoff = (uint64_t) (0.5 * sepadata->scale);
    for( i = (unsigned int) sepadata->lastroot; i < 2 * nbinvars
            && startcounter < maxstarts
            && sepadata->ncuts - sepadata->oldncuts < (unsigned int) sepadata->maxsepacutsround

@@ -7,25 +7,29 @@ endif()
 
 project(Queens)
 
-if(TARGET SCIP::SCIP)
-  # find package by SCIP PATH
-  find_package(SCIP CONFIG NO_DEFAULT_PATH PATHS ${SCIP_BINARY_DIR} REQUIRED)
-else()
-  find_package(SCIP REQUIRED)
+# Find SCIP unless we already have it because we build it.
+if(NOT TARGET SCIP::SCIP)
+  find_package(SCIP
+     REQUIRED
+     CONFIG
+     HINTS "${SCIP_DIR}"
+     )
 endif()
 
-include_directories(BEFORE PUBLIC ${SCIP_INCLUDE_DIRS})
+
 
 add_executable(queens
    src/queens.cpp
    src/queens_main.cpp)
-set_property(TARGET queens PROPERTY INTERPROCEDURAL_OPTIMIZATION ${LTO_AVAILABLE})
+target_link_libraries(queens SCIP::SCIP)
 
-target_link_libraries(queens ${SCIP_LIBRARIES})
-target_compile_options(queens PRIVATE ${SCIP_COMPILE_FLAGS})
+if(SCIP_HAS_LTO)
+   set_target_properties(queens PROPERTIES
+      INTERPROCEDURAL_OPTIMIZATION 1)
+endif()
 
-if( TARGET examples )
-    add_dependencies( examples queens )
+if(TARGET examples)
+   add_dependencies(examples queens)
 endif()
 
 include(CTest)
@@ -33,43 +37,40 @@ include(CTest)
 # add a test to build the executable
 #
 add_test(NAME examples-queens-build
-        COMMAND "${CMAKE_COMMAND}" --build "${CMAKE_BINARY_DIR}" --config $<CONFIG> --target queens
-        )
+   COMMAND "${CMAKE_COMMAND}" --build "${CMAKE_BINARY_DIR}" --config $<CONFIG> --target queens
+   )
 #
 # avoid that several build jobs try to concurrently build the SCIP library
 # note that this ressource lock name is not the actual libscip target
 #
-set_tests_properties(examples-queens-build
-                    PROPERTIES
-                        RESOURCE_LOCK libscip
-                    )
+set_tests_properties(examples-queens-build PROPERTIES
+   RESOURCE_LOCK libscip)
 
 #
 # test the queens example on checker boards of different size
 #
 
 set(nSet
-    1
-    2
-    4
-    8
-    16
-    )
+   1
+   2
+   4
+   8
+   16
+   )
 foreach(n ${nSet})
-    add_test(NAME examples-queens-${n}
-            COMMAND $<TARGET_FILE:queens> ${n}
-            )
-    set_tests_properties(examples-queens-${n}
-                        PROPERTIES
+   add_test(NAME examples-queens-${n}
+      COMMAND $<TARGET_FILE:queens> ${n}
+      )
+   set_tests_properties(examples-queens-${n} PROPERTIES
 			FAIL_REGULAR_EXPRESSION "ERROR"
-                            DEPENDS examples-queens-build
-                        )
-    if(WIN32)
-        # on windows we need to execute the application and examples executables from the directory containing the libscip.dll,
-        # on other systems this directory does not exist.
-        set_tests_properties(examples-queens-${n}
-                PROPERTIES
-                    WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/bin/$<CONFIG>
-            )
-    endif()
+      DEPENDS examples-queens-build
+      )
+   if(WIN32)
+      # on windows we need to execute the application and examples executables from the directory containing the libscip.dll,
+      # on other systems this directory does not exist.
+      set_tests_properties(examples-queens-${n} PROPERTIES
+         WORKING_DIRECTORY "${CMAKE_BINARY_DIR}/bin/$<CONFIG>"
+         )
+   endif()
 endforeach(n)
+

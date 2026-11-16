@@ -59,7 +59,7 @@ static
 void teardown(void)
 {
    SCIP_CALL( SCIPfree(&scip) );
-   cr_assert_eq(BMSgetMemoryUsed(), 0, "There is are memory leak!!");
+   TEST_ASSERT_EQUAL(BMSgetMemoryUsed(), 0, "There is are memory leak!!");
 }
 
 /* helper function to test NLPI */
@@ -174,34 +174,34 @@ SCIP_RETCODE testNlpi(SCIP_NLPI* nlpi)
 #else
    SCIP_CALL( SCIPsolveNlpi(scip, nlpi, nlpiprob, .feastol = 1e-9) );
 #endif
-   cr_expect(SCIPgetNlpiTermstat(scip, nlpi, nlpiprob) == SCIP_NLPTERMSTAT_OKAY);
-   cr_expect(SCIPgetNlpiSolstat(scip, nlpi, nlpiprob) <= SCIP_NLPSOLSTAT_LOCOPT);
+   SOFT_ASSERT(SCIPgetNlpiTermstat(scip, nlpi, nlpiprob) == SCIP_NLPTERMSTAT_OKAY);
+   SOFT_ASSERT(SCIPgetNlpiSolstat(scip, nlpi, nlpiprob) <= SCIP_NLPSOLSTAT_LOCOPT);
 
    /* collect statistics */
    SCIP_CALL( SCIPgetNlpiStatistics(scip, nlpi, nlpiprob, &statistics) );
-   cr_expect(statistics.niterations > 0);
-   cr_expect(statistics.totaltime >= 0.0);
+   SOFT_ASSERT(statistics.niterations > 0);
+   SOFT_ASSERT(statistics.totaltime >= 0.0);
 
    SCIP_CALL( SCIPgetNlpiSolution(scip, nlpi, nlpiprob, &primal, &dualcons, &duallb, &dualub, NULL) );
 
    /* check primal solution */
-   cr_expect(SCIPisFeasEQ(scip, primal[0], 0.0));
-   cr_expect(SCIPisFeasEQ(scip, primal[1], 0.5));
-   cr_expect(SCIPisFeasEQ(scip, primal[2], 1.0));
-   cr_expect(SCIPisFeasEQ(scip, primal[3], 2.0));
+   SOFT_ASSERT(SCIPisFeasEQ(scip, primal[0], 0.0));
+   SOFT_ASSERT(SCIPisFeasEQ(scip, primal[1], 0.5));
+   SOFT_ASSERT(SCIPisFeasEQ(scip, primal[2], 1.0));
+   SOFT_ASSERT(SCIPisFeasEQ(scip, primal[3], 2.0));
 
    /* check dual solution */
-   cr_expect(SCIPisFeasEQ(scip, dualcons[0], 0.0));
-   cr_expect(SCIPisFeasEQ(scip, dualcons[1], 1.0));
-   cr_expect(SCIPisFeasEQ(scip, dualcons[2], -2.0));
-   cr_expect(SCIPisFeasEQ(scip, duallb[0], 0.0));
-   cr_expect(SCIPisFeasEQ(scip, duallb[1], 0.0));
-   cr_expect(SCIPisFeasEQ(scip, duallb[2], 0.0));
-   cr_expect(SCIPisFeasEQ(scip, duallb[3], 0.0));
-   cr_expect(SCIPisFeasEQ(scip, dualub[0], 0.0));
-   cr_expect(SCIPisFeasEQ(scip, dualub[1], 0.0));
-   cr_expect(SCIPisFeasEQ(scip, dualub[2], 0.0));
-   cr_expect(SCIPisFeasEQ(scip, dualub[3], 3.0));
+   SOFT_ASSERT(SCIPisFeasEQ(scip, dualcons[0], 0.0));
+   SOFT_ASSERT(SCIPisFeasEQ(scip, dualcons[1], 1.0));
+   SOFT_ASSERT(SCIPisFeasEQ(scip, dualcons[2], -2.0));
+   SOFT_ASSERT(SCIPisFeasEQ(scip, duallb[0], 0.0));
+   SOFT_ASSERT(SCIPisFeasEQ(scip, duallb[1], 0.0));
+   SOFT_ASSERT(SCIPisFeasEQ(scip, duallb[2], 0.0));
+   SOFT_ASSERT(SCIPisFeasEQ(scip, duallb[3], 0.0));
+   SOFT_ASSERT(SCIPisFeasEQ(scip, dualub[0], 0.0));
+   SOFT_ASSERT(SCIPisFeasEQ(scip, dualub[1], 0.0));
+   SOFT_ASSERT(SCIPisFeasEQ(scip, dualub[2], 0.0));
+   SOFT_ASSERT(SCIPisFeasEQ(scip, dualub[3], 3.0));
 
    /* change upper bound of x2 */
    lininds[0] = 2;
@@ -223,34 +223,34 @@ SCIP_RETCODE testNlpi(SCIP_NLPI* nlpi)
    SCIP_CALL( SCIPsolveNlpi(scip, nlpi, nlpiprob, .feastol = 1e-9) );
 #endif
 
-   cr_expect(SCIPgetNlpiTermstat(scip, nlpi, nlpiprob) == SCIP_NLPTERMSTAT_OKAY);
-   cr_expect(SCIPgetNlpiSolstat(scip, nlpi, nlpiprob) <= SCIP_NLPSOLSTAT_LOCOPT);
+   SOFT_ASSERT(SCIPgetNlpiTermstat(scip, nlpi, nlpiprob) == SCIP_NLPTERMSTAT_OKAY);
+   SOFT_ASSERT(SCIPgetNlpiSolstat(scip, nlpi, nlpiprob) <= SCIP_NLPSOLSTAT_LOCOPT);
 
    /* collect statistics */
    SCIP_CALL( SCIPgetNlpiStatistics(scip, nlpi, nlpiprob, &statistics) );
-   cr_expect(statistics.niterations > 0);
-   cr_expect(statistics.totaltime >= 0.0);
+   SOFT_ASSERT(statistics.niterations > 0);
+   SOFT_ASSERT(statistics.totaltime >= 0.0);
 
    SCIP_CALL( SCIPgetNlpiSolution(scip, nlpi, nlpiprob, &primal, &dualcons, &duallb, &dualub, NULL) );
 
    /* check primal solution */
-   cr_expect(SCIPisFeasEQ(scip, primal[0], 0.6513878189));
-   cr_expect(SCIPisFeasEQ(scip, primal[1], 0.5));
-   cr_expect(SCIPisFeasEQ(scip, primal[2], 0.5));
-   cr_expect(SCIPisFeasEQ(scip, primal[3], 2.0));
+   SOFT_ASSERT(SCIPisFeasEQ(scip, primal[0], 0.6513878189));
+   SOFT_ASSERT(SCIPisFeasEQ(scip, primal[1], 0.5));
+   SOFT_ASSERT(SCIPisFeasEQ(scip, primal[2], 0.5));
+   SOFT_ASSERT(SCIPisFeasEQ(scip, primal[3], 2.0));
 
    /* check dual solution */
-   cr_expect(SCIPisFeasEQ(scip, dualcons[0], -0.7226499019));
-   cr_expect(SCIPisFeasEQ(scip, dualcons[1], 0.0));
-   cr_expect(SCIPisFeasEQ(scip, dualcons[2], -2.0));
-   cr_expect(SCIPisFeasEQ(scip, duallb[0], 0.0));
-   cr_expect(SCIPisFeasEQ(scip, duallb[1], 0.0));
-   cr_expect(SCIPisFeasEQ(scip, duallb[2], 0.0));
-   cr_expect(SCIPisFeasEQ(scip, duallb[3], 0.0));
-   cr_expect(SCIPisFeasEQ(scip, dualub[0], 0.0));
-   cr_expect(SCIPisFeasEQ(scip, dualub[1], 0.0));
-   cr_expect(SCIPisFeasEQ(scip, dualub[2], 2.1933752453));
-   cr_expect(SCIPisFeasEQ(scip, dualub[3], 2.0));
+   SOFT_ASSERT(SCIPisFeasEQ(scip, dualcons[0], -0.7226499019));
+   SOFT_ASSERT(SCIPisFeasEQ(scip, dualcons[1], 0.0));
+   SOFT_ASSERT(SCIPisFeasEQ(scip, dualcons[2], -2.0));
+   SOFT_ASSERT(SCIPisFeasEQ(scip, duallb[0], 0.0));
+   SOFT_ASSERT(SCIPisFeasEQ(scip, duallb[1], 0.0));
+   SOFT_ASSERT(SCIPisFeasEQ(scip, duallb[2], 0.0));
+   SOFT_ASSERT(SCIPisFeasEQ(scip, duallb[3], 0.0));
+   SOFT_ASSERT(SCIPisFeasEQ(scip, dualub[0], 0.0));
+   SOFT_ASSERT(SCIPisFeasEQ(scip, dualub[1], 0.0));
+   SOFT_ASSERT(SCIPisFeasEQ(scip, dualub[2], 2.1933752453));
+   SOFT_ASSERT(SCIPisFeasEQ(scip, dualub[3], 2.0));
 
    /* free memory */
    SCIPfreeBufferArray(scip, &linvals);
@@ -388,9 +388,8 @@ SCIP_RETCODE solveQP(
    return SCIP_OKAY;
 }
 
-Test(nlpi, interface, .init = setup, .fini = teardown,
-   .description = "checks fundamental NLPI functions"
-   )
+/** @brief checks fundamental NLPI functions */
+void test_nlpi_interface(void)
 {
    int i;
 
@@ -402,9 +401,8 @@ Test(nlpi, interface, .init = setup, .fini = teardown,
 
 #define DIM 50
 
-Test(nlpi, solveQP, .init = setup, .fini = teardown,
-   .description = "solves convex QP with different NLPIs"
-   )
+/** @brief solves convex QP with different NLPIs */
+void test_nlpi_solveQP(void)
 {
    SCIP_NLPTERMSTAT ipopttermstat;
    SCIP_NLPTERMSTAT worhpiptermstat;
@@ -454,28 +452,27 @@ Test(nlpi, solveQP, .init = setup, .fini = teardown,
       if( ipopt != NULL && worhpip != NULL &&
          ipoptsolstat == SCIP_NLPSOLSTAT_LOCOPT && worhpipsolstat == SCIP_NLPSOLSTAT_LOCOPT )
       {
-         cr_assert(SCIPisFeasLE(scip, worhpipval, ipoptval));
+         TEST_ASSERT(SCIPisFeasLE(scip, worhpipval, ipoptval));
       }
 
       /* compare the solution values of WORHP and Ipopt */
       if( ipopt != NULL && worhpsqp != NULL &&
          ipoptsolstat == SCIP_NLPSOLSTAT_LOCOPT && worhpsqpsolstat == SCIP_NLPSOLSTAT_LOCOPT )
       {
-         cr_assert(SCIPisFeasLE(scip, worhpsqpval, ipoptval));
+         TEST_ASSERT(SCIPisFeasLE(scip, worhpsqpval, ipoptval));
       }
 
       /* compare the solution values of CONOPT and Ipopt */
       if( ipopt != NULL && conopt != NULL &&
          ipoptsolstat == SCIP_NLPSOLSTAT_LOCOPT && conoptsolstat == SCIP_NLPSOLSTAT_LOCOPT )
       {
-         cr_assert(SCIPisFeasLE(scip, conoptval, ipoptval));
+         TEST_ASSERT(SCIPisFeasLE(scip, conoptval, ipoptval));
       }
    }
 }
 
-Test(nlpi, workinglimits, .init = setup, .fini = teardown,
-   .description = "solves convex QP with a small iteration limit"
-   )
+/** @brief solves convex QP with a small iteration limit */
+void test_nlpi_workinglimits(void)
 {
    SCIP_NLPTERMSTAT termstat;
    SCIP_NLPSOLSTAT solstat;
@@ -485,33 +482,33 @@ Test(nlpi, workinglimits, .init = setup, .fini = teardown,
    {
       /* set a small iteration limit */
       SCIP_CALL( solveQP(worhpip, 1, 100, -100.0, 100.0, SCIPinfinity(scip), 5, &solval, &solstat, &termstat) );
-      cr_expect(termstat == SCIP_NLPTERMSTAT_ITERLIMIT);
+      SOFT_ASSERT(termstat == SCIP_NLPTERMSTAT_ITERLIMIT);
 
       /* set a small time limit */
       SCIP_CALL( solveQP(worhpip, 1, 500, -100.0, 100.0, 1.0, INT_MAX, &solval, &solstat, &termstat) );
-      cr_expect(termstat == SCIP_NLPTERMSTAT_TIMELIMIT);
+      SOFT_ASSERT(termstat == SCIP_NLPTERMSTAT_TIMELIMIT);
    }
 
    if( worhpsqp != NULL )
    {
       /* set a small iteration limit */
       SCIP_CALL( solveQP(worhpsqp, 1, 100, -100.0, 100.0, SCIPinfinity(scip), 5, &solval, &solstat, &termstat) );
-      cr_expect(termstat == SCIP_NLPTERMSTAT_ITERLIMIT);
+      SOFT_ASSERT(termstat == SCIP_NLPTERMSTAT_ITERLIMIT);
 
       /* set a small time limit */
       SCIP_CALL( solveQP(worhpsqp, 1, 500, -100.0, 100.0, 1.0, INT_MAX, &solval, &solstat, &termstat) );
-      cr_expect(termstat == SCIP_NLPTERMSTAT_TIMELIMIT);
+      SOFT_ASSERT(termstat == SCIP_NLPTERMSTAT_TIMELIMIT);
    }
 
    if( conopt != NULL )
    {
       /* set a small iteration limit */
       SCIP_CALL( solveQP(conopt, 1, 100, -100.0, 100.0, SCIPinfinity(scip), 1, &solval, &solstat, &termstat) );
-      cr_expect(termstat == SCIP_NLPTERMSTAT_ITERLIMIT);
+      SOFT_ASSERT(termstat == SCIP_NLPTERMSTAT_ITERLIMIT);
 
       /* set a small time limit */
       SCIP_CALL( solveQP(conopt, 1, 500, -100.0, 100.0, 1.0, INT_MAX, &solval, &solstat, &termstat) );
-      cr_expect(termstat == SCIP_NLPTERMSTAT_TIMELIMIT);
+      SOFT_ASSERT(termstat == SCIP_NLPTERMSTAT_TIMELIMIT);
    }
 }
 
@@ -545,22 +542,22 @@ SCIP_RETCODE resolveAfterFixingVars(
 
    /* first solve */
    SCIP_CALL( SCIPsolveNlpi(scip, nlpi, nlpiprob) );
-   cr_expect(SCIPgetNlpiTermstat(scip, nlpi, nlpiprob) == SCIP_NLPTERMSTAT_OKAY);
-   cr_expect(SCIPgetNlpiSolstat(scip, nlpi, nlpiprob) <= SCIP_NLPSOLSTAT_LOCOPT);
+   SOFT_ASSERT(SCIPgetNlpiTermstat(scip, nlpi, nlpiprob) == SCIP_NLPTERMSTAT_OKAY);
+   SOFT_ASSERT(SCIPgetNlpiSolstat(scip, nlpi, nlpiprob) <= SCIP_NLPSOLSTAT_LOCOPT);
    SCIP_CALL( SCIPgetNlpiSolution(scip, nlpi, nlpiprob, &primal, NULL, NULL, NULL, NULL) );
-   cr_expect(SCIPisFeasEQ(scip, primal[0], 1.0));
-   cr_expect(SCIPisFeasEQ(scip, primal[1], -2.0));
+   SOFT_ASSERT(SCIPisFeasEQ(scip, primal[0], 1.0));
+   SOFT_ASSERT(SCIPisFeasEQ(scip, primal[1], -2.0));
 
    /* fix x0 and resolve */
    lbs[0] = 0.0;
    ubs[0] = 0.0;
    SCIP_CALL( SCIPchgNlpiVarBounds(scip, nlpi, nlpiprob, 1, inds, lbs, ubs) );
    SCIP_CALL( SCIPsolveNlpi(scip, nlpi, nlpiprob) );
-   cr_expect(SCIPgetNlpiTermstat(scip, nlpi, nlpiprob) == SCIP_NLPTERMSTAT_OKAY);
-   cr_expect(SCIPgetNlpiSolstat(scip, nlpi, nlpiprob) <= SCIP_NLPSOLSTAT_LOCOPT);
+   SOFT_ASSERT(SCIPgetNlpiTermstat(scip, nlpi, nlpiprob) == SCIP_NLPTERMSTAT_OKAY);
+   SOFT_ASSERT(SCIPgetNlpiSolstat(scip, nlpi, nlpiprob) <= SCIP_NLPSOLSTAT_LOCOPT);
    SCIP_CALL( SCIPgetNlpiSolution(scip, nlpi, nlpiprob, &primal, NULL, NULL, NULL, NULL) );
-   cr_expect(SCIPisFeasEQ(scip, primal[0], 0.0));
-   cr_expect(SCIPisFeasEQ(scip, primal[1], -2.0));
+   SOFT_ASSERT(SCIPisFeasEQ(scip, primal[0], 0.0));
+   SOFT_ASSERT(SCIPisFeasEQ(scip, primal[1], -2.0));
 
    /* free memory */
    SCIP_CALL( SCIPfreeNlpiProblem(scip, nlpi, &nlpiprob) );
@@ -570,9 +567,8 @@ SCIP_RETCODE resolveAfterFixingVars(
    return SCIP_OKAY;
 }
 
-Test(nlpi, fixvars, .init = setup, .fini = teardown,
-   .description = "resolves a QP after fixing some variables"
-   )
+/** @brief resolves a QP after fixing some variables */
+void test_nlpi_fixvars(void)
 {
    int i;
 
@@ -583,4 +579,19 @@ Test(nlpi, fixvars, .init = setup, .fini = teardown,
 
       SCIP_CALL( resolveAfterFixingVars(nlpi) );
    }
+}
+
+void setUp(void) { setup(); }
+
+void tearDown(void) { teardown(); }
+
+int main(void)
+{
+   UNITY_BEGIN();
+   RUN_TEST(test_nlpi_interface
+);
+   RUN_TEST(test_nlpi_solveQP);
+   RUN_TEST(test_nlpi_workinglimits);
+   RUN_TEST(test_nlpi_fixvars);
+   return UNITY_END();
 }

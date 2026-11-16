@@ -729,7 +729,7 @@ SCIP_RETCODE checkFullOrbitopeSolution(
    assert( consdata->vars != NULL );
    assert( consdata->nrows > 0 );
    assert( consdata->ncols > 0 );
-   assert( ! consdata->ismodelcons ); /* non-model constraints are never checked */
+   assert( consdata->ismodelcons ); /* non-model constraints are never checked */
 
    vars = consdata->vars;
    nrows = consdata->nrows;
@@ -1045,8 +1045,10 @@ SCIP_RETCODE replaceAggregatedVarsOrbitopeFull(
          assert( SCIPvarIsActive(var) || SCIPvarGetStatus(var) == SCIP_VARSTATUS_NEGATED || SCIPvarGetStatus(var) == SCIP_VARSTATUS_FIXED );
          if ( var != vars[i][j] )
          {
+            SCIP_CALL( SCIPunlockVarCons(scip, vars[i][j], cons, TRUE, TRUE) );
             SCIP_CALL( SCIPreleaseVar(scip, &vars[i][j]) );
             vars[i][j] = var;
+            SCIP_CALL( SCIPlockVarCons(scip, vars[i][j], cons, TRUE, TRUE) );
             SCIP_CALL( SCIPcaptureVar(scip, var) );
          }
       }

@@ -3977,6 +3977,7 @@ SCIP_RETCODE SCIPconshdlrPropagate(
          {
             SCIP_CONS** conss;
             SCIP_Longint oldndomchgs;
+            SCIP_Longint oldnactiveconss;
             SCIP_Longint oldnprobdomchgs;
             SCIP_Longint lastpropdomchgcount;
             int lastnusefulpropconss;
@@ -3994,6 +3995,7 @@ SCIP_RETCODE SCIPconshdlrPropagate(
 
             oldndomchgs = stat->nboundchgs + stat->nholechgs;
             oldnprobdomchgs = stat->nprobboundchgs + stat->nprobholechgs;
+            oldnactiveconss = stat->nactiveconss;
 
             /* check, if we want to use eager evaluation */
             if( (conshdlr->eagerfreq == 0 && conshdlr->npropcalls == 0)
@@ -4035,6 +4037,7 @@ SCIP_RETCODE SCIPconshdlrPropagate(
             {
                conshdlr->lastpropdomchgcount = lastpropdomchgcount;
                conshdlr->lastnusefulpropconss = MIN(conshdlr->nusefulpropconss, lastnusefulpropconss);
+               conshdlr->nconssfound += MAX(stat->nactiveconss - oldnactiveconss, 0); /*lint !e776*/
                conshdlr->npropcalls++;
             }
             else
@@ -4052,6 +4055,7 @@ SCIP_RETCODE SCIPconshdlrPropagate(
 
             /* check result code of callback method */
             if( *result != SCIP_CUTOFF
+               && *result != SCIP_CONSADDED
                && *result != SCIP_REDUCEDDOM
                && *result != SCIP_DIDNOTFIND
                && *result != SCIP_DIDNOTRUN
@@ -6946,17 +6950,17 @@ SCIP_RETCODE SCIPconsSetPropagated(
    return SCIP_OKAY;
 }
 
-/** sets the local flag of the given constraint */
+/** sets the local flag of the given constraint and resets valid depth */
 void SCIPconsSetLocal(
    SCIP_CONS*            cons,               /**< constraint */
    SCIP_Bool             local               /**< new value */
    )
 {
    assert(cons != NULL);
+   assert(cons->local || cons->validdepth <= 0);
 
    cons->local = local;
-   if( !local )
-      cons->validdepth = 0;
+   cons->validdepth = local ? -1 : 0;
 }
 
 /** sets the modifiable flag of the given constraint */
@@ -7903,6 +7907,8 @@ SCIP_RETCODE SCIPconsProp(
    conshdlr = cons->conshdlr;
    assert(conshdlr != NULL);
 
+   *result = SCIP_DIDNOTRUN;
+
    /* call external method */
    if( conshdlr->consprop != NULL )
    {
@@ -8276,7 +8282,6 @@ int SCIPlinConsStatsGetTypeCount(
 {
    assert(linconsstats != NULL);
    assert(0 <= (int)linconstype && (int)linconstype < SCIP_NLINCONSTYPES); /*lint !e587 !e685 !e568*/
-   assert(linconsstats->counter != NULL);
 
    return linconsstats->counter[(int)linconstype];
 }
@@ -8301,7 +8306,6 @@ void SCIPlinConsStatsIncTypeCount(
    assert(linconsstats != NULL);
    assert(increment >= 1);
    assert(0 <= (int)linconstype && (int)linconstype < SCIP_NLINCONSTYPES); /*lint !e587 !e685 !e568*/
-   assert(linconsstats->counter != NULL);
 
    linconsstats->counter[(int)linconstype] += increment;
    linconsstats->sum += increment;

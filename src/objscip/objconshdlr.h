@@ -53,7 +53,7 @@ namespace scip
  *  - \ref CONSHDLRS "List of available constraint handlers"
  *  - \ref type_cons.h "Corresponding C interface"
  */
-class ObjConshdlr : public ObjProbCloneable
+class SCIP_EXPORT ObjConshdlr : public ObjProbCloneable
 {
 public:
    /*lint --e{1540}*/
@@ -511,7 +511,7 @@ public:
  *
  *  The method should be called in one of the following ways:
  *
- *   1. The user is resposible of deleting the object:
+ *   1. The user is responsible of deleting the object:
  *       SCIP_CALL( SCIPcreate(&scip) );
  *       ...
  *       MyConshdlr* myconshdlr = new MyConshdlr(...);

@@ -7,26 +7,26 @@ endif()
 
 project(Sudoku)
 
-if(TARGET SCIP::SCIP)
-  # find package by SCIP PATH
-  find_package(SCIP CONFIG NO_DEFAULT_PATH PATHS ${SCIP_BINARY_DIR} REQUIRED)
-else()
-  find_package(SCIP REQUIRED)
+# Find SCIP unless we already have it because we build it.
+if(NOT TARGET SCIP::SCIP)
+  find_package(SCIP
+     REQUIRED
+     CONFIG
+     HINTS "${SCIP_DIR}"
+     )
 endif()
-
-include_directories(BEFORE PUBLIC ${SCIP_INCLUDE_DIRS})
 
 add_executable(sudoku
    src/sudoku_main.cpp
    src/sudoku_utils.h)
-set_property(TARGET sudoku PROPERTY INTERPROCEDURAL_OPTIMIZATION ${LTO_AVAILABLE})
+target_link_libraries(sudoku SCIP::SCIP)
 
-target_link_libraries(sudoku ${SCIP_LIBRARIES})
-target_compile_options(sudoku PRIVATE ${SCIP_COMPILE_FLAGS})
-
-if( TARGET examples )
-    add_dependencies( examples sudoku )
+if(SCIP_HAS_LTO)
+   set_target_properties(sudoku PROPERTIES
+      INTERPROCEDURAL_OPTIMIZATION 1)
 endif()
 
-#add_subdirectory(check)
-#enable_testing()
+if(TARGET examples)
+    add_dependencies(examples sudoku)
+endif()
+

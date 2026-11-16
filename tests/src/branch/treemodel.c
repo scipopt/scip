@@ -138,19 +138,21 @@ void setup_problem(void)
 static
 void teardown(void)
 {
-   /** Remove mocks */
-   scip->set->stage = old_stage;
-   scip->tree = old_tree;
-   scip->primal = old_primal;
+   /** Remove mocks if they were set up */
+   if( old_tree != NULL )
+   {
+      scip->set->stage = old_stage;
+      scip->tree = old_tree;
+      scip->primal = old_primal;
+      old_tree = NULL;
+   }
 
    SCIP_CALL( SCIPfree(&scip) );
 
-   cr_assert_null(scip, "SCIP data structure is not null after being freed");
-   cr_assert_eq(BMSgetMemoryUsed(), 0, "There is a memory leak!!");
+   TEST_ASSERT_NULL(scip, "SCIP data structure is not null after being freed");
+   TEST_ASSERT_EQUAL(BMSgetMemoryUsed(), 0, "There is a memory leak!!");
 }
 
-TestSuite(branch_treemodel, .init = setup, .fini = teardown);
-TestSuite(branch_treemodel_select, .init = setup_problem, .fini = teardown);
 
 /* Set up required background */
 
@@ -160,8 +162,8 @@ void setDualGap(
    SCIP_Real            gap      /**< The desired dual gap */
 )
 {
-   cr_assert_not_null(scip, "SCIP data structure is NULL");
-   cr_assert_geq(gap, 0, "Dual gap must be non-negative");
+   TEST_ASSERT_NOT_NULL(scip, "SCIP data structure is NULL");
+   TEST_ASSERT_GREATER_OR_EQUAL(gap, 0, "Dual gap must be non-negative");
 
    /** Set the primal bound to gap */
    primal.upperbound = gap;
@@ -174,7 +176,7 @@ void setupTestVars(
    ...             /**< Groups of four for each candidate indicating (mingain, maxgain, otherscore) */
 )
 {
-   cr_assert_geq(ncands, 0, "Must initialise a non-zero number of variables");
+   TEST_ASSERT_GREATER_OR_EQUAL(ncands, 0, "Must initialise a non-zero number of variables");
 
    int c;
    va_list args;
@@ -232,38 +234,41 @@ void freeTestVars(void)
 /* TESTS */
 
 /** Test the API function SCIPtreemodelIsEnabled */
-Test(branch_treemodel, IsEnabled)
+void test_branch_treemodel_IsEnabled(void)
 {
-   cr_assert_not_null(scip, "SCIP data structure is NULL");
+   setup();
+   TEST_ASSERT_NOT_NULL(scip, "SCIP data structure is NULL");
 
    SCIP_TREEMODEL treemodel;
    treemodel.enabled = TRUE;
 
-   cr_assert_eq(SCIPtreemodelIsEnabled(scip, &treemodel), TRUE, "Treemodel is enabled, but isEnabled returned FALSE");
+   TEST_ASSERT_EQUAL(SCIPtreemodelIsEnabled(scip, &treemodel), TRUE, "Treemodel is enabled, but isEnabled returned FALSE");
 
    treemodel.enabled = FALSE;
-   cr_assert_eq(SCIPtreemodelIsEnabled(scip, &treemodel), FALSE, "Treemodel is disabled, but isEnabled returned TRUE");
+   TEST_ASSERT_EQUAL(SCIPtreemodelIsEnabled(scip, &treemodel), FALSE, "Treemodel is disabled, but isEnabled returned TRUE");
 }
 
 /** Test the API functions SCIPtreemodelInit and SCIPtreemodelFree */
-Test(branch_treemodel, InitFree)
+void test_branch_treemodel_InitFree(void)
 {
-   cr_assert_not_null(scip, "SCIP data structure is NULL");
+   setup();
+   TEST_ASSERT_NOT_NULL(scip, "SCIP data structure is NULL");
 
    SCIP_TREEMODEL* treemodel = NULL;
    SCIPtreemodelInit(scip, &treemodel);
 
-   cr_assert_not_null(treemodel, "Treemodel is NULL, but it should be initialized");
+   TEST_ASSERT_NOT_NULL(treemodel, "Treemodel is NULL, but it should be initialized");
 
    SCIPtreemodelFree(scip, &treemodel);
 
-   cr_assert_null(treemodel, "Treemodel is not NULL after being freed");
+   TEST_ASSERT_NULL(treemodel, "Treemodel is not NULL after being freed");
 }
 
 /**  Test that the ratio rule selects the correct variable */
-Test(branch_treemodel_select, RatioRule)
+void test_branch_treemodel_select_RatioRule(void)
 {
    int bestcand = 0;
+   setup_problem();
 
    /** Enable Treemodel */
    SCIP_TREEMODEL treemodel;
@@ -294,13 +299,14 @@ Test(branch_treemodel_select, RatioRule)
    /** Free the branching candidates */
    freeTestVars();
 
-   cr_assert_eq(bestcand, 1, "Ratio rule selected (10,10) over (2,49) which is incorrect");
+   TEST_ASSERT_EQUAL(bestcand, 1, "Ratio rule selected (10,10) over (2,49) which is incorrect");
 }
 
 /**  Test that the SVTS rule selects the correct variable */
-Test(branch_treemodel_select, SvtsRule1)
+void test_branch_treemodel_select_SvtsRule1(void)
 {
    int bestcand = 0;
+   setup_problem();
 
    /** Enable Treemodel */
    SCIP_TREEMODEL treemodel;
@@ -332,13 +338,14 @@ Test(branch_treemodel_select, SvtsRule1)
    /** Free the branching candidates */
    freeTestVars();
 
-   cr_assert_eq(bestcand, 0, "SVTS did not select (10,10) at G = 40 which is incorrect");
+   TEST_ASSERT_EQUAL(bestcand, 0, "SVTS did not select (10,10) at G = 40 which is incorrect");
 }
 
 /**  Test that the SVTS rule selects the correct variable when there is a tie */
-Test(branch_treemodel_select, SvtsRule2)
+void test_branch_treemodel_select_SvtsRule2(void)
 {
    int bestcand = 0;
+   setup_problem();
 
    /** Enable Treemodel */
    SCIP_TREEMODEL treemodel;
@@ -370,13 +377,14 @@ Test(branch_treemodel_select, SvtsRule2)
    /** Free the branching candidates */
    freeTestVars();
 
-   cr_assert_eq(bestcand, 3, "SVTS did not select (2,48) at G = 41 (tied with (2,49) with higher hybrid scores) which is incorrect");
+   TEST_ASSERT_EQUAL(bestcand, 3, "SVTS did not select (2,48) at G = 41 (tied with (2,49) with higher hybrid scores) which is incorrect");
 }
 
 /**  Test that the SVTS rule selects the correct variable when filtering is enabled */
-Test(branch_treemodel_select, SvtsRule3)
+void test_branch_treemodel_select_SvtsRule3(void)
 {
    int bestcand = 0;
+   setup_problem();
 
    /** Enable Treemodel */
    SCIP_TREEMODEL treemodel;
@@ -408,13 +416,14 @@ Test(branch_treemodel_select, SvtsRule3)
    /** Free the branching candidates */
    freeTestVars();
 
-   cr_assert_eq(bestcand, 3, "SVTS did not select (2,49) at G = 41 which is incorrect");
+   TEST_ASSERT_EQUAL(bestcand, 3, "SVTS did not select (2,49) at G = 41 which is incorrect");
 }
 
 /**  Test that the Sampling rule selects the correct variable */
-Test(branch_treemodel_select, SamplingRule1)
+void test_branch_treemodel_select_SamplingRule1(void)
 {
    int bestcand = 0;
+   setup_problem();
 
    /** Enable Treemodel */
    SCIP_TREEMODEL treemodel;
@@ -446,13 +455,14 @@ Test(branch_treemodel_select, SamplingRule1)
    /** Free the branching candidates */
    freeTestVars();
 
-   cr_assert_eq(bestcand, 1, "Sampling did not select (2,49) at G = 41 which is incorrect");
+   TEST_ASSERT_EQUAL(bestcand, 1, "Sampling did not select (2,49) at G = 41 which is incorrect");
 }
 
 /**  Test that the Sampling rule selects the correct variable when filtering is enabled */
-Test(branch_treemodel_select, SamplingRule2)
+void test_branch_treemodel_select_SamplingRule2(void)
 {
    int bestcand = 0;
+   setup_problem();
 
    /** Enable Treemodel */
    SCIP_TREEMODEL treemodel;
@@ -484,13 +494,14 @@ Test(branch_treemodel_select, SamplingRule2)
    /** Free the branching candidates */
    freeTestVars();
 
-   cr_assert_eq(bestcand, 3, "Sampling did not select (2,49) at G = 41 which is incorrect");
+   TEST_ASSERT_EQUAL(bestcand, 3, "Sampling did not select (2,49) at G = 41 which is incorrect");
 }
 
 /**  Test that the SVTS rule goes to the fallback strategy when the tree size is infinite */
-Test(branch_treemodel_select, SvtsInfFallback)
+void test_branch_treemodel_select_SvtsInfFallback(void)
 {
    int bestcand = 0;
+   setup_problem();
 
    /** Enable Treemodel */
    SCIP_TREEMODEL treemodel;
@@ -522,13 +533,14 @@ Test(branch_treemodel_select, SvtsInfFallback)
    /** Free the branching candidates */
    freeTestVars();
 
-   cr_assert_eq(bestcand, 2, "SVTS did not use ratio fallback when treesize was infinite");
+   TEST_ASSERT_EQUAL(bestcand, 2, "SVTS did not use ratio fallback when treesize was infinite");
 }
 
 /**  Test that the SVTS rule goes to the fallback strategy when there is no primal bound */
-Test(branch_treemodel_select, SvtsNoPrimalFallback)
+void test_branch_treemodel_select_SvtsNoPrimalFallback(void)
 {
    int bestcand = 0;
+   setup_problem();
 
    /** Enable Treemodel */
    SCIP_TREEMODEL treemodel;
@@ -560,5 +572,25 @@ Test(branch_treemodel_select, SvtsNoPrimalFallback)
    /** Free the branching candidates */
    freeTestVars();
 
-   cr_assert_eq(bestcand, 2, "SVTS did not use ratio fallback when there was no primal bound");
+   TEST_ASSERT_EQUAL(bestcand, 2, "SVTS did not use ratio fallback when there was no primal bound");
+}
+
+void setUp(void) { scip = NULL; old_tree = NULL; }
+
+void tearDown(void) { if( scip != NULL ) teardown(); }
+
+int main(void)
+{
+   UNITY_BEGIN();
+   RUN_TEST(test_branch_treemodel_IsEnabled);
+   RUN_TEST(test_branch_treemodel_InitFree);
+   RUN_TEST(test_branch_treemodel_select_RatioRule);
+   RUN_TEST(test_branch_treemodel_select_SvtsRule1);
+   RUN_TEST(test_branch_treemodel_select_SvtsRule2);
+   RUN_TEST(test_branch_treemodel_select_SvtsRule3);
+   RUN_TEST(test_branch_treemodel_select_SamplingRule1);
+   RUN_TEST(test_branch_treemodel_select_SamplingRule2);
+   RUN_TEST(test_branch_treemodel_select_SvtsInfFallback);
+   RUN_TEST(test_branch_treemodel_select_SvtsNoPrimalFallback);
+   return UNITY_END();
 }

@@ -51,13 +51,13 @@ void checkHashkey(
 {
    unsigned int hashkey1;
    unsigned int hashkey2;
-   cr_assert_not_null(expr1);
+   TEST_ASSERT_NOT_NULL(expr1);
 
    SCIPinfoMessage(scip, NULL, "hash key of expression: ");
    SCIP_CALL( SCIPprintExpr(scip, expr1, NULL) );
    SCIP_CALL( SCIPhashExpr(scip, expr1, &hashkey1));
    SCIPinfoMessage(scip, NULL, " = %u\n", hashkey1);
-   cr_assert_neq(hashkey1, 0);
+   TEST_ASSERT_NOT_EQUAL(hashkey1, 0);
 
    if( expr2 != NULL )
    {
@@ -65,8 +65,8 @@ void checkHashkey(
       SCIP_CALL( SCIPprintExpr(scip, expr2, NULL) );
       SCIP_CALL( SCIPhashExpr(scip, expr2, &hashkey2));
       SCIPinfoMessage(scip, NULL, " = %u\n", hashkey2);
-      cr_assert_eq(hashkey1, hashkey2);
-      cr_assert_neq(hashkey2, 0);
+      TEST_ASSERT_EQUAL(hashkey1, hashkey2);
+      TEST_ASSERT_NOT_EQUAL(hashkey2, 0);
    }
 }
 
@@ -97,12 +97,11 @@ void teardown(void)
    SCIP_CALL( SCIPreleaseExpr(scip, &xexpr) );
    SCIP_CALL( SCIPfree(&scip) );
 
-   cr_assert_eq(BMSgetMemoryUsed(), 0, "Memory is leaking!!");
+   TEST_ASSERT_EQUAL(BMSgetMemoryUsed(), 0, "Memory is leaking!!");
 }
 
-TestSuite(hash, .init = setup, .fini = teardown);
 
-Test(hash, hashEqualExpressions)
+void test_hash_hashEqualExpressions(void)
 {
    SCIP_EXPR* expr;
    SCIP_EXPR* expr2;
@@ -141,7 +140,7 @@ Test(hash, hashEqualExpressions)
    SCIP_CALL( SCIPreleaseExpr(scip, &expr) );
 }
 
-Test(hash, hashSingleExpr)
+void test_hash_hashSingleExpr(void)
 {
    SCIP_EXPR* expr;
    int i;
@@ -177,4 +176,17 @@ Test(hash, hashSingleExpr)
    SCIP_CALL( SCIPparseExpr(scip, &expr, "abs(exp(<x>*<y>^2/<x>^4) - log(2*<x>)*(3+5*<x>-2*<y>)*(<x>+<y>)^(-3.5)) + 2", NULL, NULL, NULL) );
    checkHashkey(expr, NULL);
    SCIP_CALL( SCIPreleaseExpr(scip, &expr) );
+}
+
+void setUp(void) { setup(); }
+
+void tearDown(void) { teardown(); }
+
+int main(void)
+{
+   UNITY_BEGIN();
+   RUN_TEST(test_hash_hashEqualExpressions
+);
+   RUN_TEST(test_hash_hashSingleExpr);
+   return UNITY_END();
 }

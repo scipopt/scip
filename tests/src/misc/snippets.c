@@ -220,7 +220,7 @@ void setup(void)
    /* initialize SCIP */
    SCIP_CALL( SCIPcreate(&scip) );
 
-   cr_assert_not_null(scip);
+   TEST_ASSERT_NOT_NULL(scip);
 }
 
 static
@@ -231,12 +231,22 @@ void teardown(void)
    SCIP_CALL( SCIPfree(&scip) );
 
    /* check for memory leaks */
-   cr_assert_eq(BMSgetMemoryUsed(), 0, "There is a memory leak!");
+   TEST_ASSERT_EQUAL(BMSgetMemoryUsed(), 0, "There is a memory leak!");
 }
 
-TestSuite(snippets, .init = setup, .fini = teardown);
+void setUp(void)
+{
+   setup();
+}
 
-Test(snippets, dialog, .description = "tests an example of dialog code")
+void tearDown(void)
+{
+   teardown();
+}
+
+/* TESTS  */
+/** @brief tests an example of dialog code */
+void test_snippets_dialog(void)
 {
    /**! [SnippetDialogCreate] */
    SCIP_DIALOG* root;
@@ -252,7 +262,8 @@ Test(snippets, dialog, .description = "tests an example of dialog code")
    SCIP_CALL( SCIPincludeDialogDrawgraph(scip, root) );
 }
 
-Test(snippets, memory, .description = "tests an example of memory allocation and freeing")
+/** @brief tests an example of memory allocation and freeing */
+void test_snippets_memory(void)
 {
    /**! [SnippetArrayAllocAndFree] */
    int nparams;
@@ -267,12 +278,24 @@ Test(snippets, memory, .description = "tests an example of memory allocation and
    /**! [SnippetArrayAllocAndFree] */
 }
 
-Test(snippets, display, .description = "tests an example of display code")
+/** @brief tests an example of display code */
+void test_snippets_display(void)
 {
    SCIPincludeDispMydisplaycolumn(scip);
 }
 
-Test(snippets, table, .description = "tests an example of table code")
+/** @brief tests an example of table code */
+void test_snippets_table(void)
 {
    SCIPincludeMytable(scip);
+}
+
+int main(void)
+{
+   UNITY_BEGIN();
+   RUN_TEST(test_snippets_dialog);
+   RUN_TEST(test_snippets_memory);
+   RUN_TEST(test_snippets_display);
+   RUN_TEST(test_snippets_table);
+   return UNITY_END();
 }

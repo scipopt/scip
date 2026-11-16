@@ -4741,7 +4741,7 @@ SCIP_RETCODE focusnodeToFork(
    SCIPsetDebugMsg(set, "focusnode #%" SCIP_LONGINT_FORMAT " to fork at depth %d\n",
       SCIPnodeGetNumber(tree->focusnode), SCIPnodeGetDepth(tree->focusnode));
 
-   /* usually, the LP should be solved to optimality; otherwise, numerical troubles occured,
+   /* usually, the LP should be solved to optimality; otherwise, numerical troubles occurred,
     * and we have to forget about the LP and transform the node into a junction (see below)
     */
    lperror = FALSE;
@@ -4853,7 +4853,7 @@ SCIP_RETCODE focusnodeToSubroot(
    SCIPsetDebugMsg(set, "focusnode #%" SCIP_LONGINT_FORMAT " to subroot at depth %d\n",
       SCIPnodeGetNumber(tree->focusnode), SCIPnodeGetDepth(tree->focusnode));
 
-   /* usually, the LP should be solved to optimality; otherwise, numerical troubles occured,
+   /* usually, the LP should be solved to optimality; otherwise, numerical troubles occurred,
     * and we have to forget about the LP and transform the node into a junction (see below)
     */
    lperror = FALSE;
@@ -5089,7 +5089,7 @@ SCIP_RETCODE SCIPnodeFocus(
          assert(!(*node)->active);
          assert((*node)->depth != 0 || tree->focusnode == NULL);
 
-         SCIPsetDebugMsg(set, "cutting off leaf node #%lld (queuelen=%d) at depth %d with lowerbound=%g\n",
+         SCIPsetDebugMsg(set, "cutting off leaf node #%" SCIP_LONGINT_FORMAT " (queuelen=%d) at depth %d with lowerbound=%g\n",
             SCIPnodeGetNumber(*node), SCIPnodepqLen(tree->leaves), SCIPnodeGetDepth(*node), SCIPnodeGetLowerbound(*node));
 
          /* check if the node should be stored for reoptimization */
@@ -7365,11 +7365,11 @@ SCIP_RETCODE treeCreateProbingNode(
    SCIP_CALL( nodeCreate(&node, blkmem, set) );
    assert(node != NULL);
 
-   /* mark node to be a probing node */
-   node->nodetype = SCIP_NODETYPE_PROBINGNODE; /*lint !e641*/
-
    /* create the probingnode data */
    SCIP_CALL( probingnodeCreate(&node->data.probingnode, blkmem, lp) );
+
+   /* mark node to be a probing node */
+   node->nodetype = SCIP_NODETYPE_PROBINGNODE; /*lint !e641*/
 
    /* make the current node the parent of the new probing node */
    retcode = nodeAssignParent(node, blkmem, set, tree, currentnode, 0.0);
@@ -7991,7 +7991,7 @@ SCIP_RETCODE SCIPtreeEndProbing(
    /* if no LP was solved during probing and the LP before probing was not solved, then it should not be solved now */
    assert(tree->probingsolvedlp || tree->probinglpwassolved || !lp->solved);
 
-   /* if the LP was solved (and hence flushed) before probing, then lp->solved should be TRUE unless we occured an error
+   /* if the LP was solved (and hence flushed) before probing, then lp->solved should be TRUE unless we occurred an error
     * during resolving right above
     */
    assert(!tree->probinglpwassolved || !tree->probinglpwasflushed || lp->solved || lp->resolvelperror);

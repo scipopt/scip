@@ -141,62 +141,81 @@ void teardown(void)
 {
    SCIP_CALL( SCIPfree(&scip) );
 
-   cr_assert_null(scip);
-   cr_assert_eq(BMSgetMemoryUsed(), 0, "There is a memory leak!!");
+   TEST_ASSERT_NULL(scip);
+   TEST_ASSERT_EQUAL(BMSgetMemoryUsed(), 0, "There is a memory leak!!");
 }
 
 
 
-TestSuite(relax, .init = setup, .fini = teardown);
 
 /* TESTS */
 
-Test(relax, relaxCheckName)
+void test_relax_relaxCheckName(void)
 {
-   cr_assert_str_eq(SCIPrelaxGetName(relax), "unittest");
+   TEST_ASSERT_EQUAL_STRING(SCIPrelaxGetName(relax), "unittest");
 }
 
-Test(relax, find)
+void test_relax_find(void)
 {
-   cr_assert_eq(relax, SCIPfindRelax(scip, "unittest"));
+   TEST_ASSERT_EQUAL(relax, SCIPfindRelax(scip, "unittest"));
 }
 
-Test(relax, relaxCheckDesc)
+void test_relax_relaxCheckDesc(void)
 {
-   cr_assert_str_eq(SCIPrelaxGetDesc(relax), "relaxator for unittest");
+   TEST_ASSERT_EQUAL_STRING(SCIPrelaxGetDesc(relax), "relaxator for unittest");
 }
 
-Test(relax, relaxCheckPriority)
+void test_relax_relaxCheckPriority(void)
 {
-   cr_assert_eq(SCIPrelaxGetPriority(relax), 101);
+   TEST_ASSERT_EQUAL(SCIPrelaxGetPriority(relax), 101);
 }
 
-Test(relax, relaxCheckFreq)
+void test_relax_relaxCheckFreq(void)
 {
-   cr_assert_eq(SCIPrelaxGetFreq(relax), 2);
-}
-
-/*@todo how to check this? */
-Test(relax, relaxCheckSetupTime)
-{
-   cr_assert_geq(SCIPrelaxGetSetupTime(relax), 0.0);
+   TEST_ASSERT_EQUAL(SCIPrelaxGetFreq(relax), 2);
 }
 
 /*@todo how to check this? */
-Test(relax, relaxCheckTime)
+void test_relax_relaxCheckSetupTime(void)
 {
-   cr_assert_geq(SCIPrelaxGetTime(relax), 0.0);
+   TEST_ASSERT_GREATER_OR_EQUAL(SCIPrelaxGetSetupTime(relax), 0.0);
 }
 
 /*@todo how to check this? */
-Test(relax, relaxCheckNCalls)
+void test_relax_relaxCheckTime(void)
 {
-   cr_assert_eq( SCIPrelaxGetNCalls(relax), SCIPgetNcallsUnittest() );
+   TEST_ASSERT_GREATER_OR_EQUAL(SCIPrelaxGetTime(relax), 0.0);
 }
 
-Test(relax, relaxCheckInitialized)
+/*@todo how to check this? */
+void test_relax_relaxCheckNCalls(void)
 {
-   cr_assert_eq( SCIPrelaxIsInitialized(relax), FALSE );
+   TEST_ASSERT_EQUAL( SCIPrelaxGetNCalls(relax), SCIPgetNcallsUnittest() );
+}
+
+void test_relax_relaxCheckInitialized(void)
+{
+   TEST_ASSERT_EQUAL( SCIPrelaxIsInitialized(relax), FALSE );
    SCIP_CALL( SCIPsolve(scip) );
-   cr_assert_eq( SCIPrelaxIsInitialized(relax), TRUE );
+   TEST_ASSERT_EQUAL( SCIPrelaxIsInitialized(relax), TRUE );
+}
+
+void setUp(void) { setup(); }
+
+void tearDown(void) { teardown(); }
+
+int main(void)
+{
+   UNITY_BEGIN();
+   RUN_TEST(test_relax_relaxCheckName
+);
+   RUN_TEST(test_relax_find);
+   RUN_TEST(test_relax_relaxCheckDesc);
+   RUN_TEST(test_relax_relaxCheckPriority);
+   RUN_TEST(test_relax_relaxCheckFreq);
+   RUN_TEST(test_relax_relaxCheckSetupTime);
+   RUN_TEST(test_relax_relaxCheckTime);
+   RUN_TEST(test_relax_relaxCheckNCalls);
+   RUN_TEST(test_relax_relaxCheckInitialized);
+   return UNITY_END();
 }

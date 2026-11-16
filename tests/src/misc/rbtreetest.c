@@ -67,17 +67,26 @@ void teardown(void)
    SCIP_CALL_ABORT( SCIPfree(&scip) );
 }
 
-TestSuite(select, .init = setup, .fini = teardown);
+void setUp(void)
+{
+   setup();
+}
+
+void tearDown(void)
+{
+   teardown();
+}
 
 /* TESTS  */
-Test(rbtree, create_and_free)
+void test_rbtree_create_and_free(void)
 {
    /* calls setup and teardown */
 }
 
 
 #define ARRAYMEMSIZE 700
-Test(rbtree, rb_random_insert, .description = "tests rb tree insertion and lookup of the integers 1...n in random order",  .init = setup, .fini = teardown)
+/** @brief tests rb tree insertion and lookup of the integers 1...n in random order */
+void test_rbtree_random_insert(void)
 {
    BMS_BLKMEM* blkmem = SCIPblkmem(scip);
    int len = ARRAYMEMSIZE;
@@ -107,7 +116,7 @@ Test(rbtree, rb_random_insert, .description = "tests rb tree insertion and looku
       elem->whateverdata = sqrt(key[i]);
       pos = findSomeType(root, elem->key, &parent);
 
-      cr_assert(pos != 0);
+      TEST_ASSERT(pos != 0);
       SCIPrbtreeInsert(&root, parent, pos, elem);
    }
 
@@ -115,33 +124,33 @@ Test(rbtree, rb_random_insert, .description = "tests rb tree insertion and looku
    i = 0;
    FOR_EACH_NODE(SOME_TYPE*, node, root,
    {
-      cr_assert_eq(node->key, i, "expected key %i but got %i\n", i, node->key);
-      cr_assert_eq(node->whateverdata, sqrt(i));
+      TEST_ASSERT_EQUAL(node->key, i, "expected key %i but got %i\n", i, node->key);
+      TEST_ASSERT_EQUAL(node->whateverdata, sqrt(i));
       ++i;
    })
 
    /* check number of elements was correct */
-   cr_assert_eq(i, len);
+   TEST_ASSERT_EQUAL(i, len);
    /* check lookup of specific elements */
    pos = findSomeType(root, 10, &x);
-   cr_assert(pos == 0);
-   cr_assert(x->key == 10);
+   TEST_ASSERT(pos == 0);
+   TEST_ASSERT(x->key == 10);
    /* delete element 10 */
    SCIPrbtreeDelete(&root, x);
    BMSfreeBlockMemory(blkmem, &x);
    /* lookup and delete 100 */
    pos = findSomeType(root, 100, &x);
-   cr_assert(pos == 0);
-   cr_assert(x->key == 100);
+   TEST_ASSERT(pos == 0);
+   TEST_ASSERT(x->key == 100);
    SCIPrbtreeDelete(&root, x);
    BMSfreeBlockMemory(blkmem, &x);
 
    /* lookup of deleted element should not find element and return predecessor/successor */
    pos = findSomeType(root, 10, &x);
-   cr_assert( (x->key == 9 && pos == -1) || (x->key == 11 && pos == 1) );
+   TEST_ASSERT( (x->key == 9 && pos == -1) || (x->key == 11 && pos == 1) );
 
    pos = findSomeType(root, 100, &x);
-   cr_assert( (x->key == 99 && pos == -1) || (x->key == 101 && pos == 1) );
+   TEST_ASSERT( (x->key == 99 && pos == -1) || (x->key == 101 && pos == 1) );
 
    /* iterate again and check order */
    i = 0;
@@ -152,10 +161,18 @@ Test(rbtree, rb_random_insert, .description = "tests rb tree insertion and looku
          ++k;
       if( k >= 100 )
          ++k;
-      cr_assert_eq(node->key, k, "expected key %i but got %i\n", k, node->key);
-      cr_assert_eq(node->whateverdata, sqrt(k));
+      TEST_ASSERT_EQUAL(node->key, k, "expected key %i but got %i\n", k, node->key);
+      TEST_ASSERT_EQUAL(node->whateverdata, sqrt(k));
       ++i;
    })
    /* check number again (with 10 and 100 missing) */
-   cr_assert_eq(i, len-2);
+   TEST_ASSERT_EQUAL(i, len-2);
+}
+
+int main(void)
+{
+   UNITY_BEGIN();
+   RUN_TEST(test_rbtree_create_and_free);
+   RUN_TEST(test_rbtree_random_insert);
+   return UNITY_END();
 }

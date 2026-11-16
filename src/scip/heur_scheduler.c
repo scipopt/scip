@@ -1237,7 +1237,7 @@ void printDivingHeurStatistics(
       SCIPinfoMessage(scip, file, " %10.5f", epsgreedyweight);
       SCIPinfoMessage(scip, file, " %10.5f", ucb);
       SCIPinfoMessage(scip, file, " %10.3f", divingheur->solvefreqdata->currentsolvefreq);
-      SCIPinfoMessage(scip, file, " %10lld", divingheur->nodelimit);
+      SCIPinfoMessage(scip, file, " %10" SCIP_LONGINT_FORMAT, divingheur->nodelimit);
 
       SCIPinfoMessage(scip, file, "\n");
    }
@@ -2646,7 +2646,7 @@ SCIP_RETCODE executeDivingHeuristic(
    /* update maximum number of conflicts found */
    heurdata->maxnconflicts = MAX(heurdata->maxnconflicts, (int) runstats->nconflicts);
 
-   SCIPdebugMsg(scip, "Finished executing diving heuristic %s (idx: %d) with %lld sols (%lld best sols), %lld conflicts, %lld backtracks and %lld probing nodes \n",
+   SCIPdebugMsg(scip, "Finished executing diving heuristic %s (idx: %d) with %" SCIP_LONGINT_FORMAT " sols (%" SCIP_LONGINT_FORMAT " best sols), %" SCIP_LONGINT_FORMAT " conflicts, %" SCIP_LONGINT_FORMAT " backtracks and %" SCIP_LONGINT_FORMAT " probing nodes \n",
          SCIPdivesetGetName(diveset), selection, runstats->nsolsfound, runstats->nbestsolsfound,
          runstats->nconflicts, runstats->nbacktracks, runstats->nprobnodes);
 
@@ -2837,7 +2837,7 @@ CLEANUP:
 
       heurdata->usednodes += runstats->usednodes;
 
-      SCIPdebugMsg(scip, "Finished executing LNS heuristic %s (idx: %d) with %lld sols (%lld best sols) and %lld nodes used.\n",
+      SCIPdebugMsg(scip, "Finished executing LNS heuristic %s (idx: %d) with %" SCIP_LONGINT_FORMAT " sols (%" SCIP_LONGINT_FORMAT " best sols) and %" SCIP_LONGINT_FORMAT " nodes used.\n",
             neighborhood->name, selection + heurdata->ndiving, runstats->nsolsfound, runstats->nbestsolsfound, runstats->usednodes);
 
       if( runstats->nbestsolsfound > 0 )
@@ -2998,7 +2998,7 @@ SCIP_DECL_HEUREXEC(heurExecScheduler)
    /* get heuristic data */
    heurdata = SCIPheurGetData(heur);
 
-   SCIPdebugMsg(scip, "Calling heurExecScheduler: depth %d sols %d inf %u node %lld \n",
+   SCIPdebugMsg(scip, "Calling heurExecScheduler: depth %d sols %d inf %u node %" SCIP_LONGINT_FORMAT " \n",
          SCIPgetDepth(scip), SCIPgetNSols(scip), nodeinfeasible, SCIPgetNNodes(scip));
 
    /* store diving heuristics if not done already and reset stats */

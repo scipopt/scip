@@ -136,7 +136,7 @@ SCIP_DECL_PRESOLEXEC(presolExecInttobinary)
          SCIP_CALL( SCIPaddVar(scip, binvar) );
 
                      /* set up debug solution */
-#ifdef WITH_DEBUG_SOLUTION
+#if SCIP_HAS_DEBUG_SOLUTION
          if( SCIPdebugSolIsEnabled(scip) )
          {
             SCIP_SOL* debugsol;
@@ -151,7 +151,7 @@ SCIP_DECL_PRESOLEXEC(presolExecInttobinary)
                SCIP_CALL( SCIPdebugAddSolVal(scip, binvar, val - lb) );
             }
          }
-#endif
+#endif /* SCIP_HAS_DEBUG_SOLUTION */
 
          /* aggregate integer and binary variable */
          SCIP_CALL( SCIPaggregateVars(scip, vars[v], binvar, 1.0, -1.0, lb, &infeasible, &redundant, &aggregated) );

@@ -663,7 +663,7 @@ SCIP_RETCODE SCIPsolveSlack(
 
       *status = SCIPgetStatus(scip);
       /* we can have an infeasible problem if some constraint are not relaxable */
-      cr_expect(*status == SCIP_STATUS_OPTIMAL || *status == SCIP_STATUS_INFEASIBLE);
+      SOFT_ASSERT(*status == SCIP_STATUS_OPTIMAL || *status == SCIP_STATUS_INFEASIBLE);
 
       nsols = SCIPgetNSols(scip);
       sols = SCIPgetSols(scip);
@@ -850,7 +850,7 @@ SCIP_RETCODE SCIPsolveSlack(
 
       *status = SCIPgetStatus(scip);
       /* we can have an infeasible problem if some constraint are not relaxable */
-      cr_expect(*status == SCIP_STATUS_OPTIMAL || *status == SCIP_STATUS_INFEASIBLE);
+      SOFT_ASSERT(*status == SCIP_STATUS_OPTIMAL || *status == SCIP_STATUS_INFEASIBLE);
 
       SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL, "end of the solving of the original problem\n");
    }
@@ -1142,12 +1142,11 @@ static
 void teardown(void)
 {
    SCIP_CALL( SCIPfree(&scip) );
-   cr_assert_eq(BMSgetMemoryUsed(), 0, "Memory is leaking!");
+   TEST_ASSERT_EQUAL(BMSgetMemoryUsed(), 0, "Memory is leaking!");
 }
 
-TestSuite(slack, .init = setup, .fini = teardown);
 
-Test(slack, feasible)
+void test_slack_feasible(void)
 {
    // read a feasible model
    SCIP_CALL( SCIPreadProb(scip, "src/cons/superindicator/misc07.mps.gz", NULL) );
@@ -1157,10 +1156,22 @@ Test(slack, feasible)
    //SCIP_CALL( testslack(scip, 1, 1, TRUE, TRUE) );
 }
 
-Test(slack, infeasible)
+void test_slack_infeasible(void)
 {
    // read a infeasible model
    SCIP_CALL( SCIPreadProb(scip, "src/cons/superindicator/gen_inf.mps.gz", NULL) );
    // call testslack
    SCIP_CALL( testslack(scip, 13, 17, TRUE, TRUE) );
+}
+
+void setUp(void) { setup(); }
+
+void tearDown(void) { teardown(); }
+
+int main(void)
+{
+   UNITY_BEGIN();
+   RUN_TEST(test_slack_feasible);
+   RUN_TEST(test_slack_infeasible);
+   return UNITY_END();
 }

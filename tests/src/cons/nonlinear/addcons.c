@@ -64,11 +64,11 @@ void teardown(void)
    SCIP_CALL( SCIPreleaseVar(scip, &z) );
    SCIP_CALL( SCIPfree(&scip) );
 
-   cr_assert_eq(BMSgetMemoryUsed(), 0, "Memory is leaking!!");
+   TEST_ASSERT_EQUAL(BMSgetMemoryUsed(), 0, "Memory is leaking!!");
 }
 
 /* test that creates and adds a nonchecked nonlinear constraints during SCIP_STAGE_SOLVING */
-Test(addcons, nonchecked, .init = setup, .fini = teardown)
+void test_addcons_nonchecked(void)
 {
    SCIP_CONS* cons;
    SCIP_CONS* t_cons;
@@ -86,7 +86,7 @@ Test(addcons, nonchecked, .init = setup, .fini = teardown)
       FALSE, /* check */
       TRUE,  /* propagate */
       FALSE, FALSE, FALSE, FALSE, FALSE, &success) );
-   cr_assert(success);
+   TEST_ASSERT(success);
 
    /* add constraint */
    SCIP_CALL( SCIPaddCons(scip, cons) );
@@ -95,23 +95,34 @@ Test(addcons, nonchecked, .init = setup, .fini = teardown)
 
    SCIP_CALL( SCIPgetTransformedCons(scip, cons, &t_cons) );
    expr = SCIPgetExprNonlinear(t_cons);
-   cr_assert(expr != NULL);
+   TEST_ASSERT(expr != NULL);
 
    /* check locks */
-   cr_expect(SCIPgetExprNLocksNegNonlinear(expr) == 1);
-   cr_expect(SCIPgetExprNLocksPosNonlinear(expr) == 1);
+   SOFT_ASSERT(SCIPgetExprNLocksNegNonlinear(expr) == 1);
+   SOFT_ASSERT(SCIPgetExprNLocksPosNonlinear(expr) == 1);
 
    /* expression should have been simplified in SCIP_DECL_CONSACTIVE */
-   cr_expect(SCIPisExprSum(scip, expr) );
-   cr_expect(SCIPexprGetNChildren(expr) == 1);
+   SOFT_ASSERT(SCIPisExprSum(scip, expr) );
+   SOFT_ASSERT(SCIPexprGetNChildren(expr) == 1);
 
    /* call SCIPconstructLP to trigger an INITLP call */
    SCIP_CALL( SCIPconstructLP(scip, &cutoff) );
-   cr_expect(!cutoff);
+   SOFT_ASSERT(!cutoff);
 
    /* check whether expression has been detected by at least one nonlinear handler (happens now already in addCons during solve */
-   cr_expect(SCIPgetExprAuxVarNonlinear(expr) != NULL);
+   SOFT_ASSERT(SCIPgetExprAuxVarNonlinear(expr) != NULL);
 
    /* release the constraint */
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
+}
+
+void setUp(void) { setup(); }
+
+void tearDown(void) { teardown(); }
+
+int main(void)
+{
+   UNITY_BEGIN();
+   RUN_TEST(test_addcons_nonchecked);
+   return UNITY_END();
 }

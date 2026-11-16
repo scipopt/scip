@@ -1081,7 +1081,7 @@ SCIP_RETCODE buildPowEstimator(
          SCIP_CALL( computeSignpowerRoot(scip, &exprdata->root, exponent) );
       }
       estimateSignedpower(scip, exponent, exprdata->root, overestimate, childlb, childub, refpoint,
-                          -childglb, childgub, constant, coef, islocal, branchcand, success);
+                          childglb, childgub, constant, coef, islocal, branchcand, success);
    }
    else if( exponent < 0.0 && (iseven || childlb >= 0.0) )
    {

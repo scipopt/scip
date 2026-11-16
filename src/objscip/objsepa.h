@@ -49,7 +49,7 @@ namespace scip
  *  - \ref SEPARATORS "List of available cut separators"
  *  - \ref type_sepa.h "Corresponding C interface"
  */
-class ObjSepa : public ObjCloneable
+class SCIP_EXPORT ObjSepa : public ObjCloneable
 {
 public:
    /*lint --e{1540}*/
@@ -219,7 +219,7 @@ public:
  *
  *  The method should be called in one of the following ways:
  *
- *   1. The user is resposible of deleting the object:
+ *   1. The user is responsible of deleting the object:
  *       SCIP_CALL( SCIPcreate(&scip) );
  *       ...
  *       MySepa* mysepa = new MySepa(...);

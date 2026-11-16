@@ -88,15 +88,15 @@ void setup(void)
    SCIP_CALL( SCIPincludeExprhdlrCos(scip) );
 
    conshdlr = SCIPfindConshdlr(scip, "nonlinear");
-   cr_assert_not_null(conshdlr);
+   TEST_ASSERT_NOT_NULL(conshdlr);
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
-   cr_assert_not_null(conshdlrdata);
+   TEST_ASSERT_NOT_NULL(conshdlrdata);
 
    SCIP_CALL( SCIPincludeNlhdlrDefault(scip) );
    SCIP_CALL( SCIPincludeNlhdlrSoc(scip) );
 
    nlhdlr = SCIPfindNlhdlrNonlinear(conshdlr, "soc");
-   cr_assert_not_null(nlhdlr);
+   TEST_ASSERT_NOT_NULL(nlhdlr);
 
    /* create problem */
    SCIP_CALL( SCIPcreateProbBasic(scip, "test_problem") );
@@ -143,12 +143,10 @@ void teardown(void)
    SCIP_CALL( SCIPfree(&scip) );
 
    BMSdisplayMemory();
-   cr_assert_eq(BMSgetMemoryUsed(), 0, "Memory is leaking!!");
+   TEST_ASSERT_EQUAL(BMSgetMemoryUsed(), 0, "Memory is leaking!!");
 }
 
 /* test suite */
-TestSuite(nlhdlrsoc, .init = setup, .fini = teardown);
-
 static
 void checkData(
    SCIP_NLHDLREXPRDATA*  nlhdlrexprdata,
@@ -164,14 +162,14 @@ void checkData(
 {
    int i;
 
-   cr_assert_not_null(nlhdlrexprdata->vars);
-   cr_assert_not_null(nlhdlrexprdata->offsets);
-   cr_assert_not_null(nlhdlrexprdata->transcoefs);
-   cr_assert_not_null(nlhdlrexprdata->transcoefsidx);
+   TEST_ASSERT_NOT_NULL(nlhdlrexprdata->vars);
+   TEST_ASSERT_NOT_NULL(nlhdlrexprdata->offsets);
+   TEST_ASSERT_NOT_NULL(nlhdlrexprdata->transcoefs);
+   TEST_ASSERT_NOT_NULL(nlhdlrexprdata->transcoefsidx);
 
-   cr_expect_eq(nlhdlrexprdata->nvars, nvars);
-   cr_expect_eq(nlhdlrexprdata->nterms, nterms);
-   cr_expect_eq(nlhdlrexprdata->termbegins[nlhdlrexprdata->nterms], ntranscoefs);
+   SOFT_ASSERT_EQUAL(nlhdlrexprdata->nvars, nvars);
+   SOFT_ASSERT_EQUAL(nlhdlrexprdata->nterms, nterms);
+   SOFT_ASSERT_EQUAL(nlhdlrexprdata->termbegins[nlhdlrexprdata->nterms], ntranscoefs);
 
    for( i = 0; i < nvars; ++i )
    {
@@ -189,11 +187,11 @@ void checkData(
          SCIPinfoMessage(scip, NULL, " <- is var %d expr after  %p\n", i, (void *)vars[i]);
       }
 
-      cr_assert_not_null(nlhdlrexprdata->vars[i]);
+      TEST_ASSERT_NOT_NULL(nlhdlrexprdata->vars[i]);
 
       SCIPprintExpr(scip, nlhdlrexprdata->vars[i], NULL);
       SCIPinfoMessage(scip, NULL, " <- is var %d in nlhdlr   %p\n", i, (void *)nlhdlrexprdata->vars[i]);
-      cr_expect_eq(nlhdlrexprdata->vars[i], vars[i], "expected expr %d to be %p, but got %p\n",
+      SOFT_ASSERT_EQUAL(nlhdlrexprdata->vars[i], vars[i], "expected expr %d to be %p, but got %p\n",
          i + 1, (void *)vars[i], (void *)nlhdlrexprdata->vars[i]);
 
       if( SCIPisExprVar(scip, vars[i]) )
@@ -210,26 +208,26 @@ void checkData(
 
    for( i = 0; i < nterms; ++i )
    {
-      cr_expect(SCIPisEQ(scip, nlhdlrexprdata->offsets[i], offsets[i]), "expected offset %d to be %f, but got %f\n",
+      SOFT_ASSERT(SCIPisEQ(scip, nlhdlrexprdata->offsets[i], offsets[i]), "expected offset %d to be %f, but got %f\n",
          i + 1, offsets[i], nlhdlrexprdata->offsets[i]);
    }
 
    for( i = 0; i < nterms; ++i )
    {
       int nnz = nlhdlrexprdata->termbegins[i + 1] - nlhdlrexprdata->termbegins[i];
-      cr_expect_eq(nnz, nnonzeroes[i], "expected nnonzeroes %d to be %d, but got %d\n",
+      SOFT_ASSERT_EQUAL(nnz, nnonzeroes[i], "expected nnonzeroes %d to be %d, but got %d\n",
          i + 1, nnonzeroes[i], nnz);
    }
 
    for( i = 0; i < ntranscoefs; ++i )
    {
-      cr_expect(SCIPisEQ(scip, nlhdlrexprdata->transcoefs[i], transcoefs[i]), "expected transcoef[%d] to be %f, but got %f\n",
+      SOFT_ASSERT(SCIPisEQ(scip, nlhdlrexprdata->transcoefs[i], transcoefs[i]), "expected transcoef[%d] to be %f, but got %f\n",
          i + 1, transcoefs[i], nlhdlrexprdata->transcoefs[i]);
    }
 
    for( i = 0; i < ntranscoefs; ++i )
    {
-      cr_expect_eq(nlhdlrexprdata->transcoefsidx[i], transcoefsidx[i], "expected transcoefsidx[%d] to be %d, but got %d\n",
+      SOFT_ASSERT_EQUAL(nlhdlrexprdata->transcoefsidx[i], transcoefsidx[i], "expected transcoefsidx[%d] to be %d, but got %d\n",
          i + 1, transcoefsidx[i], nlhdlrexprdata->transcoefsidx[i]);
    }
 }
@@ -245,16 +243,16 @@ void checkCut(
 {
    int i;
 
-   cr_assert_not_null(cut);
-   cr_assert_not_null(vars);
-   cr_assert_not_null(vals);
+   TEST_ASSERT_NOT_NULL(cut);
+   TEST_ASSERT_NOT_NULL(vars);
+   TEST_ASSERT_NOT_NULL(vals);
 
    SCIPmergeRowprepTerms(scip, cut);
 
-   cr_expect_eq(SCIProwprepGetNVars(cut), nvars, "expected %d vars in cut, but got %d\n",
+   SOFT_ASSERT_EQUAL(SCIProwprepGetNVars(cut), nvars, "expected %d vars in cut, but got %d\n",
       nvars, SCIProwprepGetNVars(cut));
-   cr_expect_eq(SCIProwprepGetSidetype(cut), SCIP_SIDETYPE_RIGHT);
-   cr_expect(SCIPisEQ(scip, SCIProwprepGetSide(cut), rhs), "expected rhs = %f, but got %f\n", rhs, SCIProwprepGetSide(cut));
+   SOFT_ASSERT_EQUAL(SCIProwprepGetSidetype(cut), SCIP_SIDETYPE_RIGHT);
+   SOFT_ASSERT(SCIPisEQ(scip, SCIProwprepGetSide(cut), rhs), "expected rhs = %f, but got %f\n", rhs, SCIProwprepGetSide(cut));
 
    /* FIXME the remaining tests assume a certain order of terms and thus are not invariant to
     * valid permutations
@@ -263,9 +261,9 @@ void checkCut(
 
    for( i = 0; i < nvars; ++i )
    {
-      cr_expect_eq(SCIProwprepGetVars(cut)[i], vars[i], "expected var%d = %s, but got %s\n",
+      SOFT_ASSERT_EQUAL(SCIProwprepGetVars(cut)[i], vars[i], "expected var%d = %s, but got %s\n",
          i + 1, SCIPvarGetName(vars[i]), SCIPvarGetName(SCIProwprepGetVars(cut)[i]));
-      cr_expect_eq(SCIProwprepGetCoefs(cut)[i], vals[i], "expected val%d = %f, but got %f\n", i + 1, vals[i],
+      SOFT_ASSERT_EQUAL(SCIProwprepGetCoefs(cut)[i], vals[i], "expected val%d = %f, but got %f\n", i + 1, vals[i],
          SCIProwprepGetCoefs(cut)[i]);
    }
 }
@@ -303,20 +301,21 @@ SCIP_RETCODE createAddConsAndConstructLP(
 
    SCIP_CALL( SCIPparseCons(scip, cons, (char*) input, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE,
             &success) );
-   cr_assert(success);
+   TEST_ASSERT(success);
 
    /* since we are in solving, this will run consactive which will: simplify and run detect */
    SCIP_CALL( SCIPaddCons(scip, *cons) );
 
    /* this will run initsepa which should create the auxvars and call the initsepa of the nlhdlr */
    SCIP_CALL( SCIPconstructLP(scip, &infeasible) );
-   cr_assert_not(infeasible);
+   TEST_ASSERT_NOT(infeasible);
 
    return SCIP_OKAY;
 }
 
 /* norm <= constant shouldn't be handled by soc */
-Test(nlhdlrsoc, detectandfree1, .description = "detects simple norm expression")
+/** @brief detects simple norm expression */
+void test_nlhdlrsoc_detectandfree1(void)
 {
    SCIP_CONS* cons;
    SCIP_NLHDLREXPRDATA* nlhdlrexprdata = NULL;
@@ -328,14 +327,15 @@ Test(nlhdlrsoc, detectandfree1, .description = "detects simple norm expression")
 
    /* check that soc nlhdlr didn't detect */
    getSocNlhdlrData(expr, &nlhdlrexprdata);
-   cr_assert_null(nlhdlrexprdata);
+   TEST_ASSERT_NULL(nlhdlrexprdata);
 
    /* free cons */
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
 }
 
 /* detects ||x|| - y <= 0 as soc expression */
-Test(nlhdlrsoc, detectandfree2, .description = "detects simple norm expression")
+/** @brief detects simple norm expression */
+void test_nlhdlrsoc_detectandfree2(void)
 {
    SCIP_CONS* cons;
    SCIP_NLHDLREXPRDATA* nlhdlrexprdata = NULL;
@@ -349,7 +349,7 @@ Test(nlhdlrsoc, detectandfree2, .description = "detects simple norm expression")
 
    /* check that soc nlhdlr detected */
    getSocNlhdlrData(normexpr, &nlhdlrexprdata);
-   cr_assert_not_null(nlhdlrexprdata);
+   TEST_ASSERT_NOT_NULL(nlhdlrexprdata);
 
    /* setup expected data */
    SCIP_EXPR* vars[4] = {xexpr, yexpr, zexpr, normexpr};
@@ -366,7 +366,8 @@ Test(nlhdlrsoc, detectandfree2, .description = "detects simple norm expression")
 }
 
 /* detects sqrt(8 +  2*(x + 1)^2 + 4*(sin(y) - 2)^2 ) as soc expression */
-Test(nlhdlrsoc, detectandfree3, .description = "detects more complex norm expression")
+/** @brief detects more complex norm expression */
+void test_nlhdlrsoc_detectandfree3(void)
 {
    SCIP_CONS* cons;
    SCIP_NLHDLREXPRDATA* nlhdlrexprdata = NULL;
@@ -378,13 +379,13 @@ Test(nlhdlrsoc, detectandfree3, .description = "detects more complex norm expres
    /* create nonlinear constraint */
    SCIP_CALL( SCIPparseCons(scip, &cons, (char*) "[nonlinear] <test>: (8 + 2*(<x> + 1)^2 + 4*(sin(<y>) - 2)^2)^0.5 + 2*(<w> - 1) <= 0",
          TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, &success) );
-   cr_assert(success);
+   TEST_ASSERT(success);
 
    /* add locks */
    SCIP_CALL( SCIPaddConsLocks(scip, cons, 1, 0) );
 
    SCIP_CALL( canonicalizeConstraints(scip, conshdlr, &cons, 1, SCIP_PRESOLTIMING_ALWAYS, &infeasible, NULL, NULL, NULL) );
-   cr_expect_not(infeasible);
+   SOFT_ASSERT_NOT(infeasible);
 
    /* call detection method -> this registers the nlhdlr */
    SCIP_CALL( detectNlhdlrs(scip, conshdlr, &cons, 1) );
@@ -394,7 +395,7 @@ Test(nlhdlrsoc, detectandfree3, .description = "detects more complex norm expres
 
    /* check that soc nlhdlr detected */
    getSocNlhdlrData(normexpr, &nlhdlrexprdata);
-   cr_assert_not_null(nlhdlrexprdata);
+   TEST_ASSERT_NOT_NULL(nlhdlrexprdata);
 
    /* setup expected data */
    SCIP_EXPR* vars[3] = {xexpr, SCIPexprGetChildren(SCIPexprGetChildren(normexpr)[0])[2], normexpr};
@@ -418,7 +419,8 @@ Test(nlhdlrsoc, detectandfree3, .description = "detects more complex norm expres
 }
 
 /* detects 2x^2 - 9y^2 + sin(z)^2 < = 0 as soc expression */
-Test(nlhdlrsoc, detectandfree4, .description = "detects simple quadratic expression")
+/** @brief detects simple quadratic expression */
+void test_nlhdlrsoc_detectandfree4(void)
 {
    SCIP_CONS* cons;
    SCIP_NLHDLREXPRDATA* nlhdlrexprdata = NULL;
@@ -429,13 +431,13 @@ Test(nlhdlrsoc, detectandfree4, .description = "detects simple quadratic express
    /* create nonlinear constraint */
    SCIP_CALL( SCIPparseCons(scip, &cons, (char*) "[nonlinear] <test>: 2*<x>^2 - 9*<y>^2 + sin(<z>)^2  <= 0",
          TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, &success) );
-   cr_assert(success);
+   TEST_ASSERT(success);
 
    /* add locks */
    SCIP_CALL( SCIPaddConsLocks(scip, cons, 1, 0) );
 
    SCIP_CALL( canonicalizeConstraints(scip, conshdlr, &cons, 1, SCIP_PRESOLTIMING_ALWAYS, &infeasible, NULL, NULL, NULL) );
-   cr_expect_not(infeasible);
+   SOFT_ASSERT_NOT(infeasible);
 
    /* call detection method -> this registers the nlhdlr */
    SCIP_CALL( detectNlhdlrs(scip, conshdlr, &cons, 1) );
@@ -444,7 +446,7 @@ Test(nlhdlrsoc, detectandfree4, .description = "detects simple quadratic express
 
    /* check that soc nlhdlr detected */
    getSocNlhdlrData(expr, &nlhdlrexprdata);
-   cr_assert_not_null(nlhdlrexprdata);
+   TEST_ASSERT_NOT_NULL(nlhdlrexprdata);
 
    SCIPprintExpr(scip, expr, NULL);
    SCIPinfoMessage(scip, NULL, " \n");
@@ -470,7 +472,8 @@ Test(nlhdlrsoc, detectandfree4, .description = "detects simple quadratic express
 }
 
 /* detects 5 - 9cos(x)^2 + y^2 + 2sin(z)^2 <= 4 as soc expression */
-Test(nlhdlrsoc, detectandfree5, .description = "detects more complication quadratic expression")
+/** @brief detects more complication quadratic expression */
+void test_nlhdlrsoc_detectandfree5(void)
 {
    SCIP_CONS* cons;
    SCIP_NLHDLREXPRDATA* nlhdlrexprdata = NULL;
@@ -481,13 +484,13 @@ Test(nlhdlrsoc, detectandfree5, .description = "detects more complication quadra
    /* create nonlinear constraint */
    SCIP_CALL( SCIPparseCons(scip, &cons, (char*) "[nonlinear] <test>: 5 - 9*cos(<x>)^2 + <y>^2 + 2*sin(<z>)^2 <= 4",
          TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, &success) );
-   cr_assert(success);
+   TEST_ASSERT(success);
 
    /* add locks */
    SCIP_CALL( SCIPaddConsLocks(scip, cons, 1, 0) );
 
    SCIP_CALL( canonicalizeConstraints(scip, conshdlr, &cons, 1, SCIP_PRESOLTIMING_ALWAYS, &infeasible, NULL, NULL, NULL) );
-   cr_expect_not(infeasible);
+   SOFT_ASSERT_NOT(infeasible);
 
    /* call detection method -> this registers the nlhdlr */
    SCIP_CALL( detectNlhdlrs(scip, conshdlr, &cons, 1) );
@@ -496,7 +499,7 @@ Test(nlhdlrsoc, detectandfree5, .description = "detects more complication quadra
 
    /* check that soc nlhdlr detected */
    getSocNlhdlrData(expr, &nlhdlrexprdata);
-   cr_assert_not_null(nlhdlrexprdata);
+   TEST_ASSERT_NOT_NULL(nlhdlrexprdata);
 
    /* setup expected data */
 
@@ -521,7 +524,8 @@ Test(nlhdlrsoc, detectandfree5, .description = "detects more complication quadra
 }
 
 /* detects that -7exp(x)^2 + y^2 - 2sin(z)^2 <= 1 is not a soc expression */
-Test(nlhdlrsoc, detectandfree6, .description = "detects quadratic expression that is not soc")
+/** @brief detects quadratic expression that is not soc */
+void test_nlhdlrsoc_detectandfree6(void)
 {
    SCIP_CONS* cons;
    SCIP_NLHDLREXPRDATA* nlhdlrexprdata = NULL;
@@ -532,13 +536,13 @@ Test(nlhdlrsoc, detectandfree6, .description = "detects quadratic expression tha
    /* create nonlinear constraint */
    SCIP_CALL( SCIPparseCons(scip, &cons, (char*) "[nonlinear] <test>: - 7*cos(<x>)^2 + <y>^2 - 2*sin(<z>)^2  <= 5",
          TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, &success) );
-   cr_assert(success);
+   TEST_ASSERT(success);
 
    /* add locks */
    SCIP_CALL( SCIPaddConsLocks(scip, cons, 1, 0) );
 
    SCIP_CALL( canonicalizeConstraints(scip, conshdlr, &cons, 1, SCIP_PRESOLTIMING_ALWAYS, &infeasible, NULL, NULL, NULL) );
-   cr_expect_not(infeasible);
+   SOFT_ASSERT_NOT(infeasible);
 
    /* call detection method -> this registers the nlhdlr */
    SCIP_CALL( detectNlhdlrs(scip, conshdlr, &cons, 1) );
@@ -547,7 +551,7 @@ Test(nlhdlrsoc, detectandfree6, .description = "detects quadratic expression tha
 
    /* check that soc nlhdlr didn't detect */
    getSocNlhdlrData(expr, &nlhdlrexprdata);
-   cr_assert_null(nlhdlrexprdata);
+   TEST_ASSERT_NULL(nlhdlrexprdata);
 
    /* remove locks */
    SCIP_CALL( SCIPaddConsLocks(scip, cons, -1, 0) );
@@ -560,7 +564,8 @@ Test(nlhdlrsoc, detectandfree6, .description = "detects quadratic expression tha
 }
 
 /* detects 1 + 7x^2 - 2*u*y + 2z^2 <= 0 as soc expression */
-Test(nlhdlrsoc, detectandfree7, .description = "detects hyperbolic quadratic expression")
+/** @brief detects hyperbolic quadratic expression */
+void test_nlhdlrsoc_detectandfree7(void)
 {
    SCIP_CONS* cons;
    SCIP_NLHDLREXPRDATA* nlhdlrexprdata = NULL;
@@ -571,13 +576,13 @@ Test(nlhdlrsoc, detectandfree7, .description = "detects hyperbolic quadratic exp
    /* create nonlinear constraint */
    SCIP_CALL( SCIPparseCons(scip, &cons, (char*) "[nonlinear] <test>: 1 + 8*<x>^2 - 2*<y>*<u> + 2*<z>^2 <= 0",
          TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, &success) );
-   cr_assert(success);
+   TEST_ASSERT(success);
 
    /* add locks */
    SCIP_CALL( SCIPaddConsLocks(scip, cons, 1, 0) );
 
    SCIP_CALL( canonicalizeConstraints(scip, conshdlr, &cons, 1, SCIP_PRESOLTIMING_ALWAYS, &infeasible, NULL, NULL, NULL) );
-   cr_expect_not(infeasible);
+   SOFT_ASSERT_NOT(infeasible);
 
    /* call detection method -> this registers the nlhdlr */
    SCIP_CALL( detectNlhdlrs(scip, conshdlr, &cons, 1) );
@@ -586,7 +591,7 @@ Test(nlhdlrsoc, detectandfree7, .description = "detects hyperbolic quadratic exp
 
    /* check that soc nlhdlr detected */
    getSocNlhdlrData(expr, &nlhdlrexprdata);
-   cr_assert_not_null(nlhdlrexprdata);
+   TEST_ASSERT_NOT_NULL(nlhdlrexprdata);
 
    /* setup expected data */
    SCIP_EXPR* vars[4] = {xexpr, zexpr, yexpr, uexpr};
@@ -610,7 +615,8 @@ Test(nlhdlrsoc, detectandfree7, .description = "detects hyperbolic quadratic exp
 }
 
 /* detects that 7x^2 - 2*u*y - 2z^2 <= 0 is no expression */
-Test(nlhdlrsoc, detectandfree8, .description = "detects hyperbolic quadratic expression that is not soc")
+/** @brief detects hyperbolic quadratic expression that is not soc */
+void test_nlhdlrsoc_detectandfree8(void)
 {
    SCIP_CONS* cons;
    SCIP_NLHDLREXPRDATA* nlhdlrexprdata = NULL;
@@ -621,13 +627,13 @@ Test(nlhdlrsoc, detectandfree8, .description = "detects hyperbolic quadratic exp
    /* create nonlinear constraint */
    SCIP_CALL( SCIPparseCons(scip, &cons, (char*) "[nonlinear] <test>: 7*<x>^2 - 2*<y>*<u> - 2*<z>^2 <= 0",
          TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, &success) );
-   cr_assert(success);
+   TEST_ASSERT(success);
 
    /* add locks */
    SCIP_CALL( SCIPaddConsLocks(scip, cons, 1, 0) );
 
    SCIP_CALL( canonicalizeConstraints(scip, conshdlr, &cons, 1, SCIP_PRESOLTIMING_ALWAYS, &infeasible, NULL, NULL, NULL) );
-   cr_expect_not(infeasible);
+   SOFT_ASSERT_NOT(infeasible);
 
    /* call detection method -> this registers the nlhdlr */
    SCIP_CALL( detectNlhdlrs(scip, conshdlr, &cons, 1) );
@@ -636,7 +642,7 @@ Test(nlhdlrsoc, detectandfree8, .description = "detects hyperbolic quadratic exp
 
    /* check that soc nlhdlr didn't detect */
    getSocNlhdlrData(expr, &nlhdlrexprdata);
-   cr_assert_null(nlhdlrexprdata);
+   TEST_ASSERT_NULL(nlhdlrexprdata);
 
    /* remove locks */
    SCIP_CALL( SCIPaddConsLocks(scip, cons, -1, 0) );
@@ -649,7 +655,8 @@ Test(nlhdlrsoc, detectandfree8, .description = "detects hyperbolic quadratic exp
 }
 
 /* detects -5 + 7cos(x)^2 - y^2 - 2sin(z)^2 >= -4 as soc expression */
-Test(nlhdlrsoc, detectandfree9, .description = "detects negated quadratic expression")
+/** @brief detects negated quadratic expression */
+void test_nlhdlrsoc_detectandfree9(void)
 {
    SCIP_CONS* cons;
    SCIP_NLHDLREXPRDATA* nlhdlrexprdata = NULL;
@@ -660,13 +667,13 @@ Test(nlhdlrsoc, detectandfree9, .description = "detects negated quadratic expres
    /* create nonlinear constraint */
    SCIP_CALL( SCIPparseCons(scip, &cons, (char*) "[nonlinear] <test>: -5 + 9*cos(<x>)^2 - <y>^2 - 2*sin(<z>)^2 >= -4",
          TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, &success) );
-   cr_assert(success);
+   TEST_ASSERT(success);
 
    /* add locks */
    SCIP_CALL( SCIPaddConsLocks(scip, cons, 1, 0) );
 
    SCIP_CALL( canonicalizeConstraints(scip, conshdlr, &cons, 1, SCIP_PRESOLTIMING_ALWAYS, &infeasible, NULL, NULL, NULL) );
-   cr_expect_not(infeasible);
+   SOFT_ASSERT_NOT(infeasible);
 
    /* call detection method -> this registers the nlhdlr */
    SCIP_CALL( detectNlhdlrs(scip, conshdlr, &cons, 1) );
@@ -675,7 +682,7 @@ Test(nlhdlrsoc, detectandfree9, .description = "detects negated quadratic expres
 
    /* check that soc nlhdlr detected */
    getSocNlhdlrData(expr, &nlhdlrexprdata);
-   cr_assert_not_null(nlhdlrexprdata);
+   TEST_ASSERT_NOT_NULL(nlhdlrexprdata);
 
    /* setup expected data */
    SCIP_EXPR* vars[3] = {yexpr, SCIPexprGetChildren(SCIPexprGetChildren(expr)[2])[0], SCIPexprGetChildren(SCIPexprGetChildren(expr)[1])[0]};
@@ -699,7 +706,8 @@ Test(nlhdlrsoc, detectandfree9, .description = "detects negated quadratic expres
 }
 
 /* detects -1 -7x^2 + 2*u*y - 2z^2 >= 0 as soc expression */
-Test(nlhdlrsoc, detectandfree10, .description = "detects negated hyperbolic quadratic expression")
+/** @brief detects negated hyperbolic quadratic expression */
+void test_nlhdlrsoc_detectandfree10(void)
 {
    SCIP_CONS* cons;
    SCIP_NLHDLREXPRDATA* nlhdlrexprdata = NULL;
@@ -710,13 +718,13 @@ Test(nlhdlrsoc, detectandfree10, .description = "detects negated hyperbolic quad
    /* create nonlinear constraint */
    SCIP_CALL( SCIPparseCons(scip, &cons, (char*) "[nonlinear] <test>: -1 - 8*<x>^2 + 2*<y>*<u> - 2*<z>^2 >= 0",
          TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, &success) );
-   cr_assert(success);
+   TEST_ASSERT(success);
 
    /* add locks */
    SCIP_CALL( SCIPaddConsLocks(scip, cons, 1, 0) );
 
    SCIP_CALL( canonicalizeConstraints(scip, conshdlr, &cons, 1, SCIP_PRESOLTIMING_ALWAYS, &infeasible, NULL, NULL, NULL) );
-   cr_expect_not(infeasible);
+   SOFT_ASSERT_NOT(infeasible);
 
    /* call detection method -> this registers the nlhdlr */
    SCIP_CALL( detectNlhdlrs(scip, conshdlr, &cons, 1) );
@@ -725,7 +733,7 @@ Test(nlhdlrsoc, detectandfree10, .description = "detects negated hyperbolic quad
 
    /* check that soc nlhdlr detected */
    getSocNlhdlrData(expr, &nlhdlrexprdata);
-   cr_assert_not_null(nlhdlrexprdata);
+   TEST_ASSERT_NOT_NULL(nlhdlrexprdata);
 
    /* setup expected data */
    SCIP_EXPR* vars[4] = {xexpr, zexpr, yexpr, uexpr};
@@ -749,7 +757,8 @@ Test(nlhdlrsoc, detectandfree10, .description = "detects negated hyperbolic quad
 }
 
 /* detects x^2 + 5xy + 5xz + 2y^2 + 2yz + 3z^2 + 8 <= 0 as soc expression */
-Test(nlhdlrsoc, detectandfree11, .description = "detects complex quadratic constraint")
+/** @brief detects complex quadratic constraint */
+void test_nlhdlrsoc_detectandfree11(void)
 {
    SCIP_CONS* cons;
    SCIP_NLHDLREXPRDATA* nlhdlrexprdata = NULL;
@@ -764,13 +773,13 @@ Test(nlhdlrsoc, detectandfree11, .description = "detects complex quadratic const
    SCIP_CALL( SCIPparseCons(scip, &cons,
          (char*) "[nonlinear] <test>: <x>^2 + 2*<y>^2 + 3*<z>^2 + 5*<x>*<y> + 5*<x>*<z> + 2*<y>*<z> + 10*<x> + 8 <= 0",
          TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, &success) );
-   cr_assert(success);
+   TEST_ASSERT(success);
 
    /* add locks */
    SCIP_CALL( SCIPaddConsLocks(scip, cons, 1, 0) );
 
    SCIP_CALL( canonicalizeConstraints(scip, conshdlr, &cons, 1, SCIP_PRESOLTIMING_ALWAYS, &infeasible, NULL, NULL, NULL) );
-   cr_expect_not(infeasible);
+   SOFT_ASSERT_NOT(infeasible);
 
    /* call detection method -> this registers the nlhdlr */
    SCIP_CALL( detectNlhdlrs(scip, conshdlr, &cons, 1) );
@@ -779,7 +788,7 @@ Test(nlhdlrsoc, detectandfree11, .description = "detects complex quadratic const
 
    /* check that soc nlhdlr detected */
    getSocNlhdlrData(expr, &nlhdlrexprdata);
-   cr_assert_not_null(nlhdlrexprdata);
+   TEST_ASSERT_NOT_NULL(nlhdlrexprdata);
 
    /* setup expected data */
    SCIP_EXPR* vars[3] = {zexpr, yexpr, xexpr};
@@ -805,7 +814,8 @@ Test(nlhdlrsoc, detectandfree11, .description = "detects complex quadratic const
 }
 
 /* detects -x^2 - 5xy - 5xz - 2y^2 - 2yz - 3z^2 - 8 >= 0 as soc expression */
-Test(nlhdlrsoc, detectandfree12, .description = "detects complex quadratic constraint")
+/** @brief detects complex quadratic constraint */
+void test_nlhdlrsoc_detectandfree12(void)
 {
    SCIP_CONS* cons;
    SCIP_NLHDLREXPRDATA* nlhdlrexprdata = NULL;
@@ -820,13 +830,13 @@ Test(nlhdlrsoc, detectandfree12, .description = "detects complex quadratic const
    SCIP_CALL( SCIPparseCons(scip, &cons,
          (char*) "[nonlinear] <test>: -<x>^2 - 2*<y>^2 - 3*<z>^2 - 5*<x>*<y> - 5*<x>*<z> - 2*<y>*<z> - 10*<x> - 8 >= 0",
          TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, &success) );
-   cr_assert(success);
+   TEST_ASSERT(success);
 
    /* add locks */
    SCIP_CALL( SCIPaddConsLocks(scip, cons, 1, 0) );
 
    SCIP_CALL( canonicalizeConstraints(scip, conshdlr, &cons, 1, SCIP_PRESOLTIMING_ALWAYS, &infeasible, NULL, NULL, NULL) );
-   cr_expect_not(infeasible);
+   SOFT_ASSERT_NOT(infeasible);
 
    /* call detection method -> this registers the nlhdlr */
    SCIP_CALL( detectNlhdlrs(scip, conshdlr, &cons, 1) );
@@ -835,7 +845,7 @@ Test(nlhdlrsoc, detectandfree12, .description = "detects complex quadratic const
 
    /* check that soc nlhdlr detected */
    getSocNlhdlrData(expr, &nlhdlrexprdata);
-   cr_assert_not_null(nlhdlrexprdata);
+   TEST_ASSERT_NOT_NULL(nlhdlrexprdata);
 
    /* setup expected data */
    SCIP_EXPR* vars[3] = {zexpr, yexpr, xexpr};
@@ -861,7 +871,8 @@ Test(nlhdlrsoc, detectandfree12, .description = "detects complex quadratic const
 }
 
 /* detects that sqrt(x^2 -4x + 1) <= 2 is not a soc expression */
-Test(nlhdlrsoc, detectandfree13, .description = "detects complex quadratic constraint")
+/** @brief detects complex quadratic constraint */
+void test_nlhdlrsoc_detectandfree13(void)
 {
    SCIP_CONS* cons;
    SCIP_NLHDLREXPRDATA* nlhdlrexprdata = NULL;
@@ -873,13 +884,13 @@ Test(nlhdlrsoc, detectandfree13, .description = "detects complex quadratic const
    SCIP_CALL( SCIPparseCons(scip, &cons,
          (char*) "[nonlinear] <test>: (<x>^2 - 4*<x> + 1)^0.5 <= 1",
          TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, &success) );
-   cr_assert(success);
+   TEST_ASSERT(success);
 
    /* add locks */
    SCIP_CALL( SCIPaddConsLocks(scip, cons, 1, 0) );
 
    SCIP_CALL( canonicalizeConstraints(scip, conshdlr, &cons, 1, SCIP_PRESOLTIMING_ALWAYS, &infeasible, NULL, NULL, NULL) );
-   cr_expect_not(infeasible);
+   SOFT_ASSERT_NOT(infeasible);
 
    /* call detection method -> this registers the nlhdlr */
    SCIP_CALL( detectNlhdlrs(scip, conshdlr, &cons, 1) );
@@ -888,7 +899,7 @@ Test(nlhdlrsoc, detectandfree13, .description = "detects complex quadratic const
 
    /* check that soc nlhdlr didn't detect */
    getSocNlhdlrData(expr, &nlhdlrexprdata);
-   cr_assert_null(nlhdlrexprdata);
+   TEST_ASSERT_NULL(nlhdlrexprdata);
 
    /* remove locks */
    SCIP_CALL( SCIPaddConsLocks(scip, cons, -1, 0) );
@@ -901,7 +912,8 @@ Test(nlhdlrsoc, detectandfree13, .description = "detects complex quadratic const
 }
 
 /* detects x^2 + y^2 - z*u <= -2 with z not nonnegative but z*u nonnegative */
-Test(nlhdlrsoc, detectandfree14, .description = "detects complex quadratic constraint")
+/** @brief detects complex quadratic constraint */
+void test_nlhdlrsoc_detectandfree14(void)
 {
    SCIP_CONS* cons;
    SCIP_NLHDLREXPRDATA* nlhdlrexprdata = NULL;
@@ -913,13 +925,13 @@ Test(nlhdlrsoc, detectandfree14, .description = "detects complex quadratic const
    SCIP_CALL( SCIPparseCons(scip, &cons,
          (char*) "[nonlinear] <test>: <x>^2 + <y>^2 - <z> * <u> <= -2",
          TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, &success) );
-   cr_assert(success);
+   TEST_ASSERT(success);
 
    /* add locks */
    SCIP_CALL( SCIPaddConsLocks(scip, cons, 1, 0) );
 
    SCIP_CALL( canonicalizeConstraints(scip, conshdlr, &cons, 1, SCIP_PRESOLTIMING_ALWAYS, &infeasible, NULL, NULL, NULL) );
-   cr_expect_not(infeasible);
+   SOFT_ASSERT_NOT(infeasible);
 
    /* call detection method -> this registers the nlhdlr */
    SCIP_CALL( detectNlhdlrs(scip, conshdlr, &cons, 1) );
@@ -928,7 +940,7 @@ Test(nlhdlrsoc, detectandfree14, .description = "detects complex quadratic const
 
    /* check that soc nlhdlr detected */
    getSocNlhdlrData(expr, &nlhdlrexprdata);
-   cr_assert_not_null(nlhdlrexprdata);
+   TEST_ASSERT_NOT_NULL(nlhdlrexprdata);
 
    /* remove locks */
    SCIP_CALL( SCIPaddConsLocks(scip, cons, -1, 0) );
@@ -941,7 +953,8 @@ Test(nlhdlrsoc, detectandfree14, .description = "detects complex quadratic const
 }
 
 /* detects x*y >= 1 with x and y nonnegative as soc */
-Test(nlhdlrsoc, detectandfree15, .description = "detects simple bilinear constraint as soc")
+/** @brief detects simple bilinear constraint as soc */
+void test_nlhdlrsoc_detectandfree15(void)
 {
    SCIP_CONS* cons;
    SCIP_NLHDLREXPRDATA* nlhdlrexprdata = NULL;
@@ -955,13 +968,13 @@ Test(nlhdlrsoc, detectandfree15, .description = "detects simple bilinear constra
    SCIP_CALL( SCIPparseCons(scip, &cons,
          (char*) "[nonlinear] <test>: <x>*<y> >= 1",
          TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, &success) );
-   cr_assert(success);
+   TEST_ASSERT(success);
 
    /* add locks */
    SCIP_CALL( SCIPaddConsLocks(scip, cons, 1, 0) );
 
    SCIP_CALL( canonicalizeConstraints(scip, conshdlr, &cons, 1, SCIP_PRESOLTIMING_ALWAYS, &infeasible, NULL, NULL, NULL) );
-   cr_expect_not(infeasible);
+   SOFT_ASSERT_NOT(infeasible);
 
    /* call detection method -> this registers the nlhdlr */
    SCIP_CALL( detectNlhdlrs(scip, conshdlr, &cons, 1) );
@@ -970,7 +983,7 @@ Test(nlhdlrsoc, detectandfree15, .description = "detects simple bilinear constra
 
    /* check that soc nlhdlr detected */
    getSocNlhdlrData(expr, &nlhdlrexprdata);
-   cr_assert_not_null(nlhdlrexprdata);
+   TEST_ASSERT_NOT_NULL(nlhdlrexprdata);
 
    /* remove locks */
    SCIP_CALL( SCIPaddConsLocks(scip, cons, -1, 0) );
@@ -983,7 +996,8 @@ Test(nlhdlrsoc, detectandfree15, .description = "detects simple bilinear constra
 }
 
 /* detects -2*x*y <= -1 with x and y nonnegative as soc */
-Test(nlhdlrsoc, detectandfree16, .description = "detects simple bilinear constraint as soc")
+/** @brief detects simple bilinear constraint as soc */
+void test_nlhdlrsoc_detectandfree16(void)
 {
    SCIP_CONS* cons;
    SCIP_NLHDLREXPRDATA* nlhdlrexprdata = NULL;
@@ -997,13 +1011,13 @@ Test(nlhdlrsoc, detectandfree16, .description = "detects simple bilinear constra
    SCIP_CALL( SCIPparseCons(scip, &cons,
          (char*) "[nonlinear] <test>: -2*<x>*<y> <= -1",
          TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, &success) );
-   cr_assert(success);
+   TEST_ASSERT(success);
 
    /* add locks */
    SCIP_CALL( SCIPaddConsLocks(scip, cons, 1, 0) );
 
    SCIP_CALL( canonicalizeConstraints(scip, conshdlr, &cons, 1, SCIP_PRESOLTIMING_ALWAYS, &infeasible, NULL, NULL, NULL) );
-   cr_expect_not(infeasible);
+   SOFT_ASSERT_NOT(infeasible);
 
    SCIP_CALL( SCIPprintCons(scip, cons, NULL) );
 
@@ -1014,7 +1028,7 @@ Test(nlhdlrsoc, detectandfree16, .description = "detects simple bilinear constra
 
    /* check that soc nlhdlr detected */
    getSocNlhdlrData(expr, &nlhdlrexprdata);
-   cr_assert_not_null(nlhdlrexprdata);
+   TEST_ASSERT_NOT_NULL(nlhdlrexprdata);
 
    /* remove locks */
    SCIP_CALL( SCIPaddConsLocks(scip, cons, -1, 0) );
@@ -1027,7 +1041,8 @@ Test(nlhdlrsoc, detectandfree16, .description = "detects simple bilinear constra
 }
 
 /* detects 2*x^2 <= 1 not as soc */
-Test(nlhdlrsoc, detectandfree17, .description = "detects too simple quadratic constraint not as soc")
+/** @brief detects too simple quadratic constraint not as soc */
+void test_nlhdlrsoc_detectandfree17(void)
 {
    SCIP_CONS* cons;
    SCIP_NLHDLREXPRDATA* nlhdlrexprdata = NULL;
@@ -1039,13 +1054,13 @@ Test(nlhdlrsoc, detectandfree17, .description = "detects too simple quadratic co
    SCIP_CALL( SCIPparseCons(scip, &cons,
          (char*) "[nonlinear] <test>: 2*<x>^2 <= 1",
          TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, &success) );
-   cr_assert(success);
+   TEST_ASSERT(success);
 
    /* add locks */
    SCIP_CALL( SCIPaddConsLocks(scip, cons, 1, 0) );
 
    SCIP_CALL( canonicalizeConstraints(scip, conshdlr, &cons, 1, SCIP_PRESOLTIMING_ALWAYS, &infeasible, NULL, NULL, NULL) );
-   cr_expect_not(infeasible);
+   SOFT_ASSERT_NOT(infeasible);
 
    SCIP_CALL( SCIPprintCons(scip, cons, NULL) );
 
@@ -1056,7 +1071,7 @@ Test(nlhdlrsoc, detectandfree17, .description = "detects too simple quadratic co
 
    /* check that soc nlhdlr did not detect */
    getSocNlhdlrData(expr, &nlhdlrexprdata);
-   cr_assert_null(nlhdlrexprdata);
+   TEST_ASSERT_NULL(nlhdlrexprdata);
 
    /* remove locks */
    SCIP_CALL( SCIPaddConsLocks(scip, cons, -1, 0) );
@@ -1069,7 +1084,8 @@ Test(nlhdlrsoc, detectandfree17, .description = "detects too simple quadratic co
 }
 
 /* detects x*y in x*y - z >= 1 with x,y nonnegative not as soc */
-Test(nlhdlrsoc, detectandfree18, .description = "detects bivariate term not as soc")
+/** @brief detects bivariate term not as soc */
+void test_nlhdlrsoc_detectandfree18(void)
 {
    SCIP_CONS* cons;
    SCIP_NLHDLREXPRDATA* nlhdlrexprdata = NULL;
@@ -1083,13 +1099,13 @@ Test(nlhdlrsoc, detectandfree18, .description = "detects bivariate term not as s
    SCIP_CALL( SCIPparseCons(scip, &cons,
          (char*) "[nonlinear] <test>: <x>*<y> - <z> >= 1",
          TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, &success) );
-   cr_assert(success);
+   TEST_ASSERT(success);
 
    /* add locks */
    SCIP_CALL( SCIPaddConsLocks(scip, cons, 1, 0) );
 
    SCIP_CALL( canonicalizeConstraints(scip, conshdlr, &cons, 1, SCIP_PRESOLTIMING_ALWAYS, &infeasible, NULL, NULL, NULL) );
-   cr_expect_not(infeasible);
+   SOFT_ASSERT_NOT(infeasible);
 
    SCIP_CALL( SCIPprintCons(scip, cons, NULL) );
 
@@ -1100,12 +1116,12 @@ Test(nlhdlrsoc, detectandfree18, .description = "detects bivariate term not as s
 
    /* check that soc nlhdlr did not detect */
    getSocNlhdlrData(expr, &nlhdlrexprdata);
-   cr_assert_null(nlhdlrexprdata);
+   TEST_ASSERT_NULL(nlhdlrexprdata);
 
    /* check that soc nlhdlr did not detect on x*y either */
    expr = SCIPexprGetChildren(SCIPgetExprNonlinear(cons))[0];
    getSocNlhdlrData(expr, &nlhdlrexprdata);
-   cr_assert_null(nlhdlrexprdata);
+   TEST_ASSERT_NULL(nlhdlrexprdata);
 
    /* remove locks */
    SCIP_CALL( SCIPaddConsLocks(scip, cons, -1, 0) );
@@ -1118,7 +1134,8 @@ Test(nlhdlrsoc, detectandfree18, .description = "detects bivariate term not as s
 }
 
 /* disaggregates sqrt( 8 + 2*(x + 1)^2 + 3*(y + sin(x) + 2)^2 ) <= -2*(w - 1) */
-Test(nlhdlrsoc, disaggregation, .description = "disaggregate soc and check the resulting datastructure")
+/** @brief disaggregate soc and check the resulting datastructure */
+void test_nlhdlrsoc_disaggregation(void)
 {
    SCIP_CONS* cons;
    SCIP_NLHDLREXPRDATA* nlhdlrexprdata = NULL;
@@ -1130,13 +1147,13 @@ Test(nlhdlrsoc, disaggregation, .description = "disaggregate soc and check the r
    /* create nonlinear constraint */
    SCIP_CALL( SCIPparseCons(scip, &cons, (char*) "[nonlinear] <test>: (8 + 2*(<x> + 1)^2 + 3*(sin(<y>) - 2)^2)^0.5 + 2*(<w> - 1) <= 0", TRUE, TRUE,
             TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, &success) );
-   cr_assert(success);
+   TEST_ASSERT(success);
 
    /* add locks */
    SCIP_CALL( SCIPaddConsLocks(scip, cons, 1, 0) );
 
    SCIP_CALL( canonicalizeConstraints(scip, conshdlr, &cons, 1, SCIP_PRESOLTIMING_ALWAYS, &infeasible, NULL, NULL, NULL) );
-   cr_expect_not(infeasible);
+   SOFT_ASSERT_NOT(infeasible);
 
    /* call detection method -> this registers the nlhdlr */
    SCIP_CALL( detectNlhdlrs(scip, conshdlr, &cons, 1) );
@@ -1149,27 +1166,27 @@ Test(nlhdlrsoc, disaggregation, .description = "disaggregate soc and check the r
 
    /* check that soc nlhdlr detected */
    getSocNlhdlrData(normexpr, &nlhdlrexprdata);
-   cr_assert_not_null(nlhdlrexprdata);
+   TEST_ASSERT_NOT_NULL(nlhdlrexprdata);
 
    /* check disvars */
-   cr_expect_not_null(nlhdlrexprdata->disvars[0]);
-   cr_expect_not_null(nlhdlrexprdata->disvars[1]);
-   cr_expect_not_null(nlhdlrexprdata->disvars[2]);
+   SOFT_ASSERT_NOT_NULL(nlhdlrexprdata->disvars[0]);
+   SOFT_ASSERT_NOT_NULL(nlhdlrexprdata->disvars[1]);
+   SOFT_ASSERT_NOT_NULL(nlhdlrexprdata->disvars[2]);
 
-   cr_expect_eq(SCIProwGetNNonz(nlhdlrexprdata->disrow), 4);
+   SOFT_ASSERT_EQUAL(SCIProwGetNNonz(nlhdlrexprdata->disrow), 4);
 
-   cr_expect_eq(SCIProwGetVals(nlhdlrexprdata->disrow)[0], 1.0, "expected %f, but got %f\n", 1.0, SCIProwGetVals(nlhdlrexprdata->disrow)[0]);
-   cr_expect_eq(SCIProwGetVals(nlhdlrexprdata->disrow)[1], 1.0, "expected %f, but got %f\n", 1.0, SCIProwGetVals(nlhdlrexprdata->disrow)[1]);
-   cr_expect_eq(SCIProwGetVals(nlhdlrexprdata->disrow)[2], 1.0, "expected %f, but got %f\n", 1.0, SCIProwGetVals(nlhdlrexprdata->disrow)[2]);
-   cr_expect_eq(SCIProwGetVals(nlhdlrexprdata->disrow)[3], -1.0, "expected %f, but got %f\n", -1.0, SCIProwGetVals(nlhdlrexprdata->disrow)[3]);
+   SOFT_ASSERT_EQUAL(SCIProwGetVals(nlhdlrexprdata->disrow)[0], 1.0, "expected %f, but got %f\n", 1.0, SCIProwGetVals(nlhdlrexprdata->disrow)[0]);
+   SOFT_ASSERT_EQUAL(SCIProwGetVals(nlhdlrexprdata->disrow)[1], 1.0, "expected %f, but got %f\n", 1.0, SCIProwGetVals(nlhdlrexprdata->disrow)[1]);
+   SOFT_ASSERT_EQUAL(SCIProwGetVals(nlhdlrexprdata->disrow)[2], 1.0, "expected %f, but got %f\n", 1.0, SCIProwGetVals(nlhdlrexprdata->disrow)[2]);
+   SOFT_ASSERT_EQUAL(SCIProwGetVals(nlhdlrexprdata->disrow)[3], -1.0, "expected %f, but got %f\n", -1.0, SCIProwGetVals(nlhdlrexprdata->disrow)[3]);
 
-   cr_expect_eq(SCIPcolGetVar(SCIProwGetCols(nlhdlrexprdata->disrow)[0]), nlhdlrexprdata->disvars[0], "expected <%s>, but got <%s>\n", SCIPvarGetName(nlhdlrexprdata->disvars[0]), SCIPvarGetName(SCIPcolGetVar(SCIProwGetCols(nlhdlrexprdata->disrow)[0])));
-   cr_expect_eq(SCIPcolGetVar(SCIProwGetCols(nlhdlrexprdata->disrow)[1]), nlhdlrexprdata->disvars[1], "expected <%s>, but got <%s>\n", SCIPvarGetName(nlhdlrexprdata->disvars[1]), SCIPvarGetName(SCIPcolGetVar(SCIProwGetCols(nlhdlrexprdata->disrow)[1])));
-   cr_expect_eq(SCIPcolGetVar(SCIProwGetCols(nlhdlrexprdata->disrow)[2]), nlhdlrexprdata->disvars[2], "expected <%s>, but got <%s>\n", SCIPvarGetName(nlhdlrexprdata->disvars[2]), SCIPvarGetName(SCIPcolGetVar(SCIProwGetCols(nlhdlrexprdata->disrow)[2])));
-   cr_expect_eq(SCIPcolGetVar(SCIProwGetCols(nlhdlrexprdata->disrow)[3]), SCIPgetExprAuxVarNonlinear(nlhdlrexprdata->vars[2]), "expected <%s>, but got <%s>\n", SCIPvarGetName(SCIPgetExprAuxVarNonlinear(nlhdlrexprdata->vars[2])), SCIPvarGetName(SCIPcolGetVar(SCIProwGetCols(nlhdlrexprdata->disrow)[3])));
+   SOFT_ASSERT_EQUAL(SCIPcolGetVar(SCIProwGetCols(nlhdlrexprdata->disrow)[0]), nlhdlrexprdata->disvars[0], "expected <%s>, but got <%s>\n", SCIPvarGetName(nlhdlrexprdata->disvars[0]), SCIPvarGetName(SCIPcolGetVar(SCIProwGetCols(nlhdlrexprdata->disrow)[0])));
+   SOFT_ASSERT_EQUAL(SCIPcolGetVar(SCIProwGetCols(nlhdlrexprdata->disrow)[1]), nlhdlrexprdata->disvars[1], "expected <%s>, but got <%s>\n", SCIPvarGetName(nlhdlrexprdata->disvars[1]), SCIPvarGetName(SCIPcolGetVar(SCIProwGetCols(nlhdlrexprdata->disrow)[1])));
+   SOFT_ASSERT_EQUAL(SCIPcolGetVar(SCIProwGetCols(nlhdlrexprdata->disrow)[2]), nlhdlrexprdata->disvars[2], "expected <%s>, but got <%s>\n", SCIPvarGetName(nlhdlrexprdata->disvars[2]), SCIPvarGetName(SCIPcolGetVar(SCIProwGetCols(nlhdlrexprdata->disrow)[2])));
+   SOFT_ASSERT_EQUAL(SCIPcolGetVar(SCIProwGetCols(nlhdlrexprdata->disrow)[3]), SCIPgetExprAuxVarNonlinear(nlhdlrexprdata->vars[2]), "expected <%s>, but got <%s>\n", SCIPvarGetName(SCIPgetExprAuxVarNonlinear(nlhdlrexprdata->vars[2])), SCIPvarGetName(SCIPcolGetVar(SCIProwGetCols(nlhdlrexprdata->disrow)[3])));
 
-   cr_expect_eq(SCIProwGetLhs(nlhdlrexprdata->disrow), -SCIPinfinity(scip));
-   cr_expect_eq(SCIProwGetRhs(nlhdlrexprdata->disrow), 0.0, "expected 0 got %g\n", SCIProwGetRhs(nlhdlrexprdata->disrow));
+   SOFT_ASSERT_EQUAL(SCIProwGetLhs(nlhdlrexprdata->disrow), -SCIPinfinity(scip));
+   SOFT_ASSERT_EQUAL(SCIProwGetRhs(nlhdlrexprdata->disrow), 0.0, "expected 0 got %g\n", SCIProwGetRhs(nlhdlrexprdata->disrow));
 
    /* free row, expr, and cons (freeing of the row doesn't happen automatically because we call createDisaggrRow
     * directly and not through the initlp callback. Thus, the enforce doesn't know that sepainit has been called and so
@@ -1190,7 +1207,8 @@ Test(nlhdlrsoc, disaggregation, .description = "disaggregate soc and check the r
 }
 
 /* separates simple norm function from different points */
-Test(nlhdlrsoc, separation1, .description = "test separation for simple norm expression")
+/** @brief test separation for simple norm expression */
+void test_nlhdlrsoc_separation1(void)
 {
    SCIP_CONS* cons;
    SCIP_NLHDLREXPRDATA* nlhdlrexprdata = NULL;
@@ -1209,8 +1227,8 @@ Test(nlhdlrsoc, separation1, .description = "test separation for simple norm exp
    expr = SCIPexprGetChildren(rootexpr)[0];
 
    getSocNlhdlrData(expr, &nlhdlrexprdata);
-   cr_assert_not_null(nlhdlrexprdata);
-   cr_assert_not_null(nlhdlrexprdata->disvars);
+   TEST_ASSERT_NOT_NULL(nlhdlrexprdata);
+   TEST_ASSERT_NOT_NULL(nlhdlrexprdata->disvars);
 
    auxvar = SCIPgetExprAuxVarNonlinear(expr);
 
@@ -1274,7 +1292,8 @@ Test(nlhdlrsoc, separation1, .description = "test separation for simple norm exp
 }
 
 /* separates simple norm function from different points */
-Test(nlhdlrsoc, separation2, .description = "test separation for simple norm expression without disagg")
+/** @brief test separation for simple norm expression without disagg */
+void test_nlhdlrsoc_separation2(void)
 {
    SCIP_CONS* cons;
    SCIP_NLHDLREXPRDATA* nlhdlrexprdata = NULL;
@@ -1313,7 +1332,7 @@ Test(nlhdlrsoc, separation2, .description = "test separation for simple norm exp
 
    /* check that soc nlhdlr detected */
    getSocNlhdlrData(expr, &nlhdlrexprdata);
-   cr_assert_not_null(nlhdlrexprdata);
+   TEST_ASSERT_NOT_NULL(nlhdlrexprdata);
 
    auxvar = SCIPgetExprAuxVarNonlinear(expr);
 
@@ -1351,7 +1370,8 @@ Test(nlhdlrsoc, separation2, .description = "test separation for simple norm exp
 }
 
 /* separates simple function */
-Test(nlhdlrsoc, separation3, .description = "test separation for simple expression without disagg")
+/** @brief test separation for simple expression without disagg */
+void test_nlhdlrsoc_separation3(void)
 {
    SCIP_CONS* cons;
    SCIP_NLHDLREXPRDATA* nlhdlrexprdata = NULL;
@@ -1380,7 +1400,7 @@ Test(nlhdlrsoc, separation3, .description = "test separation for simple expressi
 
    /* check that soc nlhdlr detected */
    getSocNlhdlrData(expr, &nlhdlrexprdata);
-   cr_assert_not_null(nlhdlrexprdata);
+   TEST_ASSERT_NOT_NULL(nlhdlrexprdata);
 
    /* since nlhdlrInitSepaSoc is not called (on purpose), alloc the varvals array manually */
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &nlhdlrexprdata->varvals, nlhdlrexprdata->nvars) );
@@ -1419,7 +1439,8 @@ Test(nlhdlrsoc, separation3, .description = "test separation for simple expressi
 }
 
 /* detects 2x^2 - 9y^2 + z^2 < = 0 as soc constraint using a public function */
-Test(nlhdlrsoc, access, .description = "public detect for simple quadratic constraint")
+/** @brief public detect for simple quadratic constraint */
+void test_nlhdlrsoc_access(void)
 {
    SCIP_CONS* cons;
    SCIP_Bool success;
@@ -1437,24 +1458,24 @@ Test(nlhdlrsoc, access, .description = "public detect for simple quadratic const
    /* create nonlinear constraint */
    SCIP_CALL( SCIPparseCons(scip, &cons, (char*) "[nonlinear] <test>: 2*<x>^2 - 9*<y>^2 + <z>^2  <= 0",
          TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, &success) );
-   cr_assert(success);
+   TEST_ASSERT(success);
 
    /* add locks */
    SCIP_CALL( SCIPaddConsLocks(scip, cons, 1, 0) );
 
    SCIP_CALL( canonicalizeConstraints(scip, conshdlr, &cons, 1, SCIP_PRESOLTIMING_ALWAYS, &infeasible, NULL, NULL, NULL) );
-   cr_expect_not(infeasible);
+   SOFT_ASSERT_NOT(infeasible);
 
    SCIP_CALL( SCIPisSOCNonlinear(scip, cons, FALSE, &success, &sidetype, &vars, &offsets, &transcoefs, &transcoefsidx,
       &termbegins, &nvars, &nterms) );
 
    /* check that soc nlhdlr detected correctly */
-   cr_assert(success);
+   TEST_ASSERT(success);
    ntranscoefs = termbegins[nterms];
-   cr_assert(sidetype == SCIP_SIDETYPE_RIGHT);
-   cr_expect_eq(nvars, 3);
-   cr_expect_eq(nterms, 3);
-   cr_expect_eq(ntranscoefs, 3);
+   TEST_ASSERT(sidetype == SCIP_SIDETYPE_RIGHT);
+   SOFT_ASSERT_EQUAL(nvars, 3);
+   SOFT_ASSERT_EQUAL(nterms, 3);
+   SOFT_ASSERT_EQUAL(ntranscoefs, 3);
 
    /* free arrays with the SOC representation */
    SCIPfreeSOCArraysNonlinear(scip, &vars, &offsets, &transcoefs, &transcoefsidx, &termbegins, nvars, nterms);
@@ -1467,4 +1488,37 @@ Test(nlhdlrsoc, access, .description = "public detect for simple quadratic const
 
    /* free cons */
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
+}
+
+void setUp(void) { setup(); }
+
+void tearDown(void) { teardown(); }
+
+int main(void)
+{
+   UNITY_BEGIN();
+   RUN_TEST(test_nlhdlrsoc_detectandfree1);
+   RUN_TEST(test_nlhdlrsoc_detectandfree2);
+   RUN_TEST(test_nlhdlrsoc_detectandfree3);
+   RUN_TEST(test_nlhdlrsoc_detectandfree4);
+   RUN_TEST(test_nlhdlrsoc_detectandfree5);
+   RUN_TEST(test_nlhdlrsoc_detectandfree6);
+   RUN_TEST(test_nlhdlrsoc_detectandfree7);
+   RUN_TEST(test_nlhdlrsoc_detectandfree8);
+   RUN_TEST(test_nlhdlrsoc_detectandfree9);
+   RUN_TEST(test_nlhdlrsoc_detectandfree10);
+   RUN_TEST(test_nlhdlrsoc_detectandfree11);
+   RUN_TEST(test_nlhdlrsoc_detectandfree12);
+   RUN_TEST(test_nlhdlrsoc_detectandfree13);
+   RUN_TEST(test_nlhdlrsoc_detectandfree14);
+   RUN_TEST(test_nlhdlrsoc_detectandfree15);
+   RUN_TEST(test_nlhdlrsoc_detectandfree16);
+   RUN_TEST(test_nlhdlrsoc_detectandfree17);
+   RUN_TEST(test_nlhdlrsoc_detectandfree18);
+   RUN_TEST(test_nlhdlrsoc_disaggregation);
+   RUN_TEST(test_nlhdlrsoc_separation1);
+   RUN_TEST(test_nlhdlrsoc_separation2);
+   RUN_TEST(test_nlhdlrsoc_separation3);
+   RUN_TEST(test_nlhdlrsoc_access);
+   return UNITY_END();
 }

@@ -51,17 +51,28 @@ void teardown(void)
    SCIPfree(&scip);
 }
 
-TestSuite(empty, .init = setup, .fini = teardown);
 
 /* TESTS  */
-Test(empty, counter, .description = "test checking that the empty solution is counted")
+/** @brief test checking that the empty solution is counted */
+void test_empty_counter(void)
 {
    SCIP_CALL( SCIPsetParamsCountsols(scip) );
    SCIP_CALL( SCIPcount(scip) );
    SCIP_Bool valid;
    SCIP_Longint count = SCIPgetNCountedSols(scip, &valid);
    int nsols = SCIPgetNSols(scip);
-   cr_assert(valid);
-   cr_assert_eq(count, 1);
-   cr_assert_eq(nsols, 0);
+   TEST_ASSERT(valid);
+   TEST_ASSERT_EQUAL(count, 1);
+   TEST_ASSERT_EQUAL(nsols, 0);
+}
+
+void setUp(void) { setup(); }
+
+void tearDown(void) { teardown(); }
+
+int main(void)
+{
+   UNITY_BEGIN();
+   RUN_TEST(test_empty_counter);
+   return UNITY_END();
 }

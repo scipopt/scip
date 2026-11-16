@@ -50,7 +50,7 @@ namespace scip
  * - \ref TABLES "List of available statistics tables"
  * - \ref type_table.h "Corresponding C interface"
  */
-class ObjTable : public ObjCloneable
+class SCIP_EXPORT ObjTable : public ObjCloneable
 {
 public:
    /*lint --e{1540}*/
@@ -170,7 +170,19 @@ public:
     *
     *  @see SCIP_DECL_TABLEOUTPUT(x) in @ref type_table.h
     */
-   virtual SCIP_DECL_TABLEOUTPUT(scip_output);
+   virtual SCIP_DECL_TABLEOUTPUT(scip_output)
+   {
+      SCIP_DATATREE* datatree;
+
+      SCIP_CALL( SCIPcreateDatatree(scip, &datatree, -1) );
+      SCIP_CALL( scip_collect(scip, table, datatree) );
+
+      SCIP_CALL( SCIPprintDatatreeAsTable(scip, datatree, file, scip_name_, scip_name_) );
+
+      SCIPfreeDatatree(scip, &datatree);
+
+      return SCIP_OKAY;
+   }
 
    /** data collection method
     *
@@ -190,7 +202,7 @@ public:
  *
  *  The method should be called in one of the following ways:
  *
- *   1. The user is resposible of deleting the object:
+ *   1. The user is responsible of deleting the object:
  *       SCIP_CALL( SCIPcreate(&scip) );
  *       ...
  *       MyTable* mytable = new MyTable(...);

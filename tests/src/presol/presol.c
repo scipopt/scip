@@ -108,14 +108,14 @@ void setup(void)
    /* initialize SCIP */
    scip = NULL;
    SCIP_CALL( SCIPcreate(&scip) );
-   cr_assert_not_null(scip);
+   TEST_ASSERT_NOT_NULL(scip);
 
    /* include unittest presolver */
    presol = NULL;
    SCIP_CALL( SCIPincludePresolBasic(scip, &presol, "unittest", "presolver to test", 20010001, 20, SCIP_PRESOLTIMING_ALWAYS, presolExecUnittest, NULL) );
    SCIP_CALL( SCIPincludeConshdlrLinear(scip) );
    SCIP_CALL( SCIPincludeNodeselDfs(scip) );
-   cr_assert_not_null(presol);
+   TEST_ASSERT_NOT_NULL(presol);
 
    /* create a problem */
    SCIP_CALL( SCIPcreateProbBasic(scip, "problem") );
@@ -128,36 +128,50 @@ void teardown(void)
 {
    SCIP_CALL( SCIPfree(&scip) );
 
-   cr_assert_null(scip);
-   cr_assert_eq(BMSgetMemoryUsed(), 0, "There is a memory leak!!");
+   TEST_ASSERT_NULL(scip);
+   TEST_ASSERT_EQUAL(BMSgetMemoryUsed(), 0, "There is a memory leak!!");
 }
 
-TestSuite(presol, .init = setup, .fini = teardown);
 
 
 /* TESTS */
-Test(presol, checkPresolGetName)
+void test_presol_checkPresolGetName(void)
 {
-   cr_assert_str_eq("unittest", SCIPpresolGetName(presol));
+   TEST_ASSERT_EQUAL_STRING("unittest", SCIPpresolGetName(presol));
 }
 
-Test(presol, CheckPresolGetDesc)
+void test_presol_CheckPresolGetDesc(void)
 {
-   cr_assert_str_eq(SCIPpresolGetDesc(presol), "presolver to test");
+   TEST_ASSERT_EQUAL_STRING(SCIPpresolGetDesc(presol), "presolver to test");
 }
 
-Test(presol, checkPresolGetPriority)
+void test_presol_checkPresolGetPriority(void)
 {
-   cr_assert_eq(SCIPpresolGetPriority(presol), 20010001 );
+   TEST_ASSERT_EQUAL(SCIPpresolGetPriority(presol), 20010001 );
 }
 
-Test(presol, checkPresolIsInitialized)
+void test_presol_checkPresolIsInitialized(void)
 {
-   cr_assert_eq(SCIPpresolIsInitialized(presol), FALSE, "was expecting the presolver not to be initialized");
+   TEST_ASSERT_EQUAL(SCIPpresolIsInitialized(presol), FALSE, "was expecting the presolver not to be initialized");
 
    SCIP_CALL( SCIPpresolve(scip) );
    SCIP_CALL( SCIPprintBestSol(scip, NULL, FALSE) );
    SCIP_CALL( SCIPprintStatistics(scip, NULL) );
 
-   cr_assert_eq(SCIPpresolIsInitialized(presol), TRUE, "was expecting the presolver to be initialized");
+   TEST_ASSERT_EQUAL(SCIPpresolIsInitialized(presol), TRUE, "was expecting the presolver to be initialized");
+}
+
+void setUp(void) { setup(); }
+
+void tearDown(void) { teardown(); }
+
+int main(void)
+{
+   UNITY_BEGIN();
+   RUN_TEST(test_presol_checkPresolGetName
+);
+   RUN_TEST(test_presol_CheckPresolGetDesc);
+   RUN_TEST(test_presol_checkPresolGetPriority);
+   RUN_TEST(test_presol_checkPresolIsInitialized);
+   return UNITY_END();
 }

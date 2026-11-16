@@ -53,7 +53,7 @@ namespace scip
  *  - \ref BENDERS "List of available Benders' decomposition plugins"
  *  - \ref type_benders.h "Corresponding C interface"
  */
-class ObjBenders : public ObjCloneable
+class SCIP_EXPORT ObjBenders : public ObjCloneable
 {
 public:
    /*lint --e{1540}*/
@@ -287,7 +287,7 @@ public:
  *
  *  The method should be called in one of the following ways:
  *
- *   1. The user is resposible of deleting the object:
+ *   1. The user is responsible of deleting the object:
  *       SCIP_CALL( SCIPcreate(&scip) );
  *       ...
  *       MyBenders* mybenders = new MyBenders(...);

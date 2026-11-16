@@ -31,7 +31,18 @@
 #include "include/scip_test.h"
 #include <stdio.h>
 
-Test(intervalarith, issue1861)
+void setUp(void)
+{
+   SOFT_ASSERT_RESET();
+}
+
+void tearDown(void)
+{
+   SOFT_ASSERT_CHECK();
+}
+
+/* TESTS */
+void test_intervalarith_issue1861(void)
 {
    SCIP_Real             infinity;
    SCIP_INTERVAL         resultant;
@@ -78,7 +89,7 @@ Test(intervalarith, issue1861)
  }
 
 /** some tests for SCIPintervalSolveUnivariateQuadExpression */
-Test(intervalarith, solveuniquad)
+void test_intervalarith_solveuniquad(void)
 {
    SCIP_INTERVAL resultant;
    SCIP_INTERVAL expect;
@@ -118,12 +129,12 @@ Test(intervalarith, solveuniquad)
                SCIPintervalSetEmpty(&expect);
             /* printf("%g*x^2 = [%g,%g]; expect [%g,%g], got [%g,%g]\n", sqrcoef.inf, rhs.inf, rhs.sup, expect.inf, expect.sup, resultant.inf, resultant.sup); */
 
-            cr_assert(SCIPintervalIsEmpty(SCIP_DEFAULT_INFINITY, resultant) == SCIPintervalIsEmpty(SCIP_DEFAULT_INFINITY, expect));
-            cr_assert(SCIPintervalIsEntire(SCIP_DEFAULT_INFINITY, resultant) == SCIPintervalIsEntire(SCIP_DEFAULT_INFINITY, expect));
+            TEST_ASSERT(SCIPintervalIsEmpty(SCIP_DEFAULT_INFINITY, resultant) == SCIPintervalIsEmpty(SCIP_DEFAULT_INFINITY, expect));
+            TEST_ASSERT(SCIPintervalIsEntire(SCIP_DEFAULT_INFINITY, resultant) == SCIPintervalIsEntire(SCIP_DEFAULT_INFINITY, expect));
             if( !SCIPintervalIsEmpty(SCIP_DEFAULT_INFINITY, expect) && !SCIPintervalIsEntire(SCIP_DEFAULT_INFINITY, expect) )
             {
-               cr_assert_float_eq(resultant.inf, expect.inf, 1e-12, "unexpected x.inf %g for %g*x^2=[%g,%g], expected %g", resultant.inf, sqrcoef.inf, rhs.inf, rhs.sup, expect.inf);
-               cr_assert_float_eq(resultant.sup, expect.sup, 1e-12, "unexpected x.sup %g for %g*x^2=[%g,%g], expected %g", resultant.sup, sqrcoef.inf, rhs.inf, rhs.sup, expect.sup);
+               TEST_ASSERT_DOUBLE_WITHIN(resultant.inf, expect.inf, 1e-12, "unexpected x.inf %g for %g*x^2=[%g,%g], expected %g", resultant.inf, sqrcoef.inf, rhs.inf, rhs.sup, expect.inf);
+               TEST_ASSERT_DOUBLE_WITHIN(resultant.sup, expect.sup, 1e-12, "unexpected x.sup %g for %g*x^2=[%g,%g], expected %g", resultant.sup, sqrcoef.inf, rhs.inf, rhs.sup, expect.sup);
             }
          }
       }
@@ -145,13 +156,13 @@ Test(intervalarith, solveuniquad)
          SCIPintervalSolveUnivariateQuadExpression(SCIP_DEFAULT_INFINITY, &resultant, sqrcoef, lincoef, rhs, xbnds);
 
          if( 2.0*rhs.sup + lincoef.inf * lincoef.inf < 0.0 )
-            cr_assert(SCIPintervalIsEmpty(SCIP_DEFAULT_INFINITY, resultant));
+            TEST_ASSERT(SCIPintervalIsEmpty(SCIP_DEFAULT_INFINITY, resultant));
          else
          {
             expect.inf = -lincoef.inf - sqrt(2.0*rhs.sup + lincoef.inf*lincoef.inf);
             expect.sup = -lincoef.inf + sqrt(2.0*rhs.sup + lincoef.inf*lincoef.inf);
-            cr_assert_float_eq(resultant.inf, expect.inf, 1e-12, "unexpected x.inf %g for 0.5*x^2%+g*x=[%g,%g], expected %g", resultant.inf, lincoef.inf, rhs.inf, rhs.sup, expect.inf);
-            cr_assert_float_eq(resultant.sup, expect.sup, 1e-12, "unexpected x.sup %g for 0.5*x^2%+g*x=[%g,%g], expected %g", resultant.sup, lincoef.inf, rhs.inf, rhs.sup, expect.sup);
+            TEST_ASSERT_DOUBLE_WITHIN(resultant.inf, expect.inf, 1e-12, "unexpected x.inf %g for 0.5*x^2%+g*x=[%g,%g], expected %g", resultant.inf, lincoef.inf, rhs.inf, rhs.sup, expect.inf);
+            TEST_ASSERT_DOUBLE_WITHIN(resultant.sup, expect.sup, 1e-12, "unexpected x.sup %g for 0.5*x^2%+g*x=[%g,%g], expected %g", resultant.sup, lincoef.inf, rhs.inf, rhs.sup, expect.sup);
          }
 
          SCIPintervalSet(&sqrcoef, -0.5);
@@ -162,13 +173,13 @@ Test(intervalarith, solveuniquad)
          SCIPintervalSolveUnivariateQuadExpression(SCIP_DEFAULT_INFINITY, &resultant, sqrcoef, lincoef, rhs, xbnds);
 
          if( -2.0*rhs.inf + lincoef.inf * lincoef.inf < 0.0 )
-            cr_assert(SCIPintervalIsEmpty(SCIP_DEFAULT_INFINITY, resultant));
+            TEST_ASSERT(SCIPintervalIsEmpty(SCIP_DEFAULT_INFINITY, resultant));
          else
          {
             expect.inf = lincoef.inf - sqrt(-2.0*rhs.inf + lincoef.inf*lincoef.inf);
             expect.sup = lincoef.inf + sqrt(-2.0*rhs.inf + lincoef.inf*lincoef.inf);
-            cr_assert_float_eq(resultant.inf, expect.inf, 1e-12, "unexpected x.inf %g for -0.5*x^2%+g*x=[%g,%g], expected %g", resultant.inf, lincoef.inf, rhs.inf, rhs.sup, expect.inf);
-            cr_assert_float_eq(resultant.sup, expect.sup, 1e-12, "unexpected x.sup %g for -0.5*x^2%+g*x=[%g,%g], expected %g", resultant.sup, lincoef.inf, rhs.inf, rhs.sup, expect.sup);
+            TEST_ASSERT_DOUBLE_WITHIN(resultant.inf, expect.inf, 1e-12, "unexpected x.inf %g for -0.5*x^2%+g*x=[%g,%g], expected %g", resultant.inf, lincoef.inf, rhs.inf, rhs.sup, expect.inf);
+            TEST_ASSERT_DOUBLE_WITHIN(resultant.sup, expect.sup, 1e-12, "unexpected x.sup %g for -0.5*x^2%+g*x=[%g,%g], expected %g", resultant.sup, lincoef.inf, rhs.inf, rhs.sup, expect.sup);
          }
       }
    }
@@ -182,18 +193,18 @@ Test(intervalarith, solveuniquad)
    SCIPintervalSet(&lincoef, -1.0);
    SCIPintervalSetBounds(&rhs, 0.0, SCIP_DEFAULT_INFINITY);
    SCIPintervalSolveUnivariateQuadExpression(SCIP_DEFAULT_INFINITY, &resultant, sqrcoef, lincoef, rhs, xbnds);
-   cr_assert_eq(resultant.inf, -SCIP_DEFAULT_INFINITY);
-   cr_assert_eq(resultant.sup, +SCIP_DEFAULT_INFINITY);
+   TEST_ASSERT_EQUAL_DOUBLE(-SCIP_DEFAULT_INFINITY, resultant.inf);
+   TEST_ASSERT_EQUAL_DOUBLE(+SCIP_DEFAULT_INFINITY, resultant.sup);
 
    SCIPintervalSetBounds(&rhs, 0.0, 1.5);
    SCIPintervalSolveUnivariateQuadExpression(SCIP_DEFAULT_INFINITY, &resultant, sqrcoef, lincoef, rhs, xbnds);
-   cr_assert_float_eq(resultant.inf, -1.0, 1e-12);
-   cr_assert_float_eq(resultant.sup,  3.0, 1e-12);
+   TEST_ASSERT_DOUBLE_WITHIN(resultant.inf, -1.0, 1e-12);
+   TEST_ASSERT_DOUBLE_WITHIN(resultant.sup,  3.0, 1e-12);
 
    SCIPintervalSetBounds(&rhs, 1.5, SCIP_DEFAULT_INFINITY);
    SCIPintervalSolveUnivariateQuadExpression(SCIP_DEFAULT_INFINITY, &resultant, sqrcoef, lincoef, rhs, xbnds);
-   cr_assert_eq(resultant.inf, -SCIP_DEFAULT_INFINITY);
-   cr_assert_eq(resultant.sup, +SCIP_DEFAULT_INFINITY);
+   TEST_ASSERT_EQUAL_DOUBLE(-SCIP_DEFAULT_INFINITY, resultant.inf);
+   TEST_ASSERT_EQUAL_DOUBLE(+SCIP_DEFAULT_INFINITY, resultant.sup);
 
    /* now, let's look only for solutions x >= 0:
     * {x >= 0 : 0.5x^2-x >= 0} = [0,0] v [2,infty]
@@ -204,18 +215,18 @@ Test(intervalarith, solveuniquad)
 
    SCIPintervalSetBounds(&rhs, 0.0, SCIP_DEFAULT_INFINITY);
    SCIPintervalSolveUnivariateQuadExpression(SCIP_DEFAULT_INFINITY, &resultant, sqrcoef, lincoef, rhs, xbnds);
-   cr_assert_float_eq(resultant.inf, 0.0, 1e-12);
-   cr_assert_eq(resultant.sup, +SCIP_DEFAULT_INFINITY);
+   TEST_ASSERT_DOUBLE_WITHIN(resultant.inf, 0.0, 1e-12);
+   TEST_ASSERT_EQUAL_DOUBLE(+SCIP_DEFAULT_INFINITY, resultant.sup);
 
    SCIPintervalSetBounds(&rhs, 0.0, 1.5);
    SCIPintervalSolveUnivariateQuadExpression(SCIP_DEFAULT_INFINITY, &resultant, sqrcoef, lincoef, rhs, xbnds);
-   cr_assert_float_eq(resultant.inf, 0.0, 1e-12);
-   cr_assert_float_eq(resultant.sup, 3.0, 1e-12);
+   TEST_ASSERT_DOUBLE_WITHIN(resultant.inf, 0.0, 1e-12);
+   TEST_ASSERT_DOUBLE_WITHIN(resultant.sup, 3.0, 1e-12);
 
    SCIPintervalSetBounds(&rhs, 1.5, SCIP_DEFAULT_INFINITY);
    SCIPintervalSolveUnivariateQuadExpression(SCIP_DEFAULT_INFINITY, &resultant, sqrcoef, lincoef, rhs, xbnds);
-   cr_assert_float_eq(resultant.inf, 3.0, 1e-12);
-   cr_assert_eq(resultant.sup, +SCIP_DEFAULT_INFINITY);
+   TEST_ASSERT_DOUBLE_WITHIN(resultant.inf, 3.0, 1e-12);
+   TEST_ASSERT_EQUAL_DOUBLE(+SCIP_DEFAULT_INFINITY, resultant.sup);
 
 
    /* now, let's look only for solutions x >= 1:
@@ -227,18 +238,18 @@ Test(intervalarith, solveuniquad)
 
    SCIPintervalSetBounds(&rhs, 0.0, SCIP_DEFAULT_INFINITY);
    SCIPintervalSolveUnivariateQuadExpression(SCIP_DEFAULT_INFINITY, &resultant, sqrcoef, lincoef, rhs, xbnds);
-   cr_assert_float_eq(resultant.inf, 2.0, 1e-12);
-   cr_assert_eq(resultant.sup, +SCIP_DEFAULT_INFINITY);
+   TEST_ASSERT_DOUBLE_WITHIN(resultant.inf, 2.0, 1e-12);
+   TEST_ASSERT_EQUAL_DOUBLE(+SCIP_DEFAULT_INFINITY, resultant.sup);
 
    SCIPintervalSetBounds(&rhs, 0.0, 1.5);
    SCIPintervalSolveUnivariateQuadExpression(SCIP_DEFAULT_INFINITY, &resultant, sqrcoef, lincoef, rhs, xbnds);
-   cr_assert_float_eq(resultant.inf, 2.0, 1e-12);
-   cr_assert_float_eq(resultant.sup, 3.0, 1e-12);
+   TEST_ASSERT_DOUBLE_WITHIN(resultant.inf, 2.0, 1e-12);
+   TEST_ASSERT_DOUBLE_WITHIN(resultant.sup, 3.0, 1e-12);
 
    SCIPintervalSetBounds(&rhs, 1.5, SCIP_DEFAULT_INFINITY);
    SCIPintervalSolveUnivariateQuadExpression(SCIP_DEFAULT_INFINITY, &resultant, sqrcoef, lincoef, rhs, xbnds);
-   cr_assert_float_eq(resultant.inf, 3.0, 1e-12);
-   cr_assert_eq(resultant.sup, +SCIP_DEFAULT_INFINITY);
+   TEST_ASSERT_DOUBLE_WITHIN(resultant.inf, 3.0, 1e-12);
+   TEST_ASSERT_EQUAL_DOUBLE(+SCIP_DEFAULT_INFINITY, resultant.sup);
 
 
   /* similarly, we can look only for solutions x <= -1:
@@ -250,18 +261,18 @@ Test(intervalarith, solveuniquad)
 
   SCIPintervalSetBounds(&rhs, 0.0, SCIP_DEFAULT_INFINITY);
   SCIPintervalSolveUnivariateQuadExpression(SCIP_DEFAULT_INFINITY, &resultant, sqrcoef, lincoef, rhs, xbnds);
-  cr_assert_eq(resultant.inf, -SCIP_DEFAULT_INFINITY);
-  cr_assert_float_eq(resultant.sup, -1.0, 1e-12);
+  TEST_ASSERT_EQUAL_DOUBLE(-SCIP_DEFAULT_INFINITY, resultant.inf);
+  TEST_ASSERT_DOUBLE_WITHIN(resultant.sup, -1.0, 1e-12);
 
   SCIPintervalSetBounds(&rhs, 0.0, 1.5);
   SCIPintervalSolveUnivariateQuadExpression(SCIP_DEFAULT_INFINITY, &resultant, sqrcoef, lincoef, rhs, xbnds);
-  cr_assert_float_eq(resultant.inf, -1.0, 1e-12);
-  cr_assert_float_eq(resultant.sup, -1.0, 1e-12);
+  TEST_ASSERT_DOUBLE_WITHIN(resultant.inf, -1.0, 1e-12);
+  TEST_ASSERT_DOUBLE_WITHIN(resultant.sup, -1.0, 1e-12);
 
   SCIPintervalSetBounds(&rhs, 1.5, SCIP_DEFAULT_INFINITY);
   SCIPintervalSolveUnivariateQuadExpression(SCIP_DEFAULT_INFINITY, &resultant, sqrcoef, lincoef, rhs, xbnds);
-  cr_assert_eq(resultant.inf, -SCIP_DEFAULT_INFINITY);
-  cr_assert_float_eq(resultant.sup, -1.0, 1e-12);
+  TEST_ASSERT_EQUAL_DOUBLE(-SCIP_DEFAULT_INFINITY, resultant.inf);
+  TEST_ASSERT_DOUBLE_WITHIN(resultant.sup, -1.0, 1e-12);
 
 
   /* a linear equation with interval coefficients should be solved well:
@@ -279,40 +290,40 @@ Test(intervalarith, solveuniquad)
   SCIPintervalSetBounds(&lincoef, -1.0, 1.0);
   SCIPintervalSetBounds(&rhs, 1.0, SCIP_DEFAULT_INFINITY);
   SCIPintervalSolveUnivariateQuadExpression(SCIP_DEFAULT_INFINITY, &resultant, sqrcoef, lincoef, rhs, xbnds);
-  cr_assert_eq(resultant.inf, -SCIP_DEFAULT_INFINITY);
-  cr_assert_eq(resultant.sup,  SCIP_DEFAULT_INFINITY);
+  TEST_ASSERT_EQUAL_DOUBLE(-SCIP_DEFAULT_INFINITY, resultant.inf);
+  TEST_ASSERT_EQUAL_DOUBLE(SCIP_DEFAULT_INFINITY, resultant.sup);
 
   SCIPintervalSetBounds(&rhs, -SCIP_DEFAULT_INFINITY, 1.0);
   SCIPintervalSolveUnivariateQuadExpression(SCIP_DEFAULT_INFINITY, &resultant, sqrcoef, lincoef, rhs, xbnds);
-  cr_assert_eq(resultant.inf, -SCIP_DEFAULT_INFINITY);
-  cr_assert_eq(resultant.sup,  SCIP_DEFAULT_INFINITY);
+  TEST_ASSERT_EQUAL_DOUBLE(-SCIP_DEFAULT_INFINITY, resultant.inf);
+  TEST_ASSERT_EQUAL_DOUBLE(SCIP_DEFAULT_INFINITY, resultant.sup);
 
   SCIPintervalSetBounds(&rhs, -SCIP_DEFAULT_INFINITY, -1.0);
   SCIPintervalSolveUnivariateQuadExpression(SCIP_DEFAULT_INFINITY, &resultant, sqrcoef, lincoef, rhs, xbnds);
-  cr_assert_eq(resultant.inf, -SCIP_DEFAULT_INFINITY);
-  cr_assert_eq(resultant.sup,  SCIP_DEFAULT_INFINITY);
+  TEST_ASSERT_EQUAL_DOUBLE(-SCIP_DEFAULT_INFINITY, resultant.inf);
+  TEST_ASSERT_EQUAL_DOUBLE(SCIP_DEFAULT_INFINITY, resultant.sup);
 
   SCIPintervalSetBounds(&rhs, -1.0, SCIP_DEFAULT_INFINITY);
   SCIPintervalSolveUnivariateQuadExpression(SCIP_DEFAULT_INFINITY, &resultant, sqrcoef, lincoef, rhs, xbnds);
-  cr_assert_eq(resultant.inf, -SCIP_DEFAULT_INFINITY);
-  cr_assert_eq(resultant.sup,  SCIP_DEFAULT_INFINITY);
+  TEST_ASSERT_EQUAL_DOUBLE(-SCIP_DEFAULT_INFINITY, resultant.inf);
+  TEST_ASSERT_EQUAL_DOUBLE(SCIP_DEFAULT_INFINITY, resultant.sup);
 
   SCIPintervalSetBounds(&lincoef, 0.0, 1.0);
   SCIPintervalSetBounds(&rhs, 1.0, SCIP_DEFAULT_INFINITY);
   SCIPintervalSolveUnivariateQuadExpression(SCIP_DEFAULT_INFINITY, &resultant, sqrcoef, lincoef, rhs, xbnds);
-  cr_assert_float_eq(resultant.inf, 1.0, 1e-12);
-  cr_assert_eq(resultant.sup, SCIP_DEFAULT_INFINITY);
+  TEST_ASSERT_DOUBLE_WITHIN(resultant.inf, 1.0, 1e-12);
+  TEST_ASSERT_EQUAL_DOUBLE(SCIP_DEFAULT_INFINITY, resultant.sup);
 
   SCIPintervalSetBounds(&lincoef, -1.0, 0.0);
   SCIPintervalSetBounds(&rhs, 1.0, SCIP_DEFAULT_INFINITY);
   SCIPintervalSolveUnivariateQuadExpression(SCIP_DEFAULT_INFINITY, &resultant, sqrcoef, lincoef, rhs, xbnds);
-  cr_assert_eq(resultant.inf, -SCIP_DEFAULT_INFINITY);
-  cr_assert_float_eq(resultant.sup, -1.0, 1e-12);
+  TEST_ASSERT_EQUAL_DOUBLE(-SCIP_DEFAULT_INFINITY, resultant.inf);
+  TEST_ASSERT_DOUBLE_WITHIN(resultant.sup, -1.0, 1e-12);
 
   SCIPintervalSetBounds(&lincoef, 0.0, 1.0);
   SCIPintervalSetBounds(&rhs, 0.0, SCIP_DEFAULT_INFINITY);
   SCIPintervalSolveUnivariateQuadExpression(SCIP_DEFAULT_INFINITY, &resultant, sqrcoef, lincoef, rhs, xbnds);
-  cr_assert(SCIPintervalIsEntire(SCIP_DEFAULT_INFINITY, resultant));
+  TEST_ASSERT(SCIPintervalIsEntire(SCIP_DEFAULT_INFINITY, resultant));
 
   /* providing bounds on x should result in better results:
    * {x in [-infty,0]: [-1,1]*x >= 1.0} = [-infty,-1]
@@ -325,24 +336,24 @@ Test(intervalarith, solveuniquad)
   SCIPintervalSetBounds(&rhs, 1.0, SCIP_DEFAULT_INFINITY);
   SCIPintervalSetBounds(&xbnds, -SCIP_DEFAULT_INFINITY, 0.0);
   SCIPintervalSolveUnivariateQuadExpression(SCIP_DEFAULT_INFINITY, &resultant, sqrcoef, lincoef, rhs, xbnds);
-  cr_assert_eq(resultant.inf, -SCIP_DEFAULT_INFINITY);
-  cr_assert_float_eq(resultant.sup, -1.0, 1e-12);
+  TEST_ASSERT_EQUAL_DOUBLE(-SCIP_DEFAULT_INFINITY, resultant.inf);
+  TEST_ASSERT_DOUBLE_WITHIN(resultant.sup, -1.0, 1e-12);
 
   SCIPintervalSetBounds(&xbnds, 0.0, SCIP_DEFAULT_INFINITY);
   SCIPintervalSolveUnivariateQuadExpression(SCIP_DEFAULT_INFINITY, &resultant, sqrcoef, lincoef, rhs, xbnds);
-  cr_assert_float_eq(resultant.inf, 1.0, 1e-12);
-  cr_assert_eq(resultant.sup, SCIP_DEFAULT_INFINITY);
+  TEST_ASSERT_DOUBLE_WITHIN(resultant.inf, 1.0, 1e-12);
+  TEST_ASSERT_EQUAL_DOUBLE(SCIP_DEFAULT_INFINITY, resultant.sup);
 
   SCIPintervalSetBounds(&rhs, -SCIP_DEFAULT_INFINITY, -1.0);
   SCIPintervalSetBounds(&xbnds, -SCIP_DEFAULT_INFINITY, 0.0);
   SCIPintervalSolveUnivariateQuadExpression(SCIP_DEFAULT_INFINITY, &resultant, sqrcoef, lincoef, rhs, xbnds);
-  cr_assert_eq(resultant.inf, -SCIP_DEFAULT_INFINITY);
-  cr_assert_float_eq(resultant.sup, -1.0, 1e-12);
+  TEST_ASSERT_EQUAL_DOUBLE(-SCIP_DEFAULT_INFINITY, resultant.inf);
+  TEST_ASSERT_DOUBLE_WITHIN(resultant.sup, -1.0, 1e-12);
 
   SCIPintervalSetBounds(&xbnds, 0.0, SCIP_DEFAULT_INFINITY);
   SCIPintervalSolveUnivariateQuadExpression(SCIP_DEFAULT_INFINITY, &resultant, sqrcoef, lincoef, rhs, xbnds);
-  cr_assert_float_eq(resultant.inf, 1.0, 1e-12);
-  cr_assert_eq(resultant.sup, SCIP_DEFAULT_INFINITY);
+  TEST_ASSERT_DOUBLE_WITHIN(resultant.inf, 1.0, 1e-12);
+  TEST_ASSERT_EQUAL_DOUBLE(SCIP_DEFAULT_INFINITY, resultant.sup);
 
   /* some more tests with lincoef=0 */
   /* [0,1]*x^2 = 1 -> x^2 = [1,infty] -> x = [-infty,-1] v [1,infty]*/
@@ -351,7 +362,7 @@ Test(intervalarith, solveuniquad)
   SCIPintervalSetBounds(&rhs, 1.0, 1.0);
   SCIPintervalSetEntire(SCIP_DEFAULT_INFINITY, &xbnds);
   SCIPintervalSolveUnivariateQuadExpression(SCIP_DEFAULT_INFINITY, &resultant, sqrcoef, lincoef, rhs, xbnds);
-  cr_assert(SCIPintervalIsEntire(SCIP_DEFAULT_INFINITY, resultant));
+  TEST_ASSERT(SCIPintervalIsEntire(SCIP_DEFAULT_INFINITY, resultant));
 
   /* [0,1]*x^2 = 1, x >= 0 -> x >= 1 */
   SCIPintervalSetBounds(&sqrcoef, 0.0, 1.0);
@@ -359,8 +370,8 @@ Test(intervalarith, solveuniquad)
   SCIPintervalSetBounds(&rhs, 1.0, 1.0);
   SCIPintervalSetBounds(&xbnds, 0.0, SCIP_DEFAULT_INFINITY);
   SCIPintervalSolveUnivariateQuadExpression(SCIP_DEFAULT_INFINITY, &resultant, sqrcoef, lincoef, rhs, xbnds);
-  cr_assert_float_eq(resultant.inf, 1.0, 1e-12);
-  cr_assert_eq(resultant.sup, SCIP_DEFAULT_INFINITY);
+  TEST_ASSERT_DOUBLE_WITHIN(resultant.inf, 1.0, 1e-12);
+  TEST_ASSERT_EQUAL_DOUBLE(SCIP_DEFAULT_INFINITY, resultant.sup);
 
   /* [0,1]*x^2 = 1, x <= 0 -> x <= -1 */
   SCIPintervalSetBounds(&sqrcoef, 0.0, 1.0);
@@ -368,12 +379,12 @@ Test(intervalarith, solveuniquad)
   SCIPintervalSetBounds(&rhs, 1.0, 1.0);
   SCIPintervalSetBounds(&xbnds, -SCIP_DEFAULT_INFINITY, -1.0);
   SCIPintervalSolveUnivariateQuadExpression(SCIP_DEFAULT_INFINITY, &resultant, sqrcoef, lincoef, rhs, xbnds);
-  cr_assert_eq(resultant.inf, -SCIP_DEFAULT_INFINITY);
-  cr_assert_float_eq(resultant.sup, -1.0, 1e-12);
+  TEST_ASSERT_EQUAL_DOUBLE(-SCIP_DEFAULT_INFINITY, resultant.inf);
+  TEST_ASSERT_DOUBLE_WITHIN(resultant.sup, -1.0, 1e-12);
 }
 
 /** some tests for x*y in rhs */
-Test(intervalarith, xy)
+void test_intervalarith_xy(void)
 {
    SCIP_INTERVAL xbnds;
    SCIP_INTERVAL ybnds;
@@ -386,55 +397,55 @@ Test(intervalarith, xy)
    SCIPintervalSetBounds(&ybnds, -1.0, 1.0);
    SCIPintervalSetBounds(&rhs, 1.0, 1.0);
    SCIPintervalSolveBivariateQuadExpressionAllScalar(SCIP_DEFAULT_INFINITY, &resultant, 0.0, 0.0, 1.0, 0.0, 0.0, rhs, xbnds, ybnds);
-   cr_assert_eq(resultant.inf, -1.0);
-   cr_assert_eq(resultant.sup,  1.0);
+   TEST_ASSERT_EQUAL_DOUBLE(-1.0, resultant.inf);
+   TEST_ASSERT_EQUAL_DOUBLE(1.0, resultant.sup);
 
    /* with x in [-1,0], this should then give x = [-1,-1] */
    SCIPintervalSetBounds(&xbnds, -1.0, 0.0);
    SCIPintervalSolveBivariateQuadExpressionAllScalar(SCIP_DEFAULT_INFINITY, &resultant, 0.0, 0.0, 1.0, 0.0, 0.0, rhs, xbnds, ybnds);
-   cr_assert_eq(resultant.inf, -1.0);
-   cr_assert_float_eq(resultant.sup, -1.0, 1e-12);
+   TEST_ASSERT_EQUAL_DOUBLE(-1.0, resultant.inf);
+   TEST_ASSERT_DOUBLE_WITHIN(resultant.sup, -1.0, 1e-12);
 
    /* and with x in [0,1], this should then give x = [1,1] */
    SCIPintervalSetBounds(&xbnds, 0.0, 1.0);
    SCIPintervalSolveBivariateQuadExpressionAllScalar(SCIP_DEFAULT_INFINITY, &resultant, 0.0, 0.0, 1.0, 0.0, 0.0, rhs, xbnds, ybnds);
-   cr_assert_float_eq(resultant.inf, 1.0, 1e-12);
-   cr_assert_eq(resultant.sup, 1.0);
+   TEST_ASSERT_DOUBLE_WITHIN(resultant.inf, 1.0, 1e-12);
+   TEST_ASSERT_EQUAL_DOUBLE(1.0, resultant.sup);
 
    /* x*y >= 1.0 for x,y in [-1,1] -> x = [-1,-1] */
    SCIPintervalSetBounds(&xbnds, -1.0, 1.0);
    SCIPintervalSetBounds(&ybnds, -1.0, 1.0);
    SCIPintervalSetBounds(&rhs, 1.0, SCIP_DEFAULT_INFINITY);
    SCIPintervalSolveBivariateQuadExpressionAllScalar(SCIP_DEFAULT_INFINITY, &resultant, 0.0, 0.0, 1.0, 0.0, 0.0, rhs, xbnds, ybnds);
-   cr_assert_eq(resultant.inf, -1.0);
-   cr_assert_float_eq(resultant.sup,  1.0, 1e-12);
+   TEST_ASSERT_EQUAL_DOUBLE(-1.0, resultant.inf);
+   TEST_ASSERT_DOUBLE_WITHIN(resultant.sup,  1.0, 1e-12);
 
    /* x*y >= 1.0 for x in [-1,1], y in [-1,0] -> x = [-1,-1] */
    SCIPintervalSetBounds(&ybnds, -1.0, -0.0);
    SCIPintervalSolveBivariateQuadExpressionAllScalar(SCIP_DEFAULT_INFINITY, &resultant, 0.0, 0.0, 1.0, 0.0, 0.0, rhs, xbnds, ybnds);
-   cr_assert_eq(resultant.inf, -1.0);
-   /* currently still gives 1 as upper bound, so cr_assert_float_eq(resultant.sup, -1.0, 1e-12); fails
+   TEST_ASSERT_EQUAL_DOUBLE(-1.0, resultant.inf);
+   /* currently still gives 1 as upper bound, so TEST_ASSERT_DOUBLE_WITHIN(resultant.sup, -1.0, 1e-12); fails
     * however, SCIPintervalSolveUnivariateQuadExpression handles this better:
     */
    SCIPintervalSet(&sqrcoef, 0.0);
    SCIPintervalSolveUnivariateQuadExpression(SCIP_DEFAULT_INFINITY, &resultant, sqrcoef, ybnds, rhs, xbnds);
-   cr_assert_eq(resultant.inf, -1.0);
-   cr_assert_float_eq(resultant.sup, -1.0, 1e-12);
+   TEST_ASSERT_EQUAL_DOUBLE(-1.0, resultant.inf);
+   TEST_ASSERT_DOUBLE_WITHIN(resultant.sup, -1.0, 1e-12);
 
    /* similar for x*y >= 1.0 for x in [-1,1], y in [0,1] -> x = [1,1] */
    SCIPintervalSetBounds(&ybnds, 0, 1.0);
    SCIPintervalSolveBivariateQuadExpressionAllScalar(SCIP_DEFAULT_INFINITY, &resultant, 0.0, 0.0, 1.0, 0.0, 0.0, rhs, xbnds, ybnds);
-   cr_assert_eq(resultant.sup, 1.0);
-   /* currently still gives -1 as lower bound, so cr_assert_float_eq(resultant.inf, 1.0, 1e-12); fails
+   TEST_ASSERT_EQUAL_DOUBLE(1.0, resultant.sup);
+   /* currently still gives -1 as lower bound, so TEST_ASSERT_DOUBLE_WITHIN(resultant.inf, 1.0, 1e-12); fails
     * however, SCIPintervalSolveUnivariateQuadExpression handles this better:
     */
    SCIPintervalSet(&sqrcoef, 0.0);
    SCIPintervalSolveUnivariateQuadExpression(SCIP_DEFAULT_INFINITY, &resultant, sqrcoef, ybnds, rhs, xbnds);
-   cr_assert_float_eq(resultant.inf, 1.0, 1e-12);
-   cr_assert_eq(resultant.sup, 1.0);
+   TEST_ASSERT_DOUBLE_WITHIN(resultant.inf, 1.0, 1e-12);
+   TEST_ASSERT_EQUAL_DOUBLE(1.0, resultant.sup);
 }
 
-Test(intervalarith, issue2250)
+void test_intervalarith_issue2250(void)
 {
    SCIP_Real             infinity;
    SCIP_INTERVAL         resultant;
@@ -458,7 +469,7 @@ Test(intervalarith, issue2250)
    SCIPintervalSetBounds(&ybnds, 0.0, infinity);
 
    /* x=y=4 is feasible for this equation, so x=4 should be part of the solution of this equation */
-   cr_assert(ax*4*4 + bx*4 + ay*4*4 + by*4 + axy*4*4 <= 1e-12);
+   TEST_ASSERT(ax*4*4 + bx*4 + ay*4*4 + by*4 + axy*4*4 <= 1e-12);
 
    SCIPintervalSolveBivariateQuadExpressionAllScalar(
       infinity,           /**< value for infinity in interval arithmetics */
@@ -473,8 +484,8 @@ Test(intervalarith, issue2250)
       ybnds               /**< bounds on y */
       );
 
-   cr_assert(resultant.inf <= 4.0);
-   cr_assert(resultant.sup >= 4.0);
+   TEST_ASSERT(resultant.inf <= 4.0);
+   TEST_ASSERT(resultant.sup >= 4.0);
 }
 
 /* The fail in #2650 was caused by GCC reorganizing operations in SCIPintervalReciprocal so that divisions
@@ -482,7 +493,7 @@ Test(intervalarith, issue2250)
  * Unfortunately, I was not able to reproduce this with a single test like this
  * (build SCIP with OPT=dbg SHARED=true USRCFLAGS="-O3 -DNDEBUG -fomit-frame-pointer").
  */
-Test(intervalarith, issue2650)
+void test_intervalarith_issue2650(void)
 {
    SCIP_Real             infinity = 1.0e300;
    SCIP_INTERVAL         resultant;
@@ -495,22 +506,21 @@ Test(intervalarith, issue2650)
    SCIPintervalPowerScalarInverse(infinity, &resultant, base, 0.2, image);
    printf("x^0.2 = [%.15g,%.15g] -> x = [%.15g,%.15g]\n", image.inf, image.sup, resultant.inf, resultant.sup);
 
-   cr_assert(resultant.inf <= 3486784401.0);
-   cr_assert(resultant.sup >= 3486784401.0);
+   TEST_ASSERT(resultant.inf <= 3486784401.0);
+   TEST_ASSERT(resultant.sup >= 3486784401.0);
 
    /* the code above failed because the 1/0.2 wasn't computed correctly: */
    SCIPintervalSetBounds(&operand, 0.2, 0.2);
    SCIPintervalReciprocal(infinity, &resultant, operand);
    printf("1/[0.2,0.2] = [%.15g,%.15g]\n", resultant.inf, resultant.sup);
 
-   cr_assert(resultant.inf <= 5.0);
-   cr_assert(resultant.sup >= 5.0);
+   TEST_ASSERT(resultant.inf <= 5.0);
+   TEST_ASSERT(resultant.sup >= 5.0);
 }
 
-#define EXPECTEQ(a,b) cr_expect_eq(a, b, "%s = %.20g != %g", #a, a, b)
-#define EXPECTFEQ(a,b) cr_expect_float_eq(a, b, 1e-12, "%s = %g != %g", #a, a, b)
+#define EXPECTEQ(a,b) SOFT_ASSERT_EQUAL(a, b, "%s = %.20g != %g", #a, a, b)
 
-Test(intervalarith, sincos)
+void test_intervalarith_sincos(void)
 {
    SCIP_INTERVAL arg;
    SCIP_INTERVAL res;
@@ -526,10 +536,10 @@ Test(intervalarith, sincos)
    arg.sup = M_PI_4;
    SCIPintervalSin(SCIP_INTERVAL_INFINITY, &res, arg);
    EXPECTEQ(res.inf, 0.0);
-   EXPECTFEQ(res.sup, M_SQRT1_2);
+   EXPECTFEQ_WITHIN(1e-12, res.sup, M_SQRT1_2);
 
    SCIPintervalCos(SCIP_INTERVAL_INFINITY, &res, arg);
-   EXPECTFEQ(res.inf, M_SQRT1_2);
+   EXPECTFEQ_WITHIN(1e-12, res.inf, M_SQRT1_2);
    EXPECTEQ(res.sup, 1.0);
 
 
@@ -540,7 +550,7 @@ Test(intervalarith, sincos)
    EXPECTEQ(res.sup, 1.0);
 
    SCIPintervalCos(SCIP_INTERVAL_INFINITY, &res, arg);
-   EXPECTFEQ(res.inf, 0.0);
+   EXPECTFEQ_WITHIN(1e-12, res.inf, 0.0);
    EXPECTEQ(res.sup, 1.0);
 
 
@@ -551,14 +561,14 @@ Test(intervalarith, sincos)
    EXPECTEQ(res.sup, 1.0);
 
    SCIPintervalCos(SCIP_INTERVAL_INFINITY, &res, arg);
-   EXPECTFEQ(res.inf, -M_SQRT1_2);
+   EXPECTFEQ_WITHIN(1e-12, res.inf, -M_SQRT1_2);
    EXPECTEQ(res.sup, 1.0);
 
 
    arg.inf = 0.0;
    arg.sup = M_PI;
    SCIPintervalSin(SCIP_INTERVAL_INFINITY, &res, arg);
-   EXPECTFEQ(res.inf, 0.0);
+   EXPECTFEQ_WITHIN(1e-12, res.inf, 0.0);
    EXPECTEQ(res.sup, 1.0);
 
    SCIPintervalCos(SCIP_INTERVAL_INFINITY, &res, arg);
@@ -569,7 +579,7 @@ Test(intervalarith, sincos)
    arg.inf = 0.0;
    arg.sup = M_PI + M_PI_4;
    SCIPintervalSin(SCIP_INTERVAL_INFINITY, &res, arg);
-   EXPECTFEQ(res.inf, -M_SQRT1_2);
+   EXPECTFEQ_WITHIN(1e-12, res.inf, -M_SQRT1_2);
    EXPECTEQ(res.sup, 1.0);
 
    SCIPintervalCos(SCIP_INTERVAL_INFINITY, &res, arg);
@@ -627,45 +637,45 @@ Test(intervalarith, sincos)
    arg.inf = M_PI_4;
    arg.sup = M_PI_2;
    SCIPintervalSin(SCIP_INTERVAL_INFINITY, &res, arg);
-   EXPECTFEQ(res.inf, M_SQRT1_2);
+   EXPECTFEQ_WITHIN(1e-12, res.inf, M_SQRT1_2);
    EXPECTEQ(res.sup, 1.0);
 
    SCIPintervalCos(SCIP_INTERVAL_INFINITY, &res, arg);
-   EXPECTFEQ(res.inf, 0.0);
-   EXPECTFEQ(res.sup, M_SQRT1_2);
+   EXPECTFEQ_WITHIN(1e-12, res.inf, 0.0);
+   EXPECTFEQ_WITHIN(1e-12, res.sup, M_SQRT1_2);
 
 
    arg.inf = M_PI_4;
    arg.sup = M_PI_2 + M_PI_4;
    SCIPintervalSin(SCIP_INTERVAL_INFINITY, &res, arg);
-   EXPECTFEQ(res.inf, M_SQRT1_2);
+   EXPECTFEQ_WITHIN(1e-12, res.inf, M_SQRT1_2);
    EXPECTEQ(res.sup, 1.0);
 
    SCIPintervalCos(SCIP_INTERVAL_INFINITY, &res, arg);
-   EXPECTFEQ(res.inf, -M_SQRT1_2);
-   EXPECTFEQ(res.sup, M_SQRT1_2);
+   EXPECTFEQ_WITHIN(1e-12, res.inf, -M_SQRT1_2);
+   EXPECTFEQ_WITHIN(1e-12, res.sup, M_SQRT1_2);
 
 
    arg.inf = M_PI_4;
    arg.sup = M_PI;
    SCIPintervalSin(SCIP_INTERVAL_INFINITY, &res, arg);
-   EXPECTFEQ(res.inf, 0.0);
+   EXPECTFEQ_WITHIN(1e-12, res.inf, 0.0);
    EXPECTEQ(res.sup, 1.0);
 
    SCIPintervalCos(SCIP_INTERVAL_INFINITY, &res, arg);
    EXPECTEQ(res.inf, -1.0);
-   EXPECTFEQ(res.sup, M_SQRT1_2);
+   EXPECTFEQ_WITHIN(1e-12, res.sup, M_SQRT1_2);
 
 
    arg.inf = M_PI_4;
    arg.sup = M_PI + M_PI_4;
    SCIPintervalSin(SCIP_INTERVAL_INFINITY, &res, arg);
-   EXPECTFEQ(res.inf, -M_SQRT1_2);
+   EXPECTFEQ_WITHIN(1e-12, res.inf, -M_SQRT1_2);
    EXPECTEQ(res.sup, 1.0);
 
    SCIPintervalCos(SCIP_INTERVAL_INFINITY, &res, arg);
    EXPECTEQ(res.inf, -1.0);
-   EXPECTFEQ(res.sup, M_SQRT1_2);
+   EXPECTFEQ_WITHIN(1e-12, res.sup, M_SQRT1_2);
 
 
    arg.inf = M_PI_4;
@@ -676,7 +686,7 @@ Test(intervalarith, sincos)
 
    SCIPintervalCos(SCIP_INTERVAL_INFINITY, &res, arg);
    EXPECTEQ(res.inf, -1.0);
-   EXPECTFEQ(res.sup, M_SQRT1_2);
+   EXPECTFEQ_WITHIN(1e-12, res.sup, M_SQRT1_2);
 
 
    arg.inf = M_PI_4;
@@ -687,7 +697,7 @@ Test(intervalarith, sincos)
 
    SCIPintervalCos(SCIP_INTERVAL_INFINITY, &res, arg);
    EXPECTEQ(res.inf, -1.0);
-   EXPECTFEQ(res.sup, M_SQRT1_2);
+   EXPECTFEQ_WITHIN(1e-12, res.sup, M_SQRT1_2);
 
 
    arg.inf = M_PI_4;
@@ -729,34 +739,34 @@ Test(intervalarith, sincos)
    arg.inf = M_PI_2;
    arg.sup = M_PI_2 + M_PI_4;
    SCIPintervalSin(SCIP_INTERVAL_INFINITY, &res, arg);
-   EXPECTFEQ(res.inf, M_SQRT1_2);
+   EXPECTFEQ_WITHIN(1e-12, res.inf, M_SQRT1_2);
    EXPECTEQ(res.sup, 1.0);
 
    SCIPintervalCos(SCIP_INTERVAL_INFINITY, &res, arg);
-   EXPECTFEQ(res.inf, -M_SQRT1_2);
-   EXPECTFEQ(res.sup, 0.0);
+   EXPECTFEQ_WITHIN(1e-12, res.inf, -M_SQRT1_2);
+   EXPECTFEQ_WITHIN(1e-12, res.sup, 0.0);
 
 
    arg.inf = M_PI_2;
    arg.sup = M_PI;
    SCIPintervalSin(SCIP_INTERVAL_INFINITY, &res, arg);
-   EXPECTFEQ(res.inf, 0.0);
+   EXPECTFEQ_WITHIN(1e-12, res.inf, 0.0);
    EXPECTEQ(res.sup, 1.0);
 
    SCIPintervalCos(SCIP_INTERVAL_INFINITY, &res, arg);
    EXPECTEQ(res.inf, -1.0);
-   EXPECTFEQ(res.sup, 0.0);
+   EXPECTFEQ_WITHIN(1e-12, res.sup, 0.0);
 
 
    arg.inf = M_PI_2;
    arg.sup = M_PI + M_PI_4;
    SCIPintervalSin(SCIP_INTERVAL_INFINITY, &res, arg);
-   EXPECTFEQ(res.inf, -M_SQRT1_2);
+   EXPECTFEQ_WITHIN(1e-12, res.inf, -M_SQRT1_2);
    EXPECTEQ(res.sup, 1.0);
 
    SCIPintervalCos(SCIP_INTERVAL_INFINITY, &res, arg);
    EXPECTEQ(res.inf, -1.0);
-   EXPECTFEQ(res.sup, 0.0);
+   EXPECTFEQ_WITHIN(1e-12, res.sup, 0.0);
 
 
    arg.inf = M_PI_2;
@@ -767,7 +777,7 @@ Test(intervalarith, sincos)
 
    SCIPintervalCos(SCIP_INTERVAL_INFINITY, &res, arg);
    EXPECTEQ(res.inf, -1.0);
-   EXPECTFEQ(res.sup, 0.0);
+   EXPECTFEQ_WITHIN(1e-12, res.sup, 0.0);
 
 
    arg.inf = M_PI_2;
@@ -778,7 +788,7 @@ Test(intervalarith, sincos)
 
    SCIPintervalCos(SCIP_INTERVAL_INFINITY, &res, arg);
    EXPECTEQ(res.inf, -1.0);
-   EXPECTFEQ(res.sup, M_SQRT1_2);
+   EXPECTFEQ_WITHIN(1e-12, res.sup, M_SQRT1_2);
 
 
    arg.inf = M_PI_2;
@@ -829,40 +839,40 @@ Test(intervalarith, sincos)
    arg.inf = -M_PI_4;
    arg.sup = 0.0;
    SCIPintervalSin(SCIP_INTERVAL_INFINITY, &res, arg);
-   EXPECTFEQ(res.inf, -M_SQRT1_2);
-   EXPECTFEQ(res.sup, 0.0);
+   EXPECTFEQ_WITHIN(1e-12, res.inf, -M_SQRT1_2);
+   EXPECTFEQ_WITHIN(1e-12, res.sup, 0.0);
 
    SCIPintervalCos(SCIP_INTERVAL_INFINITY, &res, arg);
-   EXPECTFEQ(res.inf, M_SQRT1_2);
+   EXPECTFEQ_WITHIN(1e-12, res.inf, M_SQRT1_2);
    EXPECTEQ(res.sup, 1.0);
 
 
    arg.inf = -M_PI_4;
    arg.sup = M_PI_4;
    SCIPintervalSin(SCIP_INTERVAL_INFINITY, &res, arg);
-   EXPECTFEQ(res.inf, -M_SQRT1_2);
-   EXPECTFEQ(res.sup, M_SQRT1_2);
+   EXPECTFEQ_WITHIN(1e-12, res.inf, -M_SQRT1_2);
+   EXPECTFEQ_WITHIN(1e-12, res.sup, M_SQRT1_2);
 
    SCIPintervalCos(SCIP_INTERVAL_INFINITY, &res, arg);
-   EXPECTFEQ(res.inf, M_SQRT1_2);
+   EXPECTFEQ_WITHIN(1e-12, res.inf, M_SQRT1_2);
    EXPECTEQ(res.sup, 1.0);
 
 
    arg.inf = -M_PI_4;
    arg.sup = M_PI_2;
    SCIPintervalSin(SCIP_INTERVAL_INFINITY, &res, arg);
-   EXPECTFEQ(res.inf, -M_SQRT1_2);
+   EXPECTFEQ_WITHIN(1e-12, res.inf, -M_SQRT1_2);
    EXPECTEQ(res.sup, 1.0);
 
    SCIPintervalCos(SCIP_INTERVAL_INFINITY, &res, arg);
-   EXPECTFEQ(res.inf, 0.0);
+   EXPECTFEQ_WITHIN(1e-12, res.inf, 0.0);
    EXPECTEQ(res.sup, 1.0);
 
 
    arg.inf = -M_PI_4;
    arg.sup = M_PI;
    SCIPintervalSin(SCIP_INTERVAL_INFINITY, &res, arg);
-   EXPECTFEQ(res.inf, -M_SQRT1_2);
+   EXPECTFEQ_WITHIN(1e-12, res.inf, -M_SQRT1_2);
    EXPECTEQ(res.sup, 1.0);
 
    SCIPintervalCos(SCIP_INTERVAL_INFINITY, &res, arg);
@@ -879,4 +889,16 @@ Test(intervalarith, sincos)
    SCIPintervalCos(SCIP_INTERVAL_INFINITY, &res, arg);
    EXPECTEQ(res.inf, -1.0);
    EXPECTEQ(res.sup, 1.0);
+}
+
+int main(void)
+{
+   UNITY_BEGIN();
+   RUN_TEST(test_intervalarith_issue1861);
+   RUN_TEST(test_intervalarith_solveuniquad);
+   RUN_TEST(test_intervalarith_xy);
+   RUN_TEST(test_intervalarith_issue2250);
+   RUN_TEST(test_intervalarith_issue2650);
+   RUN_TEST(test_intervalarith_sincos);
+   return UNITY_END();
 }

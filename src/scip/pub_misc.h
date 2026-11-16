@@ -1892,7 +1892,7 @@ unsigned int SCIPcalcFibHash(
  * speed up the algorithms.
  */
 
-#define SCIPcalcFibHash(v)   ((v) >= 0 ? ((unsigned long long)((v) * 2654435769)) % UINT_MAX : ((unsigned long long)(-(v) * 683565275)) % UINT_MAX )
+#define SCIPcalcFibHash(v)   ((v) >= 0 ? ((uint64_t)((v) * 2654435769)) % UINT_MAX : ((uint64_t)(-(v) * 683565275)) % UINT_MAX )
 
 #endif
 

@@ -690,7 +690,7 @@ SCIP_RETCODE estimateUnivariateQuotient(
    /* add estimator to rowprep, if successful */
    if( *success )
    {
-      (void) SCIPsnprintf(SCIProwprepGetName(rowprep), SCIP_MAXSTRLEN, "quot_%s_%lld", SCIPvarGetName(x), SCIPgetNLPs(scip));
+      (void) SCIPsnprintf(SCIProwprepGetName(rowprep), SCIP_MAXSTRLEN, "quot_%s_%" SCIP_LONGINT_FORMAT, SCIPvarGetName(x), SCIPgetNLPs(scip));
       SCIP_CALL( createRowprep(scip, rowprep, &x, &coef, constant, 1) );
       SCIProwprepSetLocal(rowprep, local);
    }
@@ -1012,7 +1012,7 @@ SCIP_RETCODE estimateBivariateQuotient(
       coefs[1] *= c;
 
       /* prepare rowprep */
-      (void) SCIPsnprintf(SCIProwprepGetName(rowprep), SCIP_MAXSTRLEN, "quot_%s_%s_%lld", SCIPvarGetName(vars[0]), SCIPvarGetName(vars[1]),
+      (void) SCIPsnprintf(SCIProwprepGetName(rowprep), SCIP_MAXSTRLEN, "quot_%s_%s_%" SCIP_LONGINT_FORMAT, SCIPvarGetName(vars[0]), SCIPvarGetName(vars[1]),
          SCIPgetNLPs(scip));
       SCIP_CALL( createRowprep(scip, rowprep, vars, coefs, constant, 2) );
    }

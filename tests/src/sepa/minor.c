@@ -78,11 +78,11 @@ void teardown(void)
    SCIP_CALL( SCIPreleaseVar(scip, &w) );
    SCIP_CALL( SCIPfree(&scip) );
 
-   cr_assert_eq(BMSgetMemoryUsed(), 0, "Memory is leaking!!");
+   TEST_ASSERT_EQUAL(BMSgetMemoryUsed(), 0, "Memory is leaking!!");
 }
 
 /** tests the detection of principal minors; the artificial problem contains two principal minors: for (x,y) and (y,z) */
-Test(minor, detect, .init = setup, .fini = teardown)
+void test_minor_detect(void)
 {
    #define NCONSS 3
    const char* inputs[NCONSS] = {"[nonlinear] <c1>: 1<= <x> * <x> + <y> * <y> <= 2",
@@ -99,7 +99,7 @@ Test(minor, detect, .init = setup, .fini = teardown)
    {
       SCIP_CALL( SCIPparseCons(scip, &cons, inputs[c], TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE,
          &success) );
-      cr_assert(success);
+      TEST_ASSERT(success);
 
       /* add and release constraint */
       SCIP_CALL( SCIPaddCons(scip, cons) );
@@ -108,31 +108,31 @@ Test(minor, detect, .init = setup, .fini = teardown)
 
    /* go to solving stage */
    SCIP_CALL( TESTscipSetStage(scip, SCIP_STAGE_SOLVING, FALSE) );
-   cr_assert(SCIPgetNConss(scip) == NCONSS);
-   cr_assert(SCIPconshdlrGetNConss(conshdlr) == NCONSS);
+   TEST_ASSERT(SCIPgetNConss(scip) == NCONSS);
+   TEST_ASSERT(SCIPconshdlrGetNConss(conshdlr) == NCONSS);
 
    /* make sure INITLP has been run to get auxiliary variables */
    SCIP_CALL( SCIPconstructLP(scip, &infeasible) );
-   cr_assert(!infeasible);
+   TEST_ASSERT(!infeasible);
 
    /* get separator data */
    sepa = SCIPfindSepa(scip, SEPA_NAME);
-   cr_assert(sepa != NULL);
+   TEST_ASSERT(sepa != NULL);
    sepadata = SCIPsepaGetData(sepa);
-   cr_assert(sepadata != NULL);
+   TEST_ASSERT(sepadata != NULL);
 
    /* call minor detection */
-   cr_expect(!sepadata->detectedminors);
-   cr_expect(sepadata->nminors == 0);
+   SOFT_ASSERT(!sepadata->detectedminors);
+   SOFT_ASSERT(sepadata->nminors == 0);
    SCIP_CALL( detectMinors(scip, sepadata) );
-   cr_expect(sepadata->detectedminors);
-   cr_expect(sepadata->nminors == 2, "nminors = %d (expected 2)", sepadata->nminors);
+   SOFT_ASSERT(sepadata->detectedminors);
+   SOFT_ASSERT(sepadata->nminors == 2, "nminors = %d (expected 2)", sepadata->nminors);
 }
 
 /** tests the detection of principal minors that are defined by auxiliary variables; the test uses the following
  *  nonlinear constraint form sin(x)^2 + sin(x)*sin(y) + sin(y)^2 <= 0
  */
-Test(minor, detect_aux, .init = setup, .fini = teardown)
+void test_minor_detect_aux(void)
 {
    const char* input = {"[nonlinear] <c1>: 1 <= sin(<x>)^2 + sin(<x>)*sin(<y>) + sin(<y>)^2 <= 2"};
    SCIP_SEPA* sepa;
@@ -143,7 +143,7 @@ Test(minor, detect_aux, .init = setup, .fini = teardown)
 
    SCIP_CALL( SCIPparseCons(scip, &cons, input, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE,
       &success) );
-   cr_assert(success);
+   TEST_ASSERT(success);
 
    /* add and release constraint */
    SCIP_CALL( SCIPaddCons(scip, cons) );
@@ -151,29 +151,29 @@ Test(minor, detect_aux, .init = setup, .fini = teardown)
 
    /* go to solving stage */
    SCIP_CALL( TESTscipSetStage(scip, SCIP_STAGE_SOLVING, FALSE) );
-   cr_assert(SCIPgetNConss(scip) == 1);
-   cr_assert(SCIPconshdlrGetNConss(conshdlr) == 1);
+   TEST_ASSERT(SCIPgetNConss(scip) == 1);
+   TEST_ASSERT(SCIPconshdlrGetNConss(conshdlr) == 1);
 
    /* make sure INITLP has been run to get auxiliary variables */
    SCIP_CALL( SCIPconstructLP(scip, &infeasible) );
-   cr_assert(!infeasible);
+   TEST_ASSERT(!infeasible);
 
    /* get separator data */
    sepa = SCIPfindSepa(scip, SEPA_NAME);
-   cr_assert(sepa != NULL);
+   TEST_ASSERT(sepa != NULL);
    sepadata = SCIPsepaGetData(sepa);
-   cr_assert(sepadata != NULL);
+   TEST_ASSERT(sepadata != NULL);
 
    /* call minor detection */
-   cr_expect(!sepadata->detectedminors);
-   cr_expect(sepadata->nminors == 0);
+   SOFT_ASSERT(!sepadata->detectedminors);
+   SOFT_ASSERT(sepadata->nminors == 0);
    SCIP_CALL( detectMinors(scip, sepadata) );
-   cr_expect(sepadata->detectedminors);
-   cr_expect(sepadata->nminors == 1, "nminors = %d (expected 1)", sepadata->nminors);
+   SOFT_ASSERT(sepadata->detectedminors);
+   SOFT_ASSERT(sepadata->nminors == 1, "nminors = %d (expected 1)", sepadata->nminors);
 }
 
 /** tests the eigenvalue and eigenvector computation */
-Test(minor, eigenvals, .init = setup, .fini = teardown)
+void test_minor_eigenvals(void)
 {
    SCIP_Real eigenvals[3];
    SCIP_Real eigenvecs[9];
@@ -191,19 +191,19 @@ Test(minor, eigenvals, .init = setup, .fini = teardown)
 
    /* compute eigenvalues and eigenvectors */
    SCIP_CALL( getEigenValues(scip, xval, yval, xxval, yyval, xyval, eigenvals, eigenvecs, &success) );
-   cr_assert(success);
+   TEST_ASSERT(success);
 
    /* check whether A v_i = lambda_i v_i holds */
    for( i = 0; i < 1; ++i )
    {
-      cr_assert(SCIPisRelEQ(scip,  1.0 * eigenvecs[3*i] +  xval * eigenvecs[3*i + 1] +  yval * eigenvecs[3*i + 2], eigenvals[i] * eigenvecs[3*i]));
-      cr_assert(SCIPisRelEQ(scip, xval * eigenvecs[3*i] + xxval * eigenvecs[3*i + 1] + xyval * eigenvecs[3*i + 2], eigenvals[i] * eigenvecs[3*i + 1]));
-      cr_assert(SCIPisRelEQ(scip, yval * eigenvecs[3*i] + xyval * eigenvecs[3*i + 1] + yyval * eigenvecs[3*i + 2], eigenvals[i] * eigenvecs[3*i + 2]));
+      TEST_ASSERT(SCIPisRelEQ(scip,  1.0 * eigenvecs[3*i] +  xval * eigenvecs[3*i + 1] +  yval * eigenvecs[3*i + 2], eigenvals[i] * eigenvecs[3*i]));
+      TEST_ASSERT(SCIPisRelEQ(scip, xval * eigenvecs[3*i] + xxval * eigenvecs[3*i + 1] + xyval * eigenvecs[3*i + 2], eigenvals[i] * eigenvecs[3*i + 1]));
+      TEST_ASSERT(SCIPisRelEQ(scip, yval * eigenvecs[3*i] + xyval * eigenvecs[3*i + 1] + yyval * eigenvecs[3*i + 2], eigenvals[i] * eigenvecs[3*i + 2]));
    }
 }
 
 /** tests isPackingCons() */
-Test(minor, isPackingCons, .init = setup, .fini = teardown)
+void test_minor_isPackingCons(void)
 {
    const char* inputs[4] = {
       "[nonlinear] <c1>: 1 <= <x>^2  + <y>^2 + <z>^2 + <w>^2 + <x> * <y> + <z> * <w> <= 2",
@@ -219,7 +219,7 @@ Test(minor, isPackingCons, .init = setup, .fini = teardown)
    {
       SCIP_CALL( SCIPparseCons(scip, &cons, inputs[i], TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE,
          &success) );
-      cr_assert(success);
+      TEST_ASSERT(success);
 
       SCIP_CALL( SCIPaddCons(scip, cons) );
       SCIP_CALL( SCIPreleaseCons(scip, &cons) );
@@ -227,10 +227,25 @@ Test(minor, isPackingCons, .init = setup, .fini = teardown)
 
    /* go to solving stage */
    SCIP_CALL( TESTscipSetStage(scip, SCIP_STAGE_SOLVING, FALSE) );
-   cr_assert(SCIPgetNConss(scip) == 4);
+   TEST_ASSERT(SCIPgetNConss(scip) == 4);
 
-   cr_expect(isPackingCons(scip, SCIPgetConss(scip)[0]));
-   cr_expect(!isPackingCons(scip, SCIPgetConss(scip)[1]));
-   cr_expect(!isPackingCons(scip, SCIPgetConss(scip)[2]));
-   cr_expect(!isPackingCons(scip, SCIPgetConss(scip)[3]));
+   SOFT_ASSERT(isPackingCons(scip, SCIPgetConss(scip)[0]));
+   SOFT_ASSERT(!isPackingCons(scip, SCIPgetConss(scip)[1]));
+   SOFT_ASSERT(!isPackingCons(scip, SCIPgetConss(scip)[2]));
+   SOFT_ASSERT(!isPackingCons(scip, SCIPgetConss(scip)[3]));
+}
+
+void setUp(void) { setup(); }
+
+void tearDown(void) { teardown(); }
+
+int main(void)
+{
+   UNITY_BEGIN();
+   RUN_TEST(test_minor_detect
+);
+   RUN_TEST(test_minor_detect_aux);
+   RUN_TEST(test_minor_eigenvals);
+   RUN_TEST(test_minor_isPackingCons);
+   return UNITY_END();
 }

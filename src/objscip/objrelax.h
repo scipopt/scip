@@ -49,7 +49,7 @@ namespace scip
  *  - \ref RELAX "Instructions for implementing a relaxation handler"
  *  - \ref type_relax.h "Corresponding C interface"
  */
-class ObjRelax : public ObjCloneable
+class SCIP_EXPORT ObjRelax : public ObjCloneable
 {
 public:
    /*lint --e{1540}*/
@@ -187,7 +187,7 @@ public:
  *
  *  The method should be called in one of the following ways:
  *
- *   1. The user is resposible of deleting the object:
+ *   1. The user is responsible of deleting the object:
  *       SCIP_CALL( SCIPcreate(&scip) );
  *       ...
  *       MyRelax* myrelax = new MyRelax(...);

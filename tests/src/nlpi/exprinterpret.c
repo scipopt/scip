@@ -89,7 +89,7 @@ void checkad_teardown(void)
    }
 
    SCIP_CALL_ABORT( SCIPfree(&scip) );
-   cr_assert_eq(BMSgetMemoryUsed(), 0, "There is are memory leak!!");
+   TEST_ASSERT_EQUAL(BMSgetMemoryUsed(), 0, "There is are memory leak!!");
 }
 
 static
@@ -146,7 +146,7 @@ void checkAD(
    /* let exprint get familiar with expr */
    SCIP_CALL( SCIPexprintCompile(scip, exprint, expr2, &exprintdata) );
    /* if exprint itself has eval capabilities, then should also have this capabilities for a specific expr since every exprhdlr has to implement eval */
-   cr_expect_eq(SCIPexprintGetExprCapability(scip, exprint, expr2, exprintdata) & SCIP_EXPRINTCAPABILITY_FUNCVALUE, SCIP_EXPRINTCAPABILITY_FUNCVALUE);
+   SOFT_ASSERT_EQUAL(SCIPexprintGetExprCapability(scip, exprint, expr2, exprintdata) & SCIP_EXPRINTCAPABILITY_FUNCVALUE, SCIP_EXPRINTCAPABILITY_FUNCVALUE);
 
    for( p = 0; p < npoints; ++p )
    {
@@ -163,10 +163,10 @@ void checkAD(
       SCIP_CALL( SCIPexprintEval(scip, exprint, expr2, exprintdata, varvals[p], &val) );
 
       SCIPinfoMessage(scip, NULL, "  expr value: %g  exprint value: %g\n", SCIPexprGetEvalValue(expr), val);
-      cr_expect(SCIPisFinite(val) == (SCIPexprGetEvalValue(expr) != SCIP_INVALID));
+      SOFT_ASSERT(SCIPisFinite(val) == (SCIPexprGetEvalValue(expr) != SCIP_INVALID));
       if( !SCIPisFinite(val) )
          continue;
-      cr_expect_float_eq(val, SCIPexprGetEvalValue(expr), TOL);
+      SOFT_ASSERT_DOUBLE_WITHIN(val, SCIPexprGetEvalValue(expr), TOL);
 
 
       if( !(SCIPexprintGetExprCapability(scip, exprint, expr2, exprintdata) & SCIP_EXPRINTCAPABILITY_GRADIENT) )
@@ -176,16 +176,16 @@ void checkAD(
       SCIP_CALL( SCIPevalExprGradient(scip, expr, sol, soltag) );
       SCIP_CALL( SCIPexprintGrad(scip, exprint, expr2, exprintdata, varvals[p], FALSE, &val, gradient) );
 
-      cr_expect_float_eq(val, SCIPexprGetEvalValue(expr), TOL);
+      SOFT_ASSERT_DOUBLE_WITHIN(val, SCIPexprGetEvalValue(expr), TOL);
       for( i = 0; i < dim; ++i )
       {
          SCIPinfoMessage(scip, NULL, "  gradient[%d]: expr: %g  exprint: %g\n", i, SCIPexprGetDerivative(varexprs[i]), gradient[i]);
          /* this assumes that exprint will set all gradient values to some non-finite number if not differentiable
           * for this test, this is sufficient at the moment
           */
-         cr_expect(SCIPisFinite(gradient[i]) == (SCIPexprGetDerivative(expr) != SCIP_INVALID));
+         SOFT_ASSERT(SCIPisFinite(gradient[i]) == (SCIPexprGetDerivative(expr) != SCIP_INVALID));
          if( SCIPisFinite(gradient[i]) )
-            cr_expect_float_eq(gradient[i], SCIPexprGetDerivative(varexprs[i]), TOL);
+            SOFT_ASSERT_DOUBLE_WITHIN(gradient[i], SCIPexprGetDerivative(varexprs[i]), TOL);
       }
 
 
@@ -231,11 +231,11 @@ void checkAD(
       for( i = 0; i < hesnnz; ++i )
       {
          SCIPinfoMessage(scip, NULL, "    (%d,%d) = %g", hesrowidx[i], hescolidx[i], hesvalues[i]);
-         cr_assert(hesrowidx[i] >= 0);
-         cr_assert(hescolidx[i] >= 0);
-         cr_assert(hesrowidx[i] < dim);
-         cr_assert(hescolidx[i] < dim);
-         cr_assert(hescolidx[i] <= hesrowidx[i]);
+         TEST_ASSERT(hesrowidx[i] >= 0);
+         TEST_ASSERT(hescolidx[i] >= 0);
+         TEST_ASSERT(hesrowidx[i] < dim);
+         TEST_ASSERT(hescolidx[i] < dim);
+         TEST_ASSERT(hescolidx[i] <= hesrowidx[i]);
 
          /* subtract exprint hessian from expr hessian, so we can check remaining hessian to be 0 */
          hessian[hesrowidx[i]*dim + hescolidx[i]] -= hesvalues[i];
@@ -243,16 +243,15 @@ void checkAD(
             hessian[hescolidx[i]*dim + hesrowidx[i]] -= hesvalues[i];
       }
       for( i = 0; i < dim*dim; ++i )
-         cr_expect_float_eq(hessian[i], 0.0, TOL);
+         SOFT_ASSERT_DOUBLE_WITHIN(hessian[i], 0.0, TOL);
    }
 
    SCIP_CALL( SCIPexprintFreeData(scip, exprint, expr2, &exprintdata) );
    SCIP_CALL( SCIPreleaseExpr(scip, &expr2) );
 }
 
-TestSuite(checkad, .init = checkad_setup, .fini = checkad_teardown);
 
-Test(checkad, abs)
+void test_checkad_abs(void)
 {
    SCIP_EXPR* expr;
 
@@ -265,7 +264,7 @@ Test(checkad, abs)
    SCIP_CALL( SCIPreleaseExpr(scip, &expr) );
 }
 
-Test(checkad, cos)
+void test_checkad_cos(void)
 {
    SCIP_EXPR* expr;
 
@@ -278,7 +277,7 @@ Test(checkad, cos)
    SCIP_CALL( SCIPreleaseExpr(scip, &expr) );
 }
 
-Test(checkad, entropy)
+void test_checkad_entropy(void)
 {
    SCIP_EXPR* expr;
 
@@ -292,7 +291,7 @@ Test(checkad, entropy)
    SCIP_CALL( SCIPreleaseExpr(scip, &expr) );
 }
 
-Test(checkad, exp)
+void test_checkad_exp(void)
 {
    SCIP_EXPR* expr;
 
@@ -305,7 +304,7 @@ Test(checkad, exp)
    SCIP_CALL( SCIPreleaseExpr(scip, &expr) );
 }
 
-Test(checkad, log)
+void test_checkad_log(void)
 {
    SCIP_EXPR* expr;
 
@@ -319,7 +318,7 @@ Test(checkad, log)
    SCIP_CALL( SCIPreleaseExpr(scip, &expr) );
 }
 
-Test(checkad, pow)
+void test_checkad_pow(void)
 {
    SCIP_EXPR* expr;
    SCIP_Real exponents[] = { 2.0, 3.0, 1.0, -1.0, 0.5, 1.875 };
@@ -339,7 +338,7 @@ Test(checkad, pow)
    }
 }
 
-Test(checkad, signpow)
+void test_checkad_signpow(void)
 {
    SCIP_EXPR* expr;
    SCIP_Real exponents[] = { 1.0, 1.875, 2.0 };
@@ -358,7 +357,7 @@ Test(checkad, signpow)
    }
 }
 
-Test(checkad, product)
+void test_checkad_product(void)
 {
    SCIP_EXPR* expr;
 
@@ -381,7 +380,7 @@ Test(checkad, product)
    SCIP_CALL( SCIPreleaseExpr(scip, &expr) );
 }
 
-Test(checkad, sin)
+void test_checkad_sin(void)
 {
    SCIP_EXPR* expr;
 
@@ -394,7 +393,7 @@ Test(checkad, sin)
    SCIP_CALL( SCIPreleaseExpr(scip, &expr) );
 }
 
-Test(checkad, sum)
+void test_checkad_sum(void)
 {
    SCIP_EXPR* expr;
    SCIP_Real coefs[] = { 0.0, 1.0, 2.0, 4.0 };
@@ -410,7 +409,7 @@ Test(checkad, sum)
    SCIP_CALL( SCIPreleaseExpr(scip, &expr) );
 }
 
-Test(checkad, value)
+void test_checkad_value(void)
 {
    SCIP_EXPR* expr;
 
@@ -424,7 +423,7 @@ Test(checkad, value)
 #if SCIP_DISABLED_CODE
 // CppAD fails to report x^0.3y^0.7 to be non-differentiable at x=y=0, see #2590
 // this test reproduces this fail
-Test(checkad, issue2590)
+void test_checkad_issue2590(void)
 {
    SCIP_EXPR* pows[2];
    SCIP_EXPR* expr;
@@ -446,7 +445,7 @@ Test(checkad, issue2590)
 }
 #endif
 
-Test(checkad, quad)
+void test_checkad_quad(void)
 {
    SCIP_EXPR* expr;
    SCIP_EXPR* term;
@@ -484,7 +483,7 @@ Test(checkad, quad)
 }
 
 /* https://en.wikipedia.org/wiki/Griewank_function should be there if we test AD */
-Test(checkad, griewank)
+void test_checkad_griewank(void)
 {
    SCIP_EXPR* exprsum;
    SCIP_EXPR* exprprod;
@@ -567,13 +566,12 @@ void performance_teardown(void)
    SCIPexprintFree(scip, &exprint);
 
    SCIP_CALL_ABORT( SCIPfree(&scip) );
-   cr_assert_eq(BMSgetMemoryUsed(), 0, "There is are memory leak!!");
+   TEST_ASSERT_EQUAL(BMSgetMemoryUsed(), 0, "There is are memory leak!!");
 }
 
 
-TestSuite(performance, .init = performance_setup, .fini = performance_teardown);
 
-Test(performance, quad)
+void test_performance_quad(void)
 {
    SCIP_EXPR* expr;
    SCIP_EXPRINTDATA* exprintdata = NULL;
@@ -686,7 +684,7 @@ Test(performance, quad)
                fullhessian[colidxs[i]*DIM+rowidxs[i]] -= hessianvals[i];
             }
             for( i = 0; i < DIM*DIM; ++i )
-               cr_assert_float_eq(fullhessian[i], 0.0, TOL);
+               TEST_ASSERT_DOUBLE_WITHIN(fullhessian[i], 0.0, TOL);
          }
 
          SCIP_CALL( SCIPexprintFreeData(scip, exprint, expr, &exprintdata) );
@@ -699,7 +697,7 @@ Test(performance, quad)
    SCIPfreeRandom(scip, &randnumgen);
 }
 
-Test(performance, griewank)
+void test_performance_griewank(void)
 {
    int numvars;
 
@@ -799,7 +797,7 @@ Test(performance, griewank)
    }
 }
 
-Test(performance, signpower)
+void test_performance_signpower(void)
 {
    SCIP_EXPR* expr;
    SCIP_EXPR* term;
@@ -845,7 +843,7 @@ TERMINATE:
    SCIP_CALL( SCIPreleaseExpr(scip, &expr) );
 }
 
-Test(performance, intpower)
+void test_performance_intpower(void)
 {
    SCIP_EXPR* expr;
    SCIP_EXPR* term;
@@ -889,4 +887,61 @@ Test(performance, intpower)
 TERMINATE:
    SCIP_CALL( SCIPexprintFreeData(scip, exprint, expr, &exprintdata) );
    SCIP_CALL( SCIPreleaseExpr(scip, &expr) );
+}
+
+static int in_performance_suite = 0;
+
+void setUp(void)
+{
+   if( in_performance_suite )
+      performance_setup();
+   else
+      SCIP_SUITE_SETUP(checkad_setup);
+}
+
+void tearDown(void)
+{
+   if( in_performance_suite )
+      performance_teardown();
+   else
+      SCIP_SUITE_TEARDOWN(checkad_teardown);
+}
+
+static void switch_to_performance_suite(void)
+{
+   /* tear down checkad suite */
+   if( scip_suite_initialized )
+   {
+      checkad_teardown();
+      scip_suite_initialized = 0;
+      scip_suite_teardown_fn = NULL;
+   }
+   in_performance_suite = 1;
+}
+
+int main(void)
+{
+   UNITY_BEGIN();
+   RUN_TEST(test_checkad_abs);
+   RUN_TEST(test_checkad_cos);
+   RUN_TEST(test_checkad_entropy);
+   RUN_TEST(test_checkad_exp);
+   RUN_TEST(test_checkad_log);
+   RUN_TEST(test_checkad_pow);
+   RUN_TEST(test_checkad_signpow);
+   RUN_TEST(test_checkad_product);
+   RUN_TEST(test_checkad_sin);
+   RUN_TEST(test_checkad_sum);
+   RUN_TEST(test_checkad_value);
+#if SCIP_DISABLED_CODE
+   RUN_TEST(test_checkad_issue2590);
+#endif
+   RUN_TEST(test_checkad_quad);
+   RUN_TEST(test_checkad_griewank);
+   switch_to_performance_suite();
+   RUN_TEST(test_performance_quad);
+   RUN_TEST(test_performance_griewank);
+   RUN_TEST(test_performance_signpower);
+   RUN_TEST(test_performance_intpower);
+   return UNITY_END();
 }

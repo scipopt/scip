@@ -31,9 +31,8 @@
 #include "scip/expr_product.c"
 #include "../estimation.h"
 
-Test(estimation, bilinear, .init = setup, .fini = teardown,
-   .description = "test estimation for a bilinear expression"
-   )
+/** @brief test estimation for a bilinear expression */
+void test_estimation_bilinear(void)
 {
    SCIP_EXPR* expr;
    SCIP_Real coefs[2];
@@ -63,12 +62,12 @@ Test(estimation, bilinear, .init = setup, .fini = teardown,
 
    SCIP_CALL( estimateProduct(scip, expr, bnds, bnds, ref, TRUE, SCIPinfinity(scip), coefs, &constant, &islocal, &success, &branchcand) );
 
-   cr_assert(success);
-   cr_assert_float_eq(constant, -4.5, SCIPepsilon(scip));
-   cr_assert_float_eq(coefs[0], -4.5, SCIPepsilon(scip));
-   cr_assert_float_eq(coefs[1], -1.5, SCIPepsilon(scip));
-   cr_assert(islocal);
-   cr_assert(branchcand);
+   TEST_ASSERT(success);
+   SOFT_ASSERT_DOUBLE_WITHIN(constant, -4.5, SCIPepsilon(scip));
+   SOFT_ASSERT_DOUBLE_WITHIN(coefs[0], -4.5, SCIPepsilon(scip));
+   SOFT_ASSERT_DOUBLE_WITHIN(coefs[1], -1.5, SCIPepsilon(scip));
+   SOFT_ASSERT(islocal);
+   SOFT_ASSERT(branchcand);
 
 
    /*
@@ -78,12 +77,12 @@ Test(estimation, bilinear, .init = setup, .fini = teardown,
     */
    SCIP_CALL( estimateProduct(scip, expr, bnds, bnds, ref, FALSE, -SCIPinfinity(scip), coefs, &constant, &islocal, &success, &branchcand) );
 
-   cr_assert(success);
-   cr_assert_float_eq(constant, -9.0, SCIPepsilon(scip));
-   cr_assert_float_eq(coefs[0], -9.0, SCIPepsilon(scip));
-   cr_assert_float_eq(coefs[1], -1.5, SCIPepsilon(scip));
-   cr_assert(islocal);
-   cr_assert(branchcand);
+   TEST_ASSERT(success);
+   SOFT_ASSERT_DOUBLE_WITHIN(constant, -9.0, SCIPepsilon(scip));
+   SOFT_ASSERT_DOUBLE_WITHIN(coefs[0], -9.0, SCIPepsilon(scip));
+   SOFT_ASSERT_DOUBLE_WITHIN(coefs[1], -1.5, SCIPepsilon(scip));
+   SOFT_ASSERT(islocal);
+   SOFT_ASSERT(branchcand);
 
    /* release expression */
    SCIP_CALL( SCIPreleaseExpr(scip, &expr) );
@@ -128,10 +127,10 @@ Test(estimation, bilinear, .init = setup, .fini = teardown,
  * violation = (hrepre.A[argmax,:]' * [0.2, -4.0, 1.1, zstar, tstar] - hrepre.b[argmax])/ hrepre.A[argmax,end]
  * */
 
-Test(estimation, quadrilinear,
-   .description = "test separation for a quadrilinear expression"
-   )
+/** @brief test separation for a quadrilinear expression */
+void test_estimation_quadrilinear(void)
 {
+   SCIP* localscip;
    SCIP_EXPR* expr;
    SCIP_Bool islocal;
    SCIP_Bool branchcand = TRUE;
@@ -155,22 +154,22 @@ Test(estimation, quadrilinear,
     */
    for( round = 0; round < 2 ; ++round )
    {
-      SCIP_CALL( SCIPcreate(&scip) );
-      SCIP_CALL( SCIPincludeDefaultPlugins(scip) );
+      SCIP_CALL( SCIPcreate(&localscip) );
+      SCIP_CALL( SCIPincludeDefaultPlugins(localscip) );
 
       /* create problem */
-      SCIP_CALL( SCIPcreateProbBasic(scip, "test_problem") );
+      SCIP_CALL( SCIPcreateProbBasic(localscip, "test_problem") );
 
       for( i = 0; i < 4; ++i )
       {
-         SCIP_CALL( SCIPcreateVarBasic(scip, &vars[i], names[i], lb[i], ub[i], 1.0, SCIP_VARTYPE_CONTINUOUS) );
-         SCIP_CALL( SCIPaddVar(scip, vars[i]) );
-         SCIP_CALL( SCIPcreateExprVar(scip, &varexprs[i], vars[i], NULL, NULL) );
+         SCIP_CALL( SCIPcreateVarBasic(localscip, &vars[i], names[i], lb[i], ub[i], 1.0, SCIP_VARTYPE_CONTINUOUS) );
+         SCIP_CALL( SCIPaddVar(localscip, vars[i]) );
+         SCIP_CALL( SCIPcreateExprVar(localscip, &varexprs[i], vars[i], NULL, NULL) );
          bnds[i].inf = lb[i];
          bnds[i].sup = ub[i];
       }
 
-      SCIP_CALL( SCIPcreateExprProduct(scip, &expr, 4, varexprs, -0.7, NULL, NULL) );
+      SCIP_CALL( SCIPcreateExprProduct(localscip, &expr, 4, varexprs, -0.7, NULL, NULL) );
 
       /* round 0:
        * compute an overestimator for -0.7*x*y*w*z with x* = 0.2, y* = -4, w* = 1.1, z* = 0.18
@@ -191,26 +190,38 @@ Test(estimation, quadrilinear,
          solval[3] = 1.0;
       }
 
-      SCIP_CALL( estimateProduct(scip, expr, bnds, bnds, solval, round == 0, (round == 0 ? SCIPinfinity(scip) : -SCIPinfinity(scip)), facetcoefs, &facetconstant, &islocal, &success, &branchcand) );
+      SCIP_CALL( estimateProduct(localscip, expr, bnds, bnds, solval, round == 0, (round == 0 ? SCIPinfinity(localscip) : -SCIPinfinity(localscip)), facetcoefs, &facetconstant, &islocal, &success, &branchcand) );
 
-      cr_assert(success);
-      cr_assert(islocal);
-      cr_assert(branchcand);
+      TEST_ASSERT(success);
+      TEST_ASSERT(islocal);
+      TEST_ASSERT(branchcand);
       for( i = 0; i < 4; ++i ) /* index 4 is the constant */
       {
-         cr_expect_float_eq(facetcoefs[i], exact_facet[round][i], SCIPfeastol(scip), "coef %d: received %g instead of %g\n", i, facetcoefs[i], exact_facet[round][i]);
+         SOFT_ASSERT_DOUBLE_WITHIN(facetcoefs[i], exact_facet[round][i], SCIPfeastol(localscip), "coef %d: received %g instead of %g\n", i, facetcoefs[i], exact_facet[round][i]);
       }
-      cr_expect_float_eq(facetconstant, exact_facet[round][i], SCIPfeastol(scip), "constant: received %g instead of %g\n", facetconstant, exact_facet[round][i]);
+      SOFT_ASSERT_DOUBLE_WITHIN(facetconstant, exact_facet[round][i], SCIPfeastol(localscip), "constant: received %g instead of %g\n", facetconstant, exact_facet[round][i]);
 
       /* release and free everything */
-      SCIP_CALL( SCIPreleaseExpr(scip, &expr) );
+      SCIP_CALL( SCIPreleaseExpr(localscip, &expr) );
       for( i = 0; i < 4; ++i )
       {
-         SCIP_CALL( SCIPreleaseExpr(scip, &varexprs[i]) );
-         SCIP_CALL( SCIPreleaseVar(scip, &vars[i]) );
+         SCIP_CALL( SCIPreleaseExpr(localscip, &varexprs[i]) );
+         SCIP_CALL( SCIPreleaseVar(localscip, &vars[i]) );
       }
-      SCIP_CALL( SCIPfree(&scip) );
+      SCIP_CALL( SCIPfree(&localscip) );
 
-      cr_assert_eq(BMSgetMemoryUsed(), 0, "Memory is leaking!!");
+      TEST_ASSERT_EQUAL(BMSgetMemoryUsed(), 0, "Memory is leaking!!");
    }
+}
+
+void setUp(void) { setup(); }
+
+void tearDown(void) { teardown(); }
+
+int main(void)
+{
+   UNITY_BEGIN();
+   RUN_TEST(test_estimation_bilinear);
+   RUN_TEST(test_estimation_quadrilinear);
+   return UNITY_END();
 }

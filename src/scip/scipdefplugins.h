@@ -127,6 +127,7 @@
 #include "scip/heur_intshifting.h"
 #include "scip/heur_linesearchdiving.h"
 #include "scip/heur_localbranching.h"
+#include "scip/heur_localsearch.h"
 #include "scip/heur_locks.h"
 #include "scip/heur_lpface.h"
 #include "scip/heur_alns.h"
@@ -197,6 +198,7 @@
 #include "scip/presol_sparsify.h"
 #include "scip/presol_dualsparsify.h"
 #include "scip/presol_stuffing.h"
+#include "scip/prop_distance.h"
 #include "scip/prop_dualfix.h"
 #include "scip/prop_genvbounds.h"
 #include "scip/prop_nlobbt.h"
@@ -220,7 +222,9 @@
 #include "scip/reader_lp.h"
 #include "scip/reader_mps.h"
 #include "scip/reader_mst.h"
+#if SCIP_HAS_AMPL
 #include "scip/reader_nl.h"
+#endif /* SCIP_HAS_AMPL */
 #include "scip/reader_opb.h"
 #include "scip/reader_osil.h"
 #include "scip/reader_pip.h"

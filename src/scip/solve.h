@@ -148,7 +148,8 @@ SCIP_RETCODE SCIPprimalHeuristics(
 
 /** tries to add symmetry handling methods to CIP
  *
- *  Compute symmetry and call each symmetry handler to check whether particular symmetry handling methods can be added.
+ *  Compute symmetry and call each symmetry handler with non-negative priority to check whether
+ *  particular symmetry handling methods can be added.
  */
 SCIP_RETCODE SCIPtryAddSymmetryHandlingMethods(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -223,7 +224,7 @@ SCIP_RETCODE SCIPpriceLoop(
                                               *   a finite limit means that the LP might not be solved to optimality! */
    int*                  npricedcolvars,     /**< pointer to store number of column variables after problem vars were priced */
    SCIP_Bool*            mustsepa,           /**< pointer to store TRUE if a separation round should follow */
-   SCIP_Bool*            lperror,            /**< pointer to store whether an unresolved error in LP solving occured */
+   SCIP_Bool*            lperror,            /**< pointer to store whether an unresolved error in LP solving occurred */
    SCIP_Bool*            aborted             /**< pointer to store whether the pricing was aborted and the lower bound must
                                               *   not be used */
    );

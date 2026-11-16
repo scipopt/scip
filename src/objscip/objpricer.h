@@ -49,7 +49,7 @@ namespace scip
  *  - \ref PRICER "Instructions for implementing a variable pricer"
  *  - \ref type_pricer.h "Corresponding C interface"
  */
-class ObjPricer : public ObjProbCloneable
+class SCIP_EXPORT ObjPricer : public ObjProbCloneable
 {
 public:
    /*lint --e{1540}*/
@@ -190,7 +190,7 @@ public:
  *
  *  The method should be called in one of the following ways:
  *
- *   1. The user is resposible of deleting the object:
+ *   1. The user is responsible of deleting the object:
  *       SCIP_CALL( SCIPcreate(&scip) );
  *       ...
  *       MyPricer* mypricer = new MyPricer(...);

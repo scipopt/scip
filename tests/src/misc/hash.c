@@ -33,40 +33,53 @@
 
 #include "include/scip_test.h"
 
-
-TestSuite(hash);
-
-Test(hash, setup_and_teardown, .description = "test that hashing numerics are correct")
+void setUp(void)
 {
-   cr_expect_eq(SCIPrealHashCode(-1), SCIPrealHashCode(-0.9999999998));
-
-   cr_expect_eq(SCIPrealHashCode(1.5), SCIPrealHashCode(1.4999999999));
-
-   /* Things can go wrong around powers of two because the exponent of the floating point representation changes here */
-   cr_expect_eq(SCIPrealHashCode(0.125), SCIPrealHashCode(0.12499999999999));
-
-   cr_expect_eq(SCIPrealHashCode(0.125), SCIPrealHashCode(0.12500000005));
-
-   cr_expect_neq(SCIPrealHashCode(0.125), SCIPrealHashCode(0.1255));
-
-   cr_expect_neq(SCIPrealHashCode(0.125), SCIPrealHashCode(0.1245));
-
-   /* Check if signs are correctly interpreted */
-   cr_expect_eq(SCIPrealHashCode(1.00000000001), SCIPrealHashCode(0.9999999998));
-
-   cr_expect_neq(SCIPrealHashCode(1.0), SCIPrealHashCode(-1.0));
-
-   cr_expect_neq(SCIPrealHashCode(1.00000000001), SCIPrealHashCode(-0.9999999998));
-
-   cr_expect_neq(SCIPrealHashCode(-1.00000000001), SCIPrealHashCode(0.9999999998));
-
-   cr_expect_eq(SCIPrealHashCode(-1), SCIPrealHashCode(-0.9999999998));
-
-   /* Check if sensible things happen at the numerical limits and at +- zero representation */
-   cr_expect_neq(SCIPrealHashCode(DBL_MAX), SCIPrealHashCode(DBL_MIN));
-   cr_expect_neq(SCIPrealHashCode(DBL_MAX), SCIPrealHashCode(0.0));
-   cr_expect_neq(SCIPrealHashCode(DBL_MIN), SCIPrealHashCode(0.0));
-   cr_expect_eq(SCIPrealHashCode(0.0), SCIPrealHashCode(-0.0));
-
+   SOFT_ASSERT_RESET();
 }
 
+void tearDown(void)
+{
+   SOFT_ASSERT_CHECK();
+}
+
+/** @brief test that hashing numerics are correct */
+void test_hash_numerics(void)
+{
+   SOFT_ASSERT_EQUAL(SCIPrealHashCode(-1), SCIPrealHashCode(-0.9999999998));
+
+   SOFT_ASSERT_EQUAL(SCIPrealHashCode(1.5), SCIPrealHashCode(1.4999999999));
+
+   /* Things can go wrong around powers of two because the exponent of the floating point representation changes here */
+   SOFT_ASSERT_EQUAL(SCIPrealHashCode(0.125), SCIPrealHashCode(0.12499999999999));
+
+   SOFT_ASSERT_EQUAL(SCIPrealHashCode(0.125), SCIPrealHashCode(0.12500000005));
+
+   SOFT_ASSERT_NOT_EQUAL(SCIPrealHashCode(0.125), SCIPrealHashCode(0.1255));
+
+   SOFT_ASSERT_NOT_EQUAL(SCIPrealHashCode(0.125), SCIPrealHashCode(0.1245));
+
+   /* Check if signs are correctly interpreted */
+   SOFT_ASSERT_EQUAL(SCIPrealHashCode(1.00000000001), SCIPrealHashCode(0.9999999998));
+
+   SOFT_ASSERT_NOT_EQUAL(SCIPrealHashCode(1.0), SCIPrealHashCode(-1.0));
+
+   SOFT_ASSERT_NOT_EQUAL(SCIPrealHashCode(1.00000000001), SCIPrealHashCode(-0.9999999998));
+
+   SOFT_ASSERT_NOT_EQUAL(SCIPrealHashCode(-1.00000000001), SCIPrealHashCode(0.9999999998));
+
+   SOFT_ASSERT_EQUAL(SCIPrealHashCode(-1), SCIPrealHashCode(-0.9999999998));
+
+   /* Check if sensible things happen at the numerical limits and at +- zero representation */
+   SOFT_ASSERT_NOT_EQUAL(SCIPrealHashCode(DBL_MAX), SCIPrealHashCode(DBL_MIN));
+   SOFT_ASSERT_NOT_EQUAL(SCIPrealHashCode(DBL_MAX), SCIPrealHashCode(0.0));
+   SOFT_ASSERT_NOT_EQUAL(SCIPrealHashCode(DBL_MIN), SCIPrealHashCode(0.0));
+   SOFT_ASSERT_EQUAL(SCIPrealHashCode(0.0), SCIPrealHashCode(-0.0));
+}
+
+int main(void)
+{
+   UNITY_BEGIN();
+   RUN_TEST(test_hash_numerics);
+   return UNITY_END();
+}

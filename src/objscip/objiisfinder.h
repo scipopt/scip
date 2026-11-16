@@ -49,7 +49,7 @@ namespace scip
  *  - \ref IISFINDERS "List of available iis finders"
  *  - \ref type_iisfinder.h "Corresponding C interface"
  */
-class ObjIISfinder : public ObjCloneable
+class SCIP_EXPORT ObjIISfinder : public ObjCloneable
 {
 public:
    /*lint --e{1540}*/

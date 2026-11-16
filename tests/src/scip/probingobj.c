@@ -75,21 +75,36 @@ void teardown(void)
    SCIP_CALL( SCIPfree(&scip) );
 
    /* check for memory leaks */
-   cr_assert_eq(BMSgetMemoryUsed(), 0, "There is are memory leak!!");
+   TEST_ASSERT_EQUAL(BMSgetMemoryUsed(), 0, "There is are memory leak!!");
 }
 
 
-/* TEST SUITE */
-TestSuite(probingobj, .init = setup, .fini = teardown);
+void setUp(void)
+{
+   SOFT_ASSERT_RESET();
+   setup();
+}
 
-Test(probingobj, create_before_probing, .description="create a solution, start probing, change objective, end probing, and test that the objective value stays the same all the time")
+void tearDown(void)
+{
+   if( SCIPinProbing(scip) )
+   {
+      SCIP_CALL( SCIPendProbing(scip) );
+   }
+   teardown();
+   SOFT_ASSERT_CHECK();
+}
+
+/* TESTS */
+/** @brief create a solution, start probing, change objective, end probing, and test that the objective value stays the same all the time */
+void test_probingobj_create_before_probing(void)
 {
    SCIP_SOL* sol;
 
    SCIP_CALL( SCIPcreateSol(scip, &sol, NULL) );
    SCIP_CALL( SCIPsetSolVal(scip, sol, x, 1.0) );
 
-   cr_expect_eq(SCIPgetSolOrigObj(scip, sol), 2.0, "expected 2.0, got %g\n", SCIPgetSolOrigObj(scip, sol));
+   SOFT_ASSERT_EQUAL(SCIPgetSolOrigObj(scip, sol), 2.0, "expected 2.0, got %g\n", SCIPgetSolOrigObj(scip, sol));
 
    SCIP_CALL( SCIPstartProbing(scip) );
 
@@ -97,16 +112,17 @@ Test(probingobj, create_before_probing, .description="create a solution, start p
 
    SCIP_CALL( SCIPchgVarObjProbing(scip, x, 100.0) );
 
-   cr_expect_eq(SCIPgetSolOrigObj(scip, sol), 2.0, "expected 2.0, got %g\n", SCIPgetSolOrigObj(scip, sol));
+   SOFT_ASSERT_EQUAL(SCIPgetSolOrigObj(scip, sol), 2.0, "expected 2.0, got %g\n", SCIPgetSolOrigObj(scip, sol));
 
    SCIP_CALL( SCIPendProbing(scip) );
 
-   cr_expect_eq(SCIPgetSolOrigObj(scip, sol), 2.0, "expected 2.0, got %g\n", SCIPgetSolOrigObj(scip, sol));
+   SOFT_ASSERT_EQUAL(SCIPgetSolOrigObj(scip, sol), 2.0, "expected 2.0, got %g\n", SCIPgetSolOrigObj(scip, sol));
 
    SCIP_CALL( SCIPfreeSol(scip, &sol) );
 }
 
-Test(probingobj, create_during_probing, .description="start probing, create a solution, change objective, end probing, and test that the objective value stays the same all the time")
+/** @brief start probing, create a solution, change objective, end probing, and test that the objective value stays the same all the time */
+void test_probingobj_create_during_probing(void)
 {
    SCIP_SOL* sol;
 
@@ -119,121 +135,129 @@ Test(probingobj, create_during_probing, .description="start probing, create a so
    SCIP_CALL( SCIPcreateSol(scip, &sol, NULL) );
    SCIP_CALL( SCIPsetSolVal(scip, sol, x, 1.0) );
 
-   cr_expect_eq(SCIPgetSolOrigObj(scip, sol), 2.0, "expected 2.0, got %g\n", SCIPgetSolOrigObj(scip, sol));
+   SOFT_ASSERT_EQUAL(SCIPgetSolOrigObj(scip, sol), 2.0, "expected 2.0, got %g\n", SCIPgetSolOrigObj(scip, sol));
 
    SCIP_CALL( SCIPendProbing(scip) );
 
-   cr_expect_eq(SCIPgetSolOrigObj(scip, sol), 2.0, "expected 2.0, got %g\n", SCIPgetSolOrigObj(scip, sol));
+   SOFT_ASSERT_EQUAL(SCIPgetSolOrigObj(scip, sol), 2.0, "expected 2.0, got %g\n", SCIPgetSolOrigObj(scip, sol));
 
    SCIP_CALL( SCIPfreeSol(scip, &sol) );
 }
 
-Test(probingobj, unlink_lpsol_during_probing, .description="start probing, solve LP, link solution to the LP, unlink solution, change objective, end probing, and test that the objective value stays the same all the time")
+/** @brief start probing, solve LP, link solution to the LP, unlink solution, change objective, end probing, and test that the objective value stays the same all the time */
+void test_probingobj_unlink_lpsol_during_probing(void)
 {
    SCIP_SOL* sol;
    SCIP_Bool cutoff;
    SCIP_Bool lperror;
 
    SCIP_CALL( SCIPconstructLP(scip, &cutoff) );
-   cr_assert_not(cutoff);
+   TEST_ASSERT_NOT(cutoff);
 
    SCIP_CALL( SCIPstartProbing(scip) );
 
    SCIP_CALL( SCIPnewProbingNode(scip) );
 
    SCIP_CALL( SCIPsolveProbingLP(scip, -1, &lperror, &cutoff) );
-   cr_assert_not(lperror);
-   cr_assert_not(cutoff);
+   TEST_ASSERT_NOT(lperror);
+   TEST_ASSERT_NOT(cutoff);
 
    SCIP_CALL( SCIPcreateLPSol(scip, &sol, NULL) );
 
    SCIP_CALL( SCIPunlinkSol(scip, sol) );
 
-   cr_expect_eq(SCIPgetSolOrigObj(scip, sol), -3.0, "expected -3.0, got %g\n", SCIPgetSolOrigObj(scip, sol));
+   SOFT_ASSERT_EQUAL(SCIPgetSolOrigObj(scip, sol), -3.0, "expected -3.0, got %g\n", SCIPgetSolOrigObj(scip, sol));
 
    SCIP_CALL( SCIPchgVarObjProbing(scip, y, 100.0) );
 
-   cr_expect_eq(SCIPgetSolOrigObj(scip, sol), -3.0, "expected -3.0, got %g\n", SCIPgetSolOrigObj(scip, sol));
+   SOFT_ASSERT_EQUAL(SCIPgetSolOrigObj(scip, sol), -3.0, "expected -3.0, got %g\n", SCIPgetSolOrigObj(scip, sol));
 
    SCIP_CALL( SCIPendProbing(scip) );
 
-   cr_expect_eq(SCIPgetSolOrigObj(scip, sol), -3.0, "expected -3.0, got %g\n", SCIPgetSolOrigObj(scip, sol));
+   SOFT_ASSERT_EQUAL(SCIPgetSolOrigObj(scip, sol), -3.0, "expected -3.0, got %g\n", SCIPgetSolOrigObj(scip, sol));
 
    SCIP_CALL( SCIPfreeSol(scip, &sol) );
 }
 
-Test(probingobj, unlink_lpsol_after_objchange, .description="start probing, solve LP, link solution to the LP, change objective, unlink solution, end probing, and test that the objective value stays the same all the time")
+/** @brief start probing, solve LP, link solution to the LP, change objective, unlink solution, end probing, and test that the objective value stays the same all the time */
+void test_probingobj_unlink_lpsol_after_objchange(void)
 {
    SCIP_SOL* sol;
    SCIP_Bool cutoff;
    SCIP_Bool lperror;
 
    SCIP_CALL( SCIPconstructLP(scip, &cutoff) );
-   cr_assert_not(cutoff);
+   TEST_ASSERT_NOT(cutoff);
 
    SCIP_CALL( SCIPstartProbing(scip) );
 
    SCIP_CALL( SCIPnewProbingNode(scip) );
 
    SCIP_CALL( SCIPsolveProbingLP(scip, -1, &lperror, &cutoff) );
-   cr_assert_not(lperror);
-   cr_assert_not(cutoff);
+   TEST_ASSERT_NOT(lperror);
+   TEST_ASSERT_NOT(cutoff);
 
    SCIP_CALL( SCIPcreateLPSol(scip, &sol, NULL) );
 
-   cr_expect_eq(SCIPgetSolOrigObj(scip, sol), -3.0, "expected -3.0, got %g\n", SCIPgetSolOrigObj(scip, sol));
+   SOFT_ASSERT_EQUAL(SCIPgetSolOrigObj(scip, sol), -3.0, "expected -3.0, got %g\n", SCIPgetSolOrigObj(scip, sol));
 
    SCIP_CALL( SCIPchgVarObjProbing(scip, y, 100.0) );
 
-   cr_expect_eq(SCIPgetSolOrigObj(scip, sol), -3.0, "expected -3.0, got %g\n", SCIPgetSolOrigObj(scip, sol));
+   SOFT_ASSERT_EQUAL(SCIPgetSolOrigObj(scip, sol), -3.0, "expected -3.0, got %g\n", SCIPgetSolOrigObj(scip, sol));
 
    SCIP_CALL( SCIPunlinkSol(scip, sol) );
 
-   cr_expect_eq(SCIPgetSolOrigObj(scip, sol), -3.0, "expected -3.0, got %g\n", SCIPgetSolOrigObj(scip, sol));
+   SOFT_ASSERT_EQUAL(SCIPgetSolOrigObj(scip, sol), -3.0, "expected -3.0, got %g\n", SCIPgetSolOrigObj(scip, sol));
 
    SCIP_CALL( SCIPendProbing(scip) );
 
-   cr_expect_eq(SCIPgetSolOrigObj(scip, sol), -3.0, "expected -3.0, got %g\n", SCIPgetSolOrigObj(scip, sol));
+   SOFT_ASSERT_EQUAL(SCIPgetSolOrigObj(scip, sol), -3.0, "expected -3.0, got %g\n", SCIPgetSolOrigObj(scip, sol));
 
    SCIP_CALL( SCIPfreeSol(scip, &sol) );
 }
 
 /* @todo: this should actually be in another file, because it just tests that you cannot link a solution to an unsolved LP */
-Test(probingobj, link_lpsol_after_objchange, .description="start probing, solve LP, change objective, link solution to the LP, unlink solution, end probing, and test that the objective value stays the same all the time", .signal = SIGABRT)
+/** @brief start probing, solve LP, change objective, link solution to the LP, unlink solution, end probing, and test that the objective value stays the same all the time */
+void test_probingobj_link_lpsol_after_objchange(void)
 {
    SCIP_SOL* sol;
    SCIP_Bool cutoff;
    SCIP_Bool lperror;
 
    SCIP_CALL( SCIPconstructLP(scip, &cutoff) );
-   cr_assert_not(cutoff);
+   TEST_ASSERT_NOT(cutoff);
 
    SCIP_CALL( SCIPstartProbing(scip) );
 
    SCIP_CALL( SCIPnewProbingNode(scip) );
 
    SCIP_CALL( SCIPsolveProbingLP(scip, -1, &lperror, &cutoff) );
-   cr_assert_not(lperror);
-   cr_assert_not(cutoff);
+   TEST_ASSERT_NOT(lperror);
+   TEST_ASSERT_NOT(cutoff);
 
    SCIP_CALL( SCIPchgVarObjProbing(scip, y, 100.0) );
 
-   SCIP_CALL( SCIPcreateLPSol(scip, &sol, NULL) );
-
 #ifdef NDEBUG
-   abort(); /* return SIGABORT in opt mode so it passes */
+   TEST_EXPECT_SIGNAL(SIGABRT, {
+      SCIP_CALL( SCIPcreateLPSol(scip, &sol, NULL) );
+      abort(); /* return SIGABORT in opt mode so it passes */
+   });
+#else
+   TEST_EXPECT_SIGNAL(SIGABRT, {
+      SCIP_CALL( SCIPcreateLPSol(scip, &sol, NULL) );
+   });
 #endif
-
 }
 
-Test(probingobj, solve_lp_after_objchange, .description="start probing, change objective, solve LP, link solution to the LP, unlink solution, end probing, and test that the objective value stays the same all the time")
+/** @brief start probing, change objective, solve LP, link solution to the LP, unlink solution, end probing, and test that the objective value stays the same all the time */
+void test_probingobj_solve_lp_after_objchange(void)
 {
    SCIP_SOL* sol;
    SCIP_Bool cutoff;
    SCIP_Bool lperror;
 
    SCIP_CALL( SCIPconstructLP(scip, &cutoff) );
-   cr_assert_not(cutoff);
+   TEST_ASSERT_NOT(cutoff);
 
    SCIP_CALL( SCIPstartProbing(scip) );
 
@@ -242,20 +266,32 @@ Test(probingobj, solve_lp_after_objchange, .description="start probing, change o
    SCIP_CALL( SCIPchgVarObjProbing(scip, y, -100.0) );
 
    SCIP_CALL( SCIPsolveProbingLP(scip, -1, &lperror, &cutoff) );
-   cr_assert_not(lperror);
-   cr_assert_not(cutoff);
+   TEST_ASSERT_NOT(lperror);
+   TEST_ASSERT_NOT(cutoff);
 
    SCIP_CALL( SCIPcreateLPSol(scip, &sol, NULL) );
 
-   cr_expect_eq(SCIPgetSolOrigObj(scip, sol), -3.0, "expected -3.0, got %g\n", SCIPgetSolOrigObj(scip, sol));
+   SOFT_ASSERT_EQUAL(SCIPgetSolOrigObj(scip, sol), -3.0, "expected -3.0, got %g\n", SCIPgetSolOrigObj(scip, sol));
 
    SCIP_CALL( SCIPunlinkSol(scip, sol) );
 
-   cr_expect_eq(SCIPgetSolOrigObj(scip, sol), -3.0, "expected -3.0, got %g\n", SCIPgetSolOrigObj(scip, sol));
+   SOFT_ASSERT_EQUAL(SCIPgetSolOrigObj(scip, sol), -3.0, "expected -3.0, got %g\n", SCIPgetSolOrigObj(scip, sol));
 
    SCIP_CALL( SCIPendProbing(scip) );
 
-   cr_expect_eq(SCIPgetSolOrigObj(scip, sol), -3.0, "expected -3.0, got %g\n", SCIPgetSolOrigObj(scip, sol));
+   SOFT_ASSERT_EQUAL(SCIPgetSolOrigObj(scip, sol), -3.0, "expected -3.0, got %g\n", SCIPgetSolOrigObj(scip, sol));
 
    SCIP_CALL( SCIPfreeSol(scip, &sol) );
+}
+
+int main(void)
+{
+   UNITY_BEGIN();
+   RUN_TEST(test_probingobj_create_before_probing);
+   RUN_TEST(test_probingobj_create_during_probing);
+   RUN_TEST(test_probingobj_unlink_lpsol_during_probing);
+   RUN_TEST(test_probingobj_unlink_lpsol_after_objchange);
+   RUN_TEST(test_probingobj_link_lpsol_after_objchange);
+   RUN_TEST(test_probingobj_solve_lp_after_objchange);
+   return UNITY_END();
 }

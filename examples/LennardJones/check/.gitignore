@@ -1,0 +1,3 @@
+# undo some settings from ../../../.gitignore
+!configuration_tmpfile_setup_lj.sh 
+!instances

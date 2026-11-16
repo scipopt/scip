@@ -171,6 +171,9 @@ then
     then
         DEBUGTOOLCMD='gdb -batch-silent -return-child-result -ex "run" -ex "set logging file ERRFILE_PLACEHOLDER" -ex "set logging on" -ex "set verbose on" -ex "thread apply all bt full" --args '
     fi
+elif test "${DEBUGTOOL}" = "perf"
+then
+    DEBUGTOOLCMD="perf stat -e PERFEVENTS_PLACEHOLDER -x , -o PERFFILE_PLACEHOLDER -- "
 else
     DEBUGTOOLCMD=""
 fi

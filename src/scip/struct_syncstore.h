@@ -27,6 +27,7 @@
  * @brief  the struct definitions for the synchronization store
  * @author Stephen J. Maher
  * @author Leona Gottwald
+ * @author Gioni Mexi
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -72,6 +73,43 @@ struct SCIP_SyncStore
    SCIP_Real             syncfreqmax;        /**< the maximum synchronization frequency */
    int                   maxnsols;           /**< maximum number of solutions that can be shared in one synchronization */
    int                   nsolvers;           /**< number of solvers synchronizing with this syncstore */
+
+   SCIP_Bool             printincumbents;    /**< should a line be printed for every new globally best solution found
+                                              *   by a concurrent solver? */
+   SCIP_Real             bestminobj;         /**< minimization-normalized original objective value of the best solution found
+                                              *   by any concurrent solver; updated immediately whenever a solver finds a
+                                              *   new incumbent, in both parallel modes */
+
+   /* The following members implement the immediate sharing of solutions, dual bounds, and global variable
+    * bounds outside of the regular synchronization points. They are only used in opportunistic mode, when
+    * the solution pool respectively the bound pool is enabled.
+    */
+   SCIP_Bool             usesolpool;         /**< should new globally best solutions be shared immediately through
+                                              *   the solution pool instead of only at synchronization points? */
+   SCIP_Real**           poolsols;           /**< solution value arrays of the pooled solutions; entries are
+                                              *   append-only and immutable once published */
+   SCIP_Real*            poolobjs;           /**< minimization-normalized original objective values of the pooled solutions */
+   int*                  poolsource;         /**< index of the concurrent solver that contributed each pooled solution */
+   int*                  poolnvals;          /**< number of values stored for each pooled solution */
+   int                   npoolsols;          /**< current number of solutions in the pool; incremented only after the
+                                              *   entry is fully written, so it doubles as a lock-free size hint */
+   int                   poolsolssize;       /**< allocated capacity of the pool arrays */
+   SCIP_Real             bestdualbound;      /**< minimization-normalized best global dual bound, updated immediately by
+                                              *   the concurrent solvers when the solution pool is enabled and read by
+                                              *   SCIPgetConcurrentDualbound; the primal counterpart is bestminobj */
+   int                   winnerid;           /**< solver id of the best terminal status reported so far, or -1; kept
+                                              *   directly in the syncstore because when the solution pool is enabled
+                                              *   the syncdata slots may be reused before the main SCIP reads them */
+   SCIP_STATUS           winnerstatus;       /**< the best terminal status reported so far, or SCIP_STATUS_UNKNOWN */
+   SCIP_Bool             useboundpool;       /**< should tightened global variable bounds be shared immediately through
+                                              *   the bound pool instead of only at the synchronization points? */
+   SCIP_Real*            boundpoollb;        /**< per communication variable, the tightest global lower bound contributed
+                                              *   by any concurrent solver, or -infinity; monotonically non-decreasing */
+   SCIP_Real*            boundpoolub;        /**< per communication variable, the tightest global upper bound contributed
+                                              *   by any concurrent solver, or +infinity; monotonically non-increasing */
+   int                   boundpoolsize;      /**< number of communication variables the bound pool is sized for */
+   int                   boundpoolversion;   /**< counter bumped whenever a pooled bound is tightened; incremented only
+                                              *   after the new bound is written, so it is a safe lock-free change hint */
 };
 
 

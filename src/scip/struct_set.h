@@ -412,6 +412,7 @@ struct SCIP_Set
    int                   lp_solutionpolishing;/**< LP solution polishing method (0: disabled, 1: only root, 2: always, 3: auto) */
    int                   lp_refactorinterval;/**< LP refactorization interval (0: automatic) */
    SCIP_Bool             lp_alwaysgetduals;  /**< should the dual solution always be collected for LP solutions. */
+   SCIP_Bool             lp_outputaddedrows; /**< should the rows added to the LP be output for debugging? */
 
    /* NLP settings */
    SCIP_Bool             nlp_disable;        /**< should the NLP be disabled even if a constraint handler enabled it? */
@@ -615,7 +616,15 @@ struct SCIP_Set
    /* concurrent solver settings */
    SCIP_Bool             concurrent_changeseeds;    /**< change the seeds in the different solvers? */
    SCIP_Bool             concurrent_changechildsel; /**< change the child selection rule in different solvers? */
-   SCIP_Bool             concurrent_commvarbnds;    /**< should the concurrent solvers communicate global variable bound changes? */
+   SCIP_Bool             concurrent_commvarbnds;    /**< should the concurrent solvers communicate global variable bound
+                                                     *   changes? in opportunistic mode they are shared immediately through
+                                                     *   a bound pool and applied at every node, in deterministic mode they
+                                                     *   are exchanged at the synchronization points */
+   SCIP_Bool             concurrent_solpool;        /**< should new incumbents be shared between the concurrent solvers
+                                                     *   immediately through a solution pool instead of only at the
+                                                     *   synchronization points? (only used in opportunistic mode) */
+   SCIP_Bool             concurrent_printincumbents;/**< should a line be printed for every new globally best solution
+                                                     *   found by a concurrent solver? */
    SCIP_Bool             concurrent_presolvebefore; /**< should the problem be presolved before it is copied to the concurrent solvers? */
    SCIP_Bool             concurrent_symmetrybefore; /**< should symmetry be computed before concurrent solving? */
    int                   concurrent_initseed;       /**< the seed for computing the concurrent solver seeds */
@@ -629,6 +638,8 @@ struct SCIP_Set
    int                   concurrent_maxnsyncdelay;  /**< max number of synchronizations before data is used */
    SCIP_Real             concurrent_minsyncdelay;   /**< min offset before synchronization data is used */
    char*                 concurrent_paramsetprefix; /**< path prefix for parameter setting files of concurrent solver scip-custom */
+   SCIP_Bool             concurrent_paramportfolio; /**< should the concurrent solvers be diversified with the built-in
+                                                     *   parameter portfolio? */
 
    /* timing settings */
    SCIP_CLOCKTYPE        time_clocktype;     /**< default clock type to use */

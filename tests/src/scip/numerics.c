@@ -45,7 +45,7 @@ void setup(void)
 {
    scip = NULL;
    SCIP_CALL( SCIPcreate(&scip) );
-   cr_assert_not_null(scip);
+   TEST_ASSERT_NOT_NULL(scip);
    SCIP_CALL( SCIPincludeDefaultPlugins(scip) );
    SCIP_CALL( SCIPcreateProbBasic(scip, "problem") );
 }
@@ -54,42 +54,40 @@ static
 void teardown(void)
 {
    SCIP_CALL( SCIPfree(&scip) );
-   cr_assert_null(scip);
-   cr_assert_eq(BMSgetMemoryUsed(), 0, "There is a memory leak!!");
+   TEST_ASSERT_NULL(scip);
+   TEST_ASSERT_EQUAL(BMSgetMemoryUsed(), 0, "There is a memory leak!!");
 }
-
-TestSuite(numerics, .init = setup, .fini = teardown);
 
 /* TESTS */
 
-/** default parameters should pass and allow transforming */
-Test(numerics, defaultParamsTransform)
+/** @brief default parameters should pass and allow transforming */
+void test_numerics_defaultParamsTransform(void)
 {
    SCIP_CALL( SCIPtransformProb(scip) );
-   cr_assert_eq(SCIPgetStage(scip), SCIP_STAGE_TRANSFORMED);
+   TEST_ASSERT_EQUAL(SCIPgetStage(scip), SCIP_STAGE_TRANSFORMED);
 }
 
-/** inconsistent settings can be set in PROBLEM stage (deferred check) */
-Test(numerics, inconsistentSetInProblemStage)
+/** @brief inconsistent settings can be set in PROBLEM stage (deferred check) */
+void test_numerics_inconsistentSetInProblemStage(void)
 {
    SCIP_CALL( SCIPsetRealParam(scip, "numerics/epsilon", 1e-4) );
-   cr_assert_eq(SCIPgetStage(scip), SCIP_STAGE_PROBLEM);
+   TEST_ASSERT_EQUAL(SCIPgetStage(scip), SCIP_STAGE_PROBLEM);
 }
 
-/** epsilon > feastol rejected at transform, stays in PROBLEM */
-Test(numerics, epsilonExceedsFeastolRejectsTransform)
+/** @brief epsilon > feastol rejected at transform, stays in PROBLEM */
+void test_numerics_epsilonExceedsFeastolRejectsTransform(void)
 {
    SCIP_RETCODE retcode;
 
    SCIP_CALL( SCIPsetRealParam(scip, "numerics/epsilon", 1e-4) );
 
    retcode = SCIPtransformProb(scip);
-   cr_assert_eq(retcode, SCIP_PARAMETERWRONGVAL);
-   cr_assert_eq(SCIPgetStage(scip), SCIP_STAGE_PROBLEM);
+   TEST_ASSERT_EQUAL(retcode, SCIP_PARAMETERWRONGVAL);
+   TEST_ASSERT_EQUAL(SCIPgetStage(scip), SCIP_STAGE_PROBLEM);
 }
 
-/** epsilon > sumepsilon rejected at transform */
-Test(numerics, epsilonExceedsSumepsilonRejectsTransform)
+/** @brief epsilon > sumepsilon rejected at transform */
+void test_numerics_epsilonExceedsSumepsilonRejectsTransform(void)
 {
    SCIP_RETCODE retcode;
 
@@ -99,12 +97,12 @@ Test(numerics, epsilonExceedsSumepsilonRejectsTransform)
    SCIP_CALL( SCIPsetRealParam(scip, "numerics/sumepsilon", 1e-5) );
 
    retcode = SCIPtransformProb(scip);
-   cr_assert_eq(retcode, SCIP_PARAMETERWRONGVAL);
-   cr_assert_eq(SCIPgetStage(scip), SCIP_STAGE_PROBLEM);
+   TEST_ASSERT_EQUAL(retcode, SCIP_PARAMETERWRONGVAL);
+   TEST_ASSERT_EQUAL(SCIPgetStage(scip), SCIP_STAGE_PROBLEM);
 }
 
-/** sumepsilon > feastol rejected at transform */
-Test(numerics, sumepsilonExceedsFeastolRejectsTransform)
+/** @brief sumepsilon > feastol rejected at transform */
+void test_numerics_sumepsilonExceedsFeastolRejectsTransform(void)
 {
    SCIP_RETCODE retcode;
 
@@ -112,12 +110,12 @@ Test(numerics, sumepsilonExceedsFeastolRejectsTransform)
    SCIP_CALL( SCIPsetRealParam(scip, "numerics/feastol", 1e-5) );
 
    retcode = SCIPtransformProb(scip);
-   cr_assert_eq(retcode, SCIP_PARAMETERWRONGVAL);
-   cr_assert_eq(SCIPgetStage(scip), SCIP_STAGE_PROBLEM);
+   TEST_ASSERT_EQUAL(retcode, SCIP_PARAMETERWRONGVAL);
+   TEST_ASSERT_EQUAL(SCIPgetStage(scip), SCIP_STAGE_PROBLEM);
 }
 
-/** consistent params in any order should allow transforming */
-Test(numerics, consistentParamsAnyOrder)
+/** @brief consistent params in any order should allow transforming */
+void test_numerics_consistentParamsAnyOrder(void)
 {
    /* epsilon set before feastol -- would fail with per-param callbacks */
    SCIP_CALL( SCIPsetRealParam(scip, "numerics/epsilon", 1e-4) );
@@ -126,11 +124,11 @@ Test(numerics, consistentParamsAnyOrder)
    SCIP_CALL( SCIPsetRealParam(scip, "numerics/dualfeastol", 1e-3) );
 
    SCIP_CALL( SCIPtransformProb(scip) );
-   cr_assert_eq(SCIPgetStage(scip), SCIP_STAGE_TRANSFORMED);
+   TEST_ASSERT_EQUAL(SCIPgetStage(scip), SCIP_STAGE_TRANSFORMED);
 }
 
-/** after transform, setting epsilon too high should be rejected and reverted */
-Test(numerics, rejectInvalidChangeAfterTransform)
+/** @brief after transform, setting epsilon too high should be rejected and reverted */
+void test_numerics_rejectInvalidChangeAfterTransform(void)
 {
    SCIP_RETCODE retcode;
    SCIP_Real oldepsilon;
@@ -141,14 +139,14 @@ Test(numerics, rejectInvalidChangeAfterTransform)
 
    /* try to set epsilon larger than feastol */
    retcode = SCIPsetRealParam(scip, "numerics/epsilon", 1e-4);
-   cr_assert_eq(retcode, SCIP_PARAMETERWRONGVAL);
+   TEST_ASSERT_EQUAL(retcode, SCIP_PARAMETERWRONGVAL);
 
    /* value should be reverted */
-   cr_assert_eq(SCIPepsilon(scip), oldepsilon); /*lint !e777*/
+   TEST_ASSERT_EQUAL(SCIPepsilon(scip), oldepsilon); /*lint !e777*/
 }
 
-/** after transform, lowering feastol below sumepsilon should be rejected and reverted */
-Test(numerics, rejectFeastolBelowSumepsilonAfterTransform)
+/** @brief after transform, lowering feastol below sumepsilon should be rejected and reverted */
+void test_numerics_rejectFeastolBelowSumepsilonAfterTransform(void)
 {
    SCIP_RETCODE retcode;
    SCIP_Real oldfeastol;
@@ -159,14 +157,14 @@ Test(numerics, rejectFeastolBelowSumepsilonAfterTransform)
 
    /* try to set feastol below default sumepsilon (1e-6) */
    retcode = SCIPsetRealParam(scip, "numerics/feastol", 1e-8);
-   cr_assert_eq(retcode, SCIP_PARAMETERWRONGVAL);
+   TEST_ASSERT_EQUAL(retcode, SCIP_PARAMETERWRONGVAL);
 
    /* value should be reverted */
-   cr_assert_eq(SCIPfeastol(scip), oldfeastol); /*lint !e777*/
+   TEST_ASSERT_EQUAL(SCIPfeastol(scip), oldfeastol); /*lint !e777*/
 }
 
-/** after transform, lowering dualfeastol below epsilon should be rejected and reverted */
-Test(numerics, rejectDualfeastolBelowEpsilonAfterTransform)
+/** @brief after transform, lowering dualfeastol below epsilon should be rejected and reverted */
+void test_numerics_rejectDualfeastolBelowEpsilonAfterTransform(void)
 {
    SCIP_RETCODE retcode;
    SCIP_Real olddualfeastol;
@@ -177,24 +175,24 @@ Test(numerics, rejectDualfeastolBelowEpsilonAfterTransform)
 
    /* try to set dualfeastol below default epsilon (1e-9) */
    retcode = SCIPsetRealParam(scip, "numerics/dualfeastol", 1e-11);
-   cr_assert_eq(retcode, SCIP_PARAMETERWRONGVAL);
+   TEST_ASSERT_EQUAL(retcode, SCIP_PARAMETERWRONGVAL);
 
    /* value should be reverted */
-   cr_assert_eq(SCIPdualfeastol(scip), olddualfeastol); /*lint !e777*/
+   TEST_ASSERT_EQUAL(SCIPdualfeastol(scip), olddualfeastol); /*lint !e777*/
 }
 
-/** after transform, consistent change should be accepted */
-Test(numerics, acceptValidChangeAfterTransform)
+/** @brief after transform, consistent change should be accepted */
+void test_numerics_acceptValidChangeAfterTransform(void)
 {
    SCIP_CALL( SCIPtransformProb(scip) );
 
    /* epsilon = 1e-12 is below all defaults */
    SCIP_CALL( SCIPsetRealParam(scip, "numerics/epsilon", 1e-12) );
-   cr_assert_eq(SCIPepsilon(scip), (SCIP_Real)1e-12); /*lint !e777*/
+   TEST_ASSERT_EQUAL(SCIPepsilon(scip), (SCIP_Real)1e-12); /*lint !e777*/
 }
 
-/** user can fix settings after rejected transform and retry */
-Test(numerics, fixAndRetryTransform)
+/** @brief user can fix settings after rejected transform and retry */
+void test_numerics_fixAndRetryTransform(void)
 {
    SCIP_RETCODE retcode;
 
@@ -202,8 +200,8 @@ Test(numerics, fixAndRetryTransform)
 
    /* first attempt should fail */
    retcode = SCIPtransformProb(scip);
-   cr_assert_eq(retcode, SCIP_PARAMETERWRONGVAL);
-   cr_assert_eq(SCIPgetStage(scip), SCIP_STAGE_PROBLEM);
+   TEST_ASSERT_EQUAL(retcode, SCIP_PARAMETERWRONGVAL);
+   TEST_ASSERT_EQUAL(SCIPgetStage(scip), SCIP_STAGE_PROBLEM);
 
    /* fix: raise feastol, sumepsilon, dualfeastol above epsilon */
    SCIP_CALL( SCIPsetRealParam(scip, "numerics/sumepsilon", 1e-3) );
@@ -212,5 +210,26 @@ Test(numerics, fixAndRetryTransform)
 
    /* retry should succeed */
    SCIP_CALL( SCIPtransformProb(scip) );
-   cr_assert_eq(SCIPgetStage(scip), SCIP_STAGE_TRANSFORMED);
+   TEST_ASSERT_EQUAL(SCIPgetStage(scip), SCIP_STAGE_TRANSFORMED);
+}
+
+void setUp(void) { setup(); }
+
+void tearDown(void) { teardown(); }
+
+int main(void)
+{
+   UNITY_BEGIN();
+   RUN_TEST(test_numerics_acceptValidChangeAfterTransform);
+   RUN_TEST(test_numerics_consistentParamsAnyOrder);
+   RUN_TEST(test_numerics_defaultParamsTransform);
+   RUN_TEST(test_numerics_epsilonExceedsFeastolRejectsTransform);
+   RUN_TEST(test_numerics_epsilonExceedsSumepsilonRejectsTransform);
+   RUN_TEST(test_numerics_fixAndRetryTransform);
+   RUN_TEST(test_numerics_inconsistentSetInProblemStage);
+   RUN_TEST(test_numerics_rejectDualfeastolBelowEpsilonAfterTransform);
+   RUN_TEST(test_numerics_rejectFeastolBelowSumepsilonAfterTransform);
+   RUN_TEST(test_numerics_rejectInvalidChangeAfterTransform);
+   RUN_TEST(test_numerics_sumepsilonExceedsFeastolRejectsTransform);
+   return UNITY_END();
 }

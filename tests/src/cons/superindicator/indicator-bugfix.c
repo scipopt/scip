@@ -52,16 +52,27 @@ void teardown(void)
    SCIPfree(&scip);
 }
 
-TestSuite(bugfixxor, .init = setup, .fini = teardown);
 
 /* TESTS  */
-Test(bugfixxor, demofix, .description = "test checking that a problem with indicator constraint is not unbounded")
+/** @brief test checking that a problem with indicator constraint is not unbounded */
+void test_bugfixxor_demofix(void)
 {
    SCIP_CALL( SCIPreadProb(scip, "src/cons/superindicator/indicator-bugfix-instance.cip", NULL) );
    SCIP_CALL( SCIPsolve(scip) );
-   cr_assert_geq(SCIPgetNSols(scip), 1);
+   TEST_ASSERT_GREATER_OR_EQUAL(SCIPgetNSols(scip), 1);
    SCIP_SOL* sol = SCIPgetBestSol(scip);
-   cr_assert(sol != NULL);
-   cr_assert_eq(SCIPgetStatus(scip), SCIP_STATUS_OPTIMAL);
-   cr_assert(EPSEQ(SCIPgetSolOrigObj(scip, sol), 28.75, SCIPfeastol(scip)));
+   TEST_ASSERT(sol != NULL);
+   TEST_ASSERT_EQUAL(SCIPgetStatus(scip), SCIP_STATUS_OPTIMAL);
+   TEST_ASSERT(EPSEQ(SCIPgetSolOrigObj(scip, sol), 28.75, SCIPfeastol(scip)));
+}
+
+void setUp(void) { setup(); }
+
+void tearDown(void) { teardown(); }
+
+int main(void)
+{
+   UNITY_BEGIN();
+   RUN_TEST(test_bugfixxor_demofix);
+   return UNITY_END();
 }

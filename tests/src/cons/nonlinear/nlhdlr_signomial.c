@@ -54,12 +54,12 @@ void setup(void)
    SCIP_CALL( SCIPincludeDefaultPlugins(scip) );
 
    conshdlr = SCIPfindConshdlr(scip, "nonlinear");
-   cr_assert_not_null(conshdlr);
+   TEST_ASSERT_NOT_NULL(conshdlr);
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
-   cr_assert_not_null(conshdlrdata);
+   TEST_ASSERT_NOT_NULL(conshdlrdata);
 
    nlhdlr = SCIPfindNlhdlrNonlinear(conshdlr, "signomial");
-   cr_assert_not_null(nlhdlr);
+   TEST_ASSERT_NOT_NULL(nlhdlr);
 
    /* create problem */
    SCIP_CALL( SCIPcreateProbBasic(scip, "test_problem") );
@@ -97,14 +97,11 @@ void teardown(void)
 
    BMSdisplayMemory();
    BMScheckEmptyMemory();
-   cr_assert_eq(BMSgetMemoryUsed(), 0, "Memory is leaking!!");
+   TEST_ASSERT_EQUAL(BMSgetMemoryUsed(), 0, "Memory is leaking!!");
 }
 
 
 /* define the test suite */
-TestSuite(nlhdlrsignomial, .init = setup, .fini = teardown);
-
-
 /** creates a constraint and calls detection methods of nonlinear handlers */
 static
 SCIP_RETCODE createAndDetect(
@@ -199,7 +196,8 @@ SCIP_RETCODE validCutProb(
 
 
 /* detects <x1> * (<x2>)^(1.0) * (<x4>)^(1.0) */
-Test(nlhdlrsignomial, detectandfree1, .description = "detects signomial terms 1")
+/** @brief detects signomial terms 1 */
+void test_nlhdlrsignomial_detectandfree1(void)
 {
    SCIP_CONS* cons;
    SCIP_NLHDLREXPRDATA* nlhdlrexprdata = NULL;
@@ -211,7 +209,7 @@ Test(nlhdlrsignomial, detectandfree1, .description = "detects signomial terms 1"
    /* create nonlinear constraint */
    SCIP_CALL( SCIPparseCons(scip, &cons, (char*) "[nonlinear] <test>: <x1> * (<x2>)^(1.0) * (<x4>)^(1.0)  <= 100",
          TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, &success) );
-   cr_assert(success);
+   TEST_ASSERT(success);
 
    /* add locks */
    SCIP_CALL( SCIPaddConsLocks(scip, cons, 1, 0) );
@@ -228,7 +226,7 @@ Test(nlhdlrsignomial, detectandfree1, .description = "detects signomial terms 1"
       if( ownerdata->enfos[i]->nlhdlr == nlhdlr )
          nlhdlrexprdata = ownerdata->enfos[i]->nlhdlrexprdata;
    }
-   cr_assert_null(nlhdlrexprdata);
+   TEST_ASSERT_NULL(nlhdlrexprdata);
 
    /* remove locks */
    SCIP_CALL( SCIPaddConsLocks(scip, cons, -1, 0) );
@@ -238,7 +236,8 @@ Test(nlhdlrsignomial, detectandfree1, .description = "detects signomial terms 1"
 }
 
 /*  detects  (<x3>)^(-1.5) */
-Test(nlhdlrsignomial, detectandfree2, .description = "detects signomial terms 2")
+/** @brief detects signomial terms 2 */
+void test_nlhdlrsignomial_detectandfree2(void)
 {
    SCIP_CONS* cons;
    SCIP_NLHDLREXPRDATA* nlhdlrexprdata = NULL;
@@ -250,7 +249,7 @@ Test(nlhdlrsignomial, detectandfree2, .description = "detects signomial terms 2"
    /* create nonlinear constraint */
    SCIP_CALL( SCIPparseCons(scip, &cons, (char*) "[nonlinear] <test>:  (<x3>)^(-1.5)  <= 100",
          TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, &success) );
-   cr_assert(success);
+   TEST_ASSERT(success);
 
    /* add locks */
    SCIP_CALL( SCIPaddConsLocks(scip, cons, 1, 0) );
@@ -267,7 +266,7 @@ Test(nlhdlrsignomial, detectandfree2, .description = "detects signomial terms 2"
       if( ownerdata->enfos[i]->nlhdlr == nlhdlr )
          nlhdlrexprdata = ownerdata->enfos[i]->nlhdlrexprdata;
    }
-   cr_assert_null(nlhdlrexprdata);
+   TEST_ASSERT_NULL(nlhdlrexprdata);
 
    /* remove locks */
    SCIP_CALL( SCIPaddConsLocks(scip, cons, -1, 0) );
@@ -278,7 +277,8 @@ Test(nlhdlrsignomial, detectandfree2, .description = "detects signomial terms 2"
 
 
 /*  detects (<x3>)^(1.5) * (<x4>)^(-1.5) * (<x5>)^(-2)) */
-Test(nlhdlrsignomial, detectandfree3, .description = "detects signomial terms 3")
+/** @brief detects signomial terms 3 */
+void test_nlhdlrsignomial_detectandfree3(void)
 {
    SCIP_CONS* cons;
    SCIP_NLHDLREXPRDATA* nlhdlrexprdata = NULL;
@@ -290,7 +290,7 @@ Test(nlhdlrsignomial, detectandfree3, .description = "detects signomial terms 3"
    /* create nonlinear constraint */
    SCIP_CALL( SCIPparseCons(scip, &cons, (char*) "[nonlinear] <test>:  (<x3>)^(1.5) * (<x4>)^(-1.5) * (<x5>)^(-2)  <= 100",
          TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, &success) );
-   cr_assert(success);
+   TEST_ASSERT(success);
 
    /* add locks */
    SCIP_CALL( SCIPaddConsLocks(scip, cons, 1, 0) );
@@ -307,19 +307,19 @@ Test(nlhdlrsignomial, detectandfree3, .description = "detects signomial terms 3"
       if( ownerdata->enfos[i]->nlhdlr == nlhdlr )
          nlhdlrexprdata = ownerdata->enfos[i]->nlhdlrexprdata;
    }
-   cr_assert_not_null(nlhdlrexprdata);
+   TEST_ASSERT_NOT_NULL(nlhdlrexprdata);
 
-   cr_assert(nlhdlrexprdata->nvars == 4);
-   cr_assert(nlhdlrexprdata->nposvars == 1);
-   cr_assert(nlhdlrexprdata->nnegvars == 3);
+   TEST_ASSERT(nlhdlrexprdata->nvars == 4);
+   TEST_ASSERT(nlhdlrexprdata->nposvars == 1);
+   TEST_ASSERT(nlhdlrexprdata->nnegvars == 3);
 
-   cr_assert(SCIPisEQ(scip, nlhdlrexprdata->exponents[0], 1.5));
-   cr_assert(SCIPisEQ(scip, nlhdlrexprdata->refexponents[0], 1.5 / (1.5 + 2 + 1) ));
-   cr_assert(SCIPisEQ(scip, nlhdlrexprdata->exponents[1], -1.5));
-   cr_assert(SCIPisEQ(scip, nlhdlrexprdata->refexponents[1], 1.5 / (1.5 + 2 + 1) ));
-   cr_assert(SCIPisEQ(scip, nlhdlrexprdata->exponents[2], -2));
-   cr_assert(SCIPisEQ(scip, nlhdlrexprdata->refexponents[2], 2 / (1.5 + 2 + 1) ));
-   cr_assert(SCIPisEQ(scip, nlhdlrexprdata->refexponents[3], 1 / (1.5 + 2 + 1) ));
+   TEST_ASSERT(SCIPisEQ(scip, nlhdlrexprdata->exponents[0], 1.5));
+   TEST_ASSERT(SCIPisEQ(scip, nlhdlrexprdata->refexponents[0], 1.5 / (1.5 + 2 + 1) ));
+   TEST_ASSERT(SCIPisEQ(scip, nlhdlrexprdata->exponents[1], -1.5));
+   TEST_ASSERT(SCIPisEQ(scip, nlhdlrexprdata->refexponents[1], 1.5 / (1.5 + 2 + 1) ));
+   TEST_ASSERT(SCIPisEQ(scip, nlhdlrexprdata->exponents[2], -2));
+   TEST_ASSERT(SCIPisEQ(scip, nlhdlrexprdata->refexponents[2], 2 / (1.5 + 2 + 1) ));
+   TEST_ASSERT(SCIPisEQ(scip, nlhdlrexprdata->refexponents[3], 1 / (1.5 + 2 + 1) ));
 
    /* remove locks */
    SCIP_CALL( SCIPaddConsLocks(scip, cons, -1, 0) );
@@ -329,7 +329,7 @@ Test(nlhdlrsignomial, detectandfree3, .description = "detects signomial terms 3"
 
 
 /* adds a linear inequality to the product expression and computes a cut at a given reference point */
-Test(nlhdlrsignomial, separation_signomial)
+void test_nlhdlrsignomial_separation_signomial(void)
 {
    SCIP_ROWPREP* rowprep;
    SCIP_CONS* cons;
@@ -364,7 +364,7 @@ Test(nlhdlrsignomial, separation_signomial)
    SCIP_CALL( SCIPconstructLP(scip, &dummy) );
 
    /* INITLP should have added an auxiliary variable to the product expression (tight might change in the future) */
-   cr_assert( SCIPgetExprAuxVarNonlinear(expr) != NULL);
+   TEST_ASSERT( SCIPgetExprAuxVarNonlinear(expr) != NULL);
 
    /* create a solution */
    SCIP_CALL( SCIPcreateSol(scip, &sol, NULL) );
@@ -380,7 +380,7 @@ Test(nlhdlrsignomial, separation_signomial)
    SCIP_CALL( SCIPcreatePtrarray(scip, &rowpreps) );
    SCIP_CALL( nlhdlrEstimateSignomial(scip, conshdlr, nlhdlr, expr, SCIPgetNlhdlrExprDataNonlinear(nlhdlr, expr), sol,
             0.1, overestimate, targetval, FALSE, rowpreps, &success, &dummy) );
-   cr_expect(success);
+   TEST_ASSERT(success);
 
    nsample = 10000;
    rowprep = (SCIP_ROWPREP*) SCIPgetPtrarrayVal(scip, rowpreps, 0);
@@ -392,5 +392,19 @@ Test(nlhdlrsignomial, separation_signomial)
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
    SCIP_CALL( SCIPfreeSol(scip, &sol) );
 
-   cr_expect(isvalid);
+   SOFT_ASSERT(isvalid);
+}
+
+void setUp(void) { setup(); }
+
+void tearDown(void) { teardown(); }
+
+int main(void)
+{
+   UNITY_BEGIN();
+   RUN_TEST(test_nlhdlrsignomial_detectandfree1);
+   RUN_TEST(test_nlhdlrsignomial_detectandfree2);
+   RUN_TEST(test_nlhdlrsignomial_detectandfree3);
+   RUN_TEST(test_nlhdlrsignomial_separation_signomial);
+   return UNITY_END();
 }

@@ -50,7 +50,7 @@ namespace scip
  *  - \ref CUTSELECTORS "List of available cut selectors"
  *  - \ref type_cutsel.h "Corresponding C interface"
  */
-class ObjCutsel : public ObjCloneable
+class SCIP_EXPORT ObjCutsel : public ObjCloneable
 {
 public:
    /*lint --e{1540}*/

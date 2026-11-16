@@ -406,7 +406,7 @@ SCIP_RETCODE componentSetupWorkingSol(
    }
 
    /* set up debug solution */
-#ifdef WITH_DEBUG_SOLUTION
+#if SCIP_HAS_DEBUG_SOLUTION
    if( SCIPdebugSolIsEnabled(component->problem->scip) )
    {
       PROBLEM* problem;
@@ -446,7 +446,7 @@ SCIP_RETCODE componentSetupWorkingSol(
          }
       }
    }
-#endif
+#endif /* SCIP_HAS_DEBUG_SOLUTION */
 
    return SCIP_OKAY;
 }
@@ -480,9 +480,9 @@ SCIP_RETCODE createSubscip(
    {
       SCIP_CONSHDLR* newconshdlr;
       SCIP_CONSHDLRDATA* newconshdlrdata;
-#ifdef WITH_DEBUG_SOLUTION
+#if SCIP_HAS_DEBUG_SOLUTION
       SCIP_Bool isvalid = FALSE;
-#endif
+#endif /* SCIP_HAS_DEBUG_SOLUTION */
 
       /* copy parameter settings */
       SCIP_CALL( SCIPcopyParamSettings(scip, *subscip) );
@@ -506,10 +506,10 @@ SCIP_RETCODE createSubscip(
       /* reduce the effort spent for hash tables; however, if the debug solution is enabled and valid in this subtree,
        * hash tables are needed for installing the debug solution
        */
-#ifdef WITH_DEBUG_SOLUTION
+#if SCIP_HAS_DEBUG_SOLUTION
       SCIP_CALL( SCIPdebugSolIsValidInSubtree(scip, &isvalid) );
       if( !isvalid && SCIPgetStage(scip) > SCIP_STAGE_PRESOLVING )
-#endif
+#endif /* SCIP_HAS_DEBUG_SOLUTION */
       {
          SCIP_CALL( SCIPsetBoolParam(*subscip, "misc/usevartable", FALSE) );
          SCIP_CALL( SCIPsetBoolParam(*subscip, "misc/useconstable", FALSE) );
@@ -1173,7 +1173,7 @@ SCIP_RETCODE solveComponent(
    component->laststatus = status;
    ++component->ncalls;
 
-   SCIPdebugMsg(scip, "--> (status = %d, nodes = %lld, time = %.2f): gap = %.5g%%, absgap = %.9g\n",
+   SCIPdebugMsg(scip, "--> (status = %d, nodes = %" SCIP_LONGINT_FORMAT ", time = %.2f): gap = %.5g%%, absgap = %.9g\n",
       status, SCIPgetNNodes(subscip), SCIPgetSolvingTime(subscip), 100.0*SCIPgetGap(subscip),
       SCIPgetPrimalbound(subscip) - SCIPgetDualbound(subscip));
 
@@ -1665,7 +1665,7 @@ SCIP_RETCODE createAndSplitProblem(
             else
                ++ncontvars;
          }
-         SCIPdebugMsg(scip, "component %d at node %lld, depth %d (%d): %d vars (%d bin, %d int, %d cont), %d conss\n",
+         SCIPdebugMsg(scip, "component %d at node %" SCIP_LONGINT_FORMAT ", depth %d (%d): %d vars (%d bin, %d int, %d cont), %d conss\n",
             comp, SCIPnodeGetNumber(SCIPgetCurrentNode(scip)), SCIPgetDepth(scip), SCIPgetDepth(scip) + conshdlrdata->subscipdepth,
             component->nvars, nbinvars, nintvars, ncontvars, ncompconss);
       }
@@ -2029,7 +2029,7 @@ SCIP_RETCODE findComponents(
                nvars = *nsortedvars;
 
                SCIPverbMessage(scip, SCIP_VERBLEVEL_FULL, NULL,
-                  "cons components found %d undirected components at node %lld, depth %d (%d)\n",
+                  "cons components found %d undirected components at node %" SCIP_LONGINT_FORMAT ", depth %d (%d)\n",
                   *ncomponents, SCIPnodeGetNumber(SCIPgetCurrentNode(scip)), SCIPgetDepth(scip), SCIPgetDepth(scip) + conshdlrdata->subscipdepth);
 
                /* sort components by size and sort variables and constraints by component number */
@@ -2211,7 +2211,7 @@ SCIP_DECL_CONSPROP(consPropComponents)
       {
          SCIP_CONS* cons;
 
-         SCIPdebugMsg(scip, "found %d components (%d fulfilling the minsize requirement) at node %lld at depth %d (%d)\n",
+         SCIPdebugMsg(scip, "found %d components (%d fulfilling the minsize requirement) at node %" SCIP_LONGINT_FORMAT " at depth %d (%d)\n",
             ncomponents, ncompsminsize, SCIPnodeGetNumber(SCIPgetCurrentNode(scip)), SCIPgetDepth(scip),
             SCIPgetDepth(scip) + conshdlrdata->subscipdepth);
 
@@ -2376,7 +2376,7 @@ SCIP_DECL_CONSPRESOL(consPresolComponents)
       int ncompconss;
       int comp;
 
-      SCIPdebugMsg(scip, "found %d components (%d with small size) during presolving; overall problem size: %d vars (%d int, %d bin, %d cont), %d conss\n",
+      SCIPdebugMsg(scip, "found %d components (%d with small size) during presolving; overall problem size: %d vars (%d bin, %d int, %d cont), %d conss\n",
          ncomponents, ncompsmaxsize, SCIPgetNVars(scip), SCIPgetNBinVars(scip), SCIPgetNIntVars(scip), SCIPgetNContVars(scip) + SCIPgetNImplVars(scip), SCIPgetNConss(scip));
 
       /* build subscip */
@@ -2396,13 +2396,21 @@ SCIP_DECL_CONSPRESOL(consPresolComponents)
       /* loop over all components */
       for( comp = 0; comp < ncompsmaxsize && !SCIPisStopped(scip); comp++ )
       {
-#ifdef WITH_DEBUG_SOLUTION
+         /* if there is only one component left, let's solve this in the main SCIP */
+         if( nsolved == ncomponents - 1 )
+         {
+            SCIPdebugMsg(scip, "Solve one remaining component in main SCIP ...\n");
+            break;
+         }
+
+#if SCIP_HAS_DEBUG_SOLUTION
          if( SCIPgetStage(subscip) > SCIP_STAGE_INIT )
          {
             SCIP_CALL( SCIPfree(&subscip) );
             SCIP_CALL( createSubscip(scip, conshdlrdata, &subscip) );
          }
-#endif
+#endif /* SCIP_HAS_DEBUG_SOLUTION */
+
          /* get component variables */
          compvars = &(sortedvars[compstartsvars[comp]]);
          ncompvars = compstartsvars[comp + 1 ] - compstartsvars[comp];
@@ -2415,6 +2423,8 @@ SCIP_DECL_CONSPRESOL(consPresolComponents)
          if( ncompconss == 0 )
          {
             assert(ncompvars == 1);
+            SCIPdebugMsg(scip, "Skipping component %d of size %d without constraints.\n", comp, ncompvars);
+            ++nsolved;
             continue;
          }
 
@@ -2459,8 +2469,8 @@ SCIP_DECL_CONSPRESOL(consPresolComponents)
             continue;
          }
 
-            /* set up debug solution */
-#ifdef WITH_DEBUG_SOLUTION
+         /* set up debug solution */
+#if SCIP_HAS_DEBUG_SOLUTION
          if( SCIPdebugSolIsEnabled(scip) )
          {
             SCIP_SOL* debugsol;
@@ -2484,7 +2494,7 @@ SCIP_DECL_CONSPRESOL(consPresolComponents)
                }
             }
          }
-#endif
+#endif /* SCIP_HAS_DEBUG_SOLUTION */
 
          /* solve the subproblem and evaluate the result, i.e. apply fixings of variables and remove constraints */
          SCIP_CALL( solveAndEvalSubscip(scip, conshdlrdata, subscip, compvars, subvars, compconss,
@@ -2498,9 +2508,6 @@ SCIP_DECL_CONSPRESOL(consPresolComponents)
 
          /* if the component is unbounded or infeasible, this holds for the complete problem as well */
          if( *result == SCIP_UNBOUNDED || *result == SCIP_CUTOFF )
-            break;
-         /* if there is only one component left, let's solve this in the main SCIP */
-         else if( nsolved == ncomponents - 1 )
             break;
       }
 

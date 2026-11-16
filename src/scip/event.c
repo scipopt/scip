@@ -2536,10 +2536,13 @@ SCIP_RETCODE SCIPeventqueueFree(
 static
 SCIP_RETCODE eventqueueAppend(
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   BMS_BLKMEM*           blkmem,             /**< block memory buffer */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_EVENT**          event               /**< pointer to event to append to the queue */
    )
 {
+   SCIP_RETCODE retcode;
+
    assert(eventqueue != NULL);
    assert(eventqueue->delayevents);
    assert(event != NULL);
@@ -2548,7 +2551,12 @@ SCIP_RETCODE eventqueueAppend(
    SCIPsetDebugMsg(set, "appending event %p of type 0x%" SCIP_EVENTTYPE_FORMAT " to event queue %p at position %d\n",
       (void*)*event, (*event)->eventtype, (void*)eventqueue, eventqueue->nevents);
 
-   SCIP_CALL( eventqueueEnsureEventsMem(eventqueue, set, eventqueue->nevents+1) );
+   retcode = eventqueueEnsureEventsMem(eventqueue, set, eventqueue->nevents+1);
+   if( retcode != SCIP_OKAY )
+   {
+      SCIP_CALL( SCIPeventFree(event, blkmem) );
+      return retcode;
+   }
    eventqueue->events[eventqueue->nevents] = *event;
    eventqueue->nevents++;
 
@@ -2631,7 +2639,7 @@ SCIP_RETCODE SCIPeventqueueAdd(
       case SCIP_EVENTTYPE_ROWSIDECHANGED: /* @todo merge with previous sidechanged event */ /*lint !e30 !e142*/
       case SCIP_EVENTTYPE_SYNC: /*lint !e30 !e142*/
          /* these events cannot (or need not) be merged; just add them to the queue */
-         SCIP_CALL( eventqueueAppend(eventqueue, set, event) );
+         SCIP_CALL( eventqueueAppend(eventqueue, blkmem, set, event) );
          break;
 
       case SCIP_EVENTTYPE_OBJCHANGED:
@@ -2671,8 +2679,8 @@ SCIP_RETCODE SCIPeventqueueAdd(
          else
          {
             /* the objective value change event doesn't exist -> add it to the queue, and remember the array index */
-            var->eventqueueindexobj = eventqueue->nevents;
-            SCIP_CALL( eventqueueAppend(eventqueue, set, event) );
+            SCIP_CALL( eventqueueAppend(eventqueue, blkmem, set, event) );
+            var->eventqueueindexobj = eventqueue->nevents - 1;
          }
          break;
 
@@ -2741,8 +2749,8 @@ SCIP_RETCODE SCIPeventqueueAdd(
          else
          {
             /* the lower bound change event doesn't exist -> add it to the queue, and remember the array index */
-            var->eventqueueindexlb = eventqueue->nevents;
-            SCIP_CALL( eventqueueAppend(eventqueue, set, event) );
+            SCIP_CALL( eventqueueAppend(eventqueue, blkmem, set, event) );
+            var->eventqueueindexlb = eventqueue->nevents - 1;
          }
          break;
 
@@ -2811,8 +2819,8 @@ SCIP_RETCODE SCIPeventqueueAdd(
          else
          {
             /* the upper bound change event doesn't exist -> add it to the queue, and remember the array index */
-            var->eventqueueindexub = eventqueue->nevents;
-            SCIP_CALL( eventqueueAppend(eventqueue, set, event) );
+            SCIP_CALL( eventqueueAppend(eventqueue, blkmem, set, event) );
+            var->eventqueueindexub = eventqueue->nevents - 1;
          }
          break;
 
@@ -2826,8 +2834,8 @@ SCIP_RETCODE SCIPeventqueueAdd(
          }
          else
          {
+            SCIP_CALL( eventqueueAppend(eventqueue, blkmem, set, event) );
             var->eventqueueimpl = TRUE;
-            SCIP_CALL( eventqueueAppend(eventqueue, set, event) );
          }
          break;
 

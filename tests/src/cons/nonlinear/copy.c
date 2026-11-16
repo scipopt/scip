@@ -62,10 +62,10 @@ void teardown(void)
    SCIP_CALL( SCIPreleaseVar(scip, &z) );
    SCIP_CALL( SCIPfree(&scip) );
 
-   cr_assert_eq(BMSgetMemoryUsed(), 0, "Memory is leaking!!");
+   TEST_ASSERT_EQUAL(BMSgetMemoryUsed(), 0, "Memory is leaking!!");
 }
 
-Test(copy, copy, .init = setup, .fini = teardown)
+void test_copy_copy(void)
 {
    SCIP* subscip;
    SCIP_CONS* cons;
@@ -77,7 +77,7 @@ Test(copy, copy, .init = setup, .fini = teardown)
    success = FALSE;
    SCIP_CALL( SCIPparseCons(scip, &cons, input,
             TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, &success) );
-   cr_assert(success);
+   TEST_ASSERT(success);
 
    /* add constraint to SCIP and release it */
    SCIP_CALL( SCIPaddCons(scip, cons) );
@@ -92,19 +92,30 @@ Test(copy, copy, .init = setup, .fini = teardown)
    SCIP_CALL( SCIPcopy(scip, subscip, NULL, NULL, "copytest_", TRUE, FALSE, FALSE, FALSE, FALSE, &valid) );
 
    /* check copying was valid and some sanity checks */
-   cr_assert(valid);
-   cr_assert_eq(SCIPgetNConss(subscip), 1);
-   cr_assert_neq(scip, subscip);
+   TEST_ASSERT(valid);
+   TEST_ASSERT_EQUAL(SCIPgetNConss(subscip), 1);
+   TEST_ASSERT_NOT_EQUAL(scip, subscip);
 
    /* check that copied constraint is the same as original (i.e. the transformed one!) */
-   cr_redirect_stdout();
+   TEST_CAPTURE_STDOUT();
    SCIP_CALL( SCIPprintCons(subscip, SCIPgetConss(subscip)[0], NULL) );
    SCIPinfoMessage(subscip, NULL, "\n");
 
    fflush(stdout);
 
-   cr_assert_stdout_eq_str("  [nonlinear] <test>: 1.1*<t_x>*<t_y>*(<t_z>)^(-1)+3.2*(<t_x>)^2*(<t_y>)^(-5)*<t_z>+0.5*(<t_z>)^3 == 2\n");
+   TEST_ASSERT_STDOUT_EQUAL_STRING("  [nonlinear] <test>: 1.1*<t_x>*<t_y>*(<t_z>)^(-1)+3.2*(<t_x>)^2*(<t_y>)^(-5)*<t_z>+0.5*(<t_z>)^3 == 2\n");
 
    /* release the copy of SCIP */
    SCIP_CALL( SCIPfree(&subscip) );
+}
+
+void setUp(void) { setup(); }
+
+void tearDown(void) { teardown(); }
+
+int main(void)
+{
+   UNITY_BEGIN();
+   RUN_TEST(test_copy_copy);
+   return UNITY_END();
 }

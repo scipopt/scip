@@ -47,15 +47,6 @@
 
 #include "vertexpolyhedral_matrices.sol"
 
-/* specify parameters of parameterized test */
-ParameterizedTestParameters(separation, multilinearLP)
-{
-   static const int sizes[] = {1,2,3,4,5,6,7};
-
-   /* type of the parameter; the parameter; number of parameters */
-   return cr_make_param_array(const int, sizes, sizeof(sizes)/sizeof(int));
-}
-
 static
 SCIP_RETCODE printMatrix(int size)
 {
@@ -69,7 +60,7 @@ SCIP_RETCODE printMatrix(int size)
    SCIP_CALL( SCIPlpiGetNRows(lp, &nrows) );
    SCIP_CALL( SCIPlpiGetNCols(lp, &ncols) );
 
-   cr_redirect_stdout();
+   TEST_CAPTURE_STDOUT();
    for( i = 0; i < nrows; ++i )
    {
       for( j = 0; j < ncols; ++j )
@@ -81,11 +72,11 @@ SCIP_RETCODE printMatrix(int size)
       printf("\n");
    }
    fflush(stdout);
-   cr_assert_stdout_eq_str(matrices[size]);
+   TEST_ASSERT_STDOUT_EQUAL_STRING(matrices[size]);
 
    SCIP_CALL( SCIPlpiFree(&lp) );
    SCIP_CALL( SCIPfree(&scip) );
-   cr_assert_eq(BMSgetMemoryUsed(), 0, "Memory is leaking!!");
+   TEST_ASSERT_EQUAL(BMSgetMemoryUsed(), 0, "Memory is leaking!!");
 
    return SCIP_OKAY;
 }
@@ -110,19 +101,23 @@ SCIP_DECL_VERTEXPOLYFUN(prodfunction)
 }
 
 
-/* generates matrix of size *size and prints it; checks it is the expected matrix */
-ParameterizedTest(const int* size, separation, multilinearLP)
+/* loops over sizes 1..7, generating matrices and checking against expected output */
+void test_separation_multilinearLP(void)
 {
-   SCIP_CALL_ABORT( printMatrix(*size) );
+   int size;
+
+   for( size = 1; size <= 7; ++size )
+   {
+      SCIP_CALL_ABORT( printMatrix(size) );
+   }
 }
 
 /*
  * The following test checks that separation of multilinear terms is performed correctly.
  * It also test the re-use of the separation LP
  */
-Test(separation, bilinear_with_LP, .init = setup, .fini = teardown,
-   .description = "test separation for a bilinear expression, but using the code for general vertex-polyhedral functions"
-   )
+/** @brief test separation for a bilinear expression, but using the code for general vertex-polyhedral functions */
+void test_separation_bilinear_with_LP(void)
 {
    SCIP_Real prodcoef;
    SCIP_Real xstar[2];
@@ -130,6 +125,9 @@ Test(separation, bilinear_with_LP, .init = setup, .fini = teardown,
    SCIP_Real facetcoefs[2];
    SCIP_Real facetconstant;
    SCIP_Bool success;
+
+   /* this test uses the estimation.h fixture */
+   setup();
 
    /*
     * compute a facet of the concave envelope of 1.5*x*y with x* = 0, y* = -4
@@ -148,10 +146,10 @@ Test(separation, bilinear_with_LP, .init = setup, .fini = teardown,
 
    SCIP_CALL( SCIPcomputeFacetVertexPolyhedralNonlinear(scip, SCIPfindConshdlr(scip, "nonlinear"), TRUE /* overestimate */, prodfunction, &prodcoef, xstar, box, 2, SCIPinfinity(scip), &success, facetcoefs, &facetconstant) );
 
-   cr_assert(success);
-   cr_expect_float_eq(facetcoefs[0], -4.5, SCIPepsilon(scip));
-   cr_expect_float_eq(facetcoefs[1], -1.5, SCIPepsilon(scip));
-   cr_expect_float_eq(facetconstant, -4.5, SCIPepsilon(scip));
+   TEST_ASSERT(success);
+   SOFT_ASSERT_DOUBLE_WITHIN(facetcoefs[0], -4.5, SCIPepsilon(scip));
+   SOFT_ASSERT_DOUBLE_WITHIN(facetcoefs[1], -1.5, SCIPepsilon(scip));
+   SOFT_ASSERT_DOUBLE_WITHIN(facetconstant, -4.5, SCIPepsilon(scip));
 
    /*
     * compute a facet of the convex envelope for 1.5*x*y with x* = 0, y* = -4, re-using the separation lp
@@ -163,10 +161,12 @@ Test(separation, bilinear_with_LP, .init = setup, .fini = teardown,
 
    SCIP_CALL( SCIPcomputeFacetVertexPolyhedralNonlinear(scip, SCIPfindConshdlr(scip, "nonlinear"), FALSE /* underestimate */, prodfunction, &prodcoef, xstar, box, 2, -SCIPinfinity(scip), &success, facetcoefs, &facetconstant) );
 
-   cr_assert(success);
-   cr_expect_float_eq(facetcoefs[0], -9.0, SCIPepsilon(scip));
-   cr_expect_float_eq(facetcoefs[1], -1.5, SCIPepsilon(scip));
-   cr_expect_float_eq(facetconstant, -9.0, SCIPepsilon(scip));
+   TEST_ASSERT(success);
+   SOFT_ASSERT_DOUBLE_WITHIN(facetcoefs[0], -9.0, SCIPepsilon(scip));
+   SOFT_ASSERT_DOUBLE_WITHIN(facetcoefs[1], -1.5, SCIPepsilon(scip));
+   SOFT_ASSERT_DOUBLE_WITHIN(facetconstant, -9.0, SCIPepsilon(scip));
+
+   teardown();
 }
 
 
@@ -209,7 +209,7 @@ Test(separation, bilinear_with_LP, .init = setup, .fini = teardown,
  * */
 
 /* this test needs to create its own data, it doesn't use the fixtures! */
-Test(separation, multilinearseparation)
+void test_separation_multilinearseparation(void)
 {
    /* char const* names[] = {"x", "y", "w", "z"}; */
    SCIP_Real prodcoef = -0.7;
@@ -229,14 +229,14 @@ Test(separation, multilinearseparation)
     */
    SCIP_CALL( SCIPcomputeFacetVertexPolyhedralNonlinear(scip, SCIPfindConshdlr(scip, "nonlinear"), TRUE /* overestimate */, prodfunction, &prodcoef, solval, box, 4, SCIPinfinity(scip), &success, facetcoefs, &facetconstant) );
 
-   cr_assert(success);
+   TEST_ASSERT(success);
 
    SCIP_Real exact_facet1[] = {63.0/100, 63.0/5000, 441.0/1000, 637.0/100, -8883.0/10000};
    for( i = 0; i < 4; ++i ) /* index 4 is the constant */
    {
-      cr_expect_float_eq(facetcoefs[i], exact_facet1[i], SCIPfeastol(scip), "coef %d: received %g instead of %g\n", i, facetcoefs[i], exact_facet1[i]);
+      SOFT_ASSERT_DOUBLE_WITHIN(facetcoefs[i], exact_facet1[i], SCIPfeastol(scip), "coef %d: received %g instead of %g\n", i, facetcoefs[i], exact_facet1[i]);
    }
-   cr_expect_float_eq(facetconstant, exact_facet1[4], SCIPfeastol(scip), "constant: received %g instead of %g\n", facetconstant, exact_facet1[i]);
+   SOFT_ASSERT_DOUBLE_WITHIN(facetconstant, exact_facet1[4], SCIPfeastol(scip), "constant: received %g instead of %g\n", facetconstant, exact_facet1[i]);
 
    /* the code below assumes that we do the same permutations as before, so recreate scip to reset random number generator */
    SCIP_CALL( SCIPfree(&scip) );
@@ -251,22 +251,22 @@ Test(separation, multilinearseparation)
     */
    SCIP_CALL( SCIPcomputeFacetVertexPolyhedralNonlinear(scip, SCIPfindConshdlr(scip, "nonlinear"), FALSE /* underestimate */, prodfunction, &prodcoef, solval, box, 3, -SCIPinfinity(scip), &success, facetcoefs, &facetconstant) );
 
-   cr_assert(success);
+   TEST_ASSERT(success);
 
    SCIP_Real exact_facet2[] = {7.0, -49.0/100, -98.0/25, -49.0/50};
    for( i = 0; i < 3; ++i ) /* index 3 is the constant */
    {
-      cr_expect_float_eq(facetcoefs[i], exact_facet2[i], SCIPfeastol(scip), "coef %d: received %g instead of %g\n", i, facetcoefs[i], exact_facet2[i]);
+      SOFT_ASSERT_DOUBLE_WITHIN(facetcoefs[i], exact_facet2[i], SCIPfeastol(scip), "coef %d: received %g instead of %g\n", i, facetcoefs[i], exact_facet2[i]);
    }
-   cr_expect_float_eq(facetconstant, exact_facet2[3], SCIPfeastol(scip), "constant: received %g instead of %g\n", facetconstant, exact_facet2[i]);
+   SOFT_ASSERT_DOUBLE_WITHIN(facetconstant, exact_facet2[3], SCIPfeastol(scip), "constant: received %g instead of %g\n", facetconstant, exact_facet2[i]);
 
    /* free SCIP */
    SCIP_CALL( SCIPfree(&scip) );
 
-   cr_assert_eq(BMSgetMemoryUsed(), 0, "Memory is leaking!!");
+   TEST_ASSERT_EQUAL(BMSgetMemoryUsed(), 0, "Memory is leaking!!");
 }
 
-Test(separation, errorfacet)
+void test_separation_errorfacet(void)
 {
    /* char const* names[] = {"x", "y", "w"}; */
    SCIP_Real box[] = {-0.2, 0.7, -10.0, 8.0, 1.0, 1.3};
@@ -292,13 +292,13 @@ Test(separation, errorfacet)
    /* compute the maximum error */
    printf("computing maximum error\n");
    maxfaceterror = computeVertexPolyhedralMaxFacetError(scip, FALSE, funvals, box, 3, 3, nonfixedpos, facet, facet[3]);
-   cr_expect_eq(maxfaceterror, 0.0);
+   SOFT_ASSERT_EQUAL(maxfaceterror, 0.0);
    printf("done\n");
 
    /* perturb facet */
    facet[3] += 1.0;
    maxfaceterror = computeVertexPolyhedralMaxFacetError(scip, FALSE, funvals, box, 3, 3, nonfixedpos, facet, facet[3]);
-   cr_expect_eq(maxfaceterror, 1.0);
+   SOFT_ASSERT_EQUAL(maxfaceterror, 1.0);
    facet[3] -= 1.0;
 
    /* now we do the same, but overestimating */
@@ -308,20 +308,20 @@ Test(separation, errorfacet)
    /* compute the maximum error */
    printf("computing maximum error over\n");
    maxfaceterror = computeVertexPolyhedralMaxFacetError(scip, TRUE, funvals, box, 3, 3, nonfixedpos, facet, facet[3]);
-   cr_expect_eq(maxfaceterror, 0.0);
+   SOFT_ASSERT_EQUAL(maxfaceterror, 0.0);
    printf("done\n");
 
    /* perturb facet */
    facet[3] -= 1.0;
    maxfaceterror = computeVertexPolyhedralMaxFacetError(scip, TRUE, funvals, box, 3, 3, nonfixedpos, facet, facet[3]);
-   cr_expect_eq(maxfaceterror, 1.0);
+   SOFT_ASSERT_EQUAL(maxfaceterror, 1.0);
    facet[3] += 1.0;
 
    /* TODO add some tests where nonfixedpos is not the trivial identity */
 
    /* free everything */
    SCIP_CALL( SCIPfree(&scip) );
-   cr_assert_eq(BMSgetMemoryUsed(), 0, "Memory is leaking!!");
+   TEST_ASSERT_EQUAL(BMSgetMemoryUsed(), 0, "Memory is leaking!!");
 }
 
 static
@@ -355,7 +355,7 @@ void test_vertexpolyhedral(
    SCIP_CALL_ABORT( SCIPcomputeFacetVertexPolyhedralNonlinear(scip, SCIPfindConshdlr(scip, "nonlinear"), overestimate,
       function, functiondata, xstar, box, dim, targetval, &success, facetcoefs, &facetconstant) );
 
-   cr_assert(success);
+   TEST_ASSERT(success);
    if( !success )
       return;
 
@@ -377,15 +377,15 @@ void test_vertexpolyhedral(
          facetval += facetcoefs[j] * corner[j];
 
       if( overestimate )
-         cr_expect_geq(facetval, funval-SCIPdualfeastol(scip)*MAX(1.0,REALABS(funval)), "Facet value %.15g expected to be above function value %.15g", facetval, funval);
+         SOFT_ASSERT_GREATER_OR_EQUAL(facetval, funval-SCIPdualfeastol(scip)*MAX(1.0,REALABS(funval)), "Facet value %.15g expected to be above function value %.15g", facetval, funval);
       else
-         cr_expect_leq(facetval, funval+SCIPdualfeastol(scip)*MAX(1.0,REALABS(funval)), "Facet value %.15g expected to be below function value %.15g", facetval, funval);
+         SOFT_ASSERT_LESS_OR_EQUAL(facetval, funval+SCIPdualfeastol(scip)*MAX(1.0,REALABS(funval)), "Facet value %.15g expected to be below function value %.15g", facetval, funval);
 
       if( SCIPisFeasEQ(scip, facetval, funval) )
          ++ntight;
    }
 
-   cr_assert_geq(ntight, dim+1);  /* for a facet of the envelope, the hyperplane should touch the function in at least dim+1 corner points */
+   TEST_ASSERT_GREATER_OR_EQUAL(ntight, dim+1);  /* for a facet of the envelope, the hyperplane should touch the function in at least dim+1 corner points */
 
 
    /* now set a target value */
@@ -400,15 +400,14 @@ void test_vertexpolyhedral(
    /* if target couldn't be reached before, it should not have been reached now, so method should not have succeeded
     * (in principal it would also be allowed to succeed when missing the target, but current implementation doesn't) */
    if( !SCIPisFeasEQ(scip, targetval, facetval) )
-      cr_assert(!success);
+      TEST_ASSERT(!success);
 
    BMSfreeMemoryArray(&corner);
    BMSfreeMemoryArray(&facetcoefs);
 }
 
-Test(separation, vertexpolyhedral,
-   .description = "test facets of convex and concave envelopes for general vertex-polyhedral functions"
-   )
+/** @brief test facets of convex and concave envelopes for general vertex-polyhedral functions */
+void test_separation_vertexpolyhedral(void)
 {
    SCIP_Real box[2*SCIP_MAXVERTEXPOLYDIM];
    SCIP_Real xstar[SCIP_MAXVERTEXPOLYDIM];
@@ -459,7 +458,22 @@ Test(separation, vertexpolyhedral,
    SCIPfreeRandom(scip, &randnumgen);
    SCIP_CALL_ABORT( SCIPfree(&scip) );
 
-   cr_assert_eq(BMSgetMemoryUsed(), 0, "Memory is leaking!!");
+   TEST_ASSERT_EQUAL(BMSgetMemoryUsed(), 0, "Memory is leaking!!");
 }
 
 #endif  /* if !intel */
+
+void setUp(void) { }
+
+void tearDown(void) { }
+
+int main(void)
+{
+   UNITY_BEGIN();
+   RUN_TEST(test_separation_multilinearLP);
+   RUN_TEST(test_separation_bilinear_with_LP);
+   RUN_TEST(test_separation_multilinearseparation);
+   RUN_TEST(test_separation_errorfacet);
+   RUN_TEST(test_separation_vertexpolyhedral);
+   return UNITY_END();
+}

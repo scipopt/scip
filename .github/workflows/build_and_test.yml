@@ -11,9 +11,10 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-
+    env:
+      MAKEFLAGS: -j4
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v7
 
     - name: Install dependencies
       run: |
@@ -25,9 +26,9 @@ jobs:
         git clone https://github.com/scipopt/soplex.git
         mkdir soplex/build && cd soplex/build
         cmake ..
-        make -j
+        make
         cd ../..
         mkdir build && cd build
         cmake .. -DSOPLEX_DIR=soplex/build -DPAPILO=Off -DIPOPT=Off -DZIMPL=Off
-        make -j
-        ctest --output-on-failure
+        make
+        ctest --output-on-failure ${MAKEFLAGS}

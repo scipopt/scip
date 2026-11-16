@@ -82,13 +82,11 @@ void teardown(void)
    SCIP_CALL( SCIPreleaseVar(scip, &x5) );
    SCIP_CALL( SCIPfree(&scip) );
 
-   cr_expect_eq(BMSgetMemoryUsed(), 0, "Memory is leaking!!");
+   SOFT_ASSERT_EQUAL(BMSgetMemoryUsed(), 0, "Memory is leaking!!");
 }
 
 /* TEST SUITE */
-TestSuite(test_create_nlrow, .init = setup, .fini = teardown);
-
-Test(test_create_nlrow, general)
+void test_test_create_nlrow_general(void)
 {
    int nvars;
    SCIP_EXPR* varexpr;
@@ -113,28 +111,28 @@ Test(test_create_nlrow, general)
    SCIP_CALL( SCIPgetTransformedVar(scip, x5, &tx5) );
 
    /* there should be on NLROW for the 1 constraint */
-   cr_expect_eq(SCIPgetNNLPNlRows(scip), 1, "%d nlrows in NLP\n", SCIPgetNNLPNlRows(scip));
+   SOFT_ASSERT_EQUAL(SCIPgetNNLPNlRows(scip), 1, "%d nlrows in NLP\n", SCIPgetNNLPNlRows(scip));
    nlrow = SCIPgetNLPNlRows(scip)[0];
-   cr_assert_not_null(nlrow);
+   TEST_ASSERT_NOT_NULL(nlrow);
 
    /* check linear part */
-   cr_expect_eq(SCIPnlrowGetConstant(nlrow), 10);
-   cr_assert_eq(SCIPnlrowGetNLinearVars(nlrow), 4);
-   cr_expect_eq(SCIPnlrowGetLinearVars(nlrow)[0], tx1);
-   cr_expect_eq(SCIPnlrowGetLinearVars(nlrow)[1], tx2);
-   cr_expect_eq(SCIPnlrowGetLinearVars(nlrow)[2], tx4);
-   cr_expect_eq(SCIPnlrowGetLinearVars(nlrow)[3], tx5);
+   SOFT_ASSERT_EQUAL(SCIPnlrowGetConstant(nlrow), 10);
+   TEST_ASSERT_EQUAL(SCIPnlrowGetNLinearVars(nlrow), 4);
+   SOFT_ASSERT_EQUAL(SCIPnlrowGetLinearVars(nlrow)[0], tx1);
+   SOFT_ASSERT_EQUAL(SCIPnlrowGetLinearVars(nlrow)[1], tx2);
+   SOFT_ASSERT_EQUAL(SCIPnlrowGetLinearVars(nlrow)[2], tx4);
+   SOFT_ASSERT_EQUAL(SCIPnlrowGetLinearVars(nlrow)[3], tx5);
 
    /* check nonlinear part */
-   cr_assert_not_null(SCIPnlrowGetExpr(nlrow));
+   TEST_ASSERT_NOT_NULL(SCIPnlrowGetExpr(nlrow));
    SCIP_CALL( SCIPgetExprVarExprs(scip, SCIPnlrowGetExpr(nlrow), &varexpr, &nvars) );
-   cr_expect_eq(nvars, 1);
-   cr_expect_eq(SCIPgetVarExprVar(varexpr), tx3);
+   SOFT_ASSERT_EQUAL(nvars, 1);
+   SOFT_ASSERT_EQUAL(SCIPgetVarExprVar(varexpr), tx3);
 
    SCIP_CALL( SCIPreleaseExpr(scip, &varexpr) );
 }
 
-Test(test_create_nlrow, nolin)
+void test_test_create_nlrow_nolin(void)
 {
    int nvars;
    SCIP_EXPR* varexprs[5];
@@ -155,25 +153,37 @@ Test(test_create_nlrow, nolin)
    SCIP_CALL( TESTscipSetStage(scip, SCIP_STAGE_SOLVING, TRUE) );
 
    /* there should be on NLROW for the 1 constraint */
-   cr_expect_eq(SCIPgetNNLPNlRows(scip), 1, "%d nlrows in NLP\n", SCIPgetNNLPNlRows(scip));
+   SOFT_ASSERT_EQUAL(SCIPgetNNLPNlRows(scip), 1, "%d nlrows in NLP\n", SCIPgetNNLPNlRows(scip));
    nlrow = SCIPgetNLPNlRows(scip)[0];
-   cr_assert_not_null(nlrow);
+   TEST_ASSERT_NOT_NULL(nlrow);
 
    /* check linear part */
-   cr_expect_eq(SCIPnlrowGetConstant(nlrow), 0);
-   cr_expect_eq(SCIPnlrowGetNLinearVars(nlrow), 0);
+   SOFT_ASSERT_EQUAL(SCIPnlrowGetConstant(nlrow), 0);
+   SOFT_ASSERT_EQUAL(SCIPnlrowGetNLinearVars(nlrow), 0);
 
    /* check nonlinear part */
-   cr_assert_not_null(SCIPnlrowGetExpr(nlrow));
+   TEST_ASSERT_NOT_NULL(SCIPnlrowGetExpr(nlrow));
 
    rowexpr = SCIPnlrowGetExpr(nlrow);
    SCIP_CALL( SCIPreplaceCommonSubexpressions(scip, &rowexpr, 1, &replacedroot) );
-   cr_expect_not(replacedroot);
+   SOFT_ASSERT_NOT(replacedroot);
    SCIP_CALL( SCIPgetExprVarExprs(scip, SCIPnlrowGetExpr(nlrow), varexprs, &nvars) );
-   cr_expect_eq(nvars, 5, "got %d vars, but 5 expected", nvars);
+   SOFT_ASSERT_EQUAL(nvars, 5, "got %d vars, but 5 expected", nvars);
 
    for( --nvars ; nvars >= 0; --nvars )
    {
       SCIP_CALL( SCIPreleaseExpr(scip, &varexprs[nvars]) );
    }
+}
+
+void setUp(void) { setup(); }
+
+void tearDown(void) { teardown(); }
+
+int main(void)
+{
+   UNITY_BEGIN();
+   RUN_TEST(test_test_create_nlrow_general);
+   RUN_TEST(test_test_create_nlrow_nolin);
+   return UNITY_END();
 }

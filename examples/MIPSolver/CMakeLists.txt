@@ -7,22 +7,26 @@ endif()
 
 project(MIPSolver)
 
-if(TARGET SCIP::SCIP)
-  # find package by SCIP PATH
-  find_package(SCIP CONFIG NO_DEFAULT_PATH PATHS ${SCIP_BINARY_DIR} REQUIRED)
-else()
-  find_package(SCIP REQUIRED)
+# Find SCIP unless we already have it because we build it.
+if(NOT TARGET SCIP::SCIP)
+  find_package(SCIP
+     REQUIRED
+     CONFIG
+     HINTS "${SCIP_DIR}"
+     )
 endif()
 
-include_directories(BEFORE PUBLIC ${SCIP_INCLUDE_DIRS})
 
 add_executable(scipmip
    src/cppmain.cpp)
-set_property(TARGET scipmip PROPERTY INTERPROCEDURAL_OPTIMIZATION ${LTO_AVAILABLE})
+target_link_libraries(scipmip SCIP::SCIP)
 
-target_link_libraries(scipmip ${SCIP_LIBRARIES})
-target_compile_options(scipmip PRIVATE ${SCIP_COMPILE_FLAGS})
-
-if( TARGET examples )
-    add_dependencies( examples scipmip )
+if(SCIP_HAS_LTO)
+   set_target_properties(scipmip PROPERTIES
+      INTERPROCEDURAL_OPTIMIZATION 1)
 endif()
+
+if(TARGET examples)
+    add_dependencies(examples scipmip)
+endif()
+

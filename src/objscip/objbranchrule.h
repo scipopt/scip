@@ -51,7 +51,7 @@ namespace scip
  *  - \ref BRANCHINGRULES "List of available branching rules"
  *  - \ref type_branch.h "Corresponding C interface"
  */
-class ObjBranchrule : public ObjCloneable
+class SCIP_EXPORT ObjBranchrule : public ObjCloneable
 {
 public:
    /*lint --e{1540}*/
@@ -220,7 +220,7 @@ public:
  *
  *  The method should be called in one of the following ways:
  *
- *   1. The user is resposible of deleting the object:
+ *   1. The user is responsible of deleting the object:
  *       SCIP_CALL( SCIPcreate(&scip) );
  *       ...
  *       MyBranchrule* mybranchrule = new MyBranchrule(...);

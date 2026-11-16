@@ -56,15 +56,14 @@ static
 void teardown(void)
 {
    SCIP_CALL( SCIPlpiFree(&lpi) );
-   cr_assert_eq(BMSgetMemoryUsed(), 0, "There is are memory leak!");
+   TEST_ASSERT_EQUAL(BMSgetMemoryUsed(), 0, "There is are memory leak!");
 }
 
-TestSuite(matrix, .init = setup, .fini = teardown);
 
 /** TESTS **/
 
 /* This test should fail with an assert from the LPI, which causes SIGABRT to be issued. Thus, this test should pass. */
-Test(matrix, create_matrix, .signal = SIGABRT)
+static void create_matrix_body(void)
 {
    SCIP_Real obj = 0.0;
    SCIP_Real lb = 0.0;
@@ -82,6 +81,8 @@ Test(matrix, create_matrix, .signal = SIGABRT)
    int matind[2];
    int beg = 0;
    int ind = 0;
+
+   setup();
 
    /* this test can only work in debug mode, so we make it pass in opt mode */
 #ifdef NDEBUG
@@ -106,30 +107,35 @@ Test(matrix, create_matrix, .signal = SIGABRT)
    /* check size */
    SCIP_CALL( SCIPlpiGetNRows(lpi, &nrows) );
    SCIP_CALL( SCIPlpiGetNCols(lpi, &ncols) );
-   cr_assert( nrows == 2 );
-   cr_assert( ncols == 2 );
+   TEST_ASSERT( nrows == 2 );
+   TEST_ASSERT( ncols == 2 );
 
    /* get rows */
    SCIP_CALL( SCIPlpiGetRows(lpi, 0, 1, matlhs, matrhs, &nnonz, matbeg, matind, matval) );
-   cr_assert( nnonz == 2 );
+   TEST_ASSERT( nnonz == 2 );
 
-   cr_assert_float_eq(matlhs[0], 1.0, EPS, "Violation of lhs: %g != %g\n", matlhs[0], 1.0);
-   cr_assert_float_eq(matlhs[1], 1.0, EPS, "Violation of lhs: %g != %g\n", matlhs[1], 1.0);
+   TEST_ASSERT_DOUBLE_WITHIN(matlhs[0], 1.0, EPS, "Violation of lhs: %g != %g\n", matlhs[0], 1.0);
+   TEST_ASSERT_DOUBLE_WITHIN(matlhs[1], 1.0, EPS, "Violation of lhs: %g != %g\n", matlhs[1], 1.0);
 
-   cr_assert_float_eq(matrhs[0], 2.0, EPS, "Violation of lhs: %g != %g\n", matrhs[0], 2.0);
-   cr_assert_float_eq(matrhs[1], 2.0, EPS, "Violation of lhs: %g != %g\n", matrhs[1], 2.0);
+   TEST_ASSERT_DOUBLE_WITHIN(matrhs[0], 2.0, EPS, "Violation of lhs: %g != %g\n", matrhs[0], 2.0);
+   TEST_ASSERT_DOUBLE_WITHIN(matrhs[1], 2.0, EPS, "Violation of lhs: %g != %g\n", matrhs[1], 2.0);
 
-   cr_assert( matbeg[0] == 0 );
-   cr_assert( matbeg[1] == 1 );
+   TEST_ASSERT( matbeg[0] == 0 );
+   TEST_ASSERT( matbeg[1] == 1 );
 
-   cr_assert( matind[0] == 0 );
-   cr_assert( matind[1] == 1 );
+   TEST_ASSERT( matind[0] == 0 );
+   TEST_ASSERT( matind[1] == 1 );
 
-   cr_assert_float_eq(matval[0], 1.0, EPS, "Violation of matrix entry (1,1): %g != %g\n", matval[0], 1.0);
-   cr_assert_float_eq(matval[1], 1.0, EPS, "Violation of matrix entry (2,2): %g != %g\n", matval[1], 1.0);
+   TEST_ASSERT_DOUBLE_WITHIN(matval[0], 1.0, EPS, "Violation of matrix entry (1,1): %g != %g\n", matval[0], 1.0);
+   TEST_ASSERT_DOUBLE_WITHIN(matval[1], 1.0, EPS, "Violation of matrix entry (2,2): %g != %g\n", matval[1], 1.0);
 }
 
-Test(matrix, change_matrix)
+void test_matrix_create_matrix(void)
+{
+   TEST_EXPECT_SIGNAL(SIGABRT, create_matrix_body());
+}
+
+void test_matrix_change_matrix(void)
 {
    SCIP_Real obj = 0.0;
    SCIP_Real lb = 0.0;
@@ -150,6 +156,8 @@ Test(matrix, change_matrix)
    int beg = 0;
    int ind = 0;
    int i;
+
+   setup();
 
    /* add one column */
    SCIP_CALL( SCIPlpiAddCols(lpi, 1, &obj, &lb, &ub, NULL, 0, NULL, NULL, NULL) );
@@ -181,43 +189,56 @@ Test(matrix, change_matrix)
    /* check matrix */
    SCIP_CALL( SCIPlpiGetNRows(lpi, &nrows) );
    SCIP_CALL( SCIPlpiGetNCols(lpi, &ncols) );
-   cr_assert( nrows == 2 );
-   cr_assert( ncols == 2 );
+   TEST_ASSERT( nrows == 2 );
+   TEST_ASSERT( ncols == 2 );
 
    /* check first row */
    SCIP_CALL( SCIPlpiGetRows(lpi, 0, 0, &matlhs, &matrhs, &nnonz, matbeg, matind, matval) );
 
-   cr_assert_float_eq(matlhs, 1.0, EPS, "Violation of lhs: %g != %g\n", matlhs, 1.0);
-   cr_assert_float_eq(matrhs, 2.0, EPS, "Violation of rhs: %g != %g\n", matlhs, 2.0);
+   TEST_ASSERT_DOUBLE_WITHIN(matlhs, 1.0, EPS, "Violation of lhs: %g != %g\n", matlhs, 1.0);
+   TEST_ASSERT_DOUBLE_WITHIN(matrhs, 2.0, EPS, "Violation of rhs: %g != %g\n", matlhs, 2.0);
 
    for (i = 0; i < nnonz; ++i)
    {
-      cr_assert( 0 <= matind[i] && matind[i] <= 1 );
-      cr_assert_float_eq(matval[i], row1[matind[i]], EPS, "Violation of matrix entry (1,%d): %g != %g\n", matind[i], matval[i], row1[matind[i]]);
+      TEST_ASSERT( 0 <= matind[i] && matind[i] <= 1 );
+      TEST_ASSERT_DOUBLE_WITHIN(matval[i], row1[matind[i]], EPS, "Violation of matrix entry (1,%d): %g != %g\n", matind[i], matval[i], row1[matind[i]]);
    }
 
    /* check second row */
    SCIP_CALL( SCIPlpiGetRows(lpi, 1, 1, &matlhs, &matrhs, &nnonz, matbeg, matind, matval) );
 
-   cr_assert_float_eq(matlhs, 1.0, EPS, "Violation of lhs: %g != %g\n", matlhs, 1.0);
-   cr_assert_float_eq(matrhs, 2.0, EPS, "Violation of rhs: %g != %g\n", matlhs, 2.0);
+   TEST_ASSERT_DOUBLE_WITHIN(matlhs, 1.0, EPS, "Violation of lhs: %g != %g\n", matlhs, 1.0);
+   TEST_ASSERT_DOUBLE_WITHIN(matrhs, 2.0, EPS, "Violation of rhs: %g != %g\n", matlhs, 2.0);
 
    for (i = 0; i < nnonz; ++i)
    {
-      cr_assert( 0 <= matind[i] && matind[i] <= 1 );
-      cr_assert_float_eq(matval[i], row2[matind[i]], EPS, "Violation of matrix entry (2,%d): %g != %g\n", matind[i], matval[i], row2[matind[i]]);
+      TEST_ASSERT( 0 <= matind[i] && matind[i] <= 1 );
+      TEST_ASSERT_DOUBLE_WITHIN(matval[i], row2[matind[i]], EPS, "Violation of matrix entry (2,%d): %g != %g\n", matind[i], matval[i], row2[matind[i]]);
    }
 
    /* check get method for first row */
    for (i = 0; i < 2; ++i)
    {
       SCIP_CALL( SCIPlpiGetCoef(lpi, 0, i, &val) );
-      cr_assert_float_eq(val, row1[i], EPS, "Violation of matrix entry (1,%d): %g != %g\n", i, val, row1[i]);
+      TEST_ASSERT_DOUBLE_WITHIN(val, row1[i], EPS, "Violation of matrix entry (1,%d): %g != %g\n", i, val, row1[i]);
    }
    /* check get method for second row */
    for (i = 0; i < 2; ++i)
    {
       SCIP_CALL( SCIPlpiGetCoef(lpi, 1, i, &val) );
-      cr_assert_float_eq(val, row2[i], EPS, "Violation of matrix entry (1,%d): %g != %g\n", i, val, row2[i]);
+      TEST_ASSERT_DOUBLE_WITHIN(val, row2[i], EPS, "Violation of matrix entry (1,%d): %g != %g\n", i, val, row2[i]);
    }
+}
+
+void setUp(void) { lpi = NULL; }
+
+void tearDown(void) { if( lpi != NULL ) teardown(); }
+
+int main(void)
+{
+   UNITY_BEGIN();
+   RUN_TEST(test_matrix_create_matrix
+);
+   RUN_TEST(test_matrix_change_matrix);
+   return UNITY_END();
 }

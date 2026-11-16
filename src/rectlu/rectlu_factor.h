@@ -40,7 +40,7 @@
 #define __RECTLU_FACTOR_H
 
 
-#ifdef SCIP_WITH_GMP
+#if SCIP_HAS_GMP
 
 /** initialize empty sparse qsnum vector */
 void QSnum_svector_init(

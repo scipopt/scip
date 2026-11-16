@@ -244,7 +244,7 @@ static SCIP* scip_test = NULL;
 static
 void setup(void)
 {
-   cr_assert(scip_test == NULL);
+   TEST_ASSERT(scip_test == NULL);
 
    /* initialize SCIP */
    SCIP_CALL( SCIPcreate(&scip_test) );
@@ -256,24 +256,24 @@ static
 void teardown(void)
 {
    SCIP_EVENTHDLR* eventhdlr = SCIPfindEventhdlr(scip_test, EVENTHDLR_NAME);
-   cr_assert(eventhdlr != NULL);
+   TEST_ASSERT(eventhdlr != NULL);
    SCIP_EVENTHDLRDATA* eventhdlrdata = SCIPeventhdlrGetData(eventhdlr);
-   cr_assert(eventhdlrdata != NULL);
+   TEST_ASSERT(eventhdlrdata != NULL);
 
    /* free event handler data */
    SCIPfreeBlockMemory(scip_test, &eventhdlrdata);
 
    SCIP_CALL( SCIPfree(&scip_test) );
 
-   cr_assert(scip_test == NULL);
-   cr_assert(BMSgetMemoryUsed() == 0, "There is a memory leak!");
+   TEST_ASSERT(scip_test == NULL);
+   TEST_ASSERT(BMSgetMemoryUsed() == 0, "There is a memory leak!");
 }
 
-TestSuite(events, .init = setup, .fini = teardown);
 
 /* TESTS */
 
-Test(events, dualboundimprovedreal, .description = "tests real SCIP_EVENTTYPE_DUALBOUNDIMPROVED")
+/** @brief tests real SCIP_EVENTTYPE_DUALBOUNDIMPROVED */
+void test_events_dualboundimprovedreal(void)
 {
    /* create the following problem with LP dual bound 1 and optimal value 1 + mu with mu = 1e-5, such that the event
     * for the lowerbound improvement from 1 to 1 + mu should happen in real mode:
@@ -327,9 +327,9 @@ Test(events, dualboundimprovedreal, .description = "tests real SCIP_EVENTTYPE_DU
    SCIPinfoMessage(scip_test, NULL, "... constraint created\n");
 
    eventhdlr = SCIPfindEventhdlr(scip_test, EVENTHDLR_NAME);
-   cr_assert(eventhdlr != NULL);
+   TEST_ASSERT(eventhdlr != NULL);
    eventhdlrdata = SCIPeventhdlrGetData(eventhdlr);
-   cr_assert(eventhdlrdata != NULL);
+   TEST_ASSERT(eventhdlrdata != NULL);
 
    eventhdlrdata->ispseudoreached = FALSE;
    eventhdlrdata->islpreached = FALSE;
@@ -340,22 +340,23 @@ Test(events, dualboundimprovedreal, .description = "tests real SCIP_EVENTTYPE_DU
    /* expect correct optimum */
    lhs = 1.0+1e-5;
    rhs = SCIPgetSolVal(scip_test, SCIPgetBestSol(scip_test), vars[0]);
-   cr_expect(SCIPisEQ(scip_test, rhs, lhs), "Solution value wrong");
+   SOFT_ASSERT(SCIPisEQ(scip_test, rhs, lhs), "Solution value wrong");
    rhs = SCIPgetDualbound(scip_test);
-   cr_expect(SCIPisEQ(scip_test, rhs, lhs), "Dual bound wrong");
+   SOFT_ASSERT(SCIPisEQ(scip_test, rhs, lhs), "Dual bound wrong");
    rhs = SCIPgetPrimalbound(scip_test);
-   cr_expect(SCIPisEQ(scip_test, rhs, lhs), "Primal bound wrong");
+   SOFT_ASSERT(SCIPisEQ(scip_test, rhs, lhs), "Primal bound wrong");
 
    SCIP_CALL( SCIPreleaseVar(scip_test, &vars[0]) );
    SCIP_CALL( SCIPreleaseVar(scip_test, &vars[1]) );
 
    /* expect at least three improvements: 0 as pseudo bound, 1 as LP bound, and 1 + mu as optimal value */
-   cr_assert(eventhdlrdata->ispseudoreached, "Pseudo objective missed");
-   cr_assert(eventhdlrdata->islpreached, "LP value missed");
-   cr_assert(eventhdlrdata->isoptreached, "Optimal bound missed");
+   TEST_ASSERT(eventhdlrdata->ispseudoreached, "Pseudo objective missed");
+   TEST_ASSERT(eventhdlrdata->islpreached, "LP value missed");
+   TEST_ASSERT(eventhdlrdata->isoptreached, "Optimal bound missed");
 }
 
-Test(events, dualboundimprovedrealimplint, .description = "tests realimplint SCIP_EVENTTYPE_DUALBOUNDIMPROVED")
+/** @brief tests realimplint SCIP_EVENTTYPE_DUALBOUNDIMPROVED */
+void test_events_dualboundimprovedrealimplint(void)
 {
    /* create the following problem with LP dual bound 0.5 and implied integral optimal value 2, such that an event
     * for a lowerbound improvement from 1 to 2 should occur:
@@ -410,9 +411,9 @@ Test(events, dualboundimprovedrealimplint, .description = "tests realimplint SCI
    SCIPinfoMessage(scip_test, NULL, "... constraint created\n");
 
    eventhdlr = SCIPfindEventhdlr(scip_test, EVENTHDLR_NAME);
-   cr_assert(eventhdlr != NULL);
+   TEST_ASSERT(eventhdlr != NULL);
    eventhdlrdata = SCIPeventhdlrGetData(eventhdlr);
-   cr_assert(eventhdlrdata != NULL);
+   TEST_ASSERT(eventhdlrdata != NULL);
 
    eventhdlrdata->ispseudoreached = FALSE;
    eventhdlrdata->islpreached = FALSE;
@@ -423,23 +424,24 @@ Test(events, dualboundimprovedrealimplint, .description = "tests realimplint SCI
    /* expect correct optimum */
    lhs = 2.0;
    rhs = SCIPgetSolVal(scip_test, SCIPgetBestSol(scip_test), vars[0]);
-   cr_expect(SCIPisEQ(scip_test, rhs, lhs), "Solution value wrong");
+   SOFT_ASSERT(SCIPisEQ(scip_test, rhs, lhs), "Solution value wrong");
    rhs = SCIPgetDualbound(scip_test);
-   cr_expect(SCIPisEQ(scip_test, rhs, lhs), "Dual bound wrong");
+   SOFT_ASSERT(SCIPisEQ(scip_test, rhs, lhs), "Dual bound wrong");
    rhs = SCIPgetPrimalbound(scip_test);
-   cr_expect(SCIPisEQ(scip_test, rhs, lhs), "Primal bound wrong");
+   SOFT_ASSERT(SCIPisEQ(scip_test, rhs, lhs), "Primal bound wrong");
 
    SCIP_CALL( SCIPreleaseVar(scip_test, &vars[0]) );
    SCIP_CALL( SCIPreleaseVar(scip_test, &vars[1]) );
 
    /* expect at least three improvements: 0 as pseudo bound, 1 as rounded LP bound, and 2 as optimal value */
-   cr_assert(eventhdlrdata->ispseudoreached, "Pseudo objective missed");
-   cr_assert(eventhdlrdata->islpreached, "LP value missed");
-   cr_assert(eventhdlrdata->isoptreached, "Optimal bound missed");
+   TEST_ASSERT(eventhdlrdata->ispseudoreached, "Pseudo objective missed");
+   TEST_ASSERT(eventhdlrdata->islpreached, "LP value missed");
+   TEST_ASSERT(eventhdlrdata->isoptreached, "Optimal bound missed");
 }
 
 #ifdef SCIP_WITH_EXACTSOLVE
-Test(events, dualboundimprovedexact, .description = "tests exact SCIP_EVENTTYPE_DUALBOUNDIMPROVED")
+/** @brief tests exact SCIP_EVENTTYPE_DUALBOUNDIMPROVED */
+void test_events_dualboundimprovedexact(void)
 {
    /* create the following problem with LP dual bound 1 and optimal value 1 + mu with mu = 1e-16, such that the event
     * for the lowerbound improvement from 1 to 1 + mu can only occur in exact mode:
@@ -501,9 +503,9 @@ Test(events, dualboundimprovedexact, .description = "tests exact SCIP_EVENTTYPE_
    SCIPinfoMessage(scip_test, NULL, "... constraint created\n");
 
    eventhdlr = SCIPfindEventhdlr(scip_test, EVENTHDLR_NAME);
-   cr_assert(eventhdlr != NULL);
+   TEST_ASSERT(eventhdlr != NULL);
    eventhdlrdata = SCIPeventhdlrGetData(eventhdlr);
-   cr_assert(eventhdlrdata != NULL);
+   TEST_ASSERT(eventhdlrdata != NULL);
 
    eventhdlrdata->ispseudoreached = FALSE;
    eventhdlrdata->islpreached = FALSE;
@@ -514,11 +516,11 @@ Test(events, dualboundimprovedexact, .description = "tests exact SCIP_EVENTTYPE_
    /* expect correct optimum */
    SCIPrationalSetString(lhs, "10000000000000001/10000000000000000");
    SCIPgetSolValExact(scip_test, SCIPgetBestSol(scip_test), vars[0], rhs);
-   cr_expect(SCIPrationalIsEQ(rhs, lhs), "Solution value wrong");
+   SOFT_ASSERT(SCIPrationalIsEQ(rhs, lhs), "Solution value wrong");
    SCIPgetDualboundExact(scip_test, rhs);
-   cr_expect(SCIPrationalIsEQ(rhs, lhs), "Dual bound wrong");
+   SOFT_ASSERT(SCIPrationalIsEQ(rhs, lhs), "Dual bound wrong");
    SCIPgetPrimalboundExact(scip_test, rhs);
-   cr_expect(SCIPrationalIsEQ(rhs, lhs), "Primal bound wrong");
+   SOFT_ASSERT(SCIPrationalIsEQ(rhs, lhs), "Primal bound wrong");
 
    SCIPrationalFreeBlock(SCIPblkmem(scip_test), &rhs);
    SCIPrationalFreeBlock(SCIPblkmem(scip_test), &lhs);
@@ -529,12 +531,13 @@ Test(events, dualboundimprovedexact, .description = "tests exact SCIP_EVENTTYPE_
    SCIP_CALL( SCIPreleaseVar(scip_test, &vars[1]) );
 
    /* expect at least three improvements: 0 as pseudo bound, 1 as LP bound, and 1 + mu as optimal value */
-   cr_assert(eventhdlrdata->ispseudoreached, "Pseudo objective missed");
-   cr_assert(eventhdlrdata->islpreached, "LP value missed");
-   cr_assert(eventhdlrdata->isoptreached, "Optimal bound missed");
+   TEST_ASSERT(eventhdlrdata->ispseudoreached, "Pseudo objective missed");
+   TEST_ASSERT(eventhdlrdata->islpreached, "LP value missed");
+   TEST_ASSERT(eventhdlrdata->isoptreached, "Optimal bound missed");
 }
 
-Test(events, dualboundimprovedexactimplint, .description = "tests exactimplint SCIP_EVENTTYPE_DUALBOUNDIMPROVED")
+/** @brief tests exactimplint SCIP_EVENTTYPE_DUALBOUNDIMPROVED */
+void test_events_dualboundimprovedexactimplint(void)
 {
    /* create the following problem with LP dual bound 1/2 and implied integral optimal value 2, such that an event
     * for a lowerbound improvement from 1 to 2 should occur:
@@ -597,9 +600,9 @@ Test(events, dualboundimprovedexactimplint, .description = "tests exactimplint S
    SCIPinfoMessage(scip_test, NULL, "... constraint created\n");
 
    eventhdlr = SCIPfindEventhdlr(scip_test, EVENTHDLR_NAME);
-   cr_assert(eventhdlr != NULL);
+   TEST_ASSERT(eventhdlr != NULL);
    eventhdlrdata = SCIPeventhdlrGetData(eventhdlr);
-   cr_assert(eventhdlrdata != NULL);
+   TEST_ASSERT(eventhdlrdata != NULL);
 
    eventhdlrdata->ispseudoreached = FALSE;
    eventhdlrdata->islpreached = FALSE;
@@ -610,11 +613,11 @@ Test(events, dualboundimprovedexactimplint, .description = "tests exactimplint S
    /* expect correct optimum */
    SCIPrationalSetString(lhs, "2");
    SCIPgetSolValExact(scip_test, SCIPgetBestSol(scip_test), vars[0], rhs);
-   cr_expect(SCIPrationalIsEQ(rhs, lhs), "Solution value wrong");
+   SOFT_ASSERT(SCIPrationalIsEQ(rhs, lhs), "Solution value wrong");
    SCIPgetDualboundExact(scip_test, rhs);
-   cr_expect(SCIPrationalIsEQ(rhs, lhs), "Dual bound wrong");
+   SOFT_ASSERT(SCIPrationalIsEQ(rhs, lhs), "Dual bound wrong");
    SCIPgetPrimalboundExact(scip_test, rhs);
-   cr_expect(SCIPrationalIsEQ(rhs, lhs), "Primal bound wrong");
+   SOFT_ASSERT(SCIPrationalIsEQ(rhs, lhs), "Primal bound wrong");
 
    SCIPrationalFreeBlock(SCIPblkmem(scip_test), &rhs);
    SCIPrationalFreeBlock(SCIPblkmem(scip_test), &lhs);
@@ -625,8 +628,21 @@ Test(events, dualboundimprovedexactimplint, .description = "tests exactimplint S
    SCIP_CALL( SCIPreleaseVar(scip_test, &vars[1]) );
 
    /* expect at least three improvements: 0 as pseudo bound, 1 as rounded LP bound, and 2 as optimal value */
-   cr_assert(eventhdlrdata->ispseudoreached, "Pseudo objective missed");
-   cr_assert(eventhdlrdata->islpreached, "LP value missed");
-   cr_assert(eventhdlrdata->isoptreached, "Optimal bound missed");
+   TEST_ASSERT(eventhdlrdata->ispseudoreached, "Pseudo objective missed");
+   TEST_ASSERT(eventhdlrdata->islpreached, "LP value missed");
+   TEST_ASSERT(eventhdlrdata->isoptreached, "Optimal bound missed");
 }
 #endif
+
+void setUp(void) { setup(); }
+
+void tearDown(void) { teardown(); }
+
+int main(void)
+{
+   UNITY_BEGIN();
+   RUN_TEST(test_events_dualboundimprovedreal);
+   RUN_TEST(test_events_dualboundimprovedrealimplint);
+   /* test_events_dualboundimprovedexact and test_events_dualboundimprovedexactimplint require SCIP_WITH_EXACTSOLVE */
+   return UNITY_END();
+}

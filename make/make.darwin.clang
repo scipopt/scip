@@ -23,7 +23,7 @@ GCCWARN += -Wno-initializer-overrides
 ifeq ($(SHARED),true)
 FLAGS		+=	-fPIC
 endif
-LINK_shared		=	-shared
+LINK_shared		=	-shared -undefined dynamic_lookup
 
 ifeq ($(LTO),true)
   CFLAGS	+=	-flto

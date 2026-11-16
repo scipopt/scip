@@ -86,9 +86,9 @@
 #include "lpi/type_lpi.h"
 #include "lpiexact/type_lpiexact.h"
 #include "scip/rational.h"
-#ifdef SCIP_WITH_EXACTSOLVE
+#if SCIP_HAS_EXACTSOLVE
 #include "rectlu/rectlu.h"
-#endif
+#endif /* SCIP_HAS_EXACTSOLVE */
 
 #ifdef __cplusplus
 extern "C" {
@@ -241,9 +241,9 @@ struct SCIP_ProjShiftData
    SCIP_RATIONAL**       correction;         /**< needed on every iteration, so only construct once and possibly resize */
    int*                  includedrows;       /**< 1 if constraints (or vars) dual variable is included in original S-interior point/ray */
    int*                  projshiftbasis;     /**< mapping for basis used in factorization (maps [1,...,|includedrows|] -> 2*nrows+2*ncols) */
-#if defined SCIP_WITH_GMP && defined SCIP_WITH_EXACTSOLVE
+#if SCIP_HAS_GMP && SCIP_HAS_EXACTSOLVE
    qsnum_factor_work*    rectfactor;         /**< stores factorized matrix for project-and-shift */
-#endif
+#endif /* SCIP_HAS_GMP && SCIP_HAS_EXACTSOLVE */
    SCIP_RATIONAL*        commonslack;        /**< slack by which S-interior point/ray satisfies inequalities */
    int                   projshiftbasisdim;  /**< length of projshiftbasis */
    int                   nextendedrows;      /**< dimension of S-interior point/ray = 2*(ncols+nrows) */
@@ -333,7 +333,7 @@ struct SCIP_LpExact
    SCIP_Bool             dualfeasible;       /**< is current LP solution (rather LPI state) dual feasible? */
    SCIP_Bool             dualchecked;        /**< was current LP solution checked for primal feasibility?? */
    SCIP_Bool             solisbasic;         /**< is current LP solution a basic solution? */
-   SCIP_Bool             resolvelperror;     /**< an error occured during resolving the LP after diving or probing */
+   SCIP_Bool             resolvelperror;     /**< an error occurred during resolving the LP after diving or probing */
    SCIP_Bool             lpihasscaling;      /**< does the LPI support the SCALING parameter? */
    SCIP_Bool             lpihaspresolving;   /**< does the LPI support the PRESOLVING parameter? */
    SCIP_Bool             projshiftpossible;  /**< can a safe bound be computed with project-and-shift? */

@@ -38,10 +38,9 @@
 
 #include "scip/def.h"
 
-#if defined(SCIP_WITH_GMP) && defined(SCIP_WITH_EGLIB)
-#include "EGlib.h"
+/* The following is on anyhow when compiling, but we make lint happy. */
+#if SCIP_LPSEXACT_QSOEX
 #include "QSopt_ex.h"
-#endif
 
 #include <string.h>
 
@@ -55,9 +54,9 @@
 
 /** solver name */
 static char __qsstr[1024];
-static char __egstr[1024];
+//static char __egstr[1024];
 
-#ifdef SCIP_WITH_GMP
+//#if SCIP_HAS_GMP
 
 typedef SCIP_DUALPACKET COLPACKET;           /* each column needs two bits of information (basic/on_lower/on_upper) */
 #define COLS_PER_PACKET SCIP_DUALPACKETSIZE
@@ -67,13 +66,13 @@ typedef SCIP_DUALPACKET ROWPACKET;           /* each row needs two bit of inform
 /** LP interface */
 struct SCIP_LPiExact
 {
-#if defined(SCIP_WITH_GMP) && defined(SCIP_WITH_EGLIB)
+//#if SCIP_HAS_GMP && defined(SCIP_WITH_EGLIB)
    mpq_QSprob            prob;               /**< LP struct pointer */
    mpq_factor_work*      factor;             /**< factorized matrix  */
    int                   solstat;            /**< solution status of last optimization call */
    int                   previt;             /**< previous number of simplex iterations performed */
    int                   pricing;            /**< SCIP pricing option */
-#endif
+//#endif
    int                   rowspace;           /**< current size of internal row-related arrays */
    char*                 isen;               /**< array of length rowspace */
    mpq_t*                irhs;               /**< array of rhs rowspace */
@@ -149,6 +148,8 @@ struct SCIP_LPiState
    ROWPACKET*            packrstat;          /**< row basis status in compressed form */
 };
 
+#ifdef SCIP_DEBUG
+
 static
 void printGMP(
    const mpq_t           val
@@ -163,6 +164,8 @@ void printGMP(
       free(buffer);
    }
 }
+
+#endif /* SCIP_DEBUG */
 
 /** returns the number of packets needed to store column packet information */
 static
@@ -334,18 +337,18 @@ SCIP_RETCODE convertSides(
       mpq_t* rhsg;
       int state1;
       int state2;
-
+   
       lhsg = SCIPrationalGetGMP(lhs[i]);
       rhsg = SCIPrationalGetGMP(rhs[i]);
-#if defined(SCIP_WITH_GMP) && defined(SCIP_WITH_EGLIB)
+//#if SCIP_HAS_GMP && defined(SCIP_WITH_EGLIB)
       state1 = ((mpq_cmp(*lhsg, mpq_ILL_MINDOUBLE) <= 0) ? 1U : 0U);
       state2 = ((mpq_cmp(*rhsg, mpq_ILL_MAXDOUBLE) >= 0) ? 2U : 0U);
       state = state1 | state2;
-#else
-      state1 = 0;
-      state2 = 0;
-      state = 0;
-#endif
+//#else
+//      state1 = 0;
+//      state2 = 0;
+//      state = 0;
+//#endif
       /* state = (((mpq_cmp(*lhsg, mpq_ILL_MINDOUBLE) <= 0) ? 1U : 0U) | ((mpq_cmp(*rhsg, mpq_ILL_MAXDOUBLE) >= 0) ? 2U : 0U)); */
       lpi->ircnt[i] = 0;
       lpi->irbeg[i] = 0;
@@ -393,17 +396,17 @@ SCIP_RETCODE convertSides(
 /**@{ */
 
 
-#endif
+//#endif
 /** gets name and version of LP solver */
 const char* SCIPlpiExactGetSolverName(
    void
    )
 {
-#if defined(SCIP_WITH_GMP) && defined(SCIP_WITH_EGLIB)
-   sprintf(__qsstr, "QSopt_ex %s", string_QSopt_ex);
-#else
+//#if SCIP_HAS_GMP && defined(SCIP_WITH_EGLIB) TODO: check
+//   sprintf(__qsstr, "QSopt_ex %s", string_QSopt_ex);
+//#else
    sprintf(__qsstr, "QSopt_ex");
-#endif
+//#endif
 
    return __qsstr;
 }
@@ -421,13 +424,14 @@ const char* SCIPlpiExactGetExternalCodeName(
    void
    )
 {
-#if defined(SCIP_WITH_GMP) && defined(SCIP_WITH_EGLIB)
-   sprintf(__egstr, "EGlib %s", string_EGlib);
-#else
-   sprintf(__egstr, "EGlib");
-#endif
+//#if SCIP_HAS_GMP && defined(SCIP_WITH_EGLIB)
+//   sprintf(__egstr, "EGlib %s", string_EGlib);
+//#else
+//   sprintf(__egstr, "EGlib");
+//#endif
 
-   return __egstr;
+ //  return __egstr;
+   return NULL;
 }
 
 /** gets description of external package required for LP solver (developer, webpage, ...) */
@@ -435,10 +439,10 @@ const char* SCIPlpiExactGetExternalCodeDesc(
    void
    )
 {
-   return "Library for basic structures and utilities by D. Espinoza and M. Goycoolea (dii.uchile.cl/~daespino/EGlib_doc/main.html)";
+   return NULL; //return "Library for basic structures and utilities by D. Espinoza and M. Goycoolea (dii.uchile.cl/~daespino/EGlib_doc/main.html)";
 }
 
-#if defined(SCIP_WITH_GMP) && defined(SCIP_WITH_EGLIB)
+//#if SCIP_HAS_GMP && defined(SCIP_WITH_EGLIB)
 
 /** gets pointer for LP solver - use only with great care */
 void* SCIPlpiExactGetSolverPointer(
@@ -819,6 +823,7 @@ SCIP_RETCODE SCIPlpiExactAddRows(
 
    SCIP_ALLOC( BMSallocMemoryArray(&valgmp, nnonz) );
    SCIPrationalSetGMPArray(valgmp, val, nnonz);
+   SCIPdebugMessage("Calling mpq_QSadd_ranged_rows.\n");
 
    rval = mpq_QSadd_ranged_rows(lpi->prob, nrows, lpi->ircnt, beg, ind, (const mpq_t*) valgmp, (const mpq_t*) lpi->irhs,
       lpi->isen, (const mpq_t*) lpi->irng, (const char**) rownames);
@@ -3102,4 +3107,4 @@ void SCIPlpiExactPrintInfo(
    SCIPerrorMessage("basisstat.dual_infeasible= %d\n", lp->basisstat.dual_infeasible );
 }
 /**@} */
-#endif
+#endif /* SCIP_LPSEXACT_QSOPTEX */

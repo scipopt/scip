@@ -2618,7 +2618,7 @@ SCIP_DECL_NLHDLRINITSEPA(nlhdlrInitSepaSoc)
       /* create variables for cone disaggregation */
       SCIP_CALL( createDisaggrVars(scip, expr, nlhdlrexprdata) );
 
-#ifdef WITH_DEBUG_SOLUTION
+#if SCIP_HAS_DEBUG_SOLUTION
       if( SCIPdebugIsMainscip(scip) )
       {
          SCIP_Real lhsval;
@@ -2667,7 +2667,7 @@ SCIP_DECL_NLHDLRINITSEPA(nlhdlrInitSepaSoc)
             }
          }
       }
-#endif
+#endif /* SCIP_HAS_DEBUG_SOLUTION */
 
       /* create the disaggregation row and store it in nlhdlrexprdata */
       SCIP_CALL( createDisaggrRow(scip, conshdlr, expr, nlhdlrexprdata) );

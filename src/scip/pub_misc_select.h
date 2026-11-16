@@ -24,10 +24,10 @@
 
 /**@file   pub_misc_select.h
  * @ingroup PUBLICCOREAPI
- * @brief  methods for selecting (weighted) k-medians
+ * @brief  methods for selecting k-medians
  * @author Gregor Hendel
  *
- * This file contains headers for selecting (weighted) k-medians
+ * This file contains headers for selecting k-medians
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -47,11 +47,11 @@ extern "C" {
  * Selection and weighted selection algorithms
  */
 
-/**@defgroup SelectionAlgorithms Algorithms for (Weighted) Median Selection
+/**@defgroup SelectionAlgorithms Algorithms for Median Selection
  * @ingroup MiscellaneousMethods
- * @brief public methods for the selection of (weighted) k-median.
+ * @brief public methods for the selection of the k-median.
  *
- * The methods in this group perform a selection of the (weighted)  \f$ k \f$-median from an unsorted array of elements.
+ * The methods in this group perform a selection of the  \f$ k \f$-median from an unsorted array of elements.
  * The necessary element swaps are performed in-place on the array of keys.
  * The necessary permutations are also performed on up to six associated arrays.
  *
@@ -72,13 +72,13 @@ extern "C" {
  *
  * After the algorithm terminates, the  \f$ k \f$-median can be accessed by accessing the array element at position  \f$ k \f$.
  *
- * A weighted median denotes the generalization of the  \f$ k \f$-median to arbitrary, nonnegative associated
- * weights \f$ w[0], \dots, w[n-1] \in \mathbb{R}\f$ and a capacity  \f$ 0 \leq C \in \mathbb{R} \f$. An element  \f$ a[i] \f$
- * is called weighted median if there exists a permutation that satisfies the same weak sorting as above and in addition
- * \f$ W:= \sum_{j = 0}^{k - 1}w[\pi^{-1}(j)] < C\f$, but  \f$ W + w[i] \geq C\f$. In other words, the weighted median
- * is the first element in the weak sorting such that its weight together with the sum of all preceding item weights
- * reach or exceed the given capacity \f$ C \f$. If all weights are equal to \f$ 1 \f$ and the capacity is  \f$ C = k + 0.5\f$,
- * the weighted median becomes the  \f$ k \f$-median.
+ * A critical item denotes the generalization of the \f$ k \f$-median to arbitrary, nonnegative
+ * associated weights \f$ w[0], \dots, w[n-1] \in \mathbb{R}\f$ and a capacity \f$ 0 \leq C \in \mathbb{R} \f$.
+ * An element \f$ a[i] \f$ is called critical item if there exists a permutation that satisfies the same
+ * weak sorting as above and in addition \f$ W:= \sum_{j = 0}^{k - 1}w[\pi^{-1}(j)] \leq C\f$, but
+ * \f$ W + w[i] > C\f$. In other words, the critical item is the first element in the weak sorting whose
+ * cumulative weight strictly exceeds the given capacity \f$ C \f$. If all weights are equal to \f$ 1 \f$ and the
+ * capacity is \f$ C = k + 0.5\f$, the critical item becomes the \f$ k \f$-median.
  *
  * @{
  */
@@ -96,7 +96,7 @@ void SCIPselectInd(
    );
 
 
-/** partial sort an index array in non-decreasing order around the weighted median w.r.t. \p weights and capacity,
+/** partial sort an index array in non-decreasing order around the critical item w.r.t. \p weights and capacity,
  *  see \ref SelectionAlgorithms for more information.
  */
 SCIP_EXPORT
@@ -104,10 +104,10 @@ void SCIPselectWeightedInd(
    int*                  indarray,           /**< pointer to the index array to be sorted */
    SCIP_DECL_SORTINDCOMP((*indcomp)),        /**< data element comparator */
    void*                 dataptr,            /**< pointer to data field that is given to the external compare method */
-   SCIP_Real*            weights,            /**< (optional), nonnegative weights array for weighted median, or NULL (all weights are equal to 1) */
-   SCIP_Real             capacity,           /**< the maximum capacity that is exceeded by the median */
+   SCIP_Real*            weights,            /**< (optional), nonnegative weights array for the critical item, or NULL (all weights are equal to one) */
+   SCIP_Real             capacity,           /**< the maximum capacity that is exceeded by the critical item */
    int                   len,                /**< length of arrays */
-   int*                  medianpos           /**< pointer to store the index of the weighted median, or NULL, if not needed */
+   int*                  medianpos           /**< pointer to store the index of the critical item, or NULL, if not needed */
    );
 
 
@@ -123,17 +123,17 @@ void SCIPselectPtr(
    );
 
 
-/** partial sort of an array of pointers in non-decreasing order around the weighted median w.r.t. \p weights and capacity,
+/** partial sort of an array of pointers in non-decreasing order around the critical item w.r.t. \p weights and capacity,
  *  see \ref SelectionAlgorithms for more information.
  */
 SCIP_EXPORT
 void SCIPselectWeightedPtr(
    void**                ptrarray,           /**< pointer array to be sorted */
    SCIP_DECL_SORTPTRCOMP((*ptrcomp)),        /**< data element comparator */
-   SCIP_Real*            weights,            /**< (optional), nonnegative weights array for weighted median, or NULL (all weights are equal to 1) */
-   SCIP_Real             capacity,           /**< the maximum capacity that is exceeded by the median */
+   SCIP_Real*            weights,            /**< (optional), nonnegative weights array for the critical item, or NULL (all weights are equal to one) */
+   SCIP_Real             capacity,           /**< the maximum capacity that is exceeded by the critical item */
    int                   len,                /**< length of arrays */
-   int*                  medianpos           /**< pointer to store the index of the weighted median, or NULL, if not needed */
+   int*                  medianpos           /**< pointer to store the index of the critical item, or NULL, if not needed */
    );
 
 
@@ -150,7 +150,7 @@ void SCIPselectPtrPtr(
    );
 
 
-/** partial sort of two joint arrays of pointers/pointers, sorted by first array in non-decreasing order around the weighted median w.r.t. \p weights and capacity,
+/** partial sort of two joint arrays of pointers/pointers, sorted by first array in non-decreasing order around the critical item w.r.t. \p weights and capacity,
  *  see \ref SelectionAlgorithms for more information.
  */
 SCIP_EXPORT
@@ -158,10 +158,10 @@ void SCIPselectWeightedPtrPtr(
    void**                ptrarray1,          /**< first pointer array to be sorted */
    void**                ptrarray2,          /**< second pointer array to be permuted in the same way */
    SCIP_DECL_SORTPTRCOMP((*ptrcomp)),        /**< data element comparator */
-   SCIP_Real*            weights,            /**< (optional), nonnegative weights array for weighted median, or NULL (all weights are equal to 1) */
-   SCIP_Real             capacity,           /**< the maximum capacity that is exceeded by the median */
+   SCIP_Real*            weights,            /**< (optional), nonnegative weights array for the critical item, or NULL (all weights are equal to one) */
+   SCIP_Real             capacity,           /**< the maximum capacity that is exceeded by the critical item */
    int                   len,                /**< length of arrays */
-   int*                  medianpos           /**< pointer to store the index of the weighted median, or NULL, if not needed */
+   int*                  medianpos           /**< pointer to store the index of the critical item, or NULL, if not needed */
    );
 
 
@@ -178,7 +178,7 @@ void SCIPselectPtrReal(
    );
 
 
-/** partial sort of two joint arrays of pointers/Reals, sorted by first array in non-decreasing order around the weighted median w.r.t. \p weights and capacity,
+/** partial sort of two joint arrays of pointers/Reals, sorted by first array in non-decreasing order around the critical item w.r.t. \p weights and capacity,
  *  see \ref SelectionAlgorithms for more information.
  */
 SCIP_EXPORT
@@ -186,10 +186,10 @@ void SCIPselectWeightedPtrReal(
    void**                ptrarray,           /**< pointer array to be sorted */
    SCIP_Real*            realarray,          /**< SCIP_Real array to be permuted in the same way */
    SCIP_DECL_SORTPTRCOMP((*ptrcomp)),        /**< data element comparator */
-   SCIP_Real*            weights,            /**< (optional), nonnegative weights array for weighted median, or NULL (all weights are equal to 1) */
-   SCIP_Real             capacity,           /**< the maximum capacity that is exceeded by the median */
+   SCIP_Real*            weights,            /**< (optional), nonnegative weights array for the critical item, or NULL (all weights are equal to one) */
+   SCIP_Real             capacity,           /**< the maximum capacity that is exceeded by the critical item */
    int                   len,                /**< length of arrays */
-   int*                  medianpos           /**< pointer to store the index of the weighted median, or NULL, if not needed */
+   int*                  medianpos           /**< pointer to store the index of the critical item, or NULL, if not needed */
    );
 
 
@@ -206,7 +206,7 @@ void SCIPselectPtrInt(
    );
 
 
-/** partial sort of two joint arrays of pointers/ints, sorted by first array in non-decreasing order around the weighted median w.r.t. \p weights and capacity,
+/** partial sort of two joint arrays of pointers/ints, sorted by first array in non-decreasing order around the critical item w.r.t. \p weights and capacity,
  *  see \ref SelectionAlgorithms for more information.
  */
 SCIP_EXPORT
@@ -214,10 +214,10 @@ void SCIPselectWeightedPtrInt(
    void**                ptrarray,           /**< pointer array to be sorted */
    int*                  intarray,           /**< int array to be permuted in the same way */
    SCIP_DECL_SORTPTRCOMP((*ptrcomp)),        /**< data element comparator */
-   SCIP_Real*            weights,            /**< (optional), nonnegative weights array for weighted median, or NULL (all weights are equal to 1) */
-   SCIP_Real             capacity,           /**< the maximum capacity that is exceeded by the median */
+   SCIP_Real*            weights,            /**< (optional), nonnegative weights array for the critical item, or NULL (all weights are equal to one) */
+   SCIP_Real             capacity,           /**< the maximum capacity that is exceeded by the critical item */
    int                   len,                /**< length of arrays */
-   int*                  medianpos           /**< pointer to store the index of the weighted median, or NULL, if not needed */
+   int*                  medianpos           /**< pointer to store the index of the critical item, or NULL, if not needed */
    );
 
 
@@ -234,7 +234,7 @@ void SCIPselectPtrBool(
    );
 
 
-/** partial sort of two joint arrays of pointers/Bools, sorted by first array in non-decreasing order around the weighted median w.r.t. \p weights and capacity,
+/** partial sort of two joint arrays of pointers/Bools, sorted by first array in non-decreasing order around the critical item w.r.t. \p weights and capacity,
  *  see \ref SelectionAlgorithms for more information.
  */
 SCIP_EXPORT
@@ -242,10 +242,10 @@ void SCIPselectWeightedPtrBool(
    void**                ptrarray,           /**< pointer array to be sorted */
    SCIP_Bool*            boolarray,          /**< SCIP_Bool array to be permuted in the same way */
    SCIP_DECL_SORTPTRCOMP((*ptrcomp)),        /**< data element comparator */
-   SCIP_Real*            weights,            /**< (optional), nonnegative weights array for weighted median, or NULL (all weights are equal to 1) */
-   SCIP_Real             capacity,           /**< the maximum capacity that is exceeded by the median */
+   SCIP_Real*            weights,            /**< (optional), nonnegative weights array for the critical item, or NULL (all weights are equal to one) */
+   SCIP_Real             capacity,           /**< the maximum capacity that is exceeded by the critical item */
    int                   len,                /**< length of arrays */
-   int*                  medianpos           /**< pointer to store the index of the weighted median, or NULL, if not needed */
+   int*                  medianpos           /**< pointer to store the index of the critical item, or NULL, if not needed */
    );
 
 
@@ -263,7 +263,7 @@ void SCIPselectPtrIntInt(
    );
 
 
-/** partial sort of three joint arrays of pointers/ints/ints, sorted by first array in non-decreasing order around the weighted median w.r.t. \p weights and capacity,
+/** partial sort of three joint arrays of pointers/ints/ints, sorted by first array in non-decreasing order around the critical item w.r.t. \p weights and capacity,
  *  see \ref SelectionAlgorithms for more information.
  */
 SCIP_EXPORT
@@ -272,10 +272,10 @@ void SCIPselectWeightedPtrIntInt(
    int*                  intarray1,          /**< first int array to be permuted in the same way */
    int*                  intarray2,          /**< second int array to be permuted in the same way */
    SCIP_DECL_SORTPTRCOMP((*ptrcomp)),        /**< data element comparator */
-   SCIP_Real*            weights,            /**< (optional), nonnegative weights array for weighted median, or NULL (all weights are equal to 1) */
-   SCIP_Real             capacity,           /**< the maximum capacity that is exceeded by the median */
+   SCIP_Real*            weights,            /**< (optional), nonnegative weights array for the critical item, or NULL (all weights are equal to one) */
+   SCIP_Real             capacity,           /**< the maximum capacity that is exceeded by the critical item */
    int                   len,                /**< length of arrays */
-   int*                  medianpos           /**< pointer to store the index of the weighted median, or NULL, if not needed */
+   int*                  medianpos           /**< pointer to store the index of the critical item, or NULL, if not needed */
    );
 
 
@@ -293,7 +293,7 @@ void SCIPselectPtrRealInt(
    );
 
 
-/** partial sort of three joint arrays of pointers/Reals/ints, sorted by first array in non-decreasing order around the weighted median w.r.t. \p weights and capacity,
+/** partial sort of three joint arrays of pointers/Reals/ints, sorted by first array in non-decreasing order around the critical item w.r.t. \p weights and capacity,
  *  see \ref SelectionAlgorithms for more information.
  */
 SCIP_EXPORT
@@ -302,10 +302,10 @@ void SCIPselectWeightedPtrRealInt(
    SCIP_Real*            realarray,          /**< SCIP_Real array to be permuted in the same way */
    int*                  intarray,           /**< int array to be permuted in the same way */
    SCIP_DECL_SORTPTRCOMP((*ptrcomp)),        /**< data element comparator */
-   SCIP_Real*            weights,            /**< (optional), nonnegative weights array for weighted median, or NULL (all weights are equal to 1) */
-   SCIP_Real             capacity,           /**< the maximum capacity that is exceeded by the median */
+   SCIP_Real*            weights,            /**< (optional), nonnegative weights array for the critical item, or NULL (all weights are equal to one) */
+   SCIP_Real             capacity,           /**< the maximum capacity that is exceeded by the critical item */
    int                   len,                /**< length of arrays */
-   int*                  medianpos           /**< pointer to store the index of the weighted median, or NULL, if not needed */
+   int*                  medianpos           /**< pointer to store the index of the critical item, or NULL, if not needed */
    );
 
 
@@ -356,7 +356,7 @@ void SCIPselectPtrRealRealIntBool(
    );
 
 
-/** partial sort of four joint arrays of pointers/Reals/Reals/ints, sorted by first array in non-decreasing order around the weighted median w.r.t. \p weights and capacity,
+/** partial sort of four joint arrays of pointers/Reals/Reals/ints, sorted by first array in non-decreasing order around the critical item w.r.t. \p weights and capacity,
  *  see \ref SelectionAlgorithms for more information.
  */
 SCIP_EXPORT
@@ -366,14 +366,14 @@ void SCIPselectWeightedPtrRealRealInt(
    SCIP_Real*            realarray2,         /**< SCIP_Real array to be permuted in the same way */
    int*                  intarray,           /**< int array to be permuted in the same way */
    SCIP_DECL_SORTPTRCOMP((*ptrcomp)),        /**< data element comparator */
-   SCIP_Real*            weights,            /**< (optional), nonnegative weights array for weighted median, or NULL (all weights are equal to 1) */
-   SCIP_Real             capacity,           /**< the maximum capacity that is exceeded by the median */
+   SCIP_Real*            weights,            /**< (optional), nonnegative weights array for the critical item, or NULL (all weights are equal to one) */
+   SCIP_Real             capacity,           /**< the maximum capacity that is exceeded by the critical item */
    int                   len,                /**< length of arrays */
-   int*                  medianpos           /**< pointer to store the index of the weighted median, or NULL, if not needed */
+   int*                  medianpos           /**< pointer to store the index of the critical item, or NULL, if not needed */
    );
 
 
-/** partial sort of four joint arrays of pointers/Reals/Reals/SCIP_Bools/SCIP_Bools, sorted by first array in non-decreasing order around the weighted median w.r.t. \p weights and capacity,
+/** partial sort of four joint arrays of pointers/Reals/Reals/SCIP_Bools/SCIP_Bools, sorted by first array in non-decreasing order around the critical item w.r.t. \p weights and capacity,
  *  see \ref SelectionAlgorithms for more information.
  */
 SCIP_EXPORT
@@ -384,14 +384,14 @@ void SCIPselectWeightedPtrRealRealBoolBool(
    SCIP_Bool*            boolarray1,         /**< SCIP_Bool array to be permuted in the same way */
    SCIP_Bool*            boolarray2,         /**< SCIP_Bool array to be permuted in the same way */
    SCIP_DECL_SORTPTRCOMP((*ptrcomp)),        /**< data element comparator */
-   SCIP_Real*            weights,            /**< (optional), nonnegative weights array for weighted median, or NULL (all weights are equal to 1) */
-   SCIP_Real             capacity,           /**< the maximum capacity that is exceeded by the median */
+   SCIP_Real*            weights,            /**< (optional), nonnegative weights array for the critical item, or NULL (all weights are equal to one) */
+   SCIP_Real             capacity,           /**< the maximum capacity that is exceeded by the critical item */
    int                   len,                /**< length of arrays */
-   int*                  medianpos           /**< pointer to store the index of the weighted median, or NULL, if not needed */
+   int*                  medianpos           /**< pointer to store the index of the critical item, or NULL, if not needed */
    );
 
 
-/** partial sort of four joint arrays of pointers/Reals/Reals/ints/SCIP_Bools, sorted by first array in non-decreasing order around the weighted median w.r.t. \p weights and capacity,
+/** partial sort of four joint arrays of pointers/Reals/Reals/ints/SCIP_Bools, sorted by first array in non-decreasing order around the critical item w.r.t. \p weights and capacity,
  *  see \ref SelectionAlgorithms for more information.
  */
 SCIP_EXPORT
@@ -402,10 +402,10 @@ void SCIPselectWeightedPtrRealRealIntBool(
    int*                  intarray,           /**< int array to be permuted in the same way */
    SCIP_Bool*            boolarray,          /**< SCIP_Bool array to be permuted in the same way */
    SCIP_DECL_SORTPTRCOMP((*ptrcomp)),        /**< data element comparator */
-   SCIP_Real*            weights,            /**< (optional), nonnegative weights array for weighted median, or NULL (all weights are equal to 1) */
-   SCIP_Real             capacity,           /**< the maximum capacity that is exceeded by the median */
+   SCIP_Real*            weights,            /**< (optional), nonnegative weights array for the critical item, or NULL (all weights are equal to one) */
+   SCIP_Real             capacity,           /**< the maximum capacity that is exceeded by the critical item */
    int                   len,                /**< length of arrays */
-   int*                  medianpos           /**< pointer to store the index of the weighted median, or NULL, if not needed */
+   int*                  medianpos           /**< pointer to store the index of the critical item, or NULL, if not needed */
    );
 
 
@@ -423,7 +423,7 @@ void SCIPselectPtrRealBool(
    );
 
 
-/** partial sort of three joint arrays of pointers/Reals/Bools, sorted by first array in non-decreasing order around the weighted median w.r.t. \p weights and capacity,
+/** partial sort of three joint arrays of pointers/Reals/Bools, sorted by first array in non-decreasing order around the critical item w.r.t. \p weights and capacity,
  *  see \ref SelectionAlgorithms for more information.
  */
 SCIP_EXPORT
@@ -432,10 +432,10 @@ void SCIPselectWeightedPtrRealBool(
    SCIP_Real*            realarray,          /**< SCIP_Real array to be permuted in the same way */
    SCIP_Bool*            boolarray,          /**< SCIP_Bool array to be permuted in the same way */
    SCIP_DECL_SORTPTRCOMP((*ptrcomp)),        /**< data element comparator */
-   SCIP_Real*            weights,            /**< (optional), nonnegative weights array for weighted median, or NULL (all weights are equal to 1) */
-   SCIP_Real             capacity,           /**< the maximum capacity that is exceeded by the median */
+   SCIP_Real*            weights,            /**< (optional), nonnegative weights array for the critical item, or NULL (all weights are equal to one) */
+   SCIP_Real             capacity,           /**< the maximum capacity that is exceeded by the critical item */
    int                   len,                /**< length of arrays */
-   int*                  medianpos           /**< pointer to store the index of the weighted median, or NULL, if not needed */
+   int*                  medianpos           /**< pointer to store the index of the critical item, or NULL, if not needed */
    );
 
 
@@ -453,7 +453,7 @@ void SCIPselectPtrPtrInt(
    );
 
 
-/** partial sort of three joint arrays of pointers/pointers/ints, sorted by first array in non-decreasing order around the weighted median w.r.t. \p weights and capacity,
+/** partial sort of three joint arrays of pointers/pointers/ints, sorted by first array in non-decreasing order around the critical item w.r.t. \p weights and capacity,
  *  see \ref SelectionAlgorithms for more information.
  */
 SCIP_EXPORT
@@ -462,10 +462,10 @@ void SCIPselectWeightedPtrPtrInt(
    void**                ptrarray2,          /**< second pointer array to be permuted in the same way */
    int*                  intarray,           /**< int array to be permuted in the same way */
    SCIP_DECL_SORTPTRCOMP((*ptrcomp)),        /**< data element comparator */
-   SCIP_Real*            weights,            /**< (optional), nonnegative weights array for weighted median, or NULL (all weights are equal to 1) */
-   SCIP_Real             capacity,           /**< the maximum capacity that is exceeded by the median */
+   SCIP_Real*            weights,            /**< (optional), nonnegative weights array for the critical item, or NULL (all weights are equal to one) */
+   SCIP_Real             capacity,           /**< the maximum capacity that is exceeded by the critical item */
    int                   len,                /**< length of arrays */
-   int*                  medianpos           /**< pointer to store the index of the weighted median, or NULL, if not needed */
+   int*                  medianpos           /**< pointer to store the index of the critical item, or NULL, if not needed */
    );
 
 
@@ -483,7 +483,7 @@ void SCIPselectPtrPtrReal(
    );
 
 
-/** partial sort of three joint arrays of pointers/pointers/Reals, sorted by first array in non-decreasing order around the weighted median w.r.t. \p weights and capacity,
+/** partial sort of three joint arrays of pointers/pointers/Reals, sorted by first array in non-decreasing order around the critical item w.r.t. \p weights and capacity,
  *  see \ref SelectionAlgorithms for more information.
  */
 SCIP_EXPORT
@@ -492,10 +492,10 @@ void SCIPselectWeightedPtrPtrReal(
    void**                ptrarray2,          /**< second pointer array to be permuted in the same way */
    SCIP_Real*            realarray,          /**< SCIP_Real array to be permuted in the same way */
    SCIP_DECL_SORTPTRCOMP((*ptrcomp)),        /**< data element comparator */
-   SCIP_Real*            weights,            /**< (optional), nonnegative weights array for weighted median, or NULL (all weights are equal to 1) */
-   SCIP_Real             capacity,           /**< the maximum capacity that is exceeded by the median */
+   SCIP_Real*            weights,            /**< (optional), nonnegative weights array for the critical item, or NULL (all weights are equal to one) */
+   SCIP_Real             capacity,           /**< the maximum capacity that is exceeded by the critical item */
    int                   len,                /**< length of arrays */
-   int*                  medianpos           /**< pointer to store the index of the weighted median, or NULL, if not needed */
+   int*                  medianpos           /**< pointer to store the index of the critical item, or NULL, if not needed */
    );
 
 
@@ -514,7 +514,7 @@ void SCIPselectPtrPtrIntInt(
    );
 
 
-/** partial sort of four joint arrays of pointers/pointers/ints/ints, sorted by first array in non-decreasing order around the weighted median w.r.t. \p weights and capacity,
+/** partial sort of four joint arrays of pointers/pointers/ints/ints, sorted by first array in non-decreasing order around the critical item w.r.t. \p weights and capacity,
  *  see \ref SelectionAlgorithms for more information.
  */
 SCIP_EXPORT
@@ -524,10 +524,10 @@ void SCIPselectWeightedPtrPtrIntInt(
    int*                  intarray1,          /**< first int array to be permuted in the same way */
    int*                  intarray2,          /**< second int array to be permuted in the same way */
    SCIP_DECL_SORTPTRCOMP((*ptrcomp)),        /**< data element comparator */
-   SCIP_Real*            weights,            /**< (optional), nonnegative weights array for weighted median, or NULL (all weights are equal to 1) */
-   SCIP_Real             capacity,           /**< the maximum capacity that is exceeded by the median */
+   SCIP_Real*            weights,            /**< (optional), nonnegative weights array for the critical item, or NULL (all weights are equal to one) */
+   SCIP_Real             capacity,           /**< the maximum capacity that is exceeded by the critical item */
    int                   len,                /**< length of arrays */
-   int*                  medianpos           /**< pointer to store the index of the weighted median, or NULL, if not needed */
+   int*                  medianpos           /**< pointer to store the index of the critical item, or NULL, if not needed */
    );
 
 
@@ -546,7 +546,7 @@ void SCIPselectPtrRealIntInt(
    );
 
 
-/** partial sort of four joint arrays of pointers/Reals/ints/ints, sorted by first array in non-decreasing order around the weighted median w.r.t. \p weights and capacity,
+/** partial sort of four joint arrays of pointers/Reals/ints/ints, sorted by first array in non-decreasing order around the critical item w.r.t. \p weights and capacity,
  *  see \ref SelectionAlgorithms for more information.
  */
 SCIP_EXPORT
@@ -556,10 +556,10 @@ void SCIPselectWeightedPtrRealIntInt(
    int*                  intarray1,          /**< first int array to be permuted in the same way */
    int*                  intarray2,          /**< second int array to be permuted in the same way */
    SCIP_DECL_SORTPTRCOMP((*ptrcomp)),        /**< data element comparator */
-   SCIP_Real*            weights,            /**< (optional), nonnegative weights array for weighted median, or NULL (all weights are equal to 1) */
-   SCIP_Real             capacity,           /**< the maximum capacity that is exceeded by the median */
+   SCIP_Real*            weights,            /**< (optional), nonnegative weights array for the critical item, or NULL (all weights are equal to one) */
+   SCIP_Real             capacity,           /**< the maximum capacity that is exceeded by the critical item */
    int                   len,                /**< length of arrays */
-   int*                  medianpos           /**< pointer to store the index of the weighted median, or NULL, if not needed */
+   int*                  medianpos           /**< pointer to store the index of the critical item, or NULL, if not needed */
    );
 
 
@@ -578,7 +578,7 @@ void SCIPselectPtrPtrRealInt(
    );
 
 
-/** partial sort of four joint arrays of pointer/pointer/Reals/ints, sorted by first array in non-decreasing order around the weighted median w.r.t. \p weights and capacity,
+/** partial sort of four joint arrays of pointer/pointer/Reals/ints, sorted by first array in non-decreasing order around the critical item w.r.t. \p weights and capacity,
  *  see \ref SelectionAlgorithms for more information.
  */
 SCIP_EXPORT
@@ -588,10 +588,10 @@ void SCIPselectWeightedPtrPtrRealInt(
    SCIP_Real*            realarray,          /**< SCIP_Real array to be permuted in the same way */
    int*                  intarray,           /**< int array to be permuted in the same way */
    SCIP_DECL_SORTPTRCOMP((*ptrcomp)),        /**< data element comparator */
-   SCIP_Real*            weights,            /**< (optional), nonnegative weights array for weighted median, or NULL (all weights are equal to 1) */
-   SCIP_Real             capacity,           /**< the maximum capacity that is exceeded by the median */
+   SCIP_Real*            weights,            /**< (optional), nonnegative weights array for the critical item, or NULL (all weights are equal to one) */
+   SCIP_Real             capacity,           /**< the maximum capacity that is exceeded by the critical item */
    int                   len,                /**< length of arrays */
-   int*                  medianpos           /**< pointer to store the index of the weighted median, or NULL, if not needed */
+   int*                  medianpos           /**< pointer to store the index of the critical item, or NULL, if not needed */
    );
 
 
@@ -610,7 +610,7 @@ void SCIPselectPtrPtrRealBool(
    );
 
 
-/** partial sort of four joint arrays of pointer/pointer/Reals/Bools, sorted by first array in non-decreasing order around the weighted median w.r.t. \p weights and capacity,
+/** partial sort of four joint arrays of pointer/pointer/Reals/Bools, sorted by first array in non-decreasing order around the critical item w.r.t. \p weights and capacity,
  *  see \ref SelectionAlgorithms for more information.
  */
 SCIP_EXPORT
@@ -620,10 +620,10 @@ void SCIPselectWeightedPtrPtrRealBool(
    SCIP_Real*            realarray,          /**< SCIP_Real array to be permuted in the same way */
    SCIP_Bool*            boolarray,          /**< SCIP_Bool array to be permuted in the same way */
    SCIP_DECL_SORTPTRCOMP((*ptrcomp)),        /**< data element comparator */
-   SCIP_Real*            weights,            /**< (optional), nonnegative weights array for weighted median, or NULL (all weights are equal to 1) */
-   SCIP_Real             capacity,           /**< the maximum capacity that is exceeded by the median */
+   SCIP_Real*            weights,            /**< (optional), nonnegative weights array for the critical item, or NULL (all weights are equal to one) */
+   SCIP_Real             capacity,           /**< the maximum capacity that is exceeded by the critical item */
    int                   len,                /**< length of arrays */
-   int*                  medianpos           /**< pointer to store the index of the weighted median, or NULL, if not needed */
+   int*                  medianpos           /**< pointer to store the index of the critical item, or NULL, if not needed */
    );
 
 
@@ -642,7 +642,7 @@ void SCIPselectPtrPtrLongInt(
    );
 
 
-/** partial sort of four joint arrays of pointer/pointer/Longs/ints, sorted by first array in non-decreasing order around the weighted median w.r.t. \p weights and capacity,
+/** partial sort of four joint arrays of pointer/pointer/Longs/ints, sorted by first array in non-decreasing order around the critical item w.r.t. \p weights and capacity,
  *  see \ref SelectionAlgorithms for more information.
  */
 SCIP_EXPORT
@@ -652,10 +652,10 @@ void SCIPselectWeightedPtrPtrLongInt(
    SCIP_Longint*         longarray,          /**< SCIP_Longint array to be permuted in the same way */
    int*                  intarray,           /**< int array to be permuted in the same way */
    SCIP_DECL_SORTPTRCOMP((*ptrcomp)),        /**< data element comparator */
-   SCIP_Real*            weights,            /**< (optional), nonnegative weights array for weighted median, or NULL (all weights are equal to 1) */
-   SCIP_Real             capacity,           /**< the maximum capacity that is exceeded by the median */
+   SCIP_Real*            weights,            /**< (optional), nonnegative weights array for the critical item, or NULL (all weights are equal to one) */
+   SCIP_Real             capacity,           /**< the maximum capacity that is exceeded by the critical item */
    int                   len,                /**< length of arrays */
-   int*                  medianpos           /**< pointer to store the index of the weighted median, or NULL, if not needed */
+   int*                  medianpos           /**< pointer to store the index of the critical item, or NULL, if not needed */
    );
 
 
@@ -675,7 +675,7 @@ void SCIPselectPtrPtrLongIntInt(
    );
 
 
-/** partial sort of five joint arrays of pointer/pointer/Longs/ints/ints, sorted by first array in non-decreasing order around the weighted median w.r.t. \p weights and capacity,
+/** partial sort of five joint arrays of pointer/pointer/Longs/ints/ints, sorted by first array in non-decreasing order around the critical item w.r.t. \p weights and capacity,
  *  see \ref SelectionAlgorithms for more information.
  */
 SCIP_EXPORT
@@ -686,10 +686,10 @@ void SCIPselectWeightedPtrPtrLongIntInt(
    int*                  intarray1,          /**< first int array to be permuted in the same way */
    int*                  intarray2,          /**< second int array to be permuted in the same way */
    SCIP_DECL_SORTPTRCOMP((*ptrcomp)),        /**< data element comparator */
-   SCIP_Real*            weights,            /**< (optional), nonnegative weights array for weighted median, or NULL (all weights are equal to 1) */
-   SCIP_Real             capacity,           /**< the maximum capacity that is exceeded by the median */
+   SCIP_Real*            weights,            /**< (optional), nonnegative weights array for the critical item, or NULL (all weights are equal to one) */
+   SCIP_Real             capacity,           /**< the maximum capacity that is exceeded by the critical item */
    int                   len,                /**< length of arrays */
-   int*                  medianpos           /**< pointer to store the index of the weighted median, or NULL, if not needed */
+   int*                  medianpos           /**< pointer to store the index of the critical item, or NULL, if not needed */
    );
 
 
@@ -704,16 +704,16 @@ void SCIPselectReal(
    );
 
 
-/** partial sort an array of Reals in non-decreasing order around the weighted median w.r.t. \p weights and capacity,
+/** partial sort an array of Reals in non-decreasing order around the critical item w.r.t. \p weights and capacity,
  *  see \ref SelectionAlgorithms for more information.
  */
 SCIP_EXPORT
 void SCIPselectWeightedReal(
    SCIP_Real*            realarray,          /**< SCIP_Real array to be sorted */
-   SCIP_Real*            weights,            /**< (optional), nonnegative weights array for weighted median, or NULL (all weights are equal to 1) */
-   SCIP_Real             capacity,           /**< the maximum capacity that is exceeded by the median */
+   SCIP_Real*            weights,            /**< (optional), nonnegative weights array for the critical item, or NULL (all weights are equal to one) */
+   SCIP_Real             capacity,           /**< the maximum capacity that is exceeded by the critical item */
    int                   len,                /**< length of arrays */
-   int*                  medianpos           /**< pointer to store the index of the weighted median, or NULL, if not needed */
+   int*                  medianpos           /**< pointer to store the index of the critical item, or NULL, if not needed */
    );
 
 
@@ -729,17 +729,17 @@ void SCIPselectRealPtr(
    );
 
 
-/** partial sort of two joint arrays of Reals/pointers, sorted by first array in non-decreasing order around the weighted median w.r.t. \p weights and capacity,
+/** partial sort of two joint arrays of Reals/pointers, sorted by first array in non-decreasing order around the critical item w.r.t. \p weights and capacity,
  *  see \ref SelectionAlgorithms for more information.
  */
 SCIP_EXPORT
 void SCIPselectWeightedRealPtr(
    SCIP_Real*            realarray,          /**< SCIP_Real array to be sorted */
    void**                ptrarray,           /**< pointer array to be permuted in the same way */
-   SCIP_Real*            weights,            /**< (optional), nonnegative weights array for weighted median, or NULL (all weights are equal to 1) */
-   SCIP_Real             capacity,           /**< the maximum capacity that is exceeded by the median */
+   SCIP_Real*            weights,            /**< (optional), nonnegative weights array for the critical item, or NULL (all weights are equal to one) */
+   SCIP_Real             capacity,           /**< the maximum capacity that is exceeded by the critical item */
    int                   len,                /**< length of arrays */
-   int*                  medianpos           /**< pointer to store the index of the weighted median, or NULL, if not needed */
+   int*                  medianpos           /**< pointer to store the index of the critical item, or NULL, if not needed */
    );
 
 
@@ -755,17 +755,17 @@ void SCIPselectRealInt(
    );
 
 
-/** partial sort of two joint arrays of Reals/ints, sorted by first array in non-decreasing order around the weighted median w.r.t. \p weights and capacity,
+/** partial sort of two joint arrays of Reals/ints, sorted by first array in non-decreasing order around the critical item w.r.t. \p weights and capacity,
  *  see \ref SelectionAlgorithms for more information.
  */
 SCIP_EXPORT
 void SCIPselectWeightedRealInt(
    SCIP_Real*            realarray,          /**< SCIP_Real array to be sorted */
    int*                  intarray,           /**< int array to be permuted in the same way */
-   SCIP_Real*            weights,            /**< (optional), nonnegative weights array for weighted median, or NULL (all weights are equal to 1) */
-   SCIP_Real             capacity,           /**< the maximum capacity that is exceeded by the median */
+   SCIP_Real*            weights,            /**< (optional), nonnegative weights array for the critical item, or NULL (all weights are equal to one) */
+   SCIP_Real             capacity,           /**< the maximum capacity that is exceeded by the critical item */
    int                   len,                /**< length of arrays */
-   int*                  medianpos           /**< pointer to store the index of the weighted median, or NULL, if not needed */
+   int*                  medianpos           /**< pointer to store the index of the critical item, or NULL, if not needed */
    );
 
 
@@ -782,7 +782,7 @@ void SCIPselectRealIntInt(
    );
 
 
-/** partial sort of three joint arrays of Reals/ints/ints, sorted by first array in non-decreasing order around the weighted median w.r.t. \p weights and capacity,
+/** partial sort of three joint arrays of Reals/ints/ints, sorted by first array in non-decreasing order around the critical item w.r.t. \p weights and capacity,
  *  see \ref SelectionAlgorithms for more information.
  */
 SCIP_EXPORT
@@ -790,10 +790,10 @@ void SCIPselectWeightedRealIntInt(
    SCIP_Real*            realarray,          /**< SCIP_Real array to be sorted */
    int*                  intarray1,          /**< int array to be permuted in the same way */
    int*                  intarray2,          /**< int array to be permuted in the same way */
-   SCIP_Real*            weights,            /**< (optional), nonnegative weights array for weighted median, or NULL (all weights are equal to 1) */
-   SCIP_Real             capacity,           /**< the maximum capacity that is exceeded by the median */
+   SCIP_Real*            weights,            /**< (optional), nonnegative weights array for the critical item, or NULL (all weights are equal to one) */
+   SCIP_Real             capacity,           /**< the maximum capacity that is exceeded by the critical item */
    int                   len,                /**< length of arrays */
-   int*                  medianpos           /**< pointer to store the index of the weighted median, or NULL, if not needed */
+   int*                  medianpos           /**< pointer to store the index of the critical item, or NULL, if not needed */
    );
 
 
@@ -810,7 +810,7 @@ void SCIPselectRealBoolPtr(
    );
 
 
-/** partial sort of three joint arrays of Reals/Bools/Pointer, sorted by first array in non-decreasing order around the weighted median w.r.t. \p weights and capacity,
+/** partial sort of three joint arrays of Reals/Bools/Pointer, sorted by first array in non-decreasing order around the critical item w.r.t. \p weights and capacity,
  *  see \ref SelectionAlgorithms for more information.
  */
 SCIP_EXPORT
@@ -818,10 +818,10 @@ void SCIPselectWeightedRealBoolPtr(
    SCIP_Real*            realarray,          /**< SCIP_Real array to be sorted */
    SCIP_Bool*            boolarray,          /**< SCIP_Bool array to be permuted in the same way */
    void**                ptrarray,           /**< pointer array to be permuted in the same way */
-   SCIP_Real*            weights,            /**< (optional), nonnegative weights array for weighted median, or NULL (all weights are equal to 1) */
-   SCIP_Real             capacity,           /**< the maximum capacity that is exceeded by the median */
+   SCIP_Real*            weights,            /**< (optional), nonnegative weights array for the critical item, or NULL (all weights are equal to one) */
+   SCIP_Real             capacity,           /**< the maximum capacity that is exceeded by the critical item */
    int                   len,                /**< length of arrays */
-   int*                  medianpos           /**< pointer to store the index of the weighted median, or NULL, if not needed */
+   int*                  medianpos           /**< pointer to store the index of the critical item, or NULL, if not needed */
    );
 
 
@@ -838,7 +838,7 @@ void SCIPselectRealIntLong(
    );
 
 
-/** partial sort of three joint arrays of Reals/ints/Longs, sorted by first array in non-decreasing order around the weighted median w.r.t. \p weights and capacity,
+/** partial sort of three joint arrays of Reals/ints/Longs, sorted by first array in non-decreasing order around the critical item w.r.t. \p weights and capacity,
  *  see \ref SelectionAlgorithms for more information.
  */
 SCIP_EXPORT
@@ -846,10 +846,10 @@ void SCIPselectWeightedRealIntLong(
    SCIP_Real*            realarray,          /**< SCIP_Real array to be sorted */
    int*                  intarray,           /**< int array to be permuted in the same way */
    SCIP_Longint*         longarray,          /**< SCIP_Longint array to be permuted in the same way */
-   SCIP_Real*            weights,            /**< (optional), nonnegative weights array for weighted median, or NULL (all weights are equal to 1) */
-   SCIP_Real             capacity,           /**< the maximum capacity that is exceeded by the median */
+   SCIP_Real*            weights,            /**< (optional), nonnegative weights array for the critical item, or NULL (all weights are equal to one) */
+   SCIP_Real             capacity,           /**< the maximum capacity that is exceeded by the critical item */
    int                   len,                /**< length of arrays */
-   int*                  medianpos           /**< pointer to store the index of the weighted median, or NULL, if not needed */
+   int*                  medianpos           /**< pointer to store the index of the critical item, or NULL, if not needed */
    );
 
 
@@ -866,7 +866,7 @@ void SCIPselectRealIntPtr(
    );
 
 
-/** partial sort of three joint arrays of Reals/ints/Pointer, sorted by first array in non-decreasing order around the weighted median w.r.t. \p weights and capacity,
+/** partial sort of three joint arrays of Reals/ints/Pointer, sorted by first array in non-decreasing order around the critical item w.r.t. \p weights and capacity,
  *  see \ref SelectionAlgorithms for more information.
  */
 SCIP_EXPORT
@@ -874,10 +874,10 @@ void SCIPselectWeightedRealIntPtr(
    SCIP_Real*            realarray,          /**< SCIP_Real array to be sorted */
    int*                  intarray,           /**< int array to be permuted in the same way */
    void**                ptrarray,           /**< pointer array to be permuted in the same way */
-   SCIP_Real*            weights,            /**< (optional), nonnegative weights array for weighted median, or NULL (all weights are equal to 1) */
-   SCIP_Real             capacity,           /**< the maximum capacity that is exceeded by the median */
+   SCIP_Real*            weights,            /**< (optional), nonnegative weights array for the critical item, or NULL (all weights are equal to one) */
+   SCIP_Real             capacity,           /**< the maximum capacity that is exceeded by the critical item */
    int                   len,                /**< length of arrays */
-   int*                  medianpos           /**< pointer to store the index of the weighted median, or NULL, if not needed */
+   int*                  medianpos           /**< pointer to store the index of the critical item, or NULL, if not needed */
    );
 
 
@@ -894,7 +894,7 @@ void SCIPselectRealPtrPtr(
    );
 
 
-/** partial sort of three joint arrays of Reals/Pointer/Pointer, sorted by first array in non-decreasing order around the weighted median w.r.t. \p weights and capacity,
+/** partial sort of three joint arrays of Reals/Pointer/Pointer, sorted by first array in non-decreasing order around the critical item w.r.t. \p weights and capacity,
  *  see \ref SelectionAlgorithms for more information.
  */
 SCIP_EXPORT
@@ -902,10 +902,10 @@ void SCIPselectWeightedRealPtrPtr(
    SCIP_Real*            realarray,          /**< SCIP_Real array to be sorted */
    void**                ptrarray1,          /**< first pointer array to be permuted in the same way */
    void**                ptrarray2,          /**< second pointer array to be permuted in the same way */
-   SCIP_Real*            weights,            /**< (optional), nonnegative weights array for weighted median, or NULL (all weights are equal to 1) */
-   SCIP_Real             capacity,           /**< the maximum capacity that is exceeded by the median */
+   SCIP_Real*            weights,            /**< (optional), nonnegative weights array for the critical item, or NULL (all weights are equal to one) */
+   SCIP_Real             capacity,           /**< the maximum capacity that is exceeded by the critical item */
    int                   len,                /**< length of arrays */
-   int*                  medianpos           /**< pointer to store the index of the weighted median, or NULL, if not needed */
+   int*                  medianpos           /**< pointer to store the index of the critical item, or NULL, if not needed */
    );
 
 
@@ -922,7 +922,7 @@ void SCIPselectRealRealPtr(
    );
 
 
-/** partial sort of three joint arrays of Reals/Reals/Pointer, sorted by first array in non-decreasing order around the weighted median w.r.t. \p weights and capacity,
+/** partial sort of three joint arrays of Reals/Reals/Pointer, sorted by first array in non-decreasing order around the critical item w.r.t. \p weights and capacity,
  *  see \ref SelectionAlgorithms for more information.
  */
 SCIP_EXPORT
@@ -930,10 +930,10 @@ void SCIPselectWeightedRealRealPtr(
    SCIP_Real*            realarray1,         /**< first SCIP_Real array to be sorted */
    SCIP_Real*            realarray2,         /**< second  SCIP_Real array to be permuted in the same way */
    void**                ptrarray,           /**< pointer array to be permuted in the same way */
-   SCIP_Real*            weights,            /**< (optional), nonnegative weights array for weighted median, or NULL (all weights are equal to 1) */
-   SCIP_Real             capacity,           /**< the maximum capacity that is exceeded by the median */
+   SCIP_Real*            weights,            /**< (optional), nonnegative weights array for the critical item, or NULL (all weights are equal to one) */
+   SCIP_Real             capacity,           /**< the maximum capacity that is exceeded by the critical item */
    int                   len,                /**< length of arrays */
-   int*                  medianpos           /**< pointer to store the index of the weighted median, or NULL, if not needed */
+   int*                  medianpos           /**< pointer to store the index of the critical item, or NULL, if not needed */
    );
 
 
@@ -951,7 +951,7 @@ void SCIPselectRealPtrPtrInt(
    );
 
 
-/** partial sort of four joint arrays of Reals/pointers/pointers/ints, sorted by first array in non-decreasing order around the weighted median w.r.t. \p weights and capacity,
+/** partial sort of four joint arrays of Reals/pointers/pointers/ints, sorted by first array in non-decreasing order around the critical item w.r.t. \p weights and capacity,
  *  see \ref SelectionAlgorithms for more information.
  */
 SCIP_EXPORT
@@ -960,10 +960,10 @@ void SCIPselectWeightedRealPtrPtrInt(
    void**                ptrarray1,          /**< pointer array to be permuted in the same way */
    void**                ptrarray2,          /**< pointer array to be permuted in the same way */
    int*                  intarray,           /**< int array to be sorted */
-   SCIP_Real*            weights,            /**< (optional), nonnegative weights array for weighted median, or NULL (all weights are equal to 1) */
-   SCIP_Real             capacity,           /**< the maximum capacity that is exceeded by the median */
+   SCIP_Real*            weights,            /**< (optional), nonnegative weights array for the critical item, or NULL (all weights are equal to one) */
+   SCIP_Real             capacity,           /**< the maximum capacity that is exceeded by the critical item */
    int                   len,                /**< length of arrays */
-   int*                  medianpos           /**< pointer to store the index of the weighted median, or NULL, if not needed */
+   int*                  medianpos           /**< pointer to store the index of the critical item, or NULL, if not needed */
    );
 
 
@@ -982,7 +982,7 @@ void SCIPselectRealPtrPtrIntInt(
    );
 
 
-/** partial sort of five joint arrays of Reals/pointers/pointers/ints/ints, sorted by first array in non-decreasing order around the weighted median w.r.t. \p weights and capacity,
+/** partial sort of five joint arrays of Reals/pointers/pointers/ints/ints, sorted by first array in non-decreasing order around the critical item w.r.t. \p weights and capacity,
  *  see \ref SelectionAlgorithms for more information.
  */
 SCIP_EXPORT
@@ -992,10 +992,10 @@ void SCIPselectWeightedRealPtrPtrIntInt(
    void**                ptrarray2,          /**< pointer array to be permuted in the same way */
    int*                  intarray1,          /**< int array to be sorted */
    int*                  intarray2,          /**< int array to be sorted */
-   SCIP_Real*            weights,            /**< (optional), nonnegative weights array for weighted median, or NULL (all weights are equal to 1) */
-   SCIP_Real             capacity,           /**< the maximum capacity that is exceeded by the median */
+   SCIP_Real*            weights,            /**< (optional), nonnegative weights array for the critical item, or NULL (all weights are equal to one) */
+   SCIP_Real             capacity,           /**< the maximum capacity that is exceeded by the critical item */
    int                   len,                /**< length of arrays */
-   int*                  medianpos           /**< pointer to store the index of the weighted median, or NULL, if not needed */
+   int*                  medianpos           /**< pointer to store the index of the critical item, or NULL, if not needed */
    );
 
 
@@ -1013,7 +1013,7 @@ void SCIPselectRealLongRealInt(
    );
 
 
-/** partial sort of four joint arrays of Reals/Longs/Reals/ints, sorted by first array in non-decreasing order around the weighted median w.r.t. \p weights and capacity,
+/** partial sort of four joint arrays of Reals/Longs/Reals/ints, sorted by first array in non-decreasing order around the critical item w.r.t. \p weights and capacity,
  *  see \ref SelectionAlgorithms for more information.
  */
 SCIP_EXPORT
@@ -1022,10 +1022,10 @@ void SCIPselectWeightedRealLongRealInt(
    SCIP_Longint*         longarray,          /**< SCIP_Longint array to be permuted in the same way */
    SCIP_Real*            realarray3,         /**< SCIP_Real array to be permuted in the same way */
    int*                  intarray,           /**< int array  to be permuted in the same way */
-   SCIP_Real*            weights,            /**< (optional), nonnegative weights array for weighted median, or NULL (all weights are equal to 1) */
-   SCIP_Real             capacity,           /**< the maximum capacity that is exceeded by the median */
+   SCIP_Real*            weights,            /**< (optional), nonnegative weights array for the critical item, or NULL (all weights are equal to one) */
+   SCIP_Real             capacity,           /**< the maximum capacity that is exceeded by the critical item */
    int                   len,                /**< length of arrays */
-   int*                  medianpos           /**< pointer to store the index of the weighted median, or NULL, if not needed */
+   int*                  medianpos           /**< pointer to store the index of the critical item, or NULL, if not needed */
    );
 
 
@@ -1043,7 +1043,7 @@ void SCIPselectRealRealIntInt(
    );
 
 
-/** partial sort of four joint arrays of Reals/Reals/ints/ints, sorted by first array in non-decreasing order around the weighted median w.r.t. \p weights and capacity,
+/** partial sort of four joint arrays of Reals/Reals/ints/ints, sorted by first array in non-decreasing order around the critical item w.r.t. \p weights and capacity,
  *  see \ref SelectionAlgorithms for more information.
  */
 SCIP_EXPORT
@@ -1052,10 +1052,10 @@ void SCIPselectWeightedRealRealIntInt(
    SCIP_Real*            realarray2,         /**< SCIP_Real array to be permuted in the same way */
    int*                  intarray1,          /**< int array to be permuted in the same way */
    int*                  intarray2,          /**< int array to be permuted in the same way */
-   SCIP_Real*            weights,            /**< (optional), nonnegative weights array for weighted median, or NULL (all weights are equal to 1) */
-   SCIP_Real             capacity,           /**< the maximum capacity that is exceeded by the median */
+   SCIP_Real*            weights,            /**< (optional), nonnegative weights array for the critical item, or NULL (all weights are equal to one) */
+   SCIP_Real             capacity,           /**< the maximum capacity that is exceeded by the critical item */
    int                   len,                /**< length of arrays */
-   int*                  medianpos           /**< pointer to store the index of the weighted median, or NULL, if not needed */
+   int*                  medianpos           /**< pointer to store the index of the critical item, or NULL, if not needed */
    );
 
 
@@ -1073,7 +1073,7 @@ void SCIPselectRealRealRealInt(
    );
 
 
-/** partial sort of four joint arrays of Reals/Reals/Reals/ints, sorted by first array in non-decreasing order around the weighted median w.r.t. \p weights and capacity,
+/** partial sort of four joint arrays of Reals/Reals/Reals/ints, sorted by first array in non-decreasing order around the critical item w.r.t. \p weights and capacity,
  *  see \ref SelectionAlgorithms for more information.
  */
 SCIP_EXPORT
@@ -1082,10 +1082,10 @@ void SCIPselectWeightedRealRealRealInt(
    SCIP_Real*            realarray2,         /**< SCIP_Real array to be permuted in the same way */
    SCIP_Real*            realarray3,         /**< SCIP_Real array to be permuted in the same way */
    int*                  intarray,           /**< int array to be permuted in the same way */
-   SCIP_Real*            weights,            /**< (optional), nonnegative weights array for weighted median, or NULL (all weights are equal to 1) */
-   SCIP_Real             capacity,           /**< the maximum capacity that is exceeded by the median */
+   SCIP_Real*            weights,            /**< (optional), nonnegative weights array for the critical item, or NULL (all weights are equal to one) */
+   SCIP_Real             capacity,           /**< the maximum capacity that is exceeded by the critical item */
    int                   len,                /**< length of arrays */
-   int*                  medianpos           /**< pointer to store the index of the weighted median, or NULL, if not needed */
+   int*                  medianpos           /**< pointer to store the index of the critical item, or NULL, if not needed */
    );
 
 
@@ -1103,7 +1103,7 @@ void SCIPselectRealRealRealPtr(
    );
 
 
-/** partial sort of four joint arrays of Reals/Reals/Reals/pointers, sorted by first array in non-decreasing order around the weighted median w.r.t. \p weights and capacity,
+/** partial sort of four joint arrays of Reals/Reals/Reals/pointers, sorted by first array in non-decreasing order around the critical item w.r.t. \p weights and capacity,
  *  see \ref SelectionAlgorithms for more information.
  */
 SCIP_EXPORT
@@ -1112,10 +1112,10 @@ void SCIPselectWeightedRealRealRealPtr(
    SCIP_Real*            realarray2,         /**< SCIP_Real array to be permuted in the same way */
    SCIP_Real*            realarray3,         /**< SCIP_Real array to be permuted in the same way */
    void**                ptrarray,           /**< pointer array to be permuted in the same way */
-   SCIP_Real*            weights,            /**< (optional), nonnegative weights array for weighted median, or NULL (all weights are equal to 1) */
-   SCIP_Real             capacity,           /**< the maximum capacity that is exceeded by the median */
+   SCIP_Real*            weights,            /**< (optional), nonnegative weights array for the critical item, or NULL (all weights are equal to one) */
+   SCIP_Real             capacity,           /**< the maximum capacity that is exceeded by the critical item */
    int                   len,                /**< length of arrays */
-   int*                  medianpos           /**< pointer to store the index of the weighted median, or NULL, if not needed */
+   int*                  medianpos           /**< pointer to store the index of the critical item, or NULL, if not needed */
    );
 
 
@@ -1134,7 +1134,7 @@ void SCIPselectRealRealRealBoolPtr(
    );
 
 
-/** partial sort of five joint arrays of Reals/Reals/Reals/Bools/pointers, sorted by first array in non-decreasing order around the weighted median w.r.t. \p weights and capacity,
+/** partial sort of five joint arrays of Reals/Reals/Reals/Bools/pointers, sorted by first array in non-decreasing order around the critical item w.r.t. \p weights and capacity,
  *  see \ref SelectionAlgorithms for more information.
  */
 SCIP_EXPORT
@@ -1144,10 +1144,10 @@ void SCIPselectWeightedRealRealRealBoolPtr(
    SCIP_Real*            realarray3,         /**< SCIP_Real array to be permuted in the same way */
    SCIP_Bool*            boolarray,          /**< SCIP_Bool array to be permuted in the same way */
    void**                ptrarray,           /**< pointer array to be permuted in the same way */
-   SCIP_Real*            weights,            /**< (optional), nonnegative weights array for weighted median, or NULL (all weights are equal to 1) */
-   SCIP_Real             capacity,           /**< the maximum capacity that is exceeded by the median */
+   SCIP_Real*            weights,            /**< (optional), nonnegative weights array for the critical item, or NULL (all weights are equal to one) */
+   SCIP_Real             capacity,           /**< the maximum capacity that is exceeded by the critical item */
    int                   len,                /**< length of arrays */
-   int*                  medianpos           /**< pointer to store the index of the weighted median, or NULL, if not needed */
+   int*                  medianpos           /**< pointer to store the index of the critical item, or NULL, if not needed */
    );
 
 
@@ -1167,7 +1167,7 @@ void SCIPselectRealRealRealBoolBoolPtr(
    );
 
 
-/** partial sort of six joint arrays of Reals/Reals/Reals/Bools/Bools/pointers, sorted by first array in non-decreasing order around the weighted median w.r.t. \p weights and capacity,
+/** partial sort of six joint arrays of Reals/Reals/Reals/Bools/Bools/pointers, sorted by first array in non-decreasing order around the critical item w.r.t. \p weights and capacity,
  *  see \ref SelectionAlgorithms for more information.
  */
 SCIP_EXPORT
@@ -1178,10 +1178,10 @@ void SCIPselectWeightedRealRealRealBoolBoolPtr(
    SCIP_Bool*            boolarray1,         /**< SCIP_Bool array to be permuted in the same way */
    SCIP_Bool*            boolarray2,         /**< SCIP_Bool array to be permuted in the same way */
    void**                ptrarray,           /**< pointer array to be permuted in the same way */
-   SCIP_Real*            weights,            /**< (optional), nonnegative weights array for weighted median, or NULL (all weights are equal to 1) */
-   SCIP_Real             capacity,           /**< the maximum capacity that is exceeded by the median */
+   SCIP_Real*            weights,            /**< (optional), nonnegative weights array for the critical item, or NULL (all weights are equal to one) */
+   SCIP_Real             capacity,           /**< the maximum capacity that is exceeded by the critical item */
    int                   len,                /**< length of arrays */
-   int*                  medianpos           /**< pointer to store the index of the weighted median, or NULL, if not needed */
+   int*                  medianpos           /**< pointer to store the index of the critical item, or NULL, if not needed */
    );
 
 
@@ -1196,16 +1196,16 @@ void SCIPselectInt(
    );
 
 
-/** partial sort array of ints in non-decreasing order around the weighted median w.r.t. \p weights and capacity,
+/** partial sort array of ints in non-decreasing order around the critical item w.r.t. \p weights and capacity,
  *  see \ref SelectionAlgorithms for more information.
  */
 SCIP_EXPORT
 void SCIPselectWeightedInt(
    int*                  intarray,           /**< int array to be sorted */
-   SCIP_Real*            weights,            /**< (optional), nonnegative weights array for weighted median, or NULL (all weights are equal to 1) */
-   SCIP_Real             capacity,           /**< the maximum capacity that is exceeded by the median */
+   SCIP_Real*            weights,            /**< (optional), nonnegative weights array for the critical item, or NULL (all weights are equal to one) */
+   SCIP_Real             capacity,           /**< the maximum capacity that is exceeded by the critical item */
    int                   len,                /**< length of arrays */
-   int*                  medianpos           /**< pointer to store the index of the weighted median, or NULL, if not needed */
+   int*                  medianpos           /**< pointer to store the index of the critical item, or NULL, if not needed */
    );
 
 
@@ -1221,17 +1221,17 @@ void SCIPselectIntInt(
    );
 
 
-/** partial sort of two joint arrays of ints/ints, sorted by first array in non-decreasing order around the weighted median w.r.t. \p weights and capacity,
+/** partial sort of two joint arrays of ints/ints, sorted by first array in non-decreasing order around the critical item w.r.t. \p weights and capacity,
  *  see \ref SelectionAlgorithms for more information.
  */
 SCIP_EXPORT
 void SCIPselectWeightedIntInt(
    int*                  intarray1,          /**< int array to be sorted */
    int*                  intarray2,          /**< second int array to be permuted in the same way */
-   SCIP_Real*            weights,            /**< (optional), nonnegative weights array for weighted median, or NULL (all weights are equal to 1) */
-   SCIP_Real             capacity,           /**< the maximum capacity that is exceeded by the median */
+   SCIP_Real*            weights,            /**< (optional), nonnegative weights array for the critical item, or NULL (all weights are equal to one) */
+   SCIP_Real             capacity,           /**< the maximum capacity that is exceeded by the critical item */
    int                   len,                /**< length of arrays */
-   int*                  medianpos           /**< pointer to store the index of the weighted median, or NULL, if not needed */
+   int*                  medianpos           /**< pointer to store the index of the critical item, or NULL, if not needed */
    );
 
 
@@ -1247,17 +1247,17 @@ void SCIPselectIntPtr(
    );
 
 
-/** partial sort of two joint arrays of ints/pointers, sorted by first array in non-decreasing order around the weighted median w.r.t. \p weights and capacity,
+/** partial sort of two joint arrays of ints/pointers, sorted by first array in non-decreasing order around the critical item w.r.t. \p weights and capacity,
  *  see \ref SelectionAlgorithms for more information.
  */
 SCIP_EXPORT
 void SCIPselectWeightedIntPtr(
    int*                  intarray,           /**< int array to be sorted */
    void**                ptrarray,           /**< pointer array to be permuted in the same way */
-   SCIP_Real*            weights,            /**< (optional), nonnegative weights array for weighted median, or NULL (all weights are equal to 1) */
-   SCIP_Real             capacity,           /**< the maximum capacity that is exceeded by the median */
+   SCIP_Real*            weights,            /**< (optional), nonnegative weights array for the critical item, or NULL (all weights are equal to one) */
+   SCIP_Real             capacity,           /**< the maximum capacity that is exceeded by the critical item */
    int                   len,                /**< length of arrays */
-   int*                  medianpos           /**< pointer to store the index of the weighted median, or NULL, if not needed */
+   int*                  medianpos           /**< pointer to store the index of the critical item, or NULL, if not needed */
    );
 
 
@@ -1273,17 +1273,17 @@ void SCIPselectIntReal(
    );
 
 
-/** partial sort of two joint arrays of ints/reals, sorted by first array in non-decreasing order around the weighted median w.r.t. \p weights and capacity,
+/** partial sort of two joint arrays of ints/reals, sorted by first array in non-decreasing order around the critical item w.r.t. \p weights and capacity,
  *  see \ref SelectionAlgorithms for more information.
  */
 SCIP_EXPORT
 void SCIPselectWeightedIntReal(
    int*                  intarray,           /**< int array to be sorted */
    SCIP_Real*            realarray,          /**< real array to be permuted in the same way */
-   SCIP_Real*            weights,            /**< (optional), nonnegative weights array for weighted median, or NULL (all weights are equal to 1) */
-   SCIP_Real             capacity,           /**< the maximum capacity that is exceeded by the median */
+   SCIP_Real*            weights,            /**< (optional), nonnegative weights array for the critical item, or NULL (all weights are equal to one) */
+   SCIP_Real             capacity,           /**< the maximum capacity that is exceeded by the critical item */
    int                   len,                /**< length of arrays */
-   int*                  medianpos           /**< pointer to store the index of the weighted median, or NULL, if not needed */
+   int*                  medianpos           /**< pointer to store the index of the critical item, or NULL, if not needed */
    );
 
 
@@ -1300,7 +1300,7 @@ void SCIPselectIntIntInt(
    );
 
 
-/** partial sort of three joint arrays of ints/ints/ints, sorted by first array in non-decreasing order around the weighted median w.r.t. \p weights and capacity,
+/** partial sort of three joint arrays of ints/ints/ints, sorted by first array in non-decreasing order around the critical item w.r.t. \p weights and capacity,
  *  see \ref SelectionAlgorithms for more information.
  */
 SCIP_EXPORT
@@ -1308,10 +1308,10 @@ void SCIPselectWeightedIntIntInt(
    int*                  intarray1,          /**< int array to be sorted */
    int*                  intarray2,          /**< second int array to be permuted in the same way */
    int*                  intarray3,          /**< third int array to be permuted in the same way */
-   SCIP_Real*            weights,            /**< (optional), nonnegative weights array for weighted median, or NULL (all weights are equal to 1) */
-   SCIP_Real             capacity,           /**< the maximum capacity that is exceeded by the median */
+   SCIP_Real*            weights,            /**< (optional), nonnegative weights array for the critical item, or NULL (all weights are equal to one) */
+   SCIP_Real             capacity,           /**< the maximum capacity that is exceeded by the critical item */
    int                   len,                /**< length of arrays */
-   int*                  medianpos           /**< pointer to store the index of the weighted median, or NULL, if not needed */
+   int*                  medianpos           /**< pointer to store the index of the critical item, or NULL, if not needed */
    );
 
 
@@ -1328,7 +1328,7 @@ void SCIPselectIntIntLong(
    );
 
 
-/** partial sort of three joint arrays of ints/ints/Longints, sorted by first array in non-decreasing order around the weighted median w.r.t. \p weights and capacity,
+/** partial sort of three joint arrays of ints/ints/Longints, sorted by first array in non-decreasing order around the critical item w.r.t. \p weights and capacity,
  *  see \ref SelectionAlgorithms for more information.
  */
 SCIP_EXPORT
@@ -1336,10 +1336,10 @@ void SCIPselectWeightedIntIntLong(
    int*                  intarray1,          /**< int array to be sorted */
    int*                  intarray2,          /**< second int array to be permuted in the same way */
    SCIP_Longint*         longarray,          /**< SCIP_Longint array to be permuted in the same way */
-   SCIP_Real*            weights,            /**< (optional), nonnegative weights array for weighted median, or NULL (all weights are equal to 1) */
-   SCIP_Real             capacity,           /**< the maximum capacity that is exceeded by the median */
+   SCIP_Real*            weights,            /**< (optional), nonnegative weights array for the critical item, or NULL (all weights are equal to one) */
+   SCIP_Real             capacity,           /**< the maximum capacity that is exceeded by the critical item */
    int                   len,                /**< length of arrays */
-   int*                  medianpos           /**< pointer to store the index of the weighted median, or NULL, if not needed */
+   int*                  medianpos           /**< pointer to store the index of the critical item, or NULL, if not needed */
    );
 
 
@@ -1356,7 +1356,7 @@ void SCIPselectIntRealLong(
    );
 
 
-/** partial sort of three joint arrays of ints/ints/Longints, sorted by first array in non-decreasing order around the weighted median w.r.t. \p weights and capacity,
+/** partial sort of three joint arrays of ints/ints/Longints, sorted by first array in non-decreasing order around the critical item w.r.t. \p weights and capacity,
  *  see \ref SelectionAlgorithms for more information.
  */
 SCIP_EXPORT
@@ -1364,10 +1364,10 @@ void SCIPselectWeightedIntRealLong(
    int*                  intarray,           /**< int array to be sorted */
    SCIP_Real*            realarray,          /**< real array to be permuted in the same way */
    SCIP_Longint*         longarray,          /**< SCIP_Longint array to be permuted in the same way */
-   SCIP_Real*            weights,            /**< (optional), nonnegative weights array for weighted median, or NULL (all weights are equal to 1) */
-   SCIP_Real             capacity,           /**< the maximum capacity that is exceeded by the median */
+   SCIP_Real*            weights,            /**< (optional), nonnegative weights array for the critical item, or NULL (all weights are equal to one) */
+   SCIP_Real             capacity,           /**< the maximum capacity that is exceeded by the critical item */
    int                   len,                /**< length of arrays */
-   int*                  medianpos           /**< pointer to store the index of the weighted median, or NULL, if not needed */
+   int*                  medianpos           /**< pointer to store the index of the critical item, or NULL, if not needed */
    );
 
 
@@ -1410,7 +1410,7 @@ void SCIPselectIntIntPtrPtrInterval(
    int                   len                 /**< length of arrays */
    );
 
-/** partial sort of three joint arrays of ints/ints/pointers, sorted by first array in non-decreasing order around the weighted median w.r.t. \p weights and capacity,
+/** partial sort of three joint arrays of ints/ints/pointers, sorted by first array in non-decreasing order around the critical item w.r.t. \p weights and capacity,
  *  see \ref SelectionAlgorithms for more information.
  */
 SCIP_EXPORT
@@ -1418,13 +1418,13 @@ void SCIPselectWeightedIntIntPtr(
    int*                  intarray1,          /**< int array to be sorted */
    int*                  intarray2,          /**< second int array to be permuted in the same way */
    void**                ptrarray,           /**< pointer array to be permuted in the same way */
-   SCIP_Real*            weights,            /**< (optional), nonnegative weights array for weighted median, or NULL (all weights are equal to 1) */
-   SCIP_Real             capacity,           /**< the maximum capacity that is exceeded by the median */
+   SCIP_Real*            weights,            /**< (optional), nonnegative weights array for the critical item, or NULL (all weights are equal to one) */
+   SCIP_Real             capacity,           /**< the maximum capacity that is exceeded by the critical item */
    int                   len,                /**< length of arrays */
-   int*                  medianpos           /**< pointer to store the index of the weighted median, or NULL, if not needed */
+   int*                  medianpos           /**< pointer to store the index of the critical item, or NULL, if not needed */
    );
 
-/** partial sort of four joint arrays of ints/ints/pointers/pointers, sorted by first array in non-decreasing order around the weighted median w.r.t. \p weights and capacity,
+/** partial sort of four joint arrays of ints/ints/pointers/pointers, sorted by first array in non-decreasing order around the critical item w.r.t. \p weights and capacity,
  *  see \ref SelectionAlgorithms for more information.
  */
 SCIP_EXPORT
@@ -1433,13 +1433,13 @@ void SCIPselectWeightedIntIntPtrPtr(
    int*                  intarray2,          /**< second int array to be permuted in the same way */
    void**                ptrarray1,          /**< pointer array to be permuted in the same way */
    void**                ptrarray2,          /**< pointer array to be permuted in the same way */
-   SCIP_Real*            weights,            /**< (optional), nonnegative weights array for weighted median, or NULL (all weights are equal to 1) */
-   SCIP_Real             capacity,           /**< the maximum capacity that is exceeded by the median */
+   SCIP_Real*            weights,            /**< (optional), nonnegative weights array for the critical item, or NULL (all weights are equal to one) */
+   SCIP_Real             capacity,           /**< the maximum capacity that is exceeded by the critical item */
    int                   len,                /**< length of arrays */
-   int*                  medianpos           /**< pointer to store the index of the weighted median, or NULL, if not needed */
+   int*                  medianpos           /**< pointer to store the index of the critical item, or NULL, if not needed */
    );
 
-/** partial sort of five joint arrays of ints/ints/pointers/pointers/interval, sorted by first array in non-decreasing order around the weighted median w.r.t. \p weights and capacity,
+/** partial sort of five joint arrays of ints/ints/pointers/pointers/interval, sorted by first array in non-decreasing order around the critical item w.r.t. \p weights and capacity,
  *  see \ref SelectionAlgorithms for more information.
  */
 SCIP_EXPORT
@@ -1449,10 +1449,10 @@ void SCIPselectWeightedIntIntPtrPtrInterval(
    void**                ptrarray1,          /**< pointer array to be permuted in the same way */
    void**                ptrarray2,          /**< pointer array to be permuted in the same way */
    SCIP_INTERVAL*        intervalarray,      /**< interval array where an element is to be deleted */
-   SCIP_Real*            weights,            /**< (optional), nonnegative weights array for weighted median, or NULL (all weights are equal to 1) */
-   SCIP_Real             capacity,           /**< the maximum capacity that is exceeded by the median */
+   SCIP_Real*            weights,            /**< (optional), nonnegative weights array for the critical item, or NULL (all weights are equal to one) */
+   SCIP_Real             capacity,           /**< the maximum capacity that is exceeded by the critical item */
    int                   len,                /**< length of arrays */
-   int*                  medianpos           /**< pointer to store the index of the weighted median, or NULL, if not needed */
+   int*                  medianpos           /**< pointer to store the index of the critical item, or NULL, if not needed */
    );
 
 
@@ -1469,7 +1469,7 @@ void SCIPselectIntIntReal(
    );
 
 
-/** partial sort of three joint arrays of ints/ints/reals, sorted by first array in non-decreasing order around the weighted median w.r.t. \p weights and capacity,
+/** partial sort of three joint arrays of ints/ints/reals, sorted by first array in non-decreasing order around the critical item w.r.t. \p weights and capacity,
  *  see \ref SelectionAlgorithms for more information.
  */
 SCIP_EXPORT
@@ -1477,10 +1477,10 @@ void SCIPselectWeightedIntIntReal(
    int*                  intarray1,          /**< int array to be sorted */
    int*                  intarray2,          /**< second int array to be permuted in the same way */
    SCIP_Real*            realarray,          /**< SCIP_Real array to be permuted in the same way */
-   SCIP_Real*            weights,            /**< (optional), nonnegative weights array for weighted median, or NULL (all weights are equal to 1) */
-   SCIP_Real             capacity,           /**< the maximum capacity that is exceeded by the median */
+   SCIP_Real*            weights,            /**< (optional), nonnegative weights array for the critical item, or NULL (all weights are equal to one) */
+   SCIP_Real             capacity,           /**< the maximum capacity that is exceeded by the critical item */
    int                   len,                /**< length of arrays */
-   int*                  medianpos           /**< pointer to store the index of the weighted median, or NULL, if not needed */
+   int*                  medianpos           /**< pointer to store the index of the critical item, or NULL, if not needed */
    );
 
 
@@ -1497,7 +1497,7 @@ void SCIPselectIntPtrReal(
    );
 
 
-/** partial sort of three joint arrays of ints/pointers/reals, sorted by first array in non-decreasing order around the weighted median w.r.t. \p weights and capacity,
+/** partial sort of three joint arrays of ints/pointers/reals, sorted by first array in non-decreasing order around the critical item w.r.t. \p weights and capacity,
  *  see \ref SelectionAlgorithms for more information.
  */
 SCIP_EXPORT
@@ -1505,10 +1505,10 @@ void SCIPselectWeightedIntPtrReal(
    int*                  intarray,           /**< int array to be sorted */
    void**                ptrarray,           /**< pointer array to be permuted in the same way */
    SCIP_Real*            realarray,          /**< real array to be permuted in the same way */
-   SCIP_Real*            weights,            /**< (optional), nonnegative weights array for weighted median, or NULL (all weights are equal to 1) */
-   SCIP_Real             capacity,           /**< the maximum capacity that is exceeded by the median */
+   SCIP_Real*            weights,            /**< (optional), nonnegative weights array for the critical item, or NULL (all weights are equal to one) */
+   SCIP_Real             capacity,           /**< the maximum capacity that is exceeded by the critical item */
    int                   len,                /**< length of arrays */
-   int*                  medianpos           /**< pointer to store the index of the weighted median, or NULL, if not needed */
+   int*                  medianpos           /**< pointer to store the index of the critical item, or NULL, if not needed */
    );
 
 
@@ -1526,7 +1526,7 @@ void SCIPselectIntIntIntPtr(
    );
 
 
-/** partial sort of four joint arrays of ints/ints/ints/pointers, sorted by first array in non-decreasing order around the weighted median w.r.t. \p weights and capacity,
+/** partial sort of four joint arrays of ints/ints/ints/pointers, sorted by first array in non-decreasing order around the critical item w.r.t. \p weights and capacity,
  *  see \ref SelectionAlgorithms for more information.
  */
 SCIP_EXPORT
@@ -1535,10 +1535,10 @@ void SCIPselectWeightedIntIntIntPtr(
    int*                  intarray2,          /**< int array to be permuted in the same way */
    int*                  intarray3,          /**< int array to be permuted in the same way */
    void**                ptrarray,           /**< pointer array to be permuted in the same way */
-   SCIP_Real*            weights,            /**< (optional), nonnegative weights array for weighted median, or NULL (all weights are equal to 1) */
-   SCIP_Real             capacity,           /**< the maximum capacity that is exceeded by the median */
+   SCIP_Real*            weights,            /**< (optional), nonnegative weights array for the critical item, or NULL (all weights are equal to one) */
+   SCIP_Real             capacity,           /**< the maximum capacity that is exceeded by the critical item */
    int                   len,                /**< length of arrays */
-   int*                  medianpos           /**< pointer to store the index of the weighted median, or NULL, if not needed */
+   int*                  medianpos           /**< pointer to store the index of the critical item, or NULL, if not needed */
    );
 
 
@@ -1556,7 +1556,7 @@ void SCIPselectIntIntIntReal(
    );
 
 
-/** partial sort of four joint arrays of ints/ints/ints/reals, sorted by first array in non-decreasing order around the weighted median w.r.t. \p weights and capacity,
+/** partial sort of four joint arrays of ints/ints/ints/reals, sorted by first array in non-decreasing order around the critical item w.r.t. \p weights and capacity,
  *  see \ref SelectionAlgorithms for more information.
  */
 SCIP_EXPORT
@@ -1565,10 +1565,10 @@ void SCIPselectWeightedIntIntIntReal(
    int*                  intarray2,          /**< int array to be permuted in the same way */
    int*                  intarray3,          /**< int array to be permuted in the same way */
    SCIP_Real*            realarray,          /**< SCIP_Real array to be permuted in the same way */
-   SCIP_Real*            weights,            /**< (optional), nonnegative weights array for weighted median, or NULL (all weights are equal to 1) */
-   SCIP_Real             capacity,           /**< the maximum capacity that is exceeded by the median */
+   SCIP_Real*            weights,            /**< (optional), nonnegative weights array for the critical item, or NULL (all weights are equal to one) */
+   SCIP_Real             capacity,           /**< the maximum capacity that is exceeded by the critical item */
    int                   len,                /**< length of arrays */
-   int*                  medianpos           /**< pointer to store the index of the weighted median, or NULL, if not needed */
+   int*                  medianpos           /**< pointer to store the index of the critical item, or NULL, if not needed */
    );
 
 
@@ -1586,7 +1586,7 @@ void SCIPselectIntPtrIntReal(
    );
 
 
-/** partial sort of four joint arrays of ints/pointers/ints/reals, sorted by first array in non-decreasing order around the weighted median w.r.t. \p weights and capacity,
+/** partial sort of four joint arrays of ints/pointers/ints/reals, sorted by first array in non-decreasing order around the critical item w.r.t. \p weights and capacity,
  *  see \ref SelectionAlgorithms for more information.
  */
 SCIP_EXPORT
@@ -1595,10 +1595,10 @@ void SCIPselectWeightedIntPtrIntReal(
    void**                ptrarray,           /**< pointer array to be permuted in the same way */
    int*                  intarray2,          /**< int array to be permuted in the same way */
    SCIP_Real*            realarray,          /**< SCIP_Real array to be permuted in the same way */
-   SCIP_Real*            weights,            /**< (optional), nonnegative weights array for weighted median, or NULL (all weights are equal to 1) */
-   SCIP_Real             capacity,           /**< the maximum capacity that is exceeded by the median */
+   SCIP_Real*            weights,            /**< (optional), nonnegative weights array for the critical item, or NULL (all weights are equal to one) */
+   SCIP_Real             capacity,           /**< the maximum capacity that is exceeded by the critical item */
    int                   len,                /**< length of arrays */
-   int*                  medianpos           /**< pointer to store the index of the weighted median, or NULL, if not needed */
+   int*                  medianpos           /**< pointer to store the index of the critical item, or NULL, if not needed */
    );
 
 
@@ -1613,16 +1613,16 @@ void SCIPselectLong(
    );
 
 
-/** partial sort an array of Longints in non-decreasing order around the weighted median w.r.t. \p weights and capacity,
+/** partial sort an array of Longints in non-decreasing order around the critical item w.r.t. \p weights and capacity,
  *  see \ref SelectionAlgorithms for more information.
  */
 SCIP_EXPORT
 void SCIPselectWeightedLong(
    SCIP_Longint*         longarray,          /**< SCIP_Longint array to be sorted */
-   SCIP_Real*            weights,            /**< (optional), nonnegative weights array for weighted median, or NULL (all weights are equal to 1) */
-   SCIP_Real             capacity,           /**< the maximum capacity that is exceeded by the median */
+   SCIP_Real*            weights,            /**< (optional), nonnegative weights array for the critical item, or NULL (all weights are equal to one) */
+   SCIP_Real             capacity,           /**< the maximum capacity that is exceeded by the critical item */
    int                   len,                /**< length of arrays */
-   int*                  medianpos           /**< pointer to store the index of the weighted median, or NULL, if not needed */
+   int*                  medianpos           /**< pointer to store the index of the critical item, or NULL, if not needed */
    );
 
 
@@ -1638,17 +1638,17 @@ void SCIPselectLongPtr(
    );
 
 
-/** partial sort of two joint arrays of Long/pointer, sorted by the first array in non-decreasing order around the weighted median w.r.t. \p weights and capacity,
+/** partial sort of two joint arrays of Long/pointer, sorted by the first array in non-decreasing order around the critical item w.r.t. \p weights and capacity,
  *  see \ref SelectionAlgorithms for more information.
  */
 SCIP_EXPORT
 void SCIPselectWeightedLongPtr(
    SCIP_Longint*         longarray,          /**< SCIP_Longint array to be sorted */
    void**                ptrarray,           /**< pointer array to be permuted in the same way */
-   SCIP_Real*            weights,            /**< (optional), nonnegative weights array for weighted median, or NULL (all weights are equal to 1) */
-   SCIP_Real             capacity,           /**< the maximum capacity that is exceeded by the median */
+   SCIP_Real*            weights,            /**< (optional), nonnegative weights array for the critical item, or NULL (all weights are equal to one) */
+   SCIP_Real             capacity,           /**< the maximum capacity that is exceeded by the critical item */
    int                   len,                /**< length of arrays */
-   int*                  medianpos           /**< pointer to store the index of the weighted median, or NULL, if not needed */
+   int*                  medianpos           /**< pointer to store the index of the critical item, or NULL, if not needed */
    );
 
 
@@ -1665,7 +1665,7 @@ void SCIPselectLongPtrInt(
    );
 
 
-/** partial sort of three arrays of Long/pointer/ints, sorted by the first array in non-decreasing order around the weighted median w.r.t. \p weights and capacity,
+/** partial sort of three arrays of Long/pointer/ints, sorted by the first array in non-decreasing order around the critical item w.r.t. \p weights and capacity,
  *  see \ref SelectionAlgorithms for more information.
  */
 SCIP_EXPORT
@@ -1673,10 +1673,10 @@ void SCIPselectWeightedLongPtrInt(
    SCIP_Longint*         longarray,          /**< SCIP_Longint array to be sorted */
    void**                ptrarray,           /**< pointer array to be permuted in the same way */
    int*                  intarray,           /**< int array to be permuted in the same way */
-   SCIP_Real*            weights,            /**< (optional), nonnegative weights array for weighted median, or NULL (all weights are equal to 1) */
-   SCIP_Real             capacity,           /**< the maximum capacity that is exceeded by the median */
+   SCIP_Real*            weights,            /**< (optional), nonnegative weights array for the critical item, or NULL (all weights are equal to one) */
+   SCIP_Real             capacity,           /**< the maximum capacity that is exceeded by the critical item */
    int                   len,                /**< length of arrays */
-   int*                  medianpos           /**< pointer to store the index of the weighted median, or NULL, if not needed */
+   int*                  medianpos           /**< pointer to store the index of the critical item, or NULL, if not needed */
    );
 
 
@@ -1694,7 +1694,7 @@ void SCIPselectLongPtrRealBool(
    );
 
 
-/** partial sort of four arrays of Long/pointer/Real/Bool, sorted by the first array in non-decreasing order around the weighted median w.r.t. \p weights and capacity,
+/** partial sort of four arrays of Long/pointer/Real/Bool, sorted by the first array in non-decreasing order around the critical item w.r.t. \p weights and capacity,
  *  see \ref SelectionAlgorithms for more information.
  */
 SCIP_EXPORT
@@ -1703,10 +1703,10 @@ void SCIPselectWeightedLongPtrRealBool(
    void**                ptrarray,           /**< pointer array to be permuted in the same way */
    SCIP_Real*            realarray,          /**< SCIP_Real array to be permuted in the same way */
    SCIP_Bool*            boolarray,          /**< SCIP_Bool array to be permuted in the same way */
-   SCIP_Real*            weights,            /**< (optional), nonnegative weights array for weighted median, or NULL (all weights are equal to 1) */
-   SCIP_Real             capacity,           /**< the maximum capacity that is exceeded by the median */
+   SCIP_Real*            weights,            /**< (optional), nonnegative weights array for the critical item, or NULL (all weights are equal to one) */
+   SCIP_Real             capacity,           /**< the maximum capacity that is exceeded by the critical item */
    int                   len,                /**< length of arrays */
-   int*                  medianpos           /**< pointer to store the index of the weighted median, or NULL, if not needed */
+   int*                  medianpos           /**< pointer to store the index of the critical item, or NULL, if not needed */
    );
 
 
@@ -1725,7 +1725,7 @@ void SCIPselectLongPtrRealRealBool(
    );
 
 
-/** partial sort of five arrays of Long/pointer/Real/Real/Bool, sorted by the first array in non-decreasing order around the weighted median w.r.t. \p weights and capacity,
+/** partial sort of five arrays of Long/pointer/Real/Real/Bool, sorted by the first array in non-decreasing order around the critical item w.r.t. \p weights and capacity,
  *  see \ref SelectionAlgorithms for more information.
  */
 SCIP_EXPORT
@@ -1735,10 +1735,10 @@ void SCIPselectWeightedLongPtrRealRealBool(
    SCIP_Real*            realarray,          /**< first SCIP_Real array to be permuted in the same way */
    SCIP_Real*            realarray2,         /**< second SCIP_Real array to be permuted in the same way */
    SCIP_Bool*            boolarray,          /**< SCIP_Bool array to be permuted in the same way */
-   SCIP_Real*            weights,            /**< (optional), nonnegative weights array for weighted median, or NULL (all weights are equal to 1) */
-   SCIP_Real             capacity,           /**< the maximum capacity that is exceeded by the median */
+   SCIP_Real*            weights,            /**< (optional), nonnegative weights array for the critical item, or NULL (all weights are equal to one) */
+   SCIP_Real             capacity,           /**< the maximum capacity that is exceeded by the critical item */
    int                   len,                /**< length of arrays */
-   int*                  medianpos           /**< pointer to store the index of the weighted median, or NULL, if not needed */
+   int*                  medianpos           /**< pointer to store the index of the critical item, or NULL, if not needed */
    );
 
 
@@ -1758,7 +1758,7 @@ void SCIPselectLongPtrRealRealIntBool(
    );
 
 
-/** partial sort of six arrays of Long/pointer/Real/Real/int/Bool, sorted by the first array in non-decreasing order around the weighted median w.r.t. \p weights and capacity,
+/** partial sort of six arrays of Long/pointer/Real/Real/int/Bool, sorted by the first array in non-decreasing order around the critical item w.r.t. \p weights and capacity,
  *  see \ref SelectionAlgorithms for more information.
  */
 SCIP_EXPORT
@@ -1769,10 +1769,10 @@ void SCIPselectWeightedLongPtrRealRealIntBool(
    SCIP_Real*            realarray2,         /**< second SCIP_Real array to be permuted in the same way */
    int*                  intarray,           /**< int array to be permuted in the same way */
    SCIP_Bool*            boolarray,          /**< SCIP_Bool array to be permuted in the same way */
-   SCIP_Real*            weights,            /**< (optional), nonnegative weights array for weighted median, or NULL (all weights are equal to 1) */
-   SCIP_Real             capacity,           /**< the maximum capacity that is exceeded by the median */
+   SCIP_Real*            weights,            /**< (optional), nonnegative weights array for the critical item, or NULL (all weights are equal to one) */
+   SCIP_Real             capacity,           /**< the maximum capacity that is exceeded by the critical item */
    int                   len,                /**< length of arrays */
-   int*                  medianpos           /**< pointer to store the index of the weighted median, or NULL, if not needed */
+   int*                  medianpos           /**< pointer to store the index of the critical item, or NULL, if not needed */
    );
 
 
@@ -1790,7 +1790,7 @@ void SCIPselectLongPtrPtrInt(
    );
 
 
-/** partial sort of four joint arrays of Long/pointer/pointer/ints, sorted by first array in non-decreasing order around the weighted median w.r.t. \p weights and capacity,
+/** partial sort of four joint arrays of Long/pointer/pointer/ints, sorted by first array in non-decreasing order around the critical item w.r.t. \p weights and capacity,
  *  see \ref SelectionAlgorithms for more information.
  */
 SCIP_EXPORT
@@ -1799,10 +1799,10 @@ void SCIPselectWeightedLongPtrPtrInt(
    void**                ptrarray1,          /**< first pointer array to be permuted in the same way */
    void**                ptrarray2,          /**< second pointer array to be permuted in the same way */
    int*                  intarray,           /**< int array to be permuted in the same way */
-   SCIP_Real*            weights,            /**< (optional), nonnegative weights array for weighted median, or NULL (all weights are equal to 1) */
-   SCIP_Real             capacity,           /**< the maximum capacity that is exceeded by the median */
+   SCIP_Real*            weights,            /**< (optional), nonnegative weights array for the critical item, or NULL (all weights are equal to one) */
+   SCIP_Real             capacity,           /**< the maximum capacity that is exceeded by the critical item */
    int                   len,                /**< length of arrays */
-   int*                  medianpos           /**< pointer to store the index of the weighted median, or NULL, if not needed */
+   int*                  medianpos           /**< pointer to store the index of the critical item, or NULL, if not needed */
    );
 
 
@@ -1821,7 +1821,7 @@ void SCIPselectLongPtrPtrIntInt(
    );
 
 
-/** partial sort of five joint arrays of Long/pointer/pointer/ints/ints, sorted by first array in non-decreasing order around the weighted median w.r.t. \p weights and capacity,
+/** partial sort of five joint arrays of Long/pointer/pointer/ints/ints, sorted by first array in non-decreasing order around the critical item w.r.t. \p weights and capacity,
  *  see \ref SelectionAlgorithms for more information.
  */
 SCIP_EXPORT
@@ -1831,10 +1831,10 @@ void SCIPselectWeightedLongPtrPtrIntInt(
    void**                ptrarray2,          /**< second pointer array to be permuted in the same way */
    int*                  intarray1,          /**< first int array to be permuted in the same way */
    int*                  intarray2,          /**< second int array to be permuted in the same way */
-   SCIP_Real*            weights,            /**< (optional), nonnegative weights array for weighted median, or NULL (all weights are equal to 1) */
-   SCIP_Real             capacity,           /**< the maximum capacity that is exceeded by the median */
+   SCIP_Real*            weights,            /**< (optional), nonnegative weights array for the critical item, or NULL (all weights are equal to one) */
+   SCIP_Real             capacity,           /**< the maximum capacity that is exceeded by the critical item */
    int                   len,                /**< length of arrays */
-   int*                  medianpos           /**< pointer to store the index of the weighted median, or NULL, if not needed */
+   int*                  medianpos           /**< pointer to store the index of the critical item, or NULL, if not needed */
    );
 
 
@@ -1853,7 +1853,7 @@ void SCIPselectLongPtrPtrBoolInt(
    );
 
 
-/** partial sort of five joint arrays of Long/pointer/pointer/Bool/ints, sorted by first array in non-decreasing order around the weighted median w.r.t. \p weights and capacity,
+/** partial sort of five joint arrays of Long/pointer/pointer/Bool/ints, sorted by first array in non-decreasing order around the critical item w.r.t. \p weights and capacity,
  *  see \ref SelectionAlgorithms for more information.
  */
 SCIP_EXPORT
@@ -1863,10 +1863,10 @@ void SCIPselectWeightedLongPtrPtrBoolInt(
    void**                ptrarray2,          /**< second pointer array to be permuted in the same way */
    SCIP_Bool*            boolarray,          /**< SCIP_Bool array to be permuted in the same way */
    int*                  intarray,           /**< int array to be sorted */
-   SCIP_Real*            weights,            /**< (optional), nonnegative weights array for weighted median, or NULL (all weights are equal to 1) */
-   SCIP_Real             capacity,           /**< the maximum capacity that is exceeded by the median */
+   SCIP_Real*            weights,            /**< (optional), nonnegative weights array for the critical item, or NULL (all weights are equal to one) */
+   SCIP_Real             capacity,           /**< the maximum capacity that is exceeded by the critical item */
    int                   len,                /**< length of arrays */
-   int*                  medianpos           /**< pointer to store the index of the weighted median, or NULL, if not needed */
+   int*                  medianpos           /**< pointer to store the index of the critical item, or NULL, if not needed */
    );
 
 
@@ -1886,7 +1886,7 @@ void SCIPselectPtrIntIntBoolBool(
    );
 
 
-/** partial sort of five joint arrays of pointer/ints/ints/Bool/Bool, sorted by first array in non-decreasing order around the weighted median w.r.t. \p weights and capacity,
+/** partial sort of five joint arrays of pointer/ints/ints/Bool/Bool, sorted by first array in non-decreasing order around the critical item w.r.t. \p weights and capacity,
  *  see \ref SelectionAlgorithms for more information.
  */
 SCIP_EXPORT
@@ -1897,10 +1897,10 @@ void SCIPselectWeightedPtrIntIntBoolBool(
    SCIP_Bool*            boolarray1,         /**< first SCIP_Bool array to be permuted in the same way */
    SCIP_Bool*            boolarray2,         /**< second SCIP_Bool array to be permuted in the same way */
    SCIP_DECL_SORTPTRCOMP((*ptrcomp)),        /**< data element comparator */
-   SCIP_Real*            weights,            /**< (optional), nonnegative weights array for weighted median, or NULL (all weights are equal to 1) */
-   SCIP_Real             capacity,           /**< the maximum capacity that is exceeded by the median */
+   SCIP_Real*            weights,            /**< (optional), nonnegative weights array for the critical item, or NULL (all weights are equal to one) */
+   SCIP_Real             capacity,           /**< the maximum capacity that is exceeded by the critical item */
    int                   len,                /**< length of arrays */
-   int*                  medianpos           /**< pointer to store the index of the weighted median, or NULL, if not needed */
+   int*                  medianpos           /**< pointer to store the index of the critical item, or NULL, if not needed */
    );
 
 
@@ -1920,7 +1920,7 @@ void SCIPselectIntPtrIntIntBoolBool(
    );
 
 
-/** partial sort of six joint arrays of ints/pointer/ints/ints/Bool/Bool, sorted by first array in non-decreasing order around the weighted median w.r.t. \p weights and capacity,
+/** partial sort of six joint arrays of ints/pointer/ints/ints/Bool/Bool, sorted by first array in non-decreasing order around the critical item w.r.t. \p weights and capacity,
  *  see \ref SelectionAlgorithms for more information.
  */
 SCIP_EXPORT
@@ -1931,10 +1931,10 @@ void SCIPselectWeightedIntPtrIntIntBoolBool(
    int*                  intarray3,          /**< thrid int array to be permuted in the same way */
    SCIP_Bool*            boolarray1,         /**< first SCIP_Bool array to be permuted in the same way */
    SCIP_Bool*            boolarray2,         /**< second SCIP_Bool array to be permuted in the same way */
-   SCIP_Real*            weights,            /**< (optional), nonnegative weights array for weighted median, or NULL (all weights are equal to 1) */
-   SCIP_Real             capacity,           /**< the maximum capacity that is exceeded by the median */
+   SCIP_Real*            weights,            /**< (optional), nonnegative weights array for the critical item, or NULL (all weights are equal to one) */
+   SCIP_Real             capacity,           /**< the maximum capacity that is exceeded by the critical item */
    int                   len,                /**< length of arrays */
-   int*                  medianpos           /**< pointer to store the index of the weighted median, or NULL, if not needed */
+   int*                  medianpos           /**< pointer to store the index of the critical item, or NULL, if not needed */
    );
 
 
@@ -1951,7 +1951,7 @@ void SCIPselectDownInd(
    );
 
 
-/** partial sort an index array in non-increasing order around the weighted median w.r.t. \p weights and capacity,
+/** partial sort an index array in non-increasing order around the critical item w.r.t. \p weights and capacity,
  *  see \ref SelectionAlgorithms for more information.
  */
 SCIP_EXPORT
@@ -1959,10 +1959,10 @@ void SCIPselectWeightedDownInd(
    int*                  indarray,           /**< pointer to the index array to be sorted */
    SCIP_DECL_SORTINDCOMP((*indcomp)),        /**< data element comparator */
    void*                 dataptr,            /**< pointer to data field that is given to the external compare method */
-   SCIP_Real*            weights,            /**< (optional), nonnegative weights array for weighted median, or NULL (all weights are equal to 1) */
-   SCIP_Real             capacity,           /**< the maximum capacity that is exceeded by the median */
+   SCIP_Real*            weights,            /**< (optional), nonnegative weights array for the critical item, or NULL (all weights are equal to one) */
+   SCIP_Real             capacity,           /**< the maximum capacity that is exceeded by the critical item */
    int                   len,                /**< length of arrays */
-   int*                  medianpos           /**< pointer to store the index of the weighted median, or NULL, if not needed */
+   int*                  medianpos           /**< pointer to store the index of the critical item, or NULL, if not needed */
    );
 
 
@@ -1978,17 +1978,17 @@ void SCIPselectDownPtr(
    );
 
 
-/** partial sort of an array of pointers in non-increasing order around the weighted median w.r.t. \p weights and capacity,
+/** partial sort of an array of pointers in non-increasing order around the critical item w.r.t. \p weights and capacity,
  *  see \ref SelectionAlgorithms for more information.
  */
 SCIP_EXPORT
 void SCIPselectWeightedDownPtr(
    void**                ptrarray,           /**< pointer array to be sorted */
    SCIP_DECL_SORTPTRCOMP((*ptrcomp)),        /**< data element comparator */
-   SCIP_Real*            weights,            /**< (optional), nonnegative weights array for weighted median, or NULL (all weights are equal to 1) */
-   SCIP_Real             capacity,           /**< the maximum capacity that is exceeded by the median */
+   SCIP_Real*            weights,            /**< (optional), nonnegative weights array for the critical item, or NULL (all weights are equal to one) */
+   SCIP_Real             capacity,           /**< the maximum capacity that is exceeded by the critical item */
    int                   len,                /**< length of arrays */
-   int*                  medianpos           /**< pointer to store the index of the weighted median, or NULL, if not needed */
+   int*                  medianpos           /**< pointer to store the index of the critical item, or NULL, if not needed */
    );
 
 
@@ -2005,7 +2005,7 @@ void SCIPselectDownPtrPtr(
    );
 
 
-/** partial sort of two joint arrays of pointers/pointers, sorted by first array in non-increasing order around the weighted median w.r.t. \p weights and capacity,
+/** partial sort of two joint arrays of pointers/pointers, sorted by first array in non-increasing order around the critical item w.r.t. \p weights and capacity,
  *  see \ref SelectionAlgorithms for more information.
  */
 SCIP_EXPORT
@@ -2013,10 +2013,10 @@ void SCIPselectWeightedDownPtrPtr(
    void**                ptrarray1,          /**< first pointer array to be sorted */
    void**                ptrarray2,          /**< second pointer array to be permuted in the same way */
    SCIP_DECL_SORTPTRCOMP((*ptrcomp)),        /**< data element comparator */
-   SCIP_Real*            weights,            /**< (optional), nonnegative weights array for weighted median, or NULL (all weights are equal to 1) */
-   SCIP_Real             capacity,           /**< the maximum capacity that is exceeded by the median */
+   SCIP_Real*            weights,            /**< (optional), nonnegative weights array for the critical item, or NULL (all weights are equal to one) */
+   SCIP_Real             capacity,           /**< the maximum capacity that is exceeded by the critical item */
    int                   len,                /**< length of arrays */
-   int*                  medianpos           /**< pointer to store the index of the weighted median, or NULL, if not needed */
+   int*                  medianpos           /**< pointer to store the index of the critical item, or NULL, if not needed */
    );
 
 
@@ -2033,7 +2033,7 @@ void SCIPselectDownPtrReal(
    );
 
 
-/** partial sort of two joint arrays of pointers/Reals, sorted by first array in non-increasing order around the weighted median w.r.t. \p weights and capacity,
+/** partial sort of two joint arrays of pointers/Reals, sorted by first array in non-increasing order around the critical item w.r.t. \p weights and capacity,
  *  see \ref SelectionAlgorithms for more information.
  */
 SCIP_EXPORT
@@ -2041,10 +2041,10 @@ void SCIPselectWeightedDownPtrReal(
    void**                ptrarray,           /**< pointer array to be sorted */
    SCIP_Real*            realarray,          /**< SCIP_Real array to be permuted in the same way */
    SCIP_DECL_SORTPTRCOMP((*ptrcomp)),        /**< data element comparator */
-   SCIP_Real*            weights,            /**< (optional), nonnegative weights array for weighted median, or NULL (all weights are equal to 1) */
-   SCIP_Real             capacity,           /**< the maximum capacity that is exceeded by the median */
+   SCIP_Real*            weights,            /**< (optional), nonnegative weights array for the critical item, or NULL (all weights are equal to one) */
+   SCIP_Real             capacity,           /**< the maximum capacity that is exceeded by the critical item */
    int                   len,                /**< length of arrays */
-   int*                  medianpos           /**< pointer to store the index of the weighted median, or NULL, if not needed */
+   int*                  medianpos           /**< pointer to store the index of the critical item, or NULL, if not needed */
    );
 
 
@@ -2061,7 +2061,7 @@ void SCIPselectDownPtrInt(
    );
 
 
-/** partial sort of two joint arrays of pointers/ints, sorted by first array in non-increasing order around the weighted median w.r.t. \p weights and capacity,
+/** partial sort of two joint arrays of pointers/ints, sorted by first array in non-increasing order around the critical item w.r.t. \p weights and capacity,
  *  see \ref SelectionAlgorithms for more information.
  */
 SCIP_EXPORT
@@ -2069,10 +2069,10 @@ void SCIPselectWeightedDownPtrInt(
    void**                ptrarray,           /**< pointer array to be sorted */
    int*                  intarray,           /**< int array to be permuted in the same way */
    SCIP_DECL_SORTPTRCOMP((*ptrcomp)),        /**< data element comparator */
-   SCIP_Real*            weights,            /**< (optional), nonnegative weights array for weighted median, or NULL (all weights are equal to 1) */
-   SCIP_Real             capacity,           /**< the maximum capacity that is exceeded by the median */
+   SCIP_Real*            weights,            /**< (optional), nonnegative weights array for the critical item, or NULL (all weights are equal to one) */
+   SCIP_Real             capacity,           /**< the maximum capacity that is exceeded by the critical item */
    int                   len,                /**< length of arrays */
-   int*                  medianpos           /**< pointer to store the index of the weighted median, or NULL, if not needed */
+   int*                  medianpos           /**< pointer to store the index of the critical item, or NULL, if not needed */
    );
 
 
@@ -2089,7 +2089,7 @@ void SCIPselectDownPtrBool(
    );
 
 
-/** partial sort of two joint arrays of pointers/Bools, sorted by first array in non-increasing order around the weighted median w.r.t. \p weights and capacity,
+/** partial sort of two joint arrays of pointers/Bools, sorted by first array in non-increasing order around the critical item w.r.t. \p weights and capacity,
  *  see \ref SelectionAlgorithms for more information.
  */
 SCIP_EXPORT
@@ -2097,10 +2097,10 @@ void SCIPselectWeightedDownPtrBool(
    void**                ptrarray,           /**< pointer array to be sorted */
    SCIP_Bool*            boolarray,          /**< SCIP_Bool array to be permuted in the same way */
    SCIP_DECL_SORTPTRCOMP((*ptrcomp)),        /**< data element comparator */
-   SCIP_Real*            weights,            /**< (optional), nonnegative weights array for weighted median, or NULL (all weights are equal to 1) */
-   SCIP_Real             capacity,           /**< the maximum capacity that is exceeded by the median */
+   SCIP_Real*            weights,            /**< (optional), nonnegative weights array for the critical item, or NULL (all weights are equal to one) */
+   SCIP_Real             capacity,           /**< the maximum capacity that is exceeded by the critical item */
    int                   len,                /**< length of arrays */
-   int*                  medianpos           /**< pointer to store the index of the weighted median, or NULL, if not needed */
+   int*                  medianpos           /**< pointer to store the index of the critical item, or NULL, if not needed */
    );
 
 
@@ -2118,7 +2118,7 @@ void SCIPselectDownPtrIntInt(
    );
 
 
-/** partial sort of three joint arrays of pointers/ints/ints, sorted by first array in non-increasing order around the weighted median w.r.t. \p weights and capacity,
+/** partial sort of three joint arrays of pointers/ints/ints, sorted by first array in non-increasing order around the critical item w.r.t. \p weights and capacity,
  *  see \ref SelectionAlgorithms for more information.
  */
 SCIP_EXPORT
@@ -2127,10 +2127,10 @@ void SCIPselectWeightedDownPtrIntInt(
    int*                  intarray1,          /**< first int array to be permuted in the same way */
    int*                  intarray2,          /**< second int array to be permuted in the same way */
    SCIP_DECL_SORTPTRCOMP((*ptrcomp)),        /**< data element comparator */
-   SCIP_Real*            weights,            /**< (optional), nonnegative weights array for weighted median, or NULL (all weights are equal to 1) */
-   SCIP_Real             capacity,           /**< the maximum capacity that is exceeded by the median */
+   SCIP_Real*            weights,            /**< (optional), nonnegative weights array for the critical item, or NULL (all weights are equal to one) */
+   SCIP_Real             capacity,           /**< the maximum capacity that is exceeded by the critical item */
    int                   len,                /**< length of arrays */
-   int*                  medianpos           /**< pointer to store the index of the weighted median, or NULL, if not needed */
+   int*                  medianpos           /**< pointer to store the index of the critical item, or NULL, if not needed */
    );
 
 
@@ -2148,7 +2148,7 @@ void SCIPselectDownPtrRealInt(
    );
 
 
-/** partial sort of three joint arrays of pointers/Reals/ints, sorted by first array in non-increasing order around the weighted median w.r.t. \p weights and capacity,
+/** partial sort of three joint arrays of pointers/Reals/ints, sorted by first array in non-increasing order around the critical item w.r.t. \p weights and capacity,
  *  see \ref SelectionAlgorithms for more information.
  */
 SCIP_EXPORT
@@ -2157,10 +2157,10 @@ void SCIPselectWeightedDownPtrRealInt(
    SCIP_Real*            realarray,          /**< SCIP_Real array to be permuted in the same way */
    int*                  intarray,           /**< int array to be permuted in the same way */
    SCIP_DECL_SORTPTRCOMP((*ptrcomp)),        /**< data element comparator */
-   SCIP_Real*            weights,            /**< (optional), nonnegative weights array for weighted median, or NULL (all weights are equal to 1) */
-   SCIP_Real             capacity,           /**< the maximum capacity that is exceeded by the median */
+   SCIP_Real*            weights,            /**< (optional), nonnegative weights array for the critical item, or NULL (all weights are equal to one) */
+   SCIP_Real             capacity,           /**< the maximum capacity that is exceeded by the critical item */
    int                   len,                /**< length of arrays */
-   int*                  medianpos           /**< pointer to store the index of the weighted median, or NULL, if not needed */
+   int*                  medianpos           /**< pointer to store the index of the critical item, or NULL, if not needed */
    );
 
 
@@ -2178,7 +2178,7 @@ void SCIPselectDownPtrRealBool(
    );
 
 
-/** partial sort of three joint arrays of pointers/Reals/Bools, sorted by first array in non-increasing order around the weighted median w.r.t. \p weights and capacity,
+/** partial sort of three joint arrays of pointers/Reals/Bools, sorted by first array in non-increasing order around the critical item w.r.t. \p weights and capacity,
  *  see \ref SelectionAlgorithms for more information.
  */
 SCIP_EXPORT
@@ -2187,10 +2187,10 @@ void SCIPselectWeightedDownPtrRealBool(
    SCIP_Real*            realarray,          /**< SCIP_Real array to be permuted in the same way */
    SCIP_Bool*            boolarray,          /**< SCIP_Bool array to be permuted in the same way */
    SCIP_DECL_SORTPTRCOMP((*ptrcomp)),        /**< data element comparator */
-   SCIP_Real*            weights,            /**< (optional), nonnegative weights array for weighted median, or NULL (all weights are equal to 1) */
-   SCIP_Real             capacity,           /**< the maximum capacity that is exceeded by the median */
+   SCIP_Real*            weights,            /**< (optional), nonnegative weights array for the critical item, or NULL (all weights are equal to one) */
+   SCIP_Real             capacity,           /**< the maximum capacity that is exceeded by the critical item */
    int                   len,                /**< length of arrays */
-   int*                  medianpos           /**< pointer to store the index of the weighted median, or NULL, if not needed */
+   int*                  medianpos           /**< pointer to store the index of the critical item, or NULL, if not needed */
    );
 
 
@@ -2208,7 +2208,7 @@ void SCIPselectDownPtrPtrInt(
    );
 
 
-/** partial sort of three joint arrays of pointers/pointers/ints, sorted by first array in non-increasing order around the weighted median w.r.t. \p weights and capacity,
+/** partial sort of three joint arrays of pointers/pointers/ints, sorted by first array in non-increasing order around the critical item w.r.t. \p weights and capacity,
  *  see \ref SelectionAlgorithms for more information.
  */
 SCIP_EXPORT
@@ -2217,10 +2217,10 @@ void SCIPselectWeightedDownPtrPtrInt(
    void**                ptrarray2,          /**< second pointer array to be permuted in the same way */
    int*                  intarray,           /**< int array to be permuted in the same way */
    SCIP_DECL_SORTPTRCOMP((*ptrcomp)),        /**< data element comparator */
-   SCIP_Real*            weights,            /**< (optional), nonnegative weights array for weighted median, or NULL (all weights are equal to 1) */
-   SCIP_Real             capacity,           /**< the maximum capacity that is exceeded by the median */
+   SCIP_Real*            weights,            /**< (optional), nonnegative weights array for the critical item, or NULL (all weights are equal to one) */
+   SCIP_Real             capacity,           /**< the maximum capacity that is exceeded by the critical item */
    int                   len,                /**< length of arrays */
-   int*                  medianpos           /**< pointer to store the index of the weighted median, or NULL, if not needed */
+   int*                  medianpos           /**< pointer to store the index of the critical item, or NULL, if not needed */
    );
 
 
@@ -2238,7 +2238,7 @@ void SCIPselectDownPtrPtrReal(
    );
 
 
-/** partial sort of three joint arrays of pointers/pointers/Reals, sorted by first array in non-increasing order around the weighted median w.r.t. \p weights and capacity,
+/** partial sort of three joint arrays of pointers/pointers/Reals, sorted by first array in non-increasing order around the critical item w.r.t. \p weights and capacity,
  *  see \ref SelectionAlgorithms for more information.
  */
 SCIP_EXPORT
@@ -2247,10 +2247,10 @@ void SCIPselectWeightedDownPtrPtrReal(
    void**                ptrarray2,          /**< second pointer array to be permuted in the same way */
    SCIP_Real*            realarray,          /**< SCIP_Real array to be permuted in the same way */
    SCIP_DECL_SORTPTRCOMP((*ptrcomp)),        /**< data element comparator */
-   SCIP_Real*            weights,            /**< (optional), nonnegative weights array for weighted median, or NULL (all weights are equal to 1) */
-   SCIP_Real             capacity,           /**< the maximum capacity that is exceeded by the median */
+   SCIP_Real*            weights,            /**< (optional), nonnegative weights array for the critical item, or NULL (all weights are equal to one) */
+   SCIP_Real             capacity,           /**< the maximum capacity that is exceeded by the critical item */
    int                   len,                /**< length of arrays */
-   int*                  medianpos           /**< pointer to store the index of the weighted median, or NULL, if not needed */
+   int*                  medianpos           /**< pointer to store the index of the critical item, or NULL, if not needed */
    );
 
 
@@ -2269,7 +2269,7 @@ void SCIPselectDownPtrPtrIntInt(
    );
 
 
-/** partial sort of four joint arrays of pointers/pointers/ints/ints, sorted by first array in non-increasing order around the weighted median w.r.t. \p weights and capacity,
+/** partial sort of four joint arrays of pointers/pointers/ints/ints, sorted by first array in non-increasing order around the critical item w.r.t. \p weights and capacity,
  *  see \ref SelectionAlgorithms for more information.
  */
 SCIP_EXPORT
@@ -2279,10 +2279,10 @@ void SCIPselectWeightedDownPtrPtrIntInt(
    int*                  intarray1,          /**< first int array to be permuted in the same way */
    int*                  intarray2,          /**< second int array to be permuted in the same way */
    SCIP_DECL_SORTPTRCOMP((*ptrcomp)),        /**< data element comparator */
-   SCIP_Real*            weights,            /**< (optional), nonnegative weights array for weighted median, or NULL (all weights are equal to 1) */
-   SCIP_Real             capacity,           /**< the maximum capacity that is exceeded by the median */
+   SCIP_Real*            weights,            /**< (optional), nonnegative weights array for the critical item, or NULL (all weights are equal to one) */
+   SCIP_Real             capacity,           /**< the maximum capacity that is exceeded by the critical item */
    int                   len,                /**< length of arrays */
-   int*                  medianpos           /**< pointer to store the index of the weighted median, or NULL, if not needed */
+   int*                  medianpos           /**< pointer to store the index of the critical item, or NULL, if not needed */
    );
 
 
@@ -2301,7 +2301,7 @@ void SCIPselectDownPtrRealIntInt(
    );
 
 
-/** partial sort of four joint arrays of pointers/Reals/ints/ints, sorted by first array in non-increasing order around the weighted median w.r.t. \p weights and capacity,
+/** partial sort of four joint arrays of pointers/Reals/ints/ints, sorted by first array in non-increasing order around the critical item w.r.t. \p weights and capacity,
  *  see \ref SelectionAlgorithms for more information.
  */
 SCIP_EXPORT
@@ -2311,10 +2311,10 @@ void SCIPselectWeightedDownPtrRealIntInt(
    int*                  intarray1,          /**< first int array to be permuted in the same way */
    int*                  intarray2,          /**< second int array to be permuted in the same way */
    SCIP_DECL_SORTPTRCOMP((*ptrcomp)),        /**< data element comparator */
-   SCIP_Real*            weights,            /**< (optional), nonnegative weights array for weighted median, or NULL (all weights are equal to 1) */
-   SCIP_Real             capacity,           /**< the maximum capacity that is exceeded by the median */
+   SCIP_Real*            weights,            /**< (optional), nonnegative weights array for the critical item, or NULL (all weights are equal to one) */
+   SCIP_Real             capacity,           /**< the maximum capacity that is exceeded by the critical item */
    int                   len,                /**< length of arrays */
-   int*                  medianpos           /**< pointer to store the index of the weighted median, or NULL, if not needed */
+   int*                  medianpos           /**< pointer to store the index of the critical item, or NULL, if not needed */
    );
 
 
@@ -2333,7 +2333,7 @@ void SCIPselectDownPtrPtrRealInt(
    );
 
 
-/** partial sort of four joint arrays of pointer/pointer/Reals/ints, sorted by first array in non-increasing order around the weighted median w.r.t. \p weights and capacity,
+/** partial sort of four joint arrays of pointer/pointer/Reals/ints, sorted by first array in non-increasing order around the critical item w.r.t. \p weights and capacity,
  *  see \ref SelectionAlgorithms for more information.
  */
 SCIP_EXPORT
@@ -2343,10 +2343,10 @@ void SCIPselectWeightedDownPtrPtrRealInt(
    SCIP_Real*            realarray,          /**< SCIP_Real array to be permuted in the same way */
    int*                  intarray,           /**< int array to be permuted in the same way */
    SCIP_DECL_SORTPTRCOMP((*ptrcomp)),        /**< data element comparator */
-   SCIP_Real*            weights,            /**< (optional), nonnegative weights array for weighted median, or NULL (all weights are equal to 1) */
-   SCIP_Real             capacity,           /**< the maximum capacity that is exceeded by the median */
+   SCIP_Real*            weights,            /**< (optional), nonnegative weights array for the critical item, or NULL (all weights are equal to one) */
+   SCIP_Real             capacity,           /**< the maximum capacity that is exceeded by the critical item */
    int                   len,                /**< length of arrays */
-   int*                  medianpos           /**< pointer to store the index of the weighted median, or NULL, if not needed */
+   int*                  medianpos           /**< pointer to store the index of the critical item, or NULL, if not needed */
    );
 
 
@@ -2365,7 +2365,7 @@ void SCIPselectDownPtrPtrRealBool(
    );
 
 
-/** partial sort of four joint arrays of pointer/pointer/Reals/bools, sorted by first array in non-increasing order around the weighted median w.r.t. \p weights and capacity,
+/** partial sort of four joint arrays of pointer/pointer/Reals/bools, sorted by first array in non-increasing order around the critical item w.r.t. \p weights and capacity,
  *  see \ref SelectionAlgorithms for more information.
  */
 SCIP_EXPORT
@@ -2375,10 +2375,10 @@ void SCIPselectWeightedDownPtrPtrRealBool(
    SCIP_Real*            realarray,          /**< SCIP_Real array to be permuted in the same way */
    SCIP_Bool*            boolarray,          /**< SCIP_Bool array to be permuted in the same way */
    SCIP_DECL_SORTPTRCOMP((*ptrcomp)),        /**< data element comparator */
-   SCIP_Real*            weights,            /**< (optional), nonnegative weights array for weighted median, or NULL (all weights are equal to 1) */
-   SCIP_Real             capacity,           /**< the maximum capacity that is exceeded by the median */
+   SCIP_Real*            weights,            /**< (optional), nonnegative weights array for the critical item, or NULL (all weights are equal to one) */
+   SCIP_Real             capacity,           /**< the maximum capacity that is exceeded by the critical item */
    int                   len,                /**< length of arrays */
-   int*                  medianpos           /**< pointer to store the index of the weighted median, or NULL, if not needed */
+   int*                  medianpos           /**< pointer to store the index of the critical item, or NULL, if not needed */
    );
 
 
@@ -2397,7 +2397,7 @@ void SCIPselectDownPtrPtrLongInt(
    );
 
 
-/** partial sort of four joint arrays of pointer/pointer/Longs/ints, sorted by first array in non-increasing order around the weighted median w.r.t. \p weights and capacity,
+/** partial sort of four joint arrays of pointer/pointer/Longs/ints, sorted by first array in non-increasing order around the critical item w.r.t. \p weights and capacity,
  *  see \ref SelectionAlgorithms for more information.
  */
 SCIP_EXPORT
@@ -2407,10 +2407,10 @@ void SCIPselectWeightedDownPtrPtrLongInt(
    SCIP_Longint*         longarray,          /**< SCIP_Longint array to be permuted in the same way */
    int*                  intarray,           /**< int array to be permuted in the same way */
    SCIP_DECL_SORTPTRCOMP((*ptrcomp)),        /**< data element comparator */
-   SCIP_Real*            weights,            /**< (optional), nonnegative weights array for weighted median, or NULL (all weights are equal to 1) */
-   SCIP_Real             capacity,           /**< the maximum capacity that is exceeded by the median */
+   SCIP_Real*            weights,            /**< (optional), nonnegative weights array for the critical item, or NULL (all weights are equal to one) */
+   SCIP_Real             capacity,           /**< the maximum capacity that is exceeded by the critical item */
    int                   len,                /**< length of arrays */
-   int*                  medianpos           /**< pointer to store the index of the weighted median, or NULL, if not needed */
+   int*                  medianpos           /**< pointer to store the index of the critical item, or NULL, if not needed */
    );
 
 
@@ -2430,7 +2430,7 @@ void SCIPselectDownPtrPtrLongIntInt(
    );
 
 
-/** partial sort of five joint arrays of pointer/pointer/Longs/ints/ints, sorted by first array in non-increasing order around the weighted median w.r.t. \p weights and capacity,
+/** partial sort of five joint arrays of pointer/pointer/Longs/ints/ints, sorted by first array in non-increasing order around the critical item w.r.t. \p weights and capacity,
  *  see \ref SelectionAlgorithms for more information.
  */
 SCIP_EXPORT
@@ -2441,10 +2441,10 @@ void SCIPselectWeightedDownPtrPtrLongIntInt(
    int*                  intarray1,          /**< first int array to be permuted in the same way */
    int*                  intarray2,          /**< second int array to be permuted in the same way */
    SCIP_DECL_SORTPTRCOMP((*ptrcomp)),        /**< data element comparator */
-   SCIP_Real*            weights,            /**< (optional), nonnegative weights array for weighted median, or NULL (all weights are equal to 1) */
-   SCIP_Real             capacity,           /**< the maximum capacity that is exceeded by the median */
+   SCIP_Real*            weights,            /**< (optional), nonnegative weights array for the critical item, or NULL (all weights are equal to one) */
+   SCIP_Real             capacity,           /**< the maximum capacity that is exceeded by the critical item */
    int                   len,                /**< length of arrays */
-   int*                  medianpos           /**< pointer to store the index of the weighted median, or NULL, if not needed */
+   int*                  medianpos           /**< pointer to store the index of the critical item, or NULL, if not needed */
    );
 
 
@@ -2459,16 +2459,16 @@ void SCIPselectDownReal(
    );
 
 
-/** partial sort an array of Reals in non-increasing order around the weighted median w.r.t. \p weights and capacity,
+/** partial sort an array of Reals in non-increasing order around the critical item w.r.t. \p weights and capacity,
  *  see \ref SelectionAlgorithms for more information.
  */
 SCIP_EXPORT
 void SCIPselectWeightedDownReal(
    SCIP_Real*            realarray,          /**< SCIP_Real  array to be sorted */
-   SCIP_Real*            weights,            /**< (optional), nonnegative weights array for weighted median, or NULL (all weights are equal to 1) */
-   SCIP_Real             capacity,           /**< the maximum capacity that is exceeded by the median */
+   SCIP_Real*            weights,            /**< (optional), nonnegative weights array for the critical item, or NULL (all weights are equal to one) */
+   SCIP_Real             capacity,           /**< the maximum capacity that is exceeded by the critical item */
    int                   len,                /**< length of arrays */
-   int*                  medianpos           /**< pointer to store the index of the weighted median, or NULL, if not needed */
+   int*                  medianpos           /**< pointer to store the index of the critical item, or NULL, if not needed */
    );
 
 
@@ -2484,17 +2484,17 @@ void SCIPselectDownRealPtr(
    );
 
 
-/** partial sort of two joint arrays of Reals/pointers, sorted by first array in non-increasing order around the weighted median w.r.t. \p weights and capacity,
+/** partial sort of two joint arrays of Reals/pointers, sorted by first array in non-increasing order around the critical item w.r.t. \p weights and capacity,
  *  see \ref SelectionAlgorithms for more information.
  */
 SCIP_EXPORT
 void SCIPselectWeightedDownRealPtr(
    SCIP_Real*            realarray,          /**< SCIP_Real  array to be sorted */
    void**                ptrarray,           /**< pointer array to be permuted in the same way */
-   SCIP_Real*            weights,            /**< (optional), nonnegative weights array for weighted median, or NULL (all weights are equal to 1) */
-   SCIP_Real             capacity,           /**< the maximum capacity that is exceeded by the median */
+   SCIP_Real*            weights,            /**< (optional), nonnegative weights array for the critical item, or NULL (all weights are equal to one) */
+   SCIP_Real             capacity,           /**< the maximum capacity that is exceeded by the critical item */
    int                   len,                /**< length of arrays */
-   int*                  medianpos           /**< pointer to store the index of the weighted median, or NULL, if not needed */
+   int*                  medianpos           /**< pointer to store the index of the critical item, or NULL, if not needed */
    );
 
 
@@ -2523,21 +2523,21 @@ void SCIPselectDownRealIntInt(
    );
 
 
-/** partial sort of two joint arrays of Reals/ints, sorted by first array in non-increasing order around the weighted median w.r.t. \p weights and capacity,
+/** partial sort of two joint arrays of Reals/ints, sorted by first array in non-increasing order around the critical item w.r.t. \p weights and capacity,
  *  see \ref SelectionAlgorithms for more information.
  */
 SCIP_EXPORT
 void SCIPselectWeightedDownRealInt(
    SCIP_Real*            realarray,          /**< SCIP_Real  array to be sorted */
    int*                  intarray,           /**< pointer array to be permuted in the same way */
-   SCIP_Real*            weights,            /**< (optional), nonnegative weights array for weighted median, or NULL (all weights are equal to 1) */
-   SCIP_Real             capacity,           /**< the maximum capacity that is exceeded by the median */
+   SCIP_Real*            weights,            /**< (optional), nonnegative weights array for the critical item, or NULL (all weights are equal to one) */
+   SCIP_Real             capacity,           /**< the maximum capacity that is exceeded by the critical item */
    int                   len,                /**< length of arrays */
-   int*                  medianpos           /**< pointer to store the index of the weighted median, or NULL, if not needed */
+   int*                  medianpos           /**< pointer to store the index of the critical item, or NULL, if not needed */
    );
 
 
-/** partial sort of three joint arrays of Reals/ints/ints, sorted by first array in non-increasing order around the weighted median w.r.t. \p weights and capacity,
+/** partial sort of three joint arrays of Reals/ints/ints, sorted by first array in non-increasing order around the critical item w.r.t. \p weights and capacity,
  *  see \ref SelectionAlgorithms for more information.
  */
 SCIP_EXPORT
@@ -2545,10 +2545,10 @@ void SCIPselectWeightedDownRealIntInt(
    SCIP_Real*            realarray,          /**< SCIP_Real  array to be sorted */
    int*                  intarray1,          /**< first int array to be permuted in the same way */
    int*                  intarray2,          /**< second int array to be permuted in the same way */
-   SCIP_Real*            weights,            /**< (optional), nonnegative weights array for weighted median, or NULL (all weights are equal to 1) */
-   SCIP_Real             capacity,           /**< the maximum capacity that is exceeded by the median */
+   SCIP_Real*            weights,            /**< (optional), nonnegative weights array for the critical item, or NULL (all weights are equal to one) */
+   SCIP_Real             capacity,           /**< the maximum capacity that is exceeded by the critical item */
    int                   len,                /**< length of arrays */
-   int*                  medianpos           /**< pointer to store the index of the weighted median, or NULL, if not needed */
+   int*                  medianpos           /**< pointer to store the index of the critical item, or NULL, if not needed */
    );
 
 
@@ -2565,7 +2565,7 @@ void SCIPselectDownRealBoolPtr(
    );
 
 
-/** partial sort of three joint arrays of Reals/Bools/Pointer, sorted by first array in non-increasing order around the weighted median w.r.t. \p weights and capacity,
+/** partial sort of three joint arrays of Reals/Bools/Pointer, sorted by first array in non-increasing order around the critical item w.r.t. \p weights and capacity,
  *  see \ref SelectionAlgorithms for more information.
  */
 SCIP_EXPORT
@@ -2573,10 +2573,10 @@ void SCIPselectWeightedDownRealBoolPtr(
    SCIP_Real*            realarray,          /**< SCIP_Real array to be sorted */
    SCIP_Bool*            boolarray,          /**< SCIP_Bool array to be permuted in the same way */
    void**                ptrarray,           /**< pointer array to be permuted in the same way */
-   SCIP_Real*            weights,            /**< (optional), nonnegative weights array for weighted median, or NULL (all weights are equal to 1) */
-   SCIP_Real             capacity,           /**< the maximum capacity that is exceeded by the median */
+   SCIP_Real*            weights,            /**< (optional), nonnegative weights array for the critical item, or NULL (all weights are equal to one) */
+   SCIP_Real             capacity,           /**< the maximum capacity that is exceeded by the critical item */
    int                   len,                /**< length of arrays */
-   int*                  medianpos           /**< pointer to store the index of the weighted median, or NULL, if not needed */
+   int*                  medianpos           /**< pointer to store the index of the critical item, or NULL, if not needed */
    );
 
 
@@ -2593,7 +2593,7 @@ void SCIPselectDownRealIntLong(
    );
 
 
-/** partial sort of three joint arrays of Reals/ints/Longs, sorted by first array in non-increasing order around the weighted median w.r.t. \p weights and capacity,
+/** partial sort of three joint arrays of Reals/ints/Longs, sorted by first array in non-increasing order around the critical item w.r.t. \p weights and capacity,
  *  see \ref SelectionAlgorithms for more information.
  */
 SCIP_EXPORT
@@ -2601,10 +2601,10 @@ void SCIPselectWeightedDownRealIntLong(
    SCIP_Real*            realarray,          /**< SCIP_Real array to be sorted */
    int*                  intarray,           /**< int array to be permuted in the same way */
    SCIP_Longint*         longarray,          /**< SCIP_Longint array to be permuted in the same way */
-   SCIP_Real*            weights,            /**< (optional), nonnegative weights array for weighted median, or NULL (all weights are equal to 1) */
-   SCIP_Real             capacity,           /**< the maximum capacity that is exceeded by the median */
+   SCIP_Real*            weights,            /**< (optional), nonnegative weights array for the critical item, or NULL (all weights are equal to one) */
+   SCIP_Real             capacity,           /**< the maximum capacity that is exceeded by the critical item */
    int                   len,                /**< length of arrays */
-   int*                  medianpos           /**< pointer to store the index of the weighted median, or NULL, if not needed */
+   int*                  medianpos           /**< pointer to store the index of the critical item, or NULL, if not needed */
    );
 
 
@@ -2621,7 +2621,7 @@ void SCIPselectDownRealIntPtr(
    );
 
 
-/** partial sort of three joint arrays of Reals/ints/Pointer, sorted by first array in non-increasing order around the weighted median w.r.t. \p weights and capacity,
+/** partial sort of three joint arrays of Reals/ints/Pointer, sorted by first array in non-increasing order around the critical item w.r.t. \p weights and capacity,
  *  see \ref SelectionAlgorithms for more information.
  */
 SCIP_EXPORT
@@ -2629,10 +2629,10 @@ void SCIPselectWeightedDownRealIntPtr(
    SCIP_Real*            realarray,          /**< SCIP_Real array to be sorted */
    int*                  intarray,           /**< int array to be permuted in the same way */
    void**                ptrarray,           /**< pointer array to be permuted in the same way */
-   SCIP_Real*            weights,            /**< (optional), nonnegative weights array for weighted median, or NULL (all weights are equal to 1) */
-   SCIP_Real             capacity,           /**< the maximum capacity that is exceeded by the median */
+   SCIP_Real*            weights,            /**< (optional), nonnegative weights array for the critical item, or NULL (all weights are equal to one) */
+   SCIP_Real             capacity,           /**< the maximum capacity that is exceeded by the critical item */
    int                   len,                /**< length of arrays */
-   int*                  medianpos           /**< pointer to store the index of the weighted median, or NULL, if not needed */
+   int*                  medianpos           /**< pointer to store the index of the critical item, or NULL, if not needed */
    );
 
 
@@ -2649,7 +2649,7 @@ void SCIPselectDownRealRealInt(
    );
 
 
-/** partial sort of three joint arrays of Reals/Reals/ints, sorted by first array in non-increasing order around the weighted median w.r.t. \p weights and capacity,
+/** partial sort of three joint arrays of Reals/Reals/ints, sorted by first array in non-increasing order around the critical item w.r.t. \p weights and capacity,
  *  see \ref SelectionAlgorithms for more information.
  */
 SCIP_EXPORT
@@ -2657,10 +2657,10 @@ void SCIPselectWeightedDownRealRealInt(
    SCIP_Real*            realarray1,         /**< first SCIP_Real array to be sorted */
    SCIP_Real*            realarray2,         /**< second SCIP_Real array to be permuted in the same way */
    int*                  intarray,           /**< integer array to be permuted in the same way */
-   SCIP_Real*            weights,            /**< (optional), nonnegative weights array for weighted median, or NULL (all weights are equal to 1) */
-   SCIP_Real             capacity,           /**< the maximum capacity that is exceeded by the median */
+   SCIP_Real*            weights,            /**< (optional), nonnegative weights array for the critical item, or NULL (all weights are equal to one) */
+   SCIP_Real             capacity,           /**< the maximum capacity that is exceeded by the critical item */
    int                   len,                /**< length of arrays */
-   int*                  medianpos           /**< pointer to store the index of the weighted median, or NULL, if not needed */
+   int*                  medianpos           /**< pointer to store the index of the critical item, or NULL, if not needed */
    );
 
 
@@ -2677,7 +2677,7 @@ void SCIPselectDownRealRealPtr(
    );
 
 
-/** partial sort of three joint arrays of Reals/Reals/Pointer, sorted by first array in non-increasing order around the weighted median w.r.t. \p weights and capacity,
+/** partial sort of three joint arrays of Reals/Reals/Pointer, sorted by first array in non-increasing order around the critical item w.r.t. \p weights and capacity,
  *  see \ref SelectionAlgorithms for more information.
  */
 SCIP_EXPORT
@@ -2685,10 +2685,10 @@ void SCIPselectWeightedDownRealRealPtr(
    SCIP_Real*            realarray1,         /**< first SCIP_Real array to be sorted */
    SCIP_Real*            realarray2,         /**< second SCIP_Real array to be permuted in the same way */
    void**                ptrarray,           /**< pointer array to be permuted in the same way */
-   SCIP_Real*            weights,            /**< (optional), nonnegative weights array for weighted median, or NULL (all weights are equal to 1) */
-   SCIP_Real             capacity,           /**< the maximum capacity that is exceeded by the median */
+   SCIP_Real*            weights,            /**< (optional), nonnegative weights array for the critical item, or NULL (all weights are equal to one) */
+   SCIP_Real             capacity,           /**< the maximum capacity that is exceeded by the critical item */
    int                   len,                /**< length of arrays */
-   int*                  medianpos           /**< pointer to store the index of the weighted median, or NULL, if not needed */
+   int*                  medianpos           /**< pointer to store the index of the critical item, or NULL, if not needed */
    );
 
 /** partial sort of three joint arrays of Reals/Reals/Pointer/Pointer, sorted by first array in non-increasing order around the \p k-th element */
@@ -2702,17 +2702,17 @@ void SCIPselectDownRealRealPtrPtr(
    int                   len                 /**< length of arrays */
    );
 
-/** partial sort of three joint arrays of Reals/Reals/Pointer/Pointer, sorted by first array in non-increasing order around the weighted median w.r.t. \p weights and capacity */
+/** partial sort of three joint arrays of Reals/Reals/Pointer/Pointer, sorted by first array in non-increasing order around the critical item w.r.t. \p weights and capacity */
 SCIP_EXPORT
 void SCIPselectWeightedDownRealRealPtrPtr(
    SCIP_Real*            realarray1,         /**< first SCIP_Real array to be sorted */
    SCIP_Real*            realarray2,         /**< second SCIP_Real array to be permuted in the same way */
    void**                ptrarray1,          /**< pointer array to be permuted in the same way */
    void**                ptrarray2,          /**< pointer array to be permuted in the same way */
-   SCIP_Real*            weights,            /**< (optional), nonnegative weights array for weighted median, or NULL (all weights are equal to 1) */
-   SCIP_Real             capacity,           /**< the maximum capacity that is exceeded by the median */
+   SCIP_Real*            weights,            /**< (optional), nonnegative weights array for the critical item, or NULL (all weights are equal to one) */
+   SCIP_Real             capacity,           /**< the maximum capacity that is exceeded by the critical item */
    int                   len,                /**< length of arrays */
-   int*                  medianpos           /**< pointer to store the index of the weighted median, or NULL, if not needed */
+   int*                  medianpos           /**< pointer to store the index of the critical item, or NULL, if not needed */
    );
 
 /** partial sort of four joint arrays of Reals/pointers/pointers/ints, sorted by first array in non-increasing order around the \p k-th element,
@@ -2729,7 +2729,7 @@ void SCIPselectDownRealPtrPtrInt(
    );
 
 
-/** partial sort of four joint arrays of Reals/pointers/pointers/ints, sorted by first array in non-increasing order around the weighted median w.r.t. \p weights and capacity,
+/** partial sort of four joint arrays of Reals/pointers/pointers/ints, sorted by first array in non-increasing order around the critical item w.r.t. \p weights and capacity,
  *  see \ref SelectionAlgorithms for more information.
  */
 SCIP_EXPORT
@@ -2738,10 +2738,10 @@ void SCIPselectWeightedDownRealPtrPtrInt(
    void**                ptrarray1,          /**< pointer array to be permuted in the same way */
    void**                ptrarray2,          /**< pointer array to be permuted in the same way */
    int*                  intarray,           /**< int array to be sorted */
-   SCIP_Real*            weights,            /**< (optional), nonnegative weights array for weighted median, or NULL (all weights are equal to 1) */
-   SCIP_Real             capacity,           /**< the maximum capacity that is exceeded by the median */
+   SCIP_Real*            weights,            /**< (optional), nonnegative weights array for the critical item, or NULL (all weights are equal to one) */
+   SCIP_Real             capacity,           /**< the maximum capacity that is exceeded by the critical item */
    int                   len,                /**< length of arrays */
-   int*                  medianpos           /**< pointer to store the index of the weighted median, or NULL, if not needed */
+   int*                  medianpos           /**< pointer to store the index of the critical item, or NULL, if not needed */
    );
 
 
@@ -2760,7 +2760,7 @@ void SCIPselectDownRealPtrPtrIntInt(
    );
 
 
-/** partial sort of five joint arrays of Reals/pointers/pointers/ints/ints, sorted by first array in non-increasing order around the weighted median w.r.t. \p weights and capacity,
+/** partial sort of five joint arrays of Reals/pointers/pointers/ints/ints, sorted by first array in non-increasing order around the critical item w.r.t. \p weights and capacity,
  *  see \ref SelectionAlgorithms for more information.
  */
 SCIP_EXPORT
@@ -2770,10 +2770,10 @@ void SCIPselectWeightedDownRealPtrPtrIntInt(
    void**                ptrarray2,          /**< pointer array to be permuted in the same way */
    int*                  intarray1,          /**< int array to be sorted */
    int*                  intarray2,          /**< int array to be sorted */
-   SCIP_Real*            weights,            /**< (optional), nonnegative weights array for weighted median, or NULL (all weights are equal to 1) */
-   SCIP_Real             capacity,           /**< the maximum capacity that is exceeded by the median */
+   SCIP_Real*            weights,            /**< (optional), nonnegative weights array for the critical item, or NULL (all weights are equal to one) */
+   SCIP_Real             capacity,           /**< the maximum capacity that is exceeded by the critical item */
    int                   len,                /**< length of arrays */
-   int*                  medianpos           /**< pointer to store the index of the weighted median, or NULL, if not needed */
+   int*                  medianpos           /**< pointer to store the index of the critical item, or NULL, if not needed */
    );
 
 
@@ -2791,7 +2791,7 @@ void SCIPselectDownRealLongRealInt(
    );
 
 
-/** partial sort of four joint arrays of Reals/Longs/Reals/ints, sorted by first array in non-increasing order around the weighted median w.r.t. \p weights and capacity,
+/** partial sort of four joint arrays of Reals/Longs/Reals/ints, sorted by first array in non-increasing order around the critical item w.r.t. \p weights and capacity,
  *  see \ref SelectionAlgorithms for more information.
  */
 SCIP_EXPORT
@@ -2800,10 +2800,10 @@ void SCIPselectWeightedDownRealLongRealInt(
    SCIP_Longint*         longarray,          /**< SCIP_Longint array to be permuted in the same way */
    SCIP_Real*            realarray3,         /**< SCIP_Real array to be permuted in the same way */
    int*                  intarray,           /**< int array  to be permuted in the same way */
-   SCIP_Real*            weights,            /**< (optional), nonnegative weights array for weighted median, or NULL (all weights are equal to 1) */
-   SCIP_Real             capacity,           /**< the maximum capacity that is exceeded by the median */
+   SCIP_Real*            weights,            /**< (optional), nonnegative weights array for the critical item, or NULL (all weights are equal to one) */
+   SCIP_Real             capacity,           /**< the maximum capacity that is exceeded by the critical item */
    int                   len,                /**< length of arrays */
-   int*                  medianpos           /**< pointer to store the index of the weighted median, or NULL, if not needed */
+   int*                  medianpos           /**< pointer to store the index of the critical item, or NULL, if not needed */
    );
 
 
@@ -2821,7 +2821,7 @@ void SCIPselectDownRealRealIntInt(
    );
 
 
-/** partial sort of four joint arrays of Reals/Reals/ints/ints, sorted by first array in non-increasing order around the weighted median w.r.t. \p weights and capacity,
+/** partial sort of four joint arrays of Reals/Reals/ints/ints, sorted by first array in non-increasing order around the critical item w.r.t. \p weights and capacity,
  *  see \ref SelectionAlgorithms for more information.
  */
 SCIP_EXPORT
@@ -2830,10 +2830,10 @@ void SCIPselectWeightedDownRealRealIntInt(
    SCIP_Real*            realarray2,         /**< SCIP_Real array to be permuted in the same way */
    int*                  intarray1,          /**< int array to be permuted in the same way */
    int*                  intarray2,          /**< int array to be permuted in the same way */
-   SCIP_Real*            weights,            /**< (optional), nonnegative weights array for weighted median, or NULL (all weights are equal to 1) */
-   SCIP_Real             capacity,           /**< the maximum capacity that is exceeded by the median */
+   SCIP_Real*            weights,            /**< (optional), nonnegative weights array for the critical item, or NULL (all weights are equal to one) */
+   SCIP_Real             capacity,           /**< the maximum capacity that is exceeded by the critical item */
    int                   len,                /**< length of arrays */
-   int*                  medianpos           /**< pointer to store the index of the weighted median, or NULL, if not needed */
+   int*                  medianpos           /**< pointer to store the index of the critical item, or NULL, if not needed */
    );
 
 
@@ -2851,7 +2851,7 @@ void SCIPselectDownRealRealRealInt(
    );
 
 
-/** partial sort of four joint arrays of Reals/Reals/Reals/ints, sorted by first array in non-increasing order around the weighted median w.r.t. \p weights and capacity,
+/** partial sort of four joint arrays of Reals/Reals/Reals/ints, sorted by first array in non-increasing order around the critical item w.r.t. \p weights and capacity,
  *  see \ref SelectionAlgorithms for more information.
  */
 SCIP_EXPORT
@@ -2860,10 +2860,10 @@ void SCIPselectWeightedDownRealRealRealInt(
    SCIP_Real*            realarray2,         /**< SCIP_Real array to be permuted in the same way */
    SCIP_Real*            realarray3,         /**< SCIP_Real array to be permuted in the same way */
    int*                  intarray,           /**< int array to be permuted in the same way */
-   SCIP_Real*            weights,            /**< (optional), nonnegative weights array for weighted median, or NULL (all weights are equal to 1) */
-   SCIP_Real             capacity,           /**< the maximum capacity that is exceeded by the median */
+   SCIP_Real*            weights,            /**< (optional), nonnegative weights array for the critical item, or NULL (all weights are equal to one) */
+   SCIP_Real             capacity,           /**< the maximum capacity that is exceeded by the critical item */
    int                   len,                /**< length of arrays */
-   int*                  medianpos           /**< pointer to store the index of the weighted median, or NULL, if not needed */
+   int*                  medianpos           /**< pointer to store the index of the critical item, or NULL, if not needed */
    );
 
 
@@ -2881,7 +2881,7 @@ void SCIPselectDownRealRealRealPtr(
    );
 
 
-/** partial sort of four joint arrays of Reals/Reals/Reals/pointers, sorted by first array in non-increasing order around the weighted median w.r.t. \p weights and capacity,
+/** partial sort of four joint arrays of Reals/Reals/Reals/pointers, sorted by first array in non-increasing order around the critical item w.r.t. \p weights and capacity,
  *  see \ref SelectionAlgorithms for more information.
  */
 SCIP_EXPORT
@@ -2890,10 +2890,10 @@ void SCIPselectWeightedDownRealRealRealPtr(
    SCIP_Real*            realarray2,         /**< SCIP_Real array to be permuted in the same way */
    SCIP_Real*            realarray3,         /**< SCIP_Real array to be permuted in the same way */
    void**                ptrarray,           /**< pointer array to be permuted in the same way */
-   SCIP_Real*            weights,            /**< (optional), nonnegative weights array for weighted median, or NULL (all weights are equal to 1) */
-   SCIP_Real             capacity,           /**< the maximum capacity that is exceeded by the median */
+   SCIP_Real*            weights,            /**< (optional), nonnegative weights array for the critical item, or NULL (all weights are equal to one) */
+   SCIP_Real             capacity,           /**< the maximum capacity that is exceeded by the critical item */
    int                   len,                /**< length of arrays */
-   int*                  medianpos           /**< pointer to store the index of the weighted median, or NULL, if not needed */
+   int*                  medianpos           /**< pointer to store the index of the critical item, or NULL, if not needed */
    );
 
 
@@ -2910,7 +2910,7 @@ void SCIPselectDownRealPtrPtr(
    );
 
 
-/** partial sort of three joint arrays of Reals/pointers, sorted by first array in non-decreasing order around the weighted median w.r.t. \p weights and capacity,
+/** partial sort of three joint arrays of Reals/pointers, sorted by first array in non-decreasing order around the critical item w.r.t. \p weights and capacity,
  *  see \ref SelectionAlgorithms for more information.
  */
 SCIP_EXPORT
@@ -2918,10 +2918,10 @@ void SCIPselectWeightedDownRealPtrPtr(
    SCIP_Real*            realarray,          /**< SCIP_Real array to be sorted */
    void**                ptrarray1,          /**< pointer array to be permuted in the same way */
    void**                ptrarray2,          /**< pointer array to be permuted in the same way */
-   SCIP_Real*            weights,            /**< (optional), nonnegative weights array for weighted median, or NULL (all weights are equal to 1) */
-   SCIP_Real             capacity,           /**< the maximum capacity that is exceeded by the median */
+   SCIP_Real*            weights,            /**< (optional), nonnegative weights array for the critical item, or NULL (all weights are equal to one) */
+   SCIP_Real             capacity,           /**< the maximum capacity that is exceeded by the critical item */
    int                   len,                /**< length of arrays */
-   int*                  medianpos           /**< pointer to store the index of the weighted median, or NULL, if not needed */
+   int*                  medianpos           /**< pointer to store the index of the critical item, or NULL, if not needed */
    );
 
 
@@ -2940,7 +2940,7 @@ void SCIPselectDownRealRealRealBoolPtr(
    );
 
 
-/** partial sort of five joint arrays of Reals/Reals/Reals/Bools/pointers, sorted by first array in non-increasing order around the weighted median w.r.t. \p weights and capacity,
+/** partial sort of five joint arrays of Reals/Reals/Reals/Bools/pointers, sorted by first array in non-increasing order around the critical item w.r.t. \p weights and capacity,
  *  see \ref SelectionAlgorithms for more information.
  */
 SCIP_EXPORT
@@ -2950,10 +2950,10 @@ void SCIPselectWeightedDownRealRealRealBoolPtr(
    SCIP_Real*            realarray3,         /**< SCIP_Real array to be permuted in the same way */
    SCIP_Bool*            boolarray,          /**< SCIP_Bool array to be permuted in the same way */
    void**                ptrarray,           /**< pointer array to be permuted in the same way */
-   SCIP_Real*            weights,            /**< (optional), nonnegative weights array for weighted median, or NULL (all weights are equal to 1) */
-   SCIP_Real             capacity,           /**< the maximum capacity that is exceeded by the median */
+   SCIP_Real*            weights,            /**< (optional), nonnegative weights array for the critical item, or NULL (all weights are equal to one) */
+   SCIP_Real             capacity,           /**< the maximum capacity that is exceeded by the critical item */
    int                   len,                /**< length of arrays */
-   int*                  medianpos           /**< pointer to store the index of the weighted median, or NULL, if not needed */
+   int*                  medianpos           /**< pointer to store the index of the critical item, or NULL, if not needed */
    );
 
 
@@ -2973,7 +2973,7 @@ void SCIPselectDownRealRealRealBoolBoolPtr(
    );
 
 
-/** partial sort of six joint arrays of Reals/Reals/Reals/Bools/Bools/pointers, sorted by first array in non-increasing order around the weighted median w.r.t. \p weights and capacity,
+/** partial sort of six joint arrays of Reals/Reals/Reals/Bools/Bools/pointers, sorted by first array in non-increasing order around the critical item w.r.t. \p weights and capacity,
  *  see \ref SelectionAlgorithms for more information.
  */
 SCIP_EXPORT
@@ -2984,10 +2984,10 @@ void SCIPselectWeightedDownRealRealRealBoolBoolPtr(
    SCIP_Bool*            boolarray1,         /**< SCIP_Bool array to be permuted in the same way */
    SCIP_Bool*            boolarray2,         /**< SCIP_Bool array to be permuted in the same way */
    void**                ptrarray,           /**< pointer array to be permuted in the same way */
-   SCIP_Real*            weights,            /**< (optional), nonnegative weights array for weighted median, or NULL (all weights are equal to 1) */
-   SCIP_Real             capacity,           /**< the maximum capacity that is exceeded by the median */
+   SCIP_Real*            weights,            /**< (optional), nonnegative weights array for the critical item, or NULL (all weights are equal to one) */
+   SCIP_Real             capacity,           /**< the maximum capacity that is exceeded by the critical item */
    int                   len,                /**< length of arrays */
-   int*                  medianpos           /**< pointer to store the index of the weighted median, or NULL, if not needed */
+   int*                  medianpos           /**< pointer to store the index of the critical item, or NULL, if not needed */
    );
 
 
@@ -3002,16 +3002,16 @@ void SCIPselectDownInt(
    );
 
 
-/** partial sort array of ints in non-increasing order around the weighted median w.r.t. \p weights and capacity,
+/** partial sort array of ints in non-increasing order around the critical item w.r.t. \p weights and capacity,
  *  see \ref SelectionAlgorithms for more information.
  */
 SCIP_EXPORT
 void SCIPselectWeightedDownInt(
    int*                  intarray,           /**< int array to be sorted */
-   SCIP_Real*            weights,            /**< (optional), nonnegative weights array for weighted median, or NULL (all weights are equal to 1) */
-   SCIP_Real             capacity,           /**< the maximum capacity that is exceeded by the median */
+   SCIP_Real*            weights,            /**< (optional), nonnegative weights array for the critical item, or NULL (all weights are equal to one) */
+   SCIP_Real             capacity,           /**< the maximum capacity that is exceeded by the critical item */
    int                   len,                /**< length of arrays */
-   int*                  medianpos           /**< pointer to store the index of the weighted median, or NULL, if not needed */
+   int*                  medianpos           /**< pointer to store the index of the critical item, or NULL, if not needed */
    );
 
 
@@ -3027,17 +3027,17 @@ void SCIPselectDownIntInt(
    );
 
 
-/** partial sort of two joint arrays of ints/ints, sorted by first array in non-increasing order around the weighted median w.r.t. \p weights and capacity,
+/** partial sort of two joint arrays of ints/ints, sorted by first array in non-increasing order around the critical item w.r.t. \p weights and capacity,
  *  see \ref SelectionAlgorithms for more information.
  */
 SCIP_EXPORT
 void SCIPselectWeightedDownIntInt(
    int*                  intarray1,          /**< int array to be sorted */
    int*                  intarray2,          /**< second int array to be permuted in the same way */
-   SCIP_Real*            weights,            /**< (optional), nonnegative weights array for weighted median, or NULL (all weights are equal to 1) */
-   SCIP_Real             capacity,           /**< the maximum capacity that is exceeded by the median */
+   SCIP_Real*            weights,            /**< (optional), nonnegative weights array for the critical item, or NULL (all weights are equal to one) */
+   SCIP_Real             capacity,           /**< the maximum capacity that is exceeded by the critical item */
    int                   len,                /**< length of arrays */
-   int*                  medianpos           /**< pointer to store the index of the weighted median, or NULL, if not needed */
+   int*                  medianpos           /**< pointer to store the index of the critical item, or NULL, if not needed */
    );
 
 
@@ -3053,17 +3053,17 @@ void SCIPselectDownIntPtr(
    );
 
 
-/** partial sort of two joint arrays of ints/pointers, sorted by first array in non-increasing order around the weighted median w.r.t. \p weights and capacity,
+/** partial sort of two joint arrays of ints/pointers, sorted by first array in non-increasing order around the critical item w.r.t. \p weights and capacity,
  *  see \ref SelectionAlgorithms for more information.
  */
 SCIP_EXPORT
 void SCIPselectWeightedDownIntPtr(
    int*                  intarray,           /**< int array to be sorted */
    void**                ptrarray,           /**< pointer array to be permuted in the same way */
-   SCIP_Real*            weights,            /**< (optional), nonnegative weights array for weighted median, or NULL (all weights are equal to 1) */
-   SCIP_Real             capacity,           /**< the maximum capacity that is exceeded by the median */
+   SCIP_Real*            weights,            /**< (optional), nonnegative weights array for the critical item, or NULL (all weights are equal to one) */
+   SCIP_Real             capacity,           /**< the maximum capacity that is exceeded by the critical item */
    int                   len,                /**< length of arrays */
-   int*                  medianpos           /**< pointer to store the index of the weighted median, or NULL, if not needed */
+   int*                  medianpos           /**< pointer to store the index of the critical item, or NULL, if not needed */
    );
 
 
@@ -3079,17 +3079,17 @@ void SCIPselectDownIntReal(
    );
 
 
-/** partial sort of two joint arrays of ints/reals, sorted by first array in non-increasing order around the weighted median w.r.t. \p weights and capacity,
+/** partial sort of two joint arrays of ints/reals, sorted by first array in non-increasing order around the critical item w.r.t. \p weights and capacity,
  *  see \ref SelectionAlgorithms for more information.
  */
 SCIP_EXPORT
 void SCIPselectWeightedDownIntReal(
    int*                  intarray,           /**< int array to be sorted */
    SCIP_Real*            realarray,          /**< real array to be permuted in the same way */
-   SCIP_Real*            weights,            /**< (optional), nonnegative weights array for weighted median, or NULL (all weights are equal to 1) */
-   SCIP_Real             capacity,           /**< the maximum capacity that is exceeded by the median */
+   SCIP_Real*            weights,            /**< (optional), nonnegative weights array for the critical item, or NULL (all weights are equal to one) */
+   SCIP_Real             capacity,           /**< the maximum capacity that is exceeded by the critical item */
    int                   len,                /**< length of arrays */
-   int*                  medianpos           /**< pointer to store the index of the weighted median, or NULL, if not needed */
+   int*                  medianpos           /**< pointer to store the index of the critical item, or NULL, if not needed */
    );
 
 
@@ -3106,7 +3106,7 @@ void SCIPselectDownIntIntInt(
    );
 
 
-/** partial sort of three joint arrays of ints/ints/ints, sorted by first array in non-increasing order around the weighted median w.r.t. \p weights and capacity,
+/** partial sort of three joint arrays of ints/ints/ints, sorted by first array in non-increasing order around the critical item w.r.t. \p weights and capacity,
  *  see \ref SelectionAlgorithms for more information.
  */
 SCIP_EXPORT
@@ -3114,10 +3114,10 @@ void SCIPselectWeightedDownIntIntInt(
    int*                  intarray1,          /**< int array to be sorted */
    int*                  intarray2,          /**< second int array to be permuted in the same way */
    int*                  intarray3,          /**< third int  array to be permuted in the same way */
-   SCIP_Real*            weights,            /**< (optional), nonnegative weights array for weighted median, or NULL (all weights are equal to 1) */
-   SCIP_Real             capacity,           /**< the maximum capacity that is exceeded by the median */
+   SCIP_Real*            weights,            /**< (optional), nonnegative weights array for the critical item, or NULL (all weights are equal to one) */
+   SCIP_Real             capacity,           /**< the maximum capacity that is exceeded by the critical item */
    int                   len,                /**< length of arrays */
-   int*                  medianpos           /**< pointer to store the index of the weighted median, or NULL, if not needed */
+   int*                  medianpos           /**< pointer to store the index of the critical item, or NULL, if not needed */
    );
 
 
@@ -3134,7 +3134,7 @@ void SCIPselectDownIntIntLong(
    );
 
 
-/** partial sort of three joint arrays of ints/ints/SCIP_Longint, sorted by first array in non-increasing order around the weighted median w.r.t. \p weights and capacity,
+/** partial sort of three joint arrays of ints/ints/SCIP_Longint, sorted by first array in non-increasing order around the critical item w.r.t. \p weights and capacity,
  *  see \ref SelectionAlgorithms for more information.
  */
 SCIP_EXPORT
@@ -3142,10 +3142,10 @@ void SCIPselectWeightedDownIntIntLong(
    int*                  intarray1,          /**< int array to be sorted */
    int*                  intarray2,          /**< second int array to be permuted in the same way */
    SCIP_Longint*         longarray,          /**< SCIP_Longint array to be permuted in the same way */
-   SCIP_Real*            weights,            /**< (optional), nonnegative weights array for weighted median, or NULL (all weights are equal to 1) */
-   SCIP_Real             capacity,           /**< the maximum capacity that is exceeded by the median */
+   SCIP_Real*            weights,            /**< (optional), nonnegative weights array for the critical item, or NULL (all weights are equal to one) */
+   SCIP_Real             capacity,           /**< the maximum capacity that is exceeded by the critical item */
    int                   len,                /**< length of arrays */
-   int*                  medianpos           /**< pointer to store the index of the weighted median, or NULL, if not needed */
+   int*                  medianpos           /**< pointer to store the index of the critical item, or NULL, if not needed */
    );
 
 
@@ -3162,7 +3162,7 @@ void SCIPselectDownIntIntPtr(
    );
 
 
-/** partial sort of three joint arrays of ints/ints/pointers, sorted by first array in non-increasing order around the weighted median w.r.t. \p weights and capacity,
+/** partial sort of three joint arrays of ints/ints/pointers, sorted by first array in non-increasing order around the critical item w.r.t. \p weights and capacity,
  *  see \ref SelectionAlgorithms for more information.
  */
 SCIP_EXPORT
@@ -3170,10 +3170,10 @@ void SCIPselectWeightedDownIntIntPtr(
    int*                  intarray1,          /**< int array to be sorted */
    int*                  intarray2,          /**< second int array to be permuted in the same way */
    void**                ptrarray,           /**< pointer array to be permuted in the same way */
-   SCIP_Real*            weights,            /**< (optional), nonnegative weights array for weighted median, or NULL (all weights are equal to 1) */
-   SCIP_Real             capacity,           /**< the maximum capacity that is exceeded by the median */
+   SCIP_Real*            weights,            /**< (optional), nonnegative weights array for the critical item, or NULL (all weights are equal to one) */
+   SCIP_Real             capacity,           /**< the maximum capacity that is exceeded by the critical item */
    int                   len,                /**< length of arrays */
-   int*                  medianpos           /**< pointer to store the index of the weighted median, or NULL, if not needed */
+   int*                  medianpos           /**< pointer to store the index of the critical item, or NULL, if not needed */
    );
 
 
@@ -3190,7 +3190,7 @@ void SCIPselectDownIntIntReal(
    );
 
 
-/** partial sort of three joint arrays of ints/ints/Reals, sorted by first array in non-increasing order around the weighted median w.r.t. \p weights and capacity,
+/** partial sort of three joint arrays of ints/ints/Reals, sorted by first array in non-increasing order around the critical item w.r.t. \p weights and capacity,
  *  see \ref SelectionAlgorithms for more information.
  */
 SCIP_EXPORT
@@ -3198,10 +3198,10 @@ void SCIPselectWeightedDownIntIntReal(
    int*                  intarray1,          /**< int array to be sorted */
    int*                  intarray2,          /**< second int array to be permuted in the same way */
    SCIP_Real*            realarray,          /**< SCIP_Real array to be permuted in the same way */
-   SCIP_Real*            weights,            /**< (optional), nonnegative weights array for weighted median, or NULL (all weights are equal to 1) */
-   SCIP_Real             capacity,           /**< the maximum capacity that is exceeded by the median */
+   SCIP_Real*            weights,            /**< (optional), nonnegative weights array for the critical item, or NULL (all weights are equal to one) */
+   SCIP_Real             capacity,           /**< the maximum capacity that is exceeded by the critical item */
    int                   len,                /**< length of arrays */
-   int*                  medianpos           /**< pointer to store the index of the weighted median, or NULL, if not needed */
+   int*                  medianpos           /**< pointer to store the index of the critical item, or NULL, if not needed */
    );
 
 
@@ -3219,7 +3219,7 @@ void SCIPselectDownIntIntIntPtr(
    );
 
 
-/** partial sort of four joint arrays of ints/ints/ints/pointers, sorted by first array in non-increasing order around the weighted median w.r.t. \p weights and capacity,
+/** partial sort of four joint arrays of ints/ints/ints/pointers, sorted by first array in non-increasing order around the critical item w.r.t. \p weights and capacity,
  *  see \ref SelectionAlgorithms for more information.
  */
 SCIP_EXPORT
@@ -3228,10 +3228,10 @@ void SCIPselectWeightedDownIntIntIntPtr(
    int*                  intarray2,          /**< int array to be permuted in the same way */
    int*                  intarray3,          /**< int array to be permuted in the same way */
    void**                ptrarray,           /**< pointer array to be permuted in the same way */
-   SCIP_Real*            weights,            /**< (optional), nonnegative weights array for weighted median, or NULL (all weights are equal to 1) */
-   SCIP_Real             capacity,           /**< the maximum capacity that is exceeded by the median */
+   SCIP_Real*            weights,            /**< (optional), nonnegative weights array for the critical item, or NULL (all weights are equal to one) */
+   SCIP_Real             capacity,           /**< the maximum capacity that is exceeded by the critical item */
    int                   len,                /**< length of arrays */
-   int*                  medianpos           /**< pointer to store the index of the weighted median, or NULL, if not needed */
+   int*                  medianpos           /**< pointer to store the index of the critical item, or NULL, if not needed */
    );
 
 
@@ -3249,7 +3249,7 @@ void SCIPselectDownIntIntIntReal(
    );
 
 
-/** partial sort of four joint arrays of ints/ints/ints/reals, sorted by first array in non-increasing order around the weighted median w.r.t. \p weights and capacity,
+/** partial sort of four joint arrays of ints/ints/ints/reals, sorted by first array in non-increasing order around the critical item w.r.t. \p weights and capacity,
  *  see \ref SelectionAlgorithms for more information.
  */
 SCIP_EXPORT
@@ -3258,10 +3258,10 @@ void SCIPselectWeightedDownIntIntIntReal(
    int*                  intarray2,          /**< int array to be permuted in the same way */
    int*                  intarray3,          /**< int array to be permuted in the same way */
    SCIP_Real*            realarray,          /**< SCIP_Real array to be permuted in the same way */
-   SCIP_Real*            weights,            /**< (optional), nonnegative weights array for weighted median, or NULL (all weights are equal to 1) */
-   SCIP_Real             capacity,           /**< the maximum capacity that is exceeded by the median */
+   SCIP_Real*            weights,            /**< (optional), nonnegative weights array for the critical item, or NULL (all weights are equal to one) */
+   SCIP_Real             capacity,           /**< the maximum capacity that is exceeded by the critical item */
    int                   len,                /**< length of arrays */
-   int*                  medianpos           /**< pointer to store the index of the weighted median, or NULL, if not needed */
+   int*                  medianpos           /**< pointer to store the index of the critical item, or NULL, if not needed */
    );
 
 
@@ -3279,7 +3279,7 @@ void SCIPselectDownIntPtrIntReal(
    );
 
 
-/** partial sort of four joint arrays of ints/pointers/ints/Reals, sorted by first array in non-increasing order around the weighted median w.r.t. \p weights and capacity,
+/** partial sort of four joint arrays of ints/pointers/ints/Reals, sorted by first array in non-increasing order around the critical item w.r.t. \p weights and capacity,
  *  see \ref SelectionAlgorithms for more information.
  */
 SCIP_EXPORT
@@ -3288,10 +3288,10 @@ void SCIPselectWeightedDownIntPtrIntReal(
    void**                ptrarray,           /**< pointer array to be permuted in the same way */
    int*                  intarray2,          /**< int array to be permuted in the same way */
    SCIP_Real*            realarray,          /**< SCIP_Real array to be permuted in the same way */
-   SCIP_Real*            weights,            /**< (optional), nonnegative weights array for weighted median, or NULL (all weights are equal to 1) */
-   SCIP_Real             capacity,           /**< the maximum capacity that is exceeded by the median */
+   SCIP_Real*            weights,            /**< (optional), nonnegative weights array for the critical item, or NULL (all weights are equal to one) */
+   SCIP_Real             capacity,           /**< the maximum capacity that is exceeded by the critical item */
    int                   len,                /**< length of arrays */
-   int*                  medianpos           /**< pointer to store the index of the weighted median, or NULL, if not needed */
+   int*                  medianpos           /**< pointer to store the index of the critical item, or NULL, if not needed */
    );
 
 
@@ -3306,16 +3306,16 @@ void SCIPselectDownLong(
    );
 
 
-/** partial sort an array of Longints in non-increasing order around the weighted median w.r.t. \p weights and capacity,
+/** partial sort an array of Longints in non-increasing order around the critical item w.r.t. \p weights and capacity,
  *  see \ref SelectionAlgorithms for more information.
  */
 SCIP_EXPORT
 void SCIPselectWeightedDownLong(
    SCIP_Longint*         longarray,          /**< SCIP_Longint array to be sorted */
-   SCIP_Real*            weights,            /**< (optional), nonnegative weights array for weighted median, or NULL (all weights are equal to 1) */
-   SCIP_Real             capacity,           /**< the maximum capacity that is exceeded by the median */
+   SCIP_Real*            weights,            /**< (optional), nonnegative weights array for the critical item, or NULL (all weights are equal to one) */
+   SCIP_Real             capacity,           /**< the maximum capacity that is exceeded by the critical item */
    int                   len,                /**< length of arrays */
-   int*                  medianpos           /**< pointer to store the index of the weighted median, or NULL, if not needed */
+   int*                  medianpos           /**< pointer to store the index of the critical item, or NULL, if not needed */
    );
 
 
@@ -3331,17 +3331,17 @@ void SCIPselectDownLongPtr(
    );
 
 
-/** partial sort of two joint arrays of Long/pointer, sorted by the first array in non-increasing order around the weighted median w.r.t. \p weights and capacity,
+/** partial sort of two joint arrays of Long/pointer, sorted by the first array in non-increasing order around the critical item w.r.t. \p weights and capacity,
  *  see \ref SelectionAlgorithms for more information.
  */
 SCIP_EXPORT
 void SCIPselectWeightedDownLongPtr(
    SCIP_Longint*         longarray,          /**< SCIP_Longint array to be sorted */
    void**                ptrarray,           /**< pointer array to be permuted in the same way */
-   SCIP_Real*            weights,            /**< (optional), nonnegative weights array for weighted median, or NULL (all weights are equal to 1) */
-   SCIP_Real             capacity,           /**< the maximum capacity that is exceeded by the median */
+   SCIP_Real*            weights,            /**< (optional), nonnegative weights array for the critical item, or NULL (all weights are equal to one) */
+   SCIP_Real             capacity,           /**< the maximum capacity that is exceeded by the critical item */
    int                   len,                /**< length of arrays */
-   int*                  medianpos           /**< pointer to store the index of the weighted median, or NULL, if not needed */
+   int*                  medianpos           /**< pointer to store the index of the critical item, or NULL, if not needed */
    );
 
 
@@ -3358,7 +3358,7 @@ void SCIPselectDownLongPtrInt(
    );
 
 
-/** partial sort of three arrays of Long/pointer/ints, sorted by the first array in non-increasing order around the weighted median w.r.t. \p weights and capacity,
+/** partial sort of three arrays of Long/pointer/ints, sorted by the first array in non-increasing order around the critical item w.r.t. \p weights and capacity,
  *  see \ref SelectionAlgorithms for more information.
  */
 SCIP_EXPORT
@@ -3366,10 +3366,10 @@ void SCIPselectWeightedDownLongPtrInt(
    SCIP_Longint*         longarray,          /**< SCIP_Longint array to be sorted */
    void**                ptrarray,           /**< pointer array to be permuted in the same way */
    int*                  intarray,           /**< int array to be permuted in the same way */
-   SCIP_Real*            weights,            /**< (optional), nonnegative weights array for weighted median, or NULL (all weights are equal to 1) */
-   SCIP_Real             capacity,           /**< the maximum capacity that is exceeded by the median */
+   SCIP_Real*            weights,            /**< (optional), nonnegative weights array for the critical item, or NULL (all weights are equal to one) */
+   SCIP_Real             capacity,           /**< the maximum capacity that is exceeded by the critical item */
    int                   len,                /**< length of arrays */
-   int*                  medianpos           /**< pointer to store the index of the weighted median, or NULL, if not needed */
+   int*                  medianpos           /**< pointer to store the index of the critical item, or NULL, if not needed */
    );
 
 
@@ -3387,7 +3387,7 @@ void SCIPselectDownLongPtrRealBool(
    );
 
 
-/** partial sort of four arrays of Long/pointer/Real/Bool, sorted by the first array in non-increasing order around the weighted median w.r.t. \p weights and capacity,
+/** partial sort of four arrays of Long/pointer/Real/Bool, sorted by the first array in non-increasing order around the critical item w.r.t. \p weights and capacity,
  *  see \ref SelectionAlgorithms for more information.
  */
 SCIP_EXPORT
@@ -3396,10 +3396,10 @@ void SCIPselectWeightedDownLongPtrRealBool(
    void**                ptrarray,           /**< pointer array to be permuted in the same way */
    SCIP_Real*            realarray,          /**< SCIP_Real array to be permuted in the same way */
    SCIP_Bool*            boolarray,          /**< SCIP_Bool array to be permuted in the same way */
-   SCIP_Real*            weights,            /**< (optional), nonnegative weights array for weighted median, or NULL (all weights are equal to 1) */
-   SCIP_Real             capacity,           /**< the maximum capacity that is exceeded by the median */
+   SCIP_Real*            weights,            /**< (optional), nonnegative weights array for the critical item, or NULL (all weights are equal to one) */
+   SCIP_Real             capacity,           /**< the maximum capacity that is exceeded by the critical item */
    int                   len,                /**< length of arrays */
-   int*                  medianpos           /**< pointer to store the index of the weighted median, or NULL, if not needed */
+   int*                  medianpos           /**< pointer to store the index of the critical item, or NULL, if not needed */
    );
 
 
@@ -3418,7 +3418,7 @@ void SCIPselectDownLongPtrRealRealBool(
    );
 
 
-/** partial sort of five arrays of Long/pointer/Real/Real/Bool, sorted by the first array in non-increasing order around the weighted median w.r.t. \p weights and capacity,
+/** partial sort of five arrays of Long/pointer/Real/Real/Bool, sorted by the first array in non-increasing order around the critical item w.r.t. \p weights and capacity,
  *  see \ref SelectionAlgorithms for more information.
  */
 SCIP_EXPORT
@@ -3428,10 +3428,10 @@ void SCIPselectWeightedDownLongPtrRealRealBool(
    SCIP_Real*            realarray,          /**< first SCIP_Real array to be permuted in the same way */
    SCIP_Real*            realarray2,         /**< second SCIP_Real array to be permuted in the same way */
    SCIP_Bool*            boolarray,          /**< SCIP_Bool array to be permuted in the same way */
-   SCIP_Real*            weights,            /**< (optional), nonnegative weights array for weighted median, or NULL (all weights are equal to 1) */
-   SCIP_Real             capacity,           /**< the maximum capacity that is exceeded by the median */
+   SCIP_Real*            weights,            /**< (optional), nonnegative weights array for the critical item, or NULL (all weights are equal to one) */
+   SCIP_Real             capacity,           /**< the maximum capacity that is exceeded by the critical item */
    int                   len,                /**< length of arrays */
-   int*                  medianpos           /**< pointer to store the index of the weighted median, or NULL, if not needed */
+   int*                  medianpos           /**< pointer to store the index of the critical item, or NULL, if not needed */
    );
 
 
@@ -3451,7 +3451,7 @@ void SCIPselectDownLongPtrRealRealIntBool(
    );
 
 
-/** partial sort of six arrays of Long/pointer/Real/Real/int/Bool, sorted by the first array in non-increasing order around the weighted median w.r.t. \p weights and capacity,
+/** partial sort of six arrays of Long/pointer/Real/Real/int/Bool, sorted by the first array in non-increasing order around the critical item w.r.t. \p weights and capacity,
  *  see \ref SelectionAlgorithms for more information.
  */
 SCIP_EXPORT
@@ -3462,10 +3462,10 @@ void SCIPselectWeightedDownLongPtrRealRealIntBool(
    SCIP_Real*            realarray2,         /**< second SCIP_Real array to be permuted in the same way */
    int*                  intarray,           /**< int array to be permuted in the same way */
    SCIP_Bool*            boolarray,          /**< SCIP_Bool array to be permuted in the same way */
-   SCIP_Real*            weights,            /**< (optional), nonnegative weights array for weighted median, or NULL (all weights are equal to 1) */
-   SCIP_Real             capacity,           /**< the maximum capacity that is exceeded by the median */
+   SCIP_Real*            weights,            /**< (optional), nonnegative weights array for the critical item, or NULL (all weights are equal to one) */
+   SCIP_Real             capacity,           /**< the maximum capacity that is exceeded by the critical item */
    int                   len,                /**< length of arrays */
-   int*                  medianpos           /**< pointer to store the index of the weighted median, or NULL, if not needed */
+   int*                  medianpos           /**< pointer to store the index of the critical item, or NULL, if not needed */
    );
 
 
@@ -3483,7 +3483,7 @@ void SCIPselectDownLongPtrPtrInt(
    );
 
 
-/** partial sort of four joint arrays of Long/pointer/pointer/ints, sorted by first array in non-increasing order around the weighted median w.r.t. \p weights and capacity,
+/** partial sort of four joint arrays of Long/pointer/pointer/ints, sorted by first array in non-increasing order around the critical item w.r.t. \p weights and capacity,
  *  see \ref SelectionAlgorithms for more information.
  */
 SCIP_EXPORT
@@ -3492,10 +3492,10 @@ void SCIPselectWeightedDownLongPtrPtrInt(
    void**                ptrarray1,          /**< first pointer array to be permuted in the same way */
    void**                ptrarray2,          /**< second pointer array to be permuted in the same way */
    int*                  intarray,           /**< int array to be permuted in the same way */
-   SCIP_Real*            weights,            /**< (optional), nonnegative weights array for weighted median, or NULL (all weights are equal to 1) */
-   SCIP_Real             capacity,           /**< the maximum capacity that is exceeded by the median */
+   SCIP_Real*            weights,            /**< (optional), nonnegative weights array for the critical item, or NULL (all weights are equal to one) */
+   SCIP_Real             capacity,           /**< the maximum capacity that is exceeded by the critical item */
    int                   len,                /**< length of arrays */
-   int*                  medianpos           /**< pointer to store the index of the weighted median, or NULL, if not needed */
+   int*                  medianpos           /**< pointer to store the index of the critical item, or NULL, if not needed */
    );
 
 
@@ -3514,7 +3514,7 @@ void SCIPselectDownLongPtrPtrIntInt(
    );
 
 
-/** partial sort of five joint arrays of Long/pointer/pointer/ints/ints, sorted by first array in non-increasing order around the weighted median w.r.t. \p weights and capacity,
+/** partial sort of five joint arrays of Long/pointer/pointer/ints/ints, sorted by first array in non-increasing order around the critical item w.r.t. \p weights and capacity,
  *  see \ref SelectionAlgorithms for more information.
  */
 SCIP_EXPORT
@@ -3524,10 +3524,10 @@ void SCIPselectWeightedDownLongPtrPtrIntInt(
    void**                ptrarray2,          /**< second pointer array to be permuted in the same way */
    int*                  intarray1,          /**< first int array to be permuted in the same way */
    int*                  intarray2,          /**< second int array to be permuted in the same way */
-   SCIP_Real*            weights,            /**< (optional), nonnegative weights array for weighted median, or NULL (all weights are equal to 1) */
-   SCIP_Real             capacity,           /**< the maximum capacity that is exceeded by the median */
+   SCIP_Real*            weights,            /**< (optional), nonnegative weights array for the critical item, or NULL (all weights are equal to one) */
+   SCIP_Real             capacity,           /**< the maximum capacity that is exceeded by the critical item */
    int                   len,                /**< length of arrays */
-   int*                  medianpos           /**< pointer to store the index of the weighted median, or NULL, if not needed */
+   int*                  medianpos           /**< pointer to store the index of the critical item, or NULL, if not needed */
    );
 
 
@@ -3546,7 +3546,7 @@ void SCIPselectDownLongPtrPtrBoolInt(
    );
 
 
-/** partial sort of five joint arrays of Long/pointer/pointer/Bool/ints, sorted by first array in non-increasing order around the weighted median w.r.t. \p weights and capacity,
+/** partial sort of five joint arrays of Long/pointer/pointer/Bool/ints, sorted by first array in non-increasing order around the critical item w.r.t. \p weights and capacity,
  *  see \ref SelectionAlgorithms for more information.
  */
 SCIP_EXPORT
@@ -3556,10 +3556,10 @@ void SCIPselectWeightedDownLongPtrPtrBoolInt(
    void**                ptrarray2,          /**< second pointer array to be permuted in the same way */
    SCIP_Bool*            boolarray,          /**< SCIP_Bool array to be permuted in the same way */
    int*                  intarray,           /**< int array to be sorted */
-   SCIP_Real*            weights,            /**< (optional), nonnegative weights array for weighted median, or NULL (all weights are equal to 1) */
-   SCIP_Real             capacity,           /**< the maximum capacity that is exceeded by the median */
+   SCIP_Real*            weights,            /**< (optional), nonnegative weights array for the critical item, or NULL (all weights are equal to one) */
+   SCIP_Real             capacity,           /**< the maximum capacity that is exceeded by the critical item */
    int                   len,                /**< length of arrays */
-   int*                  medianpos           /**< pointer to store the index of the weighted median, or NULL, if not needed */
+   int*                  medianpos           /**< pointer to store the index of the critical item, or NULL, if not needed */
    );
 
 
@@ -3579,7 +3579,7 @@ void SCIPselectDownPtrIntIntBoolBool(
    );
 
 
-/** partial sort of five joint arrays of pointer/ints/ints/Bool/Bool, sorted by first array in non-increasing order around the weighted median w.r.t. \p weights and capacity,
+/** partial sort of five joint arrays of pointer/ints/ints/Bool/Bool, sorted by first array in non-increasing order around the critical item w.r.t. \p weights and capacity,
  *  see \ref SelectionAlgorithms for more information.
  */
 SCIP_EXPORT
@@ -3590,10 +3590,10 @@ void SCIPselectWeightedDownPtrIntIntBoolBool(
    SCIP_Bool*            boolarray1,         /**< first SCIP_Bool array to be permuted in the same way */
    SCIP_Bool*            boolarray2,         /**< second SCIP_Bool array to be permuted in the same way */
    SCIP_DECL_SORTPTRCOMP((*ptrcomp)),        /**< data element comparator */
-   SCIP_Real*            weights,            /**< (optional), nonnegative weights array for weighted median, or NULL (all weights are equal to 1) */
-   SCIP_Real             capacity,           /**< the maximum capacity that is exceeded by the median */
+   SCIP_Real*            weights,            /**< (optional), nonnegative weights array for the critical item, or NULL (all weights are equal to one) */
+   SCIP_Real             capacity,           /**< the maximum capacity that is exceeded by the critical item */
    int                   len,                /**< length of arrays */
-   int*                  medianpos           /**< pointer to store the index of the weighted median, or NULL, if not needed */
+   int*                  medianpos           /**< pointer to store the index of the critical item, or NULL, if not needed */
    );
 
 
@@ -3613,7 +3613,7 @@ void SCIPselectDownIntPtrIntIntBoolBool(
    );
 
 
-/** partial sort of six joint arrays of ints/pointer/ints/ints/Bool/Bool, sorted by first array in non-increasing order around the weighted median w.r.t. \p weights and capacity,
+/** partial sort of six joint arrays of ints/pointer/ints/ints/Bool/Bool, sorted by first array in non-increasing order around the critical item w.r.t. \p weights and capacity,
  *  see \ref SelectionAlgorithms for more information.
  */
 SCIP_EXPORT
@@ -3624,10 +3624,10 @@ void SCIPselectWeightedDownIntPtrIntIntBoolBool(
    int*                  intarray3,          /**< thrid int array to be permuted in the same way */
    SCIP_Bool*            boolarray1,         /**< first SCIP_Bool array to be permuted in the same way */
    SCIP_Bool*            boolarray2,         /**< second SCIP_Bool array to be permuted in the same way */
-   SCIP_Real*            weights,            /**< (optional), nonnegative weights array for weighted median, or NULL (all weights are equal to 1) */
-   SCIP_Real             capacity,           /**< the maximum capacity that is exceeded by the median */
+   SCIP_Real*            weights,            /**< (optional), nonnegative weights array for the critical item, or NULL (all weights are equal to one) */
+   SCIP_Real             capacity,           /**< the maximum capacity that is exceeded by the critical item */
    int                   len,                /**< length of arrays */
-   int*                  medianpos           /**< pointer to store the index of the weighted median, or NULL, if not needed */
+   int*                  medianpos           /**< pointer to store the index of the critical item, or NULL, if not needed */
    );
 
 /**@} */

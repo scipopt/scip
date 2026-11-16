@@ -36,7 +36,7 @@
 
 #define INF 1e+20
 
-#define expecti(x, y) cr_expect_eq(x, y, "%s expected to be %d, got %d", #x, y, x)
+#define expecti(x, y) SOFT_ASSERT_EQUAL(x, y, "%s expected to be %d, got %d", #x, y, x)
 
 static SCIP* scip = NULL;
 static SCIP_NLPIORACLE* oracle = NULL;
@@ -59,12 +59,11 @@ void teardown(void)
 {
    SCIP_CALL( SCIPnlpiOracleFree(scip, &oracle) );
    SCIP_CALL( SCIPfree(&scip) );
-   cr_assert_eq(BMSgetMemoryUsed(), 0, "There is are memory leak!!");
+   TEST_ASSERT_EQUAL(BMSgetMemoryUsed(), 0, "There is are memory leak!!");
 }
 
-Test(oracle, jacsparsity, .init = setup, .fini = teardown,
-   .description = "checks Jacobian sparsity structure"
-   )
+/** @brief checks Jacobian sparsity structure */
+void test_oracle_jacsparsity(void)
 {
    const char* varnames[4] = {"x0", "x1", "x2", "x3"};
    SCIP_EXPR* varexprs[4];
@@ -149,7 +148,7 @@ Test(oracle, jacsparsity, .init = setup, .fini = teardown,
    expecti(jaccols[4], 1);
    expecti(jaccols[5], 3);
 
-   cr_assert(jaccolnlflags != NULL);
+   TEST_ASSERT(jaccolnlflags != NULL);
 
    expecti(jaccolnlflags[0], TRUE);
    expecti(jaccolnlflags[1], TRUE);
@@ -178,7 +177,7 @@ Test(oracle, jacsparsity, .init = setup, .fini = teardown,
    expecti(jacrows[4], 1);
    expecti(jacrows[5], 2);
 
-   cr_assert(jacrownlflags != NULL);
+   TEST_ASSERT(jacrownlflags != NULL);
 
    expecti(jacrownlflags[0], TRUE);
    expecti(jacrownlflags[1], FALSE);
@@ -198,4 +197,15 @@ Test(oracle, jacsparsity, .init = setup, .fini = teardown,
    SCIP_CALL( SCIPreleaseExpr(scip, &varexprs[2]) );
    SCIP_CALL( SCIPreleaseExpr(scip, &varexprs[1]) );
    SCIP_CALL( SCIPreleaseExpr(scip, &varexprs[0]) );
+}
+
+void setUp(void) { setup(); }
+
+void tearDown(void) { teardown(); }
+
+int main(void)
+{
+   UNITY_BEGIN();
+   RUN_TEST(test_oracle_jacsparsity);
+   return UNITY_END();
 }

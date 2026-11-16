@@ -66,7 +66,7 @@ void setup(void)
    /* create problem data */
    SCIP_CALL( SCIPprobdataCreate(scip, "unit test", demands, rints, rexts, 4, 100.0, 100.0) );
    probdata = SCIPgetProbData(scip);
-   cr_assert(probdata != NULL);
+   TEST_ASSERT(probdata != NULL);
 
    /* creates a circular pattern */
    SCIP_CALL( SCIPpatternCreateCircular(scip, &pattern, 1) );
@@ -82,54 +82,54 @@ void teardown(void)
    /* free SCIP */
    SCIP_CALL( SCIPfree(&scip) );
 
-   cr_assert_null(scip);
-   cr_assert_eq(BMSgetMemoryUsed(), 0, "There is a memory leak!!");
+   TEST_ASSERT_NULL(scip);
+   TEST_ASSERT_EQUAL(0, BMSgetMemoryUsed(), "There is a memory leak!!");
 }
 
-/* test suite */
-TestSuite(verification, .init = setup, .fini = teardown);
+void setUp(void) { setup(); }
+void tearDown(void) { teardown(); }
 
 /** verifies empty circular pattern with NLP */
-Test(verification, nlp_empty)
+void test_verification_nlp_empty(void)
 {
-   cr_expect(SCIPpatternGetPackableStatus(pattern) == SCIP_PACKABLE_UNKNOWN);
+   SOFT_ASSERT(SCIPpatternGetPackableStatus(pattern) == SCIP_PACKABLE_UNKNOWN);
 
    SCIP_CALL( SCIPverifyCircularPatternNLP(scip, probdata, pattern, SCIPinfinity(scip), SCIP_LONGINT_MAX) );
-   cr_expect(SCIPpatternGetPackableStatus(pattern) == SCIP_PACKABLE_YES);
+   SOFT_ASSERT(SCIPpatternGetPackableStatus(pattern) == SCIP_PACKABLE_YES);
 }
 
 /** verifies circular pattern containing a single element with NLP */
-Test(verification, nlp_single)
+void test_verification_nlp_single(void)
 {
-   cr_expect(SCIPpatternGetPackableStatus(pattern) == SCIP_PACKABLE_UNKNOWN);
+   SOFT_ASSERT(SCIPpatternGetPackableStatus(pattern) == SCIP_PACKABLE_UNKNOWN);
 
    /* add element of type 1 */
    SCIP_CALL( SCIPpatternAddElement(pattern, 1, SCIP_INVALID, SCIP_INVALID) );
    SCIP_CALL( SCIPverifyCircularPatternNLP(scip, probdata, pattern, SCIPinfinity(scip), SCIP_LONGINT_MAX) );
-   cr_expect(SCIPpatternGetPackableStatus(pattern) == SCIP_PACKABLE_YES);
+   SOFT_ASSERT(SCIPpatternGetPackableStatus(pattern) == SCIP_PACKABLE_YES);
 }
 
 /** verifies circular pattern containing two elements with NLP */
-Test(verification, nlp_two)
+void test_verification_nlp_two(void)
 {
-   cr_expect(SCIPpatternGetPackableStatus(pattern) == SCIP_PACKABLE_UNKNOWN);
+   SOFT_ASSERT(SCIPpatternGetPackableStatus(pattern) == SCIP_PACKABLE_UNKNOWN);
 
    /* add element of type 3 and element of type 2 -> not packable */
    SCIP_CALL( SCIPpatternAddElement(pattern, 3, SCIP_INVALID, SCIP_INVALID) );
    SCIP_CALL( SCIPpatternAddElement(pattern, 2, SCIP_INVALID, SCIP_INVALID) );
    SCIP_CALL( SCIPverifyCircularPatternNLP(scip, probdata, pattern, SCIPinfinity(scip), SCIP_LONGINT_MAX) );
-   cr_expect(SCIPpatternGetPackableStatus(pattern) == SCIP_PACKABLE_NO);
+   SOFT_ASSERT(SCIPpatternGetPackableStatus(pattern) == SCIP_PACKABLE_NO);
 
    /* remove element of type 2 and add another element of type 3 -> packable */
    SCIPpatternSetPackableStatus(pattern, SCIP_PACKABLE_UNKNOWN);
    SCIPpatternRemoveLastElements(pattern, 1);
    SCIP_CALL( SCIPpatternAddElement(pattern, 3, SCIP_INVALID, SCIP_INVALID) );
    SCIP_CALL( SCIPverifyCircularPatternNLP(scip, probdata, pattern, SCIPinfinity(scip), SCIP_LONGINT_MAX) );
-   cr_expect(SCIPpatternGetPackableStatus(pattern) == SCIP_PACKABLE_YES);
+   SOFT_ASSERT(SCIPpatternGetPackableStatus(pattern) == SCIP_PACKABLE_YES);
 }
 
 /** verifies circular pattern containing two elements with NLP */
-Test(verification, nlp_complex)
+void test_verification_nlp_complex(void)
 {
    SCIP_PATTERN* p;
    int i;
@@ -142,59 +142,59 @@ Test(verification, nlp_complex)
       SCIPpatternAddElement(p, 1, SCIP_INVALID, SCIP_INVALID);
 
    SCIP_CALL( SCIPverifyCircularPatternNLP(scip, probdata, p, SCIPinfinity(scip), SCIP_LONGINT_MAX) );
-   cr_expect(SCIPpatternGetPackableStatus(p) == SCIP_PACKABLE_YES);
+   SOFT_ASSERT(SCIPpatternGetPackableStatus(p) == SCIP_PACKABLE_YES);
 
    /* add one more element -> not packable anymore */
    SCIPpatternAddElement(p, 1, SCIP_INVALID, SCIP_INVALID);
    SCIPpatternSetPackableStatus(p, SCIP_PACKABLE_UNKNOWN);
    SCIP_CALL( SCIPverifyCircularPatternNLP(scip, probdata, p, SCIPinfinity(scip), SCIP_LONGINT_MAX) );
-   cr_expect(SCIPpatternGetPackableStatus(p) == SCIP_PACKABLE_NO);
+   SOFT_ASSERT(SCIPpatternGetPackableStatus(p) == SCIP_PACKABLE_NO);
 
    /* release pattern */
    SCIPpatternRelease(scip, &p);
 }
 
 /** verifies empty circular pattern with heuristic */
-Test(verification, heur_empty)
+void test_verification_heur_empty(void)
 {
-   cr_expect(SCIPpatternGetPackableStatus(pattern) == SCIP_PACKABLE_UNKNOWN);
+   SOFT_ASSERT(SCIPpatternGetPackableStatus(pattern) == SCIP_PACKABLE_UNKNOWN);
 
    SCIP_CALL( SCIPverifyCircularPatternHeuristic(scip, probdata, pattern, SCIPinfinity(scip), 1) );
-   cr_expect(SCIPpatternGetPackableStatus(pattern) == SCIP_PACKABLE_YES);
+   SOFT_ASSERT(SCIPpatternGetPackableStatus(pattern) == SCIP_PACKABLE_YES);
 }
 
 /** verifies circular pattern containing a single element with heuristic */
-Test(verification, heur_single)
+void test_verification_heur_single(void)
 {
-   cr_expect(SCIPpatternGetPackableStatus(pattern) == SCIP_PACKABLE_UNKNOWN);
+   SOFT_ASSERT(SCIPpatternGetPackableStatus(pattern) == SCIP_PACKABLE_UNKNOWN);
 
    /* add element of type 1 */
    SCIP_CALL( SCIPpatternAddElement(pattern, 1, SCIP_INVALID, SCIP_INVALID) );
    SCIP_CALL( SCIPverifyCircularPatternHeuristic(scip, probdata, pattern, SCIPinfinity(scip), 1) );
-   cr_expect(SCIPpatternGetPackableStatus(pattern) == SCIP_PACKABLE_YES);
+   SOFT_ASSERT(SCIPpatternGetPackableStatus(pattern) == SCIP_PACKABLE_YES);
 }
 
 /** verify circular pattern containing two elements with heuristic */
-Test(verification, heur_two)
+void test_verification_heur_two(void)
 {
-   cr_expect(SCIPpatternGetPackableStatus(pattern) == SCIP_PACKABLE_UNKNOWN);
+   SOFT_ASSERT(SCIPpatternGetPackableStatus(pattern) == SCIP_PACKABLE_UNKNOWN);
 
    /* add element of type 3 and element of type 2 -> not packable */
    SCIP_CALL( SCIPpatternAddElement(pattern, 3, SCIP_INVALID, SCIP_INVALID) );
    SCIP_CALL( SCIPpatternAddElement(pattern, 2, SCIP_INVALID, SCIP_INVALID) );
    SCIP_CALL( SCIPverifyCircularPatternHeuristic(scip, probdata, pattern, SCIPinfinity(scip), 1) );
-   cr_expect(SCIPpatternGetPackableStatus(pattern) == SCIP_PACKABLE_UNKNOWN);
+   SOFT_ASSERT(SCIPpatternGetPackableStatus(pattern) == SCIP_PACKABLE_UNKNOWN);
 
    /* remove element of type 3 and add another element of type 2 -> packable */
    SCIPpatternSetPackableStatus(pattern, SCIP_PACKABLE_UNKNOWN);
    SCIPpatternRemoveLastElements(pattern, 1);
    SCIP_CALL( SCIPpatternAddElement(pattern, 3, SCIP_INVALID, SCIP_INVALID) );
    SCIP_CALL( SCIPverifyCircularPatternHeuristic(scip, probdata, pattern, SCIPinfinity(scip), 1) );
-   cr_expect(SCIPpatternGetPackableStatus(pattern) == SCIP_PACKABLE_YES);
+   SOFT_ASSERT(SCIPpatternGetPackableStatus(pattern) == SCIP_PACKABLE_YES);
 }
 
 /** verifies circular pattern containing four and five elements with heuristic */
-Test(verification, heuer_four)
+void test_verification_heuer_four(void)
 {
    SCIP_PATTERN* p;
    int i;
@@ -208,14 +208,28 @@ Test(verification, heuer_four)
 
    /* easy enough for any heuristic */
    SCIP_CALL( SCIPverifyCircularPatternHeuristic(scip, probdata, p, SCIPinfinity(scip), 1) );
-   cr_expect(SCIPpatternGetPackableStatus(p) == SCIP_PACKABLE_YES);
+   SOFT_ASSERT(SCIPpatternGetPackableStatus(p) == SCIP_PACKABLE_YES);
 
    /* add one more element -> not packable anymore (heuristic should only detect UNKNOWN) */
    SCIPpatternAddElement(p, 1, SCIP_INVALID, SCIP_INVALID);
    SCIPpatternSetPackableStatus(p, SCIP_PACKABLE_UNKNOWN);
    SCIP_CALL( SCIPverifyCircularPatternHeuristic(scip, probdata, p, SCIPinfinity(scip), 10) );
-   cr_expect(SCIPpatternGetPackableStatus(p) == SCIP_PACKABLE_UNKNOWN);
+   SOFT_ASSERT(SCIPpatternGetPackableStatus(p) == SCIP_PACKABLE_UNKNOWN);
 
    /* release pattern */
    SCIPpatternRelease(scip, &p);
+}
+
+int main(void)
+{
+   UNITY_BEGIN();
+   RUN_TEST(test_verification_nlp_empty);
+   RUN_TEST(test_verification_nlp_single);
+   RUN_TEST(test_verification_nlp_two);
+   RUN_TEST(test_verification_nlp_complex);
+   RUN_TEST(test_verification_heur_empty);
+   RUN_TEST(test_verification_heur_single);
+   RUN_TEST(test_verification_heur_two);
+   RUN_TEST(test_verification_heuer_four);
+   return UNITY_END();
 }

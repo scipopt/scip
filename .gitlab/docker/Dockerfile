@@ -10,7 +10,6 @@ ENV LAPACK_VERSION=3.12.0
 ENV MUMPS_VERSION=3.0.5
 ENV IPOPT_VERSION=3.14.14
 ENV TBB_VERSION=2021.10.0
-ENV CRITERION_VERSION=2.4.2
 ENV PAPILO_REVISION=v2.2.0
 ENV SOPLEX_REVISION=release-700
 
@@ -127,10 +126,4 @@ RUN git clone https://github.com/scipopt/papilo.git && \
     cmake .. -DCMAKE_BUILD_TYPE=Release -DQUADMATH=off -DBLA_STATIC=ON -DBLA_VENDOR=OpenBLAS -DTBB=off && \
     make -j5 && \
     make install && \
-    rm -rf /home/builds/*
-
-# criterion
-RUN wget https://github.com/Snaipe/Criterion/releases/download/v2.4.2/criterion-$CRITERION_VERSION-linux-x86_64.tar.xz && \
-    tar xf criterion-$CRITERION_VERSION-linux-x86_64.tar.xz && \
-    cp -r criterion-$CRITERION_VERSION/* /usr/local && \
     rm -rf /home/builds/*

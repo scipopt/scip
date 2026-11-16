@@ -130,7 +130,10 @@ void sassyhook(
 
    /* make sure we do not generate more that maxgenerators many permutations */
    if ( data->maxgenerators != 0 && data->nperms >= data->maxgenerators )
+   {
+      nauty_kill_request = 1;
       return;
+   }
 
    /* copy first part of automorphism */
    bool isIdentity = true;
@@ -163,7 +166,7 @@ void sassyhook(
    /* check whether permutation is identity */
    for (int j = 0; j < permlen; ++j)
    {
-      if ( (int) aut[j] != j )
+      if ( aut[j] != j )
          isIdentity = false;
    }
 
@@ -179,14 +182,14 @@ void sassyhook(
    {
       int cnt = 0;
       for (int j = nsymvars; j < permlen; ++j, ++cnt)
-         p[cnt] = (int) aut[j] - nsymvars;
+         p[cnt] = aut[j] - nsymvars;
       for (int j = 0; j < nsymvars; ++j, ++cnt)
-         p[cnt] = (int) aut[j] + data->nnodessdg;
+         p[cnt] = aut[j] + data->nnodessdg;
    }
    else
    {
       for (int j = 0; j < permlen; ++j)
-         p[j] = (int) aut[j];
+         p[j] = aut[j];
    }
 
    /* check whether we should allocate space for perms */

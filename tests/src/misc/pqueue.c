@@ -124,9 +124,9 @@ SCIP_RETCODE insertIntoPQueue(
       int minidx;
       SCIP_CALL( SCIPpqueueInsert(pqueue_local, (void *)(&tcs[i])) );
 
-      cr_assert_eq(SCIPpqueueNElems(pqueue_local), i + 1);
+      TEST_ASSERT_EQUAL(SCIPpqueueNElems(pqueue_local), i + 1);
       minidx = tcargmin(tcs, i + 1);
-      cr_assert_eq(tcs[minidx].val, ((TC*)SCIPpqueueFirst(pqueue_local))->val);
+      TEST_ASSERT_EQUAL(tcs[minidx].val, ((TC*)SCIPpqueueFirst(pqueue_local))->val);
    }
 
    return SCIP_OKAY;
@@ -148,9 +148,9 @@ void deleteFromPQueue(
       int minidx = tcargmin(&tcs[i], ntcs - i) + i;
 
       /* ensure that the minimum element */
-      cr_assert_eq(tcs[minidx].val, ((TC*)SCIPpqueueFirst(pqueue_local))->val);
-      cr_assert(elempos < SCIPpqueueNElems(pqueue_local));
-      cr_assert_eq(SCIPpqueueElems(pqueue_local)[elempos], (void*)(&tcs[i]));
+      TEST_ASSERT_EQUAL(tcs[minidx].val, ((TC*)SCIPpqueueFirst(pqueue_local))->val);
+      TEST_ASSERT(elempos < SCIPpqueueNElems(pqueue_local));
+      TEST_ASSERT_EQUAL(SCIPpqueueElems(pqueue_local)[elempos], (void*)(&tcs[i]));
       SCIPpqueueDelPos(pqueue_local, elempos);
    }
 }
@@ -173,22 +173,29 @@ void teardown(void)
    SCIP_CALL( SCIPfree(&scip) );
 }
 
+void setUp(void)
+{
+   setup();
+}
 
-
-TestSuite(pqueue, .init = setup, .fini = teardown);
+void tearDown(void)
+{
+   teardown();
+}
 
 /* TESTS  */
-Test(pqueue, create_and_free)
+void test_pqueue_create_and_free(void)
 {
    /* calls setup and teardown */
 }
 
 
-Test(pqueue, insert, .description="test insertion")
+/** @brief test insertion */
+void test_pqueue_insert(void)
 {
    int i;
-   TC testc[n1];
-   TC* testc2[n1];
+   TC testc[5];  /* n1 = 5 */
+   TC* testc2[5];
 
    /* initialize values to those in values1 */
    initTestContainers(testc, values1, n1);
@@ -203,12 +210,13 @@ Test(pqueue, insert, .description="test insertion")
 
    /* test if elements are sorted in increasing order */
    for( i = 0; i < n1 - 1; ++i )
-      cr_assert(testc2[i]->val <= testc2[i+1]->val);
+      TEST_ASSERT(testc2[i]->val <= testc2[i+1]->val);
 }
 
-Test(pqueue, delpos, .description="test deletion using positions")
+/** @brief test deletion using positions */
+void test_pqueue_delpos(void)
 {
-   TC testc[n1];
+   TC testc[5];  /* n1 = 5 */
 
    /* initialize values to those in values1 */
    initTestContainers(testc, values1, n1);
@@ -222,7 +230,8 @@ Test(pqueue, delpos, .description="test deletion using positions")
 
 #define N2 50
 #define NSHUF 1000
-Test(pqueue, insert_and_delete_random, .description="test random value permutations to cover extreme cases")
+/** @brief test random value permutations to cover extreme cases */
+void test_pqueue_insert_and_delete_random(void)
 {
    int i;
    int s;
@@ -252,4 +261,14 @@ Test(pqueue, insert_and_delete_random, .description="test random value permutati
    }
 
    SCIPfreeRandom(scip, &rng);
+}
+
+int main(void)
+{
+   UNITY_BEGIN();
+   RUN_TEST(test_pqueue_create_and_free);
+   RUN_TEST(test_pqueue_insert);
+   RUN_TEST(test_pqueue_delpos);
+   RUN_TEST(test_pqueue_insert_and_delete_random);
+   return UNITY_END();
 }

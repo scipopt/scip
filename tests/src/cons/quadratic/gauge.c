@@ -73,9 +73,8 @@ void setup(void)
    SCIP_CALL( SCIPcreateProbBasic(scip, "problem") );
 }
 
-Test(separation, gauge, .init = setup,
-   .description = "check computation of gauge function of a convex quadratic set"
-   )
+/** @brief check computation of gauge function of a convex quadratic set */
+void test_separation_gauge(void)
 {
    SCIP_VAR* xvar;
    SCIP_VAR* yvar;
@@ -127,11 +126,11 @@ Test(separation, gauge, .init = setup,
       SCIP_CALL( computeGauge(scip, conshdlr, cons) );
 
       /* this could be a single test probably */
-      cr_assert(consdata->isgaugeavailable, "gauge unavailable, pointless to continue");
-      cr_assert_arr_eq(consdata->interiorpoint, expectedarray, 2, "wrong interior point");
-      cr_assert_float_eq(consdata->interiorpointval, 0.0, EPS, "wrong interior point value");
-      cr_assert_arr_eq(consdata->gaugecoefs, expectedarray, 2, "wrong interior point");
-      cr_assert_float_eq(consdata->gaugeconst, 0.0, EPS, "wrong gauge constant");
+      TEST_ASSERT(consdata->isgaugeavailable, "gauge unavailable, pointless to continue");
+      TEST_ASSERT_EQUAL_MEMORY(expectedarray, consdata->interiorpoint, 2, "wrong interior point");
+      TEST_ASSERT_DOUBLE_WITHIN(consdata->interiorpointval, 0.0, EPS, "wrong interior point value");
+      TEST_ASSERT_EQUAL_MEMORY(expectedarray, consdata->gaugecoefs, 2, "wrong interior point");
+      TEST_ASSERT_DOUBLE_WITHIN(consdata->gaugeconst, 0.0, EPS, "wrong gauge constant");
 
       /* create sol where to evaluate the gauge: one could parametrize this
        * or even create a theory out this, because in our case gauge(X) = X/norm(X)^2 */
@@ -141,9 +140,9 @@ Test(separation, gauge, .init = setup,
 
       /* test evaluation */
       SCIP_CALL( evaluateGauge(scip, conshdlr, cons, point, &val, &success) );
-      cr_assert(success, "unsuccessful evaluation of gauge");
+      TEST_ASSERT(success, "unsuccessful evaluation of gauge");
 
-      cr_assert_float_eq(val, 1.41421356237309504880, EPS, "wrong gauge evaluation");
+      TEST_ASSERT_DOUBLE_WITHIN(val, 1.41421356237309504880, EPS, "wrong gauge evaluation");
    }
 
    SCIP_CALL( SCIPfreeSol(scip, &point) );
@@ -155,7 +154,20 @@ Test(separation, gauge, .init = setup,
    SCIP_CALL( SCIPfree(&scip) );
 
    /* check for memory leaks */
-   cr_assert_eq(BMSgetMemoryUsed(), 0, "There is are memory leak!!");
+   TEST_ASSERT_EQUAL(BMSgetMemoryUsed(), 0, "There is are memory leak!!");
 }
 
 #endif  /* ifdef SCIP_DISABLED_CODE */
+
+void setUp(void) { }
+
+void tearDown(void) { }
+
+int main(void)
+{
+   UNITY_BEGIN();
+#ifdef SCIP_DISABLED_CODE
+   RUN_TEST(test_separation_gauge);
+#endif
+   return UNITY_END();
+}

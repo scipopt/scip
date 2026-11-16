@@ -853,6 +853,27 @@ SCIP_RETCODE SCIPgetNegatedVars(
    SCIP_VAR**            negvars             /**< array to store the negated variables */
    );
 
+/** gets corresponding active, fixed, or multi-aggregated problem variables of binary variables and
+ *  updates the given negation status of each variable
+ */
+SCIP_EXPORT
+SCIP_RETCODE SCIPgetProbvarsBinary(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR***           vars,               /**< pointer to binary problem variables */
+   SCIP_Bool**           negatedarr,         /**< pointer to corresponding array to update the negation status */
+   int                   nvars               /**< number of variables and values in vars and negated array */
+   );
+
+/** gets corresponding active, fixed, or multi-aggregated problem variable of a binary variable and
+ *  updates the given negation status
+ */
+SCIP_EXPORT
+SCIP_RETCODE SCIPgetProbvarBinary(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR**            var,                /**< pointer to binary problem variable */
+   SCIP_Bool*            negated             /**< pointer to update the negation status */
+   );
+
 /** gets a binary variable that is equal to the given binary variable, and that is either active, fixed, or
  *  multi-aggregated, or the negated variable of an active, fixed, or multi-aggregated variable
  *
@@ -1074,7 +1095,7 @@ SCIP_RETCODE SCIPgetActiveVars(
  *
  *  @pre This method can only be called if @p scip is in stage \ref SCIP_STAGE_SOLVING
  *
- *  @note The return value of this method should be used carefully if the dual feasibility check was explictely disabled.
+ *  @note The return value of this method should be used carefully if the dual feasibility check was explicitly disabled.
  */
 SCIP_EXPORT
 SCIP_Real SCIPgetVarRedcost(
@@ -1090,7 +1111,7 @@ SCIP_Real SCIPgetVarRedcost(
  *
  *  @pre This method can only be called if @p scip is in stage \ref SCIP_STAGE_SOLVING
  *
- *  @note The return value of this method should be used carefully if the dual feasibility check was explictely disabled.
+ *  @note The return value of this method should be used carefully if the dual feasibility check was explicitly disabled.
  */
 SCIP_EXPORT
 SCIP_Real SCIPgetVarImplRedcost(
@@ -3683,7 +3704,7 @@ SCIP_Bool SCIPallowStrongDualReds(
 
 /** returns whether weak dual reductions are allowed during propagation and presolving
  *
- *  @note A reduction is called weak dual, if it may discard feasible solutions, but leaves at all optimal solutions
+ *  @note A reduction is called weak dual, if it may discard feasible solutions, but leaves all optimal solutions
  *        intact. Often such reductions are based on analyzing the objective function, reduced costs, and/or dual LPs.
  */
 SCIP_EXPORT

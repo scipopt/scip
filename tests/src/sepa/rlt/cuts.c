@@ -70,11 +70,11 @@ void setup(void)
 
    /* get nonlinear conshdlr*/
    conshdlr = SCIPfindConshdlr(scip, "nonlinear");
-   cr_assert(conshdlr != NULL);
+   TEST_ASSERT(conshdlr != NULL);
 
    /* get separator */
    sepa = SCIPfindSepa(scip, "rlt");
-   cr_assert(sepa != NULL);
+   TEST_ASSERT(sepa != NULL);
 
    /* create problem */
    SCIP_CALL( SCIPcreateProbBasic(scip, "test_problem") );
@@ -89,11 +89,11 @@ void setup(void)
    /* add nonlinear constraints */
    SCIP_CALL( SCIPparseCons(scip, &conss[0], input1,
       TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, &success) );
-   cr_expect(success);
+   TEST_ASSERT(success);
    success = FALSE;
    SCIP_CALL( SCIPparseCons(scip, &conss[1], input2,
       TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, &success) );
-   cr_expect(success);
+   TEST_ASSERT(success);
    SCIP_CALL( SCIPaddCons(scip, conss[0]) );
    SCIP_CALL( SCIPaddCons(scip, conss[1]) );
    SCIP_CALL( SCIPreleaseCons(scip, &conss[1]) );
@@ -107,7 +107,7 @@ void setup(void)
 
    /* initialize LP (creates auxvars and collects bilinear terms) */
    SCIP_CALL( SCIPconstructLP(scip, &infeasible) );
-   cr_assert(!infeasible);
+   TEST_ASSERT(!infeasible);
 
    /* create sepadata */
    SCIP_CALL( SCIPallocBlockMemory(scip, &sepadata) );
@@ -153,10 +153,9 @@ void teardown(void)
    /* free SCIP */
    SCIP_CALL( SCIPfree(&scip) );
 
-   cr_assert_eq(BMSgetMemoryUsed(), 0, "Memory leak!!");
+   TEST_ASSERT_EQUAL(BMSgetMemoryUsed(), 0, "Memory leak!!");
 }
 
-TestSuite(cuts, .init = setup, .fini = teardown);
 
 static
 void checkCut(SCIP_ROW* cut, SCIP_VAR** vars, SCIP_Real* vals, int nvars, SCIP_Real lhs, SCIP_Real rhs)
@@ -167,10 +166,10 @@ void checkCut(SCIP_ROW* cut, SCIP_VAR** vars, SCIP_Real* vals, int nvars, SCIP_R
    int i;
    int j;
 
-   cr_assert(cut != NULL);
-   cr_expect_eq(SCIProwGetNNonz(cut), nvars, "\nExpected %d nonz, got %d", nvars, SCIProwGetNNonz(cut));
-   cr_expect(SCIPisEQ(scip, SCIProwGetLhs(cut), lhs));
-   cr_expect(SCIPisEQ(scip, SCIProwGetRhs(cut), rhs));
+   TEST_ASSERT(cut != NULL);
+   SOFT_ASSERT_EQUAL(SCIProwGetNNonz(cut), nvars, "\nExpected %d nonz, got %d", nvars, SCIProwGetNNonz(cut));
+   SOFT_ASSERT(SCIPisEQ(scip, SCIProwGetLhs(cut), lhs));
+   SOFT_ASSERT(SCIPisEQ(scip, SCIProwGetRhs(cut), rhs));
 
    for( i = 0; i < SCIProwGetNNonz(cut); ++i )
    {
@@ -182,46 +181,46 @@ void checkCut(SCIP_ROW* cut, SCIP_VAR** vars, SCIP_Real* vals, int nvars, SCIP_R
       {
          if( var == vars[j] )
          {
-            cr_expect(SCIPisEQ(scip, coef, vals[j]));
+            SOFT_ASSERT(SCIPisEQ(scip, coef, vals[j]));
             found = TRUE;
          }
       }
 
       if( !found )
-         cr_expect(FALSE, "found an unknown variable");
+         SOFT_ASSERT(FALSE, "found an unknown variable");
    }
 }
 
 /* checks the correspondence between variables and expressions */
-Test(cuts, collect)
+void test_cuts_collect(void)
 {
    /* check original variables */
-   cr_expect_eq(SCIPgetBilinTermNonlinear(conshdlr, x, x)->aux.var, xx);
-   cr_expect_eq(SCIPgetBilinTermNonlinear(conshdlr, x, y)->aux.var, xy);
-   cr_expect_eq(SCIPgetBilinTermNonlinear(conshdlr, x, z)->aux.var, xz);
-   cr_expect_eq(SCIPgetBilinTermNonlinear(conshdlr, y, x)->aux.var, xy);
-   cr_expect_eq(SCIPgetBilinTermNonlinear(conshdlr, z, x)->aux.var, xz);
+   SOFT_ASSERT_EQUAL(SCIPgetBilinTermNonlinear(conshdlr, x, x)->aux.var, xx);
+   SOFT_ASSERT_EQUAL(SCIPgetBilinTermNonlinear(conshdlr, x, y)->aux.var, xy);
+   SOFT_ASSERT_EQUAL(SCIPgetBilinTermNonlinear(conshdlr, x, z)->aux.var, xz);
+   SOFT_ASSERT_EQUAL(SCIPgetBilinTermNonlinear(conshdlr, y, x)->aux.var, xy);
+   SOFT_ASSERT_EQUAL(SCIPgetBilinTermNonlinear(conshdlr, z, x)->aux.var, xz);
 
-   cr_expect_eq(SCIPgetBilinTermNonlinear(conshdlr, y, z), NULL);
-   cr_expect_eq(SCIPgetBilinTermNonlinear(conshdlr, z, y), NULL);
-   cr_expect_eq(SCIPgetBilinTermNonlinear(conshdlr, y, y), NULL);
-   cr_expect_eq(SCIPgetBilinTermNonlinear(conshdlr, z, z), NULL);
+   SOFT_ASSERT_EQUAL(SCIPgetBilinTermNonlinear(conshdlr, y, z), NULL);
+   SOFT_ASSERT_EQUAL(SCIPgetBilinTermNonlinear(conshdlr, z, y), NULL);
+   SOFT_ASSERT_EQUAL(SCIPgetBilinTermNonlinear(conshdlr, y, y), NULL);
+   SOFT_ASSERT_EQUAL(SCIPgetBilinTermNonlinear(conshdlr, z, z), NULL);
 
    /* check auxiliary variables for second constraint */
-   cr_expect_eq(SCIPgetBilinTermNonlinear(conshdlr, logvar, logvar)->aux.var, powvar);
-   cr_expect_eq(SCIPgetBilinTermNonlinear(conshdlr, absvar, powvar)->aux.var, prodvar);
-   cr_expect_eq(SCIPgetBilinTermNonlinear(conshdlr, prodvar, prodvar), NULL);
-   cr_expect_eq(SCIPgetBilinTermNonlinear(conshdlr, prodvar, absvar), NULL);
-   cr_expect_eq(SCIPgetBilinTermNonlinear(conshdlr, prodvar, powvar), NULL);
-   cr_expect_eq(SCIPgetBilinTermNonlinear(conshdlr, prodvar, logvar), NULL);
-   cr_expect_eq(SCIPgetBilinTermNonlinear(conshdlr, absvar, absvar), NULL);
-   cr_expect_eq(SCIPgetBilinTermNonlinear(conshdlr, absvar, logvar), NULL);
-   cr_expect_eq(SCIPgetBilinTermNonlinear(conshdlr, powvar, powvar), NULL);
-   cr_expect_eq(SCIPgetBilinTermNonlinear(conshdlr, powvar, logvar), NULL);
+   SOFT_ASSERT_EQUAL(SCIPgetBilinTermNonlinear(conshdlr, logvar, logvar)->aux.var, powvar);
+   SOFT_ASSERT_EQUAL(SCIPgetBilinTermNonlinear(conshdlr, absvar, powvar)->aux.var, prodvar);
+   SOFT_ASSERT_EQUAL(SCIPgetBilinTermNonlinear(conshdlr, prodvar, prodvar), NULL);
+   SOFT_ASSERT_EQUAL(SCIPgetBilinTermNonlinear(conshdlr, prodvar, absvar), NULL);
+   SOFT_ASSERT_EQUAL(SCIPgetBilinTermNonlinear(conshdlr, prodvar, powvar), NULL);
+   SOFT_ASSERT_EQUAL(SCIPgetBilinTermNonlinear(conshdlr, prodvar, logvar), NULL);
+   SOFT_ASSERT_EQUAL(SCIPgetBilinTermNonlinear(conshdlr, absvar, absvar), NULL);
+   SOFT_ASSERT_EQUAL(SCIPgetBilinTermNonlinear(conshdlr, absvar, logvar), NULL);
+   SOFT_ASSERT_EQUAL(SCIPgetBilinTermNonlinear(conshdlr, powvar, powvar), NULL);
+   SOFT_ASSERT_EQUAL(SCIPgetBilinTermNonlinear(conshdlr, powvar, logvar), NULL);
 }
 
 /* computes and checks cuts */
-Test(cuts, separation)
+void test_cuts_separation(void)
 {
    SCIP_ROW* row1;
    SCIP_ROW* cutlhs;
@@ -258,15 +257,15 @@ Test(cuts, separation)
     * cut for row1 and (x-0)
     */
    SCIP_CALL( isAcceptableRow(sepadata, row1, x, &currentnunknown, &result) );
-   cr_expect(result);
-   cr_expect_eq(computeRltCut(scip, sepa, sepadata, &cutlhs, row1, NULL, NULL, bestunder, bestover, x, &success, TRUE, TRUE,
+   SOFT_ASSERT(result);
+   SOFT_ASSERT_EQUAL(computeRltCut(scip, sepa, sepadata, &cutlhs, row1, NULL, NULL, bestunder, bestover, x, &success, TRUE, TRUE,
          TRUE, FALSE, FALSE), SCIP_OKAY);
-   cr_assert(success);
-   cr_expect_eq(computeRltCut(scip, sepa, sepadata, &cutrhs, row1, NULL, NULL, bestunder, bestover, x, &success, TRUE, FALSE,
+   TEST_ASSERT(success);
+   SOFT_ASSERT_EQUAL(computeRltCut(scip, sepa, sepadata, &cutrhs, row1, NULL, NULL, bestunder, bestover, x, &success, TRUE, FALSE,
          TRUE, FALSE, FALSE), SCIP_OKAY);
-   cr_assert(success);
-   cr_assert(cutlhs != NULL);
-   cr_assert(cutrhs != NULL);
+   TEST_ASSERT(success);
+   TEST_ASSERT(cutlhs != NULL);
+   TEST_ASSERT(cutrhs != NULL);
 
    /* check lhs cut */
    cutvars = (SCIP_VAR*[4]) {xx, xy, xz, x};
@@ -283,14 +282,14 @@ Test(cuts, separation)
    /*
     * cut for row1 and (2-x)
     */
-   cr_expect_eq(computeRltCut(scip, sepa, sepadata, &cutlhs, row1, NULL, NULL, bestunder, bestover, x, &success, FALSE,
+   SOFT_ASSERT_EQUAL(computeRltCut(scip, sepa, sepadata, &cutlhs, row1, NULL, NULL, bestunder, bestover, x, &success, FALSE,
          TRUE, TRUE, FALSE, FALSE), SCIP_OKAY);
-   cr_assert(success);
-   cr_expect_eq(computeRltCut(scip, sepa, sepadata, &cutrhs, row1, NULL, NULL, bestunder, bestover, x, &success, FALSE,
+   TEST_ASSERT(success);
+   SOFT_ASSERT_EQUAL(computeRltCut(scip, sepa, sepadata, &cutrhs, row1, NULL, NULL, bestunder, bestover, x, &success, FALSE,
          FALSE, TRUE, FALSE, FALSE), SCIP_OKAY);
-   cr_assert(success);
-   cr_assert(cutlhs != NULL);
-   cr_assert(cutrhs != NULL);
+   TEST_ASSERT(success);
+   TEST_ASSERT(cutlhs != NULL);
+   TEST_ASSERT(cutrhs != NULL);
 
    /* check lhs cut */
    cutvars = (SCIP_VAR*[6]) {xx, xy, xz, x, y, z};
@@ -306,9 +305,21 @@ Test(cuts, separation)
 
    /* check for not acceptable row */
    SCIP_CALL( isAcceptableRow(sepadata, row1, y, &currentnunknown, &result) );
-   cr_expect(!result);
+   SOFT_ASSERT(!result);
    SCIP_CALL( SCIPreleaseRow(scip, &row1) );
 
    SCIPfreeBufferArray(scip, &bestover);
    SCIPfreeBufferArray(scip, &bestunder);
+}
+
+void setUp(void) { setup(); }
+
+void tearDown(void) { teardown(); }
+
+int main(void)
+{
+   UNITY_BEGIN();
+   RUN_TEST(test_cuts_collect);
+   RUN_TEST(test_cuts_separation);
+   return UNITY_END();
 }

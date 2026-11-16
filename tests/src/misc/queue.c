@@ -80,13 +80,23 @@ void teardown(void)
    SCIPqueueFree(&queue);
 }
 
-TestSuite(queue, .init = setup, .fini = teardown);
+void setUp(void)
+{
+   setup();
+}
 
-Test(queue, setup_and_teardown, .description = "test that setup and teardown work correctly")
+void tearDown(void)
+{
+   teardown();
+}
+
+/** @brief test that setup and teardown work correctly */
+void test_queue_setup_and_teardown(void)
 {
 }
 
-Test(queue, test_queue_insertion, .description = "test that the queue stores entries correctly.")
+/** @brief test that the queue stores entries correctly. */
+void test_queue_insertion(void)
 {
    int i;
 
@@ -95,14 +105,15 @@ Test(queue, test_queue_insertion, .description = "test that the queue stores ent
 
    for( i = 0; i < arraylen; i++ )
    {
-      cr_assert_eq(myptrentries[i], (SCIP_Real*) SCIPqueueFirst(queue));
-      cr_assert_eq(myptrentries[i], (SCIP_Real*) SCIPqueueRemove(queue));
+      TEST_ASSERT_EQUAL(myptrentries[i], (SCIP_Real*) SCIPqueueFirst(queue));
+      TEST_ASSERT_EQUAL(myptrentries[i], (SCIP_Real*) SCIPqueueRemove(queue));
    }
 
-   cr_assert(SCIPqueueIsEmpty(queue));
+   TEST_ASSERT(SCIPqueueIsEmpty(queue));
 }
 
-Test(queue, test_queue_uintinsertion, .description = "test that the queue stores unsigned integer entries correctly.")
+/** @brief test that the queue stores unsigned integer entries correctly. */
+void test_queue_uintinsertion(void)
 {
    int i;
 
@@ -114,14 +125,15 @@ Test(queue, test_queue_uintinsertion, .description = "test that the queue stores
 
    for( i = 0; i < arraylen; i++ )
    {
-      cr_assert_eq(myuintentries[i], SCIPqueueFirstUInt(queue));
-      cr_assert_eq(myuintentries[i], SCIPqueueRemoveUInt(queue));
+      TEST_ASSERT_EQUAL(myuintentries[i], SCIPqueueFirstUInt(queue));
+      TEST_ASSERT_EQUAL(myuintentries[i], SCIPqueueRemoveUInt(queue));
    }
 
-   cr_assert(SCIPqueueIsEmpty(queue));
+   TEST_ASSERT(SCIPqueueIsEmpty(queue));
 }
 
-Test(queue, test_queue_clear, .description = "test that the queue clears entries correctly.")
+/** @brief test that the queue clears entries correctly. */
+void test_queue_clear(void)
 {
    int i;
 
@@ -131,9 +143,19 @@ Test(queue, test_queue_clear, .description = "test that the queue clears entries
    for( i = 0; i < arraylen; i++ )
       SCIP_CALL( SCIPqueueInsert(queue, (void*) myptrentries[i]) );
 
-   cr_assert_eq(arraylen, SCIPqueueNElems(queue));
+   TEST_ASSERT_EQUAL(arraylen, SCIPqueueNElems(queue));
 
    SCIPqueueClear(queue);
 
-   cr_assert(SCIPqueueIsEmpty(queue));
+   TEST_ASSERT(SCIPqueueIsEmpty(queue));
+}
+
+int main(void)
+{
+   UNITY_BEGIN();
+   RUN_TEST(test_queue_setup_and_teardown);
+   RUN_TEST(test_queue_insertion);
+   RUN_TEST(test_queue_uintinsertion);
+   RUN_TEST(test_queue_clear);
+   return UNITY_END();
 }

@@ -297,7 +297,7 @@ SCIP_RETCODE solveLP(
          SCIPdebugMsg(scip, "   lp was not solved\n");
          break;
       case SCIP_LPSOLSTAT_ERROR:
-         SCIPdebugMsg(scip, "   an error occured during solving lp\n");
+         SCIPdebugMsg(scip, "   an error occurred during solving lp\n");
          break;
       case SCIP_LPSOLSTAT_INFEASIBLE:
       case SCIP_LPSOLSTAT_OBJLIMIT:
@@ -1626,7 +1626,7 @@ SCIP_DECL_SORTPTRCOMP(compBoundsBoundtype)
       return diff;
 
    diff = (bound1->boundtype == SCIP_BOUNDTYPE_LOWER ? 1 : 0) - (bound2->boundtype == SCIP_BOUNDTYPE_LOWER ? 1 : 0);
-   if( diff != 0 )  /* cppcheck-suppress knownConditionTrueFalse */
+   if( diff != 0 )
       return diff;
 
    return (bound1->score == bound2->score) ? 0 : (bound1->score > bound2->score ? 1 : -1);
@@ -1768,7 +1768,7 @@ SCIP_RETCODE applySeparation(
       SCIPdebug( SCIPdebugMsg(scip, "applySeparation() - optimal=%u error=%u lpiter=%" SCIP_LONGINT_FORMAT "\n", optimal, error, nlpiter); )
       SCIPdebugMsg(scip, "oldval = %e newval = %e\n", oldval, SCIPvarGetLPSol(currbound->var));
 
-      /* leave if we did not solve the LP to optimality or an error occured */
+      /* leave if we did not solve the LP to optimality or an error occurred */
       if( error || !optimal )
          break;
 
@@ -1886,7 +1886,7 @@ SCIP_RETCODE findNewBounds(
       SCIPdebugMsg(scip, "before solving      var <%s>, LP value: %f\n",
          SCIPvarGetName(currbound->var), SCIPvarGetLPSol(currbound->var));
 
-      SCIPdebugMsg(scip, "probing iterations before solve: %lld \n", SCIPgetNLPIterations(scip));
+      SCIPdebugMsg(scip, "probing iterations before solve: %" SCIP_LONGINT_FORMAT " \n", SCIPgetNLPIterations(scip));
 
       propdata->nprobingiterations -= SCIPgetNLPIterations(scip);
 
@@ -1896,7 +1896,7 @@ SCIP_RETCODE findNewBounds(
       propdata->nprobingiterations += SCIPgetNLPIterations(scip);
       propdata->nsolvedbounds++;
 
-      SCIPdebugMsg(scip, "probing iterations after solve: %lld \n", SCIPgetNLPIterations(scip));
+      SCIPdebugMsg(scip, "probing iterations after solve: %" SCIP_LONGINT_FORMAT " \n", SCIPgetNLPIterations(scip));
       SCIPdebugMsg(scip, "OPT: %u ERROR: %u\n" , optimal, error);
       SCIPdebugMsg(scip, "after solving      Boundtype: %d , LB: %e , UB: %e\n",
          currbound->boundtype == SCIP_BOUNDTYPE_LOWER, SCIPvarGetLbLocal(currbound->var),
@@ -2482,7 +2482,7 @@ SCIP_RETCODE applyObbtBilinear(
 
    nolditerations = SCIPgetNLPIterations(scip);
    nleftiterations = getIterationsLeft(scip, nolditerations, itlimit);
-   SCIPdebugMsg(scip, "iteration limit: %lld\n", nleftiterations);
+   SCIPdebugMsg(scip, "iteration limit: %" SCIP_LONGINT_FORMAT "\n", nleftiterations);
 
    /* 1. start probing */
    SCIP_CALL( SCIPstartProbing(scip) );
@@ -2571,7 +2571,7 @@ SCIP_RETCODE applyObbtBilinear(
 
          /* update number of LP iterations */
          nleftiterations = getIterationsLeft(scip, nolditerations, itlimit);
-         SCIPdebugMsg(scip, "LP iterations left: %lld\n", nleftiterations);
+         SCIPdebugMsg(scip, "LP iterations left: %" SCIP_LONGINT_FORMAT "\n", nleftiterations);
 
          /* add inequality to quadratic constraint handler if it separates (xt,yt) */
          if( !SCIPisHugeValue(scip, xcoef)  && !SCIPisFeasZero(scip, xcoef)
@@ -3185,7 +3185,7 @@ SCIP_DECL_PROPEXEC(propExecObbt)
    SCIPdebugMsg(scip, "applying obbt for problem <%s> at depth %d\n", SCIPgetProbName(scip), SCIPgetDepth(scip));
 
    /* without an optimal LP solution we don't want to run; this may be because propagators with higher priority have
-    * already found reductions or numerical troubles occured during LP solving
+    * already found reductions or numerical troubles occurred during LP solving
     */
    if( SCIPgetLPSolstat(scip) != SCIP_LPSOLSTAT_OPTIMAL && SCIPgetLPSolstat(scip) != SCIP_LPSOLSTAT_UNBOUNDEDRAY )
    {

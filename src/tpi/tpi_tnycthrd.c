@@ -811,7 +811,6 @@ SCIP_RETCODE SCIPtpiSignalCondition(
 }
 
 /** signals all waiting threads */
-SCIP_EXPORT
 SCIP_RETCODE SCIPtpiBroadcastCondition(
    SCIP_CONDITION*       condition           /**< the condition variable to broadcast */
    )

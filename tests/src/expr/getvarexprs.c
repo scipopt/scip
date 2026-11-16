@@ -72,12 +72,11 @@ void teardown(void)
    SCIP_CALL( SCIPreleaseVar(scip, &z) );
    SCIP_CALL( SCIPfree(&scip) );
 
-   cr_assert_eq(BMSgetMemoryUsed(), 0, "Memory is leaking!!");
+   TEST_ASSERT_EQUAL(BMSgetMemoryUsed(), 0, "Memory is leaking!!");
 }
 
-TestSuite(getvars, .init = setup, .fini = teardown);
 
-Test(getvars, expression_not_containing_all_vars)
+void test_getvars_expression_not_containing_all_vars(void)
 {
    SCIP_EXPR* varexprs[3];
    int nvarexprs;
@@ -85,19 +84,19 @@ Test(getvars, expression_not_containing_all_vars)
 
    /* note that this captures the variable expressions */
    SCIP_CALL( SCIPgetExprVarExprs(scip, expr, varexprs, &nvarexprs) );
-   cr_assert_eq(nvarexprs, 3);
+   TEST_ASSERT_EQUAL(nvarexprs, 3);
 
    for( i = 0; i < nvarexprs; ++i )
    {
-      cr_assert_not_null(varexprs[i]);
-      cr_assert(SCIPisExprVar(scip, varexprs[i]));
+      TEST_ASSERT_NOT_NULL(varexprs[i]);
+      TEST_ASSERT(SCIPisExprVar(scip, varexprs[i]));
 
       /* release variable expression */
       SCIP_CALL( SCIPreleaseExpr(scip, &varexprs[i]) );
    }
 }
 
-Test(getvars, expression_containing_all_vars)
+void test_getvars_expression_containing_all_vars(void)
 {
    SCIP_EXPR* varexprs[4];
    SCIP_EXPR* wexpr;
@@ -112,12 +111,12 @@ Test(getvars, expression_containing_all_vars)
 
    /* note that this captures the variable expressions */
    SCIP_CALL( SCIPgetExprVarExprs(scip, sumexpr, varexprs, &nvarexprs) );
-   cr_assert_eq(nvarexprs, 4, "Expecting 4, got %d\n", nvarexprs);
+   TEST_ASSERT_EQUAL(nvarexprs, 4, "Expecting 4, got %d\n", nvarexprs);
 
    for( i = 0; i < nvarexprs; ++i )
    {
-      cr_assert_not_null(varexprs[i]);
-      cr_assert(SCIPisExprVar(scip, varexprs[i]));
+      TEST_ASSERT_NOT_NULL(varexprs[i]);
+      TEST_ASSERT(SCIPisExprVar(scip, varexprs[i]));
 
       /* release variable expression */
       SCIP_CALL( SCIPreleaseExpr(scip, &varexprs[i]) );
@@ -125,4 +124,17 @@ Test(getvars, expression_containing_all_vars)
 
    SCIP_CALL( SCIPreleaseExpr(scip, &sumexpr) );
    SCIP_CALL( SCIPreleaseExpr(scip, &wexpr) );
+}
+
+void setUp(void) { setup(); }
+
+void tearDown(void) { teardown(); }
+
+int main(void)
+{
+   UNITY_BEGIN();
+   RUN_TEST(test_getvars_expression_not_containing_all_vars
+);
+   RUN_TEST(test_getvars_expression_containing_all_vars);
+   return UNITY_END();
 }

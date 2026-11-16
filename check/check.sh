@@ -107,20 +107,20 @@ MEMFORMAT="kB"
 
 if test -e "${SCIPPATH}/../${BINNAME}"
 then
-    EXECNAME="${SCIPPATH}/../${BINNAME}"
+    ORIGEXECNAME="${SCIPPATH}/../${BINNAME}"
 
     # check if we can set hard memory limit (address, leak, or thread sanitzer don't like ulimit -v)
-    if [ $(uname) == Linux ] && (ldd "${EXECNAME}" | grep -q lib[alt]san); then
+    if [ $(uname) == Linux ] && (ldd "${ORIGEXECNAME}" | grep -q lib[alt]san); then
         # skip hard mem limit if using AddressSanitizer (libasan), LeakSanitizer (liblsan), or ThreadSanitizer (libtsan)
         HARDMEMLIMIT="none"
-    elif [ $(uname) == Linux ] && (nm "${EXECNAME}" | grep -q __[alt]san); then
+    elif [ $(uname) == Linux ] && (nm "${ORIGEXECNAME}" | grep -q __[alt]san); then
         # skip hard mem limit if using AddressSanitizer, LeakSanitizer, or ThreadSanitizer linked statitically (__[alt]san symbols)
         HARDMEMLIMIT="none"
     else
         ULIMITMEM="ulimit -v ${HARDMEMLIMIT} k;"
     fi
 else
-    EXECNAME="${BINNAME}"
+    ORIGEXECNAME="${BINNAME}"
     ULIMITMEM="ulimit -v ${HARDMEMLIMIT} k;"
 fi
 
@@ -128,10 +128,10 @@ fi
 EXT="${BINNAME##*.}"
 if test "${EXT}" = "py"
 then
-   EXECNAME="${PYTHON} ${BINNAME}"
+   ORIGEXECNAME="${PYTHON} ${BINNAME}"
 fi
 
-EXECNAME="${DEBUGTOOLCMD}${EXECNAME}"
+ORIGEXECNAME="${DEBUGTOOLCMD}${ORIGEXECNAME}"
 
 INIT="true"
 COUNT=0
@@ -200,6 +200,7 @@ do
 
                 # call tmp file configuration for SCIP
                 # this may modify the EXECNAME environment variable
+                EXECNAME=${ORIGEXECNAME}
                 . "./${CONFFILE}" "${INSTANCE}" "${SCIPPATH}" "${TMPFILE}" "${SETNAME}" "${SETFILE}" "${THREADS}" "${SETCUTOFF}" \
                     "${FEASTOL}" "${TIMELIMIT}" "${MEMLIMIT}" "${NODELIMIT}" "${LPS}" "${DISPFREQ}"  "${REOPT}" "${OPTCOMMAND}" \
                     "${CLIENTTMPDIR}" "${FILENAME}" "${VISUALIZE}" "${SOLUFILE}" "${EMPHBENCHMARK}" "${CLOCKTYPE}" "${WITHCERTIFICATE}" \

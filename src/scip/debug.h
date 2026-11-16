@@ -40,7 +40,7 @@
 #include "scip/type_retcode.h"
 #include "scip/type_scip.h"
 
-#ifdef WITH_DEBUG_SOLUTION
+#if SCIP_HAS_DEBUG_SOLUTION
 #include "blockmemshell/memory.h"
 #include "scip/type_cons.h"
 #include "scip/type_lp.h"
@@ -49,7 +49,7 @@
 #include "scip/type_sol.h"
 #include "scip/type_tree.h"
 #include "scip/type_var.h"
-#endif
+#endif /* SCIP_HAS_DEBUG_SOLUTION */
 
 
 #ifdef __cplusplus
@@ -59,7 +59,7 @@ extern "C" {
 /** solution data for debugging purposes */
 typedef struct SCIP_DebugSolData SCIP_DEBUGSOLDATA;
 
-#ifdef WITH_DEBUG_SOLUTION
+#if SCIP_HAS_DEBUG_SOLUTION
 
 /** creates debug solution data */
 SCIP_RETCODE SCIPdebugSolDataCreate(
@@ -282,11 +282,11 @@ SCIP_Bool SCIPdebugSolIsEnabled(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/** check if SCIP is compiled with WITH_DEBUG_SOLUTION */
+/** check if SCIP is compiled with SCIP_HAS_DEBUG_SOLUTION */
 SCIP_EXPORT
 SCIP_Bool SCIPwithDebugSol(void);
 
-#else
+#else /* !SCIP_HAS_DEBUG_SOLUTION */
 
 #define SCIPdebugSolDataCreate(debugsoldata) SCIP_OKAY
 #define SCIPdebugFreeSol(set) SCIP_OKAY
@@ -317,7 +317,7 @@ SCIP_Bool SCIPwithDebugSol(void);
 #define SCIPdebugSolIsEnabled(scip) FALSE
 #define SCIPwithDebugSol(void) FALSE
 
-#endif
+#endif /* SCIP_HAS_DEBUG_SOLUTION */
 
 
 /*
@@ -340,7 +340,7 @@ SCIP_RETCODE SCIPdebugCheckBInvRow(
 #endif
 
 /** checks if SCIP is in one of the feasible stages */
-#ifdef SCIP_CHECK_STAGE
+#if SCIP_CHECK_STAGE
 
 SCIP_RETCODE SCIPcheckStage(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -360,12 +360,12 @@ SCIP_RETCODE SCIPcheckStage(
    SCIP_Bool             freetrans,          /**< may method be called in the FREETRANS stage? */
    SCIP_Bool             freescip            /**< may method be called in the FREE stage? */
    );
-#else
+#else /* !SCIP_CHECK_STAGE */
 
 #define SCIPcheckStage(scip,method,init,problem,transforming,transformed,initpresolve,presolving,exitpresolve,presolved, \
    initsolve,solving,solved,exitsolve,freetrans,freescip) SCIP_OKAY
 
-#endif
+#endif /* SCIP_CHECK_STAGE */
 
 #ifdef __cplusplus
 }

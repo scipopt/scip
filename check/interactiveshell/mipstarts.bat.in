@@ -5,6 +5,7 @@ validatesolve ${optval} ${optval}
 read ${CMAKE_CURRENT_SOURCE_DIR}/${path}
 read ${CMAKE_CURRENT_SOURCE_DIR}/mipstarts/${basename}.mst
 set heuristics completesol beforepresol FALSE
+set heuristics localsearch freq -1
 optimize
 validatesolve ${optval} ${optval}
 quit

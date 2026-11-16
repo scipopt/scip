@@ -270,15 +270,14 @@
  *
  * project(minex)
  * find_package(SCIP REQUIRED)
- * include_directories(${SCIP_INCLUDE_DIRS})
  *
  * add_executable(minex
- *   src/cmain.c)
+ *    src/cmain.c)
  *
- * target_link_libraries(minex ${SCIP_LIBRARIES})
+ * target_link_libraries(minex SCIP::SCIP)
  *
- * if( TARGET examples )
- *     add_dependencies( examples minex )
+ * if(TARGET examples)
+ *    add_dependencies(examples minex)
  * endif()
  * ```
  *
@@ -901,6 +900,14 @@
  *  </td>
  *  <td>
  *  An example about using custom relaxators.
+ *  </td>
+ *  </tr>
+ *  <tr>
+ *  <td>
+ *  @subpage LJ_MAIN "Nonlinear Handler"
+ *  </td>
+ *  <td>
+ *  An example illustrating the use of a nonlinear handler to improve SCIP's handling of a nonlinearity that appears in Lennard-Jones Cluster Problems.
  *  </td>
  *  </tr>
  *  <tr>
@@ -4144,6 +4151,7 @@
  * component.
  * The first symmetry handler that can handle the symmetries of a component will get this component assigned.
  * That is, the higher the priority the more likely it is that this symmetry handler handles a symmetry component.
+ * Symmetry handlers with a negative priority are disabled, i.e., they will not try to handle symmetries.
  *
  * @subsection SYM_ADDITIONALPROPERTIES Optional Symmetry Handler properties
  *
@@ -8846,6 +8854,7 @@
  *  \arg <code>THREADS</code> - the number of threads used for solving LPs, if the linked LP solver supports multithreading [default: 1]
  *  \arg <code>VALGRIND</code> - run valgrind on the SCIP binary; errors and memory leaks found by valgrind are reported as fails [default: "false"]
  *  \arg <code>KEEPSOL</code> - if set to 'false', the best found solution is no longer written out to a solution file [default: "true"]
+ *  \arg <code>DEBUGTOOL</code> - runs SCIP through an additional tool, possible values: valgrind, rr, gdb, perf, "" [default: ""]
  *
  *
  *  @section COMPARE Comparing test runs for different settings
@@ -8919,7 +8928,7 @@
  *       processed nodes or in the total number of simplex iterations.
  *  \arg <code>equal</code> - Solvers with instances whose number of processed nodes and total number of
  *       simplex iterations is equal to the reference solver (including a 10% tolerance) and where no timeout
- *       occured.
+ *       occurred.
  *  \arg <code>all optimal</code> - Solvers with instances that could be solved to optimality by
  *       <em>all</em> solvers; in particular, no timeout occurred.
  *

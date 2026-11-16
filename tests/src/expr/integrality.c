@@ -63,7 +63,7 @@ void teardown(void)
    SCIP_CALL( SCIPreleaseVar(scip, &x) );
    SCIP_CALL( SCIPfree(&scip) );
 
-   cr_assert_eq(BMSgetMemoryUsed(), 0, "Memory leak!!");
+   TEST_ASSERT_EQUAL(BMSgetMemoryUsed(), 0, "Memory leak!!");
 }
 
 /** helper function to check integrality information */
@@ -79,7 +79,7 @@ SCIP_RETCODE checkIntegrality(
    SCIP_Bool infeasible;
 
    /* create and print expression */
-   cr_expect_eq(SCIPparseExpr(scip, &origexpr, (char*)input, NULL, NULL, NULL), SCIP_OKAY);
+   SOFT_ASSERT_EQUAL(SCIPparseExpr(scip, &origexpr, (char*)input, NULL, NULL, NULL), SCIP_OKAY);
 
    /* simplify expression */
    SCIP_CALL( SCIPsimplifyExpr(scip, origexpr, &expr, &changed, &infeasible, NULL, NULL) );
@@ -91,7 +91,7 @@ SCIP_RETCODE checkIntegrality(
 
    /* compute and check integrality information */
    SCIP_CALL( SCIPcomputeExprIntegrality(scip, expr) );
-   cr_expect( SCIPexprGetIntegrality(expr) == integrality);
+   SOFT_ASSERT( SCIPexprGetIntegrality(expr) == integrality);
 
    /* release expression */
    SCIP_CALL( SCIPreleaseExpr(scip, &expr) );
@@ -103,78 +103,77 @@ SCIP_RETCODE checkIntegrality(
  * define the testsuite
  */
 
-TestSuite(integrality, .init = setup, .fini = teardown);
 
 /*
  * tests for single expressions
  */
 
-Test(integrality, abs)
+void test_integrality_abs(void)
 {
    SCIP_CALL( checkIntegrality("abs(<x>)", SCIP_IMPLINTTYPE_STRONG) );
    SCIP_CALL( checkIntegrality("abs(<y>)", SCIP_IMPLINTTYPE_STRONG) );
    SCIP_CALL( checkIntegrality("abs(<z>)", SCIP_IMPLINTTYPE_NONE) );
 }
 
-Test(integrality, cos)
+void test_integrality_cos(void)
 {
    SCIP_CALL( checkIntegrality("cos(<x>)", SCIP_IMPLINTTYPE_NONE) );
 }
 
-Test(integrality, entropy)
+void test_integrality_entropy(void)
 {
    SCIP_CALL( checkIntegrality("entropy(<y>)", SCIP_IMPLINTTYPE_NONE) );
 }
 
-Test(integrality, exp)
+void test_integrality_exp(void)
 {
    SCIP_CALL( checkIntegrality("exp(<x>)", SCIP_IMPLINTTYPE_NONE) );
 }
 
-Test(integrality, log)
+void test_integrality_log(void)
 {
    SCIP_CALL( checkIntegrality("log(<x>)", SCIP_IMPLINTTYPE_NONE) );
 }
 
-Test(integrality, pow)
+void test_integrality_pow(void)
 {
    SCIP_CALL( checkIntegrality("<x>^2", SCIP_IMPLINTTYPE_STRONG) );
    SCIP_CALL( checkIntegrality("<y>^2.2", SCIP_IMPLINTTYPE_NONE) );
    SCIP_CALL( checkIntegrality("<y>^(-2)", SCIP_IMPLINTTYPE_NONE) );
 }
 
-Test(integrality, signpower)
+void test_integrality_signpower(void)
 {
    SCIP_CALL( checkIntegrality("signpower(<x>,2)", SCIP_IMPLINTTYPE_STRONG) );
    SCIP_CALL( checkIntegrality("signpower(<y>,2.2)", SCIP_IMPLINTTYPE_NONE) );
 }
 
-Test(integrality, product)
+void test_integrality_product(void)
 {
    SCIP_CALL( checkIntegrality("<x> * <y>", SCIP_IMPLINTTYPE_STRONG) );
    SCIP_CALL( checkIntegrality("-1.1 * <x> * <y>", SCIP_IMPLINTTYPE_NONE) );
    SCIP_CALL( checkIntegrality("<x> * <y> * <z>", SCIP_IMPLINTTYPE_NONE) );
 }
 
-Test(integrality, sin)
+void test_integrality_sin(void)
 {
    SCIP_CALL( checkIntegrality("sin(<x>)", SCIP_IMPLINTTYPE_NONE) );
 }
 
-Test(integrality, sum)
+void test_integrality_sum(void)
 {
    SCIP_CALL( checkIntegrality("<x> + <y>", SCIP_IMPLINTTYPE_STRONG) );
    SCIP_CALL( checkIntegrality("<x> -2.2*<y>", SCIP_IMPLINTTYPE_NONE) );
    SCIP_CALL( checkIntegrality("<x> + <y> + <z>", SCIP_IMPLINTTYPE_NONE) );
 }
 
-Test(integrality, value)
+void test_integrality_value(void)
 {
    SCIP_CALL( checkIntegrality("-2.0", SCIP_IMPLINTTYPE_STRONG) );
    SCIP_CALL( checkIntegrality("3.1", SCIP_IMPLINTTYPE_NONE) );
 }
 
-Test(integrality, var)
+void test_integrality_var(void)
 {
    SCIP_CALL( checkIntegrality("<x>", SCIP_IMPLINTTYPE_STRONG) );
    SCIP_CALL( checkIntegrality("<y>", SCIP_IMPLINTTYPE_STRONG) );
@@ -185,12 +184,37 @@ Test(integrality, var)
  * tests for more complex expressions
  */
 
-Test(integrality, quadratic)
+void test_integrality_quadratic(void)
 {
    SCIP_CALL( checkIntegrality("3*<x>^2 -2 * <x>*<y> + 5 * <y> + 2", SCIP_IMPLINTTYPE_STRONG) );
 }
 
-Test(integrality, polynomial)
+void test_integrality_polynomial(void)
 {
    SCIP_CALL( checkIntegrality("<x>^2 * <y>^3 + <y>^2.5", SCIP_IMPLINTTYPE_NONE) );
+}
+
+void setUp(void) { setup(); }
+
+void tearDown(void) { teardown(); }
+
+int main(void)
+{
+   UNITY_BEGIN();
+   RUN_TEST(test_integrality_abs
+);
+   RUN_TEST(test_integrality_cos);
+   RUN_TEST(test_integrality_entropy);
+   RUN_TEST(test_integrality_exp);
+   RUN_TEST(test_integrality_log);
+   RUN_TEST(test_integrality_pow);
+   RUN_TEST(test_integrality_signpower);
+   RUN_TEST(test_integrality_product);
+   RUN_TEST(test_integrality_sin);
+   RUN_TEST(test_integrality_sum);
+   RUN_TEST(test_integrality_value);
+   RUN_TEST(test_integrality_var);
+   RUN_TEST(test_integrality_quadratic);
+   RUN_TEST(test_integrality_polynomial);
+   return UNITY_END();
 }

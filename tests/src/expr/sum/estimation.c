@@ -31,9 +31,8 @@
 #include "scip/expr_sum.c"
 #include "../estimation.h"
 
-Test(estimation, sum, .init = setup, .fini = teardown,
-   .description = "test separation for a sum expression"
-   )
+/** @brief test separation for a sum expression */
+void test_estimation_sum(void)
 {
    SCIP_EXPR* expr;
    SCIP_Real refpoint[2] = { 0., 0. };
@@ -50,13 +49,24 @@ Test(estimation, sum, .init = setup, .fini = teardown,
 
    SCIP_CALL( estimateSum(scip, expr, bounds, bounds, refpoint, TRUE, SCIP_INVALID, coefs, &constant, &islocal, &success, branchcand) );
 
-   cr_expect(success);
-   cr_expect_eq(coefs[0], 2.3);
-   cr_expect_eq(coefs[1], -5.1);
-   cr_expect_eq(constant, 1.5);
-   cr_expect_not(islocal);
-   cr_expect_not(branchcand[0]);
-   cr_expect_not(branchcand[1]);
+   TEST_ASSERT(success);
+   SOFT_ASSERT_EQUAL(coefs[0], 2.3);
+   SOFT_ASSERT_EQUAL(coefs[1], -5.1);
+   SOFT_ASSERT_EQUAL(constant, 1.5);
+   SOFT_ASSERT_NOT(islocal);
+   SOFT_ASSERT_NOT(branchcand[0]);
+   SOFT_ASSERT_NOT(branchcand[1]);
 
    SCIP_CALL( SCIPreleaseExpr(scip, &expr) );
+}
+
+void setUp(void) { setup(); }
+
+void tearDown(void) { teardown(); }
+
+int main(void)
+{
+   UNITY_BEGIN();
+   RUN_TEST(test_estimation_sum);
+   return UNITY_END();
 }

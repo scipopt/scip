@@ -563,12 +563,6 @@ SCIP_RETCODE SCIPprobCollectStatistics(
    SCIP_DATATREE*        datatree            /**< data tree */
    );
 
-#ifndef NDEBUG
-
-/* In debug mode, the following methods are implemented as function calls to ensure
- * type validity.
- */
-
 /** is the problem permuted */
 SCIP_Bool SCIPprobIsPermuted(
    SCIP_PROB*            prob
@@ -714,9 +708,9 @@ void SCIPprobEnableConsCompression(
    SCIP_PROB*            prob                /**< problem data */
    );
 
-#else
+#ifdef NDEBUG
 
-/* In optimized mode, the methods are implemented as defines to reduce the number of function calls and
+/* In optimized mode, some functions are overwritten by defines to reduce the number of function calls and
  * speed up the algorithms.
  */
 

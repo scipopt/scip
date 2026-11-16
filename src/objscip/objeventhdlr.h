@@ -49,7 +49,7 @@ namespace scip
  *  - \ref EVENT "Instructions for implementing an event handler"
  *  - \ref type_event.h "Corresponding C interface"
  */
-class ObjEventhdlr : public ObjCloneable
+class SCIP_EXPORT ObjEventhdlr : public ObjCloneable
 {
 public:
    /*lint --e{1540}*/

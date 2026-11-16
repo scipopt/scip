@@ -52,7 +52,7 @@ extern "C" {
  * @{
  */
 
-/** compares two benderss w. r. to their priority */
+/** compares two benderss w.r.t. their priority */
 SCIP_EXPORT
 SCIP_DECL_SORTPTRCOMP(SCIPbendersComp);
 
@@ -214,7 +214,7 @@ SCIP_Bool SCIPbendersSubproblemIsSetup(
    int                   probnumber          /**< the subproblem number */
    );
 
-/** returns the master auxiliary variable that represents an underestimation of the subproblem objective value. */
+/** returns the master auxiliary variable that represents an underestimation of the subproblem objective value */
 SCIP_EXPORT
 SCIP_VAR* SCIPbenderGetMasterAuxiliaryVar(
    SCIP_BENDERS*         benders             /**< Benders' decomposition */
@@ -320,7 +320,7 @@ SCIP_BENDERSCUT* SCIPfindBenderscut(
 
 
 /** returns the array of currently available Benders' cuts; active Benders' decomposition are in the first slots of
- * the array
+ *  the array
  */
 SCIP_EXPORT
 SCIP_BENDERSCUT** SCIPbendersGetBenderscuts(
@@ -412,7 +412,7 @@ void SCIPbendersSetSubproblemIsNonlinear(
    SCIP_Bool             isnonlinear         /**< flag to indicate whether the subproblem contains non-linear constraints */
    );
 
-/** returns whether the subproblem contains non-linear constraints. */
+/** returns whether the subproblem contains non-linear constraints */
 SCIP_EXPORT
 SCIP_Bool SCIPbendersSubproblemIsNonlinear(
    SCIP_BENDERS*         benders,            /**< Benders' decomposition */
@@ -432,7 +432,7 @@ void SCIPbendersSetMasterIsNonlinear(
    SCIP_Bool             isnonlinear         /**< flag to indicate whether the subproblem contains non-linear constraints */
    );
 
-/** returns whether the master problem contains non-linear constraints. */
+/** returns whether the master problem contains non-linear constraints */
 SCIP_EXPORT
 SCIP_Bool SCIPbendersMasterIsNonlinear(
    SCIP_BENDERS*         benders             /**< Benders' decomposition */
@@ -451,6 +451,7 @@ SCIP_Bool SCIPbendersInStrengthenRound(
    );
 
 /** returns whether at least one of the subproblems has been identified as infeasible.
+ *
  *  NOTE: this is without any variable fixing being performed
  */
 SCIP_EXPORT
@@ -519,7 +520,7 @@ SCIP_Bool SCIPbendersSubproblemIsIndependent(
    int                   probnumber          /**< the subproblem number */
    );
 
-/** returns whether the subproblem is enabled, i.e. the subproblem is still solved in the solving loop. */
+/** returns whether the subproblem is enabled, i.e. the subproblem is still solved in the solving loop */
 SCIP_EXPORT
 SCIP_Bool SCIPbendersSubproblemIsEnabled(
    SCIP_BENDERS*         benders,            /**< Benders' decomposition */

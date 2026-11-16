@@ -154,85 +154,99 @@ void teardown(void)
    SCIP_CALL( SCIPfree(&scip) );
 
    /* check for leaks */
-   cr_assert_eq(BMSgetMemoryUsed(), 0, "There are memory leaks!");
+   TEST_ASSERT_EQUAL(BMSgetMemoryUsed(), 0, "There are memory leaks!");
 }
 
-TestSuite(compare, .init = setup, .fini = teardown);
 
-Test(compare, linear_expressions)
+void test_compare_linear_expressions(void)
 {
    SCIP_EXPR* lin_expr1;
    SCIP_EXPR* lin_expr2;
 
-   cr_expect( SCIPcompareExpr(scip, expr_x, expr_x) == 0 );
-   cr_expect( SCIPcompareExpr(scip, expr_y, expr_y) == 0 );
-   cr_expect( SCIPcompareExpr(scip, expr_x, expr_y) == -1 );
-   cr_expect( SCIPcompareExpr(scip, expr_y, expr_x) == 1 );
+   SOFT_ASSERT( SCIPcompareExpr(scip, expr_x, expr_x) == 0 );
+   SOFT_ASSERT( SCIPcompareExpr(scip, expr_y, expr_y) == 0 );
+   SOFT_ASSERT( SCIPcompareExpr(scip, expr_x, expr_y) == -1 );
+   SOFT_ASSERT( SCIPcompareExpr(scip, expr_y, expr_x) == 1 );
 
    SCIP_CALL( SCIPcreateExprSum(scip, &lin_expr1, 1, &expr_x, NULL, 2.0, NULL, NULL) );
    SCIP_CALL( SCIPcreateExprSum(scip, &lin_expr2, 1, &expr_x, NULL, 3.0, NULL, NULL) );
-   cr_expect( SCIPcompareExpr(scip, lin_expr1, lin_expr2) == -1 );
-   cr_expect( SCIPcompareExpr(scip, lin_expr2, lin_expr1) == 1 );
-   cr_expect( SCIPcompareExpr(scip, lin_expr1, lin_expr1) == 0 );
+   SOFT_ASSERT( SCIPcompareExpr(scip, lin_expr1, lin_expr2) == -1 );
+   SOFT_ASSERT( SCIPcompareExpr(scip, lin_expr2, lin_expr1) == 1 );
+   SOFT_ASSERT( SCIPcompareExpr(scip, lin_expr1, lin_expr1) == 0 );
 
    SCIP_CALL( SCIPappendExprSumExpr(scip, lin_expr1, expr_y, 3.0) );
    SCIP_CALL( SCIPappendExprSumExpr(scip, lin_expr2, expr_y, 3.0) );
-   cr_expect( SCIPcompareExpr(scip, lin_expr1, lin_expr2) == -1 );
-   cr_expect( SCIPcompareExpr(scip, lin_expr2, lin_expr1) == 1 );
-   cr_expect( SCIPcompareExpr(scip, lin_expr1, lin_expr1) == 0 );
+   SOFT_ASSERT( SCIPcompareExpr(scip, lin_expr1, lin_expr2) == -1 );
+   SOFT_ASSERT( SCIPcompareExpr(scip, lin_expr2, lin_expr1) == 1 );
+   SOFT_ASSERT( SCIPcompareExpr(scip, lin_expr1, lin_expr1) == 0 );
 
    SCIP_CALL( SCIPreleaseExpr(scip, &lin_expr1) );
    SCIP_CALL( SCIPreleaseExpr(scip, &lin_expr2) );
 }
 
-Test(compare, values)
+void test_compare_values(void)
 {
-   cr_expect( SCIPcompareExpr(scip, expr_negvalue, expr_negvalue) == 0 );
-   cr_expect( SCIPcompareExpr(scip, expr_posvalue, expr_negvalue) == 1 );
-   cr_expect( SCIPcompareExpr(scip, expr_negvalue, expr_posvalue) == -1 );
-   cr_expect( SCIPcompareExpr(scip, expr_posvalue, expr_x) == -1 );
-   cr_expect( SCIPcompareExpr(scip, expr_posvalue, expr_y) == -1 );
-   cr_expect( SCIPcompareExpr(scip, expr_posvalue, expr_sum) == -1 );
-   cr_expect( SCIPcompareExpr(scip, expr_posvalue, expr_prod) == -1 );
+   SOFT_ASSERT( SCIPcompareExpr(scip, expr_negvalue, expr_negvalue) == 0 );
+   SOFT_ASSERT( SCIPcompareExpr(scip, expr_posvalue, expr_negvalue) == 1 );
+   SOFT_ASSERT( SCIPcompareExpr(scip, expr_negvalue, expr_posvalue) == -1 );
+   SOFT_ASSERT( SCIPcompareExpr(scip, expr_posvalue, expr_x) == -1 );
+   SOFT_ASSERT( SCIPcompareExpr(scip, expr_posvalue, expr_y) == -1 );
+   SOFT_ASSERT( SCIPcompareExpr(scip, expr_posvalue, expr_sum) == -1 );
+   SOFT_ASSERT( SCIPcompareExpr(scip, expr_posvalue, expr_prod) == -1 );
 }
 
-Test(compare, exponents)
+void test_compare_exponents(void)
 {
-   cr_expect( SCIPcompareExpr(scip, expr_halfx, expr_x) == -1 );
-   cr_expect( SCIPcompareExpr(scip, expr_x, expr_halfx) == 1 );
-   cr_expect( SCIPcompareExpr(scip, expr_sqrtx, expr_x) == -1 );
-   cr_expect( SCIPcompareExpr(scip, expr_x, expr_sqrtx) == 1 );
-   cr_expect( SCIPcompareExpr(scip, expr_sqrtx, expr_sqrx) == -1 );
-   cr_expect( SCIPcompareExpr(scip, expr_sqrx, expr_sqrtx) == 1 );
-   cr_expect( SCIPcompareExpr(scip, expr_x, expr_sqrx) == -1 );
-   cr_expect( SCIPcompareExpr(scip, expr_sqrx, expr_x) == 1 );
-   cr_expect( SCIPcompareExpr(scip, expr_prod, expr_sum_fracpow) == -1 );
-   cr_expect( SCIPcompareExpr(scip, expr_sum_fracpow, expr_prod) == 1 );
-   cr_expect( SCIPcompareExpr(scip, expr_sum_fracpow, expr_sum_fracpow) == 0 );
+   SOFT_ASSERT( SCIPcompareExpr(scip, expr_halfx, expr_x) == -1 );
+   SOFT_ASSERT( SCIPcompareExpr(scip, expr_x, expr_halfx) == 1 );
+   SOFT_ASSERT( SCIPcompareExpr(scip, expr_sqrtx, expr_x) == -1 );
+   SOFT_ASSERT( SCIPcompareExpr(scip, expr_x, expr_sqrtx) == 1 );
+   SOFT_ASSERT( SCIPcompareExpr(scip, expr_sqrtx, expr_sqrx) == -1 );
+   SOFT_ASSERT( SCIPcompareExpr(scip, expr_sqrx, expr_sqrtx) == 1 );
+   SOFT_ASSERT( SCIPcompareExpr(scip, expr_x, expr_sqrx) == -1 );
+   SOFT_ASSERT( SCIPcompareExpr(scip, expr_sqrx, expr_x) == 1 );
+   SOFT_ASSERT( SCIPcompareExpr(scip, expr_prod, expr_sum_fracpow) == -1 );
+   SOFT_ASSERT( SCIPcompareExpr(scip, expr_sum_fracpow, expr_prod) == 1 );
+   SOFT_ASSERT( SCIPcompareExpr(scip, expr_sum_fracpow, expr_sum_fracpow) == 0 );
 
    /* compare signed and unsigned power (same exponents) */
-   cr_expect( SCIPcompareExpr(scip, expr_sqrx, expr_signsqrx) == -1 );
+   SOFT_ASSERT( SCIPcompareExpr(scip, expr_sqrx, expr_signsqrx) == -1 );
 }
 
-Test(compare, sums_and_products)
+void test_compare_sums_and_products(void)
 {
-   cr_expect( SCIPcompareExpr(scip, expr_sum, expr_prod) == -1 );
-   cr_expect( SCIPcompareExpr(scip, expr_prod, expr_sum) == 1 );
-   cr_expect( SCIPcompareExpr(scip, expr_prod, expr_prod) == 0 );
-   cr_expect( SCIPcompareExpr(scip, expr_sum, expr_sum) == 0 );
-   cr_expect( SCIPcompareExpr(scip, expr_x, expr_sum) == -1 );
-   cr_expect( SCIPcompareExpr(scip, expr_y, expr_sum) == -1 );
-   cr_expect( SCIPcompareExpr(scip, expr_x, expr_prod) == -1 );
-   cr_expect( SCIPcompareExpr(scip, expr_y, expr_prod) == -1 );
-   cr_expect( SCIPcompareExpr(scip, expr_sum, expr_x) == 1 );
-   cr_expect( SCIPcompareExpr(scip, expr_sum, expr_y) == 1 );
-   cr_expect( SCIPcompareExpr(scip, expr_prod, expr_x) == 1 );
-   cr_expect( SCIPcompareExpr(scip, expr_prod, expr_y) == 1 );
-   cr_expect( SCIPcompareExpr(scip, expr_prod, expr_subprod_fracpow) == -1 );
-   cr_expect( SCIPcompareExpr(scip, expr_subprod_fracpow, expr_prod) == 1 );
-   cr_expect( SCIPcompareExpr(scip, expr_subprod_fracpow, expr_subprod_fracpow) == 0 );
-   cr_expect( SCIPcompareExpr(scip, expr_subprod_fracpow, expr_z) == -1 );
-   cr_expect( SCIPcompareExpr(scip, expr_z, expr_subprod_fracpow) == 1 );
-   cr_expect( SCIPcompareExpr(scip, expr_sqrx, expr_half_sqrx) == 1 );
-   cr_expect( SCIPcompareExpr(scip, expr_half_sqrx, expr_sqrx) == -1 );
+   SOFT_ASSERT( SCIPcompareExpr(scip, expr_sum, expr_prod) == -1 );
+   SOFT_ASSERT( SCIPcompareExpr(scip, expr_prod, expr_sum) == 1 );
+   SOFT_ASSERT( SCIPcompareExpr(scip, expr_prod, expr_prod) == 0 );
+   SOFT_ASSERT( SCIPcompareExpr(scip, expr_sum, expr_sum) == 0 );
+   SOFT_ASSERT( SCIPcompareExpr(scip, expr_x, expr_sum) == -1 );
+   SOFT_ASSERT( SCIPcompareExpr(scip, expr_y, expr_sum) == -1 );
+   SOFT_ASSERT( SCIPcompareExpr(scip, expr_x, expr_prod) == -1 );
+   SOFT_ASSERT( SCIPcompareExpr(scip, expr_y, expr_prod) == -1 );
+   SOFT_ASSERT( SCIPcompareExpr(scip, expr_sum, expr_x) == 1 );
+   SOFT_ASSERT( SCIPcompareExpr(scip, expr_sum, expr_y) == 1 );
+   SOFT_ASSERT( SCIPcompareExpr(scip, expr_prod, expr_x) == 1 );
+   SOFT_ASSERT( SCIPcompareExpr(scip, expr_prod, expr_y) == 1 );
+   SOFT_ASSERT( SCIPcompareExpr(scip, expr_prod, expr_subprod_fracpow) == -1 );
+   SOFT_ASSERT( SCIPcompareExpr(scip, expr_subprod_fracpow, expr_prod) == 1 );
+   SOFT_ASSERT( SCIPcompareExpr(scip, expr_subprod_fracpow, expr_subprod_fracpow) == 0 );
+   SOFT_ASSERT( SCIPcompareExpr(scip, expr_subprod_fracpow, expr_z) == -1 );
+   SOFT_ASSERT( SCIPcompareExpr(scip, expr_z, expr_subprod_fracpow) == 1 );
+   SOFT_ASSERT( SCIPcompareExpr(scip, expr_sqrx, expr_half_sqrx) == 1 );
+   SOFT_ASSERT( SCIPcompareExpr(scip, expr_half_sqrx, expr_sqrx) == -1 );
+}
+
+void setUp(void) { setup(); }
+
+void tearDown(void) { teardown(); }
+
+int main(void)
+{
+   UNITY_BEGIN();
+   RUN_TEST(test_compare_linear_expressions
+);
+   RUN_TEST(test_compare_values);
+   RUN_TEST(test_compare_exponents);
+   RUN_TEST(test_compare_sums_and_products);
+   return UNITY_END();
 }

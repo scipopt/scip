@@ -29,8 +29,6 @@
  *
  * This is an implementation of SCIP's LP interface for SoPlex.
  *
- * For debugging purposes, the SoPlex results can be double checked with CPLEX if WITH_LPSCHECK is defined. This may
- * yield false positives, since the LP is dumped to a file for transferring it to CPLEX, hence, precision may be lost.
  */
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -85,15 +83,16 @@
 #include "spxgithash.h"
 #endif
 
-#ifndef SOPLEX_WITH_GMP
-#error "SOPLEX_WITH_GMP not defined: SoPlex must be build with GMP to be used with LPSEXACT=spx"
-#endif
+#if (!defined(SOPLEX_HAS_GMP) || !SOPLEX_HAS_GMP) && !defined(SOPLEX_WITH_GMP)
+#error "SOPLEX_HAS_GMP not defined: SoPlex must be build with GMP to be used with LPSEXACT=spx"
+#endif /* !SOPLEX_HAS_GMP && !SOPLEX_WITH_GMP (deprecated) */
 
-#ifndef SOPLEX_WITH_MPFR
-#error "SOPLEX_WITH_MPFR not defined: SoPlex must be build with MPFR to be used with LPSEXACT=spx"
-#endif
+/* Remove SOPLEX_WITH_MPFR once SoPlex versions <= 8 are not compatible anymore. */
+#if (!defined(SOPLEX_HAS_MPFR) || !SOPLEX_HAS_MPFR) && !defined(SOPLEX_WITH_MPFR)
+#error "SOPLEX_HAS_MPFR not defined: SoPlex must be build with MPFR to be used with LPSEXACT=spx"
+#endif /* !SOPLEX_HAS_MPFR && !SOPLEX_WITH_MPFR (deprecated) */
 
-#ifndef SOPLEX_WITH_BOOST
+#if (!defined(SOPLEX_HAS_BOOST) || !SOPLEX_HAS_BOOST) && !defined(SOPLEX_WITH_BOOST)
 #error "SOPLEX_WITH_BOOST not defined: SoPlex must be build with BOOST to be used with LPSEXACT=spx"
 #endif
 
@@ -206,11 +205,11 @@ static void RsetSpxR(
       SCIPrationalSetNegInfinity(r);
    else
    {
-#if defined(SCIP_WITH_BOOST) && defined(SCIP_WITH_GMP)
+#if SCIP_HAS_GMP && SCIP_HAS_BOOST
       r->val = spxr;
-#else
+#else /* !SCIP_HAS_GMP || !SCIP_HAS_BOOST */
       r->val = (double) spxr;
-#endif
+#endif /* SCIP_HAS_GMP && SCIP_HAS_BOOST */
       r->isinf = FALSE;
       r->isfprepresentable = SCIP_ISFPREPRESENTABLE_UNKNOWN;
    }
@@ -247,11 +246,11 @@ static void SpxRSetRat(
    }
    else
    {
-#if defined(SOPLEX_WITH_GMP) && defined(SCIP_WITH_BOOST) && defined(SCIP_WITH_GMP)
+#if SCIP_HAS_BOOST && SCIP_HAS_GMP
       spxr = soplex::Rational(*SCIPrationalGetGMP(src));
-#else
+#else /* !SCIP_HAS_BOOST || !SCIP_HAS_GMP */
       spxr = soplex::Rational(SCIPrationalGetReal(src));
-#endif
+#endif /* SCIP_HAS_BOOST && SCIP_HAS_GMP */
    }
 }
 
@@ -1958,10 +1957,6 @@ SCIP_RETCODE spxSolve(
    invalidateSolution(lpi);
 
    assert( lpi->spx->preStrongbranchingBasisFreed() );
-
-#ifdef WITH_LPSCHECK
-   lpi->spx->setDoubleCheck(CHECK_SPXSOLVE);
-#endif
 
    /* delete starting basis if solving from scratch */
    if( lpi->spx->getFromScratch() )

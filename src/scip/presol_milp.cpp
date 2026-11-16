@@ -40,7 +40,7 @@
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 #include "scip/presol_milp.h"
 
-#ifndef SCIP_WITH_PAPILO
+#if !SCIP_HAS_PAPILO
 
 /** creates the MILP presolver and includes it in SCIP */
 SCIP_RETCODE SCIPincludePresolMILP(
@@ -51,7 +51,7 @@ SCIP_RETCODE SCIPincludePresolMILP(
    return SCIP_OKAY;
 }
 
-#else
+#else /* SCIP_HAS_PAPILO */
 
 /* disable some warnings that come up in header files of PAPILOs dependencies */
 #ifdef __GNUC__
@@ -66,6 +66,9 @@ SCIP_RETCODE SCIPincludePresolMILP(
 #endif
 
 #include <assert.h>
+#include "papilo/core/Presolve.hpp"
+#include "papilo/core/ProblemBuilder.hpp"
+#include "papilo/Config.hpp"
 #include "scip/cons_linear.h"
 #include "scip/cons_exactlinear.h"
 #include "scip/pub_matrix.h"
@@ -85,13 +88,10 @@ SCIP_RETCODE SCIPincludePresolMILP(
 #include "scip/scip_timing.h"
 #include "scip/scip_message.h"
 #include "scip/scip_randnumgen.h"
-#if defined(SCIP_WITH_EXACTSOLVE)
+#if SCIP_HAS_EXACTSOLVE
 #include "scip/struct_rational.h"
-#endif
+#endif /* SCIP_HAS_EXACTSOLVE */
 #include "scip/rational.h"
-#include "papilo/core/Presolve.hpp"
-#include "papilo/core/ProblemBuilder.hpp"
-#include "papilo/Config.hpp"
 
 /* API since PaPILO 2.3.0 */
 #if !defined(PAPILO_API_VERSION)
@@ -102,11 +102,12 @@ SCIP_RETCODE SCIPincludePresolMILP(
 #define PAPILO_APIVERSION PAPILO_API_VERSION
 #endif
 
-#if defined(SCIP_WITH_GMP) && defined(SCIP_WITH_EXACTSOLVE) && !defined(PAPILO_HAVE_GMP)
+/* TODO: Make use of PAPILO_HAS_GMP in future releases. */
+#if SCIP_HAS_GMP && SCIP_HAS_EXACTSOLVE && !defined(PAPILO_HAVE_GMP)
 #warning SCIP built with GMP and exact solving, but PaPILO without GMP disables exact presolving.
 #endif
 
-#if defined(SCIP_WITH_GMP) && defined(SCIP_WITH_EXACTSOLVE) && defined(PAPILO_HAVE_GMP)
+#if SCIP_HAS_GMP && SCIP_HAS_EXACTSOLVE && defined(PAPILO_HAVE_GMP)
 #define PAPILO_WITH_EXACTPRESOLVE
 #endif
 
@@ -417,7 +418,7 @@ SCIP_RETCODE setupPresolve(
    dualfix->set_fix_to_infinity_allowed(false);
    presolve.addPresolveMethod( uptr( dualfix ) );
 #else
-   presolve.addPresolveMethod( uptr( new DualFix<SCIP_Real>() ) );
+   presolve.addPresolveMethod( uptr( new DualFix<T>() ) );
 #endif
    presolve.addPresolveMethod( uptr( new FixContinuous<T>() ) );
    presolve.addPresolveMethod( uptr( new SimplifyInequalities<T>() ) );
@@ -1619,7 +1620,7 @@ SCIP_DECL_PRESOLCOPY(presolCopyMILP)
 static
 SCIP_DECL_PRESOLFREE(presolFreeMILP)
 {  /*lint --e{715}*/
-   SCIP_PRESOLMILPDATA* data = (SCIP_PRESOLMILPDATA*)SCIPpresolGetData(presol);
+   SCIP_PRESOLMILPDATA* data = reinterpret_cast<SCIP_PRESOLMILPDATA*>(SCIPpresolGetData(presol));
    assert(data != NULL);
 
    SCIPpresolSetData(presol, NULL);
@@ -1631,7 +1632,7 @@ SCIP_DECL_PRESOLFREE(presolFreeMILP)
 static
 SCIP_DECL_PRESOLINIT(presolInitMILP)
 {  /*lint --e{715}*/
-   SCIP_PRESOLMILPDATA* data = (SCIP_PRESOLMILPDATA*)SCIPpresolGetData(presol);
+   SCIP_PRESOLMILPDATA* data = reinterpret_cast<SCIP_PRESOLMILPDATA*>(SCIPpresolGetData(presol));
    assert(data != NULL);
 
    data->lastncols = -1;
@@ -1653,7 +1654,7 @@ SCIP_DECL_PRESOLEXEC(presolExecMILP)
 
    *result = SCIP_DIDNOTRUN;
 
-   data = (SCIP_PRESOLMILPDATA*)SCIPpresolGetData(presol);
+   data = reinterpret_cast<SCIP_PRESOLMILPDATA*>(SCIPpresolGetData(presol));
 
    int nvars = SCIPgetNVars(scip);
    int nconss = SCIPgetNConss(scip);
@@ -1727,6 +1728,7 @@ SCIP_RETCODE SCIPincludePresolMILP(
    String name = fmt::format("PaPILO {}.{}.{}", PAPILO_VERSION_MAJOR, PAPILO_VERSION_MINOR, PAPILO_VERSION_PATCH);
 #endif
 
+/* TODO: Make use of PAPILO_HAS_GITHASH in future releases. */
 #if defined(PAPILO_GITHASH_AVAILABLE) && defined(PAPILO_TBB)
    String desc = fmt::format("parallel presolve for integer and linear optimization (github.com/scipopt/papilo) (built with TBB) [GitHash: {}]", PAPILO_GITHASH);
 #elif !defined(PAPILO_GITHASH_AVAILABLE) && !defined(PAPILO_TBB)
@@ -1750,7 +1752,7 @@ SCIP_RETCODE SCIPincludePresolMILP(
    /* include presolver */
    SCIP_CALL( SCIPincludePresolBasic(scip, &presol, PRESOL_NAME, PRESOL_DESC, PRESOL_PRIORITY, PRESOL_MAXROUNDS, PRESOL_TIMING,
          presolExecMILP,
-         (SCIP_PRESOLDATA*)presoldata) );
+         reinterpret_cast<SCIP_PRESOLDATA*>(presoldata)) );
 
    assert(presol != NULL);
 
@@ -1921,4 +1923,4 @@ SCIP_RETCODE SCIPincludePresolMILP(
    return SCIP_OKAY;
 }
 
-#endif
+#endif /* !SCIP_HAS_PAPILO */

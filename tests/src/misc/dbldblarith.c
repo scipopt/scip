@@ -47,9 +47,17 @@ volatile double xhi = -2.881951920481567e+17;
 volatile double xlo = 6.0078125;
 
 /* TEST SUITE */
-TestSuite(dbldblarith);
+void setUp(void)
+{
+}
 
-Test(dbldblarith, product, .description = "tests product with double double arithmetic")
+void tearDown(void)
+{
+}
+
+/* TESTS  */
+/** @brief tests product with double double arithmetic */
+void test_dbldblarith_product(void)
 {
    volatile double result;
    volatile double dbldblres;
@@ -60,15 +68,16 @@ Test(dbldblarith, product, .description = "tests product with double double arit
    SCIPdbldblProd(dbldblres, dbldblreserr, a, b);
    SCIPdbldblProd21(dbldblres, dbldblreserr, dbldblres, dbldblreserr, c);
 
-   cr_assert_neq(result, 1.0010219031129229441, "double precision should not be exact");
-   cr_assert_eq((dbldblres + dbldblreserr), 1.0010219031129229441, "double double arithmetic did not give exact double precision result");
-   cr_assert_lt(fabs(result - 1.0010219031129229441), 1e-14, "double precision has to large error");
+   TEST_ASSERT(result != 1.0010219031129229441, "double precision should not be exact");
+   TEST_ASSERT_EQUAL_DOUBLE(1.0010219031129229441, (dbldblres + dbldblreserr), "double double arithmetic did not give exact double precision result");
+   TEST_ASSERT(fabs(result - 1.0010219031129229441) < 1e-14, "double precision has to large error");
 
    printf("error with double: %.18g, error with dbldbl: %.18g\n", fabs(result - 1.0010219031129229441), fabs((dbldblres + dbldblreserr) - 1.0010219031129229441));
 }
 
 
-Test(dbldblarith, sum, .description = "tests sum with double double arithmetic")
+/** @brief tests sum with double double arithmetic */
+void test_dbldblarith_sum(void)
 {
    volatile double result;
    volatile double dbldblres;
@@ -80,15 +89,16 @@ Test(dbldblarith, sum, .description = "tests sum with double double arithmetic")
    SCIPdbldblSum21(dbldblres, dbldblreserr, dbldblres, dbldblreserr, a);
    SCIPdbldblSum21(dbldblres, dbldblreserr, dbldblres, dbldblreserr, a);
 
-   cr_assert_neq(result, 1.2345681245670069507e7, "double precision should not be exact");
-   cr_assert_eq((dbldblres + dbldblreserr), 1.2345681245670069507e7, "double double arithmetic did not give exact double precision result");
-   cr_assert_lt(fabs(result - 1.2345681245670069507e7), 1e-7, "double precision has to large error");
+   TEST_ASSERT(result != 1.2345681245670069507e7, "double precision should not be exact");
+   TEST_ASSERT_EQUAL_DOUBLE(1.2345681245670069507e7, (dbldblres + dbldblreserr), "double double arithmetic did not give exact double precision result");
+   TEST_ASSERT(fabs(result - 1.2345681245670069507e7) < 1e-7, "double precision has to large error");
 
    printf("error with double: %.18g, error with dbldbl: %.18g\n", fabs(result - 1.2345681245670069507e7), fabs((dbldblres + dbldblreserr) - 1.2345681245670069507e7));
 }
 
 
-Test(dbldblarith, division, .description = "tests division with double double arithmetic")
+/** @brief tests division with double double arithmetic */
+void test_dbldblarith_division(void)
 {
    volatile double result;
    volatile double dbldblres;
@@ -101,15 +111,16 @@ Test(dbldblarith, division, .description = "tests division with double double ar
    SCIPdbldblDiv21(dbldblres, dbldblreserr, dbldblres, dbldblreserr, a);
    SCIPdbldblDiv21(dbldblres, dbldblreserr, dbldblres, dbldblreserr, c);
 
-   cr_assert_neq(result, 12.879932287432127447, "double precision should not be exact");
-   cr_assert_eq((dbldblres + dbldblreserr), 12.879932287432127447, "double double arithmetic did not give exact double precision result");
-   cr_assert_lt(fabs(result - 12.879932287432127447), 1e-14, "double precision has to large error");
+   TEST_ASSERT(result != 12.879932287432127447, "double precision should not be exact");
+   TEST_ASSERT_EQUAL_DOUBLE(12.879932287432127447, (dbldblres + dbldblreserr), "double double arithmetic did not give exact double precision result");
+   TEST_ASSERT(fabs(result - 12.879932287432127447) < 1e-14, "double precision has to large error");
 
    printf("error with double: %.18g, error with dbldbl: %.18g\n", fabs(result - 12.879932287432127447), fabs((dbldblres + dbldblreserr) - 12.879932287432127447));
 }
 
 
-Test(dbldblarith, square, .description = "tests squaring with double double arithmetic")
+/** @brief tests squaring with double double arithmetic */
+void test_dbldblarith_square(void)
 {
    volatile double result;
    volatile double dbldblres;
@@ -129,15 +140,16 @@ Test(dbldblarith, square, .description = "tests squaring with double double arit
    dbldblreserr *= 1152921504606846976.0;
    SCIPdbldblSquare2(dbldblres, dbldblreserr, dbldblres, dbldblreserr);
 
-   cr_assert_neq(result, 2.7095239662690573102e-24, "double precision should not be exact");
-   cr_assert_eq((dbldblres + dbldblreserr), 2.7095239662690573102e-24, "double double arithmetic did not give exact double precision result");
-   cr_assert_lt(fabs(result - 2.7095239662690573102e-24), 1e-39, "double precision has to large error");
+   TEST_ASSERT(result != 2.7095239662690573102e-24, "double precision should not be exact");
+   TEST_ASSERT_EQUAL_DOUBLE(2.7095239662690573102e-24, (dbldblres + dbldblreserr), "double double arithmetic did not give exact double precision result");
+   TEST_ASSERT(fabs(result - 2.7095239662690573102e-24) < 1e-39, "double precision has to large error");
 
    printf("error with double: %.18g, error with dbldbl: %.18g\n", fabs(result - 2.7095239662690573102e-24), fabs((dbldblres + dbldblreserr) - 2.7095239662690573102e-24));
 }
 
 
-Test(dbldblarith, sqrt, .description = "tests sqrt with double double arithmetic")
+/** @brief tests sqrt with double double arithmetic */
+void test_dbldblarith_sqrt(void)
 {
    int i;
    volatile double result;
@@ -154,15 +166,16 @@ Test(dbldblarith, sqrt, .description = "tests sqrt with double double arithmetic
    for( i = 0; i < 50; ++i )
       SCIPdbldblSqrt2(dbldblres, dbldblreserr, dbldblres, dbldblreserr);
 
-   cr_assert_neq(result, 1.0000000000000072514, "double precision should not be exact");
-   cr_assert_eq((dbldblres + dbldblreserr), 1.0000000000000072514, "double double arithmetic did not give exact double precision result");
-   cr_assert_lt(fabs(result - 1.0000000000000072514), 1e-14, "double precision has to large error");
+   TEST_ASSERT(result != 1.0000000000000072514, "double precision should not be exact");
+   TEST_ASSERT_EQUAL_DOUBLE(1.0000000000000072514, (dbldblres + dbldblreserr), "double double arithmetic did not give exact double precision result");
+   TEST_ASSERT(fabs(result - 1.0000000000000072514) < 1e-14, "double precision has to large error");
 
    printf("error with double: %.18g, error with dbldbl: %.18g\n", fabs(result - 1.0000000000000072514), fabs((dbldblres + dbldblreserr) - 1.0000000000000072514));
 }
 
 
-Test(dbldblarith, floor_ceil, .description = "tests floor/ceil with double double arithmetic")
+/** @brief tests floor/ceil with double double arithmetic */
+void test_dbldblarith_floor_ceil(void)
 {
    double tmphi;
    double tmplo;
@@ -176,19 +189,31 @@ Test(dbldblarith, floor_ceil, .description = "tests floor/ceil with double doubl
    resultfloor = floor(xhi + xlo);
    resultceil = ceil(-xhi - xlo);
 
-   cr_assert_eq(resultfloor, (-resultceil), "floor(x) should be equal to -ceil(-x)");
+   TEST_ASSERT_EQUAL(resultfloor, (-resultceil), "floor(x) should be equal to -ceil(-x)");
 
    SCIPdbldblFloor2(dbldblfloorres, dbldblfloorreserr, xhi, xlo);
    SCIPdbldblCeil2(dbldblceilres, dbldblceilreserr, -xhi, -xlo);
 
    printf("ceil(- (%.16g + %.16g)) = %.16g + %.16g  floor(%.16g + %.16g) = %.16g + %.16g\n", xhi, xlo, dbldblceilres, dbldblceilreserr, xhi, xlo, dbldblfloorres, dbldblfloorreserr);
 
-   cr_assert_eq(dbldblfloorres, -dbldblceilres, "floor(x) should be equal to -ceil(-x)");
-   cr_assert_eq(dbldblfloorreserr, -dbldblceilreserr, "floor(x) should be equal to -ceil(-x)");
+   TEST_ASSERT_EQUAL(dbldblfloorres, -dbldblceilres, "floor(x) should be equal to -ceil(-x)");
+   TEST_ASSERT_EQUAL(dbldblfloorreserr, -dbldblceilreserr, "floor(x) should be equal to -ceil(-x)");
 
    SCIPdbldblSum22(tmphi, tmplo, xhi, xlo, -dbldblfloorres, -dbldblfloorreserr);
-   cr_assert_eq((tmphi + tmplo), 0.0078125, "double double arithmetic floor should give the correct result 0.0078125");
+   TEST_ASSERT_EQUAL((tmphi + tmplo), 0.0078125, "double double arithmetic floor should give the correct result 0.0078125");
 
    SCIPdbldblSum21(tmphi, tmplo, xhi, xlo, -resultfloor);
-   cr_assert_eq((tmphi + tmplo),  6.0078125, "double precision floor should give the incorrect result 6.0078125");
+   TEST_ASSERT_EQUAL((tmphi + tmplo),  6.0078125, "double precision floor should give the incorrect result 6.0078125");
+}
+
+int main(void)
+{
+   UNITY_BEGIN();
+   RUN_TEST(test_dbldblarith_product);
+   RUN_TEST(test_dbldblarith_sum);
+   RUN_TEST(test_dbldblarith_division);
+   RUN_TEST(test_dbldblarith_square);
+   RUN_TEST(test_dbldblarith_sqrt);
+   RUN_TEST(test_dbldblarith_floor_ceil);
+   return UNITY_END();
 }

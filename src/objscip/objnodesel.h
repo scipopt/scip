@@ -50,7 +50,7 @@ namespace scip
  *  - \ref NODESELECTORS "List of available node selectors"
  *  - \ref type_nodesel.h "Corresponding C interface"
  */
-class ObjNodesel : public ObjCloneable
+class SCIP_EXPORT ObjNodesel : public ObjCloneable
 {
 public:
    /*lint --e{1540}*/
@@ -188,7 +188,7 @@ public:
  *
  *  The method should be called in one of the following ways:
  *
- *   1. The user is resposible of deleting the object:
+ *   1. The user is responsible of deleting the object:
  *       SCIP_CALL( SCIPcreate(&scip) );
  *       ...
  *       MyNodesel* mynodesel = new MyNodesel(...);

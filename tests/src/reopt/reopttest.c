@@ -31,9 +31,6 @@
 #include "scip/scipdefplugins.h"
 #include "include/scip_test.h"
 
-static const char* testfilename1 = "../check/instances/MIP/flugpl.mps";
-static const char* testfilename2 = "../check/instances/MIP/MANN_a9.clq.lp";
-
 static SCIP* scip;
 static SCIP* reoptscip;
 static SCIP_RANDNUMGEN* randgen;
@@ -74,11 +71,11 @@ void teardown(void)
    BMScheckEmptyMemory();
 }
 
-TestSuite(reopt, .init = setup, .fini = teardown);
 
 /* TEST 1: changing objective */
-Test(reopt, objective)
+void test_reopt_objective(void)
 {
+   char filename[SCIP_MAXSTRLEN];
    SCIP_VAR** reoptvars;
    SCIP_VAR** vars;
    SCIP_Real newobj;
@@ -95,8 +92,9 @@ Test(reopt, objective)
    int j;
 
    /* read problem */
-   SCIP_CALL( SCIPreadProb(scip, testfilename1, NULL) );
-   SCIP_CALL( SCIPreadProb(reoptscip, testfilename1, NULL) );
+   TESTsetTestfilename(filename, __FILE__, "../../../check/instances/MIP/flugpl.mps");
+   SCIP_CALL( SCIPreadProb(scip, filename, NULL) );
+   SCIP_CALL( SCIPreadProb(reoptscip, filename, NULL) );
 
    nvars = SCIPgetNOrigVars(scip);
    vars = SCIPgetOrigVars(scip);
@@ -135,7 +133,7 @@ Test(reopt, objective)
       status = SCIPgetStatus(scip);
       reoptstatus = SCIPgetStatus(reoptscip);
 
-      cr_assert( status == reoptstatus );
+      TEST_ASSERT( status == reoptstatus );
 
       if ( status == SCIP_STATUS_OPTIMAL )
       {
@@ -143,7 +141,7 @@ Test(reopt, objective)
          reoptval = SCIPgetPrimalbound(reoptscip);
 
          SCIPverbMessage(scip, SCIP_VERBLEVEL_DIALOG, NULL, "         objective = %g, reopt objecive = %g.\n", optval, reoptval);
-         cr_assert_float_eq( optval, reoptval, 1e-6, "Optimal values are not equal: %g vs. %g.\n", optval, reoptval);
+         TEST_ASSERT_DOUBLE_WITHIN( optval, reoptval, 1e-6, "Optimal values are not equal: %g vs. %g.\n", optval, reoptval);
       }
 
       SCIP_CALL( SCIPfreeTransform(scip) );
@@ -155,7 +153,7 @@ Test(reopt, objective)
 }
 
 /* TEST 2: changing objective for small instance */
-Test(reopt, objectivesmall)
+void test_reopt_objectivesmall(void)
 {
    SCIP_VAR* var1;
    SCIP_VAR* var2;
@@ -288,7 +286,7 @@ Test(reopt, objectivesmall)
       status = SCIPgetStatus(scip);
       reoptstatus = SCIPgetStatus(reoptscip);
 
-      cr_assert( status == reoptstatus );
+      TEST_ASSERT( status == reoptstatus );
 
       if ( status == SCIP_STATUS_OPTIMAL )
       {
@@ -296,7 +294,7 @@ Test(reopt, objectivesmall)
          reoptval = SCIPgetPrimalbound(reoptscip);
 
          SCIPverbMessage(scip, SCIP_VERBLEVEL_DIALOG, NULL, "         objective = %g, reopt objecive = %g.\n", optval, reoptval);
-         cr_assert_float_eq( optval, reoptval, 1e-6, "Optimal values are not equal: %g vs. %g.\n", optval, reoptval);
+         TEST_ASSERT_DOUBLE_WITHIN( optval, reoptval, 1e-6, "Optimal values are not equal: %g vs. %g.\n", optval, reoptval);
       }
 
       SCIP_CALL( SCIPfreeTransform(scip) );
@@ -308,9 +306,10 @@ Test(reopt, objectivesmall)
 }
 
 /* TEST 3: adding inequalities */
-Test(reopt, conss)
+void test_reopt_conss(void)
 {
    char name[SCIP_MAXSTRLEN];
+   char filename[SCIP_MAXSTRLEN];
    SCIP_VAR** reoptvars;
    SCIP_VAR** vars;
    SCIP_STATUS status;
@@ -326,8 +325,9 @@ Test(reopt, conss)
    int j;
 
    /* read problem */
-   SCIP_CALL( SCIPreadProb(scip, testfilename2, NULL) );
-   SCIP_CALL( SCIPreadProb(reoptscip, testfilename2, NULL) );
+   TESTsetTestfilename(filename, __FILE__, "../../../check/instances/MIP/MANN_a9.clq.lp");
+   SCIP_CALL( SCIPreadProb(scip, filename, NULL) );
+   SCIP_CALL( SCIPreadProb(reoptscip, filename, NULL) );
 
    nvars = SCIPgetNOrigVars(scip);
    vars = SCIPgetOrigVars(scip);
@@ -351,7 +351,7 @@ Test(reopt, conss)
       status = SCIPgetStatus(scip);
       reoptstatus = SCIPgetStatus(reoptscip);
 
-      cr_assert( status == reoptstatus );
+      TEST_ASSERT( status == reoptstatus );
 
       if ( status == SCIP_STATUS_OPTIMAL )
       {
@@ -363,7 +363,7 @@ Test(reopt, conss)
          reoptval = SCIPgetPrimalbound(reoptscip);
 
          SCIPverbMessage(scip, SCIP_VERBLEVEL_DIALOG, NULL, "         objective = %g, reopt objecive = %g.\n", optval, reoptval);
-         cr_assert_float_eq( optval, reoptval, 1e-6, "Optimal values are not equal: %g vs. %g.\n", optval, reoptval);
+         TEST_ASSERT_DOUBLE_WITHIN( optval, reoptval, 1e-6, "Optimal values are not equal: %g vs. %g.\n", optval, reoptval);
 
          /* create no-good cut for previous solution */
          bestsol = SCIPgetBestSol(scip);
@@ -371,7 +371,7 @@ Test(reopt, conss)
          {
             /* assert( SCIPvarGetType(vars[j]) == SCIP_VARTYPE_BINARY ); */
             solval = SCIPgetSolVal(scip, bestsol, vars[j]);
-            cr_assert( SCIPisFeasIntegral(scip, solval) );
+            TEST_ASSERT( SCIPisFeasIntegral(scip, solval) );
             if ( solval < 0.5 )
                consvals[j] = 1.0;
             else
@@ -399,4 +399,18 @@ Test(reopt, conss)
 
    SCIPfreeBlockMemoryArray(scip, &consvars, nvars);
    SCIPfreeBlockMemoryArray(scip, &consvals, nvars);
+}
+
+void setUp(void) { setup(); }
+
+void tearDown(void) { teardown(); }
+
+int main(void)
+{
+   UNITY_BEGIN();
+   RUN_TEST(test_reopt_objective
+);
+   RUN_TEST(test_reopt_objectivesmall);
+   RUN_TEST(test_reopt_conss);
+   return UNITY_END();
 }

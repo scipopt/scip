@@ -1402,7 +1402,7 @@ SCIP_RETCODE dualPresolving(
          negated = FALSE;
 
          /* get the active variable */
-         SCIP_CALL( SCIPvarGetProbvarBinary(&activevar, &negated) );
+         SCIP_CALL( SCIPgetProbvarBinary(scip, &activevar, &negated) );
          assert(SCIPvarIsActive(activevar));
 
          if( negated )
@@ -1500,7 +1500,7 @@ SCIP_RETCODE dualPresolving(
             negated = FALSE;
 
             /* get the active variable */
-            SCIP_CALL( SCIPvarGetProbvarBinary(&activevar, &negated) );
+            SCIP_CALL( SCIPgetProbvarBinary(scip, &activevar, &negated) );
             assert(SCIPvarIsActive(activevar));
 
             if( negated )
@@ -1545,7 +1545,7 @@ SCIP_RETCODE dualPresolving(
             negated = FALSE;
 
             /* get the active variable */
-            SCIP_CALL( SCIPvarGetProbvarBinary(&activevar, &negated) );
+            SCIP_CALL( SCIPgetProbvarBinary(scip, &activevar, &negated) );
             assert(SCIPvarIsActive(activevar));
             assert(negated
                || (SCIPvarGetNLocksDownType(var, SCIP_LOCKTYPE_MODEL) == SCIPvarGetNLocksDownType(activevar, SCIP_LOCKTYPE_MODEL)

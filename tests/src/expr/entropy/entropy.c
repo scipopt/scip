@@ -95,32 +95,33 @@ void teardown(void)
    SCIP_CALL( SCIPreleaseVar(scip, &y) );
    SCIP_CALL( SCIPfree(&scip) );
 
-   cr_assert_eq(BMSgetMemoryUsed(), 0, "There is are memory leak!!");
+   TEST_ASSERT_EQUAL(BMSgetMemoryUsed(), 0, "There is are memory leak!!");
 }
 
 /* test suite */
-TestSuite(entropy, .init = setup, .fini = teardown);
 
 /*
  * TESTS
  */
 
-Test(entropy, creation, .description = "Tests the expression creation.")
+/** @brief Tests the expression creation. */
+void test_entropy_creation(void)
 {
    SCIP_EXPR* expr;
 
    /* create entropy expression */
    SCIP_CALL( SCIPcreateExprEntropy(scip, &expr, xexpr, NULL, NULL) );
 
-   cr_assert(expr != NULL);
-   cr_expect(SCIPexprGetNChildren(expr) == 1);
-   cr_expect(SCIPexprGetChildren(expr)[0] == xexpr);
+   TEST_ASSERT(expr != NULL);
+   SOFT_ASSERT(SCIPexprGetNChildren(expr) == 1);
+   SOFT_ASSERT(SCIPexprGetChildren(expr)[0] == xexpr);
 
    /* release expression */
    SCIP_CALL( SCIPreleaseExpr(scip, &expr) );
 }
 
-Test(entropy, parse, .description = "Tests the expression parsing.")
+/** @brief Tests the expression parsing. */
+void test_entropy_parse(void)
 {
    SCIP_EXPR* expr;
    const char* input = "entropy(<x>[C])";
@@ -128,16 +129,17 @@ Test(entropy, parse, .description = "Tests the expression parsing.")
    /* create entropy expression */
    SCIP_CALL( SCIPparseExpr(scip, &expr, (char*)input, NULL, NULL, NULL) );
 
-   cr_assert(expr != NULL);
-   cr_expect(SCIPexprGetNChildren(expr) == 1);
-   cr_expect(SCIPisExprVar(scip, SCIPexprGetChildren(expr)[0]));
-   cr_expect(SCIPgetVarExprVar(SCIPexprGetChildren(expr)[0]) == x);
+   TEST_ASSERT(expr != NULL);
+   SOFT_ASSERT(SCIPexprGetNChildren(expr) == 1);
+   SOFT_ASSERT(SCIPisExprVar(scip, SCIPexprGetChildren(expr)[0]));
+   SOFT_ASSERT(SCIPgetVarExprVar(SCIPexprGetChildren(expr)[0]) == x);
 
    /* release expression */
    SCIP_CALL( SCIPreleaseExpr(scip, &expr) );
 }
 
-Test(entropy, eval, .description = "Tests the expression evaluation.")
+/** @brief Tests the expression evaluation. */
+void test_entropy_eval(void)
 {
    SCIP_Real testvalues[4] = {-1.0, 0.0, exp(-1.0), 1.0};
    SCIP_Real results[4] = {SCIP_INVALID, 0.0, exp(-1.0), 0.0};
@@ -150,7 +152,7 @@ Test(entropy, eval, .description = "Tests the expression evaluation.")
       SCIP_CALL( SCIPsetSolVal(scip, sol, x, testvalues[i]) );
       SCIP_CALL( SCIPevalExpr(scip, entropyexpr, sol, 0) );
 
-      cr_expect(SCIPisEQ(scip, SCIPexprGetEvalValue(entropyexpr), results[i]));
+      SOFT_ASSERT(SCIPisEQ(scip, SCIPexprGetEvalValue(entropyexpr), results[i]));
    }
 
    /* random part */
@@ -160,14 +162,15 @@ Test(entropy, eval, .description = "Tests the expression evaluation.")
       SCIP_CALL( SCIPsetSolVal(scip, sol, x, randnum) );
 
       SCIP_CALL( SCIPevalExpr(scip, entropyexpr, sol, 0) );
-      cr_expect(SCIPisEQ(scip, SCIPexprGetEvalValue(entropyexpr), -randnum * log(randnum)));
+      SOFT_ASSERT(SCIPisEQ(scip, SCIPexprGetEvalValue(entropyexpr), -randnum * log(randnum)));
 
       SCIP_CALL( SCIPevalExpr(scip, negprodexpr, sol, 0) );
-      cr_expect(SCIPisEQ(scip, SCIPexprGetEvalValue(negprodexpr), -randnum * log(randnum)));
+      SOFT_ASSERT(SCIPisEQ(scip, SCIPexprGetEvalValue(negprodexpr), -randnum * log(randnum)));
    }
 }
 
-Test(entropy, inteval, .description = "Tests the expression interval evaluation.")
+/** @brief Tests the expression interval evaluation. */
+void test_entropy_inteval(void)
 {
    SCIP_INTERVAL intervalEntropy;
    SCIP_Real rndlb[4];
@@ -211,8 +214,8 @@ Test(entropy, inteval, .description = "Tests the expression interval evaluation.
       SCIP_CALL( SCIPevalExprActivity(scip, entropyexpr) );
       intervalEntropy = SCIPexprGetActivity(entropyexpr);
 
-      cr_expect(SCIPisEQ(scip, intervalEntropy.inf, detreslb[i]));
-      cr_expect(SCIPisEQ(scip, intervalEntropy.sup, detresub[i]));
+      SOFT_ASSERT(SCIPisEQ(scip, intervalEntropy.inf, detreslb[i]));
+      SOFT_ASSERT(SCIPisEQ(scip, intervalEntropy.sup, detresub[i]));
    }
 
    /* random part */
@@ -223,12 +226,13 @@ Test(entropy, inteval, .description = "Tests the expression interval evaluation.
       SCIP_CALL( SCIPevalExprActivity(scip, entropyexpr) );
       intervalEntropy = SCIPexprGetActivity(entropyexpr);
 
-      cr_expect(SCIPisEQ(scip, intervalEntropy.inf, rndreslb[i]));
-      cr_expect(SCIPisEQ(scip, intervalEntropy.sup, rndresub[i]));
+      SOFT_ASSERT(SCIPisEQ(scip, intervalEntropy.inf, rndreslb[i]));
+      SOFT_ASSERT(SCIPisEQ(scip, intervalEntropy.sup, rndresub[i]));
    }
 }
 
-Test(entropy, derivative, .description = "Tests the expression derivation.")
+/** @brief Tests the expression derivation. */
+void test_entropy_derivative(void)
 {
    SCIP_Real testvalues[5] = {-1.0, 0.0, exp(-1.0), 1.0, 2.0};
    SCIP_Real results[5] = {SCIP_INVALID, SCIP_INVALID, 0.0, -1.0, -1.0 - log(2.0)};
@@ -242,10 +246,10 @@ Test(entropy, derivative, .description = "Tests the expression derivation.")
       SCIP_CALL( SCIPevalExprGradient(scip, entropyexpr, sol, 0) );
 
       /* iff cannot be differentiated, then entropyexpr->derivative is SCIP_INVALID */
-      cr_expect((SCIPexprGetDerivative(entropyexpr) == SCIP_INVALID) == (results[i] == SCIP_INVALID));
+      SOFT_ASSERT((SCIPexprGetDerivative(entropyexpr) == SCIP_INVALID) == (results[i] == SCIP_INVALID));
       /* if entropyexpr cannot be differentiated, then the equality may not hold since
        * xexpr->derivative may not be SCIP_INVALID */
-      cr_expect(SCIPisEQ(scip, SCIPexprGetDerivative(xexpr), results[i]) || (results[i] == SCIP_INVALID));
+      SOFT_ASSERT(SCIPisEQ(scip, SCIPexprGetDerivative(xexpr), results[i]) || (results[i] == SCIP_INVALID));
    }
 
    /* random part */
@@ -255,14 +259,15 @@ Test(entropy, derivative, .description = "Tests the expression derivation.")
       SCIP_CALL( SCIPsetSolVal(scip, sol, x, randnum) );
 
       SCIP_CALL( SCIPevalExprGradient(scip, entropyexpr, sol, 0) );
-      cr_expect(SCIPisFeasEQ(scip, SCIPexprGetDerivative(xexpr), -1.0 - log(randnum)));
+      SOFT_ASSERT(SCIPisFeasEQ(scip, SCIPexprGetDerivative(xexpr), -1.0 - log(randnum)));
 
       SCIP_CALL( SCIPevalExprGradient(scip, negprodexpr, sol, 0) );
-      cr_expect(SCIPisFeasEQ(scip, SCIPexprGetDerivative(xexpr), -1.0 - log(randnum)));
+      SOFT_ASSERT(SCIPisFeasEQ(scip, SCIPexprGetDerivative(xexpr), -1.0 - log(randnum)));
    }
 }
 
-Test(entropy, hash, .description = "Tests the expression hash.")
+/** @brief Tests the expression hash. */
+void test_entropy_hash(void)
 {
    SCIP_EXPR* expr1;
    SCIP_EXPR* expr2;
@@ -279,18 +284,19 @@ Test(entropy, hash, .description = "Tests the expression hash.")
    SCIP_CALL( SCIPhashExpr(scip, expr2, &hashkey2) );
    SCIP_CALL( SCIPhashExpr(scip, expr3, &hashkey3) );
 
-   cr_expect(hashkey1 != 0);
-   cr_expect(hashkey2 != 0);
-   cr_expect(hashkey3 != 0);
-   cr_expect(hashkey1 == hashkey2);
-   cr_expect(hashkey1 != hashkey3);
+   SOFT_ASSERT(hashkey1 != 0);
+   SOFT_ASSERT(hashkey2 != 0);
+   SOFT_ASSERT(hashkey3 != 0);
+   SOFT_ASSERT(hashkey1 == hashkey2);
+   SOFT_ASSERT(hashkey1 != hashkey3);
 
    SCIP_CALL( SCIPreleaseExpr(scip, &expr3) );
    SCIP_CALL( SCIPreleaseExpr(scip, &expr2) );
    SCIP_CALL( SCIPreleaseExpr(scip, &expr1) );
 }
 
-Test(entropy, simplify, .description = "Tests the expression simplification.")
+/** @brief Tests the expression simplification. */
+void test_entropy_simplify(void)
 {
    SCIP_EXPR* expr1;
    SCIP_EXPR* expr2;
@@ -304,10 +310,10 @@ Test(entropy, simplify, .description = "Tests the expression simplification.")
    SCIP_CALL( SCIPsimplifyExpr(scip, expr2, &expr3, &changed, &infeasible, NULL, NULL));
    SCIP_CALL( SCIPevalExpr(scip, expr2, sol, 0) );
 
-   cr_expect(changed);
-   cr_assert_not(infeasible);
-   cr_expect(SCIPexprGetHdlr(expr3) == SCIPgetExprhdlrValue(scip));
-   cr_expect(SCIPisFeasEQ(scip, SCIPexprGetEvalValue(expr2), -5.0 * log(5.0)));
+   SOFT_ASSERT(changed);
+   TEST_ASSERT_NOT(infeasible);
+   SOFT_ASSERT(SCIPexprGetHdlr(expr3) == SCIPgetExprhdlrValue(scip));
+   SOFT_ASSERT(SCIPisFeasEQ(scip, SCIPexprGetEvalValue(expr2), -5.0 * log(5.0)));
 
    SCIP_CALL( SCIPreleaseExpr(scip, &expr3) );
    SCIP_CALL( SCIPreleaseExpr(scip, &expr2) );
@@ -319,17 +325,17 @@ Test(entropy, simplify, .description = "Tests the expression simplification.")
    changed = FALSE;
    SCIP_CALL( SCIPsimplifyExpr(scip, prodexpr, &expr1, &changed, &infeasible, NULL, NULL));
 
-   cr_expect(changed);
-   cr_assert_not(infeasible);
-   cr_expect(SCIPexprGetHdlr(expr1) == SCIPgetExprhdlrSum(scip));
-   cr_expect(SCIPexprGetNChildren(expr1) == 1);
-   cr_expect(SCIPgetCoefsExprSum(expr1)[0] == -1.0);
+   SOFT_ASSERT(changed);
+   TEST_ASSERT_NOT(infeasible);
+   SOFT_ASSERT(SCIPexprGetHdlr(expr1) == SCIPgetExprhdlrSum(scip));
+   SOFT_ASSERT(SCIPexprGetNChildren(expr1) == 1);
+   SOFT_ASSERT(SCIPgetCoefsExprSum(expr1)[0] == -1.0);
 
    expr2 = SCIPexprGetChildren(expr1)[0];
-   cr_expect(SCIPexprGetHdlr(expr2) == SCIPfindExprhdlr(scip, "entropy"));
-   cr_expect(SCIPexprGetNChildren(expr2) == 1);
-   cr_expect(SCIPisExprVar(scip, SCIPexprGetChildren(expr2)[0]));
-   cr_expect(SCIPgetVarExprVar(SCIPexprGetChildren(expr2)[0]) == x);
+   SOFT_ASSERT(SCIPexprGetHdlr(expr2) == SCIPfindExprhdlr(scip, "entropy"));
+   SOFT_ASSERT(SCIPexprGetNChildren(expr2) == 1);
+   SOFT_ASSERT(SCIPisExprVar(scip, SCIPexprGetChildren(expr2)[0]));
+   SOFT_ASSERT(SCIPgetVarExprVar(SCIPexprGetChildren(expr2)[0]) == x);
 
    SCIP_CALL( SCIPreleaseExpr(scip, &expr1) );
 
@@ -340,11 +346,28 @@ Test(entropy, simplify, .description = "Tests the expression simplification.")
    changed = FALSE;
    SCIP_CALL( SCIPsimplifyExpr(scip, negprodexpr, &expr1, &changed, &infeasible, NULL, NULL));
 
-   cr_expect(changed);
-   cr_assert_not(infeasible);
-   cr_expect(SCIPexprGetHdlr(expr1) == SCIPfindExprhdlr(scip, "entropy"));
-   cr_expect(SCIPexprGetNChildren(expr1) == 1);
-   cr_expect(SCIPgetVarExprVar(SCIPexprGetChildren(expr1)[0]) == x);
+   SOFT_ASSERT(changed);
+   TEST_ASSERT_NOT(infeasible);
+   SOFT_ASSERT(SCIPexprGetHdlr(expr1) == SCIPfindExprhdlr(scip, "entropy"));
+   SOFT_ASSERT(SCIPexprGetNChildren(expr1) == 1);
+   SOFT_ASSERT(SCIPgetVarExprVar(SCIPexprGetChildren(expr1)[0]) == x);
 
    SCIP_CALL( SCIPreleaseExpr(scip, &expr1) );
+}
+
+void setUp(void) { setup(); }
+
+void tearDown(void) { teardown(); }
+
+int main(void)
+{
+   UNITY_BEGIN();
+   RUN_TEST(test_entropy_creation);
+   RUN_TEST(test_entropy_parse);
+   RUN_TEST(test_entropy_eval);
+   RUN_TEST(test_entropy_inteval);
+   RUN_TEST(test_entropy_derivative);
+   RUN_TEST(test_entropy_hash);
+   RUN_TEST(test_entropy_simplify);
+   return UNITY_END();
 }

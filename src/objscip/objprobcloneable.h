@@ -48,7 +48,7 @@ namespace scip
     *
     *  Constraint handler and variable pricer C++ wrapper object plugins should extend this class
     */
-   struct ObjProbCloneable
+   struct SCIP_EXPORT ObjProbCloneable
    {
       virtual ~ObjProbCloneable() {}
 
