@@ -148,7 +148,8 @@ SCIP_RETCODE SCIPprimalHeuristics(
 
 /** tries to add symmetry handling methods to CIP
  *
- *  Compute symmetry and call each symmetry handler to check whether particular symmetry handling methods can be added.
+ *  Compute symmetry and call each symmetry handler with non-negative priority to check whether
+ *  particular symmetry handling methods can be added.
  */
 SCIP_RETCODE SCIPtryAddSymmetryHandlingMethods(
    SCIP*                 scip,               /**< SCIP data structure */
