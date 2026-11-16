@@ -44,6 +44,8 @@ Fixed bugs
   each branching call
 - fixed that SCIPeventqueueAdd() recorded a variable's event queue position before appending the event, which left a
   stale position if the append failed
+- fixed that info messages printed to a file (or only to the log file) were passed to the dialog message callback
+  instead of the info message callback, which called a NULL function pointer if the handler had no dialog callback
 
 Examples and applications
 -------------------------
