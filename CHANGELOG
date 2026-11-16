@@ -44,6 +44,7 @@ Fixed bugs
   each branching call
 - fixed that SCIPeventqueueAdd() recorded a variable's event queue position before appending the event, which left a
   stale position if the append failed
+- ExactSCIP: do not overwrite the validity of the aggregation row in SCIPaggrRowSumRows() when cleaning the certificate row
 
 Examples and applications
 -------------------------

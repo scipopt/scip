@@ -3736,7 +3736,8 @@ SCIP_RETCODE SCIPaggrRowSumRows(
    {
       SCIPaggrRowRemoveZeros(scip, aggrrow, FALSE, valid);
 
-      if( certificaterow != NULL )
+      /* do not overwrite an invalid result for aggrrow, which may still contain SCIP_INVALID entries */
+      if( *valid && certificaterow != NULL )
       {
          SCIPaggrRowRemoveZeros(scip, certificaterow, FALSE, valid);
          SCIP_CALL( SCIPaddCertificateAggrInfo(scip, certificaterow, usedrows, usedweights, certificaterow->nrows,
