@@ -249,7 +249,7 @@ then
 
     # compress vipr file
     echo Gzipping vipr file ... >> $OUTFILE
-    bash -c "gzip $VIPRFILE 2>>$ERRFIL@E"  | tee -a $OUTFILE
+    bash -c "gzip $VIPRFILE 2>>$ERRFILE"  | tee -a $OUTFILE
     echo "viprfile gzipped:   " `ls -lisa $VIPRFILE.gz` >> $OUTFILE
 fi
 
@@ -273,7 +273,7 @@ then
 
     # compress vipr_ori file
     echo Gzipping vipr_ori file ... >> $OUTFILE
-    bash -c "gzip $VIPRORIFILE 2>>$ERRFIL@E"  | tee -a $OUTFILE
+    bash -c "gzip $VIPRORIFILE 2>>$ERRFILE"  | tee -a $OUTFILE
     echo "vipr_ori file gzipped:   " `ls -lisa $VIPRORIFILE.gz` >> $OUTFILE
 
     # compress untightened vipr file
