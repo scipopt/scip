@@ -456,6 +456,12 @@ Fixed bugs
 - fixed uninitialized data in exact LU factorization (rectlu) leading to wrong results
 - consider all binary objective variables in the pseudoobj propagator to avoid invalid conflicts
 - set variable status in SCIPvarColumn(), SCIPvarColumnExact(), SCIPvarMultiaggregate(), SCIPvarMultiaggregateExact(), and node status in treeCreateProbingNode() after data allocation succeeds to enable freeing after data allocation fails
+- keep best passed solution in trysol heuristic also for maximization
+- check bound array memory reallocations in conflictClearResolution()
+- fixed that the dynamic lookahead in branch_relpscost did not reset the dual gain sample count and mean at the start of
+  each branching call
+- fixed that SCIPeventqueueAdd() recorded a variable's event queue position before appending the event, which left a
+  stale position if the append failed
 
 Examples and applications
 -------------------------

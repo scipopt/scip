@@ -3415,7 +3415,7 @@ void conflictClear(
 
 /** clears the resolution conflict analysis queues and the bounds leading to conflict */
 static
-void conflictClearResolution(
+SCIP_RETCODE conflictClearResolution(
    SCIP_CONFLICT*        conflict,           /**< conflict analysis data */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_PROB*            prob                /**< problem data */
@@ -3429,7 +3429,7 @@ void conflictClearResolution(
    assert(prob != NULL);
 
    if( !set->conf_usegenres )
-      return;
+      return SCIP_OKAY;
 
    /* clear the resolution conflict analysis queues */
    SCIPpqueueClear(conflict->resbdchgqueue);
@@ -3440,9 +3440,9 @@ void conflictClearResolution(
    /* allocate memory for the lower and upper bounds of variables used in the resolution conflict analysis */
    if(conflict->conflictprobnvars < nvars)
    {
+      SCIP_ALLOC( BMSreallocMemoryArray(&conflict->conflictvarslbs, nvars) );
+      SCIP_ALLOC( BMSreallocMemoryArray(&conflict->conflictvarsubs, nvars) );
       conflict->conflictprobnvars = nvars;
-      BMSreallocMemoryArray(&conflict->conflictvarslbs, nvars);
-      BMSreallocMemoryArray(&conflict->conflictvarsubs, nvars);
    }
 
    for( i = 0; i < nvars; ++i )
@@ -3450,6 +3450,8 @@ void conflictClearResolution(
       conflict->conflictvarslbs[i] = SCIP_REAL_MIN;
       conflict->conflictvarsubs[i] = SCIP_REAL_MAX;
    }
+
+   return SCIP_OKAY;
 }
 
 /** initializes propagation and resolution conflict analysis by clearing the conflict candidate queues */
@@ -3473,7 +3475,7 @@ SCIP_RETCODE SCIPconflictInit(
    conflictClear(conflict);
 
    /* clear the resolution conflict analysis queues and the bounds leading to conflict */
-   conflictClearResolution(conflict, set, prob);
+   SCIP_CALL( conflictClearResolution(conflict, set, prob) );
 
    /* set conflict type */
    assert(conftype == SCIP_CONFTYPE_BNDEXCEEDING || conftype == SCIP_CONFTYPE_INFEASLP

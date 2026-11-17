@@ -481,7 +481,7 @@ ifeq ($(PAPILO),true)
 ifeq ($(BOOST),false)
 $(error PaPILO requires Boost to be available. Use either PAPILO=false or BOOST=true.)
 endif
-FLAGS        +=    -DPAPILO_NO_CMAKE_CONFIG -I$(LIBDIR)/include/papilo -I$(LIBDIR)/include/papilo/src # the last include is for backwards compatibility or if users link to the PaPILO repo
+FLAGS        +=    -DPAPILO_NO_CMAKE_CONFIG -DPAPILO_HEADER_ONLY -I$(LIBDIR)/include/papilo -I$(LIBDIR)/include/papilo/src # the last include is for backwards compatibility or if users link to the PaPILO repo
 SOFTLINKS    +=    $(LIBDIR)/include/papilo
 LPIINSTMSG    +=    "\n  -> \"papilo\" is the path to the PaPILO source directory, i.e., \"<papilo>/papilo/Config.hpp\" should exist.\n"
 endif
