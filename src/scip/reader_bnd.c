@@ -198,7 +198,7 @@ SCIP_RETCODE readBounds(
          nread = sscanf(ubstring, "%lf", &ub);
          if( nread != 1 )
          {
-            SCIPerrorMessage("invalid lower bound value <%s> for variable <%s> in line %d of bounds file <%s>\n",
+            SCIPerrorMessage("invalid upper bound value <%s> for variable <%s> in line %d of bounds file <%s>\n",
                ubstring, varname, lineno, fname);
             error = TRUE;
             break;

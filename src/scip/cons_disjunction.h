@@ -97,7 +97,7 @@ SCIP_RETCODE SCIPcreateConsDisjunction(
                                               *   are separated as constraints. */
    );
 
-/** creates and captures a cumulative constraint
+/** creates and captures a disjunction constraint
  *  in its most basic version, i. e., all constraint flags are set to their basic value as explained for the
  *  method SCIPcreateConsDisjunction(); all flags can be set via SCIPsetConsFLAGNAME-methods in scip.h
  *

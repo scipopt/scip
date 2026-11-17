@@ -2302,7 +2302,7 @@ SCIP_RETCODE chgLhsLinearCons(
    case SCIP_LINEARCONSTYPE_LOGICOR:
    case SCIP_LINEARCONSTYPE_KNAPSACK:
    case SCIP_LINEARCONSTYPE_SETPPC:
-      SCIPerrorMessage("changing left hand side only allowed on standard lienar constraint \n");
+      SCIPerrorMessage("changing left hand side only allowed on standard linear constraint \n");
       return SCIP_INVALIDDATA;
 #ifdef WITHEQKNAPSACK
    case SCIP_LINEARCONSTYPE_EQKNAPSACK:
@@ -2333,7 +2333,7 @@ SCIP_RETCODE chgRhsLinearCons(
    case SCIP_LINEARCONSTYPE_LOGICOR:
    case SCIP_LINEARCONSTYPE_KNAPSACK:
    case SCIP_LINEARCONSTYPE_SETPPC:
-      SCIPerrorMessage("changing left hand side only allowed on standard lienar constraint \n");
+      SCIPerrorMessage("changing right hand side only allowed on standard linear constraint \n");
       return SCIP_INVALIDDATA;
 #ifdef WITHEQKNAPSACK
    case SCIP_LINEARCONSTYPE_EQKNAPSACK:
@@ -8897,7 +8897,7 @@ SCIP_DECL_CONSPARSE(consParsePseudoboolean)
    {
       if( !SCIPparseReal(scip, rhsstrptr, &rhs, (char**)&endptr) )
       {
-         SCIPerrorMessage("error parsing right hand side number from <%s>\n", lhsstrptr);
+         SCIPerrorMessage("error parsing right hand side number from <%s>\n", rhsstrptr);
          return SCIP_OKAY;
       }
    }

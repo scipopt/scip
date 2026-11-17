@@ -437,7 +437,7 @@ SCIP_RETCODE SCIPlapackSolveLinearEquations(
 
          if ( convertToInt(INFO) != 0 )
          {
-            SCIPdebugMessage("There was an error when calling DGETRF. INFO = %d\n", convertToInt(INFO));
+            SCIPdebugMessage("There was an error when calling DGETRS. INFO = %d\n", convertToInt(INFO));
             *success = FALSE;
          }
          else

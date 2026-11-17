@@ -1724,7 +1724,7 @@ SCIP_Real SCIPeventGetRowOldConstVal(
 
    if( !(event->eventtype & SCIP_EVENTTYPE_ROWCONSTCHANGED) )
    {
-      SCIPerrorMessage("event is not a row coefficient changed event\n");
+      SCIPerrorMessage("event is not a row constant changed event\n");
       SCIPABORT();
       return SCIP_INVALID;  /*lint !e527*/
    }
@@ -1741,7 +1741,7 @@ SCIP_Real SCIPeventGetRowNewConstVal(
 
    if( !(event->eventtype & SCIP_EVENTTYPE_ROWCONSTCHANGED) )
    {
-      SCIPerrorMessage("event is not a row coefficient changed event\n");
+      SCIPerrorMessage("event is not a row constant changed event\n");
       SCIPABORT();
       return SCIP_INVALID;  /*lint !e527*/
    }
