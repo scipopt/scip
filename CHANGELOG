@@ -22,6 +22,9 @@ Features
   global variable bounds through a bound pool that is applied at every node, instead of only at the synchronization
   points
 
+### Presolve
+- tighten binary coefficient not divisible by gcd of other integral coefficients in linear constraint also when coefficient or side is fractional
+
 ### Benders Decomposition
 - the no-good and integer optimality cuts for Benders' decomposition are generated per subproblem. Previously, only a
   single no-good or integer optimality cut was generated in a Benders' decomposition iteration. This change makes the
