@@ -357,13 +357,17 @@ SCIP_RETCODE delPosConflict(
    assert(conflictstore->conflicts[pos]->confconsspos == pos);
    conflictstore->conflicts[pos]->confconsspos = -1;
 
+   /* conflicts in this array are never registered in the certificate hashmap (only dual proofs are) */
+   assert(!SCIPisExact(set->scip) || !SCIPisCertified(set->scip) || SCIPgetCertificate(set->scip)->rowdatahash == NULL
+      || !SCIPhashmapExists(SCIPgetCertificate(set->scip)->rowdatahash, (void*) conflict));
+
    /* mark the constraint as deleted */
    if( deleteconflict && !SCIPconsIsDeleted(conflict) )
    {
       assert(transprob != NULL);
       SCIP_CALL( SCIPconsDelete(conflictstore->conflicts[pos], blkmem, set, stat, transprob, reopt) );
-      SCIP_CALL( removeExactConflictFromCertificateHashmap(set, conflictstore->conflicts[pos]) );
    }
+
    SCIP_CALL( SCIPconsRelease(&conflictstore->conflicts[pos], blkmem, set) );
 
    /* replace with conflict at the last position */
@@ -487,8 +491,8 @@ SCIP_RETCODE delPosDualsol(
    {
       assert(transprob != NULL);
       SCIP_CALL( SCIPconsDelete(dualproof, blkmem, set, stat, transprob, reopt) );
-      SCIP_CALL( removeExactConflictFromCertificateHashmap(set, dualproof) );
    }
+   SCIP_CALL( removeExactConflictFromCertificateHashmap(set, dualproof) );
    SCIP_CALL( SCIPconsRelease(&dualproof, blkmem, set) );
 
    /* replace with dual ray at the last position */
