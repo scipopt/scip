@@ -3734,11 +3734,15 @@ SCIP_RETCODE SCIPaggrRowSumRows(
 
    if( *valid )
    {
+      /* if removal returns with *valid == FALSE, then the row became redundant; in this case, no row must be printed in
+       * the certificate
+       */
       SCIPaggrRowRemoveZeros(scip, aggrrow, FALSE, valid);
 
-      if( certificaterow != NULL )
+      if( *valid && certificaterow != NULL )
       {
          SCIPaggrRowRemoveZeros(scip, certificaterow, FALSE, valid);
+         assert(*valid);
          SCIP_CALL( SCIPaddCertificateAggrInfo(scip, certificaterow, usedrows, usedweights, certificaterow->nrows,
                negslackrows, negslackweights, nnegslackrows) );
       }

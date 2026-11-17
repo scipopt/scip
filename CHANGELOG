@@ -461,6 +461,7 @@ Fixed bugs
   each branching call
 - fixed that SCIPeventqueueAdd() recorded a variable's event queue position before appending the event, which left a
   stale position if the append failed
+- do not print certificate lines for aggregation rows that become redundant in SCIPaggrRowSumRows()
 
 Examples and applications
 -------------------------
