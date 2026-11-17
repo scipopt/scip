@@ -138,6 +138,7 @@ Interface changes
 - `heuristics/localsearch/onlybeforenode`: should run before presolving be skipped?
 - `heuristics/localsearch/onlywithoutsol`: should run with solution be skipped?
 - `estimation/checkpoint/depthlim`: depth below which checkpoint is updated
+- `symmetries/accuracy`: accuracy used to compare coefficients and bounds in symmetry detection
 - `symmetries/enabled`: whether symmetry handling in enabled
 - `symmetries/tryaddtiming`: whether symmetries are computed before or at the end of presolving
 - `symmetries/maxngenerators`: maximum number of generators of the symmetry group that is computed
