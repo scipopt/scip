@@ -2586,6 +2586,10 @@ SCIP_RETCODE eventMergeExactBdchg(
       SCIPrationalSetReal(qevent->data.eventbdchg.oldboundexact, qevent->data.eventbdchg.oldbound);
    }
 
+   /* check that the old bound in the "new" event matches the new bound in the queued event */
+   assert(event->data.eventbdchg.oldboundexact == NULL || SCIPrationalIsEQ(event->data.eventbdchg.oldboundexact, qevent->data.eventbdchg.newboundexact));
+   assert(event->data.eventbdchg.oldboundexact != NULL || SCIPrationalIsEQReal(qevent->data.eventbdchg.newboundexact, event->data.eventbdchg.oldbound);
+
    /* the exact new bound is the one of the merged event */
    if( event->data.eventbdchg.newboundexact != NULL )
       SCIPrationalSetRational(qevent->data.eventbdchg.newboundexact, event->data.eventbdchg.newboundexact);
