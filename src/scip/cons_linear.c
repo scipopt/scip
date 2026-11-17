@@ -6055,12 +6055,12 @@ SCIP_RETCODE rangedRowPropagation(
       if( possiblegcd )
       {
          v = ninfcheckvars - 1;
-         gcdinfvars = (SCIP_Longint)(REALABS(infcheckvals[v]) + feastol);
+         gcdinfvars = (SCIP_Longint)round(REALABS(infcheckvals[v]));
          assert(gcdinfvars >= 2);
 
          for( ; v >= 0 && gcdinfvars >= 2; --v )
          {
-            gcdinfvars = SCIPcalcGreComDiv(gcdinfvars, (SCIP_Longint)(REALABS(infcheckvals[v]) + feastol));
+            gcdinfvars = SCIPcalcGreComDiv(gcdinfvars, (SCIP_Longint)round(REALABS(infcheckvals[v])));
          }
       }
       else if( gcdisone )
@@ -11211,29 +11211,96 @@ SCIP_DECL_SORTINDCOMP(consdataCompSim)
    return (value > 0 ? +1 : (value < 0 ? -1 : 0));
 }
 
+/** compute tightened binary coefficient and side for one side direction
+ *
+ *  Given a constraint where all non-binary terms are integer-valued with GCD g, conditioning
+ *  on x_k = 0 and x_k = 1 and rounding each integer-valued restriction yields
+ *  \f$a_k' = \lfloor \mathit{side} / g \rfloor \cdot g - \lfloor (\mathit{side} - a_k) / g \rfloor \cdot g\f$
+ *  on a \f$\le\f$ side (floor) and analogously with \f$\lceil \cdot \rceil\f$ on a \f$\ge\f$ side (ceil).
+ */
+static
+void computeBinaryTightening(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Real             side,               /**< current side value */
+   SCIP_Real             coef,               /**< current binary coefficient */
+   SCIP_Longint          gcd,                /**< GCD of all other coefficients */
+   SCIP_Bool             isrhs,              /**< TRUE for RHS (floor), FALSE for LHS (ceil) */
+   SCIP_Real*            newside,            /**< pointer to store new side value */
+   SCIP_Real*            newcoef             /**< pointer to store new coefficient value */
+   )
+{
+   SCIP_Real sidernd;
+   SCIP_Real coefrnd;
+
+   assert(scip != NULL);
+   assert(gcd >= 1);
+   assert(newside != NULL);
+   assert(newcoef != NULL);
+
+   sidernd = round(side / gcd);
+   coefrnd = round((side - coef) / gcd);
+
+   if( isrhs )
+   {
+      if( SCIPisFeasPositive(scip, sidernd * gcd - side) )
+         sidernd -= 1.0;
+      if( SCIPisFeasPositive(scip, coefrnd * gcd - (side - coef)) )
+         coefrnd -= 1.0;
+   }
+   else
+   {
+      if( SCIPisFeasNegative(scip, sidernd * gcd - side) )
+         sidernd += 1.0;
+      if( SCIPisFeasNegative(scip, coefrnd * gcd - (side - coef)) )
+         coefrnd += 1.0;
+   }
+
+   *newside = sidernd * gcd;
+   *newcoef = *newside - coefrnd * gcd;
+}
+
 /** tries to simplify coefficients in ranged row of the form lhs <= a^Tx <= rhs
  *
  *  1. lhs <= a^Tx <= rhs, x binary, lhs > 0, forall a_i >= lhs, a_i <= rhs, and forall pairs a_i + a_j > rhs,
  *     then we can change this constraint to 1^Tx = 1
+ *
+ *  2. single fractional binary: if exactly one binary has a non-integral coefficient and the rest of the
+ *     row is integer-valued, CG-round each restriction x_k = 0 and x_k = 1 separately; for a ranged row
+ *     both sides must agree on the replacement coefficient
  */
 static
 SCIP_RETCODE rangedRowSimplify(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< linear constraint */
    int*                  nchgcoefs,          /**< pointer to store the amount of changed coefficients */
-   int*                  nchgsides           /**< pointer to store the amount of changed sides */
+   int*                  nchgsides,          /**< pointer to store the amount of changed sides */
+   SCIP_Bool*            infeasible          /**< pointer to store whether infeasibility was detected */
    )
 {
    SCIP_CONSDATA* consdata;
    SCIP_VAR** vars;
    SCIP_Real* vals;
+   SCIP_Longint coefval;
+   SCIP_Longint gcd;
    SCIP_Real minval;
    SCIP_Real secondminval;
    SCIP_Real maxval;
+   SCIP_Real newcoef_rhs;
+   SCIP_Real newcoef_lhs;
+   SCIP_Real newrhsval;
+   SCIP_Real newlhsval;
    SCIP_Real lhs;
    SCIP_Real rhs;
+   SCIP_Bool allcoefintegral;
+   SCIP_Bool allnonbincoefintegral;
+   int fracpos;
+   int nfracbins;
    int nvars;
    int v;
+
+   assert(infeasible != NULL);
+
+   *infeasible = FALSE;
 
    /* we must not change a modifiable constraint in any way */
    if( SCIPconsIsModifiable(cons) )
@@ -11257,53 +11324,150 @@ SCIP_RETCODE rangedRowSimplify(
    assert(!SCIPisInfinity(scip, rhs));
    assert(!SCIPisNegative(scip, rhs));
 
-   /* sides must be positive and different to detect set partition */
-   if( !SCIPisPositive(scip, lhs) || !SCIPisLT(scip, lhs, rhs) )
-      return SCIP_OKAY;
-
    vals = consdata->vals;
    vars = consdata->vars;
    assert(vars != NULL);
    assert(vals != NULL);
 
-   minval = SCIP_INVALID;
-   secondminval = SCIP_INVALID;
-   maxval = -SCIP_INVALID;
+   /* sides must be positive and different to detect set partition */
+   if( SCIPisPositive(scip, lhs) && SCIPisLT(scip, lhs, rhs) )
+   {
+      minval = SCIP_INVALID;
+      secondminval = SCIP_INVALID;
+      maxval = -SCIP_INVALID;
+
+      for( v = nvars - 1; v >= 0; --v )
+      {
+         if( SCIPvarIsBinary(vars[v]) )
+         {
+            if( minval > vals[v] || minval == SCIP_INVALID ) /*lint !e777*/
+            {
+               secondminval = minval;
+               minval = vals[v];
+            }
+            else if( secondminval > vals[v] || secondminval == SCIP_INVALID ) /*lint !e777*/
+               secondminval = vals[v];
+
+            if( maxval < vals[v] || maxval == -SCIP_INVALID ) /*lint !e777*/
+               maxval = vals[v];
+         }
+         else
+            break;
+      }
+
+      /* check if all variables are binary, we can choose one, and need to choose at most one */
+      if( v == -1 && SCIPisGE(scip, minval, lhs) && SCIPisLE(scip, maxval, rhs)
+         && SCIPisGT(scip, minval + secondminval, rhs) )
+      {
+         /* change all coefficients to 1.0 */
+         for( v = nvars - 1; v >= 0; --v )
+         {
+            SCIP_CALL( chgCoefPos(scip, cons, v, 1.0) );
+         }
+         (*nchgcoefs) += nvars;
+
+         /* replace old right and left hand side with 1.0 */
+         SCIP_CALL( chgRhs(scip, cons, 1.0) );
+         SCIP_CALL( chgLhs(scip, cons, 1.0) );
+         (*nchgsides) += 2;
+
+         return SCIP_OKAY;
+      }
+   }
+
+   /* tighten single fractional binary coefficient */
+   allcoefintegral = TRUE;
+   allnonbincoefintegral = TRUE;
+   gcd = 0;
+   fracpos = -1;
+   nfracbins = 0;
 
    for( v = nvars - 1; v >= 0; --v )
    {
-      if( SCIPvarIsBinary(vars[v]) )
-      {
-         if( minval > vals[v] || minval == SCIP_INVALID ) /*lint !e777*/
-         {
-            secondminval = minval;
-            minval = vals[v];
-         }
-         else if( secondminval > vals[v] || secondminval == SCIP_INVALID ) /*lint !e777*/
-            secondminval = vals[v];
+      if( !SCIPvarIsIntegral(vars[v]) )
+         return SCIP_OKAY;
 
-         if( maxval < vals[v] || maxval == -SCIP_INVALID ) /*lint !e777*/
-            maxval = vals[v];
+      if( !SCIPisIntegral(scip, vals[v]) || REALABS(vals[v]) - 0.5 >= (SCIP_Real)SCIP_LONGINT_MAX )
+      {
+         allcoefintegral = FALSE;
+
+         if( !SCIPvarIsBinary(vars[v]) || ++nfracbins > 1 )
+         {
+            allnonbincoefintegral = FALSE;
+            break;
+         }
+         fracpos = v;
       }
       else
-         break;
+      {
+         coefval = (SCIP_Longint)round(REALABS(vals[v]));
+         gcd = (gcd == 0) ? coefval : SCIPcalcGreComDiv(gcd, coefval);
+      }
    }
 
-   /* check if all variables are binary, we can choose one, and need to choose at most one */
-   if( v == -1 && SCIPisGE(scip, minval, lhs) && SCIPisLE(scip, maxval, rhs)
-      && SCIPisGT(scip, minval + secondminval, rhs) )
+   if( !allcoefintegral && allnonbincoefintegral && fracpos >= 0 )
    {
-      /* change all coefficients to 1.0 */
-      for( v = nvars - 1; v >= 0; --v )
-      {
-         SCIP_CALL( chgCoefPos(scip, cons, v, 1.0) );
-      }
-      (*nchgcoefs) += nvars;
+      assert(gcd >= 1);
 
-      /* replace old right and left hand side with 1.0 */
-      SCIP_CALL( chgRhs(scip, cons, 1.0) );
-      SCIP_CALL( chgLhs(scip, cons, 1.0) );
-      (*nchgsides) += 2;
+      computeBinaryTightening(scip, rhs, vals[fracpos], gcd, TRUE, &newrhsval, &newcoef_rhs);
+      computeBinaryTightening(scip, lhs, vals[fracpos], gcd, FALSE, &newlhsval, &newcoef_lhs);
+
+      if( SCIPisEQ(scip, newcoef_rhs, newcoef_lhs) )
+      {
+         assert(SCIPrealIsExactlyIntegral(newlhsval));
+         assert(SCIPrealIsExactlyIntegral(newrhsval));
+         assert(SCIPrealIsExactlyIntegral(newcoef_rhs));
+
+         if( newlhsval > newrhsval )
+         {
+            *infeasible = TRUE;
+            return SCIP_OKAY;
+         }
+
+         SCIPdebugMsg(scip, "ranged row <%s>: tightening fractional binary coefficient of <%s> from %g to %g\n",
+            SCIPconsGetName(cons), SCIPvarGetName(vars[fracpos]), vals[fracpos], newcoef_rhs);
+
+         if( !SCIPisEQ(scip, newrhsval, rhs) )
+         {
+            SCIP_CALL( chgRhs(scip, cons, newrhsval) );
+            ++(*nchgsides);
+         }
+         if( !SCIPisEQ(scip, newlhsval, lhs) )
+         {
+            SCIP_CALL( chgLhs(scip, cons, newlhsval) );
+            ++(*nchgsides);
+         }
+
+         if( SCIPisZero(scip, newcoef_rhs) )
+         {
+            SCIP_CALL( delCoefPos(scip, cons, fracpos) );
+         }
+         else
+         {
+            SCIP_CALL( chgCoefPos(scip, cons, fracpos, newcoef_rhs) );
+         }
+         ++(*nchgcoefs);
+
+         /* normalize by dividing all coefficients and sides by the gcd */
+         for( v = 0; v < consdata->nvars; ++v )
+         {
+            vals[v] = round(vals[v] / gcd);
+            assert(!SCIPisZero(scip, vals[v]));
+         }
+
+         consdata->lhs = round(consdata->lhs / gcd);
+         consdata->rhs = round(consdata->rhs / gcd);
+
+         consdataInvalidateActivities(consdata);
+         consdata->normalized = TRUE;
+
+         SCIPdebugPrintCons(scip, cons, NULL);
+
+         nvars = consdata->nvars;
+
+         if( nvars < 2 )
+            return SCIP_OKAY;
+      }
    }
 
    return SCIP_OKAY;
@@ -11323,7 +11487,12 @@ SCIP_RETCODE rangedRowSimplify(
  *
  *     e.g. 5.2x1 + 5.1x2 + 3x3 <= 8.3  => will be changed to 5x1 + 5x2 + 3x3 <= 8 if all x are binary
  *
- *  3. We are using the greatest common divisor for further reductions
+ *  3. If a single binary has a fractional coefficient and the rest is integer-valued, we tighten
+ *     using the residual GCD of all other coefficients
+ *
+ *     e.g. 6y1 + 2y2 + 1.5x1 <= 7 with x1 binary => will be changed to 3y1 + y2 + x1 <= 3
+ *
+ *  4. We are using the greatest common divisor for further reductions
  *
  *     e.g. 10x1 + 5y2 + 5x3 + 3x4 <= 15  => will be changed to 2x1 + y2 + x3 + x4 <= 3 if all xi are binary and y2 is
  *          integral
@@ -11344,7 +11513,6 @@ SCIP_RETCODE simplifyInequalities(
    SCIP_Real minactsub;
    SCIP_Real maxactsub;
    SCIP_Real siderest;
-   SCIP_Real feastol;
    SCIP_Real newcoef;
    SCIP_Real absval;
    SCIP_Real minact;
@@ -11354,10 +11522,12 @@ SCIP_RETCODE simplifyInequalities(
    SCIP_Real rhs;
    SCIP_Real lb;
    SCIP_Real ub;
-   SCIP_Longint restcoef;
+   SCIP_Longint coefval;
    SCIP_Longint oldgcd;
-   SCIP_Longint rest;
    SCIP_Longint gcd;
+   SCIP_Real newrhsval;
+   SCIP_Real newlhsval;
+   SCIP_Real newside;
    SCIP_Bool isminsettoinfinity;
    SCIP_Bool ismaxsettoinfinity;
    SCIP_Bool ismintight;
@@ -11446,7 +11616,7 @@ SCIP_RETCODE simplifyInequalities(
    /* @todo extend both-sided simplification */
    if( haslhs && hasrhs )
    {
-      SCIP_CALL( rangedRowSimplify(scip, cons, nchgcoefs, nchgsides ) );
+      SCIP_CALL( rangedRowSimplify(scip, cons, nchgcoefs, nchgsides, infeasible) );
 
       return SCIP_OKAY;
    }
@@ -11485,8 +11655,6 @@ SCIP_RETCODE simplifyInequalities(
    /* do not process constraints when all coefficients are 1.0 */
    if( SCIPisEQ(scip, REALABS(vals[0]), 1.0) && ((hasrhs && SCIPisIntegral(scip, rhs)) || (haslhs && SCIPisIntegral(scip, lhs))) )
       return SCIP_OKAY;
-
-   feastol = SCIPfeastol(scip);
 
    SCIPdebugMsg(scip, "starting simplification of coefficients\n");
    SCIPdebugPrintCons(scip, cons, NULL);
@@ -11608,7 +11776,7 @@ SCIP_RETCODE simplifyInequalities(
       SCIP_Bool rredundant;
       SCIP_Bool lredundant;
 
-      gcd = (SCIP_Longint)(REALABS(vals[v]) + feastol);
+      gcd = (SCIP_Longint)round(REALABS(vals[v]));
       assert(gcd >= 1);
 
       if( v == 0 )
@@ -11647,7 +11815,7 @@ SCIP_RETCODE simplifyInequalities(
          }
 
          /* calculate greatest common divisor for all general and binary variables */
-         gcd = SCIPcalcGreComDiv(gcd, (SCIP_Longint)(REALABS(vals[v]) + feastol));
+         gcd = SCIPcalcGreComDiv(gcd, (SCIP_Longint)round(REALABS(vals[v])));
 
          if( gcd == 1 )
             break;
@@ -11674,14 +11842,18 @@ SCIP_RETCODE simplifyInequalities(
          if( hasrhs )
          {
             /* determine the remainder of the right hand side and the gcd */
-            siderest = rhs - SCIPfeasFloor(scip, rhs/gcd) * gcd;
+            newside = round(rhs / gcd);
+            if( SCIPisFeasPositive(scip, newside * gcd - rhs) )
+               newside -= 1.0;
+            siderest = rhs - newside * gcd;
          }
          else
          {
             /* determine the remainder of the left hand side and the gcd */
-            siderest = lhs - SCIPfeasFloor(scip, lhs/gcd) * gcd;
-            if( SCIPisZero(scip, siderest) )
-               siderest = gcd;
+            newside = round(lhs / gcd);
+            if( !SCIPisFeasNegative(scip, newside * gcd - lhs) )
+               newside -= 1.0;
+            siderest = lhs - newside * gcd;
          }
 
          rredundant = hasrhs && maxactsub <= siderest && SCIPisFeasGT(scip, minactsub, siderest - gcd);
@@ -11701,14 +11873,18 @@ SCIP_RETCODE simplifyInequalities(
          if( hasrhs )
          {
             /* determine the remainder of the right hand side and the gcd */
-            siderest = rhs - SCIPfeasFloor(scip, rhs/gcd) * gcd;
+            newside = round(rhs / gcd);
+            if( SCIPisFeasPositive(scip, newside * gcd - rhs) )
+               newside -= 1.0;
+            siderest = rhs - newside * gcd;
          }
          else
          {
             /* determine the remainder of the left hand side and the gcd */
-            siderest = lhs - SCIPfeasFloor(scip, lhs/gcd) * gcd;
-            if( SCIPisZero(scip, siderest) )
-               siderest = gcd;
+            newside = round(lhs / gcd);
+            if( !SCIPisFeasNegative(scip, newside * gcd - lhs) )
+               newside -= 1.0;
+            siderest = lhs - newside * gcd;
          }
       }
       else
@@ -11763,14 +11939,18 @@ SCIP_RETCODE simplifyInequalities(
             assert(offsetv == -1);
 
             /* determine the remainder of the right hand side and the gcd */
-            siderest = rhs - SCIPfeasFloor(scip, rhs/gcd) * gcd;
+            newside = round(rhs / gcd);
+            if( SCIPisFeasPositive(scip, newside * gcd - rhs) )
+               newside -= 1.0;
+            siderest = rhs - newside * gcd;
          }
          else
          {
             /* determine the remainder of the left hand side and the gcd */
-            siderest = lhs - SCIPfeasFloor(scip, lhs/gcd) * gcd;
-            if( SCIPisZero(scip, siderest) )
-               siderest = gcd;
+            newside = round(lhs / gcd);
+            if( !SCIPisFeasNegative(scip, newside * gcd - lhs) )
+               newside -= 1.0;
+            siderest = lhs - newside * gcd;
          }
 
          /* is the redundancy really fulfilled */
@@ -11795,13 +11975,13 @@ SCIP_RETCODE simplifyInequalities(
          SCIP_CALL( normalizeCons(scip, cons, infeasible) );
          assert(vars == consdata->vars);
          assert(vals == consdata->vals);
-         assert(w < consdata->nvars);
+         assert(v == consdata->nvars);
 
          if( *infeasible )
             return SCIP_OKAY;
 
          /* compute new greatest common divisor due to normalization */
-         gcd = (SCIP_Longint)(gcd / (oldcoef/vals[w]) + feastol);
+         gcd = (SCIP_Longint)round(gcd / (oldcoef/vals[w]));
          assert(gcd >= 1);
 
          /* update side */
@@ -11846,7 +12026,7 @@ SCIP_RETCODE simplifyInequalities(
       if( offsetv >= 0 && gcd == 1 )
       {
          /* calculate greatest common divisor for all general variables */
-         gcd = (SCIP_Longint)(REALABS(vals[nvars - 1]) + feastol);
+         gcd = (SCIP_Longint)round(REALABS(vals[nvars - 1]));
 
          if( gcd > 1 )
          {
@@ -11869,13 +12049,13 @@ SCIP_RETCODE simplifyInequalities(
 
                if( gcd == -1 )
                {
-                  gcd = (SCIP_Longint)(REALABS(vals[v]) + feastol);
+                  gcd = (SCIP_Longint)round(REALABS(vals[v]));
                   assert(gcd >= 1);
                }
                else
                {
                   /* calculate greatest common divisor for all general and binary variables */
-                  gcd = SCIPcalcGreComDiv(gcd, (SCIP_Longint)(REALABS(vals[v]) + feastol));
+                  gcd = SCIPcalcGreComDiv(gcd, (SCIP_Longint)round(REALABS(vals[v])));
                }
 
                /* if the greatest commmon divisor has become 1, we might have found the possible coefficient to change or we
@@ -11931,39 +12111,11 @@ SCIP_RETCODE simplifyInequalities(
 #endif
 
             if( vals[candpos] > 0 && SCIPvarIsBinary(vars[candpos]) &&
-               SCIPcalcGreComDiv(gcd, (SCIP_Longint)(REALABS(vals[candpos]) + feastol)) < gcd )
+               SCIPcalcGreComDiv(gcd, (SCIP_Longint)round(REALABS(vals[candpos]))) < gcd )
             {
-               /* determine the remainder of the side and the gcd */
-               if( hasrhs )
-                  rest = ((SCIP_Longint)(rhs + feastol)) % gcd;
-               else
-                  rest = ((SCIP_Longint)(lhs + feastol)) % gcd;
-               assert(rest >= 0);
-               assert(rest < gcd);
-
-               /* determine the remainder of the coefficient candidate and the gcd */
-               restcoef = ((SCIP_Longint)(vals[candpos] + feastol)) % gcd;
-               assert(restcoef >= 1);
-               assert(restcoef < gcd);
-
-               if( hasrhs )
-               {
-                  /* calculate new coefficient */
-                  if( restcoef > rest )
-                     newcoef = vals[candpos] - restcoef + gcd;
-                  else
-                     newcoef = vals[candpos] - restcoef;
-               }
-               else
-               {
-                  /* calculate new coefficient */
-                  if( rest == 0 || restcoef < rest )
-                     newcoef = vals[candpos] - restcoef;
-                  else
-                     newcoef = vals[candpos] - restcoef + gcd;
-               }
-
-               /* done */
+               /* compute tightened coefficient using floor/ceil formula */
+               computeBinaryTightening(scip, hasrhs ? rhs : lhs, vals[candpos], gcd,
+                     hasrhs, &newside, &newcoef);
 
                /* new coeffcient must not be zero if we would loose the implication that a variable needs to be 0 if
                 * another with the big coefficient was set to 1
@@ -11987,26 +12139,32 @@ SCIP_RETCODE simplifyInequalities(
             }
             else if( vals[candpos] < 0 || !SCIPvarIsBinary(vars[candpos]) )
             {
-               gcd = SCIPcalcGreComDiv(gcd, (SCIP_Longint)(REALABS(vals[candpos]) + feastol));
+               gcd = SCIPcalcGreComDiv(gcd, (SCIP_Longint)round(REALABS(vals[candpos])));
             }
 
             /* correct side and big coefficients */
-            if( (!notchangable && hasrhs && ((!SCIPisFeasIntegral(scip, rhs) || SCIPcalcGreComDiv(gcd, (SCIP_Longint)(rhs + feastol)) < gcd) && (SCIPcalcGreComDiv(gcd, (SCIP_Longint)(REALABS(vals[candpos]) + feastol)) == gcd))) ||
-               ( haslhs && (!SCIPisFeasIntegral(scip, lhs) || SCIPcalcGreComDiv(gcd, (SCIP_Longint)(lhs + feastol)) < gcd) && (SCIPcalcGreComDiv(gcd, (SCIP_Longint)(REALABS(vals[candpos]) + feastol)) == gcd)) )
+            if( (!notchangable && hasrhs && ((!SCIPisFeasIntegral(scip, rhs) || SCIPcalcGreComDiv(gcd, (SCIP_Longint)round(rhs)) < gcd) && (SCIPcalcGreComDiv(gcd, (SCIP_Longint)round(REALABS(vals[candpos]))) == gcd))) ||
+               ( haslhs && (!SCIPisFeasIntegral(scip, lhs) || SCIPcalcGreComDiv(gcd, (SCIP_Longint)round(lhs)) < gcd) && (SCIPcalcGreComDiv(gcd, (SCIP_Longint)round(REALABS(vals[candpos]))) == gcd)) )
             {
                if( haslhs )
                {
-                  newcoef = (SCIP_Real)((SCIP_Longint)(SCIPfeasCeil(scip, lhs/gcd) * gcd + feastol));
+                  newside = round(lhs / gcd);
+                  if( SCIPisFeasNegative(scip, newside * gcd - lhs) )
+                     newside += 1.0;
+                  newside *= gcd;
 
-                  SCIP_CALL( chgLhs(scip, cons, newcoef) );
+                  SCIP_CALL( chgLhs(scip, cons, newside) );
                   ++(*nchgsides);
                }
                else
                {
                   assert(hasrhs);
-                  newcoef = (SCIP_Real)((SCIP_Longint)(SCIPfeasFloor(scip, rhs/gcd) * gcd + feastol));
+                  newside = round(rhs / gcd);
+                  if( SCIPisFeasPositive(scip, newside * gcd - rhs) )
+                     newside -= 1.0;
+                  newside *= gcd;
 
-                  SCIP_CALL( chgRhs(scip, cons, newcoef) );
+                  SCIP_CALL( chgRhs(scip, cons, newside) );
                   ++(*nchgsides);
                }
 
@@ -12015,22 +12173,24 @@ SCIP_RETCODE simplifyInequalities(
                {
                   assert(vals[w] > 0);
 
-                  SCIP_CALL( chgCoefPos(scip, cons, w, newcoef) );
+                  SCIP_CALL( chgCoefPos(scip, cons, w, newside) );
                }
                (*nchgcoefs) += (offsetv + 1);
             }
 
             if( !notchangable )
             {
+               /* get new constraint data */
+               nvars = consdata->nvars;
+
                SCIP_CALL( normalizeCons(scip, cons, infeasible) );
                assert(vars == consdata->vars);
                assert(vals == consdata->vals);
+               assert(nvars == consdata->nvars);
 
                if( *infeasible )
                   return SCIP_OKAY;
 
-               /* get new constraint data */
-               nvars = consdata->nvars;
                assert(nvars >= 2);
 
                SCIPdebugPrintCons(scip, cons, NULL);
@@ -12058,6 +12218,96 @@ SCIP_RETCODE simplifyInequalities(
          onlybin = FALSE;
       if( !SCIPisIntegral(scip, vals[v]) )
          allcoefintegral = FALSE;
+   }
+
+   /* tighten single fractional binary coefficient */
+   if( !allcoefintegral )
+   {
+      SCIP_Bool allnonbincoefintegral = TRUE;
+      int fracpos = -1;
+      int nfracbins = 0;
+
+      gcd = 0;
+      for( v = nvars - 1; v >= 0; --v )
+      {
+         if( !SCIPisIntegral(scip, vals[v]) || REALABS(vals[v]) - 0.5 >= (SCIP_Real)SCIP_LONGINT_MAX )
+         {
+            if( !SCIPvarIsBinary(vars[v]) || ++nfracbins > 1 )
+            {
+               allnonbincoefintegral = FALSE;
+               break;
+            }
+            fracpos = v;
+         }
+         else
+         {
+            coefval = (SCIP_Longint)round(REALABS(vals[v]));
+            gcd = (gcd == 0) ? coefval : SCIPcalcGreComDiv(gcd, coefval);
+         }
+      }
+
+      if( allnonbincoefintegral && fracpos >= 0 )
+      {
+         assert(gcd >= 1);
+
+         /* tighten binary coefficient */
+         if( hasrhs )
+         {
+            computeBinaryTightening(scip, rhs, vals[fracpos], gcd, TRUE, &newrhsval, &newcoef);
+            if( !SCIPisEQ(scip, newrhsval, rhs) )
+            {
+               SCIP_CALL( chgRhs(scip, cons, newrhsval) );
+               ++(*nchgsides);
+            }
+         }
+         else
+         {
+            computeBinaryTightening(scip, lhs, vals[fracpos], gcd, FALSE, &newlhsval, &newcoef);
+            if( !SCIPisEQ(scip, newlhsval, lhs) )
+            {
+               SCIP_CALL( chgLhs(scip, cons, newlhsval) );
+               ++(*nchgsides);
+            }
+         }
+
+         SCIPdebugMsg(scip, "tightening fractional binary coefficient of <%s> from %g to %g\n",
+            SCIPvarGetName(vars[fracpos]), vals[fracpos], newcoef);
+
+         if( SCIPisZero(scip, newcoef) )
+         {
+            SCIP_CALL( delCoefPos(scip, cons, fracpos) );
+         }
+         else
+         {
+            SCIP_CALL( chgCoefPos(scip, cons, fracpos, newcoef) );
+         }
+         ++(*nchgcoefs);
+
+         /* normalize by dividing all coefficients and sides by the gcd */
+         for( v = 0; v < consdata->nvars; ++v )
+         {
+            vals[v] = round(vals[v] / gcd);
+            assert(!SCIPisZero(scip, vals[v]));
+         }
+
+         if( haslhs )
+            consdata->lhs = round(consdata->lhs / gcd);
+         if( hasrhs )
+            consdata->rhs = round(consdata->rhs / gcd);
+
+         consdataInvalidateActivities(consdata);
+         consdata->normalized = TRUE;
+
+         SCIPdebugPrintCons(scip, cons, NULL);
+
+         nvars = consdata->nvars;
+         lhs = consdata->lhs;
+         rhs = consdata->rhs;
+         allcoefintegral = TRUE;
+
+         if( nvars < 2 )
+            return SCIP_OKAY;
+      }
    }
 
    /* check if the non-integrality part of all integral variables is smaller than the non-inegrality part of the right
@@ -12299,10 +12549,6 @@ SCIP_RETCODE simplifyInequalities(
    if( !allcoefintegral )
       return SCIP_OKAY;
 
-   /* we want to avoid numerical troubles, therefore we do not change non-integral sides */
-   if( (hasrhs && !SCIPisIntegral(scip, rhs)) || (haslhs && !SCIPisIntegral(scip, lhs)) )
-      return SCIP_OKAY;
-
    /* maximal absolute value of coefficients in constraint is one, so we cannot tighten it further */
    if( SCIPisEQ(scip, REALABS(vals[0]), 1.0) )
       return SCIP_OKAY;
@@ -12348,19 +12594,22 @@ SCIP_RETCODE simplifyInequalities(
 
             absval = REALABS(vals[v]);
             /* arithmetic precision can lead to the absolute value only being integral up to feasibility tolerance,
-             * even though the value itself is feasible up to epsilon, but since we add feastol later, this is enough
+             * even though the value itself is feasible up to epsilon, but since we round later, this is enough
              */
             assert(SCIPisFeasIntegral(scip, absval));
 
+            if( absval - 0.5 >= (SCIP_Real)SCIP_LONGINT_MAX )
+               return SCIP_OKAY;
+
             if( gcd == -1 )
             {
-               gcd = (SCIP_Longint)(absval + feastol);
+               gcd = (SCIP_Longint)round(absval);
                assert(gcd >= 1);
             }
             else
             {
                /* calculate greatest common divisor for all general variables */
-               gcd = SCIPcalcGreComDiv(gcd, (SCIP_Longint)(absval + feastol));
+               gcd = SCIPcalcGreComDiv(gcd, (SCIP_Longint)round(absval));
             }
             if( gcd == 1 )
                break;
@@ -12387,21 +12636,24 @@ SCIP_RETCODE simplifyInequalities(
          {
             absval = REALABS(vals[v]);
             /* arithmetic precision can lead to the absolute value only being integral up to feasibility tolerance,
-             * even though the value itself is feasible up to epsilon, but since we add feastol later, this is enough
+             * even though the value itself is feasible up to epsilon, but since we round later, this is enough
              */
             assert(SCIPisFeasIntegral(scip, absval));
+
+            if( absval - 0.5 >= (SCIP_Real)SCIP_LONGINT_MAX )
+               return SCIP_OKAY;
 
             oldgcd = gcd;
 
             if( gcd == -1 )
             {
-               gcd = (SCIP_Longint)(REALABS(vals[v]) + feastol);
+               gcd = (SCIP_Longint)round(REALABS(vals[v]));
                assert(gcd >= 1);
             }
             else
             {
                /* calculate greatest common divisor for all general and binary variables */
-               gcd = SCIPcalcGreComDiv(gcd, (SCIP_Longint)(REALABS(vals[v]) + feastol));
+               gcd = SCIPcalcGreComDiv(gcd, (SCIP_Longint)round(REALABS(vals[v])));
             }
 
             /* if the greatest commmon divisor has become 1, we might have found the possible coefficient to change or we
@@ -12432,11 +12684,11 @@ SCIP_RETCODE simplifyInequalities(
                      candpos = candpos2;
 
                      /* recalculate gcd from scratch */
-                     gcd = (SCIP_Longint)(REALABS(vals[v+1]) + feastol);
+                     gcd = (SCIP_Longint)round(REALABS(vals[v+1]));
                      assert(gcd >= 1);
 
                      /* calculate greatest common divisor for all general and binary variables */
-                     gcd = SCIPcalcGreComDiv(gcd, (SCIP_Longint)(REALABS(vals[v]) + feastol));
+                     gcd = SCIPcalcGreComDiv(gcd, (SCIP_Longint)round(REALABS(vals[v])));
                      if( gcd == 1 )
                         return SCIP_OKAY;
                   }
@@ -12454,68 +12706,32 @@ SCIP_RETCODE simplifyInequalities(
        */
       assert(candpos >= 0 && candpos < nvars);
 
-      /* all variables and all coefficients are integral, so the side should be too */
-      assert((hasrhs && SCIPisIntegral(scip, rhs)) || (haslhs && SCIPisIntegral(scip, lhs)));
-
       /* check again, if we have a normalized inequality (not ranged) the one side should be positive,
        * @see normalizeCons()
        */
       assert(!hasrhs || !SCIPisNegative(scip, rhs));
       assert(!haslhs || !SCIPisNegative(scip, lhs));
 
-      /* determine the remainder of the side and the gcd */
-      if( hasrhs )
-         rest = ((SCIP_Longint)(rhs + feastol)) % gcd;
-      else
-         rest = ((SCIP_Longint)(lhs + feastol)) % gcd;
-      assert(rest >= 0);
-      assert(rest < gcd);
+      /* compute tightened side and coefficient using floor/ceil formula */
+      computeBinaryTightening(scip, hasrhs ? rhs : lhs, vals[candpos], gcd, hasrhs, &newside, &newcoef);
 
-      /* determine the remainder of the coefficient candidate and the gcd */
-      if( vals[candpos] < 0 )
+      if( hasrhs && !SCIPisEQ(scip, newside, rhs) )
       {
-         restcoef = ((SCIP_Longint)(vals[candpos] - feastol)) % gcd;
-         assert(restcoef <= -1);
-         restcoef += gcd;
+         SCIP_CALL( chgRhs(scip, cons, newside) );
+         ++(*nchgsides);
       }
-      else
-         restcoef = ((SCIP_Longint)(vals[candpos] + feastol)) % gcd;
-      assert(restcoef >= 1);
-      assert(restcoef < gcd);
-
-      if( hasrhs )
+      else if( haslhs && !SCIPisEQ(scip, newside, lhs) )
       {
-         if( rest > 0 )
-         {
-            /* replace old with new right hand side */
-            SCIP_CALL( chgRhs(scip, cons, rhs - rest) );
-            ++(*nchgsides);
-         }
-
-         /* calculate new coefficient */
-         if( restcoef > rest )
-            newcoef = vals[candpos] - restcoef + gcd;
-         else
-            newcoef = vals[candpos] - restcoef;
+         SCIP_CALL( chgLhs(scip, cons, newside) );
+         ++(*nchgsides);
       }
-      else
-      {
-         if( rest > 0 )
-         {
-            /* replace old with new left hand side */
-            SCIP_CALL( chgLhs(scip, cons, lhs - rest + gcd) );
-            ++(*nchgsides);
-         }
 
-         /* calculate new coefficient */
-         if( rest == 0 || restcoef < rest )
-            newcoef = vals[candpos] - restcoef;
-         else
-            newcoef = vals[candpos] - restcoef + gcd;
-      }
-      assert(SCIPisZero(scip, newcoef) || SCIPcalcGreComDiv(gcd, (SCIP_Longint)(REALABS(newcoef) + feastol)) == gcd);
+      assert(SCIPisZero(scip, newcoef) || SCIPcalcGreComDiv(gcd, (SCIP_Longint)round(REALABS(newcoef))) == gcd);
 
-      SCIPdebugMsg(scip, "gcd = %" SCIP_LONGINT_FORMAT ", rest = %" SCIP_LONGINT_FORMAT ", restcoef = %" SCIP_LONGINT_FORMAT "; changing coef of variable <%s> to %g and %s by %" SCIP_LONGINT_FORMAT "\n", gcd, rest, restcoef, SCIPvarGetName(vars[candpos]), newcoef, hasrhs ? "reduced rhs" : "increased lhs", hasrhs ? rest : (rest > 0 ? gcd - rest : 0));
+      SCIPdebugMsg(scip,
+            "gcd = %" SCIP_LONGINT_FORMAT "; changing coef of variable <%s> from %g to %g and %s from %g to %g\n",
+            gcd, SCIPvarGetName(vars[candpos]), vals[candpos], newcoef,
+            hasrhs ? "rhs" : "lhs", hasrhs ? rhs : lhs, newside);
 
       if( SCIPisZero(scip, newcoef) )
       {
@@ -12529,20 +12745,27 @@ SCIP_RETCODE simplifyInequalities(
       }
       ++(*nchgcoefs);
 
-      /* now constraint can be normalized, might be directly done by dividing it by the gcd */
-      SCIP_CALL( normalizeCons(scip, cons, infeasible) );
-      assert(vars == consdata->vars);
-      assert(vals == consdata->vals);
+      /* normalize by dividing all coefficients and sides by the gcd */
+      for( v = 0; v < consdata->nvars; ++v )
+      {
+         vals[v] = round(vals[v] / gcd);
+         assert(!SCIPisZero(scip, vals[v]));
+      }
 
-      if( *infeasible )
-         return SCIP_OKAY;
+      if( haslhs )
+         consdata->lhs = round(consdata->lhs / gcd);
+      if( hasrhs )
+         consdata->rhs = round(consdata->rhs / gcd);
+
+      consdataInvalidateActivities(consdata);
+      consdata->normalized = TRUE;
 
       SCIPdebugPrintCons(scip, cons, NULL);
 
-      rhs = consdata->rhs;
       lhs = consdata->lhs;
-      assert(!hasrhs || !SCIPisNegative(scip, rhs));
+      rhs = consdata->rhs;
       assert(!haslhs || !SCIPisNegative(scip, lhs));
+      assert(!hasrhs || !SCIPisNegative(scip, rhs));
 
       nvars = consdata->nvars;
 
