@@ -467,6 +467,7 @@ Fixed bugs
   stale position if the append failed
 - do not print certificate lines for aggregation rows that become redundant in SCIPaggrRowSumRows()
 - ExactSCIP: remove dual proof constraints from the certificate hashmap whenever they are deleted from the conflict store to avoid SCIP_KEYALREADYEXISTING errors
+- mark LP primal and dual feasible when ignoring instability if LP interface reports optimality
 
 Examples and applications
 -------------------------
