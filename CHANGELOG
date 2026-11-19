@@ -21,6 +21,7 @@ Features
 - in opportunistic concurrent solving, new incumbents are shared immediately through a solution pool and tightened
   global variable bounds through a bound pool that is applied at every node, instead of only at the synchronization
   points
+- added new symmetry handling method folding for aggregating symmetric variables of convex problems
 
 ### Benders Decomposition
 - the no-good and integer optimality cuts for Benders' decomposition are generated per subproblem. Previously, only a
