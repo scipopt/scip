@@ -1449,7 +1449,7 @@ SCIP_RETCODE SCIPaddObjoffset(
 
    SCIPprobAddObjoffset(scip->transprob, addval);
    SCIP_CALL( SCIPprimalUpdateObjoffset(scip->primal, SCIPblkmem(scip), scip->set, scip->stat, scip->eventqueue,
-         scip->eventfilter, scip->transprob, scip->origprob, scip->tree, scip->reopt, scip->lp) );
+         scip->eventfilter, scip->transprob, scip->origprob, scip->tree, scip->reopt, scip->lp, addval) );
 
    return SCIP_OKAY;
 }

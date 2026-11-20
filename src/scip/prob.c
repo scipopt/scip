@@ -50,6 +50,7 @@
 #include "scip/stat.h"
 #include "scip/struct_cons.h"
 #include "scip/struct_lp.h"
+#include "scip/struct_primal.h"
 #include "scip/struct_prob.h"
 #include "scip/struct_set.h"
 #include "scip/struct_stat.h"
@@ -1789,7 +1790,7 @@ SCIP_RETCODE probCheckObjIntegralExact(
       transprob->objisintegral = TRUE;
 
       /* update upper bound and cutoff bound in primal data structure due to new internality information */
-      SCIP_CALL( SCIPprimalUpdateObjoffset(primal, blkmem, set, stat, eventqueue, eventfilter, transprob, origprob, tree, reopt, lp) );
+      SCIP_CALL( SCIPprimalUpdateObjoffset(primal, blkmem, set, stat, eventqueue, eventfilter, transprob, origprob, tree, reopt, lp, 0.0) );
    }
 
    return SCIP_OKAY;
@@ -1859,7 +1860,7 @@ SCIP_RETCODE SCIPprobCheckObjIntegral(
       transprob->objisintegral = TRUE;
 
       /* update upper bound and cutoff bound in primal data structure due to new internality information */
-      SCIP_CALL( SCIPprimalUpdateObjoffset(primal, blkmem, set, stat, eventqueue, eventfilter, transprob, origprob, tree, reopt, lp) );
+      SCIP_CALL( SCIPprimalUpdateObjoffset(primal, blkmem, set, stat, eventqueue, eventfilter, transprob, origprob, tree, reopt, lp, 0.0) );
    }
 
    return SCIP_OKAY;
@@ -2006,8 +2007,12 @@ SCIP_RETCODE probScaleObjExact(
             transprob->objisintegral = TRUE;
             SCIPrationalDebugMessage("integral objective scalar: objscale=%q\n", transprob->objscaleexact);
 
+            /* scale cutoff bound */
+            if( !SCIPrationalIsInfinity(primal->cutoffboundexact) )
+               SCIPrationalMult(primal->cutoffboundexact, primal->cutoffboundexact, intscalar);
+
             /* update upperbound and cutoffbound in primal data structure */
-            SCIP_CALL( SCIPprimalUpdateObjoffsetExact(primal, blkmem, set, stat, eventqueue, eventfilter, transprob, origprob, tree, reopt, lp) );
+            SCIP_CALL( SCIPprimalUpdateObjoffsetExact(primal, blkmem, set, stat, eventqueue, eventfilter, transprob, origprob, tree, reopt, lp, NULL) );
          }
       }
 
@@ -2144,8 +2149,16 @@ SCIP_RETCODE SCIPprobScaleObj(
                   transprob->objisintegral = TRUE;
                   SCIPsetDebugMsg(set, "integral objective scalar: objscale=%g\n", transprob->objscale);
 
+                  /* scale cutoff bound */
+                  if( !SCIPsetIsInfinity(set, primal->cutoffbound) )
+                  {
+                     primal->cutoffbound *= intscalar;
+                     if( SCIPsetIsInfinity(set, primal->cutoffbound) )
+                        primal->cutoffbound = SCIPsetInfinity(set);
+                  }
+
                   /* update upperbound and cutoffbound in primal data structure */
-                  SCIP_CALL( SCIPprimalUpdateObjoffset(primal, blkmem, set, stat, eventqueue, eventfilter, transprob, origprob, tree, reopt, lp) );
+                  SCIP_CALL( SCIPprimalUpdateObjoffset(primal, blkmem, set, stat, eventqueue, eventfilter, transprob, origprob, tree, reopt, lp, 0.0) );
                }
             }
          }
