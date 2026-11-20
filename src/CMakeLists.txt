@@ -651,6 +651,7 @@ add_library(objects_base OBJECT
    scip/solve.c
    scip/stat.c
    scip/sym.c
+   scip/sym_folding.c
    scip/sym_lexorbred.c
    scip/sym_rowcol.c
    scip/sym_sst.c
