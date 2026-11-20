@@ -132,7 +132,8 @@ SCIP_RETCODE SCIPprimalUpdateObjoffset(
    SCIP_PROB*            origprob,           /**< original problem data */
    SCIP_TREE*            tree,               /**< branch and bound tree */
    SCIP_REOPT*           reopt,              /**< reoptimization data structure */
-   SCIP_LP*              lp                  /**< current LP data */
+   SCIP_LP*              lp,                 /**< current LP data */
+   SCIP_Real             addval              /**< added objective offset */
    );
 
 /** recalculates upper bound and cutoff bound in primal data after a change of the problem's objective offset */
@@ -147,7 +148,8 @@ SCIP_RETCODE SCIPprimalUpdateObjoffsetExact(
    SCIP_PROB*            origprob,           /**< original problem data */
    SCIP_TREE*            tree,               /**< branch and bound tree */
    SCIP_REOPT*           reopt,              /**< reoptimization data structure */
-   SCIP_LP*              lp                  /**< current LP data */
+   SCIP_LP*              lp,                 /**< current LP data */
+   SCIP_RATIONAL*        addval              /**< added objective offset, or NULL if unchanged */
    );
 
 /** adds additional objective offset in origanal space to all existing solution (in original space) */
