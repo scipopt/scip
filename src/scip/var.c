@@ -9723,14 +9723,16 @@ SCIP_RETCODE SCIPvarAddObj(
       case SCIP_VARSTATUS_FIXED:
          assert(SCIPsetIsEQ(set, var->locdom.lb, var->locdom.ub));
          SCIPprobAddObjoffset(transprob, var->locdom.lb * addobj);
-         SCIP_CALL( SCIPprimalUpdateObjoffset(primal, blkmem, set, stat, eventqueue, eventfilter, transprob, origprob, tree, reopt, lp) );
+         SCIP_CALL( SCIPprimalUpdateObjoffset(primal, blkmem, set, stat, eventqueue, eventfilter, transprob, origprob, tree, reopt, lp,
+               var->locdom.lb * addobj) );
          break;
 
       case SCIP_VARSTATUS_AGGREGATED:
          assert(!var->donotaggr);
          /* x = a*y + c  ->  add a*addobj to obj. val. of y, and c*addobj to obj. offset of problem */
          SCIPprobAddObjoffset(transprob, var->data.aggregate.constant * addobj);
-         SCIP_CALL( SCIPprimalUpdateObjoffset(primal, blkmem, set, stat, eventqueue, eventfilter, transprob, origprob, tree, reopt, lp) );
+         SCIP_CALL( SCIPprimalUpdateObjoffset(primal, blkmem, set, stat, eventqueue, eventfilter, transprob, origprob, tree, reopt, lp,
+               var->data.aggregate.constant * addobj) );
          SCIP_CALL( SCIPvarAddObj(var->data.aggregate.var, blkmem, set, stat, transprob, origprob, primal, tree, reopt,
                lp, eventqueue, eventfilter, var->data.aggregate.scalar * addobj) );
          break;
@@ -9739,7 +9741,8 @@ SCIP_RETCODE SCIPvarAddObj(
          assert(!var->donotmultaggr);
          /* x = a_1*y_1 + ... + a_n*y_n  + c  ->  add a_i*addobj to obj. val. of y_i, and c*addobj to obj. offset */
          SCIPprobAddObjoffset(transprob, var->data.multaggr.constant * addobj);
-         SCIP_CALL( SCIPprimalUpdateObjoffset(primal, blkmem, set, stat, eventqueue, eventfilter, transprob, origprob, tree, reopt, lp) );
+         SCIP_CALL( SCIPprimalUpdateObjoffset(primal, blkmem, set, stat, eventqueue, eventfilter, transprob, origprob, tree, reopt, lp,
+               var->data.multaggr.constant * addobj) );
          for( i = 0; i < var->data.multaggr.nvars; ++i )
          {
             SCIP_CALL( SCIPvarAddObj(var->data.multaggr.vars[i], blkmem, set, stat, transprob, origprob, primal, tree,
@@ -9753,7 +9756,8 @@ SCIP_RETCODE SCIPvarAddObj(
          assert(SCIPvarGetStatus(var->negatedvar) != SCIP_VARSTATUS_NEGATED);
          assert(var->negatedvar->negatedvar == var);
          SCIPprobAddObjoffset(transprob, var->data.negate.constant * addobj);
-         SCIP_CALL( SCIPprimalUpdateObjoffset(primal, blkmem, set, stat, eventqueue, eventfilter, transprob, origprob, tree, reopt, lp) );
+         SCIP_CALL( SCIPprimalUpdateObjoffset(primal, blkmem, set, stat, eventqueue, eventfilter, transprob, origprob, tree, reopt, lp,
+               var->data.negate.constant * addobj) );
          SCIP_CALL( SCIPvarAddObj(var->negatedvar, blkmem, set, stat, transprob, origprob, primal, tree, reopt, lp,
                eventqueue, eventfilter, -addobj) );
          break;
@@ -9850,14 +9854,14 @@ SCIP_RETCODE SCIPvarAddObjExact(
          assert(SCIPsetIsEQ(set, var->locdom.lb, var->locdom.ub));
          SCIPrationalMult(tmpobj, var->exactdata->locdom.lb, addobj);
          SCIPprobAddObjoffsetExact(transprob, tmpobj);
-         SCIP_CALL( SCIPprimalUpdateObjoffsetExact(primal, blkmem, set, stat, eventqueue, eventfilter, transprob, origprob, tree, reopt, lp) );
+         SCIP_CALL( SCIPprimalUpdateObjoffsetExact(primal, blkmem, set, stat, eventqueue, eventfilter, transprob, origprob, tree, reopt, lp, tmpobj) );
          break;
 
       case SCIP_VARSTATUS_AGGREGATED:
          /* x = a*y + c  ->  add a*addobj to obj. val. of y, and c*addobj to obj. offset of problem */
          SCIPrationalMult(tmpobj, var->exactdata->aggregate.constant, addobj);
          SCIPprobAddObjoffsetExact(transprob, tmpobj);
-         SCIP_CALL( SCIPprimalUpdateObjoffsetExact(primal, blkmem, set, stat, eventqueue, eventfilter, transprob, origprob, tree, reopt, lp) );
+         SCIP_CALL( SCIPprimalUpdateObjoffsetExact(primal, blkmem, set, stat, eventqueue, eventfilter, transprob, origprob, tree, reopt, lp, tmpobj) );
 
          SCIPrationalMult(tmpobj, var->exactdata->aggregate.scalar, addobj);
 
@@ -9872,7 +9876,7 @@ SCIP_RETCODE SCIPvarAddObjExact(
 
          SCIPrationalMult(tmpobj, var->exactdata->multaggr.constant, addobj);
          SCIPprobAddObjoffsetExact(transprob, tmpobj);
-         SCIP_CALL( SCIPprimalUpdateObjoffsetExact(primal, blkmem, set, stat, eventqueue, eventfilter, transprob, origprob, tree, reopt, lp) );
+         SCIP_CALL( SCIPprimalUpdateObjoffsetExact(primal, blkmem, set, stat, eventqueue, eventfilter, transprob, origprob, tree, reopt, lp, tmpobj) );
 
          for( i = 0; i < var->data.multaggr.nvars; ++i )
          {
@@ -9891,7 +9895,7 @@ SCIP_RETCODE SCIPvarAddObjExact(
 
          SCIPrationalMultReal(tmpobj, addobj, var->data.negate.constant);
          SCIPprobAddObjoffsetExact(transprob, tmpobj);
-         SCIP_CALL( SCIPprimalUpdateObjoffsetExact(primal, blkmem, set, stat, eventqueue, eventfilter, transprob, origprob, tree, reopt, lp) );
+         SCIP_CALL( SCIPprimalUpdateObjoffsetExact(primal, blkmem, set, stat, eventqueue, eventfilter, transprob, origprob, tree, reopt, lp, tmpobj) );
 
          SCIPrationalNegate(tmpobj, addobj);
          SCIP_CALL( SCIPvarAddObjExact(var->negatedvar, blkmem, set, stat, transprob, origprob, primal, tree, reopt, lp,
