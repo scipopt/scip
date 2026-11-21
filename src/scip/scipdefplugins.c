@@ -253,6 +253,7 @@ SCIP_RETCODE SCIPincludeDefaultPlugins(
    SCIP_CALL( SCIPincludeSepaEccuts(scip) );
    SCIP_CALL( SCIPincludeSepaOddcycle(scip) );
    SCIP_CALL( SCIPincludeSepaRapidlearning(scip) );
+   SCIP_CALL( SCIPincludeSymhdlrFolding(scip) );
    SCIP_CALL( SCIPincludeSymhdlrLexOrbRed(scip) );
    SCIP_CALL( SCIPincludeSymhdlrRowCol(scip) );
    SCIP_CALL( SCIPincludeSymhdlrSST(scip) );

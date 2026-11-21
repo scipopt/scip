@@ -760,6 +760,12 @@ SCIP_Bool SCIPconsIsStickingAtNode(
    SCIP_CONS*            cons                /**< constraint */
    );
 
+/** returns TRUE iff the constraint is convex when variables are relaxed to be continuous */
+SCIP_EXPORT
+SCIP_Bool SCIPconsIsRelaxConvex(
+   SCIP_CONS*            cons                /**< constraint */
+   );
+
 /** returns TRUE iff constraint belongs to the global problem */
 SCIP_EXPORT
 SCIP_Bool SCIPconsIsInProb(
@@ -900,6 +906,7 @@ int SCIPconsGetNUpgradeLocks(
 #define SCIPconsIsDynamic(cons)         (cons)->dynamic
 #define SCIPconsIsRemovable(cons)       (cons)->removable
 #define SCIPconsIsStickingAtNode(cons)  (cons)->stickingatnode
+#define SCIPconsIsRelaxConvex(cons)     (cons)->isrelaxconvex
 #define SCIPconsIsInProb(cons)          ((cons)->addconssetchg == NULL && (cons)->addarraypos >= 0)
 #define SCIPconsIsOriginal(cons)        (cons)->original
 #define SCIPconsIsTransformed(cons)     !(cons)->original

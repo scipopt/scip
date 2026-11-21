@@ -6131,6 +6131,7 @@ SCIP_RETCODE SCIPconsCreate(
    (*cons)->updateunmarkpropagate = FALSE;
    (*cons)->updatefree = FALSE;
    (*cons)->updateactfocus = FALSE;
+   (*cons)->isrelaxconvex = FALSE;
 
    for( i = 0; i < NLOCKTYPES; i++ )
    {
@@ -7017,6 +7018,17 @@ void SCIPconsSetNamePointer(
    assert( name != NULL );
 
    cons->name = (char*)name;
+}
+
+/** sets the isrelaxconvex flag of the given constraint */
+void SCIPconsSetIsRelaxConvex(
+   SCIP_CONS*            cons,               /**< constraint */
+   SCIP_Bool             isrelaxconvex       /**< new value */
+   )
+{
+   assert(cons != NULL);
+
+   cons->isrelaxconvex = isrelaxconvex;
 }
 
 /** gets associated transformed constraint of an original constraint, or NULL if no associated transformed constraint
@@ -8370,6 +8382,7 @@ void SCIPprintLinConsStats(
 #undef SCIPconsIsDynamic
 #undef SCIPconsIsRemovable
 #undef SCIPconsIsStickingAtNode
+#undef SCIPconsIsRelaxConvex
 #undef SCIPconsIsInProb
 #undef SCIPconsIsOriginal
 #undef SCIPconsIsTransformed
@@ -8676,6 +8689,16 @@ SCIP_Bool SCIPconsIsStickingAtNode(
    assert(cons != NULL);
 
    return cons->stickingatnode;
+}
+
+/** returns TRUE iff the constraint is convex when variables are relaxed to be continuous */
+SCIP_Bool SCIPconsIsRelaxConvex(
+   SCIP_CONS*            cons                /**< constraint */
+   )
+{
+   assert(cons != NULL);
+
+   return cons->isrelaxconvex;
 }
 
 /** returns TRUE iff constraint belongs to the global problem */

@@ -4232,6 +4232,7 @@ SCIP_DECL_CONSTRANS(consTransAnd)
          SCIPconsIsChecked(sourcecons), SCIPconsIsPropagated(sourcecons), SCIPconsIsLocal(sourcecons),
          SCIPconsIsModifiable(sourcecons), SCIPconsIsDynamic(sourcecons), SCIPconsIsRemovable(sourcecons),
          SCIPconsIsStickingAtNode(sourcecons)) );
+   SCIP_CALL( SCIPsetConsIsRelaxConvex(scip, *targetcons, TRUE) );
 
    return SCIP_OKAY;
 }
@@ -5165,6 +5166,7 @@ SCIP_RETCODE SCIPcreateConsAnd(
    /* create constraint */
    SCIP_CALL( SCIPcreateCons(scip, cons, name, conshdlr, consdata, initial, separate, enforce, check, propagate,
          local, modifiable, dynamic, removable, stickingatnode) );
+   SCIP_CALL( SCIPsetConsIsRelaxConvex(scip, *cons, TRUE) );
 
    return SCIP_OKAY;
 }

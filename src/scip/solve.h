@@ -155,7 +155,8 @@ SCIP_RETCODE SCIPtryAddSymmetryHandlingMethods(
    SCIP*                 scip,               /**< SCIP data structure */
    int*                  naddedconss,        /**< pointer to store number of constraints added by symmetry handlers */
    SCIP_Bool             allowbdchgs,        /**< whether bound changed permitted (needed for stage EXITPRESOLVE) */
-   int*                  nchgbds             /**< pointer to store number of changed variable bounds */
+   int*                  nchgbds,            /**< pointer to store number of changed variable bounds */
+   int*                  naggrvars           /**< pointer to store number of aggregated variables */
    );
 
 /** calls presolving methods of symmetry handlers */

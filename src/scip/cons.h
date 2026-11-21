@@ -1018,6 +1018,12 @@ void SCIPconsSetNamePointer(
    const char*           name                /**< new name of constraint */
    );
 
+/** sets the isrelaxconvex flag of the given constraint */
+void SCIPconsSetIsRelaxConvex(
+   SCIP_CONS*            cons,               /**< constraint */
+   SCIP_Bool             isrelaxconvex       /**< new value */
+   );
+
 /** gets associated transformed constraint of an original constraint, or NULL if no associated transformed constraint
  *  exists
  */

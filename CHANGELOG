@@ -21,6 +21,7 @@ Features
 - in opportunistic concurrent solving, new incumbents are shared immediately through a solution pool and tightened
   global variable bounds through a bound pool that is applied at every node, instead of only at the synchronization
   points
+- added new symmetry handling method folding for aggregating symmetric variables of convex problems
 
 ### Presolve
 - tighten binary coefficient not divisible by gcd of other integral coefficients in linear constraint also when coefficient or side is fractional
@@ -81,7 +82,7 @@ Interface changes
 - new methods to retrieve data from symmetry handlers and symmetry components: SCIPsymcompGetData(), SCIPsymcompGetHdlr(), SCIPsymcompGetName(), SCIPsymhdlrGetName(), SCIPsymhdlrGetData(), SCIPsymhdlrGetPriority(), SCIPsymhdlrGetPresolPriority(), SCIPsymhdlrGetDesc(), SCIPsymhdlrDoesPresolve(), SCIPsymhdlrGetSetupTime(), SCIPsymhdlrGetPresolTime(), SCIPsymhdlrGetNPresolCalls(), SCIPsymhdlrGetNFixedVars(), SCIPsymhdlrGetNAggrVars(), SCIPsymhdlrGetNChgVarTypes(), SCIPsymhdlrGetNChgBds(), SCIPsymhdlrGetNAddHoles(), SCIPsymhdlrGetNDelConss(), SCIPsymhdlrGetNAddConss(), SCIPsymhdlrGetNChgCoefs(), SCIPsymhdlrGetSepaPriority(), SCIPsymhdlrGetPropPriority(), SCIPsymhdlrGetNChgSides(), SCIPsymhdlrGetNPropCalls(), SCIPsymhdlrGetNRespropCalls(), SCIPsymhdlrGetNCutoffs(), SCIPsymhdlrGetNDomredsFound(), SCIPsymhdlrPropGetTimingmask(), SCIPsymhdlrPropGetPriority(), SCIPsymhdlrPropWasDelayed(), SCIPsymhdlrSepaGetPriority(), SCIPsymhdlrSepaWasLPDelayed(), SCIPsymhdlrGetNSepaCalls(), SCIPsymhdlrGetNCutsFound(), SCIPsymhdlrGetNCutsAdded(), SCIPsymhdlrGetSepaTime(), SCIPsymhdlrGetPropTime(), SCIPsymhdlrGetStrongBranchPropTime(), SCIPsymhdlrGetRespropTime(), SCIP_DECL_SORTPTRCOMP(SCIPsymhdlrCompTryadd), SCIP_DECL_SORTPTRCOMP(SCIPsymhdlrCompSepa), SCIP_DECL_SORTPTRCOMP(SCIPsymhdlrCompProp), SCIP_DECL_SORTPTRCOMP(SCIPsymhdlrCompPresol), SCIP_DECL_SORTPTRCOMP(SCIPsymhdlrCompName), SCIPgetSyminfo()), SCIPsyminfoGetPermstrans()
 - new methods SCIPbdchginfoGetInferSymcomp(), SCIPinferVarFixSym(), SCIPinferVarLbSym(), SCIPinferVarUbSym(), SCIPinferBinvarSym() to get and set inference information in conflict analysis that arise from symmetry handling
 - new methods SCIPprintSymhdlrStatistics(), SCIPcollectSymhdlrStatistics() to retrieve statistics of the different symmetyr handlers
-- new methods SCIPincludeSymhdlrLexOrbRed(), SCIPincludeSymhdlrRowCol(), SCIPincludeSymhdlrSST() to include SCIP's default symmetry handlers and SCIPincludeSymhdlrXyz() for the template symmetry handler
+- new methods SCIPincludeSymhdlrLexOrbRed(), SCIPincludeSymhdlrRowCol(), SCIPincludeSymhdlrSST(), SCIPincludeSymhdlrFolding() to include SCIP's default symmetry handlers and SCIPincludeSymhdlrXyz() for the template symmetry handler
 - new method SCIPcomputeOrbitsFilterSymNoComp() to compute orbits of a symmetry group when no component information is provided
 - new methods isProperPerm(), isPermKnown() to determine information about permutations
 - new methods SCIPsetIncludeSymhdlr(), SCIPsetSortSymhdlrs(), SCIPsetSortSymhdlrsProp(), SCIPsetSortSymhdlrsPresol(), SCIPsetSortSymhdlrsSepa(), SCIPsetSortSymhdlrsName(), SCIPsetFindSymhdlr() to sort symmetry handlers
@@ -94,6 +95,7 @@ Interface changes
 - new method SCIPsyncstoreGetWinnerStatus() to get the terminal status of the winning concurrent solver
 - new method SCIPextractBendersIISMasterSolution() can be called to identify an irreducible master solution that achieves the same subproblem result, i.e. infeasible or feasible with the same objective.
 - new method SCIPgetProbvarBinary() and SCIPgetProbvarsBinary()	as interfaces to SCIPvarGetProbvarBinary()/SCIPvarsGetProbvarBinary()
+- new methods SCIPsetConsIsRelaxConvex() and SCIPconsIsRelaxConvex() to set and query the isrelaxconvex flag of a constraint, respectively
 
 ### New parameters
 
@@ -286,6 +288,7 @@ Interface changes
 - enum SCIP_BOUNDCHGTYPE got extended by new type SCIP_BOUNDCHGTYPE_SYMINFER
 - exchanged definition of SYM_SPEC_BINARY and SYM_SPEC_INTEGER
 - removed SYM_TIMING_DURINGPRESOL and SYM_COMPUTETIMING_DURINGPRESOL, and replaced definition of SYM_TIMING_AFTERPRESOL
+- struct SCIP_CONS has an addition field isrelaxconvex to store whether the constraint is convex when variables are relaxed to be continuous
 
 Unit tests
 ----------

@@ -4502,6 +4502,7 @@ SCIP_DECL_CONSTRANS(consTransLogicor)
          SCIPconsIsChecked(sourcecons), SCIPconsIsPropagated(sourcecons),
          SCIPconsIsLocal(sourcecons), SCIPconsIsModifiable(sourcecons),
          SCIPconsIsDynamic(sourcecons), SCIPconsIsRemovable(sourcecons), SCIPconsIsStickingAtNode(sourcecons)) );
+   SCIP_CALL( SCIPsetConsIsRelaxConvex(scip, *targetcons, TRUE) );
 
    return SCIP_OKAY;
 }
@@ -5708,6 +5709,7 @@ SCIP_RETCODE SCIPcreateConsLogicor(
    /* create constraint */
    SCIP_CALL( SCIPcreateCons(scip, cons, name, conshdlr, consdata, initial, separate, enforce, check, propagate,
          local, modifiable, dynamic, removable, stickingatnode) );
+   SCIP_CALL( SCIPsetConsIsRelaxConvex(scip, *cons, TRUE) );
 
    if( SCIPisTransformed(scip) && SCIPgetStage(scip) == SCIP_STAGE_PRESOLVING )
    {
