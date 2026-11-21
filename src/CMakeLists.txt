@@ -1295,6 +1295,7 @@ foreach(header_file
       scip/struct_visual.h
       scip/datatree.h
       scip/sym.h
+      scip/sym_folding.h
       scip/sym_lexorbred.h
       scip/sym_rowcol.h
       scip/sym_sst.h
