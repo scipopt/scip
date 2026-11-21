@@ -66,7 +66,7 @@ set(SCIP_VERSION_MINOR 0
    CACHE STRING "Minor component of SCIP version")
 set(SCIP_VERSION_PATCH 0
    CACHE STRING "Patch component of SCIP version")
-set(SCIP_VERSION_API 170
+set(SCIP_VERSION_API 171
    CACHE STRING "API component of SCIP version")
 
 # Project
