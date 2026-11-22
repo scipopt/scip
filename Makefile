@@ -155,7 +155,7 @@ endif
 LPSOPTIONS	+=	spx
 ifeq ($(LPS),spx)
 LINKER		=	CPP
-FLAGS		+=	-I$(LIBDIR)/include/spxinc
+FLAGS		+=	-I$(realpath $(LIBDIR)/include/spxinc)/../lib/include -I$(LIBDIR)/include/spxinc
 ifeq ($(MPFR),true)
 LPSLDFLAGS	+=	$(MPFR_LDFLAGS)
 endif
@@ -268,7 +268,7 @@ ifeq ($(EXACTSOLVE),false)
 $(error Building with SoPlex as exact LP solver requires GMP, MPFR, and Boost to be available. Use either LPSEXACT=none or all of GMP,BOOST,MPFR=true.)
 endif
 LINKER		=	CPP
-FLAGS		+=	-I$(LIBDIR)/include/spxinc
+FLAGS		+=	-I$(realpath $(LIBDIR)/include/spxinc)/../lib/include -I$(LIBDIR)/include/spxinc
 ifeq ($(MPFR),true)
 LPSEXLDFLAGS	+=	$(MPFR_LDFLAGS)
 endif
