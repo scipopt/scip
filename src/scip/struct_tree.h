@@ -239,6 +239,7 @@ struct SCIP_Tree
    SCIP_Bool             probingnodehaslp;   /**< was the LP solved (at least once) in the current probing node? */
    SCIP_Bool             focuslpconstructed; /**< was the LP of the focus node already constructed? */
    SCIP_Bool             cutoffdelayed;      /**< the treeCutoff() call was delayed because of diving and has to be executed */
+   SCIP_Bool             focusnodestopped;   /**< was the processing of the focus node interrupted before being solved? */
    SCIP_Bool             probinglpwasflushed;/**< was the LP flushed before we entered the probing mode? */
    SCIP_Bool             probinglpwassolved; /**< was the LP solved before we entered the probing mode? */
    SCIP_Bool             probingloadlpistate;/**< must the LP state be reloaded because of a backtrack in probing? */
