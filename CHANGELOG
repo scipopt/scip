@@ -49,6 +49,7 @@ Fixed bugs
 - mark LP primal and dual feasible when ignoring instability if LP interface reports optimality
 - use SCIPintervalNegateReal() in safe cut generation to prevent the compiler from folding coef * (-bound) into -(coef * bound) and thereby producing invalid cuts
 - maintain cutoff bound when objective offset or scale changes especially to keep objective parallel constraints enforced
+- fixed wrong way of determining if flower inequality separation is called for the first time at current node.
 - cut off node bounded by solution of aborted pricing before branching by applying bounding after storing it
 - continue only focus node interrupted before being solved while applying cut off to last node directly
 

@@ -100,7 +100,6 @@ struct SCIP_Hypergraph_OverlapData
 struct SCIP_SepaData
 {
    int                   lastrun;            /**< Last run for which we constructed a hypergraph. */
-   SCIP_NODE*            lastnode;           /**< Last node for which we separated. */
    SCIP_Bool             scanand;            /**< Whether to scan AND constraints when constructing a hypergraph. */
    SCIP_Bool             scanproduct;        /**< Whether to scan product expressions when constructing a hypergraph. */
    SCIP_HYPERGRAPH*      hypergraph;         /**< The hypergraph. */
@@ -1264,9 +1263,8 @@ SCIP_RETCODE separate(
       sepadata->nuselesstwoflower = 0;
    }
 
-   if( SCIPgetCurrentNode(scip) != sepadata->lastnode )
+   if( SCIPsepaGetNCallsAtNode(sepa) == 0 )
    {
-     sepadata->lastnode = SCIPgetCurrentNode(scip);
      sepadata->nuselessoneflower = 0;
      sepadata->nuselesstwoflower = 0;
    }
@@ -1434,7 +1432,6 @@ SCIP_RETCODE SCIPincludeSepaFlower(
    /* create flower separator data */
    SCIP_CALL( SCIPallocBlockMemory(scip, &sepadata) );
    sepadata->lastrun = -1;
-   sepadata->lastnode = NULL;
    sepadata->hypergraph = NULL;
    sepadata->nsepacuts = 0;
    sepadata->timesepaoneflower = 0.0;
