@@ -5605,6 +5605,7 @@ SCIP_RETCODE SCIPtreeCreate(
    (*tree)->probingnodehaslp = FALSE;
    (*tree)->focuslpconstructed = FALSE;
    (*tree)->cutoffdelayed = FALSE;
+   (*tree)->focusnodestopped = FALSE;
    (*tree)->probinglpwasflushed = FALSE;
    (*tree)->probinglpwassolved = FALSE;
    (*tree)->probingloadlpistate = FALSE;
@@ -5721,6 +5722,7 @@ SCIP_RETCODE SCIPtreeClear(
    tree->focusnodehaslp = FALSE;
    tree->probingnodehaslp = FALSE;
    tree->cutoffdelayed = FALSE;
+   tree->focusnodestopped = FALSE;
    tree->probinglpwasflushed = FALSE;
    tree->probinglpwassolved = FALSE;
    tree->probingloadlpistate = FALSE;
