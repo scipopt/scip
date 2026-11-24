@@ -48,6 +48,8 @@ Fixed bugs
 - ExactSCIP: remove dual proof constraints from the certificate hashmap whenever they are deleted from the conflict store to avoid SCIP_KEYALREADYEXISTING errors
 - mark LP primal and dual feasible when ignoring instability if LP interface reports optimality
 - maintain cutoff bound when objective offset or scale changes especially to keep objective parallel constraints enforced
+- cut off node bounded by solution of aborted pricing before branching by applying bounding after storing it
+- continue only focus node interrupted before being solved while applying cut off to last node directly
 
 Examples and applications
 -------------------------
