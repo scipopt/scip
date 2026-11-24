@@ -789,7 +789,7 @@ SCIP_Bool removeZerosSafely(
                return TRUE;
             }
             else
-               *cutrhs += (-val) * ub;
+               *cutrhs += SCIPintervalNegateReal(val) * ub;
          }
          else
          {
@@ -799,7 +799,7 @@ SCIP_Bool removeZerosSafely(
                return TRUE;
             }
             else
-               *cutrhs += (-val) * lb;
+               *cutrhs += SCIPintervalNegateReal(val) * lb;
          }
 
          val = 0.0;
@@ -1638,7 +1638,7 @@ SCIP_Real scaleValSafely(
    {
       newval = SCIPintervalGetInf(valinterval);
       SCIPintervalSetRoundingModeUpwards();
-      *rhschange = (SCIPintervalGetSup(valinterval) - SCIPintervalGetInf(valinterval)) * (-lb);
+      *rhschange = (SCIPintervalGetSup(valinterval) - SCIPintervalGetInf(valinterval)) * SCIPintervalNegateReal(lb);
       SCIPdebugMessage("Using lb %.17g corrected by %.17g. Change to rhs: %.17g \n", SCIPvarGetLbGlobal(var), -SCIPintervalGetSup(valinterval) + SCIPintervalGetInf(valinterval), *rhschange);
    }
    else if( ub < SCIPinfinity(scip) )
@@ -5137,7 +5137,7 @@ void performBoundSubstitutionSafely(
    /* standard (bestlbtype < 0) or variable (bestlbtype >= 0) lower bound? */
    if( boundtype < 0 )
    {
-      *cutrhs += coef * (-boundval);
+      *cutrhs += coef * SCIPintervalNegateReal(boundval);
       *localbdsused = *localbdsused || (boundtype == -2);
    }
    else
@@ -5183,7 +5183,7 @@ void performBoundSubstitutionSimpleSafely(
    /* must be a standard bound */
    assert( boundtype < 0 );
 
-   *cutrhs += coef * (-boundval);
+   *cutrhs += coef * SCIPintervalNegateReal(boundval);
 
    *localbdsused = *localbdsused || (boundtype == -2);
 
