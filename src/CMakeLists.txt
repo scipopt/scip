@@ -61,6 +61,7 @@ target_link_libraries(private_dependencies
       $<$<BOOL:${SCIP_HAS_BLISS}>:Bliss::libbliss>
       $<$<BOOL:${SCIP_HAS_CURSES}>:Curses::Curses>
       $<$<BOOL:${SCIP_HAS_CONOPT}>:CONOPT::CONOPT>
+      $<$<BOOL:${SCIP_HAS_BOOST}>:Boost::boost>
       $<$<BOOL:${SCIP_HAS_GMP}>:GMP::GMP>
       $<$<BOOL:${SCIP_HAS_IPOPT}>:Ipopt::Ipopt>
       $<$<BOOL:${SCIP_HAS_LAPACK}>:LAPACK::LAPACK>
