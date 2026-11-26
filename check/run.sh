@@ -285,11 +285,8 @@ then
     mv $VIPRRAWFILE.gz $SOLVERPATH/$OUTPUTDIR/$BASENAME.viprraw.gz
     mv $VIPRORIFILE.gz $SOLVERPATH/$OUTPUTDIR/$BASENAME.vipr_ori.gz
 fi
-#ensure no garbage is left over
-if test -e $VIPRFILE
-then
-    rm $CLIENTTMPDIR/${USER}-tmpdir/$BASENAME*vipr*
-fi
+# ensure no garbage is left over; the separator after the basename avoids deleting files of other instances with the same prefix
+rm -f "${CLIENTTMPDIR}/${USER}-tmpdir/${BASENAME}".vipr* "${CLIENTTMPDIR}/${USER}-tmpdir/${BASENAME}"_complete.vipr*
 
 # currently, the solution checker only supports .mps-files
 FILENAMENOGZ=$(basename "${FILENAME}" .gz)
