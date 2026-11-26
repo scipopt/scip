@@ -52,6 +52,7 @@ Fixed bugs
 - fixed wrong way of determining if flower inequality separation is called for the first time at current node.
 - cut off node bounded by solution of aborted pricing before branching by applying bounding after storing it
 - continue only focus node interrupted before being solved while applying cut off to last node directly
+- constraint handler for Benders' cuts uses current node number instead of current node since the former may be reused.
 
 Examples and applications
 -------------------------
