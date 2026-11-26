@@ -82,7 +82,7 @@ struct SCIP_ConshdlrData
 
    /* variable used to control the behaviour of the two-phase method for Benders' decomposition */
    SCIP_Longint          ncallsnode;         /**< the number of calls at the current node */
-   SCIP_NODE*            currnode;           /**< the current node */
+   SCIP_Longint          currnodenumber;     /**< the current node number */
    SCIP_Real             prevbound;          /**< the previous dual bound */
    int                   iterlimit;          /**< the iteration limit for the first phase of the two-phase method at a node lower than the root. */
    int                   stallcount;         /**< the number of nodes processed since the last lower bound increase */
@@ -188,9 +188,9 @@ SCIP_DECL_CONSENFOLP(consEnfolpBenderslp)
    conshdlrdata->ncallsnode++;
 
    /* if a new node is being processed, then the iteration counts are reset. */
-   if( conshdlrdata->currnode != SCIPgetCurrentNode(scip) )
+   if( conshdlrdata->currnodenumber != SCIPnodeGetNumber(SCIPgetCurrentNode(scip)) )
    {
-      conshdlrdata->currnode = SCIPgetCurrentNode(scip);
+      conshdlrdata->currnodenumber = SCIPnodeGetNumber(SCIPgetCurrentNode(scip));
       conshdlrdata->ncallsnode = 0;
    }
 
