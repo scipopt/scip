@@ -88,6 +88,7 @@ Fixed bugs
 - continue only focus node interrupted before being solved while applying cut off to last node directly
 - constraint handler for Benders' cuts uses current node number instead of current node since the former may be reused.
 - fixed double-allocation of debug solution data upon SCIPcopy and added assertions to debug.c to make scanbuild happy.
+- handle constraint dependencies during IIS generation by postponing deletion of required constraints to ensure final irreducibility
 
 Examples and applications
 -------------------------
