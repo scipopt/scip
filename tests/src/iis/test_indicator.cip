@@ -1,0 +1,17 @@
+STATISTICS
+  Problem name     : test_indicator
+  Variables        : 4 (3 binary, 0 integer, 0 implicit integer, 1 continuous)
+  Constraints      : 0 initial, 4 maximal
+OBJECTIVE
+  Sense            : minimize
+VARIABLES
+  [binary] <b1>: obj=0, original bounds=[0,1]
+  [binary] <b2>: obj=0, original bounds=[0,1]
+  [binary] <b3>: obj=0, original bounds=[0,1]
+  [continuous] <s>: obj=0, original bounds=[0,+inf]
+CONSTRAINTS
+  [linear] <linear1>:  +<b1>[B] -<s>[C] <= -1;
+  [linear] <linear2>:  +<b1>[B] +<b2>[B] >= 1;
+  [linear] <linear3>:  +<b1>[B] +<b2>[B] <= 0;
+  [indicator] <indicator1>: <b3> = 1 -> <s> = 0 (<linear1>);
+END

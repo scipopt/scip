@@ -44,13 +44,10 @@ static
 void setup(void)
 {
    scip = NULL;
-   char filename[SCIP_MAXSTRLEN];
 
    /* initialize SCIP */
    SCIP_CALL( SCIPcreate(&scip) );
    SCIP_CALL( SCIPincludeDefaultPlugins(scip) );
-   TESTsetTestfilename(filename, __FILE__, "test_infeasible.lp");
-   SCIP_CALL( SCIPreadProb(scip, filename, NULL) );
 }
 
 static
@@ -64,12 +61,25 @@ void teardown(void)
 
 TestSuite(iisplugin, .init = setup, .fini = teardown);
 
+/** reads an instance that is located in the directory of this file */
+static
+void readTestProb(
+   const char*           probname            /**< file name of the instance */
+   )
+{
+   char filename[SCIP_MAXSTRLEN];
+
+   TESTsetTestfilename(filename, __FILE__, probname);
+   SCIP_CALL( SCIPreadProb(scip, filename, NULL) );
+}
+
 
 /* test that the IIS functionality works */
 Test(iisplugin, valid)
 {
    SCIP_IIS* iis;
 
+   readTestProb("test_infeasible.lp");
    SCIP_CALL( SCIPsolve(scip) );
    iis = SCIPgetIIS(scip);
    /** ensure that the original problem is infeasible */
@@ -130,4 +140,52 @@ Test(iisplugin, valid)
    cr_assert(c2IIS != NULL || c5IIS != NULL);
    cr_assert(c2IIS == NULL || strcmp(SCIPconsGetName(c2), SCIPconsGetName(c2IIS)) == 0);
    cr_assert(c5IIS == NULL || strcmp(SCIPconsGetName(c5), SCIPconsGetName(c5IIS)) == 0);
+}
+
+/* test that the linear constraint of a deleted indicator constraint does not survive in the IIS */
+Test(iisplugin, indicator)
+{
+   SCIP_IIS* iis;
+
+   readTestProb("test_indicator.cip");
+   SCIP_CALL( SCIPsolve(scip) );
+   /** ensure that the original problem is infeasible */
+   cr_expect_eq(SCIPgetStatus(scip), SCIP_STATUS_INFEASIBLE, "got status %d, expected %d", SCIPgetStatus(scip), SCIP_STATUS_INFEASIBLE);
+   SCIP_CALL( SCIPsetBoolParam(scip, "iis/greedy/additive", FALSE) );
+   SCIP_CALL( SCIPsetIntParam(scip, "iis/greedy/maxbatchsize", 1) );
+   SCIP_CALL( SCIPgenerateIIS(scip) );
+   iis = SCIPgetIIS(scip);
+   cr_expect_eq(SCIPiisIsSubscipInfeasible(iis), TRUE, "iis is not valid");
+   cr_expect_eq(SCIPiisIsSubscipIrreducible(iis), TRUE, "iis is not irreducible");
+
+   /** collect the constraints of the instance */
+   int nOrigConss = SCIPgetNOrigConss(scip);
+   SCIP_CONS** origConss = SCIPgetOrigConss(scip);
+   SCIP_CONS* linear1 = NULL;
+   SCIP_CONS* linear2 = NULL;
+   SCIP_CONS* linear3 = NULL;
+   SCIP_CONS* indicator1 = NULL;
+   for( int i = 0; i < nOrigConss; ++i )
+   {
+      SCIP_CONS* cons = origConss[i];
+      if( strcmp(SCIPconsGetName(cons), "linear1") == 0 )
+         linear1 = cons;
+      else if( strcmp(SCIPconsGetName(cons), "linear2") == 0 )
+         linear2 = cons;
+      else if( strcmp(SCIPconsGetName(cons), "linear3") == 0 )
+         linear3 = cons;
+      else if( strcmp(SCIPconsGetName(cons), "indicator1") == 0 )
+         indicator1 = cons;
+   }
+   cr_assert(linear1 != NULL);
+   cr_assert(linear2 != NULL);
+   cr_assert(linear3 != NULL);
+   cr_assert(indicator1 != NULL);
+
+   /** the only IIS consists of linear2 and linear3 */
+   cr_expect(SCIPiisGetSubscipCons(iis, linear1) == NULL, "linear1 is still part of the iis");
+   cr_expect(SCIPiisGetSubscipCons(iis, linear2) != NULL, "linear2 is not part of the iis");
+   cr_expect(SCIPiisGetSubscipCons(iis, linear3) != NULL, "linear3 is not part of the iis");
+   cr_expect(SCIPiisGetSubscipCons(iis, indicator1) == NULL, "indicator1 is still part of the iis");
+   cr_expect_eq(SCIPgetNOrigConss(SCIPiisGetSubscip(iis)), 2, "iis has %d constraints, expected 2", SCIPgetNOrigConss(SCIPiisGetSubscip(iis)));
 }
