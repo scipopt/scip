@@ -165,7 +165,7 @@ SCIP_RETCODE readSol(
       retcode = SCIPfixVar(scip, var, value, &infeasible, &fixed);
       if( retcode != SCIP_OKAY )
       {
-         SCIPerrorMessage("Error fixing variable <%s> to value %.15g in line %d of bounds file <%s>\n",
+         SCIPerrorMessage("Error fixing variable <%s> to value %.15g in line %d of solution file <%s>\n",
             varname, value, lineno, filename);
          error = TRUE;
          break;

@@ -17056,7 +17056,7 @@ SCIP_DECL_CONSPARSE(consParseLinear)
    {
       if( ! SCIPparseReal(scip, rhsstrptr, &rhs, &endptr) )
       {
-         SCIPerrorMessage("error parsing right hand side number from <%s>\n", lhsstrptr);
+         SCIPerrorMessage("error parsing right hand side number from <%s>\n", rhsstrptr);
          return SCIP_OKAY;
       }
    }

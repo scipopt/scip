@@ -283,7 +283,7 @@ SCIP_DECL_BRANCHEXECEXT(branchExecextRandom)
 
    if( bestcand == NULL )
    {
-      SCIPerrorMessage("branchExecrelRandom failed to select a branching variable from %d candidates\n", nprioexterncands);
+      SCIPerrorMessage("branchExecextRandom failed to select a branching variable from %d candidates\n", nprioexterncands);
       *result = SCIP_DIDNOTRUN;
       return SCIP_OKAY;
    }

@@ -1083,7 +1083,7 @@ SCIP_RETCODE SCIPincludeBenderscut(
    /* check whether pricer is already present */
    if( SCIPfindBenderscut(benders, name) != NULL )
    {
-      SCIPerrorMessage("benders <%s> already included.\n", name);
+      SCIPerrorMessage("Benders' cut <%s> already included.\n", name);
       return SCIP_INVALIDDATA;
    }
 
