@@ -74,6 +74,7 @@ SCIP_RETCODE SCIPdebugSolDataCreate(
    )
 {
    assert(debugsoldata != NULL);
+   assert(*debugsoldata == NULL);
 
    SCIP_ALLOC( BMSallocMemory(debugsoldata) );
 
@@ -156,6 +157,7 @@ SCIP_RETCODE readSolfile(
    assert(vals != NULL);
    assert(*vals == NULL);
    assert(nvals != NULL);
+   assert(*nvals == 0);
    assert(valssize != NULL);
 
    printf("***** debug: reading solution file <%s>\n", filename);
@@ -1942,7 +1944,7 @@ SCIP_RETCODE SCIPdebugSolIsValidInSubtree(
                                               *   subtree */
    )
 {
-   SCIP_Bool solcontained;
+   SCIP_Bool solcontained = FALSE;
 
    *isvalidinsubtree = FALSE;
 
