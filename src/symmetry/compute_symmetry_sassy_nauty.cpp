@@ -130,7 +130,10 @@ void sassyhook(
 
    /* make sure we do not generate more that maxgenerators many permutations */
    if ( data->maxgenerators != 0 && data->nperms >= data->maxgenerators )
+   {
+      nauty_kill_request = 1;
       return;
+   }
 
    /* copy first part of automorphism */
    bool isIdentity = true;

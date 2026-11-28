@@ -7,34 +7,35 @@ endif()
 
 project(Scheduler)
 
-if(TARGET SCIP::SCIP)
-  # find package by SCIP PATH
-  find_package(SCIP CONFIG NO_DEFAULT_PATH PATHS ${SCIP_BINARY_DIR} REQUIRED)
-else()
-  find_package(SCIP REQUIRED)
+# Find SCIP unless we already have it because we build it.
+if(NOT TARGET SCIP::SCIP)
+  find_package(SCIP
+     REQUIRED
+     CONFIG
+     HINTS "${SCIP_DIR}"
+     )
 endif()
 
-include_directories(BEFORE PUBLIC ${SCIP_INCLUDE_DIRS})
-
 add_executable(scheduler
-    src/main.cpp
-    src/cons_optcumulative.c
-    src/heur_listscheduling.c
-    src/heur_optcumulative.c
-    src/reader_cmin.c
-    src/reader_rcp.c
-    src/reader_sch.c
-    src/reader_sm.c
-)
-set_property(TARGET scheduler PROPERTY INTERPROCEDURAL_OPTIMIZATION ${LTO_AVAILABLE})
+   src/main.cpp
+   src/cons_optcumulative.c
+   src/heur_listscheduling.c
+   src/heur_optcumulative.c
+   src/reader_cmin.c
+   src/reader_rcp.c
+   src/reader_sch.c
+   src/reader_sm.c
+   )
+target_link_libraries(scheduler SCIP::SCIP)
 
-target_link_libraries(scheduler ${SCIP_LIBRARIES})
-target_compile_options(scheduler PRIVATE ${SCIP_COMPILE_FLAGS})
+if(SCIP_HAS_LTO)
+   set_target_properties(scheduler PROPERTIES
+      INTERPROCEDURAL_OPTIMIZATION 1)
+endif()
 
-if( TARGET applications )
-    add_dependencies( applications scheduler )
+if(TARGET applications)
+    add_dependencies(applications scheduler)
 endif()
 
 add_subdirectory(check)
-
 enable_testing()

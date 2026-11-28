@@ -31,7 +31,7 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#ifdef TPI_OMP
+#if SCIP_TPI_OMP
 
 #ifndef _TPI_OPENMP_H_
 #define _TPI_OPENMP_H_
@@ -50,4 +50,4 @@
 #define SCIPtpiDestroyCondition(condition) do { assert((condition)->_waiters == 0); assert((condition)->_waitnum == 0); assert((condition)->_signals == 0); omp_destroy_lock(&(condition)->_lock); } while(0)
 #endif
 
-#endif
+#endif /* SCIP_TPI_OMP */

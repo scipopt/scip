@@ -2536,10 +2536,13 @@ SCIP_RETCODE SCIPeventqueueFree(
 static
 SCIP_RETCODE eventqueueAppend(
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   BMS_BLKMEM*           blkmem,             /**< block memory buffer */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_EVENT**          event               /**< pointer to event to append to the queue */
    )
 {
+   SCIP_RETCODE retcode;
+
    assert(eventqueue != NULL);
    assert(eventqueue->delayevents);
    assert(event != NULL);
@@ -2548,11 +2551,62 @@ SCIP_RETCODE eventqueueAppend(
    SCIPsetDebugMsg(set, "appending event %p of type 0x%" SCIP_EVENTTYPE_FORMAT " to event queue %p at position %d\n",
       (void*)*event, (*event)->eventtype, (void*)eventqueue, eventqueue->nevents);
 
-   SCIP_CALL( eventqueueEnsureEventsMem(eventqueue, set, eventqueue->nevents+1) );
+   retcode = eventqueueEnsureEventsMem(eventqueue, set, eventqueue->nevents+1);
+   if( retcode != SCIP_OKAY )
+   {
+      SCIP_CALL( SCIPeventFree(event, blkmem) );
+      return retcode;
+   }
    eventqueue->events[eventqueue->nevents] = *event;
    eventqueue->nevents++;
 
    *event = NULL;
+
+   return SCIP_OKAY;
+}
+
+/** merges the exact data of a bound change event into a queued bound change event on the same bound
+ *
+ *  The queued event describes the change from its old bound to its new bound, the given event the change from the
+ *  queued event's new bound to a further new bound.  After merging, the queued event describes the change from its
+ *  original old bound to the given event's new bound.  An event without exact data describes a change between the
+ *  floating-point values, which are then exact.
+ */
+static
+SCIP_RETCODE eventMergeExactBdchg(
+   SCIP_EVENT*           qevent,             /**< queued event */
+   SCIP_EVENT*           event,              /**< event to merge into the queued event */
+   BMS_BLKMEM*           blkmem              /**< block memory buffer */
+   )
+{
+   assert(qevent != NULL);
+   assert(event != NULL);
+
+   if( qevent->data.eventbdchg.newboundexact == NULL && event->data.eventbdchg.newboundexact == NULL )
+      return SCIP_OKAY;
+
+   /* if exact values are available, the new bound in the previous, queued event should match the old bound in the "new"
+    * event exactly
+    */
+   assert(event->data.eventbdchg.oldboundexact == NULL || qevent->data.eventbdchg.newboundexact == NULL
+      || SCIPrationalIsEQ(event->data.eventbdchg.oldboundexact, qevent->data.eventbdchg.newboundexact));
+
+   /* make sure the queued event carries its exact old bound; without exact data the floating-point value is exact */
+   if( qevent->data.eventbdchg.oldboundexact == NULL )
+   {
+      SCIP_CALL( SCIPrationalCreateBlock(blkmem, &qevent->data.eventbdchg.oldboundexact) );
+      SCIPrationalSetReal(qevent->data.eventbdchg.oldboundexact, qevent->data.eventbdchg.oldbound);
+   }
+
+   /* update the exact new bound of the queued event to the one of the merged event */
+   if( qevent->data.eventbdchg.newboundexact == NULL )
+   {
+      SCIP_CALL( SCIPrationalCreateBlock(blkmem, &qevent->data.eventbdchg.newboundexact) );
+   }
+   if( event->data.eventbdchg.newboundexact != NULL )
+      SCIPrationalSetRational(qevent->data.eventbdchg.newboundexact, event->data.eventbdchg.newboundexact);
+   else
+      SCIPrationalSetReal(qevent->data.eventbdchg.newboundexact, event->data.eventbdchg.newbound);
 
    return SCIP_OKAY;
 }
@@ -2631,7 +2685,7 @@ SCIP_RETCODE SCIPeventqueueAdd(
       case SCIP_EVENTTYPE_ROWSIDECHANGED: /* @todo merge with previous sidechanged event */ /*lint !e30 !e142*/
       case SCIP_EVENTTYPE_SYNC: /*lint !e30 !e142*/
          /* these events cannot (or need not) be merged; just add them to the queue */
-         SCIP_CALL( eventqueueAppend(eventqueue, set, event) );
+         SCIP_CALL( eventqueueAppend(eventqueue, blkmem, set, event) );
          break;
 
       case SCIP_EVENTTYPE_OBJCHANGED:
@@ -2671,8 +2725,8 @@ SCIP_RETCODE SCIPeventqueueAdd(
          else
          {
             /* the objective value change event doesn't exist -> add it to the queue, and remember the array index */
-            var->eventqueueindexobj = eventqueue->nevents;
-            SCIP_CALL( eventqueueAppend(eventqueue, set, event) );
+            SCIP_CALL( eventqueueAppend(eventqueue, blkmem, set, event) );
+            var->eventqueueindexobj = eventqueue->nevents - 1;
          }
          break;
 
@@ -2700,24 +2754,8 @@ SCIP_RETCODE SCIPeventqueueAdd(
 
             qevent->data.eventbdchg.newbound = (*event)->data.eventbdchg.newbound;
 
-            /* possibly update exact bound */
-            if( (*event)->data.eventbdchg.newboundexact != NULL )
-            {
-               if( qevent->data.eventbdchg.newboundexact == NULL )
-               {
-                  SCIP_CALL( SCIPeventAddExactBdChg(qevent, blkmem, (*event)->data.eventbdchg.oldboundexact, (*event)->data.eventbdchg.newboundexact) );
-               }
-               else
-                  SCIPrationalSetRational(qevent->data.eventbdchg.newboundexact, (*event)->data.eventbdchg.newboundexact);
-            }
-            else
-            {
-               if( qevent->data.eventbdchg.newboundexact != NULL )
-               {
-                  SCIPrationalFreeBlock(blkmem, &(qevent->data.eventbdchg.newboundexact));
-                  SCIPrationalFreeBlock(blkmem, &(qevent->data.eventbdchg.oldboundexact));
-               }
-            }
+            /* merge exact bound data such that the queued event goes from the original old bound to the latest new bound */
+            SCIP_CALL( eventMergeExactBdchg(qevent, *event, blkmem) );
 
             /*if( SCIPsetIsLT(set, qevent->data.eventbdchg.newbound, qevent->data.eventbdchg.oldbound) )*/
             if( qevent->data.eventbdchg.newbound < qevent->data.eventbdchg.oldbound )
@@ -2741,8 +2779,8 @@ SCIP_RETCODE SCIPeventqueueAdd(
          else
          {
             /* the lower bound change event doesn't exist -> add it to the queue, and remember the array index */
-            var->eventqueueindexlb = eventqueue->nevents;
-            SCIP_CALL( eventqueueAppend(eventqueue, set, event) );
+            SCIP_CALL( eventqueueAppend(eventqueue, blkmem, set, event) );
+            var->eventqueueindexlb = eventqueue->nevents - 1;
          }
          break;
 
@@ -2770,24 +2808,8 @@ SCIP_RETCODE SCIPeventqueueAdd(
 
             qevent->data.eventbdchg.newbound = (*event)->data.eventbdchg.newbound;
 
-            /* possibly update exact bound */
-            if( (*event)->data.eventbdchg.newboundexact != NULL )
-            {
-               if( qevent->data.eventbdchg.newboundexact == NULL )
-               {
-                  SCIP_CALL( SCIPeventAddExactBdChg(qevent, blkmem, (*event)->data.eventbdchg.oldboundexact, (*event)->data.eventbdchg.newboundexact) );
-               }
-               else
-                  SCIPrationalSetRational(qevent->data.eventbdchg.newboundexact, (*event)->data.eventbdchg.newboundexact);
-            }
-            else
-            {
-               if( qevent->data.eventbdchg.newboundexact != NULL )
-               {
-                  SCIPrationalFreeBlock(blkmem, &(qevent->data.eventbdchg.newboundexact));
-                  SCIPrationalFreeBlock(blkmem, &(qevent->data.eventbdchg.oldboundexact));
-               }
-            }
+            /* merge exact bound data such that the queued event goes from the original old bound to the latest new bound */
+            SCIP_CALL( eventMergeExactBdchg(qevent, *event, blkmem) );
 
             /*if( SCIPsetIsLT(set, qevent->data.eventbdchg.newbound, qevent->data.eventbdchg.oldbound) )*/
             if( qevent->data.eventbdchg.newbound < qevent->data.eventbdchg.oldbound )
@@ -2811,8 +2833,8 @@ SCIP_RETCODE SCIPeventqueueAdd(
          else
          {
             /* the upper bound change event doesn't exist -> add it to the queue, and remember the array index */
-            var->eventqueueindexub = eventqueue->nevents;
-            SCIP_CALL( eventqueueAppend(eventqueue, set, event) );
+            SCIP_CALL( eventqueueAppend(eventqueue, blkmem, set, event) );
+            var->eventqueueindexub = eventqueue->nevents - 1;
          }
          break;
 
@@ -2826,8 +2848,8 @@ SCIP_RETCODE SCIPeventqueueAdd(
          }
          else
          {
+            SCIP_CALL( eventqueueAppend(eventqueue, blkmem, set, event) );
             var->eventqueueimpl = TRUE;
-            SCIP_CALL( eventqueueAppend(eventqueue, set, event) );
          }
          break;
 

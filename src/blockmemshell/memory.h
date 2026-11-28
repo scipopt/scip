@@ -302,7 +302,7 @@ long long BMSgetMemoryUsed_call(
 typedef struct BMS_ChkMem BMS_CHKMEM;           /**< collection of memory chunks of the same element size */
 
 
-#ifndef BMS_NOBLOCKMEM
+#if !BMS_HAS_NOBLOCKMEM
 
 #define BMScreateChunkMemory(sz,isz,gbf)      BMScreateChunkMemory_call( (sz), (isz), (gbf), __FILE__, __LINE__ )
 #define BMSclearChunkMemory(mem)              BMSclearChunkMemory_call( (mem), __FILE__, __LINE__ )
@@ -316,7 +316,7 @@ typedef struct BMS_ChkMem BMS_CHKMEM;           /**< collection of memory chunks
 #define BMSgarbagecollectChunkMemory(mem)     BMSgarbagecollectChunkMemory_call(mem)
 #define BMSgetChunkMemoryUsed(mem)            BMSgetChunkMemoryUsed_call(mem)
 
-#else
+#else /* BMS_HAS_NOBLOCKMEM */
 
 /* block memory management mapped to standard memory management */
 
@@ -332,7 +332,7 @@ typedef struct BMS_ChkMem BMS_CHKMEM;           /**< collection of memory chunks
 #define BMSgarbagecollectChunkMemory(mem)          /**/
 #define BMSgetChunkMemoryUsed(mem)                 0LL
 
-#endif
+#endif /* !BMS_HAS_NOBLOCKMEM */
 
 
 /** aligns the given byte size corresponding to the minimal alignment for chunk and block memory */
@@ -436,7 +436,7 @@ long long BMSgetChunkMemoryUsed_call(
 
 typedef struct BMS_BlkMem BMS_BLKMEM;           /**< block memory: collection of chunk blocks */
 
-#ifndef BMS_NOBLOCKMEM
+#if !BMS_HAS_NOBLOCKMEM
 
 /* block memory methods for faster memory access */
 
@@ -480,7 +480,7 @@ typedef struct BMS_BlkMem BMS_BLKMEM;           /**< block memory: collection of
 #define BMSdisplayBlockMemory(mem)            BMSdisplayBlockMemory_call(mem)
 #define BMSblockMemoryCheckEmpty(mem)         BMScheckEmptyBlockMemory_call(mem)
 
-#else
+#else /* BMS_HAS_NOBLOCKMEM */
 
 /* block memory management mapped to standard memory management */
 
@@ -515,7 +515,7 @@ typedef struct BMS_BlkMem BMS_BLKMEM;           /**< block memory: collection of
 #define BMSdisplayBlockMemory(mem)                           SCIP_UNUSED(mem)
 #define BMSblockMemoryCheckEmpty(mem)                        (SCIP_UNUSED(mem), 0LL)
 
-#endif
+#endif /* !BMS_HAS_NOBLOCKMEM */
 
 
 /** creates a block memory allocation data structure */

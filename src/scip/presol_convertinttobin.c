@@ -251,7 +251,7 @@ SCIP_DECL_PRESOLEXEC(presolExecConvertinttobin)
          weights[v2] = scalar;
       }
 
-#ifdef WITH_DEBUG_SOLUTION
+#if SCIP_HAS_DEBUG_SOLUTION
       /* set the debug solution values */
       if( SCIPdebugIsMainscip(scip) )
       {
@@ -280,7 +280,7 @@ SCIP_DECL_PRESOLEXEC(presolExecConvertinttobin)
             }
          }
       }
-#endif
+#endif /* SCIP_HAS_DEBUG_SOLUTION */
 
       /* aggregate integer and binary variable */
       SCIP_CALL( SCIPmultiaggregateVar(scip, vars[v], nnewbinvars, newbinvars, (SCIP_Real*)newbinvarcoeffs, lb, &infeasible, &aggregated) );

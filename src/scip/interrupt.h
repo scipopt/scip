@@ -76,6 +76,7 @@ SCIP_Bool SCIPterminated(
  *
  *  @note For terminating a specific SCIP process use SCIPinterruptSolve().
  */
+SCIP_EXPORT
 void SCIPtryTerminate(
    void
    );

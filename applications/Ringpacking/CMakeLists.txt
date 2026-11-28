@@ -7,14 +7,20 @@ endif()
 
 project(Rinpacking)
 
-if(TARGET SCIP::SCIP)
-  # find package by SCIP PATH
-  find_package(SCIP CONFIG NO_DEFAULT_PATH PATHS ${SCIP_BINARY_DIR} REQUIRED)
-else()
-  find_package(SCIP REQUIRED)
+# Find SCIP unless we already have it because we build it.
+if(NOT TARGET SCIP::SCIP)
+  find_package(SCIP
+     REQUIRED
+     CONFIG
+     HINTS "${SCIP_DIR}"
+     )
 endif()
 
-include_directories(BEFORE PUBLIC ${SCIP_INCLUDE_DIRS})
+# Find math library.
+find_library(LIBM m)
+if(NOT LIBM)
+  set(LIBM "")
+endif()
 
 add_executable(ringpacking
    src/cmain.c
@@ -23,19 +29,15 @@ add_executable(ringpacking
    src/pricer_rpa.c
    src/cons_rpa.c
    src/pattern.c)
-set_property(TARGET ringpacking PROPERTY INTERPROCEDURAL_OPTIMIZATION ${LTO_AVAILABLE})
+target_link_libraries(ringpacking SCIP::SCIP ${LIBM})
 
-# link to math library if it is available
-find_library(LIBM m)
-if(NOT LIBM)
-  set(LIBM "")
+if(SCIP_HAS_LTO)
+   set_target_properties(ringpacking PROPERTIES
+      INTERPROCEDURAL_OPTIMIZATION 1)
 endif()
 
-target_link_libraries(ringpacking ${SCIP_LIBRARIES} ${LIBM})
-target_compile_options(ringpacking PRIVATE ${SCIP_COMPILE_FLAGS})
-
-if( TARGET applications )
-    add_dependencies( applications ringpacking )
+if(TARGET applications)
+    add_dependencies(applications ringpacking)
 endif()
 
 #

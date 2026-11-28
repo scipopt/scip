@@ -43,11 +43,11 @@
 
 #include "scip/struct_dialog.h"
 
-#ifdef SCIP_WITH_READLINE
+#if SCIP_HAS_READLINE
 #include <stdio.h>
 #include <readline/readline.h>
 #include <readline/history.h>
-#endif
+#endif /* SCIP_HAS_READLINE */
 
 
 
@@ -55,7 +55,7 @@
  * read line methods
  */
 
-#ifdef SCIP_WITH_READLINE
+#if SCIP_HAS_READLINE
 
 /** reads a line of input from stdin */
 static
@@ -149,7 +149,7 @@ SCIP_RETCODE writeHistory(
       return SCIP_FILECREATEERROR;
 }
 
-#else
+#else /* !SCIP_HAS_READLINE */
 
 /** reads a line of input from stdin */
 static
@@ -234,7 +234,7 @@ SCIP_RETCODE writeHistory(
    return SCIP_OKAY;
 }
 
-#endif
+#endif /* SCIP_HAS_READLINE */
 
 /** frees a single linelist entry, but not its successors */
 static
@@ -338,9 +338,9 @@ SCIP_RETCODE SCIPdialoghdlrCreate(
    SCIP_DIALOGHDLR**     dialoghdlr          /**< pointer to store dialog handler */
    )
 {  /*lint --e{715}*/
-#ifdef SCIP_WITH_READLINE
+#if SCIP_HAS_READLINE
    char readlineversion[20];
-#endif
+#endif /* SCIP_HAS_READLINE */
 
    assert(set != NULL);
    assert(dialoghdlr != NULL);
@@ -355,10 +355,10 @@ SCIP_RETCODE SCIPdialoghdlrCreate(
 
    SCIPdialoghdlrClearBuffer(*dialoghdlr);
 
-#ifdef SCIP_WITH_READLINE
+#if SCIP_HAS_READLINE
    (void) SCIPsnprintf(readlineversion, (int)sizeof(readlineversion), "Readline %s", rl_library_version);
    SCIP_CALL( SCIPsetIncludeExternalCode(set, readlineversion, "GNU library for command line editing (gnu.org/s/readline)") );
-#endif
+#endif /* SCIP_HAS_READLINE */
 
    return SCIP_OKAY;
 }

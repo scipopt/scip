@@ -1881,7 +1881,11 @@ SCIP_RETCODE extractSDG(
    SCIP_CALL( estimateSymgraphSize(scip, &nopnodes, &nvalnodes, &nconsnodes, &nedges) );
 
    /* create graph */
-   SCIP_CALL( SCIPgetRealParam(scip, "numerics/epsilon", &eps) );
+   eps = scip->set->sym_accuracy;
+   if( eps < 0 )
+   {
+      eps = scip->set->num_epsilon;
+   }
    SCIP_CALL( SCIPcreateSymgraph(scip, symtype, graph, SCIPgetVars(scip), SCIPgetNVars(scip),
          nopnodes, nvalnodes, nconsnodes, nedges, eps) );
 
@@ -2249,13 +2253,15 @@ SCIP_RETCODE computeComponentsSym(
 
 /** tries to add symmetry handling methods to CIP
  *
- *  Compute symmetry and call each symmetry handler to check whether particular symmetry handling methods can be added.
+ *  Compute symmetry and call each symmetry handler with non-negative priority to check whether
+ *  particular symmetry handling methods can be added.
  */
 SCIP_RETCODE SCIPtryAddSymmetryHandlingMethods(
    SCIP*                 scip,               /**< SCIP data structure */
    int*                  naddedconss,        /**< pointer to store number of constraints added by symmetry handlers */
    SCIP_Bool             allowbdchgs,        /**< whether bound changed permitted (needed for stage EXITPRESOLVE) */
-   int*                  nchgbds             /**< pointer to store number of changed variable bounds */
+   int*                  nchgbds,            /**< pointer to store number of changed variable bounds */
+   int*                  naggrvars           /**< pointer to store number of aggregated variables */
    )
 {
    SCIP_SYMINFO* syminfo;
@@ -2271,9 +2277,11 @@ SCIP_RETCODE SCIPtryAddSymmetryHandlingMethods(
    assert(scip != NULL);
    assert(naddedconss != NULL);
    assert(nchgbds != NULL);
+   assert(naggrvars != NULL);
 
    *naddedconss = 0;
    *nchgbds = 0;
+   *naggrvars = 0;
 
    /* only run when symmetry handling is enabled */
    if( !scip->set->sym_enabled )
@@ -2368,6 +2376,7 @@ SCIP_RETCODE SCIPtryAddSymmetryHandlingMethods(
       SCIP_SYMCOMPDATA* symcompdata;
       int ntmpconss;
       int ntmpchgbds;
+      int ntmpaggrvars;
 
       /* possibly get symmetries of this component */
       if( syminfo->ncomponents > 1 )
@@ -2381,13 +2390,19 @@ SCIP_RETCODE SCIPtryAddSymmetryHandlingMethods(
 
       for( i = 0; i < nsymhdlrs && !success; ++i )
       {
+         /* symhdlrs are sorted by tryadd priority, i.e., we can terminate once one with negative priority is found */
+         if( symhdlrs[i]->tryaddpriority < 0 )
+            break;
+
          SCIP_CALL( SCIPsymhdlrTryAdd(symhdlrs[i], scip->set, perms, nperms, syminfo->symtype, syminfo->permvars, /*lint !e644 */
                syminfo->npermvars, vardomcenter, syminfo->permvarmap, graph, c, &symcompdata, &ntmpconss, allowbdchgs,
-               &ntmpchgbds, &success) );
+               &ntmpchgbds, &ntmpaggrvars, &success) );
          *naddedconss += ntmpconss;
          *nchgbds += ntmpchgbds;
+         *naggrvars += ntmpaggrvars;
          symhdlrs[i]->naddconss += ntmpconss;
          symhdlrs[i]->nchgbds += ntmpchgbds;
+         symhdlrs[i]->naggrvars += ntmpaggrvars;
 
          if( success )
          {
@@ -5821,10 +5836,6 @@ SCIP_RETCODE solveNode(
                eventqueue, eventfilter, cliquetable, (actdepth == 0), SCIP_EFFICIACYCHOICE_LP, cutoff, &propagateagain,
                &solvelpagain, &solverelaxagain) );
 
-         /* update lower bound with the pseudo objective value, and cut off node by bounding */
-         SCIP_CALL( applyBounding(blkmem, set, stat, transprob, origprob, primal, tree, reopt, lp, branchcand, eventqueue,
-            eventfilter, conflict, cliquetable, cutoff) );
-
          /* update the cutoff, propagateagain, and solverelaxagain status of current solving loop */
          updateLoopStatus(set, stat, tree, actdepth, cutoff, &propagateagain, &solverelaxagain);
       }
@@ -5885,6 +5896,13 @@ SCIP_RETCODE solveNode(
          }
 
          *infeasible = TRUE;
+      }
+
+      /* update lower bound with the pseudo objective value, and cut off node by bounding */
+      if( !(*cutoff) && !(*postpone) && !(*restart) )
+      {
+         SCIP_CALL( applyBounding(blkmem, set, stat, transprob, origprob, primal, tree, reopt, lp, branchcand,
+               eventqueue, eventfilter, conflict, cliquetable, cutoff) );
       }
 
       /* if the node is infeasible, but no constraint handler could resolve the infeasibility
@@ -6162,11 +6180,11 @@ SCIP_RETCODE solveNode(
       {
          SCIP_CALL( SCIPcertificatePrintInheritedBound(set, stat->certificate, focusnode) );
       }
-      else if( SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_INFEASIBLE && focusnodehaslp )
+      else if( SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_INFEASIBLE && SCIPtreeIsFocusNodeLPConstructed(tree) )
       {
          SCIP_CALL( SCIPcertificatePrintDualboundExactLP(stat->certificate, lp->lpexact, set, SCIPtreeGetFocusNode(tree), transprob, TRUE) );
       }
-      else if( focusnodehaslp )
+      else if( SCIPtreeIsFocusNodeLPConstructed(tree) )
       {
          SCIP_CALL( SCIPcertificatePrintDualboundExactLP(stat->certificate, lp->lpexact, set, SCIPtreeGetFocusNode(tree), transprob, FALSE) );
       }
@@ -6385,7 +6403,6 @@ SCIP_RETCODE SCIPsolveCIP(
    SCIP_Bool unbounded;
    SCIP_Bool infeasible;
    SCIP_Bool foundsol;
-   SCIP_Bool iscontinued;
 
    assert(set != NULL);
    assert(blkmem != NULL);
@@ -6428,7 +6445,6 @@ SCIP_RETCODE SCIPsolveCIP(
    stat->status = SCIP_STATUS_UNKNOWN;
 
    focusnode = tree->focusnode;
-   iscontinued = (focusnode != NULL && !focusnode->cutoff && tree->nchildren == 0);
    nextnode = NULL;
    unbounded = FALSE;
    postpone = FALSE;
@@ -6446,8 +6462,8 @@ SCIP_RETCODE SCIPsolveCIP(
       infeasible = FALSE;
 
       /* continue with unfinished focus node */
-      if( iscontinued )
-         iscontinued = FALSE;
+      if( tree->focusnodestopped )
+         tree->focusnodestopped = FALSE;
       /* select and focus another node */
       else
       {
@@ -6493,6 +6509,16 @@ SCIP_RETCODE SCIPsolveCIP(
 
             /* stop node activation timer */
             SCIPclockStop(stat->nodeactivationtime, set);
+
+            /* issue NODEINFEASIBLE event if the new focus node was cut off while switching the path */
+            if( cutoff && focusnode != NULL )
+            {
+               assert(!tree->focuslpconstructed);
+
+               SCIP_CALL( SCIPeventChgType(&event, SCIP_EVENTTYPE_NODEINFEASIBLE) );
+               SCIP_CALL( SCIPeventChgNode(&event, focusnode) );
+               SCIP_CALL( SCIPeventProcess(&event, set, NULL, NULL, NULL, eventfilter) );
+            }
 
             assert(BMSgetNUsedBufferMemory(mem->buffer) == 0);
          }
@@ -6627,14 +6653,6 @@ SCIP_RETCODE SCIPsolveCIP(
                else
                   stat->ninfeasleaves++;
 
-               if( set->reopt_enable )
-               {
-                  assert(reopt != NULL);
-                  SCIP_CALL( SCIPreoptCheckCutoff(reopt, set, blkmem, focusnode, SCIP_EVENTTYPE_NODEINFEASIBLE, lp,
-                        SCIPlpGetSolstat(lp), tree->root == focusnode, tree->focusnode == focusnode,
-                        focusnode->lowerbound, tree->effectiverootdepth) );
-               }
-
                /* increase the cutoff counter of the branching variable */
                if( stat->lastbranchvar != NULL )
                {
@@ -6663,7 +6681,10 @@ SCIP_RETCODE SCIPsolveCIP(
          assert(BMSgetNUsedBufferMemory(mem->buffer) == 0);
 
          if( stopped )
+         {
+            tree->focusnodestopped = !branched;
             break;
+         }
 
          /* if no branching was created, the node was not cut off, but its lower bound is still smaller than
           * the cutoff bound, we have to branch on a non-fixed variable;
@@ -6822,12 +6843,54 @@ SCIP_RETCODE SCIPsolveCIP(
    if( tree->focusnode != NULL && SCIPtreeGetNNodes(tree) == 0
       && SCIPsetIsGE(set, tree->focusnode->lowerbound, primal->cutoffbound) )
    {
-      if( set->reopt_enable )
+      /* cut off last interrupted node */
+      if( tree->focusnodestopped )
       {
-         assert(reopt != NULL);
-         SCIP_CALL( SCIPreoptCheckCutoff(reopt, set, blkmem, tree->focusnode, SCIP_EVENTTYPE_NODEINFEASIBLE, lp,
-               SCIPlpGetSolstat(lp), tree->root == focusnode, tree->focusnode == focusnode, tree->focusnode->lowerbound,
-               tree->effectiverootdepth) );
+         tree->focusnodestopped = FALSE;
+
+         SCIP_CALL( SCIPnodeCutoff(focusnode, set, stat, eventfilter, tree, transprob, origprob, reopt, lp, blkmem) );
+
+         if( !(lp->solved && lp->flushed) )
+         {
+            SCIP_CALL( SCIPcertificatePrintInheritedBound(set, stat->certificate, focusnode) );
+         }
+         else if( SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_INFEASIBLE && SCIPtreeIsFocusNodeLPConstructed(tree) )
+         {
+            SCIP_CALL( SCIPcertificatePrintDualboundExactLP(stat->certificate, lp->lpexact, set,
+                  SCIPtreeGetFocusNode(tree), transprob, TRUE) );
+         }
+         else if( SCIPtreeIsFocusNodeLPConstructed(tree) )
+         {
+            SCIP_CALL( SCIPcertificatePrintDualboundExactLP(stat->certificate, lp->lpexact, set,
+                  SCIPtreeGetFocusNode(tree), transprob, FALSE) );
+         }
+
+         /* the LP might have been unbounded but not enforced, because the node is cut off anyway */
+         unbounded = FALSE;
+
+         /* change color of node in visualization output */
+         SCIPvisualCutoffNode(stat->visual, set, stat, focusnode, TRUE);
+
+         /* issue NODEINFEASIBLE event */
+         SCIP_CALL( SCIPeventChgType(&event, SCIP_EVENTTYPE_NODEINFEASIBLE) );
+
+         /* we only increase the number of objective leaf nodes if we hit the LP objective limit; we might have also
+          * hit the objective limit at a node that is actually infeasible, or a dual reduction led to an infeasibility
+          * prior to LP solving such that the node will be marked as infeasible */
+         if( SCIPtreeHasCurrentNodeLP(tree) && SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OBJLIMIT )
+            stat->nobjleaves++;
+         else
+            stat->ninfeasleaves++;
+
+         /* increase the cutoff counter of the branching variable */
+         if( stat->lastbranchvar != NULL )
+         {
+            SCIP_CALL( SCIPvarIncCutoffSum(stat->lastbranchvar, blkmem, set, stat, stat->lastbranchdir,
+                  stat->lastbranchvalue, 1.0) );
+         }
+
+         SCIP_CALL( SCIPeventChgNode(&event, focusnode) );
+         SCIP_CALL( SCIPeventProcess(&event, set, NULL, NULL, NULL, eventfilter) );
       }
 
       focusnode = NULL;

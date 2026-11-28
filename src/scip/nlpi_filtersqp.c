@@ -55,11 +55,12 @@
 #include "scip/pub_message.h"
 
 /* fallback to non-thread version for windows, because pthread does not exist */
-#if defined(_MSC_VER) && defined(SCIP_THREADSAFE)
-#undef SCIP_THREADSAFE
-#endif
+#if defined(_MSC_VER) && SCIP_IS_THREADSAFE
+#undef SCIP_IS_THREADSAFE
+#define SCIP_IS_THREADSAFE 0
+#endif /* _MSC_VER && SCIP_IS_THREADSAFE */
 
-#ifdef SCIP_THREADSAFE
+#if SCIP_IS_THREADSAFE
 #include <pthread.h>
 #endif
 
@@ -270,9 +271,9 @@ extern struct
 } F77_FUNC(scalec,SCALEC);
 /*lint -esym(754,phe) */
 
-#ifdef SCIP_THREADSAFE
+#if SCIP_IS_THREADSAFE
 static pthread_mutex_t filtersqpmutex = PTHREAD_MUTEX_INITIALIZER; /*lint !e708*/
-#endif
+#endif /* SCIP_IS_THREADSAFE */
 
 static
 SCIP_TIME gettime(void)
@@ -1585,9 +1586,9 @@ SCIP_DECL_NLPISOLVE(nlpiSolveFilterSQP)
    /* from here on we are not thread-safe: if intended for multithread use, then protect filtersqp call with mutex
     * NOTE: we need to make sure that we do not return from nlpiSolve before unlocking the mutex
     */
-#ifdef SCIP_THREADSAFE
+#if SCIP_IS_THREADSAFE
    (void) pthread_mutex_lock(&filtersqpmutex);
-#endif
+#endif /* SCIP_IS_THREADSAFE */
 
    /* initialize global variables from filtersqp */
    /* FilterSQP eps is tolerance for both feasibility and optimality, and also for trust-region radius, etc. */
@@ -1709,9 +1710,9 @@ SCIP_DECL_NLPISOLVE(nlpiSolveFilterSQP)
       assert(success);
    }
 
-#ifdef SCIP_THREADSAFE
+#if SCIP_IS_THREADSAFE
    (void) pthread_mutex_unlock(&filtersqpmutex);
-#endif
+#endif /* SCIP_IS_THREADSAFE */
 
    SCIP_CALL( processSolveOutcome(data, problem, ifail, param.feastol, param.opttol, problem->x, problem->lam) );
 

@@ -11828,10 +11828,8 @@ SCIP_RETCODE ignoreInstability(
    if( *success )
    {
       lpNumericalTroubleMessage(messagehdlr, set, stat, SCIP_VERBLEVEL_FULL, "ignoring instability of %s", lpalgoName(lpalgo));
-      if( !set->lp_checkdualfeas )
-         lp->dualfeasible = TRUE;
-      if( !set->lp_checkprimfeas )
-         lp->primalchecked = TRUE;
+      lp->primalfeasible = SCIPlpiIsPrimalFeasible(lp->lpi);
+      lp->dualfeasible = SCIPlpiIsDualFeasible(lp->lpi);
    }
 
    return SCIP_OKAY;

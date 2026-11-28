@@ -50,19 +50,19 @@
 #include <string.h>
 #include <algorithm>
 
-#ifdef SCIP_WITH_MPFR
+#if SCIP_HAS_MPFR
 #include <mpfr.h>
-#endif
+#endif /* SCIP_HAS_MPFR */
 
-#ifdef SCIP_WITH_BOOST
+#if SCIP_HAS_BOOST
 #include <boost/format.hpp>
-#ifdef SCIP_WITH_GMP
+#if SCIP_HAS_GMP
 #include <boost/multiprecision/gmp.hpp>
-#endif
+#endif /* SCIP_HAS_GMP */
 #include <boost/multiprecision/number.hpp>
-#else
+#else /* !SCIP_HAS_BOOST */
 using namespace scip;
-#endif
+#endif /* SCIP_HAS_BOOST */
 
 /** print SCIP_RATIONAL to output stream */
 static
@@ -81,11 +81,11 @@ std::ostream& operator<<(
 
 extern "C" {
 
-#ifdef SCIP_THREADSAFE
+#if SCIP_IS_THREADSAFE
 constexpr static SCIP_Real infinity = SCIP_DEFAULT_INFINITY; /* values above this are considered to be infinite */
-#else
+#else /* !SCIP_IS_THREADSAFE */
 static SCIP_Real infinity = SCIP_DEFAULT_INFINITY; /* values above this are considered to be infinite */
-#endif
+#endif /* SCIP_IS_THREADSAFE */
 
 /*
  * Creation methods
@@ -371,7 +371,7 @@ SCIP_RETCODE SCIPrationalReallocBlockArray(
    return SCIP_OKAY;
 }
 
-#if defined(SCIP_WITH_BOOST) && defined(SCIP_WITH_GMP)
+#if SCIP_HAS_GMP && SCIP_HAS_BOOST
 /** gets the underlying gmp rational pointer */
 mpq_t* SCIPrationalGetGMP(
    SCIP_RATIONAL*        rational            /**< rational to access */
@@ -445,7 +445,7 @@ void SCIPrationalClearArrayGMP(
       mpq_clear(mpqarray[i]);
    }
 }
-#endif
+#endif /* SCIP_HAS_GMP && SCIP_HAS_BOOST */
 
 /** delete a rational and free the allocated ordinary memory */
 void SCIPrationalFree(
@@ -541,9 +541,9 @@ void SCIPrationalCanonicalize(
    )
 {
    assert(rational != nullptr);
-#if defined(SCIP_WITH_GMP) && defined(SCIP_WITH_BOOST)
+#if SCIP_HAS_GMP && SCIP_HAS_BOOST
    mpq_canonicalize(rational->val.backend().data());
-#endif
+#endif /* SCIP_HAS_GMP && SCIP_HAS_BOOST */
 }
 
 /** checks if the underlying rational has a value >= infinity;
@@ -1962,7 +1962,7 @@ void SCIPrationalPrintDebugMessage(
    va_end(ap);
 }
 
-#ifdef SCIP_WITH_BOOST
+#if SCIP_HAS_BOOST
 
 /** returns the numerator of a rational as a long */
 SCIP_Longint SCIPrationalNumerator(
@@ -2011,7 +2011,8 @@ SCIP_Bool SCIPrationalDenominatorIsLE(
    return denominator <= val;
 }
 
-#else /* the following is for the dummy class present for systems where Boost is not available */
+#else /* !SCIP_HAS_BOOST */
+/* the following is for the dummy class present for systems where Boost is not available */
 
 /** returns the numerator of a rational as a long */
 SCIP_Longint SCIPrationalNumerator(
@@ -2041,7 +2042,7 @@ SCIP_Bool SCIPrationalDenominatorIsLE(
    return TRUE;
 }
 
-#endif
+#endif /* SCIP_HAS_BOOST */
 
 /** returns the sign of the rational (1 if positive, -1 if negative, 0 if zero) */
 int SCIPrationalGetSign(
@@ -2061,7 +2062,7 @@ void SCIPrationalGetFrac(
    assert(src != nullptr);
    assert(res != nullptr);
 
-#ifdef SCIP_WITH_BOOST
+#if SCIP_HAS_BOOST
 
    if( src->isinf )
       SCIPrationalSetReal(res, 0.0);
@@ -2077,7 +2078,7 @@ void SCIPrationalGetFrac(
       }
       res->val = src->val - roundint;
    }
-#endif
+#endif /* SCIP_HAS_BOOST */
 }
 
 /** returns approximation of rational as SCIP_Real */
@@ -2087,19 +2088,19 @@ SCIP_Real SCIPrationalGetReal(
 {
    assert(rational != nullptr);
 
-#ifdef SCIP_WITH_BOOST
+#if SCIP_HAS_BOOST
    if( rational->isinf )
       return (rational->val.sign() * infinity);
 
-#ifdef SCIP_WITH_GMP
+#if SCIP_HAS_GMP
    /* mpq_get_d is faster than the boost internal implementation */
    return mpq_get_d(rational->val.backend().data()); /*lint !e838*/
-#else
+#else /* !SCIP_HAS_GMP */
    return rational->val.convert_to<SCIP_Real>(); /*lint !e838*/
-#endif
-#else
+#endif /* SCIP_HAS_GMP */
+#else /* !SCIP_HAS_BOOST */
    return 0.0;
-#endif
+#endif /* SCIP_HAS_BOOST */
 }
 
 /** gets the relaxation of a rational as a real
@@ -2118,7 +2119,7 @@ SCIP_Real SCIPrationalRoundReal(
    if( rational->isfprepresentable == SCIP_ISFPREPRESENTABLE_TRUE || roundmode == SCIP_R_ROUND_NEAREST )
       return SCIPrationalGetReal(rational);
 
-#if defined(SCIP_WITH_MPFR) && defined(SCIP_WITH_BOOST) && defined(SCIP_WITH_GMP)
+#if SCIP_HAS_GMP && SCIP_HAS_MPFR && SCIP_HAS_BOOST
    {
       SCIP_Real realapprox;
       mpfr_t valmpfr;
@@ -2146,11 +2147,11 @@ SCIP_Real SCIPrationalRoundReal(
       mpfr_clear(valmpfr);
       return realapprox;
    }
-#else
+#else /* !SCIP_HAS_GMP || !SCIP_HAS_MPFR || !SCIP_HAS_BOOST */
    SCIPerrorMessage("method SCIPrationalRoundReal not supported when SCIP is compiled without Boost.\n");
    SCIPABORT();
    return SCIP_INVALID;
-#endif
+#endif /* SCIP_HAS_GMP && SCIP_HAS_MPFR && SCIP_HAS_BOOST */
 }
 
 /** rounds a rational to an integer and saves it as a rational */
@@ -2162,7 +2163,7 @@ void SCIPrationalRoundInteger(
 {
    assert(src != nullptr);
    assert(res != nullptr);
-#ifdef SCIP_WITH_BOOST
+#if SCIP_HAS_BOOST
    scip::Integer roundint, rest;
 
    if( src->isinf )
@@ -2193,7 +2194,7 @@ void SCIPrationalRoundInteger(
       }
       res->val = roundint;
    }
-#endif
+#endif /* SCIP_HAS_BOOST */
 }
 
 /** rounds rational to next integer in direction of roundmode
@@ -2209,7 +2210,7 @@ SCIP_Bool SCIPrationalRoundLong(
    assert(src != nullptr);
    assert(res != nullptr);
 
-#ifdef SCIP_WITH_BOOST
+#if SCIP_HAS_BOOST
    assert(!src->isinf);
 
    scip::Integer roundint, rest;
@@ -2237,11 +2238,11 @@ SCIP_Bool SCIPrationalRoundLong(
    *res = roundint.convert_to<SCIP_Longint>();
    if( *res == roundint )
       return TRUE;
-#endif
+#endif /* SCIP_HAS_BOOST */
    return FALSE;
 }
 
-#ifdef SCIP_WITH_BOOST
+#if SCIP_HAS_BOOST
 /** choose the best semiconvergent with demnominator <= maxdenom between p1/q1 and p2/q2 */
 static
 void chooseSemiconv(
@@ -2457,7 +2458,7 @@ void SCIPrationalComputeApproximationLong(
    res->isinf = FALSE;
    res->isfprepresentable = SCIP_ISFPREPRESENTABLE_UNKNOWN;
 }
-#endif
+#endif /* SCIP_HAS_BOOST */
 
 /** compute an approximate number with denominator <= maxdenom, closest to src and save it in res using continued fractions */
 void SCIPrationalComputeApproximation(
@@ -2469,7 +2470,7 @@ void SCIPrationalComputeApproximation(
 {
    assert(src != nullptr);
    assert(res != nullptr);
-#ifdef SCIP_WITH_BOOST
+#if SCIP_HAS_BOOST
    int done;
 
    scip::Integer temp;
@@ -2653,7 +2654,7 @@ void SCIPrationalComputeApproximation(
 
    assert(forcegreater != 1 || res->val >= src->val);
    assert(forcegreater != -1 || res->val <= src->val);
-#endif
+#endif /* SCIP_HAS_BOOST */
 
    res->isinf = FALSE;
    res->isfprepresentable = SCIP_ISFPREPRESENTABLE_UNKNOWN;
@@ -2846,16 +2847,16 @@ void SCIPrationalChgInfinity(
 {
    assert(inf > 0);
 
-#ifdef SCIP_THREADSAFE
+#if SCIP_IS_THREADSAFE
    if( inf != SCIP_DEFAULT_INFINITY )
    {
       SCIPerrorMessage("method SCIPrationalChgInfinity() not thread safe\n");
       SCIPABORT();
    }
    assert(inf == SCIP_DEFAULT_INFINITY);
-#else
+#else /* !SCIP_IS_THREADSAFE */
    infinity = inf;
-#endif
+#endif /* SCIP_IS_THREADSAFE */
 }
 
 /** return the infinity threshold for rationals */

@@ -1019,6 +1019,7 @@ SCIP_RETCODE SCIPsymhdlrTryAdd(
    int*                  naddedconss,        /**< pointer to store number of constraints added by symhdlr */
    SCIP_Bool             allowbdchgs,        /**< whether bound changed permitted (needed for stage EXITPRESOLVE) */
    int*                  nchgbds,            /**< pointer to store number of changed variable bounds */
+   int*                  naggrvars,          /**< pointer to store number of aggregated variables */
    SCIP_Bool*            success             /**< pointer to store whether symmetry handling method could be added */
    )
 {
@@ -1037,9 +1038,10 @@ SCIP_RETCODE SCIPsymhdlrTryAdd(
 
    *naddedconss = 0;
    *nchgbds = 0;
+   *naggrvars = 0;
 
    SCIP_CALL( symhdlr->symtryadd(set->scip, symhdlr, symtype, perms, nperms, permvars, npermvars,
-         vardomcenter, permvarmap, symgraph, id, symcompdata, naddedconss, allowbdchgs, nchgbds, success) );
+         vardomcenter, permvarmap, symgraph, id, symcompdata, naddedconss, allowbdchgs, nchgbds, naggrvars, success) );
 
    /* end timing */
    SCIPclockStop(symhdlr->setuptime, set);
@@ -1487,7 +1489,6 @@ int SCIPsymhdlrGetPresolPriority(
 }
 
 /** gets description of symmetry handler */
-SCIP_EXPORT
 const char* SCIPsymhdlrGetDesc(
    SCIP_SYMHDLR*         symhdlr             /**< symmetry handler */
    )

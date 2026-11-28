@@ -7148,6 +7148,7 @@ SCIP_RETCODE createConsSetppc(
    /* create constraint */
    SCIP_CALL( SCIPcreateCons(scip, cons, name, conshdlr, consdata, initial, separate, enforce, check, propagate,
          local, modifiable, dynamic, removable, stickingatnode) );
+   SCIP_CALL( SCIPsetConsIsRelaxConvex(scip, *cons, TRUE) );
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
@@ -7737,6 +7738,7 @@ SCIP_DECL_CONSTRANS(consTransSetppc)
          SCIPconsIsChecked(sourcecons), SCIPconsIsPropagated(sourcecons),
          SCIPconsIsLocal(sourcecons), SCIPconsIsModifiable(sourcecons),
          SCIPconsIsDynamic(sourcecons), SCIPconsIsRemovable(sourcecons), SCIPconsIsStickingAtNode(sourcecons)) );
+   SCIP_CALL( SCIPsetConsIsRelaxConvex(scip, *targetcons, TRUE) );
 
    if( (SCIP_SETPPCTYPE)sourcedata->setppctype == SCIP_SETPPCTYPE_PARTITIONING )
    {

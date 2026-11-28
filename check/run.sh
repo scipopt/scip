@@ -249,7 +249,7 @@ then
 
     # compress vipr file
     echo Gzipping vipr file ... >> $OUTFILE
-    bash -c "gzip $VIPRFILE 2>>$ERRFIL@E"  | tee -a $OUTFILE
+    bash -c "gzip $VIPRFILE 2>>$ERRFILE"  | tee -a $OUTFILE
     echo "viprfile gzipped:   " `ls -lisa $VIPRFILE.gz` >> $OUTFILE
 fi
 
@@ -273,7 +273,7 @@ then
 
     # compress vipr_ori file
     echo Gzipping vipr_ori file ... >> $OUTFILE
-    bash -c "gzip $VIPRORIFILE 2>>$ERRFIL@E"  | tee -a $OUTFILE
+    bash -c "gzip $VIPRORIFILE 2>>$ERRFILE"  | tee -a $OUTFILE
     echo "vipr_ori file gzipped:   " `ls -lisa $VIPRORIFILE.gz` >> $OUTFILE
 
     # compress untightened vipr file
@@ -285,11 +285,8 @@ then
     mv $VIPRRAWFILE.gz $SOLVERPATH/$OUTPUTDIR/$BASENAME.viprraw.gz
     mv $VIPRORIFILE.gz $SOLVERPATH/$OUTPUTDIR/$BASENAME.vipr_ori.gz
 fi
-#ensure no garbage is left over
-if test -e $VIPRFILE
-then
-    rm $CLIENTTMPDIR/${USER}-tmpdir/$BASENAME*vipr*
-fi
+# ensure no garbage is left over; the separator after the basename avoids deleting files of other instances with the same prefix
+rm -f "${CLIENTTMPDIR}/${USER}-tmpdir/${BASENAME}".vipr* "${CLIENTTMPDIR}/${USER}-tmpdir/${BASENAME}"_complete.vipr*
 
 # currently, the solution checker only supports .mps-files
 FILENAMENOGZ=$(basename "${FILENAME}" .gz)

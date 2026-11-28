@@ -222,7 +222,9 @@
 #include "scip/reader_lp.h"
 #include "scip/reader_mps.h"
 #include "scip/reader_mst.h"
+#if SCIP_HAS_AMPL
 #include "scip/reader_nl.h"
+#endif /* SCIP_HAS_AMPL */
 #include "scip/reader_opb.h"
 #include "scip/reader_osil.h"
 #include "scip/reader_pip.h"
@@ -257,6 +259,7 @@
 #include "scip/sepa_rlt.h"
 #include "scip/sepa_zerohalf.h"
 #include "scip/scipshell.h"
+#include "scip/sym_folding.h"
 #include "scip/sym_lexorbred.h"
 #include "scip/sym_rowcol.h"
 #include "scip/sym_sst.h"

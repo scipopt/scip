@@ -981,7 +981,7 @@ SCIP_RETCODE SCIPconsSetPropagated(
    SCIP_Bool             propagate           /**< new value */
    );
 
-/** sets the local flag of the given constraint */
+/** sets the local flag of the given constraint and resets valid depth */
 void SCIPconsSetLocal(
    SCIP_CONS*            cons,               /**< constraint */
    SCIP_Bool             local               /**< new value */
@@ -1016,6 +1016,12 @@ void SCIPconsSetStickingAtNode(
 void SCIPconsSetNamePointer(
    SCIP_CONS*            cons,               /**< constraint */
    const char*           name                /**< new name of constraint */
+   );
+
+/** sets the isrelaxconvex flag of the given constraint */
+void SCIPconsSetIsRelaxConvex(
+   SCIP_CONS*            cons,               /**< constraint */
+   SCIP_Bool             isrelaxconvex       /**< new value */
    );
 
 /** gets associated transformed constraint of an original constraint, or NULL if no associated transformed constraint

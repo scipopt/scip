@@ -148,13 +148,15 @@ SCIP_RETCODE SCIPprimalHeuristics(
 
 /** tries to add symmetry handling methods to CIP
  *
- *  Compute symmetry and call each symmetry handler to check whether particular symmetry handling methods can be added.
+ *  Compute symmetry and call each symmetry handler with non-negative priority to check whether
+ *  particular symmetry handling methods can be added.
  */
 SCIP_RETCODE SCIPtryAddSymmetryHandlingMethods(
    SCIP*                 scip,               /**< SCIP data structure */
    int*                  naddedconss,        /**< pointer to store number of constraints added by symmetry handlers */
    SCIP_Bool             allowbdchgs,        /**< whether bound changed permitted (needed for stage EXITPRESOLVE) */
-   int*                  nchgbds             /**< pointer to store number of changed variable bounds */
+   int*                  nchgbds,            /**< pointer to store number of changed variable bounds */
+   int*                  naggrvars           /**< pointer to store number of aggregated variables */
    );
 
 /** calls presolving methods of symmetry handlers */

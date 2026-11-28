@@ -569,8 +569,9 @@ SCIP_RETCODE exitPresolve(
       {
          int naddedconss = 0;
          int nchgbds = 0;
+         int naggrvars = 0;
 
-         SCIP_CALL( SCIPtryAddSymmetryHandlingMethods(scip, &naddedconss, FALSE, &nchgbds) );
+         SCIP_CALL( SCIPtryAddSymmetryHandlingMethods(scip, &naddedconss, FALSE, &nchgbds, &naggrvars) );
       }
    }
 
@@ -1406,6 +1407,7 @@ SCIP_RETCODE presolve(
          {
             int nnewconss = 0;
             int nchgbds = 0;
+            int naggrvars = 0;
             int npresolfixedvarsold;
             int npresolaggrvarsold;
             int npresolchgvartypesold;
@@ -1417,10 +1419,11 @@ SCIP_RETCODE presolve(
             int npresolchgcoefsold;
             int npresolchgsidesold;
 
-            SCIP_CALL( SCIPtryAddSymmetryHandlingMethods(scip, &nnewconss, TRUE, &nchgbds) );
+            SCIP_CALL( SCIPtryAddSymmetryHandlingMethods(scip, &nnewconss, TRUE, &nchgbds, &naggrvars) );
 
             scip->stat->npresoladdconss += nnewconss;
             scip->stat->npresolchgbds += nchgbds;
+            scip->stat->npresolaggrvars += naggrvars;
 
             /* Call presolving methods of symmetry handlers, use timing SCIP_PRESOLTIMING_MAX to guarantee that they are
              * presolved at least once. Also keep track of numbers of previous presolving reductions to see whether a
@@ -1445,7 +1448,7 @@ SCIP_RETCODE presolve(
             /* continue presolving in case symmetry presolving methods found a reduction */
             if( !*unbounded && !*infeasible )
             {
-               if( nnewconss > 0 || nchgbds > 0
+               if( nnewconss > 0 || nchgbds > 0 || naggrvars > 0
                   ||npresolfixedvarsold < scip->stat->npresolfixedvars
                   || npresolaggrvarsold < scip->stat->npresolaggrvars
                   || npresolchgvartypesold < scip->stat->npresolchgvartypes
@@ -2678,11 +2681,13 @@ SCIP_RETCODE SCIPpresolve(
       {
          int nnewconss;
          int nchgbds;
+         int naggrvars;
 
-         SCIP_CALL( SCIPtryAddSymmetryHandlingMethods(scip, &nnewconss, TRUE, &nchgbds) );
+         SCIP_CALL( SCIPtryAddSymmetryHandlingMethods(scip, &nnewconss, TRUE, &nchgbds, &naggrvars) );
 
          scip->stat->npresoladdconss += nnewconss;
          scip->stat->npresolchgbds += nchgbds;
+         scip->stat->npresolaggrvars += naggrvars;
       }
 
       /* presolve problem */
@@ -3218,7 +3223,6 @@ SCIP_RETCODE SCIPsolveConcurrent(
       SCIP_CONCSOLVERTYPE** concsolvertypes;
       SCIP_Longint* weights;
       SCIP_Real* prios;
-      SCIP_Real memorylimit;
       SCIP_Real prefpriosum;
       int* solvertypes;
       int nconcsolvertypes;
@@ -3269,47 +3273,38 @@ SCIP_RETCODE SCIPsolveConcurrent(
          goto TERMINATE;
       }
 
-      /* estimate memory */
-      memorylimit = scip->set->limit_memory;
-      if( memorylimit < SCIP_MEM_NOLIMIT )
+      /* estimate maximum number of threads based on memory limit, if any */
+      if( scip->set->misc_avoidmemout && scip->set->limit_memory < SCIP_MEM_NOLIMIT )
       {
+         SCIP_Real memorylimit = scip->set->limit_memory;
+
          /* substract the memory already used by the main SCIP and the estimated memory usage of external software */
          memorylimit -= SCIPgetMemUsed(scip)/1048576.0;
          memorylimit -= SCIPgetMemExternEstim(scip)/1048576.0;
 
-         /* estimate maximum number of copies that be created based on memory limit */
-         if( !scip->set->misc_avoidmemout )
-         {
-            nthreads = MAX(1, memorylimit / (4.0*SCIPgetMemExternEstim(scip)/1048576.0));  /*lint !e666 !e524*/
-            SCIPverbMessage(scip, SCIP_VERBLEVEL_FULL, NULL, "Estimated a maximum of %d threads based on memory limit.\n", nthreads);
-         }
-         else
-         {
-            nthreads = minnthreads;
-            SCIPverbMessage(scip, SCIP_VERBLEVEL_FULL, NULL, "Ignoring memory limit; all threads can be created.\n");
-         }
-      }
-      nconcsolvertypes = SCIPgetNConcsolverTypes(scip);
-      concsolvertypes = SCIPgetConcsolverTypes(scip);
+         nthreads = MAX(1, memorylimit / (4.0*SCIPgetMemExternEstim(scip)/1048576.0));  /*lint !e666 !e524*/
+         SCIPverbMessage(scip, SCIP_VERBLEVEL_FULL, NULL, "Estimated a maximum of %d threads based on memory limit.\n", nthreads);
 
-      if( minnthreads > nthreads )
-      {
-         SCIP_CALL( initSolve(scip, TRUE) );
-         scip->stat->status = SCIP_STATUS_MEMLIMIT;
-         SCIPsyncstoreSetSolveIsStopped(SCIPgetSyncstore(scip), TRUE);
-         SCIPwarningMessage(scip, "Requested minimum number of threads could not be satisfied with given memory limit.\n");
-         SCIP_CALL( displayRelevantStats(scip) );
-         retcode = SCIP_OKAY;
-         goto TERMINATE;
+         if( minnthreads > nthreads )
+         {
+            SCIP_CALL( initSolve(scip, TRUE) );
+            scip->stat->status = SCIP_STATUS_MEMLIMIT;
+            SCIPsyncstoreSetSolveIsStopped(SCIPgetSyncstore(scip), TRUE);
+            SCIPwarningMessage(scip, "Requested minimum number of threads could not be satisfied with given memory limit.\n");
+            SCIP_CALL( displayRelevantStats(scip) );
+            retcode = SCIP_OKAY;
+            goto TERMINATE;
+         }
+
+         if( nthreads == 1 )
+         {
+            SCIPwarningMessage(scip, "Can only use 1 thread, performing sequential solve instead.\n");
+            SCIP_CALL( SCIPfreeConcurrent(scip) );
+            retcode = SCIPsolve(scip);
+            goto TERMINATE;
+         }
       }
 
-      if( nthreads == 1 )
-      {
-         SCIPwarningMessage(scip, "Can only use 1 thread, performing sequential solve instead.\n");
-         SCIP_CALL( SCIPfreeConcurrent(scip) );
-         retcode = SCIPsolve(scip);
-         goto TERMINATE;
-      }
       nthreads = MIN(nthreads, maxnthreads);
       SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "Using %d threads for concurrent solve in %s mode.\n", nthreads,
          scip->set->parallel_mode == (int) SCIP_PARA_OPPORTUNISTIC ? "opportunistic" : "deterministic");
@@ -3317,6 +3312,8 @@ SCIP_RETCODE SCIPsolveConcurrent(
       /* now set up nthreads many concurrent solvers that will be used for the concurrent solve
        * using the preferred priorities of each concurrent solver
        */
+      nconcsolvertypes = SCIPgetNConcsolverTypes(scip);
+      concsolvertypes = SCIPgetConcsolverTypes(scip);
       prefpriosum = 0.0;
       for( i = 0; i < nconcsolvertypes; ++i )
          prefpriosum += SCIPconcsolverTypeGetPrefPrio(concsolvertypes[i]);

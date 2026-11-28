@@ -48,7 +48,7 @@
 
 #pragma GCC diagnostic ignored "-Wpedantic"
 
-#ifdef SCIP_WITH_GMP
+#if SCIP_HAS_GMP
 static QSnum_type qsnum_zeroLpNum;
 static QSnum_type qsnum_oneLpNum;
 static QSnum_type __t__;
@@ -240,11 +240,15 @@ int QSnum_factor_create_factor_work(
       f->ur_inf[i].nzcnt = 0;
       f->lc_inf[i].nzcnt = 0;
       f->lr_inf[i].nzcnt = 0;
+      f->ur_inf[i].delay = 0;
+      f->lc_inf[i].delay = 0;
+      f->lr_inf[i].delay = 0;
       f->rperm[i] = i;
       f->rrank[i] = i;
    }
    for (i = 0; i < dimc; i++) {
       f->uc_inf[i].nzcnt = 0;
+      f->uc_inf[i].delay = 0;
       f->cperm[i] = i;
       f->crank[i] = i;
    }

@@ -364,8 +364,11 @@ void test_change_testchgobjectives(void)
             int ind[2] = {0, 1};
             SCIP_Real setobj[2];
 
-            first = substituteInfinity(first);
-            second = substituteInfinity(second);
+/* disabled since using infinity as an objective coefficient is questionable! */
+#if 0
+            first = substituteInfinity( first );
+            second = substituteInfinity( second );
+#endif
             if( !initProb(prob, &ncols, &nrows, &nnonz, &sense) )
                continue;
 

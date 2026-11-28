@@ -31,7 +31,7 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#ifdef TPI_TNY
+#if SCIP_TPI_TNY
 
 #ifndef _TPI_TINYCTHRD_H_
 #define _TPI_TINYCTHRD_H_
@@ -56,4 +56,4 @@ extern _Thread_local int _threadnumber;
 
 #endif
 
-#endif
+#endif /* SCIP_TPI_TNY */

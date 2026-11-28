@@ -1245,7 +1245,7 @@ SCIP_RETCODE setObjective(
             /* add auxiliary variable to the problem */
             SCIP_CALL( SCIPaddVar(scip, var) );
 
-#ifdef WITH_DEBUG_SOLUTION
+#if SCIP_HAS_DEBUG_SOLUTION
             if( SCIPdebugIsMainscip(scip) )
             {
                SCIP_Real val = 0.0;
@@ -1260,7 +1260,7 @@ SCIP_RETCODE setObjective(
                }
                SCIP_CALL( SCIPdebugAddSolVal(scip, var, (val < 0.5) ? 0.0 : 1.0) );
             }
-#endif
+#endif /* SCIP_HAS_DEBUG_SOLUTION */
 
             /* @todo: check whether all constraint creation flags are the best option */
             /* create and-constraint */

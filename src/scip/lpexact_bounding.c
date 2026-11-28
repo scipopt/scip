@@ -34,9 +34,9 @@
 
 #include "lpi/lpi.h"
 #include "lpiexact/lpiexact.h"
-#ifdef SCIP_WITH_EXACTSOLVE
+#ifdef SCIP_HAS_EXACTSOLVE
 #include "rectlu/rectlu.h"
-#endif
+#endif /* SCIP_HAS_EXACTSOLVE */
 #include "scip/lpexact_bounding.h"
 #include "scip/pub_message.h"
 #include "scip/pub_misc.h"
@@ -59,7 +59,7 @@
 #include "scip/struct_set.h"
 #include "scip/primal.h"
 
-#ifdef SCIP_WITH_BOOST
+#if SCIP_HAS_BOOST
 
 #define PSBIGM                      100LL
 
@@ -112,8 +112,8 @@ SCIP_Bool fpLPisIntFeasible(
    return feasible;
 }
 
-#ifdef SCIP_WITH_GMP
-#ifdef SCIP_WITH_EXACTSOLVE
+#if SCIP_HAS_GMP
+#if SCIP_HAS_EXACTSOLVE
 /** helper method, compute number of nonzeros in lp */
 static
 int getNNonz(
@@ -129,7 +129,7 @@ int getNNonz(
 
    return ret;
 }
-#endif
+#endif /* SCIP_HAS_EXACTSOLVE */
 
 /** subroutine of constructProjectShiftData(); chooses which columns of the dual matrix are designated as set S, used
  *  for projections
@@ -265,7 +265,7 @@ SCIP_RETCODE projectShiftFactorizeDualSubmatrix(
    BMS_BLKMEM*           blkmem              /**< block memory */
    )
 {
-#if defined(SCIP_WITH_GMP) && defined(SCIP_WITH_EXACTSOLVE)
+#if SCIP_HAS_GMP && SCIP_HAS_EXACTSOLVE
    int i;
    int j;
    int pos;
@@ -375,7 +375,7 @@ SCIP_RETCODE projectShiftFactorizeDualSubmatrix(
       SCIPrationalPrint(projval[i]);
       printf(">\n");
    }
-#endif
+#endif /* SCIP_DEBUG_PS_OUT */
 
    /* factorize projection matrix D
     * - projshiftbasis stores a mapping to tell us what D is, i.e. the dual columns corresponding to dual valuse that have a
@@ -392,13 +392,13 @@ SCIP_RETCODE projectShiftFactorizeDualSubmatrix(
       SCIPdebugMessage("factorization of matrix for project-and-shift method failed.\n");
 #ifdef SCIP_DEBUG_PS_OUT
       printf("   matrix factorization complete: failed\n");
-#endif
+#endif /* SCIP_DEBUG_PS_OUT */
    }
    else
    {
 #ifdef SCIP_DEBUG_PS_OUT
       printf("   matrix factorization complete: correct termination\n");
-#endif
+#endif /* SCIP_DEBUG_PS_OUT */
    }
 
    SCIPrationalClearArrayGMP(projvalgmp, projindsize);
@@ -408,12 +408,12 @@ SCIP_RETCODE projectShiftFactorizeDualSubmatrix(
    SCIPsetFreeBufferArray(set, &projlen);
    SCIPsetFreeBufferArray(set, &projbeg);
 
-#else  /* SCIP_WITH_GMP or SCIP_WITH_EXACTSOLVE not defined */
+#else /* ! SCIP_HAS_GMP || !SCIP_HAS_EXACTSOLVE */
    lpexact->projshiftdata->projshiftdatafail = TRUE;
 #ifdef SCIP_DEBUG_PS_OUT
    printf("   matrix factorization skipped: no GMP or EXACTSOLVE\n");
-#endif
-#endif
+#endif /* SCIP_DEBUG_PS_OUT */
+#endif /* SCIP_HAS_GMP && SCIP_HAS_EXACTSOLVE */
 
    return SCIP_OKAY;
 }
@@ -1418,7 +1418,7 @@ SCIP_RETCODE projectShift(
    }
 
    SCIPrationalPrintf("   objective value=%f (%q) \n", SCIPrationalGetReal(dualbound), dualbound);
-#endif
+#endif /* SCIP_DEBUG_PS_OUT */
 
    /* calculate violation of equality constraints r=c-A^ty */
    for( i = 0; i < ncols; i++ )
@@ -1456,7 +1456,7 @@ SCIP_RETCODE projectShift(
       SCIPrationalPrint(violation[i]);
       printf("\n");
    }
-#endif
+#endif /* SCIP_DEBUG_PS_OUT */
 
    /* if there is no violation of the constraints, then skip the projection */
    isfeas = TRUE;
@@ -1479,11 +1479,11 @@ SCIP_RETCODE projectShift(
          mpq_init(correctiongmp[i]);
       }
 
-#if defined SCIP_WITH_GMP && defined SCIP_WITH_EXACTSOLVE
+#if SCIP_HAS_GMP && SCIP_HAS_EXACTSOLVE
       rval = RECTLUsolveSystem(projshiftdata->rectfactor, ncols, nextendedrows, violationgmp, correctiongmp);
-#else
+#else /* ! SCIP_HAS_GMP || ! SCIP_HAS_EXACTSOLVE */
       rval = 1;
-#endif
+#endif /* SCIP_HAS_GMP && SCIP_HAS_EXACTSOLVE */
 
       /* rval = 0 -> fail */
       if( rval )
@@ -1507,7 +1507,7 @@ SCIP_RETCODE projectShift(
          SCIPrationalPrint(correction[i]);
          printf(", position=%d\n", projshiftdata->projshiftbasis[i]);
       }
-#endif
+#endif /* SCIP_DEBUG_PS_OUT */
 
       /* projection step: compute bold(y)=y^+[z 0];
        * save the corrected components in the correction vector; reset the dualsol-vector to 0
@@ -1562,7 +1562,7 @@ SCIP_RETCODE projectShift(
          SCIPrationalPrint(correction[i]);
          printf(", position=%d\n", projshiftdata->projshiftbasis[i]);
       }
-#endif
+#endif /* SCIP_DEBUG_PS_OUT */
 
       if( useinteriorpoint )
       {
@@ -1620,7 +1620,7 @@ SCIP_RETCODE projectShift(
       printf("   lambda1: ");
       SCIPrationalPrint(lambda1);
       printf(")\n");
-#endif
+#endif /* SCIP_DEBUG_PS_OUT */
 
       /* tranfsorm correction back to dualsol */
       for( i = 0; i < projshiftdata->projshiftbasisdim; i++ )
@@ -1649,7 +1649,7 @@ SCIP_RETCODE projectShift(
       printf("   lambda1: ");
       SCIPrationalPrint(lambda1);
       printf(")\n");
-#endif
+#endif /* SCIP_DEBUG_PS_OUT */
 
       /* perform shift */
       if( !SCIPrationalIsZero(lambda2) )
@@ -1681,7 +1681,7 @@ SCIP_RETCODE projectShift(
       {
          SCIPrationalPrintf("   i=%d: %f.20 (%q) \n", i, SCIPrationalGetReal(dualsol[i]), dualsol[i]);
       }
-#endif
+#endif /* SCIP_DEBUG_PS_OUT */
    }
 
 #ifndef NDEBUG
@@ -1731,7 +1731,7 @@ SCIP_RETCODE projectShift(
    if( !rval )
       SCIPdebugMessage("   dual solution verified\n");
    assert(!rval);
-#endif
+#endif /* !NDEBUG */
 
    SCIPrationalSetFraction(dualbound, 0LL, 1LL);
    for( i = 0; i < nrows + ncols; i++ )
@@ -1817,7 +1817,7 @@ SCIP_RETCODE projectShift(
    printf("   dual objective value=%.20f (", SCIPrationalGetReal(dualbound));
    SCIPrationalPrint(dualbound);
    printf(")\n");
-#endif
+#endif /* SCIP_DEBUG_PS_OUT */
 
  TERMINATE:
    /* free memory */
@@ -1849,7 +1849,7 @@ SCIP_RETCODE projectShift(
 
    return SCIP_OKAY;
 }
-#endif
+#endif /* SCIP_HAS_GMP */
 
 /** chooses which bounding method to use at first attempt to provide safe bound for current lp */
 static
@@ -2145,7 +2145,7 @@ SCIP_RETCODE boundShift(
          assert(colexact->rows[i]->lppos == -1);
          assert(colexact->linkpos[i] >= 0);
       }
-#endif
+#endif /* !NDEBUG */
    }
 
    /* create objective vector and lb/ub vector in interval arithmetic and compute min{(obj^T - dual^TMatrix)lb/ub} */
@@ -2298,7 +2298,7 @@ CLEANUP:
 
    return SCIP_OKAY;
 }
-#endif
+#endif /* SCIP_HAS_BOOST */
 
 /** computes a safe bound for the current floating point LP */
 SCIP_RETCODE SCIPlpExactComputeSafeBound(
@@ -2317,7 +2317,7 @@ SCIP_RETCODE SCIPlpExactComputeSafeBound(
    SCIP_Bool*            dualfeasible        /**< pointer to store whether the solution is dual feasible, or NULL */
    ) /*lint --e{715}*/
 {  /*lint --e{715}*/
-#ifdef SCIP_WITH_BOOST
+#if SCIP_HAS_BOOST
    char dualboundmethod;
    char lastboundmethod;
    SCIP_Bool shouldabort;
@@ -2341,10 +2341,10 @@ SCIP_RETCODE SCIPlpExactComputeSafeBound(
    if( SCIPgetDepth(set->scip) <= 0 && lpexact->projshiftdata->lpiexact == NULL
       && !lpexact->projshiftdata->projshiftdatacon && !lpexact->projshiftdata->projshiftdatafail )
    {
-#ifdef SCIP_WITH_GMP
+#if SCIP_HAS_GMP
       SCIP_CALL( constructProjectShiftDataLPIExact(lp, lpexact, set, stat, messagehdlr, eventqueue, prob,
             blkmem) );
-#endif
+#endif /* SCIP_HAS_GMP */
    }
 
    while( (!lp->hasprovedbound && !shouldabort) || lpexact->allowexactsolve )
@@ -2369,14 +2369,14 @@ SCIP_RETCODE SCIPlpExactComputeSafeBound(
             SCIP_CALL( boundShift(lp, lpexact, set, blkmem, stat, eventqueue,
                   prob, usefarkas, safebound) );
             break;
-      #ifdef SCIP_WITH_GMP
+      #if SCIP_HAS_GMP
          case 'p':
             /* Project-and-Shift (Chapter 3)*/
             *lperror = FALSE;
             SCIP_CALL( projectShift(lp, lpexact, set, stat, messagehdlr, eventqueue,
                   prob, blkmem, usefarkas, safebound) );
             break;
-      #endif
+      #endif /* SCIP_HAS_GMP */
          case 'e':
             /* exact LP */
             SCIP_CALL( SCIPlpExactSolveAndEval(lpexact, lp, set, messagehdlr, blkmem, stat, eventqueue,
@@ -2413,7 +2413,7 @@ SCIP_RETCODE SCIPlpExactComputeSafeBound(
       if( lpexact->lpsolstat == SCIP_LPSOLSTAT_TIMELIMIT )
          shouldabort = TRUE;
    }
-#endif
+#endif /* SCIP_HAS_BOOST */
    if( *lperror && lp->lpsolstat != SCIP_LPSOLSTAT_TIMELIMIT && lp->lpsolstat != SCIP_LPSOLSTAT_ITERLIMIT )
    {
       lp->solved = FALSE;

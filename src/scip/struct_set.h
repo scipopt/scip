@@ -412,6 +412,7 @@ struct SCIP_Set
    int                   lp_solutionpolishing;/**< LP solution polishing method (0: disabled, 1: only root, 2: always, 3: auto) */
    int                   lp_refactorinterval;/**< LP refactorization interval (0: automatic) */
    SCIP_Bool             lp_alwaysgetduals;  /**< should the dual solution always be collected for LP solutions. */
+   SCIP_Bool             lp_outputaddedrows; /**< should the rows added to the LP be output for debugging? */
 
    /* NLP settings */
    SCIP_Bool             nlp_disable;        /**< should the NLP be disabled even if a constraint handler enabled it? */
@@ -688,6 +689,8 @@ struct SCIP_Set
 
    /* symmetry settings */
    SCIP_Bool             sym_enabled;        /**< is symmetry handling enabled? */
+   SCIP_Real             sym_accuracy;       /**< Accuracy used to compare coefficients and bounds in symmetry
+                                              *   detection (negative: SCIP's internal epsilon is used). */
    int                   sym_tryaddtiming;   /**< timing for trying to add symmetry handling methods (0: before presolinv; 1: after presolving) */
    int                   sym_maxngenerators; /**< maximum number of symmetry group generators to be computed (-1: unbounded) */
    int                   sym_symtype;        /**< type of symmetries to be considered */

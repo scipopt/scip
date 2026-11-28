@@ -158,8 +158,8 @@ SCIP_RETCODE branchruledataEnsureArraySize(
    if( maxindex < branchruledata->memsize )
       return SCIP_OKAY;
 
-   /* new memory size is the max index + 1 plus 10% additional space */
-   newsize = (int)SCIPfeasCeil(scip, (maxindex + 1) * 1.1);
+   /* compute new size */
+   newsize = SCIPcalcMemGrowSize(scip, maxindex + 1);
    assert(newsize > branchruledata->memsize);
    assert(branchruledata->memsize >= 0);
 

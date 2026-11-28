@@ -4917,6 +4917,7 @@ SCIP_DECL_CONSTRANS(consTransVarbound)
          SCIPconsIsChecked(sourcecons), SCIPconsIsPropagated(sourcecons),
          SCIPconsIsLocal(sourcecons), SCIPconsIsModifiable(sourcecons),
          SCIPconsIsDynamic(sourcecons), SCIPconsIsRemovable(sourcecons), SCIPconsIsStickingAtNode(sourcecons)) );
+   SCIP_CALL( SCIPsetConsIsRelaxConvex(scip, *targetcons, TRUE) );
 
    /* catch events for variables */
    SCIP_CALL( catchEvents(scip, *targetcons, conshdlrdata->eventhdlr) );
@@ -5896,6 +5897,7 @@ SCIP_RETCODE SCIPcreateConsVarbound(
    /* create constraint */
    SCIP_CALL( SCIPcreateCons(scip, cons, name, conshdlr, consdata, initial, separate, enforce, check, propagate,
          local, modifiable, dynamic, removable, stickingatnode) );
+   SCIP_CALL( SCIPsetConsIsRelaxConvex(scip, *cons, TRUE) );
 
    if( SCIPisTransformed(scip) )
    {

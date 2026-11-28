@@ -51,6 +51,7 @@
 #include "scip/cuts.h"
 #include "scip/cutsel.h"
 #include "scip/struct_event.h"
+#include "scip/struct_scip.h"
 #include "scip/struct_sepastore.h"
 #include "scip/misc.h"
 #include "scip/pub_lpexact.h"
@@ -891,6 +892,9 @@ SCIP_RETCODE sepastoreApplyCut(
    /* a row could have been added twice to the separation store; add it only once! */
    if( !SCIProwIsInLP(cut) )
    {
+      if( set->lp_outputaddedrows )
+         SCIProwPrint(cut, set->scip->messagehdlr, NULL);
+
       /* add cut to the LP and capture it */
       SCIP_CALL( SCIPlpAddRow(lp, blkmem, set, eventqueue, eventfilter, cut, depth) );
 

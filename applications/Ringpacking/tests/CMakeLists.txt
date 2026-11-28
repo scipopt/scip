@@ -108,14 +108,10 @@ foreach(testSrc ${TEST_SRCS})
     COMMAND ${CMAKE_COMMAND} --build ${CMAKE_BINARY_DIR} --target ${testName}
     )
 
-  #
-  # avoid that several build jobs try to concurrently build the SCIP library
-  # note that this ressource lock name is not the actual libscip target
-  #
-  set_tests_properties(${testName}-build
-    PROPERTIES
-    RESOURCE_LOCK libscip
-    )
+    #
+    # link the executable against the SCIP library target
+    #
+    target_link_libraries(${testName} SCIP::SCIP ${LIBM})
 
   #
   # Finally, add the executable as a test to the test framework

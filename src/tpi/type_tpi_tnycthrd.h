@@ -31,7 +31,7 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#ifdef TPI_TNY
+#if SCIP_TPI_TNY
 
 #ifndef __TYPE_TPI_TINYCTHRD_H__
 #define __TYPE_TPI_TINYCTHRD_H__
@@ -43,4 +43,4 @@ typedef cnd_t SCIP_CONDITION;
 
 #endif
 
-#endif
+#endif /* SCIP_TPI_TNY */

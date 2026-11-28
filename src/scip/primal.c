@@ -598,7 +598,8 @@ SCIP_RETCODE SCIPprimalUpdateObjoffset(
    SCIP_PROB*            origprob,           /**< original problem data */
    SCIP_TREE*            tree,               /**< branch and bound tree */
    SCIP_REOPT*           reopt,              /**< reoptimization data structure */
-   SCIP_LP*              lp                  /**< current LP data */
+   SCIP_LP*              lp,                 /**< current LP data */
+   SCIP_Real             addval              /**< added objective offset */
    )
 {
    SCIP_Real upperbound;
@@ -606,6 +607,10 @@ SCIP_RETCODE SCIPprimalUpdateObjoffset(
 
    assert(primal != NULL);
    assert(SCIPsetGetStage(set) <= SCIP_STAGE_PRESOLVED);
+
+   /* skip unavailable cutoff */
+   if( SCIPsetIsInfinity(set, primal->cutoffbound) )
+      return SCIP_OKAY;
 
    /* recalculate internal objective limit */
    upperbound = SCIPprobInternObjval(transprob, origprob, set, SCIPprobGetObjlim(origprob, set));
@@ -629,12 +634,8 @@ SCIP_RETCODE SCIPprimalUpdateObjoffset(
    /* invalidate old upper bound */
    SCIP_CALL( primalSetUpperbound(primal, blkmem, set, stat, eventqueue, eventfilter, transprob, tree, reopt, lp, SCIPsetInfinity(set)) );
 
-   /* reset the cutoff bound
-    *
-    * @note we might need to relax the bound since in presolving the objective correction of an
-    *       aggregation is still in progress
-    */
-   SCIP_CALL( primalSetCutoffbound(primal, blkmem, set, stat, transprob, eventqueue, eventfilter, tree, reopt, lp, upperbound) );
+   /* update cutoff bound */
+   SCIP_CALL( primalSetCutoffbound(primal, blkmem, set, stat, transprob, eventqueue, eventfilter, tree, reopt, lp, primal->cutoffbound - addval) );
 
    /* set new upper bound (and decrease cutoff bound, if objective value is always integral) */
    SCIP_CALL( primalSetUpperbound(primal, blkmem, set, stat, eventqueue, eventfilter, transprob, tree, reopt, lp, upperbound) );
@@ -654,7 +655,8 @@ SCIP_RETCODE SCIPprimalUpdateObjoffsetExact(
    SCIP_PROB*            origprob,           /**< original problem data */
    SCIP_TREE*            tree,               /**< branch and bound tree */
    SCIP_REOPT*           reopt,              /**< reoptimization data structure */
-   SCIP_LP*              lp                  /**< current LP data */
+   SCIP_LP*              lp,                 /**< current LP data */
+   SCIP_RATIONAL*        addval              /**< added objective offset, or NULL if unchanged */
    )
 {
    SCIP_RATIONAL* upperbound;
@@ -663,6 +665,10 @@ SCIP_RETCODE SCIPprimalUpdateObjoffsetExact(
 
    assert(primal != NULL);
    assert(SCIPsetGetStage(set) <= SCIP_STAGE_PRESOLVED);
+
+   /* skip unavailable cutoff */
+   if( SCIPrationalIsInfinity(primal->cutoffboundexact) )
+      return SCIP_OKAY;
 
    SCIP_CALL( SCIPrationalCreateBuffer(set->buffer, &tmp) );
    SCIP_CALL( SCIPrationalCreateBuffer(set->buffer, &upperbound) );
@@ -698,12 +704,12 @@ SCIP_RETCODE SCIPprimalUpdateObjoffsetExact(
    /* invalidate old upper bound */
    SCIP_CALL( primalSetUpperboundExact(primal, blkmem, set, stat, eventqueue, eventfilter, transprob, tree, reopt, lp, inf) );
 
-   /* reset the cutoff bound
-    *
-    * @note we might need to relax the bound since in presolving the objective correction of an
-    *       aggregation is still in progress
-    */
-   SCIP_CALL( primalSetCutoffboundExact(primal, blkmem, set, stat, transprob, eventqueue, eventfilter, tree, reopt, lp, upperbound) );
+   /* update cutoff bound */
+   if( addval != NULL )
+      SCIPrationalDiff(tmp, primal->cutoffboundexact, addval);
+   else
+      SCIPrationalSetRational(tmp, primal->cutoffboundexact);
+   SCIP_CALL( primalSetCutoffboundExact(primal, blkmem, set, stat, transprob, eventqueue, eventfilter, tree, reopt, lp, tmp) );
 
    /* set new upper bound (and decrease cutoff bound, if objective value is always integral) */
    SCIP_CALL( primalSetUpperboundExact(primal, blkmem, set, stat, eventqueue, eventfilter, transprob, tree, reopt, lp, upperbound) );
@@ -952,7 +958,7 @@ SCIP_RETCODE primalAddSol(
             SCIPprobExternObjval(transprob, origprob, set, SCIPgetLowerbound(set->scip)), SCIPprobExternObjval(transprob, origprob, set, obj));
       }
 
-#ifdef WITH_DEBUG_SOLUTION
+#if SCIP_HAS_DEBUG_SOLUTION
       /* check for missed debugsol cutoff */
       if( SCIPdebugSolIsEnabled(set->scip) )
       {
@@ -965,7 +971,7 @@ SCIP_RETCODE primalAddSol(
          else
             assert(SCIPsetIsFeasGE(set, SCIPgetDualbound(set->scip), SCIPsolGetOrigObj(debugsol)));
       }
-#endif
+#endif /* SCIP_HAS_DEBUG_SOLUTION */
    }
 
    SCIPdebug( SCIP_CALL( SCIPsolPrint(sol, set, messagehdlr, stat, transprob, NULL, NULL, FALSE, FALSE) ) );

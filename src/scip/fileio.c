@@ -38,7 +38,7 @@
 
 #define BUFFER_LEN 8192
 
-#ifdef SCIP_WITH_ZLIB
+#if SCIP_HAS_ZLIB
 
 /* file i/o using zlib */
 #include <zlib.h>
@@ -142,7 +142,7 @@ int SCIPfclose(SCIP_FILE *fp)
 }
 
 
-#else
+#else /* !SCIP_HAS_ZLIB */
 
 #ifdef _MSC_VER
 #define fdopen _fdopen
@@ -234,5 +234,4 @@ int SCIPfclose(SCIP_FILE *fp)
    return fclose((FILE*)fp);
 }
 
-
-#endif
+#endif /* SCIP_HAS_ZLIB */

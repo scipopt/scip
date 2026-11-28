@@ -7,14 +7,20 @@ endif()
 
 project(Binpacking)
 
-if(TARGET SCIP::SCIP)
-  # find package by SCIP PATH
-  find_package(SCIP CONFIG NO_DEFAULT_PATH PATHS ${SCIP_BINARY_DIR} REQUIRED)
-else()
-  find_package(SCIP REQUIRED)
+# Find SCIP unless we already have it because we build it.
+if(NOT TARGET SCIP::SCIP)
+  find_package(SCIP
+     REQUIRED
+     CONFIG
+     HINTS "${SCIP_DIR}"
+     )
 endif()
 
-include_directories(BEFORE PUBLIC ${SCIP_INCLUDE_DIRS})
+# Find math library.
+find_library(LIBM m)
+if(NOT LIBM)
+  set(LIBM "")
+endif()
 
 add_executable(binpacking
    src/branch_ryanfoster.c
@@ -24,24 +30,17 @@ add_executable(binpacking
    src/probdata_binpacking.c
    src/reader_bpa.c
    src/vardata_binpacking.c)
-set_property(TARGET binpacking PROPERTY INTERPROCEDURAL_OPTIMIZATION ${LTO_AVAILABLE})
+if(SCIP_HAS_LTO)
+   set_target_properties(binpacking PROPERTIES
+      INTERPROCEDURAL_OPTIMIZATION 1)
+endif()
+target_link_libraries(binpacking SCIP::SCIP ${LIBM})
 
-# link to math library if it is available
-find_library(LIBM m)
-if(NOT LIBM)
-  set(LIBM "")
+if(TARGET examples)
+   add_dependencies(examples binpacking)
 endif()
 
-target_link_libraries(binpacking ${SCIP_LIBRARIES} ${LIBM})
-target_compile_options(binpacking PRIVATE ${SCIP_COMPILE_FLAGS})
-
-if( TARGET examples )
-    add_dependencies( examples binpacking )
-endif()
-
-#
-# add check subdirectory for tests
-#
+# Add check subdirectory for tests.
 add_subdirectory(check)
 
 enable_testing()

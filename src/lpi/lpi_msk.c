@@ -95,19 +95,19 @@ typedef enum MSKoptimizertype_enum MSKoptimizertype;
 #define IS_NEGINF(x) ((x) <= -MSK_INFINITY)
 #define MOSEK_relDiff(val1, val2)         ( ((val1)-(val2))/(MAX3(1.0,REALABS(val1),REALABS(val2))) )
 
-#ifdef SCIP_THREADSAFE
+#if SCIP_IS_THREADSAFE
    #if defined(_Thread_local)
       /* Use thread local environment in order to not create a new environment for each new LP. */
       static _Thread_local MSKenv_t reusemosekenv =     NULL;
       static _Thread_local int numlp         =           0;
       #define SCIP_REUSEENV
    #endif
-#else
+#else /* !SCIP_IS_THREADSAFE */
    /* Global Mosek environment in order to not create a new environment for each new LP. This is not thread safe. */
    static MSKenv_t reusemosekenv =     NULL;
    static int numlp         =           0;
    #define SCIP_REUSEENV
-#endif
+#endif /* SCIP_IS_THREADSAFE */
 
 #if MSK_VERSION_MAJOR >= 9
 #define NEAR_REL_TOLERANCE           1.0     /* MOSEK will multiply all tolerances with this factor after stalling */

@@ -6,9 +6,9 @@
 #include <strings.h> /*lint --e{766}*/
 #endif
 
-#ifdef SCIP_WITH_ZLIB
+#if SCIP_HAS_ZLIB
 #include <zlib.h>
-#endif
+#endif /* SCIP_HAS_ZLIB */
 
 #include "lpi/lpi.h"
 #include "scip/exprinterpret.h"

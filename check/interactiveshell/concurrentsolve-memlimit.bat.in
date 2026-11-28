@@ -1,0 +1,9 @@
+set heur localsearch freq -1
+set limits memory 512
+set misc avoidmemout TRUE
+set parallel minnthreads 1
+set parallel maxnthreads 8
+read ${CMAKE_CURRENT_SOURCE_DIR}/${path}
+concurrentopt
+validatesolve ${optval} ${optval}
+quit

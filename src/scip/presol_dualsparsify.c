@@ -650,7 +650,7 @@ SCIP_RETCODE aggregation(
    SCIP_CALL( SCIPaddVar(scip, newvar) );
 
    /* set the debug solution value for the new variable */
-#ifdef WITH_DEBUG_SOLUTION
+#if SCIP_HAS_DEBUG_SOLUTION
    if( SCIPdebugIsMainscip(scip) )
    {
       SCIP_Real val1;
@@ -662,7 +662,7 @@ SCIP_RETCODE aggregation(
 
       SCIPdebugMsg(scip, "set debug solution value of %s to %g\n", SCIPvarGetName(newvar), weight1 * val1 + val2);
    }
-#endif
+#endif /* SCIP_HAS_DEBUG_SOLUTION */
 
    tmpvars[0] = vars[colidx1];
    tmpvars[1] = newvar;

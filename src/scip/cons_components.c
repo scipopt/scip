@@ -406,7 +406,7 @@ SCIP_RETCODE componentSetupWorkingSol(
    }
 
    /* set up debug solution */
-#ifdef WITH_DEBUG_SOLUTION
+#if SCIP_HAS_DEBUG_SOLUTION
    if( SCIPdebugSolIsEnabled(component->problem->scip) )
    {
       PROBLEM* problem;
@@ -446,7 +446,7 @@ SCIP_RETCODE componentSetupWorkingSol(
          }
       }
    }
-#endif
+#endif /* SCIP_HAS_DEBUG_SOLUTION */
 
    return SCIP_OKAY;
 }
@@ -480,9 +480,9 @@ SCIP_RETCODE createSubscip(
    {
       SCIP_CONSHDLR* newconshdlr;
       SCIP_CONSHDLRDATA* newconshdlrdata;
-#ifdef WITH_DEBUG_SOLUTION
+#if SCIP_HAS_DEBUG_SOLUTION
       SCIP_Bool isvalid = FALSE;
-#endif
+#endif /* SCIP_HAS_DEBUG_SOLUTION */
 
       /* copy parameter settings */
       SCIP_CALL( SCIPcopyParamSettings(scip, *subscip) );
@@ -506,10 +506,10 @@ SCIP_RETCODE createSubscip(
       /* reduce the effort spent for hash tables; however, if the debug solution is enabled and valid in this subtree,
        * hash tables are needed for installing the debug solution
        */
-#ifdef WITH_DEBUG_SOLUTION
+#if SCIP_HAS_DEBUG_SOLUTION
       SCIP_CALL( SCIPdebugSolIsValidInSubtree(scip, &isvalid) );
       if( !isvalid && SCIPgetStage(scip) > SCIP_STAGE_PRESOLVING )
-#endif
+#endif /* SCIP_HAS_DEBUG_SOLUTION */
       {
          SCIP_CALL( SCIPsetBoolParam(*subscip, "misc/usevartable", FALSE) );
          SCIP_CALL( SCIPsetBoolParam(*subscip, "misc/useconstable", FALSE) );
@@ -2403,13 +2403,14 @@ SCIP_DECL_CONSPRESOL(consPresolComponents)
             break;
          }
 
-#ifdef WITH_DEBUG_SOLUTION
+#if SCIP_HAS_DEBUG_SOLUTION
          if( SCIPgetStage(subscip) > SCIP_STAGE_INIT )
          {
             SCIP_CALL( SCIPfree(&subscip) );
             SCIP_CALL( createSubscip(scip, conshdlrdata, &subscip) );
          }
-#endif
+#endif /* SCIP_HAS_DEBUG_SOLUTION */
+
          /* get component variables */
          compvars = &(sortedvars[compstartsvars[comp]]);
          ncompvars = compstartsvars[comp + 1 ] - compstartsvars[comp];
@@ -2468,8 +2469,8 @@ SCIP_DECL_CONSPRESOL(consPresolComponents)
             continue;
          }
 
-            /* set up debug solution */
-#ifdef WITH_DEBUG_SOLUTION
+         /* set up debug solution */
+#if SCIP_HAS_DEBUG_SOLUTION
          if( SCIPdebugSolIsEnabled(scip) )
          {
             SCIP_SOL* debugsol;
@@ -2493,7 +2494,7 @@ SCIP_DECL_CONSPRESOL(consPresolComponents)
                }
             }
          }
-#endif
+#endif /* SCIP_HAS_DEBUG_SOLUTION */
 
          /* solve the subproblem and evaluate the result, i.e. apply fixings of variables and remove constraints */
          SCIP_CALL( solveAndEvalSubscip(scip, conshdlrdata, subscip, compvars, subvars, compconss,

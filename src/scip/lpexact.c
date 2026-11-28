@@ -3681,10 +3681,10 @@ SCIP_RETCODE SCIPlpExactFlush(
    }
 
    /* we can't retrieve the solution from Qsoptex after anything was changed, so we need to resolve the lp */
-#ifdef SCIP_WITH_QSOPTEX
+#if SCIP_LPS_QSO
    lpexact->solved = FALSE;
    lpexact->lpsolstat = SCIP_LPSOLSTAT_NOTSOLVED;
-#endif
+#endif /* SCIP_LPS_QSO */
 
    assert(lpexact->nlpicols == lpexact->ncols);
    assert(lpexact->lpifirstchgcol == lpexact->nlpicols);
@@ -3798,9 +3798,9 @@ SCIP_RETCODE SCIPlpPsdataCreate(
    projshiftdata->commonslack = NULL;
    projshiftdata->includedrows = NULL;
    projshiftdata->projshiftbasis = NULL;
-#if defined SCIP_WITH_GMP && defined SCIP_WITH_EXACTSOLVE
+#if SCIP_HAS_GMP && SCIP_HAS_EXACTSOLVE
    projshiftdata->rectfactor = (qsnum_factor_work*) NULL;
-#endif
+#endif /* SCIP_HAS_GMP && SCIP_HAS_EXACTSOLVE */
 
    projshiftdata->nextendedrows = 0;
    projshiftdata->projshiftbasisdim = 0;
@@ -3879,10 +3879,10 @@ SCIP_RETCODE SCIPlpExactProjectShiftFree(
    BMSfreeBlockMemoryArrayNull(blkmem, &projshiftdata->includedrows, projshiftdata->nextendedrows);
    BMSfreeBlockMemoryArrayNull(blkmem, &projshiftdata->projshiftbasis, projshiftdata->nextendedrows);
 
-#if defined(SCIP_WITH_GMP) && defined(SCIP_WITH_EXACTSOLVE)
+#if SCIP_HAS_GMP && SCIP_HAS_EXACTSOLVE
    if( projshiftdata->rectfactor != NULL )
       RECTLUfreeFactorization(projshiftdata->rectfactor);
-#endif
+#endif /* SCIP_HAS_GMP && SCIP_HAS_EXACTSOLVE */
 
    assert(projshiftdata->interiorpoint == NULL);
    assert(projshiftdata->interiorray == NULL);
@@ -7898,13 +7898,13 @@ SCIP_RETCODE lpExactRestoreSolVals(
    storedsolvals = lpexact->storedsolvals;
    if( storedsolvals != NULL )
    {
-#ifdef SCIP_WITH_QSOPTEX
+#if SCIP_LPS_QSO
       lpexact->solved = FALSE;
       lpexact->lpsolstat = SCIP_LPSOLSTAT_NOTSOLVED;
-#else
+#else /* !SCIP_LPS_QSO */
       lpexact->solved = storedsolvals->lpissolved;
       lpexact->lpsolstat = storedsolvals->lpsolstat;
-#endif
+#endif /* SCIP_LPS_QSO */
       SCIPrationalSetRational(lpexact->lpobjval, storedsolvals->lpobjval);
       lpexact->primalfeasible = storedsolvals->primalfeasible;
       lpexact->primalchecked = storedsolvals->primalchecked;

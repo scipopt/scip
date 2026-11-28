@@ -62,9 +62,9 @@
  * checks enabled with the defines below.
  * The maintenance of the memlist, however, is not threadsafe.
  */
-#ifndef SCIP_THREADSAFE
+#if !SCIP_IS_THREADSAFE
 /*#define ENABLE_MEMLIST_CHECKS*/
-#endif
+#endif /* !SCIP_IS_THREADSAFE */
 
 #ifdef ENABLE_MEMLIST_CHECKS
 /* uncomment the following for debugging:
@@ -2642,7 +2642,7 @@ void BMSsetBufferMemoryArraygrowinit(
    buffer->arraygrowinit = (unsigned) arraygrowinit;
 }
 
-#ifndef SCIP_NOBUFFERMEM
+#if !SCIP_HAS_NOBUFFERMEM
 /** calculate memory size for dynamically allocated arrays
  *
  *  This function is a copy of the function in set.c in order to be able to use memory.? separately.
@@ -2686,7 +2686,7 @@ size_t calcMemoryGrowSize(
 
    return size;
 }
-#endif
+#endif /* !SCIP_HAS_NOBUFFERMEM */
 
 /** work for allocating the next unused buffer */
 INLINE static
@@ -2698,11 +2698,9 @@ void* BMSallocBufferMemory_work(
    )
 {
    void* ptr;
-#ifndef SCIP_NOBUFFERMEM
+#if !SCIP_HAS_NOBUFFERMEM
    size_t bufnum;
-#endif
 
-#ifndef SCIP_NOBUFFERMEM
    assert( buffer != NULL );
    assert( buffer->firstfree <= buffer->ndata );
 
@@ -2798,7 +2796,7 @@ void* BMSallocBufferMemory_work(
       (unsigned long long)bufnum, (unsigned long long)(buffer->ndata), buffer->data[bufnum],
       (unsigned long long)(buffer->size[bufnum]), (unsigned long long)size, ptr);
 
-#else
+#else /* SCIP_HAS_NOBUFFERMEM */
    if( buffer->clean )
    {
       /* we should allocate at least one byte, otherwise BMSallocMemorySize will fail */
@@ -2810,7 +2808,7 @@ void* BMSallocBufferMemory_work(
    {
       BMSallocMemorySize(&ptr, size);
    }
-#endif
+#endif /* !SCIP_HAS_NOBUFFERMEM */
 
    return ptr;
 }
@@ -2885,11 +2883,9 @@ void* BMSreallocBufferMemory_work(
    )
 {
    void* newptr;
-#ifndef SCIP_NOBUFFERMEM
+#if !SCIP_HAS_NOBUFFERMEM
    size_t bufnum;
-#endif
 
-#ifndef SCIP_NOBUFFERMEM
    assert( buffer != NULL );
    assert( buffer->firstfree <= buffer->ndata );
    assert(!buffer->clean); /* reallocating clean buffer elements is not supported */
@@ -2939,10 +2935,10 @@ void* BMSreallocBufferMemory_work(
       (unsigned long long)bufnum, (unsigned long long)(buffer->ndata), buffer->data[bufnum],
       (unsigned long long)(buffer->size[bufnum]), (unsigned long long)size, newptr);
 
-#else
+#else /* SCIP_HAS_NOBUFFERMEM */
    newptr = ptr;
    BMSreallocMemorySize(&newptr, size);
-#endif
+#endif /* !SCIP_HAS_NOBUFFERMEM */
 
    return newptr;
 }
@@ -3113,7 +3109,7 @@ void BMSfreeBufferMemory_call(
 {  /*lint --e{715}*/
    assert( ptr != NULL );
 
-#ifndef SCIP_NOBUFFERMEM
+#if !SCIP_HAS_NOBUFFERMEM
    if ( *ptr != NULL )
       BMSfreeBufferMemory_work(buffer, ptr, filename, line);
    else
@@ -3121,9 +3117,9 @@ void BMSfreeBufferMemory_call(
       printErrorHeader(filename, line);
       printError("Tried to free null buffer pointer.\n");
    }
-#else
+#else /* SCIP_HAS_NOBUFFERMEM */
    BMSfreeMemory(ptr);
-#endif
+#endif /* !SCIP_HAS_NOBUFFERMEM */
 }
 
 /** frees a buffer if pointer is not NULL and sets pointer to NULL */
@@ -3138,11 +3134,11 @@ void BMSfreeBufferMemoryNull_call(
 
    if ( *ptr != NULL )
    {
-#ifndef SCIP_NOBUFFERMEM
+#if !SCIP_HAS_NOBUFFERMEM
       BMSfreeBufferMemory_work(buffer, ptr, filename, line);
-#else
+#else /* SCIP_HAS_NOBUFFERMEM */
       BMSfreeMemory(ptr);
-#endif
+#endif /* !SCIP_HAS_NOBUFFERMEM */
    }
 }
 

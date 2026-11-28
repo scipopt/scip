@@ -43,7 +43,6 @@
 #include "scip/scip_mem.h"
 #include "scip/scip_message.h"
 #include "scip/scip_numerics.h"
-#include "scip/scip_prob.h"
 #include "scip/scip_sol.h"
 
 
@@ -277,9 +276,8 @@ SCIP_RETCODE SCIPheurPassSolTrySol(
    /* only store solution if we are not within our own SCIPtrySol() call */
    if( ! heurdata->rec )
    {
-      if( heurdata->trysol == NULL || (SCIPgetObjsense(scip) == SCIP_OBJSENSE_MAXIMIZE &&
-            SCIPisGT(scip, SCIPgetSolOrigObj(scip, sol), SCIPgetSolOrigObj(scip, heurdata->trysol))) ||
-         SCIPisLT(scip, SCIPgetSolOrigObj(scip, sol), SCIPgetSolOrigObj(scip, heurdata->trysol)) )
+      if( heurdata->trysol == NULL
+         || SCIPisLT(scip, SCIPgetSolTransObj(scip, sol), SCIPgetSolTransObj(scip, heurdata->trysol)) )
       {
          if( heurdata->trysol != NULL )
          {
@@ -319,9 +317,8 @@ SCIP_RETCODE SCIPheurPassSolAddSol(
    /* only store solution if we are not within our own SCIPtrySol() call */
    if( ! heurdata->rec )
    {
-      if( heurdata->addsol == NULL || (SCIPgetObjsense(scip) == SCIP_OBJSENSE_MAXIMIZE &&
-            SCIPisGT(scip, SCIPgetSolOrigObj(scip, sol), SCIPgetSolOrigObj(scip, heurdata->addsol))) ||
-         SCIPisLT(scip, SCIPgetSolOrigObj(scip, sol), SCIPgetSolOrigObj(scip, heurdata->addsol)) )
+      if( heurdata->addsol == NULL
+         || SCIPisLT(scip, SCIPgetSolTransObj(scip, sol), SCIPgetSolTransObj(scip, heurdata->addsol)) )
       {
          if( heurdata->addsol != NULL )
          {
