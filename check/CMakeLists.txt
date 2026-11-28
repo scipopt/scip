@@ -343,7 +343,7 @@ if(SCIP_HAS_ZIMPL)
 endif()
 
 # exact ip instances
-if(SCIP_WITH_EXACTSOLVE)
+if(SCIP_HAS_EXACTSOLVE)
     set(instances_MIPEX
         "instances/MIPEX/egout.cip\;5681007/10000"
         "instances/MIP/enigma.mps\;0"
@@ -1383,7 +1383,7 @@ if (UNIX)
 endif (UNIX)
 endif()
 
-if(SCIP_WITH_EXACTSOLVE)
+if(SCIP_HAS_EXACTSOLVE)
     #
     # first test writing and reading from and to different file extensions for default MIPEX (only without original objective offset)
     #
