@@ -352,13 +352,11 @@ SCIP_RETCODE SCIPiisGenerate(
    SCIP_Bool stopafterone;
    SCIP_Bool removeunusedvars;
    SCIP_Bool trivial;
-   SCIP_Bool islinear;
    SCIP_Bool success;
    int nconss;
    int nvars;
    int nbounds;
    int i;
-   int j;
 
    /* exact mode is not supported */
    if( set->exact_enable )
@@ -540,28 +538,6 @@ SCIP_RETCODE SCIPiisGenerate(
       assert( iis->infeasible );
       SCIP_CALL( SCIPiisGreedyMakeIrreducible(iis) );
       assert( iis->infeasible );
-   }
-
-   /* Remove redundant constraints that potentially are left over from indicator constraints,
-    * that is constraints containing a variables with no bounds and that only features in a single constraint */
-   nconss = SCIPgetNOrigConss(iis->subscip);
-   conss = SCIPgetOrigConss(iis->subscip);
-   for( i = nconss -1; i >= 0; --i )
-   {
-      islinear = strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(conss[i])), "linear") == 0;
-      if( islinear && SCIPconsGetNUses(conss[i]) <= 1)
-      {
-         nvars = SCIPgetNVarsLinear(iis->subscip, conss[i]);
-         vars = SCIPgetVarsLinear(iis->subscip, conss[i]);
-         for( j = 0; j < nvars; ++j )
-         {
-            if( SCIPvarGetNUses(vars[j]) <= 2 && SCIPisInfinity(iis->subscip, -SCIPvarGetLbOriginal(vars[j])) && SCIPisInfinity(iis->subscip, SCIPvarGetUbOriginal(vars[j])) )
-            {
-               SCIP_CALL( SCIPdelCons(iis->subscip, conss[i]) );
-               break;
-            }
-         }
-      }
    }
 
    SCIP_CALL( SCIPgetBoolParam(set->scip, "iis/removeunusedvars", &removeunusedvars) );
