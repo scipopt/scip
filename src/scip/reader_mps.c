@@ -149,6 +149,7 @@ struct MpsInput
    SCIP_Bool             dynamicrows;        /**< should rows be added and removed dynamically to the LP? */
    SCIP_Bool             isinteger;
    SCIP_Bool             isnewformat;
+   SCIP_HASHSET*         varswithupperbound; /**< variables with an explicit upper bound */
 };
 typedef struct MpsInput MPSINPUT;
 
@@ -191,6 +192,7 @@ SCIP_RETCODE mpsinputCreate(
    (*mpsi)->haserror    = FALSE;
    (*mpsi)->isinteger   = FALSE;
    (*mpsi)->isnewformat = FALSE;
+   (*mpsi)->varswithupperbound = NULL;
    (*mpsi)->buf     [0] = '\0';
    (*mpsi)->probname[0] = '\0';
    (*mpsi)->objname [0] = '\0';
@@ -216,6 +218,8 @@ void mpsinputFree(
    MPSINPUT**            mpsi                /**< mps input structure */
    )
 {
+   if( (*mpsi)->varswithupperbound != NULL )
+      SCIPhashsetFree(&(*mpsi)->varswithupperbound, SCIPblkmem(scip));
    SCIPfreeBlockMemory(scip, mpsi);
 }
 
@@ -1974,6 +1978,8 @@ SCIP_RETCODE readBounds(
    nsemicont = 0;
    semicontsize = 0;
 
+   SCIP_CALL( SCIPhashsetCreate(&mpsi->varswithupperbound, SCIPblkmem(scip), SCIPgetNVars(scip)) );
+
    SCIPdebugMsg(scip, "read bounds\n");
 
    while( mpsinputReadLine(mpsi) )
@@ -2107,7 +2113,11 @@ SCIP_RETCODE readBounds(
             assert(!infeasible);
 
             oldvartype =  SCIP_VARTYPE_INTEGER;
-            SCIP_CALL( SCIPchgVarUb(scip, var, SCIPinfinity(scip)) );
+            /* only replace the default binary upper bound */
+            if( !SCIPhashsetExists(mpsi->varswithupperbound, var) )
+            {
+               SCIP_CALL( SCIPchgVarUb(scip, var, SCIPinfinity(scip)) );
+            }
          }
 
          /* switch variable type to continuous before applying the bound, this is necessary for stupid non-integral
@@ -2241,6 +2251,12 @@ SCIP_RETCODE readBounds(
             return SCIP_OKAY;
          }
 
+         /* all bound records except LO/LI and MI explicitly define an upper bound */
+         if( mpsinputField1(mpsi)[0] != 'L' && mpsinputField1(mpsi)[0] != 'M' )
+         {
+            SCIP_CALL( SCIPhashsetInsert(mpsi->varswithupperbound, SCIPblkmem(scip), var) );
+         }
+
          /* switch variable type back to old type if necessary */
          if( oldvartype < SCIPvarGetType(var) )
          {
@@ -2346,6 +2362,8 @@ SCIP_RETCODE readBoundsExact(
    semicont = NULL;
    nsemicont = 0;
    semicontsize = 0;
+
+   SCIP_CALL( SCIPhashsetCreate(&mpsi->varswithupperbound, SCIPblkmem(scip), SCIPgetNVars(scip)) );
 
    SCIP_CALL( SCIPrationalCreateBuffer(SCIPbuffer(scip), &val) );
 
@@ -2483,17 +2501,21 @@ SCIP_RETCODE readBoundsExact(
             && ( mpsinputField1(mpsi)[0] != 'F' || mpsinputField1(mpsi)[1] != 'X'
             || SCIPrationalIsNegative(val) || SCIPrationalIsGTReal(val, 1.0) ) )
          {
-            SCIP_RATIONAL* tmp;
             SCIP_CALL( SCIPchgVarType(scip, var, SCIP_VARTYPE_INTEGER, &infeasible) );
             assert(!infeasible);
 
-            SCIP_CALL( SCIPrationalCreateBuffer(SCIPbuffer(scip), &tmp) );
-            SCIPrationalSetInfinity(tmp);
-
             oldvartype =  SCIP_VARTYPE_INTEGER;
 
-            SCIP_CALL( SCIPchgVarUbExact(scip, var, tmp) );
-            SCIPrationalFreeBuffer(SCIPbuffer(scip), &tmp);
+            /* only replace the default binary upper bound */
+            if( !SCIPhashsetExists(mpsi->varswithupperbound, var) )
+            {
+               SCIP_RATIONAL* tmp;
+
+               SCIP_CALL( SCIPrationalCreateBuffer(SCIPbuffer(scip), &tmp) );
+               SCIPrationalSetInfinity(tmp);
+               SCIP_CALL( SCIPchgVarUbExact(scip, var, tmp) );
+               SCIPrationalFreeBuffer(SCIPbuffer(scip), &tmp);
+            }
          }
 
          /* switch variable type to continuous before applying the bound, this is necessary for stupid non-integral
@@ -2631,6 +2653,12 @@ SCIP_RETCODE readBoundsExact(
          default:
             mpsinputSyntaxerror(mpsi);
             return SCIP_OKAY;
+         }
+
+         /* all bound records except LO/LI and MI explicitly define an upper bound */
+         if( mpsinputField1(mpsi)[0] != 'L' && mpsinputField1(mpsi)[0] != 'M' )
+         {
+            SCIP_CALL( SCIPhashsetInsert(mpsi->varswithupperbound, SCIPblkmem(scip), var) );
          }
 
          /* switch variable type back to old type if necessary */
