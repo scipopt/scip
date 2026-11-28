@@ -3288,7 +3288,11 @@ void SCIPsolRecomputeInternObjExact(
    nvars = prob->nvars;
    (void) SCIPrationalCreateBuffer(set->buffer, &solval);
 
-   SCIPrationalSetFraction(sol->valsexact->obj, 0LL, 1LL);
+   /* original solutions store the external objective value, including the original offset */
+   if( SCIPsolIsOriginal(sol) )
+      SCIPrationalSetRational(sol->valsexact->obj, SCIPprobGetObjoffsetExact(prob));
+   else
+      SCIPrationalSetFraction(sol->valsexact->obj, 0LL, 1LL);
 
    /* recompute the objective value */
    for( v = 0; v < nvars; ++v )
